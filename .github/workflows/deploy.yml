@@ -28,7 +28,7 @@ jobs:
           IONOS_HOST: ${{ secrets.SSH_IONOS }}
           IONOS_USER: ${{ secrets.SSH_USER }}
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
-          IONOS_KNOWN_HOSTS: ${{ secrets.SSH_KNOWNHOST }}
+          IONOS_KNOWN_HOSTS: ${{ secrets.SSH_KNOWHOST }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$IONOS_KNOWN_HOSTS" > ~/.ssh/known_hosts
