@@ -18,30 +18,19 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      
-name: Installer le client de connexion
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y sshpass
+      - name: Installer le client de connexion
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
 
-      
-name: Mettre à jour le site
-      env:
-        IONOS_HOST: ${{ secrets.SSH_IONOS }}
-        IONOS_USER: ${{ secrets.SSH_USER }}
-        SSHPASS: ${{ secrets.SSH_PASSWORD }}
-        IONOS_KNOWN_HOSTS: ${{ secrets.SSH_KNOWHOST }}
-      run: |
-        install -d -m 700 ~/.ssh
-        printf '%s\n' "$IONOS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-        chmod 600 ~/.ssh/known_hosts
-
-          sshpass -e ssh \
-            -o StrictHostKeyChecking=yes \
-            -o ConnectTimeout=30 \
-            -o PubkeyAuthentication=no \
-            "$IONOS_USER@$IONOS_HOST" \
-            'set -eu
-             cd ~/public
-             test "$(git branch --show-current)" = main
-             git pull --ff-only origin main'
+      - name: Mettre à jour le site
+        env:
+          IONOS_HOST: ${{ secrets.SSH_IONOS }}
+          IONOS_USER: ${{ secrets.SSH_USER }}
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          IONOS_KNOWN_HOSTS: ${{ secrets.SSH_KNOWNHOST }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$IONOS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o PubkeyAuthentication=no "$IONOS_USER@$IONOS_HOST" 'set -eu; cd ~/public; test "$(git branch --show-current)" = main; git pull --ff-only origin main'
