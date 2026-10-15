@@ -1639,12 +1639,17 @@ function openLevelUp(offers){
  $('#reroll').addEventListener('click',()=>{if(RUN.rerolls<=0||!armed())return;RUN.rerolls--;const nx=rollOffers(offers);openLevelUp(nx);overlayAt=0;});
  overlayKeys=c=>{const m=NUMKEY[c];if(m===undefined)return;if(!offers.length){if(m===0)choose(null);return;}if(offers[m])choose(offers[m]);};
 }
+let relicRR=null;
 function openRelics(title,sub){
- const avail=shuffle(RELICS.filter(r=>!P.relics.includes(r.id)&&(!r.cls||r.cls===P.cls)&&relicUnlocked(r))).slice(0,3);
+ const rr=relicRR!=null?relicRR:1;relicRR=null;
+ const pool=RELICS.filter(r=>!P.relics.includes(r.id)&&(!r.cls||r.cls===P.cls)&&relicUnlocked(r));
+ const avail=shuffle(pool.slice()).slice(0,4);
  if(!avail.length){heal(30,'halte');toast('Aucune relique restante : +30 PV');return;}
- openOverlay(`<div class="panel narrow"><p class="eyebrow">Relique</p><h2>${esc(title)}</h2><p class="sub">${esc(sub)}</p><div class="three">${avail.map((r,i)=>`<button type="button" class="card" data-id="${r.id}"><span class="gl">${icon(r.id)}</span><h3>${esc(r.name)}</h3><p>${esc(r.desc)}</p><span class="k">touche ${i+1}</span></button>`).join('')}</div></div>`);
+ const canRe=rr>0&&pool.length>avail.length;
+ openOverlay(`<div class="panel narrow"><p class="eyebrow">Relique</p><h2>${esc(title)}</h2><p class="sub">${esc(sub)}</p><div class="four">${avail.map((r,i)=>`<button type="button" class="card" data-id="${r.id}"><span class="gl">${icon(r.id)}</span><h3>${esc(r.name)}</h3><p>${esc(r.desc)}</p><span class="k">touche ${i+1}</span></button>`).join('')}</div><div class="row"><button type="button" class="btn" id="relre" ${canRe?'':'disabled'}>Relancer les reliques (${rr})</button><span class="k">${pool.length} reliques possibles</span></div></div>`);
  const choose=id=>{if(!armed())return;applyRelic(RELICS.find(r=>r.id===id));closeOverlay();};
  overlayEl.querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.id)));
+ $('#relre').addEventListener('click',()=>{if(!canRe||!armed())return;relicRR=rr-1;openRelics(title,sub);overlayAt=0;});
  overlayKeys=c=>{const m=NUMKEY[c];if(m!==undefined&&avail[m])choose(avail[m].id);};
 }
 function openHalte(ante){
@@ -1694,8 +1699,8 @@ function openEnd(win,abandon){
   SAVE.runs++;if(win)SAVE.wins++;else if(!abandon)SAVE.deaths++;
   SAVE.kills+=RUN.kills;SAVE.shards+=RUN.final.total;SAVE.total+=RUN.final.total;
   if(RUN.g>SAVE.best){SAVE.best=RUN.g;SAVE.bestLabel=`Acte ${ROM[RUN.act]} · salle ${RUN.roomIdx}`;}
-  RUN.final.palUp=!!(win&&RUN.palier<5&&RUN.palier+1>SAVE.palierMax);
-  if(win)SAVE.palierMax=Math.max(SAVE.palierMax,Math.min(5,RUN.palier+1));
+  RUN.final.palUp=!!(win&&RUN.palier<PALIERS.length-1&&RUN.palier+1>SAVE.palierMax);
+  if(win)SAVE.palierMax=Math.max(SAVE.palierMax,Math.min(PALIERS.length-1,RUN.palier+1));
   persist();
   RUN.final.lore=LORE.filter(l=>l.c(SAVE)&&!before.includes(l.id)).map(l=>l.t);
  }
@@ -1733,7 +1738,7 @@ function openTitle(){
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v7</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v11</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -1801,7 +1806,7 @@ function renderPortail(){
  const n=npcById('portail'),cl=chosenCls;
  const cards=CLASSLIST.map(c=>c.on?`<button type="button" class="cls ${c.id===cl?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===cl}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===cl?'Choisi':'Jouable'}</span></span><p>${c.pitch}</p><span class="mech">${c.mech}</span></button>`:`<div class="cls off"><div class="top"><h3>${c.name}</h3><span class="tag">Bientôt</span></div><p>${c.pitch}</p><span class="mech">${c.mech}</span></div>`).join('');
  const cur=clamp(SAVE.palier||0,0,SAVE.palierMax);
- const pal=SAVE.palierMax>0?`<p class="h-sec">Palier de Brume</p><div class="pal">${PALIERS.map(p=>`<button type="button" class="palbtn ${p.n===cur?'sel':''}" data-p="${p.n}" ${p.n>SAVE.palierMax?'disabled':''}><b>${p.n}</b><span><strong>${p.name}</strong>${esc(p.desc)}</span></button>`).join('')}</div><p class="k" style="margin-top:8px">Chaque palier s’ajoute aux précédents et rapporte 20 % d’éclats en plus. Fais taire le Glas Originel pour débloquer le suivant.</p>`
+ const pal=SAVE.palierMax>0?`<p class="h-sec">Palier de Brume</p><div class="pal">${PALIERS.map(p=>`<button type="button" class="palbtn ${p.n===cur?'sel':''}" data-p="${p.n}" ${p.n>SAVE.palierMax?'disabled':''}><b>${p.n}</b><span><strong>${p.name}</strong>${esc(p.desc)}</span></button>`).join('')}</div><p class="k" style="margin-top:8px">Chaque palier s’ajoute aux précédents, renforce les ennemis de +4 % de PV et +3 % de dégâts, et rapporte 20 % d’éclats en plus. Fais taire le Glas Originel pour débloquer le suivant.</p>`
   :`<p class="h-sec">Palier de Brume</p><p class="tip" style="margin:0">Les Paliers de Brume se débloquent après ta première victoire contre le Glas Originel.</p>`;
  const boons=[];if(mr('sav'))boons.push(`${mr('sav')} niveau${mr('sav')>1?'x':''} d’avance`);if(mr('bag'))boons.push('une relique de départ');if(mr('sec'))boons.push('une seconde flamme');if(mr('cho'))boons.push('4 talents au choix');
  overlayEl.innerHTML=`<div class="panel">${npcHead(n)}<div class="two"><div><p class="h-sec" style="margin-top:0">Classe</p><div class="classes">${cards}</div>${pal}</div><div><p class="h-sec" style="margin-top:0">Commandes · ${CLS[cl].short}</p>${keysHTML(keysFor(cl))}<p class="tip">${tipFor(cl)}</p>${boons.length?`<p class="notice">Bénédictions d’Ismène pour cette descente : ${boons.join(', ')}.</p>`:''}</div></div><div class="row" style="margin-top:22px"><button type="button" class="btn primary big" id="descend">Descendre avec ${art(cl)}${cur?' · Palier '+cur:''}</button><button type="button" class="btn" id="close">Rester au Sanctuaire</button><span class="k">Entrée pour descendre · Échap pour rester</span></div></div>`;
@@ -1812,7 +1817,7 @@ function renderPortail(){
 }
 
 // ───────────────────────── Colporteur
-function genShop(){const n=3+(P.s.clef?1:0);const pool=shuffle(RELICS.filter(r=>!P.relics.includes(r.id)&&(!r.cls||r.cls===P.cls)&&relicUnlocked(r)));return{relics:pool.slice(0,n).map(r=>({id:r.id,price:price(70+randi(0,4)*5)})),sold:{},refreshN:0,freeRefresh:!!P.s.clef,line:pick(MERCHANT_LINES),items:[]};}
+function genShop(){const n=4+(P.s.clef?1:0);const pool=shuffle(RELICS.filter(r=>!P.relics.includes(r.id)&&(!r.cls||r.cls===P.cls)&&relicUnlocked(r)));return{relics:pool.slice(0,n).map(r=>({id:r.id,price:price(70+randi(0,4)*5)})),sold:{},refreshN:0,freeRefresh:!!P.s.clef,line:pick(MERCHANT_LINES),items:[]};}
 function renderShop(){
  const sh=room.shop,g=gold();if(!sh){closeOverlay();return;}
  const items=[];
@@ -1825,7 +1830,7 @@ function renderShop(){
  const refreshCost=sh.freeRefresh?0:price(15+10*sh.refreshN);
  overlayEl.innerHTML=`<div class="panel">${npcHead(MERCHANT,sh.line)}<div class="row" style="justify-content:space-between;margin:0 0 14px"><p class="purse"><span>Ta bourse</span><b>${g}</b><span>or</span></p><span class="k">L’or ne remonte pas au Sanctuaire. Dépense-le.</span></div><div class="shop">${items.map(it=>{const sold=!!sh.sold[it.key];const can=!sold&&g>=it.price;return `<button type="button" class="card ${sold?'sold':''}" data-k="${it.key}" ${can?'':'disabled'}><span class="meta"><span class="br">${it.kind}</span><span>${sold?'Vendu':''}</span></span><span class="gl">${it.g}</span><h3>${esc(it.name)}</h3><p>${esc(it.desc)}</p><span class="price">${sold?'Vendu':it.price+' or'}</span></button>`;}).join('')}</div><div class="row"><button type="button" class="btn" id="refresh" ${g>=refreshCost?'':'disabled'}>Renouveler les reliques · ${refreshCost?refreshCost+' or':'gratuit'}</button><button type="button" class="btn primary" id="leave">Partir</button><span class="k">Échap pour partir. Reviens vers la charrette pour rouvrir l’étal.</span></div></div>`;
  overlayEl.querySelectorAll('[data-k]').forEach(b=>b.addEventListener('click',()=>buyItem(b.dataset.k)));
- $('#refresh').addEventListener('click',()=>{const cost=sh.freeRefresh?0:price(15+10*sh.refreshN);if(gold()<cost)return;RUN.goldF-=cost;if(sh.freeRefresh)sh.freeRefresh=false;else sh.refreshN++;const n=3+(P.s.clef?1:0);const pool=shuffle(RELICS.filter(r=>!P.relics.includes(r.id)&&(!r.cls||r.cls===P.cls)&&relicUnlocked(r)));for(const k in sh.sold)if(k.startsWith('r:'))delete sh.sold[k];sh.relics=pool.slice(0,n).map(r=>({id:r.id,price:price(70+randi(0,4)*5)}));sfx('pick');renderShop();});
+ $('#refresh').addEventListener('click',()=>{const cost=sh.freeRefresh?0:price(15+10*sh.refreshN);if(gold()<cost)return;RUN.goldF-=cost;if(sh.freeRefresh)sh.freeRefresh=false;else sh.refreshN++;const n=4+(P.s.clef?1:0);const pool=shuffle(RELICS.filter(r=>!P.relics.includes(r.id)&&(!r.cls||r.cls===P.cls)&&relicUnlocked(r)));for(const k in sh.sold)if(k.startsWith('r:'))delete sh.sold[k];sh.relics=pool.slice(0,n).map(r=>({id:r.id,price:price(70+randi(0,4)*5)}));sfx('pick');renderShop();});
  $('#leave').addEventListener('click',closeOverlay);overlayKeys=escKeys;
 }
 function buyItem(key){
@@ -2313,7 +2318,7 @@ function drawNpcsPost(){const c=ctx;for(const n of room.npcs){
  else if(n.id==='colporteur'){glow(c,n.x+31,n.y-42,24,'150,255,190',0.5);c.fillStyle='rgba(210,255,225,.9)';c.fillRect(n.x+28,n.y-46,6,7);c.fillStyle='rgba(150,255,200,.9)';c.fillRect(n.x-3.5,n.y-10,1.8,1.4);c.fillRect(n.x+1.5,n.y-10,1.8,1.4);}
  c.restore();
  const near=hyp(P.x-n.tx,P.y-n.ty)<n.tr+50,ly=n.id==='portail'?AR.y0+28:n.y+(NPC_LABEL[n.id]||-48);
- c.save();c.textAlign='center';c.lineJoin='round';c.font='500 21px "Grenze Gotisch", Georgia, serif';c.strokeStyle='rgba(0,0,0,.85)';c.lineWidth=4;c.strokeText(n.name,n.x,ly);c.fillStyle=near?'#fff3d6':'#d8cfb8';c.fillText(n.name,n.x,ly);c.font='700 11px "Alegreya Sans", sans-serif';c.strokeText(n.role.toUpperCase(),n.x,ly+16);c.fillStyle=near?'#f3b94d':'#9a96a8';c.fillText(n.role.toUpperCase(),n.x,ly+16);c.restore();}}
+ c.save();c.textAlign='center';c.lineJoin='round';c.font='500 28px "Grenze Gotisch", Georgia, serif';c.strokeStyle='rgba(0,0,0,.9)';c.lineWidth=5;c.strokeText(n.name,n.x,ly);c.fillStyle=near?'#fff3d6':'#d8cfb8';c.fillText(n.name,n.x,ly);c.font='700 13px "Alegreya Sans", sans-serif';c.strokeText(n.role.toUpperCase(),n.x,ly+20);c.fillStyle=near?'#f3b94d':'#b8b3c4';c.fillText(n.role.toUpperCase(),n.x,ly+20);c.restore();}}
 function drawBraziers(){const c=ctx;c.save();c.globalCompositeOperation='lighter';for(const [bx,by] of BRAZIERS){for(let i=0;i<4;i++){const h=18+Math.sin(T*9+i*1.7+bx)*5,w=7+i%2*3,x=bx+(i-1.5)*5;const g=c.createLinearGradient(0,by-h,0,by+4);g.addColorStop(0,'rgba(255,120,40,0)');g.addColorStop(1,'rgba(255,190,90,.75)');c.fillStyle=g;c.beginPath();c.ellipse(x,by-h/2+1,w/2,h/2,0,0,TAU);c.fill();}if(Math.random()<0.08)parts.push({x:bx+rand(-8,8),y:by-10,vx:rand(-8,8),vy:rand(-50,-25),life:0.9,max:0.9,size:1.6,col:'#ffb35c',layer:'post',drag:0.5});}
  glow(c,1045,250,24,'255,140,60',0.6+0.2*Math.sin(T*6));
  for(let i=0;i<5;i++)glow(c,276.5+i*26,308+Math.sin(T*8+i)*0.8,7,'255,220,150',0.9);
@@ -2592,7 +2597,7 @@ function herStrikeHits(mult,j,stun,shadow){const s=P.s,a=P.face,range=s.atkRange
  return hits;}
 function herStrike(){const s=P.s,j=judge();P.atkT=atkCooldown();P.lastAtk=RUN.time;P.swingT=0.16;P.swingDir=-(P.swingDir||1);P.swA=P.face;
  registerBeat(j,'strike');
- let mult=j.on?1.4*(1+s.beatDmg):0.6;if(j.on&&s.pacte)mult*=1.2;let stun=0;
+ let mult=j.on?1.4*(1+s.beatDmg):0.75;if(j.on&&s.pacte)mult*=1.2;let stun=0;
  const fort=j.on&&j.strong&&s.tempsFort;if(fort){mult*=s.tempsFort>=2?2.6:2;stun=0.5;}
  herStrikeHits(mult,j,stun,false);
  const a=P.face,range=s.atkRange;
@@ -5085,6 +5090,272 @@ window.__v10={F:()=>P.s.v10,pv,NODES,nodeAvailable,rollOffers,takeNode,majCount1
 .tn.own .xl{fill:#0c0e15}
 @media (max-width:560px){.xpair{grid-template-columns:1fr}}
 `;document.head.appendChild(st);})();
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v11 · Lisibilité, rythme et équilibrage
+// Talents à la demande, guide, choix de classe à l’écran titre, HUD retravaillé,
+// reliques plus nombreuses, gardiens plus endurants, paliers 6 à 8.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ───────────────────────── Réglages d’équilibrage (un seul endroit pour ajuster)
+const BAL={
+ hpPerRoom:0.085,   // PV ennemis : +8,5 % par salle franchie dans la run
+ dmgPerRoom:0.03,   // dégâts ennemis : +3 % par salle
+ palHp:0.04,        // chaque palier : +4 % de PV ennemis (en plus de son effet propre)
+ palDmg:0.03,       // chaque palier : +3 % de dégâts ennemis
+ palBudget:0.04,    // chaque palier : +4 % d’ennemis par vague
+ bossMul:[1,1.9,1.8,1.8], // PV des gardiens par acte (acte I : 1000 → 1900 au palier 0)
+ phaseLock:1.2,     // à chaque changement de phase, le gardien se protège 1,2 s…
+ phaseLockDmg:0.15, // …et ne subit que 15 % des dégâts pendant ce temps
+ p6Spd:1.12, p8Elite:1.4, p8Hp:0.85};
+
+// ───────────────────────── Paliers : rampe continue + trois nouveaux paliers
+PALIERS.push(
+ {n:6,name:'Hâte',desc:'Les ennemis sont 12 % plus rapides.'},
+ {n:7,name:'Vagues sans fin',desc:'Chaque salle de combat compte une vague de plus.'},
+ {n:8,name:'Le Glas éternel',desc:'Tu as 15 % de PV max en moins et les champions ont +40 % de PV.'});
+hpMul=function(){return (1+BAL.hpPerRoom*(G()-1))*(PAL()>=1?1.2:1)*(1+BAL.palHp*PAL());};
+dmgMul=function(){return (1+BAL.dmgPerRoom*(G()-1))*(PAL()>=3?1.2:1)*(1+BAL.palDmg*PAL());};
+spdMul=function(){return (1+0.012*(G()-1))*(PAL()>=6?BAL.p6Spd:1);};
+budget=function(){return (4.5+1.5*(G()-1))*(PAL()>=2?1.2:1)*(1+BAL.palBudget*PAL());};
+const _pr11=planRoom;
+planRoom=function(type){const w=_pr11(type);if(type==='combat'&&w.length&&PAL()>=7)w.push(genWave(budget()*0.7,allowedTypes()));return w;};
+const _ce11=createEnemy;
+createEnemy=function(type,x,y,elite=false){const e=_ce11(type,x,y,elite);if(e&&elite&&PAL()>=8&&!RUN.hub){e.maxHp*=BAL.p8Elite;e.hp=e.maxHp;}return e;};
+const _am11=applyMeta;
+applyMeta=function(){_am11();if(P&&RUN&&!RUN.hub&&PAL()>=8){P.s.maxHp=Math.round(P.s.maxHp*BAL.p8Hp);P.hp=P.s.maxHp;}};
+
+// ───────────────────────── Classes
+const _bs11=baseStats;
+baseStats=function(cls){const s=_bs11(cls);
+ if(cls==='lum'){s.atkDmg=15;}
+ if(cls==='her'){s.atkDmg=13;s.beatWin=0.11;}
+ if(cls==='tis'){s.maxHp=100;s.tension=0.4;}
+ return s;};
+
+// ───────────────────────── Gardiens : plus de PV, phases garanties, chrono
+const _cb11=createBoss;
+createBoss=function(){const e=_cb11();const f=(BAL.bossMul[RUN.act]||1)*(1+BAL.palHp*PAL());e.maxHp*=f;e.hp=e.maxHp;RUN.bossStart=RUN.time;return e;};
+const _bd11=bossDefeated;
+bossDefeated=function(e){(RUN.bossT||(RUN.bossT={}))[RUN.act]=RUN.time-(RUN.bossStart||RUN.time);_bd11(e);};
+const _hit11=hitEnemy;
+hitEnemy=function(e,base,o){
+ o=o||{};
+ if(!e||e.dead||!P||!P.s)return _hit11(e,base,o);
+ const s=P.s;
+ if(s.stunDmg&&e.stun>0)base*=1+s.stunDmg;
+ if(e.type!=='boss'||e.fixed)return _hit11(e,base,o);
+ if(s.bossDmg)base*=1+s.bossDmg;
+ if(e.lockT>RUN.time)base*=BAL.phaseLockDmg;
+ const hp0=e.hp,guard=hp0>e.maxHp*0.34?1e7:0;
+ e.hp+=guard;const d=_hit11(e,base,o);e.hp-=guard;
+ if(!e.dead){for(const t of[0.66,0.33]){const th=e.maxHp*t;if(hp0>th&&e.hp<th-1){e.hp=th-1;e.lockT=RUN.time+BAL.phaseLock;break;}}if(e.hp<=0)killEnemy(e);}
+ return d;};
+const _dep11=drawEnemyPost;
+drawEnemyPost=function(e){_dep11(e);if(e.type==='boss'&&!e.dead&&e.lockT>RUN.time){const c=ctx,k=(e.lockT-RUN.time)/BAL.phaseLock;c.save();c.globalCompositeOperation='lighter';c.strokeStyle=`rgba(230,225,255,${0.25+0.5*k})`;c.lineWidth=4;c.setLineDash([10,6]);c.lineDashOffset=-T*40;c.beginPath();c.arc(e.x,e.y,e.r*1.3,0,TAU);c.stroke();c.restore();}};
+const _oe11=openEnd;
+openEnd=function(win,abandon){_oe11(win,abandon);const bt=RUN&&RUN.bossT;if(!bt)return;const ks=Object.keys(bt);if(!ks.length)return;const tl=overlayEl.querySelector('.tiles');if(!tl||tl.querySelector('.bosst'))return;
+ tl.insertAdjacentHTML('beforeend',`<div class="tile bosst"><span>Combats de gardien</span><b>${ks.map(a=>`${ROM[a]} ${Math.round(bt[a])} s`).join(' · ')}</b></div>`);};
+
+// ───────────────────────── Reliques : 9 nouvelles
+Object.assign(ICONS,{
+ gant:'M7 21v-8l-2-4V6a1 1 0 0 1 2 0v4M7 10V4a1 1 0 0 1 2 0v6M9 9V3a1 1 0 0 1 2 0v6M11 9V4a1 1 0 0 1 2 0v7l2-2a1.5 1.5 0 0 1 2 2l-4 5v6',
+ fiole:'M10 3h4M10 3v5l-4 7a4 4 0 0 0 3.5 6h5a4 4 0 0 0 3.5-6l-4-7V3M8 15c2 1 6 1 8 0',
+ ancre:ci(12,5,2)+'M12 7v14M8 11h8M4 14a8 8 0 0 0 16 0M4 14l2 1M20 14l-2 1',
+ pendule:'M6 3h12M12 3v11'+ci(12,17,3)+'M8 21h8',
+ os:'M7 7l10 10'+ci(6,5,1.8)+ci(5,7,1.8)+ci(18,17,1.8)+ci(17,19,1.8),
+ cierge:'M9 21V10h6v11M8 21h8M12 10V7M12 3c1 1.5 1 2.5 0 4c-1-1.5-1-2.5 0-4M10 14h4',
+ chaineg:'M9 15l6-6M7 11l-2 2a3.5 3.5 0 0 0 5 5l2-2M17 13l2-2a3.5 3.5 0 0 0-5-5l-2 2',
+ boussole:ci(12,12,9)+'M15 9l-2 4-4 2 2-4z',
+ lacry:'M12 3c3 5 5 7.5 5 10.5a5 5 0 0 1-10 0C7 10.5 9 8 12 3zM10 14a2 2 0 0 0 2 2'});
+RELICS.push(
+ {id:'gant',g:'✋',name:'Gantelet du sonneur',desc:'+15 % de vitesse d’attaque.',apply:s=>{s.atkSpeed+=0.15;}},
+ {id:'fiole',g:'⚱',name:'Fiole de sang tiède',desc:'Chaque ennemi vaincu te rend 2 PV.',apply:s=>{s.regenKill+=2;}},
+ {id:'ancre',g:'⚓',name:'Ancre de brume',desc:'−12 % de dégâts subis.',apply:s=>{s.dmgTaken*=0.88;}},
+ {id:'pendule',g:'⏚',name:'Pendule du beffroi',desc:'Ton esquive se recharge 25 % plus vite.',apply:s=>{s.dashCd*=0.75;}},
+ {id:'os',g:'⚚',name:'Os creux',desc:'+10 PV max et +8 % de vitesse de déplacement.',apply:s=>{s.maxHp+=10;s.speed*=1.08;}},
+ {id:'lacry',g:'◌',name:'Lacrymatoire',desc:'+25 % de soins reçus.',apply:s=>{s.healMul=(s.healMul||1)*1.25;}},
+ {id:'boussole',g:'⌖',name:'Boussole brisée',desc:'+2 relances de talents, tout de suite.',apply:s=>{if(RUN)RUN.rerolls+=2;}},
+ {id:'cierge',lock:40,g:'♰',name:'Cierge votif',desc:'+15 % de dégâts contre les gardiens.',apply:s=>{s.bossDmg=(s.bossDmg||0)+0.15;}},
+ {id:'chaineg',lock:35,g:'⛓',name:'Chaîne de glas',desc:'Les ennemis étourdis subissent +25 % de dégâts.',apply:s=>{s.stunDmg=(s.stunDmg||0)+0.25;}});
+const _heal11=heal;
+heal=function(n,src){if(P&&P.s&&P.s.healMul)n*=P.s.healMul;_heal11(n,src);};
+
+// ───────────────────────── Talents : uniquement à la demande (bouton ou Tab)
+pumpOverlay=function(){if(!overlayEl.hidden||state!=='play'||trans||!P||P.dead)return;if(queue.length)queue.shift()();};
+function openTalents(){if(!P||P.pendingLv<=0||!overlayEl.hidden||state!=='play'||P.dead||trans)return;P.pendingLv--;RUN.talOpen=true;openLevelUp();}
+const _olu11=openLevelUp;
+openLevelUp=function(o){
+ _olu11(o);
+ const later11=()=>{if(!armed())return;P.pendingLv++;RUN.talOpen=false;closeOverlay();};
+ const rr=overlayEl.querySelector('#reroll');
+ if(rr)rr.insertAdjacentHTML('afterend','<button type="button" class="btn" id="tallater">Plus tard · Échap</button>');
+ const b=$('#tallater');if(b)b.addEventListener('click',later11);
+ const k=overlayKeys;overlayKeys=(c,e)=>{if(c==='Escape'){later11();return;}if(k)k(c,e);};
+ const ey=overlayEl.querySelector('.eyebrow');if(ey&&P.pendingLv>0)ey.textContent+=` · encore ${P.pendingLv} après celui-ci`;
+};
+const _co11=closeOverlay;
+closeOverlay=function(){const ch=RUN&&RUN.talOpen;if(RUN)RUN.talOpen=false;_co11();if(ch&&P&&P.pendingLv>0&&state==='play'&&!P.dead)openTalents();};
+const _gx11=gainXp;
+gainXp=function(n){const l0=P.level;_gx11(n);if(P.level>l0&&state==='play'&&RUN&&!RUN.hub)toast(`Niveau ${P.level} · un talent t’attend (Tab)`,2.2);};
+const _orc11=onRoomCleared;
+onRoomCleared=function(){_orc11();if(P&&P.pendingLv>0&&RUN&&!RUN.hub)later(1.3,()=>{if(P.pendingLv>0)toast(`${P.pendingLv} talent${P.pendingLv>1?'s':''} à attribuer · bouton Talents ou Tab`,3);});};
+const tbtn=document.createElement('button');tbtn.type='button';tbtn.id='hTal';tbtn.hidden=true;hudEl.appendChild(tbtn);
+tbtn.addEventListener('click',()=>{initAudio();openTalents();});
+const gbtn=document.createElement('button');gbtn.type='button';gbtn.className='pausebtn';gbtn.id='hGuide';gbtn.textContent='Guide · H';
+$('#hPause').insertAdjacentElement('afterend',gbtn);
+gbtn.addEventListener('click',()=>{if(state==='play'&&overlayEl.hidden&&P&&!P.dead)openGuide();});
+addEventListener('keydown',e=>{
+ if(state!=='play'||!overlayEl.hidden||!P||P.dead||trans)return;
+ if(e.code==='Tab'){e.preventDefault();keys.delete('Tab');if(!e.repeat)openTalents();}
+ else if(e.code==='KeyH'&&!e.repeat)openGuide();
+});
+const _sh11=setHint;
+setHint=function(){_sh11();const h=$('#hHint');if(!h||!P)return;h.innerHTML+=RUN&&RUN.hub?' <kbd>H</kbd> ouvre le guide.':' · <kbd>Tab</kbd> choisir un talent · <kbd>H</kbd> guide';};
+const _op11=openPause;
+openPause=function(){_op11();const r=$('#resume');if(!r||$('#pguide'))return;r.insertAdjacentHTML('afterend','<button type="button" class="btn" id="pguide">Comment jouer</button>');$('#pguide').addEventListener('click',()=>openGuide(()=>{closeOverlay();openPause();}));};
+
+// ───────────────────────── HUD : recharges en secondes, barres plus lisibles
+function cdSec(id){switch(id){
+ case 'dash':return P.cls==='gou'&&P.s.colosse?P.stompCd:(P.dashCh>0?0:P.dashRecT);
+ case 'a':return P.aCd;case 'e':return P.eCd;case 'f':return P.ultCd;case 'vol':return P.vCd;
+ case 'r':return P.cls==='lum'?0:P.rCd;default:return 0;}}
+const _bsl11=buildSlots;
+buildSlots=function(){_bsl11();for(const sl of SLOTS){if(!sl.el)continue;sl.el.insertAdjacentHTML('beforeend','<strong class="cds"></strong>');sl.cs=sl.el.querySelector('.cds');sl.prevCd=0;}};
+const hpBar=$('#hHp').parentElement,hpTrail=document.createElement('span');hpTrail.className='trail';hpBar.insertBefore(hpTrail,hpBar.firstChild);
+let trailF=1,hudT=0;
+const _uh11=updateHud;
+updateHud=function(){
+ _uh11();
+ if(state!=='play'||!P)return;
+ const now=performance.now(),dt=Math.min(0.1,(now-(hudT||now))/1000);hudT=now;
+ const f=clamp(P.hp/P.s.maxHp,0,1);
+ if(f>=trailF)trailF=f;else trailF=Math.max(f,trailF-dt*0.35);
+ const tw=Math.round(trailF*1000)/10+'%';if(hpTrail._w!==tw){hpTrail._w=tw;hpTrail.style.width=tw;}
+ hpBar.classList.toggle('low',f<0.3&&!P.dead);
+ for(const sl of SLOTS){if(!sl.el||!sl.cs)continue;
+  const frac=clamp(sl.cd(),0,1),p=(Math.round(frac*100)/100)+'';if(sl.el._p!==p){sl.el._p=p;sl.el.style.setProperty('--p',p);}
+  const locked=sl.locked(),sec=locked?0:cdSec(sl.id);
+  const txt=sec>0.25?(sec>=10?String(Math.ceil(sec)):sec.toFixed(1).replace('.',',')):'';
+  if(sl.cs._v!==txt){sl.cs._v=txt;sl.cs.textContent=txt;}
+  if(!locked&&sl.prevCd>0.25&&sec<=0.05){sl.el.classList.remove('ready');void sl.el.offsetWidth;sl.el.classList.add('ready');}
+  sl.prevCd=sec;}
+ const show=!RUN.hub&&P.pendingLv>0&&!P.dead;
+ if(tbtn.hidden===show)tbtn.hidden=!show;
+ if(show){const t=`✦ ${P.pendingLv} talent${P.pendingLv>1?'s':''} à choisir · Tab`;if(tbtn._t!==t){tbtn._t=t;tbtn.textContent=t;}}
+};
+// Barres au-dessus du héros
+const RESCOL={lum:'246,199,102',her:'166,212,255',tis:'255,107,138'};
+const _dn11=drawNums;
+drawNums=function(){_dn11();
+ if(state!=='play'||!P||P.dead||!RUN||RUN.hub)return;
+ const c=ctx,w=50,x=P.x-w/2,y=P.y+(P.cls==='gou'?P.r+12:22);
+ const hp=clamp(P.hp/P.s.maxHp,0,1);let rs,rc;
+ if(P.cls==='gou'){rs=P.cor/corCap();rc=TIERCOL[gouTier()];}
+ else if(P.cls==='her'){rs=P.res/resCap();rc=RESCOL.her;}
+ else if(P.cls==='tis'){rs=P.bob/100;rc=RESCOL.tis;}
+ else{rs=P.lueur/100;rc=RESCOL.lum;}
+ c.save();
+ c.fillStyle='rgba(0,0,0,.72)';c.fillRect(x-1,y-1,w+2,10);
+ c.fillStyle=hp<0.3?`rgba(255,${60+40*Math.sin(T*10)},70,1)`:'#e04f5b';c.fillRect(x,y,w*hp,5);
+ if(P.shield>=1){c.fillStyle='rgba(246,236,200,.9)';c.fillRect(x,y,w*clamp(P.shield/P.s.maxHp,0,1),2);}
+ c.fillStyle=`rgba(${rc},1)`;c.fillRect(x,y+6,w*clamp(rs,0,1),2);
+ c.restore();};
+
+// ───────────────────────── Guide « Comment jouer »
+const DIFF={lum:'Accessible',gou:'Intermédiaire',her:'Exigeant',tis:'Intermédiaire'};
+const CLSHELP={
+ lum:'Ta lanterne éclaire et expose les ennemis. Le Faisceau (clic droit) consomme la Lueur, que tu regagnes en frappant les exposés. Lancer la lanterne te plonge dans l’Obscur : plus rapide, plus de critiques, mais moins de lumière.',
+ gou:'Dévore la Brume (clic droit maintenu) pour remplir ta Corruption : plus elle monte, plus tu frappes fort. Recrache-la (R) avant 100, sinon c’est la Rupture : tu exploses et tu te blesses.',
+ her:'Un cercle bat la mesure sous tes pieds. Frappe quand il se referme : les coups en mesure font plus de dégâts et montent ta Cadence. Hors mesure, la Cadence retombe. Le Grand Glas (R) fait tomber une cloche géante.',
+ tis:'Tire des aiguilles à distance, noue des fils sur les ennemis (clic droit), puis Arrache-les (R) pour les projeter les uns contre les autres. Les ennemis attachés sont exposés et ralentis.'};
+function openGuide(back){
+ if(!SAVE.flags.guide){SAVE.flags.guide=1;persist();}
+ const card=(n,t,x)=>`<div class="gd-card"><b>${n}</b><h3>${t}</h3><p>${x}</p></div>`;
+ const html=`<div class="panel guide"><p class="eyebrow">Guide</p><h2>Comment jouer</h2>
+ <p class="sub">La Brume est un roguelite d’action. Tu descends salle après salle, tu tomberas souvent, et chaque retour au Sanctuaire te rend un peu plus fort.</p>
+ <p class="h-sec">L’essentiel</p><div class="gd-grid">
+ ${card(1,'La descente','Une descente compte trois actes. Chaque acte enchaîne des salles puis un gardien. Quand une salle est purifiée, des portes s’ouvrent au nord : leur symbole annonce la suite (combat, champion, autel, halte, Colporteur).')}
+ ${card(2,'Mourir fait partie du jeu','À la mort, tu remontes au Sanctuaire. Ton niveau, tes talents, tes reliques et ton or disparaissent. Tu gardes une partie des Éclats de Mémoire et tout ce que tu as débloqué.')}
+ ${card(3,'Devenir fort pendant la descente','Les ennemis donnent de l’expérience. À chaque niveau, un talent t’attend : clique sur le bouton Talents, ou appuie sur Tab, quand tu es à l’abri. Les autels et les champions offrent des reliques ; le Colporteur vend contre de l’or.')}
+ ${card(4,'Lumière et Brume','Les ennemis dans ta lumière sont exposés : ralentis, ils subissent +25 % de dégâts. Les Voilés ne craignent presque rien dans le noir : garde-les dans ta lumière.')}
+ ${card(5,'Lire le combat','Un cercle ou une bande rouge au sol annonce une attaque : sors-en. L’esquive (Espace) te rend intouchable un instant. Sous tes pieds, deux petites barres rappellent tes PV et ta ressource.')}
+ ${card(6,'Le Sanctuaire','Entre deux descentes : Ismène renforce ta flamme et tes Résonances, Corbin forge de nouvelles reliques, l’Archiviste tient tes chroniques et la Carte du Glas. Le Portail, au nord, lance la descente.')}
+ </div>
+ <p class="h-sec">Les quatre formes</p><div class="gd-grid">${CLASSLIST.map(c=>`<div class="gd-card" style="--c:${CLS[c.id].color}"><b style="color:var(--c)">${DIFF[c.id]}</b><h3>${c.name}</h3><p>${CLSHELP[c.id]}</p></div>`).join('')}</div>
+ <p class="h-sec">Pour aller plus loin</p><dl class="keys">
+ <dt><b>Paliers de Brume</b></dt><dd>Après ta première victoire, tu peux redescendre plus difficile. Chaque palier ajoute une contrainte et rapporte plus d’éclats.</dd>
+ <dt><b>Accoutumance</b></dt><dd>Si tu abuses toujours du même mécanisme, la Brume s’y habitue : certains ennemis y résistent. Change de style, ou frappe pendant leurs fenêtres d’exposition.</dd>
+ <dt><b>Échos et tombes</b></dt><dd>Là où tu tombes, une tombe d’Écho t’attend à la descente suivante. Recueille-la pour un bonus.</dd>
+ <dt><b>Carte du Glas</b></dt><dd>Gardiens, champions, autels et tombes laissent des fragments de carte. Un chapitre complet révèle une Vérité.</dd>
+ <dt><b>Résonances</b></dt><dd>Un arbre permanent chez Ismène. Chaque nœud t’offre un avantage et te coûte quelque chose.</dd></dl>
+ <p class="h-sec">Commandes · ${CLS[chosenCls].short}</p>${keysHTML([...keysFor(chosenCls),['Tab','Choisir un talent en attente'],['H','Ouvrir ce guide']])}
+ <div class="row" style="margin-top:20px"><button type="button" class="btn primary" id="gclose">${back?'Retour':'Compris'}</button><span class="k">Échap pour fermer</span></div></div>`;
+ openOverlay(html);
+ const done=()=>{if(back)back();else closeOverlay();};
+ $('#gclose').addEventListener('click',done);
+ overlayKeys=c=>{if(c==='Escape'||c==='Enter')done();};
+}
+const _eh11=enterHub;
+enterHub=function(){_eh11();if(!SAVE.flags.guide)later(1.3,()=>{if(overlayEl.hidden&&state==='play'&&RUN&&RUN.hub)openGuide();});};
+
+// ───────────────────────── Écran titre : choix de la forme avant le Sanctuaire
+function titleCls(c){if(!CLS[c])return;chosenCls=c;SAVE.cls=c;persist();P=newPlayer(c);P.x=W/2+150;P.y=H/2+40;sfx('pick');openTitle();}
+openTitle=function(){
+ const back=SAVE.runs>0;
+ const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
+ const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v11</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
+ <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
+ <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ overlayAt=0;
+ overlayEl.querySelectorAll('button.cls').forEach(b=>b.addEventListener('click',()=>titleCls(b.dataset.cls)));
+ $('#go').addEventListener('click',enterHub);
+ $('#howto').addEventListener('click',()=>openGuide(openTitle));
+ overlayKeys=c=>{if(c==='Enter')enterHub();else if(c==='KeyH')openGuide(openTitle);else{const m=NUMKEY[c];if(m!==undefined&&CLASSLIST[m])titleCls(CLASSLIST[m].id);}};
+};
+
+// ───────────────────────── Styles v11
+(function(){const st=document.createElement('style');st.id='v11css';st.textContent=`
+#overlay{z-index:20}#toast,#banner{z-index:15}
+.hud-bl{width:min(380px,calc(50vw - 316px));min-width:250px;gap:7px}
+.stat{grid-template-columns:92px minmax(0,1fr) 78px}
+.stat .lab{font-size:12px;font-weight:700;color:#d8d0bb}
+.stat .val{font-size:14px;font-weight:700}
+.hud-bl .stat:nth-child(-n+2) .bar{height:17px;border-radius:3px}
+.bar.hp{position:relative}
+.bar.hp .trail{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,232,205,.55)}
+#hHp{position:relative;z-index:1}
+.bar.hp.low{animation:lowp .8s ease-in-out infinite}
+@keyframes lowp{50%{box-shadow:0 0 0 2px rgba(255,70,80,.85),0 0 18px rgba(255,60,70,.6)}}
+.slot{width:78px;height:76px}
+.slot .sic .ic{width:26px;height:26px}
+.slot span{font-size:11px}
+.slot .cd{top:0;height:auto!important;background:conic-gradient(rgba(4,5,10,.8) calc(var(--p,0)*360deg),rgba(0,0,0,0) 0)}
+.slot .cds{position:absolute;inset:0;display:grid;place-items:center;font:700 23px var(--f-body);color:#fff;text-shadow:0 0 6px #000,0 2px 4px #000;z-index:2;pointer-events:none}
+.slot.ready{animation:rdy .55s ease-out}
+@keyframes rdy{0%{border-color:#ffd889;box-shadow:0 0 0 2px var(--flame),0 0 28px rgba(243,185,77,.85)}}
+#hTal{position:absolute;left:50%;bottom:calc(108px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);pointer-events:auto;font:700 15px var(--f-body);letter-spacing:.05em;padding:10px 20px;border-radius:999px;border:1px solid var(--flame);background:rgba(44,30,8,.94);color:#ffe0a0;cursor:pointer;box-shadow:0 0 22px rgba(243,185,77,.45);animation:talp 1.4s ease-in-out infinite}
+#hTal:hover{background:#4a3410}
+@keyframes talp{50%{box-shadow:0 0 34px rgba(243,185,77,.8)}}
+.quote{margin:12px 0 0;font-size:clamp(18px,1.6vw,22px);line-height:1.5;color:#f4ead2;max-width:66ch;border:1px solid #5a4a2a;border-left:4px solid var(--flame);background:linear-gradient(90deg,rgba(243,185,77,.13),rgba(243,185,77,.02));padding:14px 18px;border-radius:4px;animation:qin .35s ease-out}
+@keyframes qin{from{opacity:0;transform:translateY(6px)}}
+.npc-head h2{font-size:clamp(38px,4.6vw,54px)}
+.npc-head .eyebrow{font-size:13px;color:var(--flame)}
+.four{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.guide{width:min(1060px,100%)}
+.gd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.gd-card{padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:4px;border-top:3px solid var(--c,var(--flame))}
+.gd-card b{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--flame)}
+.gd-card h3{font-size:24px;margin:2px 0 4px}
+.gd-card p{margin:0;font-size:14.5px;color:#d2cab6}
+.guide .keys dt{text-align:left;color:var(--bone)}
+@media (max-width:760px){.slot{width:56px;height:56px}.slot .cds{font-size:17px}}
+@media (prefers-reduced-motion:reduce){#hTal,.bar.hp.low{animation:none}}
+`;document.body.appendChild(st);})();
+window.__v11={BAL,openGuide,openTalents};
+
 
 // ───────────────────────── Démarrage
 function start(){resize();initTitle();requestAnimationFrame(frame);}
