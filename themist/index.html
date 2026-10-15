@@ -2854,7 +2854,7 @@ function drawMetronome(c){const s=P.s,p=herPeriod(),ph=P.beatPh,since=ph*p,toNex
  c.strokeStyle=`rgba(${col},${win?0.95:0.35})`;c.lineWidth=win?2.6:1.3;ell(c,P.x,fy,20,7);c.stroke();
  const k=1-ph,rx=20*(1+1.7*k),ry=7*(1+1.7*k);c.strokeStyle=`rgba(${col},${0.12+0.6*(1-k)})`;c.lineWidth=1.7;ell(c,P.x,fy,rx,ry);c.stroke();
  if(P.beatFlash>0){const f=P.beatFlash/0.12;glow(c,P.x,fy,36,col,0.32*f);}
- const n=s.cadMax;for(let i=0;i<n;i++){const an=Math.PI*(0.18+0.64*(n>1?i/(n-1):0.5)),px=P.x-Math.cos(an)*31,py=fy+Math.sin(an)*12;const on=i<P.cad;c.fillStyle=on?(P.cad>=n?'rgba(255,230,170,.95)':'rgba(190,225,255,.95)'):'rgba(120,130,160,.3)';c.beginPath();c.arc(px,py,on?2.3:1.5,0,TAU);c.fill();}}
+ const n=s.cadMax;for(let i=0;i<n;i++){const u=n>1?i/(n-1)-0.5:0,px=P.x+u*Math.min(56,n*8),py=P.y+39+Math.abs(u)*3;const on=i<P.cad;c.fillStyle=on?(P.cad>=n?'rgba(255,230,170,.95)':'rgba(190,225,255,.95)'):'rgba(120,130,160,.3)';c.beginPath();c.arc(px,py,on?2.3:1.5,0,TAU);c.fill();}}
 // ───────────────────────── Rendu : monde
 function bellShape(c,x,y,s,rot){c.save();c.translate(x,y);c.rotate(rot||0);c.scale(s,s);
  c.beginPath();c.moveTo(-10,6);c.quadraticCurveTo(-8,3,-7,-2);c.bezierCurveTo(-6.5,-12.5,6.5,-12.5,7,-2);c.quadraticCurveTo(8,3,10,6);c.quadraticCurveTo(0,8.5,-10,6);c.closePath();
