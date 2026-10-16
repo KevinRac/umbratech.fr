@@ -970,7 +970,7 @@ function onRoomCleared(){
 function next1(){return room.doors.length===1&&room.doors[0].type==='halte';}
 function updateRoom(dt){
  if(room.annT>0){room.annT-=dt;if(room.annT<=0)announceTheme();}
- for(const sp of room.spawning){sp.t-=dt;if(sp.t<=0){const ne=createEnemy(sp.type,sp.x,sp.y,sp.elite);if(sp.key)ne.key=true;if(sp.tag)ne.tag=sp.tag;if(sp.siege)ne.siege=true;if(sp.cm)ne.cm=true;sp.done=true;sparks(sp.x,sp.y,6,'#b9a6ff');}}
+ for(const sp of room.spawning){sp.t-=dt;if(sp.t<=0){const ne=createEnemy(sp.type,sp.x,sp.y,sp.elite);if(sp.key)ne.key=true;if(sp.tag)ne.tag=sp.tag;if(sp.siege)ne.siege=true;if(sp.cm)ne.cm=true;if(sp.role)ne.role=sp.role;sp.done=true;sparks(sp.x,sp.y,6,'#b9a6ff');}}
  room.spawning=room.spawning.filter(s=>!s.done);
  for(const d of room.doors)d.open=Math.min(1,d.open+dt*1.6);
  if(room.npcs)updateNpcs();
@@ -1516,7 +1516,7 @@ function drawTelegraphs(){
   if(e.type==='bouffi'&&e.state==='fuse'){const k=1-e.t/0.7;c.fillStyle=`rgba(255,120,50,${0.08+0.14*k})`;c.strokeStyle=`rgba(255,150,70,${0.55+0.35*Math.sin(T*30)})`;c.lineWidth=2;c.beginPath();c.arc(e.x,e.y,82,0,TAU);c.fill();c.stroke();}
   if(e.type==='voile'&&e.state==='blink'){c.strokeStyle=`rgba(220,225,255,${0.4+0.3*Math.sin(T*30)})`;c.lineWidth=2;c.setLineDash([4,5]);c.beginPath();c.arc(e.bx,e.by,18,0,TAU);c.stroke();c.setLineDash([]);}
   if(e.type==='voile'&&e.state==='wind'){const k=clamp(1-e.t/e.windTot,0,1);c.fillStyle=`rgba(200,205,255,${0.08+0.16*k})`;c.beginPath();c.moveTo(e.x,e.y);c.arc(e.x,e.y,e.r+55,e.ang-1.1,e.ang+1.1);c.closePath();c.fill();}
-  if((e.type==='brute'||e.type==='boss')&&e.state==='wind'){const len=e.type==='boss'?560:330,w=e.r*2;c.save();c.translate(e.x,e.y);c.rotate(e.ang);c.fillStyle='rgba(255,70,60,0.13)';c.fillRect(0,-w/2,len,w);const k=clamp(1-e.t/e.windTot,0,1);c.fillStyle='rgba(255,80,60,0.24)';c.fillRect(0,-w/2,len*k,w);c.restore();}
+  if((e.type==='brute'||e.type==='boss')&&e.state==='wind'){const len=e.type==='boss'?560:330,w=e.r*2;c.save();c.translate(e.x,e.y);c.rotate(e.ang);const zc=e.type==='boss'?TELE.zone:'255,75,60';c.fillStyle=`rgba(${zc},0.13)`;c.fillRect(0,-w/2,len,w);const k=clamp(1-e.t/e.windTot,0,1);c.fillStyle=`rgba(${zc},0.24)`;c.fillRect(0,-w/2,len*k,w);c.restore();}
  }
  c.restore();
 }
@@ -1738,7 +1738,7 @@ function openTitle(){
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v12</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v13</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -2492,7 +2492,7 @@ function drawHeartPost(e){const c=ctx,r=e.r,b=beatK();glow(c,e.x,e.y,r*(0.75+0.3
  const open=e.phase===1?0.25:e.phase===2?0.6:1;c.fillStyle='rgba(250,240,255,.95)';ell(c,e.x,e.y-r*0.05,r*0.12*open+1,r*0.26);c.fill();c.fillStyle='rgba(120,30,170,.95)';ell(c,e.x+clamp((P.x-e.x)/60,-3,3),e.y-r*0.05+clamp((P.y-e.y)/80,-4,4),r*0.05*open+0.8,r*0.15);c.fill();
  if(e.state==='ring'){const k=1-e.t/0.55;c.strokeStyle=`rgba(230,200,255,${0.7*k})`;c.lineWidth=4;c.beginPath();c.arc(e.x,e.y,r+12+22*k,0,TAU);c.stroke();}
  if(e.beams){c.save();c.beginPath();c.rect(AR.x0,AR.y0,AR.x1-AR.x0,AR.y1-AR.y0);c.clip();const act=e.state==='sweep';for(const a of e.beams){const ex=e.x+Math.cos(a)*900,ey=e.y+Math.sin(a)*900;const ln=()=>{c.beginPath();c.moveTo(e.x,e.y);c.lineTo(ex,ey);c.stroke();};
-  if(!act){c.strokeStyle=`rgba(230,210,255,${0.3+0.25*Math.sin(T*30)})`;c.lineWidth=2;c.setLineDash([12,9]);c.lineDashOffset=-T*60;ln();c.setLineDash([]);}
+  if(!act){c.strokeStyle=`rgba(${TELE.zone},${0.45+0.3*Math.sin(T*30)})`;c.lineWidth=2;c.setLineDash([12,9]);c.lineDashOffset=-T*60;ln();c.setLineDash([]);}
   else{c.strokeStyle='rgba(150,100,255,.28)';c.lineWidth=30;ln();c.strokeStyle='rgba(215,185,255,.7)';c.lineWidth=11;ln();c.strokeStyle='rgba(255,250,255,.95)';c.lineWidth=3;ln();for(let k=0;k<5;k++){const d=((T*500+k*180)%900);glow(c,e.x+Math.cos(a)*d,e.y+Math.sin(a)*d,14,'230,210,255',0.5);}}}c.restore();}}
 function updateHeart(e,dt,dP,touching){
  const ph=bossPhase(e);if(ph>e.phase){e.phase=ph;e.queue=[];e.beams=null;e.state='idle';room.drainT=0;toast(ph===2?'Le Glas Originel engloutit la lumière':'Le Glas Originel se fend : son cœur est à nu',2.4);RUN.fogBoost=ph===2?0.04:0.07;bossRing(e,Math.random());shake(12,0.5);sfx('phase');e.patT=1.2;}
@@ -5305,7 +5305,7 @@ openTitle=function(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
  const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v12</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v13</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
  <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
  <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
  <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
@@ -5533,7 +5533,7 @@ function updateMere(e,dt,slow,dP,touching){
  e.mk+=((e.phase===3?0.25:e.phase===2?0.8:1)-e.mk)*Math.min(1,dt*1.5);
  e.reach+=((e.reachTo||0)-e.reach)*Math.min(1,dt*(e.reachTo?8:4));
  e.dodgeCd-=dt;
- const gap=MERE_GAP[e.phase]*(PAL()>=5?0.85:1),spdK=e.phase===3?1.4:1;
+ const gap=MERE_GAP[e.phase]*(PAL()>=5?0.85:1)*pactAgg(),spdK=e.phase===3?1.4:1;
  // saisie en cours : elle attire sa proie
  if(e.grabbing){
   if(P.grabT>0&&!P.dead){P.grabT-=dt;const dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy)||1,m=e.r+P.r+16;if(d>m){const v=Math.min(d-m,320*dt);P.x+=dx/d*v;P.y+=dy/d*v;collidePlayer();}e.armT={x:P.x,y:P.y};}
@@ -5701,6 +5701,329 @@ openEnd=function(win,abandon){
 #murmur span{display:block;font-size:14.5px;line-height:1.4}
 @media (prefers-reduced-motion:reduce){#murmur{transition:none}}`;document.head.appendChild(st);})();
 window.__v12={profile,runAxes,CMS,PR,mereChooseCopy};
+
+
+// ═════════════════════════ v13 · Pacte de la Brume, ennemis à rôles, équipements, gardiens II et III en trois temps
+// Pacte : avant chaque acte, un avantage fort contre une contrainte que le Brumeux choisit d’après ton profil.
+//         Chaque pacte accepté rend les gardiens plus agressifs (−7 % de temps entre leurs attaques, jusqu’à 3).
+// Rôles : un chef invisible répartit Rempart, Harceleur, Soutien et Chasseur dans une vague, selon ton style.
+// Équipements V1 : un seul emplacement, 11 objets à contrepartie (communs, rares) + 2 uniques de gardien, codex permanent.
+// Gardiens II et III : mêmes trois temps que la Mère-Brume (Observation, Adaptation, Désespoir), palette par phase,
+//         brume comme matériau du corps, copie d’une capacité, point faible net.
+
+// ───────────────────────── Pacte de la Brume
+const PBOON={
+ fureur:{n:'Fureur',d:'+30 % de dégâts.'},
+ vigueur:{n:'Vigueur',d:'+30 % de PV max (et soin d’autant).',on(s){s.maxHp*=1.3;P.hp+=s.maxHp*0.3/1.3;},off(s){s.maxHp/=1.3;P.hp=Math.min(P.hp,s.maxHp);}},
+ vif:{n:'Vivacité',d:'+20 % de vitesse, esquive 20 % plus rapide à recharger.',on(s){s.speed*=1.2;s.dashCd*=0.8;},off(s){s.speed/=1.2;s.dashCd/=0.8;}},
+ avidite:{n:'Avidité',d:'+60 % d’or et une relance de talents.',on(){RUN.goldMul*=1.6;RUN.rerolls++;},off(){RUN.goldMul/=1.6;}},
+ sangsue:{n:'Sangsue',d:'Tes coups te soignent de 3 % des dégâts infligés.'}};
+const PCONS={
+ brume:{n:'Brume dense',d:'La Brume s’épaissit dans chaque salle : tu vois moins loin.',ax:'portee',hi:true,why:'tu frappes de loin'},
+ lourd:{n:'Pas lourds',d:'Ton esquive met 35 % plus de temps à se recharger.',ax:'esquive',hi:true,why:'tu esquives sans cesse',on(s){s.dashCd*=1.35;},off(s){s.dashCd/=1.35;}},
+ avare:{n:'Brume avare',d:'Les soins que tu reçois sont réduits de moitié.',ax:'soin',hi:true,why:'tu te soignes beaucoup'},
+ meute:{n:'Meute',d:'Chaque salle de combat compte deux Rampants de plus.',ax:'rythme',hi:true,why:'tu purges les salles vite'},
+ heurts:{n:'Heurts',d:'Les coups au corps à corps te font 25 % de dégâts en plus.',ax:'portee',hi:false,why:'tu frappes au contact'},
+ fragile:{n:'Fragilité',d:'Tu subis 20 % de dégâts en plus.',ax:'risque',hi:false,why:'tu restes prudent',on(s){s.dmgTaken*=1.2;},off(s){s.dmgTaken/=1.2;}}};
+const pactOn=k=>!!(RUN&&!RUN.hub&&RUN.pact&&(RUN.pact.boon===k||RUN.pact.cons===k));
+function pactAgg(){return RUN&&!RUN.hub?1-0.07*Math.min(3,RUN.pactN||0):1;}
+function pactEnd(){const p=RUN&&RUN.pact;if(!p)return;const B=PBOON[p.boon],C=PCONS[p.cons];if(B&&B.off)B.off(P.s);if(C&&C.off)C.off(P.s);RUN.pact=null;}
+function pactOffers(){
+ const p=profile(),sc=k=>{const C=PCONS[k],v=p[C.ax];return v==null?0.35+Math.random()*0.2:(C.hi?v:1-v)+Math.random()*0.08;};
+ const cons=Object.keys(PCONS).sort((a,b)=>sc(b)-sc(a)).slice(0,2),boons=shuffle(Object.keys(PBOON)).slice(0,2);
+ return cons.map((c,i)=>({boon:boons[i],cons:c,known:p[PCONS[c].ax]!=null}));}
+function openPacte(){
+ if(!RUN||RUN.hub||P.dead)return;
+ pactEnd();const offers=pactOffers(),n=RUN.pactN||0;
+ const card=(o,i)=>{const B=PBOON[o.boon],C=PCONS[o.cons];return `<button type="button" class="card pact" data-i="${i}" style="--c:#b48cff"><span class="meta"><span class="br">● Pacte</span><span>touche ${i+1}</span></span><h3>${B.n} · ${C.n}</h3><p class="boon">+ ${esc(B.d)}</p><p class="cons">− ${esc(C.d)}</p><p class="why">${o.known?`Il a vu que ${esc(C.why)}.`:'Il ne te connaît pas encore : il choisit au hasard.'}</p></button>`;};
+ openOverlay(`<div class="panel narrow"><p class="eyebrow">Acte ${ROM[RUN.act]} · Le Pacte de la Brume</p><h2>Le Brumeux te tend la main</h2><p class="sub">Un avantage fort, contre une contrainte qu’il choisit en te regardant jouer. Le pacte dure tout l’acte. Chaque pacte accepté rend les gardiens plus agressifs${n?` (déjà ${n} accepté${n>1?'s':''} : gardiens ${Math.round((1-pactAgg())*100)} % plus rapides)`:''}.</p><div class="three">${offers.map(card).join('')}<button type="button" class="card" data-i="r"><span class="meta"><span class="br">● Refus</span><span>touche 3</span></span><h3>Refuser</h3><p>Tu descends sans rien devoir à la Brume.</p></button></div></div>`);
+ const choose=i=>{if(!armed())return;if(i!=='r'){const o=offers[i];RUN.pact={boon:o.boon,cons:o.cons};RUN.pactN=(RUN.pactN||0)+1;const B=PBOON[o.boon],C=PCONS[o.cons];if(B.on)B.on(P.s);if(C.on)C.on(P.s);if(o.cons==='brume')RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.07);
+   sfx('murmur');murmur(`Pacte scellé · ${B.n}`,`${B.d} En échange : ${C.d}`,4.2);if(P.eq==='murmure')murRank(1);}
+  else toast('Tu refuses le pacte. La Brume t’observe en silence.',2.2);
+  closeOverlay();renderRelics();};
+ overlayEl.querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.i==='r'?'r':+b.dataset.i)));
+ overlayKeys=c=>{const m=NUMKEY[c];if(m===0||m===1)choose(m);else if(m===2)choose('r');};}
+const _sr13=startRun;
+startRun=function(){_sr13();if(RUN&&!RUN.hub){RUN.pactN=0;RUN.pact=null;P.eq=null;P.eqS={};enqueue(openPacte);renderRelics();}};
+const _de13=doEnter;
+doEnter=function(type){const a0=RUN&&RUN.act;_de13(type);if(RUN&&!RUN.hub&&RUN.act!==a0){RUN.fiole=false;RUN.larme=false;enqueue(openPacte);}};
+
+// ───────────────────────── Ennemis à rôles
+const ROLES={
+ rempart:{n:'Rempart',col:'140,190,255',d:'protège ses voisins : −30 % de dégâts pour les ennemis près de lui. Éloigne-les ou abats-le.'},
+ harceleur:{n:'Harceleur',col:'255,200,90',d:'vise l’endroit où tu vas, pas celui où tu es.'},
+ soutien:{n:'Soutien',col:'130,240,160',d:'soigne et accélère ses alliés. Abats-le en premier.'},
+ chasseur:{n:'Chasseur',col:'255,96,96',d:'guette ton point faible et bondit dessus.'}};
+function hunterWeak(){const p=profile();if(p.soin!=null&&p.soin>0.55)return'soin';if(p.esquive!=null&&p.esquive>0.5)return'esquive';return'pv';}
+const HUNT_TXT={soin:'il bondit quand tu viens de te soigner',esquive:'il bondit quand ton esquive est vide',pv:'il bondit quand tu passes sous la moitié de tes PV'};
+function roleSet(){const p=profile(),out=[];
+ if(p.soin!=null&&p.soin>0.5||p.esquive!=null&&p.esquive>0.5)out.push('chasseur');
+ if(p.portee!=null&&p.portee>0.55)out.push('harceleur');
+ if(p.portee!=null&&p.portee<0.45)out.push('rempart');
+ if(G()>=6)out.push('soutien');
+ for(const k of shuffle(Object.keys(ROLES)))if(!out.includes(k))out.push(k);
+ return out;}
+function assignRoles(waves){
+ if(G()<4||Math.random()>0.7||!waves.length)return;
+ let w=waves[0];for(const x of waves)if(x.length>w.length)w=x;if(w.length<4)return;
+ const want=roleSet().slice(0,Math.min(3,Math.floor(w.length/3))),pref={rempart:['brute','nourrice','rampant'],soutien:['spectre','hurleur','rampant'],harceleur:['rampant','voile'],chasseur:['rampant','voile','brute']};
+ for(const k of want){const free=w.filter(s=>!s.role&&!s.key&&!s.elite&&!s.siege&&!s.cm&&s.type!=='bouffi');if(!free.length)break;free.sort((a,b)=>(pref[k].indexOf(a.type)+9)%10-(pref[k].indexOf(b.type)+9)%10);free[0].role=k;}}
+const _pr13=planRoom;
+planRoom=function(type){const w=_pr13(type);if(!RUN||RUN.hub||!w||!w.length)return w;
+ if(type==='combat'&&(pactOn('meute')||(room&&room.mpCons==='meute')))w[0].push({type:'rampant'},{type:'rampant'});
+ if(type==='combat'||type==='elite')assignRoles(w);return w;};
+const _sw13=spawnWave;
+spawnWave=function(w,last){const n0=room.spawning.length;_sw13(w,last);for(let i=0;i<w.length;i++){const sp=room.spawning[n0+i];if(sp&&w[i]&&w[i].role)sp.role=w[i].role;}};
+function rolesTick(dt){
+ const weak=room.hunt||(room.hunt=hunterWeak());let fresh=[];
+ for(const e of enemies){if(e.dead||!e.role)continue;
+  if(!e.roleT){e.roleT=1;fresh.push(e.role);}
+  if(e.stun>0||e.puppet>0)continue;const dP=hyp(P.x-e.x,P.y-e.y);
+  if(e.role==='harceleur'&&dP>40){const ix=clamp(P.x+P.vx*0.7,AR.x0+20,AR.x1-20),iy=clamp(P.y+P.vy*0.7,AR.y0+20,AR.y1-20),d=hyp(ix-e.x,iy-e.y)||1;e.x+=(ix-e.x)/d*e.spd*0.45*dt;e.y+=(iy-e.y)/d*e.spd*0.45*dt;}
+  else if(e.role==='soutien'){
+   if(dP<230){e.x-=(P.x-e.x)/(dP||1)*e.spd*0.5*dt;e.y-=(P.y-e.y)/(dP||1)*e.spd*0.5*dt;e.x=clamp(e.x,AR.x0+e.r,AR.x1-e.r);e.y=clamp(e.y,AR.y0+e.r,AR.y1-e.r);}
+   e.supT=(e.supT==null?2.5:e.supT)-dt;
+   if(e.supT<=0.7&&!e.supTo){let best=null,bv=0.95;for(const o of enemies){if(o===e||o.dead||o.type==='boss'||o.fixed)continue;const v=o.hp/o.maxHp;if(v<bv&&hyp(o.x-e.x,o.y-e.y)<320){bv=v;best=o;}}if(best)e.supTo=best;else e.supT=1.2;}
+   if(e.supT<=0&&e.supTo){const o=e.supTo;if(!o.dead){o.hp=Math.min(o.maxHp,o.hp+o.maxHp*0.15);o.hasteT=3;addNum(o.x,o.y-o.r-14,'soigné','echo');fx.push({k:'line',x1:e.x,y1:e.y,x2:o.x,y2:o.y,w:5,t:0.35,max:0.35,col:'rgba(130,240,160,'});sparks(o.x,o.y,6,'#9ff0b8');}e.supTo=null;e.supT=4.5;}}
+  else if(e.role==='chasseur'){
+   e.hcd=(e.hcd==null?2:e.hcd)-dt;
+   if(e.hst==='aim'){e.ht-=dt;if(e.ht<=0){e.hst='lunge';e.ht=0.32;e.hhit=false;sfx('dash');}}
+   else if(e.hst==='lunge'){e.ht-=dt;e.x+=Math.cos(e.hang)*620*dt;e.y+=Math.sin(e.hang)*620*dt;e.x=clamp(e.x,AR.x0+e.r,AR.x1-e.r);e.y=clamp(e.y,AR.y0+e.r,AR.y1-e.r);
+    if(!e.hhit&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){e.hhit=true;contact(e,e.dmg*1.4);}if(e.ht<=0){e.hst=null;e.hcd=3.5;}}
+   else if(e.hcd<=0&&dP<340){const cond=weak==='soin'?RUN.time-(P.lastHealT||-9)<1.5:weak==='esquive'?P.dashCh<=0:P.hp<P.s.maxHp*0.5;if(cond){e.hst='aim';e.ht=e.hT=0.45;e.hang=Math.atan2(P.y-e.y,P.x-e.x);}}}}
+ if(fresh.length&&!room.roleSaid){room.roleSaid=true;const ks=[...new Set(room.waves.flat().filter(s=>s.role).map(s=>s.role).concat(fresh))],first=ks.filter(k=>!SAVE.flags['role_'+k]);
+  murmur('Le Brumeux coordonne',ks.map(k=>`${ROLES[k].n} : ${k==='chasseur'?HUNT_TXT[weak]+'.':ROLES[k].d}`).join(' · '),first.length?6.5:3.5);sfx('murmur');
+  for(const k of first)SAVE.flags['role_'+k]=1;if(first.length)persist();}}
+function rempartNear(e){if(e.role==='rempart'||e.type==='boss')return false;for(const o of enemies)if(!o.dead&&o.role==='rempart'&&o!==e&&hyp(o.x-e.x,o.y-e.y)<130)return true;return false;}
+function drawRolePost(e){const R=ROLES[e.role];if(!R)return;const c=ctx,x=e.x,y=e.y-e.r-(e.elite?50:16)-(e.cm?16:0)-Math.sin(T*4+e.wob)*2,col=R.col;
+ c.save();c.globalCompositeOperation='lighter';glow(c,x,y,12,col,0.45);c.strokeStyle=`rgba(${col},.95)`;c.fillStyle=`rgba(${col},.95)`;c.lineWidth=1.8;c.lineCap='round';c.beginPath();
+ if(e.role==='rempart'){c.moveTo(x-6,y-6);c.lineTo(x+6,y-6);c.lineTo(x+6,y);c.quadraticCurveTo(x+6,y+5,x,y+7);c.quadraticCurveTo(x-6,y+5,x-6,y);c.closePath();c.stroke();
+  c.strokeStyle=`rgba(${col},.22)`;c.setLineDash([5,7]);c.lineDashOffset=-T*12;c.beginPath();c.arc(e.x,e.y,130,0,TAU);c.stroke();c.setLineDash([]);}
+ else if(e.role==='harceleur'){c.moveTo(x-7,y-5);c.lineTo(x-1,y);c.lineTo(x-7,y+5);c.moveTo(x,y-5);c.lineTo(x+6,y);c.lineTo(x,y+5);c.stroke();}
+ else if(e.role==='soutien'){c.moveTo(x,y-6);c.lineTo(x,y+6);c.moveTo(x-6,y);c.lineTo(x+6,y);c.stroke();if(e.supTo&&!e.supTo.dead){const k=1-clamp(e.supT/0.7,0,1);c.strokeStyle=`rgba(${col},${0.25+0.5*k})`;c.lineWidth=2;c.setLineDash([4,5]);c.beginPath();c.moveTo(e.x,e.y);c.lineTo(e.supTo.x,e.supTo.y);c.stroke();c.setLineDash([]);glow(c,e.x,e.y,e.r*1.6,col,0.2+0.3*k);}}
+ else{c.arc(x,y,5.5,0,TAU);c.moveTo(x-9,y);c.lineTo(x-3,y);c.moveTo(x+3,y);c.lineTo(x+9,y);c.moveTo(x,y-9);c.lineTo(x,y-3);c.moveTo(x,y+3);c.lineTo(x,y+9);c.stroke();
+  if(e.hst==='aim'){const k=1-e.ht/e.hT,w=e.r*2;c.save();c.translate(e.x,e.y);c.rotate(e.hang);c.fillStyle=`rgba(${TELE.zone},${0.12+0.2*k})`;c.fillRect(0,-w/2,200,w);c.strokeStyle=`rgba(${TELE.zone},.7)`;c.lineWidth=1.5;c.strokeRect(0,-w/2,200,w);c.restore();}}
+ c.restore();}
+
+// ───────────────────────── Équipements
+const RAR={commun:{n:'Commun',col:'207,198,176'},rare:{n:'Rare',col:'111,178,255'},unique:{n:'Unique',col:'255,198,92'}};
+const EQ_IC={arme:'M5 19l9-9m0 0l4-6 2 2-6 4m-5 4l2 2m-6 0l3 3',armure:'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z',relique:'M9 4h6l1 3H8zM8 7h8v9a4 4 0 01-8 0zM12 11v4',talisman:'M7 4c2 3 8 3 10 0M12 7v3M12 10a4 4 0 104 4 4 4 0 00-4-4z'};
+const EQS={
+ lame:{n:'Lame émoussée',r:'commun',slot:'arme',up:'+15 % de dégâts.',down:'−10 % de vitesse d’attaque.',on(s){s.atkSpeed*=0.9;},off(s){s.atkSpeed/=0.9;}},
+ gilet:{n:'Gilet de lin brumeux',r:'commun',slot:'armure',up:'−10 % de dégâts subis.',down:'Ton esquive met 8 % plus de temps à se recharger.',on(s){s.dmgTaken*=0.9;s.dashCd*=1.08;},off(s){s.dmgTaken/=0.9;s.dashCd/=1.08;}},
+ lanterne:{n:'Lanterne fêlée',r:'commun',slot:'relique',cls:'lum',up:'+20 % de rayon de lumière.',down:'Ta lumière s’éteint 2 s après chaque coup reçu.',on(s){s.aura*=1.2;s.groundLight*=1.2;},off(s){s.aura/=1.2;s.groundLight/=1.2;}},
+ piece:{n:'Pièce trouée',r:'commun',slot:'talisman',up:'+20 % d’or.',down:'Les portes d’élite apparaissent plus souvent.',on(){RUN.goldMul*=1.2;},off(){RUN.goldMul/=1.2;}},
+ bottes:{n:'Bottes de cendre',r:'commun',slot:'armure',up:'+10 % de vitesse de déplacement.',down:'−10 % de PV max.',on(s){s.speed*=1.1;s.maxHp*=0.9;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.speed/=1.1;s.maxHp/=0.9;}},
+ dague:{n:'Dague du guetteur',r:'commun',slot:'arme',up:'+25 % de dégâts dans le dos.',down:'−15 % de dégâts de face.'},
+ amulette:{n:'Amulette de ficelle',r:'commun',slot:'talisman',up:'Te soigne de 4 PV par salle purifiée.',down:'−5 % de PV max.',on(s){s.maxHp*=0.95;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.95;}},
+ fiole:{n:'Fiole de brume',r:'commun',slot:'relique',up:'Annule le premier coup reçu de chaque acte.',down:'En se brisant, elle enrage tous les ennemis de la salle pendant 4 s.'},
+ coeur:{n:'Cœur de lanterne',r:'rare',slot:'relique',up:'+1 % de dégâts par ennemi vaincu, jusqu’à +25 %.',down:'Tout le bonus est perdu dès que tu es touché.'},
+ anneau:{n:'Anneau du pari',r:'rare',slot:'talisman',up:'À chaque salle : une chance sur deux d’avoir +20 % de dégâts…',down:'…et une chance sur deux d’avoir −20 %. Tirage non annulable.'},
+ brassard:{n:'Brassard d’épines',r:'rare',slot:'armure',up:'Renvoie 50 % des dégâts de contact à l’attaquant.',down:'Soins reçus −30 %.'},
+ murmure:{n:'Le Premier Murmure',r:'unique',slot:'relique',src:'La Mère-Brume',up:'Une salle sur deux, le Brumeux te propose un pacte de salle. Chaque pacte accepté renforce l’objet : +4 % de dégâts par rang (5 rangs).',down:'Chaque pacte de salle impose sa contrainte pour la salle.'},
+ larme:{n:'Larme du Gardien',r:'unique',slot:'talisman',src:'Le Héraut Noyé',up:'Protège ton dernier PV une fois par acte.',down:'Le gardien suivant t’identifie : il copie ta façon de jouer dès son premier temps.'}};
+function eqDiscover(id){const m=M();if(!m.codex)m.codex={};if(!m.codex[id]){m.codex[id]=1;persist();return true;}return false;}
+function equip(id){const s=P.s;if(P.eq&&EQS[P.eq].off)EQS[P.eq].off(s);P.eq=id;P.eqS={};if(id&&EQS[id].on)EQS[id].on(s);renderRelics();}
+function rollEquip(){const r=Math.random()<0.7?'commun':'rare',pool=Object.keys(EQS).filter(k=>EQS[k].r===r&&k!==P.eq&&(!EQS[k].cls||EQS[k].cls===P.cls));return pick(pool.length?pool:Object.keys(EQS).filter(k=>EQS[k].r!=='unique'&&k!==P.eq));}
+function eqCard(id,tag){if(!id)return `<div class="card eqc empty"><span class="meta"><span class="br">● ${tag}</span></span><h3>Rien</h3><p>Aucun équipement porté.</p></div>`;
+ const E=EQS[id],R=RAR[E.r];return `<div class="card eqc" style="--c:rgb(${R.col})"><span class="meta"><span class="br">● ${R.n} · ${E.slot}</span><span>${tag}</span></span><h3><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg> ${esc(E.n)}</h3><p class="boon">+ ${esc(E.up)}</p><p class="cons">− ${esc(E.down)}</p>${E.src?`<p class="why">Arraché à ${esc(E.src)}.</p>`:''}${id==='murmure'&&P.eqS&&P.eqS.rank?`<p class="k">Rang ${P.eqS.rank} / 5</p>`:''}</div>`;}
+function openEquip(id,title){
+ if(!RUN||RUN.hub||P.dead||!id)return;const E=EQS[id],R=RAR[E.r],isNew=eqDiscover(id);
+ sfx(E.r==='unique'?'level':E.r==='rare'?'buy':'pick');
+ openOverlay(`<div class="panel narrow"><p class="eyebrow">Équipement · ${R.n}${isNew?' · nouveau dans le codex':''}</p><h2>${esc(title)}</h2><p class="sub">Tu ne peux porter qu’un seul équipement. S’il remplace l’ancien, l’ancien est perdu.</p><div class="two eqrow">${eqCard(id,'Trouvé')}${eqCard(P.eq,'Porté')}</div><div class="row"><button type="button" class="btn primary" id="eqy">Équiper · 1</button><button type="button" class="btn" id="eqn">Laisser · 2</button><span class="k">Codex : ${Object.keys(M().codex||{}).length} / ${Object.keys(EQS).length}</span></div></div>`,E.r==='unique'?'eq-unique':'');
+ const go=y=>{if(!armed())return;if(y){equip(id);toast(`Tu portes ${E.n}.`,2);}closeOverlay();};
+ $('#eqy').addEventListener('click',()=>go(true));$('#eqn').addEventListener('click',()=>go(false));
+ overlayKeys=c=>{const m=NUMKEY[c];if(m===0)go(true);else if(m===1)go(false);};}
+function murRank(n){if(P.eq!=='murmure')return;P.eqS.rank=Math.min(5,(P.eqS.rank||0)+n);addNum(P.x,P.y-40,`Murmure rang ${P.eqS.rank}`,'echo');renderRelics();}
+function openMurmure(){
+ if(!room||room.cleared||P.dead)return;const k=pick(['avare','fragile','brume']),C=PCONS[k];
+ openOverlay(`<div class="panel narrow"><p class="eyebrow">Le Premier Murmure · rang ${P.eqS.rank||0} / 5</p><h2>Un pacte pour cette salle</h2><p class="sub">Le Brumeux murmure une offre. Elle ne vaut que pour cette salle.</p><div class="two">${`<button type="button" class="card pact" data-y="1" style="--c:#ffc65c"><span class="meta"><span class="br">● Pacte de salle</span><span>touche 1</span></span><h3>Accepter</h3><p class="boon">+ 25 % de dégâts dans cette salle, et le Murmure gagne un rang.</p><p class="cons">− ${esc(C.d)}</p></button>`}<button type="button" class="card" data-y="0"><span class="meta"><span class="br">● Refus</span><span>touche 2</span></span><h3>Refuser</h3><p>La salle reste telle quelle.</p></button></div></div>`);
+ const go=y=>{if(!armed())return;if(y){room.mpDmg=1.25;room.mpCons=k;if(k==='brume')RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.07);murRank(1);sfx('murmur');}closeOverlay();};
+ overlayEl.querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>go(b.dataset.y==='1')));
+ overlayKeys=c=>{const m=NUMKEY[c];if(m===0)go(true);else if(m===1)go(false);};}
+const _rr13=renderRelics;
+renderRelics=function(){_rr13();if(!P||!P.eq||!RUN||RUN.hub)return;const E=EQS[P.eq],R=RAR[E.r];const box=$('#hRelics');if(!box)return;
+ box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${P.eq==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${P.eq==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg></span>`);};
+const eqIs=id=>!!(P&&P.eq===id&&RUN&&!RUN.hub);
+
+// ───────────────────────── Effets en combat (équipements, pactes, rôles)
+const _hit13=hitEnemy;
+hitEnemy=function(e,base,o){
+ o=o||{};
+ if(!RUN||RUN.hub||!P||!e||e.dead||e.fixed)return _hit13(e,base,o);
+ let m=1;
+ if(pactOn('fureur'))m*=1.3;
+ if(room&&room.mpDmg)m*=room.mpDmg;
+ if(eqIs('lame'))m*=1.15;
+ if(eqIs('dague')&&!o.dot){const back=angDiff(e.ang||0,Math.atan2(P.y-e.y,P.x-e.x))>2.0;m*=back?1.25:0.85;if(back&&Math.random()<0.25)addNum(e.x,e.y-e.r-16,'dans le dos','echo');}
+ if(eqIs('coeur'))m*=1+(P.eqS.st||0)/100;
+ if(eqIs('anneau')&&room&&room.ring)m*=room.ring;
+ if(eqIs('murmure'))m*=1+0.04*(P.eqS.rank||0);
+ if(rempartNear(e))m*=0.7;
+ if(e.type==='boss'&&e.c13&&e.phase===3)m*=1.25;
+ const d=_hit13(e,base*m,o);
+ if(pactOn('sangsue')&&d>0)heal(d*0.03,'pacte');
+ return d;};
+const _ke13=killEnemy;
+killEnemy=function(e){const was=!e.dead;_ke13(e);if(was&&eqIs('coeur')&&e.type!=='boss'){P.eqS.st=Math.min(25,(P.eqS.st||0)+1);}};
+const _hp13=hurtPlayer;
+hurtPlayer=function(dmg,src){
+ if(!RUN||RUN.hub||!P||P.iT>0||P.dashT>0||P.dead||state!=='play')return _hp13(dmg,src);
+ if(eqIs('fiole')&&!RUN.fiole){RUN.fiole=true;P.iT=0.8;sparks(P.x,P.y,14,'#c9b4ff');mist(P.x,P.y,26,'#2a2440');for(const o of enemies)if(!o.dead&&o.type!=='boss')o.hasteT=4;toast('La Fiole de brume se brise : coup annulé. Les ennemis s’enragent 4 s.',2.6);sfx('rupture');return;}
+ if(src&&(pactOn('heurts')))dmg*=1.25;
+ if(room&&room.mpCons==='fragile')dmg*=1.2;
+ const h0=P.hp;_hp13(dmg,src);
+ if(P.hp<h0&&eqIs('brassard')&&src&&!src.dead&&hyp(src.x-P.x,src.y-P.y)<src.r+P.r+30)hitEnemy(src,(h0-P.hp)*0.5,{crit:false,color:'#e2b0ff'});};
+const _lh13=loseHp;
+loseHp=function(n){
+ if(RUN&&!RUN.hub&&P&&!P.dead&&n>0){
+  if(eqIs('larme')&&!RUN.larme&&P.hp-n<1){RUN.larme=true;n=Math.max(0,P.hp-1);P.iT=1.5;toast('La Larme du Gardien retient ton dernier souffle.',2.6);sfx('pick');fx.push({k:'ring',x:P.x,y:P.y,r0:10,r1:150,w:12,t:0.5,max:0.5,col:'rgba(140,220,255,',fill:true});}
+  if(eqIs('coeur')&&(P.eqS.st||0)>0){if(P.eqS.st>=5)addNum(P.x,P.y-40,`Cœur éteint −${P.eqS.st} %`,'echo');P.eqS.st=0;}
+  if(eqIs('lanterne')&&P.cls==='lum')P.blindT=Math.max(P.blindT,2);}
+ _lh13(n);};
+const _he13=heal;
+heal=function(n,src){
+ if(RUN&&!RUN.hub&&P){if(pactOn('avare')&&src!=='boss')n*=0.5;if(room&&room.mpCons==='avare'&&src!=='boss')n*=0.5;if(eqIs('brassard')&&src!=='boss')n*=0.7;}
+ const h0=P?P.hp:0;_he13(n,src);if(P&&P.hp>h0&&!['boss','level','halte','room'].includes(src))P.lastHealT=RUN?RUN.time:0;};
+const _md13=makeDoors;
+makeDoors=function(){_md13();if(!eqIs('piece')||!room||!room.doors||room.type==='boss'||RUN.roomIdx<2)return;const d=room.doors.find(x=>x.type==='combat');if(d&&!room.doors.some(x=>x.type==='elite')&&Math.random()<0.35)d.type='elite';};
+const _er13=enterRoom;
+enterRoom=function(type){
+ _er13.apply(this,arguments);
+ if(!RUN||RUN.hub||!room)return;
+ if(pactOn('brume')&&(type==='combat'||type==='elite'||type==='boss'))RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.07);
+ if(eqIs('anneau')&&(type==='combat'||type==='elite')){room.ring=Math.random()<0.5?1.2:0.8;later(0.8,()=>{if(P&&!P.dead)addNum(P.x,P.y-42,room.ring>1?'Pari gagné · +20 %':'Pari perdu · −20 %','echo');});}
+ if(eqIs('murmure')&&type==='combat'&&RUN.roomIdx%2===0)enqueue(openMurmure);};
+const _orc13=onRoomCleared;
+onRoomCleared=function(){
+ const t=room&&room.type,act=RUN&&RUN.act;
+ _orc13();
+ if(!RUN||RUN.hub)return;
+ if(eqIs('amulette'))heal(4,'equip');
+ if(t==='elite'&&Math.random()<0.6)enqueue(()=>openEquip(rollEquip(),'Le champion portait quelque chose'));
+ if(t==='boss'&&act===1)enqueue(()=>openEquip('murmure','La Mère-Brume laisse un murmure'));
+ if(t==='boss'&&act===2)enqueue(()=>openEquip('larme','Une larme sous la cloche'));};
+const _ue13=updateEnemies;
+updateEnemies=function(dt){_ue13(dt);if(RUN&&!RUN.hub&&room)try{rolesTick(dt);}catch(err){console.error(err);}};
+const _dep13=drawEnemyPost;
+drawEnemyPost=function(e){_dep13(e);if(e.role&&!e.dead)drawRolePost(e);};
+
+// ───────────────────────── Gardiens II et III : trois temps
+const B13={
+ 2:{p1:[90,220,210],p3:[255,96,96],l1:'Il t’écoute',l3:'La cloche se fend',t3:'La cloche se fend et la brume se retire : son battant est à nu, +25 % de dégâts. Il sonne plus vite.'},
+ 3:{p1:[210,170,255],p3:[255,90,120],l1:'Il bat pour toi',l3:'La Brume se retire',t3:'La Brume se retire du Cœur : il est à nu, +25 % de dégâts. Il bat plus vite.'}};
+function b13Pal(e){const B=B13[RUN.act];if(e.phase===2)return(CRGB[P.cls]||'201,180,255').split(',').map(Number);return e.phase===3?B.p3:B.p1;}
+function b13Init(e){e.c13=1;e.mk=1;e.pal13=B13[RUN.act].p1.slice();e.fade=1;
+ if(eqIs('larme')){e.knows=true;e.copy=mereChooseCopy();}
+ later(0.3,()=>{if(e.dead)return;showBanner('Premier temps · Observation',B13[RUN.act].l1,true);toast(e.knows?`Il t’a identifié : il copie déjà ${MERE_COPY[e.copy].what}. ${MERE_COPY[e.copy].hint}`:'Retiens ses schémas. Orange : zone · Violet : tirs · Cyan : saisie.',4.4);});}
+function b13Phase(e,ph){
+ e.phase=ph;e.queue=[];e.state='idle';e.patT=1.4;e.fade=1;e.beams=null;if(room)room.drainT=0;
+ for(let i=0;i<3;i++)later(i*0.12,()=>{if(!e.dead)mist(e.x+rand(-30,30),e.y+rand(-20,40),e.r*1.3,ph===3?'#3a1220':'#1c2a30');});
+ sfx('phase');shake(12,0.5);tlights.push({x:e.x,y:e.y,r:420,t:0.5,max:0.5,c:'rage'});
+ if(ph===2){if(!e.copy)e.copy=mereChooseCopy();if(RUN.prof)RUN.prof.copied2=e.copy;const C=MERE_COPY[e.copy];showBanner('Deuxième temps · Adaptation','Il t’imite',true);later(1.0,()=>toast(`Il a copié ${C.what}. ${C.hint}`,4.6));if(RUN.act===3)RUN.fogBoost=0.05;}
+ else{showBanner('Troisième temps · Désespoir',B13[RUN.act].l3,true);later(1.0,()=>toast(B13[RUN.act].t3,4));if(RUN.act===3)RUN.fogBoost=0;}}
+function copyStart(e){const ph=e.phase;
+ if(e.copy==='volee'){e.state='mvolley';e.vn=3;e.t=e.tt=0.6;}
+ else if(e.copy==='balayage'){e.state='msweepIn';e.t=0.75;}
+ else{const q=mereSafePoint(P.x,P.y);e.state='mblink';e.bx=q.x;e.by=q.y;e.t=e.tt=ph===3?0.6:0.75;}}
+function copyStep(e,dt,dP){
+ const gap=bossGap(e);
+ switch(e.state){
+ case 'mvolley':e.t-=dt;if(e.t<=0){const a=Math.atan2(P.y-e.y+e.r*0.3,P.x-e.x);for(const da of[-0.16,0,0.16])mereShot(e,a+da,250);sfx('shoot');e.vn--;if(e.vn>0)e.t=e.tt=e.phase===3?0.32:0.42;else{e.state='idle';e.patT=gap;}}return true;
+ case 'msweepIn':moveTo(e,P.x,P.y,e.spd*3.2,dt);e.t-=dt;if(dP<e.r+95||e.t<=0){e.state='msweep';e.t=e.tt=e.phase===3?0.5:0.65;e.ang=Math.atan2(P.y-e.y,P.x-e.x);}return true;
+ case 'msweep':e.t-=dt;if(e.t<=0){const R=e.r+125;if(!P.dead&&hyp(P.x-e.x,P.y-e.y)<R+P.r&&angDiff(Math.atan2(P.y-e.y,P.x-e.x),e.ang)<1.15)hurtPlayer(e.dmg*1.5,e);fx.push({k:'slash',x:e.x,y:e.y-6,a:e.ang,r:R,arc:2.3,dir:1,style:'shadow',t:0.25,max:0.25});shake(6,0.2);sfx('lame');e.state='idle';e.patT=gap;}return true;
+ case 'mblink':e.t-=dt;e.fade=clamp(e.t/e.tt*1.4-0.2,0.08,1);if(e.t<=0){mist(e.x,e.y,e.r,'#2a2440');e.x=e.bx;e.y=e.by;if(e.hx!=null){e.hx=e.bx;e.hy=e.by;}e.fade=1;if(!P.dead&&hyp(P.x-e.x,P.y-e.y)<105+P.r&&P.dashT<=0)hurtPlayer(e.dmg*1.1,e);fx.push({k:'ring',x:e.x,y:e.y,r0:e.r,r1:110,w:10,t:0.35,max:0.35,col:`rgba(${TELE.zone},`,fill:true});shake(6,0.2);sfx('explode');e.state='idle';e.patT=gap;}return true;}
+ return false;}
+const _ub13=updateBoss;
+updateBoss=function(e,dt,slow,dP,touching){
+ if(RUN.hub||RUN.act===1){_ub13(e,dt,slow,dP,touching);return;}
+ if(!e.c13)b13Init(e);
+ const ph=bossPhase(e);if(ph>e.phase)b13Phase(e,ph);
+ const tg=b13Pal(e),kk=Math.min(1,dt*2.2);e.pal13=mixA(e.pal13,tg,kk);
+ e.mk+=((e.phase===3?0.25:e.phase===2?0.8:1)-e.mk)*Math.min(1,dt*1.5);
+ if(copyStep(e,dt,dP)){if(touching&&e.fade>0.5)contact(e,e.dmg);return;}
+ _ub13(e,dt,slow,dP,touching);
+ EYE.boss=rgb12(e.pal13);};
+const _bp13=bossPattern;
+bossPattern=function(e){if(e.c13&&e.copy&&(e.phase>=2||e.knows)&&Math.random()<0.32){copyStart(e);return;}_bp13(e);};
+const _hpat13=heartPattern;
+heartPattern=function(e){if(e.c13&&e.copy&&(e.phase>=2||e.knows)&&Math.random()<0.3){copyStart(e);return;}_hpat13(e);};
+const _bg13=bossGap;
+bossGap=function(e){return _bg13(e)*pactAgg();};
+const _bd13=bossDefeated;
+bossDefeated=function(e){if(e&&e.c13)EYE.boss='255,64,87';_bd13(e);};
+// Brume comme matériau : un linceul qui se retire au troisième temps
+function shroud(c,e,col,a,front){const r=e.r,mk=e.mk==null?1:e.mk;for(let i=0;i<10;i++){const ang=i/10*TAU+T*0.25+e.wob*0.05,d=r*(front?0.5:0.95)*(0.6+0.4*mk),x=Math.cos(ang)*d,y=Math.sin(ang)*d*0.8+r*0.25,rad=r*(0.55+0.25*Math.sin(T*0.9+i*1.7))*(0.5+0.5*mk);
+ const g=c.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,`rgba(${col},${a})`);g.addColorStop(1,`rgba(${col},0)`);c.fillStyle=g;c.beginPath();c.arc(x,y,rad,0,TAU);c.fill();}}
+// Le Héraut Noyé : un sonneur englouti sous sa propre cloche
+drawHeraut=function(c,e){
+ const r=e.r,mk=e.mk==null?1:e.mk,pc=rgb12(e.pal13||B13[2].p1),vib=(e.state==='chant'||e.state==='ring')?Math.sin(T*40)*1.5:0,ph=e.phase||1;
+ c.globalAlpha=e.fade==null?1:e.fade;
+ shadowAt(c,0,r*1.25,r*(0.9+0.4*mk),r*0.36,.5);
+ shroud(c,e,'40,70,80',0.4*mk,false);
+ // cordes de la cloche : il sonne encore
+ c.lineCap='round';const sway=Math.sin(T*1.4)*r*0.08;
+ for(const s of[-1,1]){const hx=s*r*0.98+sway,hy=-r*0.5+Math.sin(T*2+s)*r*0.05;
+  c.strokeStyle=INK;c.lineWidth=5;c.beginPath();c.moveTo(hx,hy);c.quadraticCurveTo(hx+s*r*0.2,-r*1.6,s*r*0.25,-r*2.3);c.stroke();c.setLineDash([5,3]);c.strokeStyle='#7a6e58';c.lineWidth=3;c.stroke();c.setLineDash([]);
+  // bras noyés qui tiennent la corde
+  c.strokeStyle=INK;c.lineWidth=r*0.2;c.beginPath();c.moveTo(s*r*0.55,r*0.42);c.quadraticCurveTo(s*r*1.05,r*0.15,hx,hy);c.stroke();c.strokeStyle='#8fa9a2';c.lineWidth=r*0.12;c.stroke();
+  ell(c,hx,hy,r*0.1,r*0.09);inkFill(c,'#a9c0b8',1.5);}
+ // robe engloutie, ruisselante
+ const hw=r*(0.42+0.4*mk),hem=r*(0.95+0.35*mk);
+ c.beginPath();c.moveTo(-r*0.6,r*0.42);for(let i=0;i<=8;i++){const u=i/8,x=-hw+2*hw*u,y=hem+(i%2?-r*0.12:r*0.06)+Math.sin(T*2+i)*2;c.lineTo(x,y);}c.lineTo(r*0.6,r*0.42);c.closePath();
+ const gr=c.createLinearGradient(0,r*0.4,0,hem);gr.addColorStop(0,'#1d3a3c');gr.addColorStop(1,`rgba(10,22,24,${0.4+0.5*mk})`);inkFill(c,gr,2);
+ c.strokeStyle='rgba(120,190,180,.35)';c.lineWidth=1.5;for(let i=0;i<5;i++){const x=-hw*0.7+i*hw*0.35,k=(T*0.8+i*0.37)%1;c.beginPath();c.moveTo(x,hem-r*0.1+k*r*0.3);c.lineTo(x,hem-r*0.02+k*r*0.3);c.stroke();}
+ // la cloche
+ c.save();c.translate(vib,0);
+ c.beginPath();c.moveTo(-r*0.78,r*0.45);c.quadraticCurveTo(-r*0.62,r*0.2,-r*0.6,-r*0.25);c.bezierCurveTo(-r*0.58,-r*0.95,r*0.58,-r*0.95,r*0.6,-r*0.25);c.quadraticCurveTo(r*0.62,r*0.2,r*0.78,r*0.45);c.quadraticCurveTo(0,r*0.58,-r*0.78,r*0.45);c.closePath();
+ const g=c.createRadialGradient(-r*0.3,-r*0.5,r*0.08,0,-r*0.1,r*1.1);g.addColorStop(0,'#b08c52');g.addColorStop(0.5,'#6a4c22');g.addColorStop(1,'#24180a');inkFill(c,g,3);
+ c.strokeStyle='rgba(20,12,4,.65)';c.lineWidth=2.6;for(const y of[-r*0.45,r*0.05,r*0.3]){c.beginPath();c.moveTo(-r*0.62,y);c.quadraticCurveTo(0,y+r*0.08,r*0.62,y);c.stroke();}
+ c.fillStyle='rgba(80,150,120,.45)';for(const [x,y,s] of[[-0.3,-0.3,0.16],[0.25,0.15,0.13],[0.4,-0.55,0.1],[-0.45,0.25,0.12]]){ell(c,x*r,y*r,r*s,r*s*0.65,x);c.fill();}
+ c.beginPath();c.arc(0,-r*0.82,r*0.12,Math.PI,0);c.strokeStyle=INK;c.lineWidth=5;c.stroke();c.strokeStyle='#5a4220';c.lineWidth=3;c.stroke();
+ if(ph===3){c.strokeStyle='rgba(0,0,0,.8)';c.lineWidth=2.2;c.beginPath();c.moveTo(-r*0.15,-r*0.72);c.lineTo(-r*0.02,-r*0.35);c.lineTo(-r*0.22,-r*0.05);c.lineTo(-r*0.05,r*0.3);c.moveTo(r*0.45,-r*0.4);c.lineTo(r*0.25,-r*0.15);c.stroke();
+  c.beginPath();c.moveTo(r*0.6,-r*0.25);c.lineTo(r*0.36,-r*0.05);c.lineTo(r*0.62,r*0.12);c.closePath();c.fillStyle='#050708';c.fill();}
+ // sous la lèvre : l’ombre où il regarde, le battant
+ c.fillStyle='#030505';ell(c,0,r*0.5,r*0.66,r*0.14);c.fill();
+ c.strokeStyle=INK;c.lineWidth=3;c.beginPath();c.moveTo(0,r*0.4);c.lineTo(0,r*0.62);c.stroke();ell(c,0,r*0.68,r*0.09,r*0.08);inkFill(c,'#3c2a12',1.5);
+ // chaînes pendantes
+ for(let i=0;i<4;i++){const x=(i-1.5)*r*0.42,len=r*(0.45+0.15*Math.sin(e.wob+i));c.strokeStyle=INK;c.lineWidth=4;c.beginPath();c.moveTo(x,r*0.5);c.lineTo(x+Math.sin(T+i)*3,r*0.5+len);c.stroke();c.setLineDash([4,3]);c.strokeStyle='#6a6a60';c.lineWidth=2.4;c.stroke();c.setLineDash([]);}
+ c.restore();
+ shroud(c,e,pc,0.07*mk,true);
+ c.globalAlpha=1;};
+const _dbp13=drawBossPost;
+drawBossPost=function(e){
+ if(RUN.act===1||!e.c13){_dbp13(e);return;}
+ const c=ctx,r=e.r,pc=rgb12(e.pal13),fd=e.fade==null?1:e.fade,pul=0.6+0.4*Math.sin(T*(2.2+e.phase));
+ if(RUN.act===2){
+  if(e.state==='chant'||e.state==='ring'){c.strokeStyle=`rgba(${TELE.proj},${0.3+0.25*Math.sin(T*30)})`;c.lineWidth=3;c.beginPath();c.arc(e.x,e.y,r*1.25,0,TAU);c.stroke();}
+  glow(c,e.x,e.y+r*0.1,r*1.7,pc,0.07*e.mk*fd);
+  const cx=e.x,cy=e.y+r*0.68,big=e.phase===3?1.5:1;glow(c,cx,cy,r*0.45*big*(0.85+0.2*pul),pc,(0.5+0.25*pul)*fd);c.fillStyle=`rgba(255,248,235,${0.55+0.35*pul})`;c.beginPath();c.arc(cx,cy,r*0.06*big,0,TAU);c.fill();
+  if(e.phase===3){c.strokeStyle=`rgba(${pc},.7)`;c.lineWidth=2;c.beginPath();c.moveTo(e.x-r*0.15,e.y-r*0.72);c.lineTo(e.x-r*0.02,e.y-r*0.35);c.lineTo(e.x-r*0.22,e.y-r*0.05);c.lineTo(e.x-r*0.05,e.y+r*0.3);c.stroke();}
+  if(e.vuln>0){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(cx,cy,r*0.3,0,TAU);c.stroke();}
+  if(Math.random()<0.25)parts.push({x:e.x+rand(-r,r),y:e.y+r*0.6,vx:0,vy:rand(20,50),life:0.7,max:0.7,size:1.6,col:`rgb(${pc})`,layer:'post',drag:0.5});}
+ else{_dbp13(e);glow(c,e.x,e.y,r*1.5,pc,(0.12+0.1*e.phase)*fd);}};
+const _dh13=drawHeart;
+drawHeart=function(c,e){if(e.c13){c.globalAlpha=e.fade==null?1:e.fade;shroud(c,e,'60,30,70',0.45*e.mk,false);}_dh13(c,e);if(e.c13){shroud(c,e,rgb12(e.pal13),0.06*e.mk,true);c.globalAlpha=1;}};
+const _dt13=drawTelegraphs;
+drawTelegraphs=function(){_dt13();const b=room&&room.boss;if(b&&!b.dead&&b.c13&&state==='play'&&['mvolley','msweep','mblink'].includes(b.state))mereTele(b);};
+const _uh13=updateHud;
+updateHud=function(){_uh13();const b=room&&room.boss;if(b&&!b.dead&&b.c13)sT(HUD.hBossName,`${b.name} · ${MERE_PH[b.phase]}${b.vuln>0?' · sonné':''}`);};
+
+// ───────────────────────── Fin de run : codex et pactes
+const _oe13=openEnd;
+openEnd=function(win,abandon){
+ _oe13(win,abandon);
+ try{if(!RUN||RUN.hub)return;const box=overlayEl.querySelector('.prof12')||overlayEl.querySelector('.two>div:last-child');if(!box||overlayEl.querySelector('.eq13'))return;
+  const cx=Object.keys(M().codex||{}).length,E=P.eq&&EQS[P.eq];
+  box.insertAdjacentHTML('beforeend',`<div class="eq13"><p class="h-sec">Équipement et pactes</p><p class="k">${E?`Porté : ${esc(E.n)} (${RAR[E.r].n}).`:'Aucun équipement porté.'} Pactes acceptés : ${RUN.pactN||0}. Codex des équipements : ${cx} / ${Object.keys(EQS).length}.</p></div>`);}catch(err){console.error(err);}};
+(function(){const st=document.createElement('style');st.textContent=`
+.card .boon{color:#bfe8b0;margin:0}.card .cons{color:#f2a3a3;margin:0}.card .why{color:#c9a8ff;font-style:italic;font-size:13.5px;margin:0}
+.card.pact{border-color:#5d4594;background:linear-gradient(180deg,rgba(60,36,100,.35),var(--card))}
+.card.eqc{cursor:default;border-top:3px solid var(--c,var(--line))}.card.eqc h3{display:flex;align-items:center;gap:8px}.card.eqc h3 .ic{width:22px;height:22px;stroke:var(--c);fill:none;stroke-width:1.8}
+.card.eqc.empty{opacity:.6}.eqrow{gap:12px}
+#overlay.eq-unique .panel{box-shadow:0 0 60px rgba(255,198,92,.25);border-color:#8a6a2a}
+.relic.eq{border-color:rgb(var(--rc));box-shadow:0 0 10px rgba(var(--rc),.35)}.relic.eq .ic{stroke:rgb(var(--rc));fill:none;stroke-width:1.8;width:18px;height:18px}`;document.head.appendChild(st);})();
+window.__v13={EQS,PBOON,PCONS,ROLES,equip,openEquip,openPacte,pactOffers,rollEquip};
 
 
 // ───────────────────────── Démarrage
