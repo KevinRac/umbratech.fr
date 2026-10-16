@@ -970,7 +970,7 @@ function onRoomCleared(){
 function next1(){return room.doors.length===1&&room.doors[0].type==='halte';}
 function updateRoom(dt){
  if(room.annT>0){room.annT-=dt;if(room.annT<=0)announceTheme();}
- for(const sp of room.spawning){sp.t-=dt;if(sp.t<=0){const ne=createEnemy(sp.type,sp.x,sp.y,sp.elite);if(sp.key)ne.key=true;if(sp.tag)ne.tag=sp.tag;if(sp.siege)ne.siege=true;sp.done=true;sparks(sp.x,sp.y,6,'#b9a6ff');}}
+ for(const sp of room.spawning){sp.t-=dt;if(sp.t<=0){const ne=createEnemy(sp.type,sp.x,sp.y,sp.elite);if(sp.key)ne.key=true;if(sp.tag)ne.tag=sp.tag;if(sp.siege)ne.siege=true;if(sp.cm)ne.cm=true;sp.done=true;sparks(sp.x,sp.y,6,'#b9a6ff');}}
  room.spawning=room.spawning.filter(s=>!s.done);
  for(const d of room.doors)d.open=Math.min(1,d.open+dt*1.6);
  if(room.npcs)updateNpcs();
@@ -1738,7 +1738,7 @@ function openTitle(){
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v11</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v12</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -5305,7 +5305,7 @@ openTitle=function(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
  const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v11</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v12</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
  <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
  <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
  <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
@@ -5355,6 +5355,352 @@ openTitle=function(){
 @media (prefers-reduced-motion:reduce){#hTal,.bar.hp.low{animation:none}}
 `;document.body.appendChild(st);})();
 window.__v11={BAL,openGuide,openTalents};
+
+
+// ═════════════════════════ v12 · Le Brumeux et la Mère-Brume en trois temps
+// 1. Profil de style : six axes mesurés pendant la run (portée, esquive, soins, risque, rythme, maîtrise),
+//    mémorisés d’une descente à l’autre (moyenne glissante dans SAVE.mem.prof).
+// 2. Le Brumeux : un budget de contre-mesures par acte, dépensé sur la composition des salles.
+//    Il ne touche jamais aux stats. Chaque contre-mesure est annoncée (murmure + son + œil violet sur les ennemis ajoutés).
+//    Il relâche quand le joueur vacille, il durcit quand le build écrase tout.
+// 3. La Mère-Brume refaite : silhouette de reine voilée, corps de brume, squelette 2D animé, cœur-cloche en point faible.
+//    Trois temps : Observation (schémas fixes), Adaptation (copie une capacité du joueur), Désespoir (la brume se retire).
+//    Code couleur des télégraphes : orange = zone, violet = tirs, cyan = saisie.
+const TELE={zone:'255,150,60',proj:'205,120,255',grab:'90,220,255'};
+const PROF_AX=['portee','esquive','soin','risque','rythme','puissance'];
+function newProf(){return{hitN:0,hitD:0,dashN:0,dmgT:0,healT:0,lowT:0,closeT:0,fightT:0,rooms:0,clearT:0,cms:[],bud:{},lastCm:-9,relaxSaid:{},copied:null};}
+function PR(){if(!RUN)return newProf();if(!RUN.prof)RUN.prof=newProf();return RUN.prof;}
+function profStore(){const m=M();if(!m.prof)m.prof={n:0,ax:{},cms:{}};return m.prof;}
+function runAxes(){
+ const R=PR(),a={};if(!P||!P.s)return a;
+ const hp=Math.max(1,P.s.maxHp),min=Math.max(R.fightT,1)/60,ok=R.fightT>=20;
+ a.portee=R.hitN>=6?clamp((R.hitD/R.hitN-45)/165,0,1):null;            // 45 px de distance moyenne → 0, 210 px → 1
+ a.esquive=ok?clamp((R.dashN/min-4)/14,0,1):null;                      // 4 esquives/min → 0, 18/min → 1
+ a.soin=ok?clamp(R.healT/hp/min/0.3,0,1):null;                         // 30 % de PV max soignés par minute → 1
+ a.risque=ok?clamp(R.closeT/R.fightT*1.4+R.lowT/R.fightT,0,1):null;    // temps au contact + temps sous 35 % PV
+ a.rythme=R.rooms?clamp((42-R.clearT/R.rooms)/28,0,1):null;            // 42 s par salle → 0, 14 s → 1
+ if(ok){const tank=clamp(1-R.dmgT/hp/min/0.5,0,1);a.puissance=a.rythme==null?tank:tank*0.6+a.rythme*0.4;}else a.puissance=null;
+ return a;}
+function profile(){
+ const S=profStore(),live=RUN&&!RUN.hub&&RUN.prof,a=live?runAxes():{},w=live?0.35+0.5*clamp(RUN.prof.fightT/180,0,1):0,out={};let known=0;
+ for(const k of PROF_AX){const s=S.ax[k],r=a[k];out[k]=r==null?(s==null?null:s):(s==null?r:s*(1-w)+r*w);if(out[k]!=null)known++;}
+ out.known=known;return out;}
+function profCommit(){
+ const R=RUN&&RUN.prof;if(!R||RUN.hub||R.fightT<20)return;
+ const S=profStore(),a=runAxes();
+ for(const k of PROF_AX){if(a[k]==null)continue;S.ax[k]=S.ax[k]==null?a[k]:S.ax[k]*0.6+a[k]*0.4;}
+ S.n++;for(const c of R.cms)S.cms[c]=(S.cms[c]||0)+1;}
+function profLines(p){const L=[];
+ if(p.portee!=null)L.push(p.portee<0.35?'Tu frappes au contact':p.portee>0.65?'Tu frappes de loin':'Tu alternes contact et distance');
+ if(p.esquive!=null&&p.esquive>0.6)L.push('Tu esquives sans cesse');else if(p.esquive!=null&&p.esquive<0.15)L.push('Tu esquives rarement');
+ if(p.soin!=null&&p.soin>0.55)L.push('Tu te soignes beaucoup');
+ if(p.risque!=null&&p.risque>0.6)L.push('Tu vis dangereusement');else if(p.risque!=null&&p.risque<0.25)L.push('Tu restes prudent');
+ if(p.rythme!=null&&p.rythme>0.65)L.push('Tu purges les salles vite');else if(p.rythme!=null&&p.rythme<0.25)L.push('Tu prends ton temps');
+ return L;}
+
+// ───────────────────────── Mesures
+const _hit12=hitEnemy;
+hitEnemy=function(e,base,o){
+ o=o||{};
+ if(RUN&&!RUN.hub&&P&&e&&!e.dead&&!e.fixed&&!(e.puppet>0)){const R=PR(),w=o.dot?0.15:1;R.hitN+=w;R.hitD+=w*Math.max(0,hyp(e.x-P.x,e.y-P.y)-e.r);}
+ if(e&&e.type==='boss'&&e.m12&&e.phase===3)base*=1.25; // Désespoir : le cœur est à nu
+ return _hit12(e,base,o);};
+const _td12=tryDash;
+tryDash=function(){if(P&&P.grabT>0)return;const was=P.dashT>0;_td12();if(RUN&&!RUN.hub&&!was&&P.dashT>0)PR().dashN++;};
+const _lh12=loseHp;
+loseHp=function(n){if(RUN&&!RUN.hub&&P&&!P.dead&&n>0)PR().dmgT+=Math.min(n,P.hp);_lh12(n);};
+const _he12=heal;
+heal=function(n,src){
+ const counted=RUN&&!RUN.hub&&P&&!['boss','level','halte','room'].includes(src);
+ if(room&&room.sape&&!room.cleared&&counted)n*=0.6;
+ const b=P?P.hp:0;_he12(n,src);
+ if(counted)PR().healT+=Math.max(0,P.hp-b);};
+const _mi12=moveInput;
+moveInput=function(){if(P&&P.grabT>0)return[0,0];return _mi12();};
+
+// ───────────────────────── Le Brumeux : contre-mesures
+const CMS={
+ traque:{n:'Traque',ax:'portee',hi:true,cost:2,why:'tu frappes de loin',what:'La Brume s’épaissit et lâche des traqueurs qui chargent.',ok:()=>true,
+  apply(){RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.09);return G()>=4?[{type:'brute'}]:[{type:'rampant'},{type:'rampant'},{type:'rampant'}];}},
+ petards:{n:'Pétards',ax:'portee',hi:false,cost:2,why:'tu frappes au contact',what:'Des Bouffis rampent vers toi : ils explosent au corps à corps.',ok:()=>G()>=3,
+  apply(){return row('bouffi',G()>=8?3:2,'rand');}},
+ barrage:{n:'Tir de barrage',ax:'esquive',hi:true,cost:2.5,why:'tu esquives tout ce qui charge',what:'Des Spectres se postent au fond et tirent de loin.',ok:()=>G()>=2,
+  apply(){return row('spectre',2,'back');}},
+ avide:{n:'Brume avide',ax:'soin',hi:true,cost:1.5,why:'tu te soignes beaucoup',what:'Dans cette salle, tes soins sont réduits de 40 %.',ok:()=>true,
+  apply(){room.sape=true;return null;}}};
+function cmBudget(p){const R=PR();if(R.bud[RUN.act]==null){const t=p.puissance==null?1:0.6+0.9*p.puissance;R.bud[RUN.act]=[0,3,4.5,6][RUN.act]*t*(1+0.1*PAL());}return R.bud[RUN.act];}
+function brumeuxPlan(){
+ const R=PR(),p=profile();if(p.known<2)return;
+ const bud=cmBudget(p);
+ // Il relâche : le joueur vacille (PV bas en entrant, ou il encaisse beaucoup).
+ if(P.hp<P.s.maxHp*0.4||(p.puissance!=null&&p.puissance<0.2)){if(!R.relaxSaid[RUN.act]){R.relaxSaid[RUN.act]=1;room.cmRelax=true;room.cmAnnT=2.2;}return;}
+ if(RUN.roomIdx-R.lastCm<2)return;                         // toujours une accalmie entre deux contre-mesures
+ if(Math.random()>(room.type==='elite'?0.35:0.6))return;
+ let best=null,bs=0.58;
+ for(const k in CMS){const c=CMS[k],v=p[c.ax];if(v==null||!c.ok()||c.cost>bud)continue;const sc=c.hi?v:1-v;if(sc>bs){bs=sc;best=k;}}
+ if(!best)return;
+ const c=CMS[best];R.bud[RUN.act]-=c.cost;R.lastCm=RUN.roomIdx;R.cms.push(best);room.cm=best;
+ const add=c.apply();
+ if(add&&add.length){for(const s of add)s.cm=true;const wi=Math.min(1,room.waves.length-1);room.waves[wi].push(...add);}
+ room.cmAnnT=room.wtheme?3.8:1.0;}
+let murEl=null,murTimer=0;
+function murmur(title,text,d){
+ if(!murEl){murEl=document.createElement('div');murEl.id='murmur';murEl.setAttribute('role','status');murEl.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(murEl);}
+ murEl.innerHTML=`<svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12c3-5 7-7 10-7s7 2 10 7c-3 5-7 7-10 7s-7-2-10-7z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg><div><b>${esc(title)}</b><span>${esc(text)}</span></div>`;
+ murEl.classList.add('show');clearTimeout(murTimer);murTimer=setTimeout(()=>murEl.classList.remove('show'),(d||4.5)*1000);}
+function announceCm(){
+ if(!room||room.cleared)return;
+ if(room.cmRelax){murmur('Le Brumeux relâche son étreinte','Il te sent vaciller et retient ses contre-mesures. Reprends ton souffle.',4.2);sfx('murmur');return;}
+ const c=CMS[room.cm];if(!c)return;room.cmShown=true;
+ murmur(`Le Brumeux · ${c.n}`,`Il a vu que ${c.why}. ${c.what}`,5);sfx('murmur');
+ tlights.push({x:W/2,y:H/2,r:760,t:0.9,max:0.9,c:'violet'});updateRoomHud();}
+const _sw12=spawnWave;
+spawnWave=function(w,last){const n0=room.spawning.length;_sw12(w,last);for(let i=0;i<w.length;i++){const sp=room.spawning[n0+i];if(sp&&w[i]&&w[i].cm)sp.cm=true;}};
+const _er12=enterRoom;
+enterRoom=function(type){
+ _er12.apply(this,arguments);
+ if(P)P.grabT=0;
+ if(!RUN||RUN.hub||!room)return;
+ room.t12=RUN.time;
+ if((type==='combat'||type==='elite')&&room.waves&&room.waves.length&&!room.v9skip)brumeuxPlan();};
+const _orc12=onRoomCleared;
+onRoomCleared=function(){
+ if(RUN&&!RUN.hub&&room&&(room.type==='combat'||room.type==='elite')&&room.t12!=null&&!room.v9skip){const R=PR();R.rooms++;R.clearT+=RUN.time-room.t12;}
+ _orc12();};
+const _urh12=updateRoomHud;
+updateRoomHud=function(){_urh12();if(RUN&&!RUN.hub&&room&&room.cm&&room.cmShown&&CMS[room.cm]){const el=$('#hRoom');if(el)el.textContent+=` · ◈ ${CMS[room.cm].n}`;}};
+const _dep12=drawEnemyPost;
+drawEnemyPost=function(e){_dep12(e);if(!e.cm||e.dead)return;const c=ctx,y=e.y-e.r-(e.elite?50:16)-Math.sin(T*4+e.wob)*2;
+ c.save();c.globalCompositeOperation='lighter';glow(c,e.x,y,11,'180,140,255',0.45);c.strokeStyle='rgba(205,175,255,.95)';c.lineWidth=1.6;
+ c.beginPath();c.moveTo(e.x-7,y);c.quadraticCurveTo(e.x,y-6,e.x+7,y);c.quadraticCurveTo(e.x,y+6,e.x-7,y);c.stroke();c.fillStyle='rgba(225,205,255,.95)';c.beginPath();c.arc(e.x,y,1.9,0,TAU);c.fill();c.restore();};
+
+// ───────────────────────── Mère-Brume : données
+const MERE_GAP=[0,1.9,1.4,0.85];
+const MERE_Q=[null,['voile','etreinte','charge'],['voile','etreinte','charge','copy','copy','summon'],['charge','copy','etreinte','spirale','voile','copy']];
+const MERE_PH=['','Observation','Adaptation','Désespoir'];
+const MERE_PAL={1:{mist:[124,112,178],body:[60,52,86],dark:[20,16,30],core:[190,160,255],eye:[205,175,255],bone:[216,207,182]},
+ 3:{mist:[150,46,70],body:[84,28,44],dark:[28,9,16],core:[255,96,96],eye:[255,84,92],bone:[240,231,210]}};
+const MERE_COPY={
+ volee:{what:'tes coups à distance',hint:'Elle tire des salves visées : les lignes violettes montrent où elles partent.'},
+ balayage:{what:'ton corps à corps',hint:'Elle fond sur toi et balaie devant elle : sors du cône orange.'},
+ esquive:{what:'ton esquive',hint:'Elle se dérobe à tes coups et resurgit près de toi : quitte le cercle orange.'}};
+const rgb12=a=>a.map(v=>Math.round(v)).join(',');
+const mixA=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k);
+function merePalTarget(e){
+ if(e.phase===2){const c=(CRGB[P.cls]||'201,180,255').split(',').map(Number),b=MERE_PAL[1];return{mist:mixA(b.mist,c,0.55),body:mixA(b.body,c,0.22),dark:b.dark,core:c,eye:c,bone:b.bone};}
+ return MERE_PAL[e.phase===3?3:1];}
+function mereInit(e){
+ e.m12=1;e.mk=1;e.reach=0;e.reachTo=0;e.reachSide=1;e.armT=null;e.dodgeCd=0;e.fade=1;e.state='idle';e.patT=1.8;e.queue=[];e.copy=null;e.grabbing=false;
+ const p0=MERE_PAL[1];e.pal={};for(const k in p0)e.pal[k]=p0[k].slice();}
+function mereChooseCopy(){
+ const p=profile(),sc={volee:p.portee,balayage:p.portee==null?null:1-p.portee,esquive:p.esquive==null?null:p.esquive*1.1};
+ let best=null,bs=-1;for(const k in sc)if(sc[k]!=null&&sc[k]>bs){bs=sc[k];best=k;}
+ return best||({lum:'volee',tis:'volee',gou:'balayage',her:'esquive'}[P.cls])||'volee';}
+
+// ───────────────────────── Mère-Brume : comportement
+const _ub12=updateBoss;
+updateBoss=function(e,dt,slow,dP,touching){
+ if(RUN.act!==1||RUN.hub){EYE.boss='255,64,87';_ub12(e,dt,slow,dP,touching);return;}
+ updateMere(e,dt,slow,dP,touching);};
+function merePhase(e,ph){
+ e.phase=ph;e.queue=[];e.state='idle';e.patT=1.5;e.reachTo=0;e.fade=1;
+ if(e.grabbing){e.grabbing=false;P.grabT=0;}
+ for(let i=0;i<3;i++)later(i*0.12,()=>{if(!e.dead)mist(e.x+rand(-30,30),e.y+rand(-20,40),e.r*1.3,ph===3?'#3a1220':'#2a2440');});
+ sfx('phase');shake(10,0.4);tlights.push({x:e.x,y:e.y,r:420,t:0.5,max:0.5,c:'rage'});
+ if(ph===2){e.copy=mereChooseCopy();if(RUN.prof)RUN.prof.copied=e.copy;const C=MERE_COPY[e.copy];
+  showBanner('Deuxième temps · Adaptation','Elle t’imite',true);later(1.0,()=>toast(`Elle a copié ${C.what}. ${C.hint}`,4.6));}
+ else{showBanner('Troisième temps · Désespoir','La Brume se retire',true);later(1.0,()=>toast('Son cœur est à nu : +25 % de dégâts. Elle frappe plus vite, tiens bon.',3.8));}}
+function mereShot(e,a,v){eproj.push({x:e.x+Math.cos(a)*e.r*0.7,y:e.y-e.r*0.3+Math.sin(a)*e.r*0.7,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:8,dmg:e.dmg*0.7,life:7,boss:true,col:TELE.proj});}
+function mereSafePoint(x,y){x=clamp(x,AR.x0+60,AR.x1-60);y=clamp(y,AR.y0+60,AR.y1-60);for(const q of room.pillars){const d=hyp(x-q.x,y-q.y);if(d<q.r+60){x=q.x+(x-q.x)/(d||1)*(q.r+60);y=q.y+(y-q.y)/(d||1)*(q.r+60);}}return{x,y};}
+function merePattern(e){
+ if(!e.queue.length)e.queue=e.phase===1?MERE_Q[1].slice():shuffle(MERE_Q[e.phase].slice());
+ const p=e.queue.shift(),ph=e.phase;
+ if(p==='voile'){e.state='mvoile';e.rings=ph;e.t=e.tt=ph===1?0.85:0.6;e.off=rand(0,TAU);}
+ else if(p==='etreinte'){const q=mereSafePoint(P.x+P.vx*0.25,P.y+P.vy*0.25);e.state='mgrab';e.gx=q.x;e.gy=q.y;e.gr=ph===3?62:72;e.t=e.tt=ph===1?1.05:ph===2?0.85:0.7;e.reachSide=q.x<e.x?-1:1;e.armT={x:q.x,y:q.y};e.reachTo=0;}
+ else if(p==='charge'){e.state='mwind';e.t=e.tt=ph===1?1.0:0.8;e.ang=Math.atan2(P.y-e.y,P.x-e.x);e.chain=ph===3?1:0;}
+ else if(p==='copy'){
+  if(e.copy==='volee'){e.state='mvolley';e.vn=3;e.t=e.tt=0.6;}
+  else if(e.copy==='balayage'){e.state='msweepIn';e.t=0.75;}
+  else{const q=mereSafePoint(P.x,P.y);e.state='mblink';e.bx=q.x;e.by=q.y;e.t=e.tt=ph===3?0.6:0.75;}}
+ else if(p==='summon'){const alive=enemies.filter(x=>!x.dead&&x!==e).length+room.spawning.length;
+  if(alive<7){const list=['rampant','rampant','rampant'];if(ph===3)list.push('rampant');list.forEach((t,i)=>{const a=i/list.length*TAU+rand(0,1);room.spawning.push({x:clamp(e.x+Math.cos(a)*110,AR.x0+30,AR.x1-30),y:clamp(e.y+Math.sin(a)*110,AR.y0+30,AR.y1-30),type:t,elite:false,t:0.8});});}
+  e.state='idle';e.patT=MERE_GAP[ph]*0.7;}
+ else{e.state='mspiral';e.t=2.6;e.shotT=0;e.spinA=rand(0,TAU);e.spinDir=Math.random()<0.5?1:-1;}}
+function updateMere(e,dt,slow,dP,touching){
+ if(!e.m12)mereInit(e);
+ const ph=bossPhase(e);if(ph>e.phase)merePhase(e,ph);
+ const tg=merePalTarget(e),kk=Math.min(1,dt*2.2);for(const k in tg)e.pal[k]=mixA(e.pal[k],tg[k],kk);EYE.boss=rgb12(e.pal.eye);
+ e.mk+=((e.phase===3?0.25:e.phase===2?0.8:1)-e.mk)*Math.min(1,dt*1.5);
+ e.reach+=((e.reachTo||0)-e.reach)*Math.min(1,dt*(e.reachTo?8:4));
+ e.dodgeCd-=dt;
+ const gap=MERE_GAP[e.phase]*(PAL()>=5?0.85:1),spdK=e.phase===3?1.4:1;
+ // saisie en cours : elle attire sa proie
+ if(e.grabbing){
+  if(P.grabT>0&&!P.dead){P.grabT-=dt;const dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy)||1,m=e.r+P.r+16;if(d>m){const v=Math.min(d-m,320*dt);P.x+=dx/d*v;P.y+=dy/d*v;collidePlayer();}e.armT={x:P.x,y:P.y};}
+  else{e.grabbing=false;P.grabT=0;e.reachTo=0;P.iT=Math.max(P.iT,0.45);}}
+ switch(e.state){
+ case 'mvoile':e.t-=dt;if(e.t<=0){const n=[0,14,16,18][e.phase];for(let i=0;i<n;i++)mereShot(e,e.off+i/n*TAU,185);sfx('shoot');e.rings--;
+  if(e.rings>0){e.off+=Math.PI/n;e.t=e.tt=e.phase===3?0.32:0.45;}else{e.state='idle';e.patT=gap;}}break;
+ case 'mwind':e.t-=dt;if(e.t>0.3)e.ang=Math.atan2(P.y-e.y,P.x-e.x);if(e.t<=0){e.state='mcharge';e.t=0.62;sfx('dash');}break;
+ case 'mcharge':{const v=680*(e.phase===3?1.12:1);e.x+=Math.cos(e.ang)*v*dt;e.y+=Math.sin(e.ang)*v*dt;e.t-=dt;if(touching)contact(e,e.dmg*1.4);
+  if(crashed(e)){e.stun=e.phase===3?0.8:1.1;e.vuln=2.4;e.state='idle';e.patT=gap+0.6;e.chain=0;shake(10,0.3);sparks(e.x,e.y,16,'#ffb0a0');toast('Sonnée ! Son cœur est à nu : +50 % de dégâts',1.6);}
+  else if(e.t<=0){if(e.chain>0){e.chain--;e.state='mwind';e.t=e.tt=0.5;e.ang=Math.atan2(P.y-e.y,P.x-e.x);}else{e.state='idle';e.patT=gap;}}break;}
+ case 'mgrab':e.t-=dt;e.reachTo=clamp(1-e.t/e.tt,0,1)*0.8;
+  if(e.t<=0){e.reachTo=1;const d=hyp(P.x-e.gx,P.y-e.gy);
+   if(!P.dead&&d<e.gr+P.r*0.5&&P.dashT<=0&&P.iT<=0){hurtPlayer(e.dmg*1.15,e);if(!P.dead){P.grabT=e.phase===3?0.7:0.9;e.grabbing=true;sfx('grab');if(!SAVE.flags.mereGrab){SAVE.flags.mereGrab=1;persist();toast('Saisie ! Le cercle cyan annonce l’étreinte : esquive au travers ou sors-en.',3.4);}}}
+   else{sparks(e.gx,e.gy,10,'#9fe8ff');fx.push({k:'ring',x:e.gx,y:e.gy,r0:10,r1:e.gr,w:6,t:0.3,max:0.3,col:`rgba(${TELE.grab},`,fill:false});sfx('hit');}
+   e.state='mgrabEnd';e.t=0.45;}break;
+ case 'mgrabEnd':e.t-=dt;if(e.t<=0&&!e.grabbing){e.reachTo=0;e.state='idle';e.patT=gap;}break;
+ case 'mvolley':e.t-=dt;if(e.t<=0){const a=Math.atan2(P.y-e.y+e.r*0.3,P.x-e.x);for(const da of[-0.16,0,0.16])mereShot(e,a+da,250);sfx('shoot');e.vn--;
+  if(e.vn>0)e.t=e.tt=e.phase===3?0.32:0.42;else{e.state='idle';e.patT=gap;}}break;
+ case 'msweepIn':moveTo(e,P.x,P.y,e.spd*3.2*spdK,dt);e.t-=dt;if(dP<e.r+95||e.t<=0){e.state='msweep';e.t=e.tt=e.phase===3?0.5:0.65;e.ang=Math.atan2(P.y-e.y,P.x-e.x);}break;
+ case 'msweep':e.t-=dt;if(e.t<=0){const R=e.r+125;if(!P.dead&&hyp(P.x-e.x,P.y-e.y)<R+P.r&&angDiff(Math.atan2(P.y-e.y,P.x-e.x),e.ang)<1.15)hurtPlayer(e.dmg*1.5,e);
+  fx.push({k:'slash',x:e.x,y:e.y-6,a:e.ang,r:R,arc:2.3,dir:1,style:'shadow',t:0.25,max:0.25});shake(6,0.2);sfx('lame');e.state='idle';e.patT=gap;}break;
+ case 'mblink':e.t-=dt;e.fade=clamp(e.t/e.tt*1.4-0.2,0.08,1);if(e.t<=0){mist(e.x,e.y,e.r,'#2a2440');e.x=e.bx;e.y=e.by;e.fade=1;
+  if(!P.dead&&hyp(P.x-e.x,P.y-e.y)<105+P.r&&P.dashT<=0)hurtPlayer(e.dmg*1.1,e);
+  fx.push({k:'ring',x:e.x,y:e.y,r0:e.r,r1:110,w:10,t:0.35,max:0.35,col:`rgba(${TELE.zone},`,fill:true});mist(e.x,e.y,e.r*1.2,'#2a2440');shake(6,0.2);sfx('explode');e.state='idle';e.patT=gap;}break;
+ case 'mspiral':e.t-=dt;e.shotT-=dt;if(e.shotT<=0){e.shotT=0.09;for(let i=0;i<3;i++)mereShot(e,e.spinA+i*TAU/3,170);e.spinA+=0.24*e.spinDir;}if(e.t<=0){e.state='idle';e.patT=gap;}break;
+ default:{
+  // Esquive copiée : elle se dérobe quand tu frappes au contact.
+  if(e.copy==='esquive'&&e.phase>=2&&e.dodgeCd<=0&&P.swingT>0&&dP<170){const a=Math.atan2(e.y-P.y,e.x-P.x)+(Math.random()<0.5?1:-1)*1.3,q=mereSafePoint(e.x+Math.cos(a)*120,e.y+Math.sin(a)*120);
+   mist(e.x,e.y,e.r*0.8,'#2a2440');e.x=q.x;e.y=q.y;e.dodgeCd=e.phase===3?2.4:3.2;addNum(e.x,e.y-e.r-30,'esquive copiée','echo');sfx('dash');}
+  const want=250,sp=e.spd*slow*spdK;if(dP>want+40)moveTo(e,P.x,P.y,sp,dt);else if(dP<want-70)moveTo(e,2*e.x-P.x,2*e.y-P.y,sp*0.8,dt);
+  e.patT-=dt;if(e.patT<=0)merePattern(e);}}
+ if(touching&&e.state!=='mcharge'&&e.fade>0.5)contact(e,e.dmg);}
+const _cb12=createBoss;
+createBoss=function(){const e=_cb12();if(RUN.act===1&&!RUN.hub){mereInit(e);later(0.3,()=>{if(e.dead)return;showBanner('Premier temps · Observation','Elle t’étudie',true);toast('Retiens ses schémas. Orange : zone · Violet : tirs · Cyan : saisie.',4.2);});}return e;};
+const _bd12=bossDefeated;
+bossDefeated=function(e){if(e&&e.m12){e.grabbing=false;if(P)P.grabT=0;EYE.boss='255,64,87';}_bd12(e);};
+
+// ───────────────────────── Mère-Brume : squelette 2D (coordonnées relatives au centre)
+function mereRig(e){
+ const r=e.r,br=Math.sin(T*1.6+e.wob)*0.04,lean=(P?clamp((P.x-e.x)/400,-1,1):0)*0.12*r,slump=e.phase===3?r*0.07:0;
+ const hx=lean*0.6,hy=-r*(1.0+br)+slump,core={x:lean*0.3,y:-r*0.34+slump*0.5};
+ const sweep=e.state==='msweep'||e.state==='msweepIn',fa=e.ang||0;
+ const arms=[-1,1].map(s=>{
+  const sx=s*r*0.46+lean*0.4,sy=-r*0.6+slump;
+  let tx=s*r*(0.95+0.1*Math.sin(T*1.3+s)),ty=r*(0.32+0.12*Math.sin(T*1.1+s*2));
+  if(sweep){const k=e.state==='msweep'?clamp(1-e.t/e.tt,0,1):0.3,a=fa+s*(0.9-1.6*k);tx=Math.cos(a)*r*1.5;ty=Math.sin(a)*r*1.5-r*0.2;}
+  else if(e.armT&&e.reachSide===s&&e.reach>0.01){tx+=(e.armT.x-e.x-tx)*e.reach;ty+=(e.armT.y-e.y-ty)*e.reach;}
+  else if(e.state==='mwind'||e.state==='mcharge'){tx=s*r*0.7;ty=-r*0.95;}
+  const dx=tx-sx,dy=ty-sy,d=hyp(dx,dy)||1,L=Math.max(d/2+2,r*0.62),h=Math.sqrt(Math.max(0,L*L-d*d/4)),nx=-dy/d,ny=dx/d;
+  let ex=sx+dx/2+nx*h,ey=sy+dy/2+ny*h;if((ex-sx)*s<(sx+dx/2-nx*h-sx)*s){ex=sx+dx/2-nx*h;ey=sy+dy/2-ny*h;}
+  return{s,sx,sy,ex,ey,hx:tx,hy:ty};});
+ return{hx,hy,core,arms,lean,slump};}
+function mereArm(c,A,col,bone,r){
+ c.lineCap='round';c.lineJoin='round';
+ c.beginPath();c.moveTo(A.sx,A.sy);c.quadraticCurveTo(A.ex,A.ey,A.hx,A.hy);c.strokeStyle=INK;c.lineWidth=r*0.24;c.stroke();c.strokeStyle=col;c.lineWidth=r*0.15;c.stroke();
+ const a=Math.atan2(A.hy-A.ey,A.hx-A.ex);
+ for(const k of[-0.55,0,0.55]){const ca=a+k,L=r*0.3,mx=A.hx+Math.cos(ca)*L*0.6,my=A.hy+Math.sin(ca)*L*0.6,bx=A.hx+Math.cos(ca+0.5*A.s)*L,by=A.hy+Math.sin(ca+0.5*A.s)*L;
+  c.beginPath();c.moveTo(A.hx,A.hy);c.quadraticCurveTo(mx,my,bx,by);c.strokeStyle=INK;c.lineWidth=4.2;c.stroke();c.strokeStyle=bone;c.lineWidth=2.2;c.stroke();}}
+function mereMist(c,e,a,front){const r=e.r,col=rgb12(e.pal.mist);
+ for(let i=0;i<9;i++){const u=i/8,side=i%2?1:-1,x=Math.sin(T*0.8+i*1.7+e.wob*0.2)*r*0.22*u+side*r*0.3*u,y=-r*0.15+u*r*1.25+(front?r*0.15:0),rad=r*(0.35+0.55*u)*(0.55+0.45*e.mk);
+  const g=c.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,`rgba(${col},${a})`);g.addColorStop(1,`rgba(${col},0)`);c.fillStyle=g;c.beginPath();c.arc(x,y,rad,0,TAU);c.fill();}}
+drawMere=function(c,e){
+ if(!e.m12)mereInit(e);
+ const r=e.r,R=mereRig(e),pl=e.pal,mk=e.mk,body=rgb12(pl.body),dark=rgb12(pl.dark),bone=rgb12(pl.bone);
+ c.globalAlpha=e.fade==null?1:e.fade;
+ shadowAt(c,0,r*1.2,r*(0.7+0.5*mk),r*0.32,.5);
+ // traînes de brume
+ c.lineCap='round';for(let i=0;i<6;i++){const a=Math.PI*0.5+(i-2.5)*0.32,len=r*(0.5+0.35*Math.sin(e.wob*1.3+i*2))*(0.4+0.6*mk);let x=Math.cos(a)*r*0.75*mk,y=r*0.9;c.beginPath();c.moveTo(x,y);for(let k=1;k<=5;k++){const u=k/5;x+=Math.cos(a)*len/5+Math.sin(e.wob*2+u*3+i)*2;y+=Math.sin(a)*len/5;c.lineTo(x,y);}
+  c.strokeStyle=`rgba(${rgb12(pl.mist)},${0.35*mk})`;c.lineWidth=7*mk+2;c.stroke();}
+ mereMist(c,e,0.42*mk,false);
+ // robe en cloche : la brume comme matériau
+ const hw=r*(0.5+0.55*mk),hemY=r*(0.78+0.34*mk);
+ c.beginPath();c.moveTo(-r*0.3,-r*0.18+R.slump);c.bezierCurveTo(-r*0.42,r*0.25,-hw*0.85,hemY*0.6,-hw,hemY);
+ for(let i=0;i<=10;i++){const u=i/10,x=-hw+2*hw*u,y=hemY+Math.sin(T*2.2+u*9+e.wob)*r*0.06*mk+(i%2?r*0.05:0);c.lineTo(x,y);}
+ c.bezierCurveTo(hw*0.85,hemY*0.6,r*0.42,r*0.25,r*0.3,-r*0.18+R.slump);c.closePath();
+ const gd=c.createLinearGradient(0,-r*0.2,0,hemY);gd.addColorStop(0,`rgba(${body},1)`);gd.addColorStop(1,`rgba(${dark},${0.35+0.5*mk})`);inkFill(c,gd,2);
+ c.strokeStyle=`rgba(${dark},.6)`;c.lineWidth=1.5;for(let i=-2;i<=2;i++){c.beginPath();c.moveTo(i*r*0.08,r*0.05+R.slump);c.quadraticCurveTo(i*r*0.22,hemY*0.6,i*hw*0.36,hemY);c.stroke();}
+ // bras (derrière le buste)
+ const armCol=`rgb(${rgb12(mixA(pl.body,pl.bone,0.12))})`;for(const A of R.arms)mereArm(c,A,armCol,bone,r);
+ // buste
+ const sy=-r*0.62+R.slump;c.beginPath();c.moveTo(-r*0.5+R.lean*0.4,sy);c.quadraticCurveTo(0,sy-r*0.14,r*0.5+R.lean*0.4,sy);c.quadraticCurveTo(r*0.4,-r*0.35+R.slump,r*0.28,-r*0.12+R.slump);c.lineTo(-r*0.28,-r*0.12+R.slump);c.quadraticCurveTo(-r*0.4,-r*0.35+R.slump,-r*0.5+R.lean*0.4,sy);c.closePath();
+ inkFill(c,radial(c,0,-r*0.4,r*0.6,`rgb(${rgb12(mixA(pl.body,[255,255,255],0.08))})`,`rgb(${dark})`),2.2);
+ // côtes : la brume se retire, l’os apparaît
+ c.strokeStyle=`rgba(${bone},${0.25+0.6*(1-mk)})`;c.lineWidth=2;for(let i=0;i<4;i++){const y=-r*0.52+i*r*0.1+R.slump;c.beginPath();c.moveTo(R.core.x-r*0.08,y);c.quadraticCurveTo(R.core.x-r*0.32,y+r*0.05,R.core.x-r*0.3,y+r*0.12);c.moveTo(R.core.x+r*0.08,y);c.quadraticCurveTo(R.core.x+r*0.32,y+r*0.05,R.core.x+r*0.3,y+r*0.12);c.stroke();}
+ // logement du cœur
+ ell(c,R.core.x,R.core.y,r*0.15,r*0.17);c.fillStyle='#07050b';c.fill();c.strokeStyle=INK;c.lineWidth=2;c.stroke();
+ // tête : voile, masque d’os, couronne
+ const hx=R.hx,hy=R.hy;
+ c.beginPath();c.moveTo(hx,hy-r*0.5);c.bezierCurveTo(hx+r*0.42,hy-r*0.3,hx+r*0.38,hy+r*0.3,hx+r*0.3,hy+r*0.42);c.lineTo(hx-r*0.3,hy+r*0.42);c.bezierCurveTo(hx-r*0.38,hy+r*0.3,hx-r*0.42,hy-r*0.3,hx,hy-r*0.5);c.closePath();inkFill(c,`rgb(${dark})`,2.4);
+ ell(c,hx,hy+r*0.04,r*0.24,r*0.29);inkFill(c,radial(c,hx,hy,r*0.3,`rgb(${bone})`,`rgb(${rgb12(mixA(pl.bone,pl.dark,0.45))})`),1.8);
+ c.fillStyle='#07050b';for(const [u,v] of MERE_EYES){ell(c,hx+u*r*0.5,hy+(v+0.45)*r*0.5,3.4,2.8);c.fill();}
+ c.strokeStyle='rgba(0,0,0,.55)';c.lineWidth=1.4;c.beginPath();c.moveTo(hx-r*0.1,hy+r*0.22);c.quadraticCurveTo(hx,hy+r*0.15,hx+r*0.1,hy+r*0.22);c.stroke();c.strokeStyle='rgba(0,0,0,.4)';c.lineWidth=1.1;for(const s of[-1,1]){c.beginPath();c.moveTo(hx+s*r*0.12,hy+r*0.02);c.quadraticCurveTo(hx+s*r*0.14,hy+r*0.1,hx+s*r*0.12,hy+r*0.18);c.stroke();}
+ for(let i=0;i<7;i++){const a=-Math.PI+0.55+i*(Math.PI-1.1)/6,pa=a+Math.PI/2,b=r*0.3,h=r*(0.52+(i===3?0.22:i%2?0.05:0.12));
+  c.beginPath();c.moveTo(hx+Math.cos(a)*b+Math.cos(pa)*3.5,hy-r*0.1+Math.sin(a)*b+Math.sin(pa)*3.5);c.lineTo(hx+Math.cos(a)*h,hy-r*0.1+Math.sin(a)*h);c.lineTo(hx+Math.cos(a)*b-Math.cos(pa)*3.5,hy-r*0.1+Math.sin(a)*b-Math.sin(pa)*3.5);c.closePath();inkFill(c,`rgb(${bone})`,1.4);}
+ // voile de brume devant le corps
+ mereMist(c,e,0.16*mk,true);
+ c.globalAlpha=1;};
+function mereEyes(e){const R=mereRig(e);return MERE_EYES.map(([u,v],i)=>[e.x+R.hx+u*e.r*0.5,e.y+R.hy+(v+0.45)*e.r*0.5,i<5?2.4:1.8]);}
+const _ep12=eyePts;
+eyePts=function(e){if(e.type==='boss'&&e.m12&&RUN&&RUN.act===1)return mereEyes(e);return _ep12(e);};
+const _dbp12=drawBossPost;
+drawBossPost=function(e){
+ if(RUN.act!==1||!e.m12){_dbp12(e);return;}
+ const c=ctx,r=e.r,R=mereRig(e),fd=e.fade==null?1:e.fade,pul=0.6+0.4*Math.sin(T*(2.2+e.phase)),core=rgb12(e.pal.core),cx=e.x+R.core.x,cy=e.y+R.core.y,big=e.phase===3?1.45:1;
+ glow(c,e.x,e.y+r*0.3,r*1.7,rgb12(e.pal.mist),0.08*e.mk*fd);
+ glow(c,cx,cy,r*0.6*big*(0.85+0.2*pul),core,(0.45+0.25*pul)*fd);
+ // le cœur-cloche (Mémoire) : point faible
+ const s=r*0.11*big;c.beginPath();c.moveTo(cx-s*0.9,cy+s);c.quadraticCurveTo(cx-s*0.85,cy-s*0.9,cx,cy-s*1.1);c.quadraticCurveTo(cx+s*0.85,cy-s*0.9,cx+s*0.9,cy+s);c.closePath();
+ c.fillStyle=`rgba(255,248,240,${0.55+0.35*pul})`;c.fill();c.strokeStyle=`rgba(${core},.95)`;c.lineWidth=1.6;c.stroke();
+ if(e.phase===3){c.strokeStyle=`rgba(${core},.5)`;c.lineWidth=1.5;for(let i=0;i<7;i++){const a=i/7*TAU+0.3;c.beginPath();c.moveTo(cx,cy);c.quadraticCurveTo(cx+Math.cos(a+0.4)*r*0.45,cy+Math.sin(a+0.4)*r*0.45,cx+Math.cos(a)*r*0.9,cy+Math.sin(a)*r*0.85);c.stroke();}}
+ if(e.vuln>0){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(cx,cy,r*0.32+4*Math.sin(T*12),0,TAU);c.stroke();}
+ if(e.grabbing||e.state==='mgrab'){const A=R.arms.find(a=>a.s===e.reachSide);if(A)glow(c,e.x+A.hx,e.y+A.hy,r*0.45,TELE.grab,0.35);}};
+// Télégraphes : orange = zone, violet = tirs, cyan = saisie
+function mereTele(e){
+ const c=ctx,k=e.tt?clamp(1-e.t/e.tt,0,1):0;c.save();
+ if(e.state==='mvoile'){const n=[0,14,16,18][e.phase];c.lineCap='round';c.strokeStyle=`rgba(${TELE.proj},${0.18+0.55*k})`;c.lineWidth=2.4;
+  for(let i=0;i<n;i++){const a=e.off+i/n*TAU,x0=e.x+Math.cos(a)*e.r*0.8,y0=e.y-e.r*0.3+Math.sin(a)*e.r*0.8,L=60+170*k;c.beginPath();c.moveTo(x0,y0);c.lineTo(x0+Math.cos(a)*L,y0+Math.sin(a)*L);c.stroke();}}
+ if(e.state==='mwind'){const w=e.r*2,len=560;c.save();c.translate(e.x,e.y);c.rotate(e.ang);c.fillStyle=`rgba(${TELE.zone},.12)`;c.fillRect(0,-w/2,len,w);c.fillStyle=`rgba(${TELE.zone},.26)`;c.fillRect(0,-w/2,len*k,w);c.strokeStyle=`rgba(${TELE.zone},.6)`;c.lineWidth=1.5;c.setLineDash([8,6]);c.strokeRect(0,-w/2,len,w);c.setLineDash([]);c.restore();}
+ if(e.state==='mgrab'){c.fillStyle=`rgba(${TELE.grab},${0.08+0.22*k})`;c.beginPath();c.arc(e.gx,e.gy,e.gr*k,0,TAU);c.fill();c.strokeStyle=`rgba(${TELE.grab},${0.55+0.4*Math.sin(T*24)*k})`;c.lineWidth=2.4;c.beginPath();c.arc(e.gx,e.gy,e.gr,0,TAU);c.stroke();
+  c.lineWidth=2;for(let i=0;i<3;i++){const a=-Math.PI/2+(i-1)*0.5;c.beginPath();c.arc(e.gx,e.gy,e.gr*0.55,a-0.15,a+0.15);c.stroke();}}
+ if(e.state==='mvolley'){const a=Math.atan2(P.y-e.y+e.r*0.3,P.x-e.x);c.strokeStyle=`rgba(${TELE.proj},${0.2+0.6*k})`;c.lineWidth=2;c.setLineDash([10,8]);c.lineDashOffset=-T*60;
+  for(const da of[-0.16,0,0.16]){c.beginPath();c.moveTo(e.x,e.y-e.r*0.3);c.lineTo(e.x+Math.cos(a+da)*420,e.y-e.r*0.3+Math.sin(a+da)*420);c.stroke();}c.setLineDash([]);}
+ if(e.state==='msweep'){const R=e.r+125;c.fillStyle=`rgba(${TELE.zone},${0.1+0.25*k})`;c.beginPath();c.moveTo(e.x,e.y);c.arc(e.x,e.y,R,e.ang-1.15,e.ang+1.15);c.closePath();c.fill();c.strokeStyle=`rgba(${TELE.zone},.7)`;c.lineWidth=2;c.stroke();}
+ if(e.state==='mblink'){c.fillStyle=`rgba(${TELE.zone},${0.08+0.22*k})`;c.beginPath();c.arc(e.bx,e.by,105*k,0,TAU);c.fill();c.strokeStyle=`rgba(${TELE.zone},${0.6+0.35*Math.sin(T*20)*k})`;c.lineWidth=2.4;c.beginPath();c.arc(e.bx,e.by,105,0,TAU);c.stroke();}
+ c.restore();}
+const _dt12=drawTelegraphs;
+drawTelegraphs=function(){_dt12();const b=room&&room.boss;if(b&&!b.dead&&b.m12&&RUN&&RUN.act===1&&state==='play')mereTele(b);};
+const _dEp12=drawEproj;
+drawEproj=function(){
+ // les tirs de la Mère-Brume portent la couleur « tir » du code (violet)
+ const keep=[];for(const p of eproj)if(p.col&&p.boss){keep.push(p);p.boss=false;}
+ _dEp12();for(const p of keep)p.boss=true;};
+const _uh12=updateHud;
+updateHud=function(){_uh12();const b=room&&room.boss;if(b&&!b.dead&&b.m12)sT(HUD.hBossName,`${b.name} · ${MERE_PH[b.phase]}${b.vuln>0?' · sonnée':''}`);};
+const _sfx12=sfx;
+sfx=function(k){
+ if(k==='murmur'){if(!AC||muted)return;tone(196,1.0,'sine',0.07,147);tone(233,1.0,'sine',0.05,175,0.14);noise(0.8,0.04,700,'lowpass');return;}
+ if(k==='grab'){if(!AC||muted)return;tone(90,0.4,'sawtooth',0.1,55);noise(0.25,0.12,500,'lowpass');return;}
+ _sfx12(k);};
+
+// ───────────────────────── Tick, fin de run
+const _st12=step;
+step=function(dt){_st12(dt);try{if(state==='play'&&RUN&&!RUN.hub&&P&&!P.dead&&room&&!trans)v12Tick(dt);}catch(err){console.error(err);}};
+function v12Tick(dt){
+ const R=PR();
+ if(!room.cleared&&['combat','elite','boss'].includes(room.type)&&!room.v9skip){
+  R.fightT+=dt;if(P.hp<P.s.maxHp*0.35)R.lowT+=dt;
+  for(const e of enemies){if(e.dead||e.puppet>0||e.fixed)continue;if(hyp(e.x-P.x,e.y-P.y)-e.r<85){R.closeT+=dt;break;}}}
+ if(room.cmAnnT>0){room.cmAnnT-=dt;if(room.cmAnnT<=0)announceCm();}
+ if(P.grabT>0&&!(room.boss&&room.boss.grabbing))P.grabT=0;}
+const _oe12=openEnd;
+openEnd=function(win,abandon){
+ if(RUN&&!RUN.final&&!RUN.hub){try{profCommit();}catch(err){console.error(err);}}
+ _oe12(win,abandon);
+ try{if(!RUN||RUN.hub||overlayEl.querySelector('.prof12'))return;const col=overlayEl.querySelector('.two>div:last-child');if(!col)return;
+  const L=profLines(profile()),cms=[...new Set((RUN.prof&&RUN.prof.cms)||[])].map(k=>CMS[k].n),cp=RUN.prof&&RUN.prof.copied;
+  if(!L.length&&!cms.length&&!cp)return;
+  col.insertAdjacentHTML('beforeend',`<div class="prof12"><p class="h-sec">Ce que la Brume a retenu</p><div class="chips">${L.map(l=>`<span class="chip" style="--c:#b48cff">${esc(l)}</span>`).join('')}</div>${cms.length?`<p class="k" style="margin-top:6px">Contre-mesures du Brumeux : ${esc(cms.join(', '))}</p>`:''}${cp?`<p class="k">La Mère-Brume a copié ${esc(MERE_COPY[cp].what)}.</p>`:''}</div>`);}catch(err){console.error(err);}};
+(function(){const st=document.createElement('style');st.textContent=`
+#murmur{position:absolute;left:50%;top:calc(140px + env(safe-area-inset-top,0px));transform:translate(-50%,-6px);max-width:min(560px,calc(100% - 32px));display:flex;gap:12px;align-items:flex-start;padding:10px 18px 10px 14px;background:linear-gradient(90deg,rgba(42,24,74,.95),rgba(14,10,24,.95));border:1px solid #5d4594;border-left:3px solid #b48cff;border-radius:4px;color:#ece2ff;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:15;box-shadow:0 0 28px rgba(150,110,255,.25)}
+#murmur.show{opacity:1;transform:translate(-50%,0)}
+#murmur .eye{flex:none;width:28px;height:28px;color:#c9a8ff;margin-top:2px}
+#murmur b{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#b48cff;margin-bottom:2px}
+#murmur span{display:block;font-size:14.5px;line-height:1.4}
+@media (prefers-reduced-motion:reduce){#murmur{transition:none}}`;document.head.appendChild(st);})();
+window.__v12={profile,runAxes,CMS,PR,mereChooseCopy};
 
 
 // ───────────────────────── Démarrage
