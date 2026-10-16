@@ -29,8 +29,10 @@ import {
 } from './layout';
 import {
   GROUND_DECOS,
+  GROUND_PRIORITY,
   GROUND_TERRAIN,
   HARD_KINDS,
+  SAMPLE_STEPS,
   TONED,
   groundKey,
   normalizeSpec,
@@ -39,9 +41,11 @@ import {
   paintDeepWater,
   paintFord,
   paintGround,
+  paintHardGround,
   type GroundKind,
   type GroundSpec,
-  type HoodCell,
+  type Layer,
+  type LayerSamples,
   type Rut,
 } from './ground';
 import { Px } from './px';
@@ -980,24 +984,153 @@ function decoFor(kind: GroundKind, x: number, y: number): number {
 
 /* ---------- Résolution des tuiles ---------- */
 
+/* Contours lissés (décision n°43) : flou gaussien de chaque couche, échantillonné tous les 8 px. */
+
+/** Couches lissées, par priorité croissante (les sols durs n'en font pas partie ; l'eau est au-dessus de tout). */
+const SOFT_LAYERS: readonly GroundKind[] = KINDS.filter((k) => !HARD_KINDS.has(k) && k !== 'pond').sort((a, b) => GROUND_PRIORITY[a] - GROUND_PRIORITY[b]);
+/** Rayon du flou (en cases) : large pour les sols naturels (courbes amples), serré pour les routes et pavés (qui restent fins). */
+const SIGMA: Record<Layer, number> = {
+  marsh: 0.95,
+  grass: 0.9,
+  field: 0,
+  forest: 0.95,
+  rock: 0.85,
+  snow: 0.85,
+  sand: 0.75,
+  dirt: 0.55,
+  road: 0.45,
+  ruins: 0.5,
+  planks: 0,
+  cobble: 0.55,
+  pond: 0,
+  water: 0.95,
+};
+/** Amplitude du bruit de bord (même valeur que `ground.ts`), pour savoir quelles couches peuvent apparaître dans une tuile. */
+const MARGIN = 0.16;
+const SUB = 4; // échantillons par case (tous les 4 px)
+const SW = SUB * W + 1;
+const SH = SUB * H + 1;
+
+/** Flou gaussien séparable d'une valeur par case, échantillonné tous les 4 px. */
+function blurField(values: Float32Array, sigma: number): Float32Array {
+  const radius = Math.ceil(3 * sigma);
+  const weight = (d: number): number => Math.exp(-(d * d) / (2 * sigma * sigma));
+  const tmp = new Float32Array(SW * H);
+  for (let cy = 0; cy < H; cy++) {
+    for (let i = 0; i < SW; i++) {
+      const pos = i / SUB;
+      let sum = 0;
+      let wsum = 0;
+      for (let cx = Math.floor(pos) - radius; cx <= Math.floor(pos) + radius; cx++) {
+        if (cx < 0 || cx >= W) continue;
+        const w = weight(pos - (cx + 0.5));
+        sum += (values[cy * W + cx] as number) * w;
+        wsum += w;
+      }
+      tmp[cy * SW + i] = wsum > 0 ? sum / wsum : 0;
+    }
+  }
+  const out = new Float32Array(SW * SH);
+  for (let j = 0; j < SH; j++) {
+    const pos = j / SUB;
+    for (let i = 0; i < SW; i++) {
+      let sum = 0;
+      let wsum = 0;
+      for (let cy = Math.floor(pos) - radius; cy <= Math.floor(pos) + radius; cy++) {
+        if (cy < 0 || cy >= H) continue;
+        const w = weight(pos - (cy + 0.5));
+        sum += (tmp[cy * SW + i] as number) * w;
+        wsum += w;
+      }
+      out[j * SW + i] = wsum > 0 ? sum / wsum : 0;
+    }
+  }
+  return out;
+}
+
+/** Les 5 × 5 échantillons (quantifiés 0..16) de la case (x, y). */
+function samplesOf(f: Float32Array, x: number, y: number): number[] {
+  const out: number[] = [];
+  for (let j = 0; j <= SUB; j++) for (let i = 0; i <= SUB; i++) out.push(Math.round((f[(SUB * y + j) * SW + (SUB * x + i)] as number) * SAMPLE_STEPS));
+  return out;
+}
+
+/**
+ * Sol « de remplissage » de chaque case : son sol pour une case de terre douce,
+ * sinon (eau, pont, champ, quai) le sol doux le plus proche, ainsi que son ton.
+ * Sert de fond sous l'eau des rivages et autour des sols durs.
+ */
+function fillKinds(c: Ctx, tones: Uint8Array): { kind: Uint8Array; tone: Uint8Array } {
+  const kind = new Uint8Array(N).fill(255);
+  const tone = new Uint8Array(N).fill(1);
+  const queue: number[] = [];
+  for (let k = 0; k < N; k++) {
+    const code = at(c.code, k);
+    if (isLandCode(code) && SOFT_LAYERS.includes(kindOf(code))) {
+      kind[k] = code;
+      tone[k] = at(tones, k);
+      queue.push(k);
+    }
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const k = queue[head] as number;
+    const x = k % W;
+    const y = Math.floor(k / W);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      if (!inb(x + dx, y + dy)) continue;
+      const n = idx(x + dx, y + dy);
+      if (kind[n] === 255) {
+        kind[n] = kind[k] as number;
+        tone[n] = tone[k] as number;
+        queue.push(n);
+      }
+    }
+  }
+  for (let k = 0; k < N; k++) if (kind[k] === 255) kind[k] = KIND_CODE.grass;
+  return { kind, tone };
+}
+
 function resolveGround(c: Ctx, waterDepth: Uint8Array): Uint16Array {
   const ground = new Uint16Array(N);
   const tones = groundTones(c);
   const wear = cobbleWear(c);
-  const isWaterLike = (x: number, y: number): boolean => {
-    if (!inb(x, y)) return true;
-    const code = at(c.code, idx(x, y));
-    return code === WATER || code === POND;
-  };
+  const filled = fillKinds(c, tones);
+  const isWaterCode = (code: number): boolean => code === WATER || code === POND;
+  const waterNeighbors = (x: number, y: number): number =>
+    ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const).filter(([dx, dy]) => !inb(x + dx, y + dy) || isWaterCode(at(c.code, idx(x + dx, y + dy)))).length;
+
+  // Eau : rivière, mer, étangs, quais au bord de l'eau ; ponts et gués comptent comme de l'eau
+  // (version « ponts en terre » pour les cases de terre qui touchent un pont : pas de fossé avant le tablier).
+  const wetA = new Float32Array(N);
+  const wetB = new Float32Array(N);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const k = idx(x, y);
       const code = at(c.code, k);
-      if (code === WATER) {
-        const level = at(waterDepth, k);
-        ground[k] = c.tiles.tile(`water:${level}`, (px) => (level === 0 ? paintClear(px) : paintDeepWater(px, level)), level === 0 ? 'riviere' : 'eau_profonde');
-        continue;
-      }
+      const crossing = code === BRIDGE || code === FORD;
+      const dock = isLandCode(code) && kindOf(code) === 'planks' && waterNeighbors(x, y) >= 2;
+      const wet = isWaterCode(code) || dock;
+      wetA[k] = wet || crossing ? 1 : 0;
+      wetB[k] = wet ? 1 : 0;
+    }
+  }
+  const waterField = blurField(wetA, SIGMA.water);
+  const waterFieldNearCrossing = blurField(wetB, SIGMA.water);
+  // Présence lissée de chaque sol sur la terre (l'eau a sa propre couche ; champs et quais prennent le sol voisin).
+  const fields = new Map<GroundKind, Float32Array>();
+  for (const layer of SOFT_LAYERS) {
+    const ind = new Float32Array(N);
+    for (let k = 0; k < N; k++) ind[k] = (wetB[k] as number) === 0 && kindOf(filled.kind[k] as number) === layer ? 1 : 0;
+    fields.set(layer, blurField(ind, SIGMA[layer]));
+  }
+  const toneValues = new Float32Array(N);
+  for (let k = 0; k < N; k++) toneValues[k] = (filled.tone[k] as number) / 2;
+  const toneField = blurField(toneValues, 1.1);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const k = idx(x, y);
+      const code = at(c.code, k);
       if (code === BRIDGE || code === FORD) {
         const left = at(c.code, idx(x - 1, y)) === code;
         const right = at(c.code, idx(x + 1, y)) === code;
@@ -1010,38 +1143,45 @@ function resolveGround(c: Ctx, waterDepth: Uint8Array): Uint16Array {
         }
         continue;
       }
-      const kind = kindOf(code);
-      const hard = HARD_KINDS.has(kind);
-      const wet: boolean[] = [];
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) wet.push(kind !== 'planks' && kind !== 'pond' && (dx !== 0 || dy !== 0) && isWaterLike(x + dx, y + dy));
-      const hood: HoodCell[] = [];
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (!inb(nx, ny) || !isLandCode(at(c.code, idx(nx, ny)))) {
-            hood.push(null);
-            continue;
-          }
-          const nk = kindOf(at(c.code, idx(nx, ny)));
-          hood.push(HARD_KINDS.has(nk) ? null : { kind: nk, tone: tones[idx(nx, ny)] as number });
-        }
+      const isWater = isWaterCode(code);
+      const terrain = code === WATER ? (at(waterDepth, k) === 0 ? 'riviere' : 'eau_profonde') : code === POND ? 'eau_profonde' : GROUND_TERRAIN[kindOf(code)];
+      if (isLandCode(code) && !isWater && HARD_KINDS.has(kindOf(code))) {
+        const kind = kindOf(code);
+        if (kind === 'field' && waterNeighbors(x, y) === 0) c.wheat[k] = 1;
+        const deco = decoFor(kind, x, y);
+        ground[k] = c.tiles.tile(`hard:${kind}:${deco}`, (px, rnd) => paintHardGround(px, rnd, kind, deco), terrain);
+        continue;
       }
-      const transitional = wet.some(Boolean);
-      if (kind === 'field' && !transitional) c.wheat[k] = 1;
+
+      let nearCrossing = false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (inb(x + dx, y + dy) && [BRIDGE, FORD].includes(at(c.code, idx(x + dx, y + dy)))) nearCrossing = true;
+      const water = samplesOf(!isWater && nearCrossing ? waterFieldNearCrossing : waterField, x, y);
+      const level = code === WATER ? at(waterDepth, k) : 0;
+      if (isWater && Math.min(...water) / SAMPLE_STEPS > 0.5 + MARGIN) {
+        ground[k] = c.tiles.tile(`water:${terrain}:${level}`, (px) => (level === 0 ? paintClear(px) : paintDeepWater(px, level)), terrain);
+        continue;
+      }
+
+      // Couches présentes près de la case ; la plus présente sert de repli.
+      const layers: LayerSamples[] = SOFT_LAYERS.map((layer) => ({ layer, f: samplesOf(fields.get(layer) as Float32Array, x, y) })).filter((l) => Math.max(...l.f) > 0);
+      const base = ([...layers].sort((a, b) => b.f.reduce((s, v) => s + v, 0) - a.f.reduce((s, v) => s + v, 0))[0]?.layer ?? kindOf(filled.kind[k] as number)) as GroundKind;
+      if (layers.length === 1 && Math.min(...(layers[0] as LayerSamples).f) === SAMPLE_STEPS) layers.length = 0;
+      if (Math.max(...water) > 0) layers.push({ layer: 'water', f: water });
+
+      const kind: Layer = isWater ? 'water' : kindOf(code);
       const rutCode = at(c.rut, k);
       const rut: Rut | null = kind === 'road' && rutCode > 0 && rutCode < 255 ? { axis: rutCode >= 3 ? 'v' : 'h', lane: ((rutCode - 1) % 2) as 0 | 1 } : null;
       const spec: GroundSpec = normalizeSpec({
         kind,
-        tone: hard ? 1 : (tones[k] as number),
-        deco: decoFor(kind, x, y),
-        hood,
+        deco: kind === 'water' ? 0 : decoFor(kind, x, y),
+        base,
+        layers,
+        tone: samplesOf(toneField, x, y),
         phase: (x & 1) + 2 * (y & 1),
-        wet,
         rut,
         wear: kind === 'cobble' ? (wear[k] as number) : 0,
       });
-      ground[k] = c.tiles.tile(groundKey(spec), (px, rnd) => paintGround(px, rnd, spec), GROUND_TERRAIN[kind]);
+      ground[k] = c.tiles.tile(`${terrain}|${groundKey(spec)}`, (px, rnd) => paintGround(px, rnd, spec), terrain);
     }
   }
   return ground;

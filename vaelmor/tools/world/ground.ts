@@ -2,18 +2,17 @@
  * Sols du monde : textures de base de chaque type de terrain, transitions
  * entre terrains voisins et rivages (GDD §3.5, §12.3, décision n°43).
  *
- * Transitions « organiques » : chaque tuile connaît les 9 cases qui
- * l'entourent. Pour chaque pixel, on interpole (bilinéaire entre les centres
- * des cases) la présence de chaque sol, puis on ajoute un bruit continu à
- * l'échelle du monde (période 32 px, donc la même valeur des deux côtés d'un
- * raccord) : le sol le plus prioritaire l'emporte là où le champ dépasse 0,5.
- * Les bords suivent ainsi des courbes, sans marche d'escalier ni coupure
- * entre deux tuiles. Le même principe découpe de larges plaques de nuances
- * (3 tons par sol) à l'intérieur d'un même terrain.
- *
- * L'eau est toujours prioritaire : la tuile de terre se découpe, laissant voir
- * l'eau animée du jeu, avec une berge sombre et un liseré d'écume. Les sols
- * « durs » (champ, planches, étang) gardent des bords nets.
+ * Contours lissés (décision n°43) : l'outil de génération floute la présence
+ * de chaque sol à l'échelle du monde (flou gaussien sur les cases, échantillonné
+ * tous les 4 px). Chaque tuile reçoit ses 5 × 5 échantillons ; pour chaque
+ * pixel on les interpole, on ajoute un bruit très doux et continu (période
+ * 32 px, même valeur des deux côtés d'un raccord), et le sol le plus présent
+ * l'emporte. Les marches d'une case
+ * deviennent des pentes et des courbes ; aucune coupure entre deux tuiles. Le
+ * même principe découpe de larges plaques de 3 tons et dessine les rivages :
+ * l'eau (rivière, mer, étangs) est la couche la plus haute ; là où elle passe,
+ * la tuile est transparente et laisse voir l'eau animée du jeu, avec un talus
+ * et un liseré d'écume. Les champs et les quais gardent des bords nets.
  */
 import { ACCENT, RAMPS, SHADE, SUN, speckle, type Ramp, type Rnd } from './art';
 import { hashString, mulberry32 } from './noise';
@@ -76,7 +75,7 @@ const GROUND_HEIGHT: Record<GroundKind, number> = {
 };
 
 /** Sols à bords nets : ils ne se mélangent pas à leurs voisins (champs cultivés, quais, étangs). */
-export const HARD_KINDS: ReadonlySet<GroundKind> = new Set<GroundKind>(['field', 'planks', 'pond']);
+export const HARD_KINDS: ReadonlySet<GroundKind> = new Set<GroundKind>(['field', 'planks']);
 /** Sols découpés en plaques de 3 tons. */
 export const TONED: ReadonlySet<GroundKind> = new Set<GroundKind>(['grass', 'forest', 'dirt', 'road', 'sand', 'rock', 'snow', 'marsh']);
 /** Sols dont la texture suit une trame du monde (pavés) : la tuile dépend de sa phase. */
@@ -100,25 +99,35 @@ export const GROUND_DECOS: Record<GroundKind, number> = {
 };
 
 
-/** Une case du voisinage : son sol et son ton (0 sombre, 1 moyen, 2 clair). `null` = neutre (eau, sol dur, hors carte). */
-export type HoodCell = { readonly kind: GroundKind; readonly tone: number } | null;
-
 /** Ornière d'une route : axe et voie (0 = haut/gauche, 1 = bas/droite d'une route de 2 cases). */
 export interface Rut {
   readonly axis: 'h' | 'v';
   readonly lane: 0 | 1;
 }
 
+/** Couche de sol lissée : un sol, ou l'eau (toujours au-dessus). */
+export type Layer = GroundKind | 'water';
+
+/** Échantillons (5 × 5, tous les 4 px, ligne par ligne) de la présence lissée d'une couche, quantifiés de 0 à 16 (= 0 à 1). */
+export interface LayerSamples {
+  readonly layer: Layer;
+  readonly f: readonly number[];
+}
+
+export const SAMPLE_STEPS = 16;
+
 export interface GroundSpec {
-  readonly kind: GroundKind;
-  readonly tone: number;
+  /** Sol de la case elle-même (porte le terrain de la tuile) ; `water` pour une case d'eau. */
+  readonly kind: Layer;
   readonly deco: number;
-  /** 3×3 cases, ligne par ligne (index 4 = la case elle-même). */
-  readonly hood: readonly HoodCell[];
+  /** Sol de repli (le plus présent dans la tuile). */
+  readonly base: GroundKind;
+  /** Couches présentes près de la tuile : chaque pixel prend celle dont la présence (plus un bruit doux) est la plus forte. */
+  readonly layers: readonly LayerSamples[];
+  /** Ton lissé (5 × 5 échantillons, 0 à 16 = ton 0 à 2). */
+  readonly tone: readonly number[];
   /** Parité de la case : (x & 1) + 2 × (y & 1). Sert au bruit et aux trames de période 32 px. */
   readonly phase: number;
-  /** Cases d'eau du voisinage (même ordre que `hood`) : la berge les suit en courbe. */
-  readonly wet: readonly boolean[];
   readonly rut: Rut | null;
   /** Usure des pavés : 0 au bord de la place, 2 au centre. */
   readonly wear: number;
@@ -127,19 +136,18 @@ export interface GroundSpec {
 const T = 16;
 const PERIOD = 32;
 
-/** Vrai si le voisinage ne contient que ce sol et ce ton (la tuile ne dépend pas de sa phase). */
-function uniformHood(spec: GroundSpec): boolean {
-  return spec.hood.every((c) => c === null || (c.kind === spec.kind && (!TONED.has(c.kind) || c.tone === spec.tone)));
+/** Ramène à 0 la phase d'une tuile qui n'en dépend pas (sol uni) : moins de tuiles différentes. */
+export function normalizeSpec(spec: GroundSpec): GroundSpec {
+  const flatTone = spec.tone.every((t) => t === spec.tone[0]);
+  const phased = spec.layers.length > 0 || !flatTone || spec.rut !== null || (spec.kind !== 'water' && PHASED.has(spec.kind));
+  return phased ? spec : { ...spec, phase: 0 };
 }
 
 export function groundKey(spec: GroundSpec): string {
-  const hard = HARD_KINDS.has(spec.kind);
-  const uniform = hard || uniformHood(spec);
-  const phased = !uniform || PHASED.has(spec.kind) || spec.rut !== null || spec.wet.some(Boolean);
-  const hood = uniform ? '=' : spec.hood.map((c) => (c === null ? '-' : `${c.kind}${c.tone}`)).join('.');
-  const wet = spec.wet.map((w) => (w ? '1' : '0')).join('');
-  const rut = spec.rut ? `${spec.rut.axis}${spec.rut.lane}` : '-';
-  return `g:${spec.kind}:${hard ? 0 : spec.tone}:${spec.deco}:${phased ? spec.phase : 0}:${hood}:${wet}:${rut}:${spec.kind === 'cobble' ? spec.wear : 0}`;
+  const layers = spec.layers.map((l) => `${l.layer}${l.f.join(',')}`).join('|');
+  const toned = TONED.has(spec.base) || spec.layers.some((l) => l.layer !== 'water' && TONED.has(l.layer));
+  const tone = toned ? spec.tone.join(',') : '';
+  return `g:${spec.kind}:${spec.base}:${spec.deco}:${spec.phase}:${layers}:${tone}:${spec.rut ? `${spec.rut.axis}${spec.rut.lane}` : '-'}:${spec.kind === 'cobble' ? spec.wear : 0}`;
 }
 
 /* ---------- Bruit continu du monde (période 32 px) ---------- */
@@ -148,8 +156,8 @@ export function groundKey(spec: GroundSpec): string {
 function periodicNoise(seed: number): Float32Array {
   const out = new Float32Array(PERIOD * PERIOD);
   const octaves: [number, number][] = [
-    [8, 0.65],
-    [4, 0.35],
+    [16, 0.55],
+    [8, 0.45],
   ];
   for (const [step, weight] of octaves) {
     const n = PERIOD / step;
@@ -186,23 +194,26 @@ function noiseOf(name: string): Float32Array {
 const wrap = (v: number): number => ((v % PERIOD) + PERIOD) % PERIOD;
 const sample = (n: Float32Array, wx: number, wy: number): number => n[wrap(wy) * PERIOD + wrap(wx)] as number;
 
-/** Amplitude du bruit de bord de chaque sol (en fraction de case) : plus elle est forte, plus le bord ondule. */
-const EDGE_AMPLITUDE: Record<GroundKind, number> = {
-  marsh: 0.36,
-  grass: 0.34,
+/** Amplitude du bruit de bord de chaque couche (en valeur de champ) : faible, pour des courbes nettes et douces. */
+const EDGE_AMPLITUDE: Record<Layer, number> = {
+  marsh: 0.14,
+  grass: 0.12,
   field: 0,
-  forest: 0.36,
-  rock: 0.3,
-  snow: 0.34,
-  sand: 0.32,
-  dirt: 0.3,
-  road: 0.2,
-  ruins: 0.3,
+  forest: 0.14,
+  rock: 0.12,
+  snow: 0.12,
+  sand: 0.1,
+  dirt: 0.1,
+  road: 0.06,
+  ruins: 0.1,
   planks: 0,
-  cobble: 0.16,
-  pond: 0,
+  cobble: 0.05,
+  pond: 0.1,
+  water: 0.09,
 };
-const TONE_AMPLITUDE = 0.32;
+const TONE_AMPLITUDE = 0.22;
+/** Léger avantage des sols aménagés : les cours et sentiers d'une case de large ne disparaissent pas dans l'herbe. */
+const LAYER_GAIN: Partial<Record<Layer, number>> = { dirt: 1.1, road: 1.06, cobble: 1.1, ruins: 1.06 };
 
 /* ---------- Textures de base ---------- */
 
@@ -569,6 +580,7 @@ function clear(kindAt: KindAt, kind: GroundKind, x0: number, y0: number, x1: num
 
 function decorate(px: Px, rnd: Rnd, spec: GroundSpec, kindAt: KindAt): void {
   const kind = spec.kind;
+  if (kind === 'water') return;
   const r = rampOf(kind);
   const spot = (w: number, h: number, tries = 6): [number, number] | null => {
     for (let i = 0; i < tries; i++) {
@@ -594,7 +606,7 @@ function decorate(px: Px, rnd: Rnd, spec: GroundSpec, kindAt: KindAt): void {
   }
   if (kind === 'rock') {
     const p = spot(4, 4);
-    if (p) slab(px, p[0] - 3, p[1] - 3, 5 + Math.floor(rnd() * 2), toneColor(r, spec.tone), r);
+    if (p) slab(px, p[0] - 3, p[1] - 3, 5 + Math.floor(rnd() * 2), px.colorAt(p[0], p[1]), r);
     if (d === 2) {
       const q = spot(2, 1);
       if (q) pebble(px, q[0], q[1], RAMPS.rock);
@@ -681,19 +693,24 @@ interface Composite {
   readonly water: boolean[];
 }
 
-/** Berge : bruit du bord et retrait minimal (en fraction de case) ; le rivage reste dans la case de terre. */
-const WATER_AMPLITUDE = 0.2;
-const WATER_BIAS = 0.27;
 const W2 = T + 2;
 const ci = (x: number, y: number): number => (y + 1) * W2 + (x + 1);
 
+/** Interpolation bilinéaire des 5 × 5 échantillons (tous les 4 px) au centre du pixel (x, y). */
+function field(samples: readonly number[], x: number, y: number): number {
+  const fx = Math.min(4, Math.max(0, (x + 0.5) / 4));
+  const fy = Math.min(4, Math.max(0, (y + 0.5) / 4));
+  const x0 = Math.min(3, Math.floor(fx));
+  const y0 = Math.min(3, Math.floor(fy));
+  const tx = fx - x0;
+  const ty = fy - y0;
+  const s = (i: number, j: number): number => samples[j * 5 + i] as number;
+  const a = s(x0, y0) * (1 - tx) + s(x0 + 1, y0) * tx;
+  const b = s(x0, y0 + 1) * (1 - tx) + s(x0 + 1, y0 + 1) * tx;
+  return (a * (1 - ty) + b * ty) / SAMPLE_STEPS;
+}
+
 function compose(spec: GroundSpec): Composite {
-  const center: { kind: GroundKind; tone: number } = { kind: spec.kind, tone: spec.tone };
-  const cell = (dx: number, dy: number): { kind: GroundKind; tone: number } => spec.hood[(dy + 1) * 3 + (dx + 1)] ?? center;
-  const hard = HARD_KINDS.has(spec.kind);
-  const present = hard ? [spec.kind] : [...new Set(spec.hood.map((c) => (c ?? center).kind))].sort((a, b) => GROUND_PRIORITY[a] - GROUND_PRIORITY[b]);
-  const wetAt = (dx: number, dy: number): boolean => spec.wet[(dy + 1) * 3 + (dx + 1)] === true;
-  const anyWet = spec.wet.some(Boolean);
   const ox = (spec.phase & 1) * T;
   const oy = (spec.phase >> 1) * T;
   const kinds: GroundKind[] = [];
@@ -701,50 +718,22 @@ function compose(spec: GroundSpec): Composite {
   const water: boolean[] = [];
   for (let y = -1; y <= T; y++) {
     for (let x = -1; x <= T; x++) {
-      const u = (x + 0.5) / T - 0.5;
-      const v = (y + 0.5) / T - 0.5;
-      const sx = u < 0 ? -1 : 1;
-      const sy = v < 0 ? -1 : 1;
-      const wx = Math.abs(u);
-      const wy = Math.abs(v);
-      const quad: [{ kind: GroundKind; tone: number }, number][] = [
-        [cell(0, 0), (1 - wx) * (1 - wy)],
-        [cell(sx, 0), wx * (1 - wy)],
-        [cell(0, sy), (1 - wx) * wy],
-        [cell(sx, sy), wx * wy],
-      ];
-      let kind = present[0] as GroundKind;
-      for (let i = 1; i < present.length; i++) {
-        const k = present[i] as GroundKind;
-        let m = 0;
-        for (const [c, w] of quad) if (GROUND_PRIORITY[c.kind] >= GROUND_PRIORITY[k]) m += w;
-        if (m + EDGE_AMPLITUDE[k] * sample(noiseOf(`edge:${k}`), ox + x, oy + y) > 0.5) kind = k;
-      }
-      let tone = 1;
-      if (TONED.has(kind)) {
-        let total = 0;
-        let m1 = 0;
-        let m2 = 0;
-        for (const [c, w] of quad) {
-          if (c.kind !== kind) continue;
-          total += w;
-          if (c.tone >= 1) m1 += w;
-          if (c.tone >= 2) m2 += w;
-        }
-        if (total < 1e-6) tone = center.kind === kind ? center.tone : 1;
-        else {
-          const n = TONE_AMPLITUDE * sample(noiseOf(`tone:${kind}`), ox + x, oy + y);
-          tone = m2 / total + n > 0.5 ? 2 : m1 / total + n > 0.5 ? 1 : 0;
+      let kind: GroundKind = spec.base;
+      let best = -Infinity;
+      let wetScore = -Infinity;
+      for (const l of spec.layers) {
+        const v = field(l.f, x, y) * (LAYER_GAIN[l.layer] ?? 1) + EDGE_AMPLITUDE[l.layer] * sample(noiseOf(`edge:${l.layer}`), ox + x, oy + y);
+        if (l.layer === 'water') wetScore = v;
+        else if (v > best) {
+          best = v;
+          kind = l.layer;
         }
       }
-      let wet = false;
-      if (anyWet) {
-        const mw = (wetAt(0, 0) ? (1 - wx) * (1 - wy) : 0) + (wetAt(sx, 0) ? wx * (1 - wy) : 0) + (wetAt(0, sy) ? (1 - wx) * wy : 0) + (wetAt(sx, sy) ? wx * wy : 0);
-        wet = mw > 0 && mw + WATER_AMPLITUDE * sample(noiseOf('water'), ox + x, oy + y) > 0.5 - WATER_BIAS;
-      }
+      // Ton : 0 à 2, frontières à 2/3 et 4/3 (le bruit les fait onduler).
+      const t = 2 * field(spec.tone, x, y) + TONE_AMPLITUDE * 2 * sample(noiseOf('tone'), ox + x, oy + y);
       kinds.push(kind);
-      tones.push(hard ? 1 : tone);
-      water.push(wet);
+      tones.push(t < 2 / 3 ? 0 : t > 4 / 3 ? 2 : 1);
+      water.push(wetScore > best);
     }
   }
   return { kinds, tones, water };
@@ -806,22 +795,24 @@ function paintEdges(px: Px, rnd: Rnd, comp: Composite): void {
   for (const [x, y, c] of edits) px.set(x, y, c);
 }
 
-/** Sol sans transition ni rivage (référence des tests et des aperçus). */
+/** Sol uni, sans transition ni rivage (référence des tests et des aperçus). */
 export function plainSpec(kind: GroundKind, deco: number, tone = 1): GroundSpec {
-  return { kind, tone, deco, hood: new Array<HoodCell>(9).fill(null), phase: 0, wet: new Array<boolean>(9).fill(false), rut: null, wear: 1 };
+  return { kind, deco, base: kind, layers: [], tone: new Array<number>(25).fill(tone * 8), phase: 0, rut: null, wear: 1 };
+}
+
+/** Sol à bords nets (champ, quai) : la texture couvre toute la case. */
+export function paintHardGround(px: Px, rnd: Rnd, kind: GroundKind, deco: number): void {
+  paintTexture(px, rnd, kind, 1, plainSpec(kind, deco));
 }
 
 function paintComposite(px: Px, rnd: Rnd, spec: GroundSpec): Composite {
   const comp = compose(spec);
-  if (HARD_KINDS.has(spec.kind)) {
-    paintTexture(px, rnd, spec.kind, 1, spec);
-    return comp;
-  }
   const kindAt: KindAt = (x, y) => comp.kinds[ci(x, y)] as GroundKind;
   // Une texture par (sol, ton) présent, peinte une seule fois puis découpée pixel par pixel.
   const textures = new Map<string, Px>();
   for (let y = 0; y < T; y++) {
     for (let x = 0; x < T; x++) {
+      if (comp.water[ci(x, y)]) continue;
       const k = kindAt(x, y);
       const tone = comp.tones[ci(x, y)] as number;
       const key = `${k}:${tone}`;
@@ -838,13 +829,6 @@ function paintComposite(px: Px, rnd: Rnd, spec: GroundSpec): Composite {
   decorate(px, rnd, spec, kindAt);
   paintEdges(px, rnd, comp);
   return comp;
-}
-
-/** Ramène à 0 la phase d'une tuile qui n'en dépend pas (moins de tuiles différentes). */
-export function normalizeSpec(spec: GroundSpec): GroundSpec {
-  const hard = HARD_KINDS.has(spec.kind);
-  const phased = !(hard || uniformHood(spec)) || PHASED.has(spec.kind) || spec.rut !== null || spec.wet.some(Boolean);
-  return phased ? spec : { ...spec, phase: 0 };
 }
 
 /* ---------- Rivages ---------- */
@@ -883,27 +867,29 @@ function bankColor(kind: GroundKind): number {
  * la borde montre un talus (face de terre sous l'herbe quand l'eau est en
  * dessous, liseré sombre ailleurs) et l'écume borde l'eau.
  */
-function paintShore(px: Px, rnd: Rnd, spec: GroundSpec, comp: Composite): void {
-  if (!spec.wet.some(Boolean)) return;
-  const wet = (x: number, y: number): boolean => comp.water[ci(x, y)] === true;
-  const bank = bankColor(spec.kind);
-  const earth = spec.kind === 'sand' ? ACCENT.wet : mix(DIRT_RAMP.dark, SHADE, 0.2);
+function paintShore(px: Px, rnd: Rnd, comp: Composite): void {
+  if (!comp.water.some(Boolean)) return;
+  const clamp = (v: number): number => Math.max(-1, Math.min(T, v));
+  const wet = (x: number, y: number): boolean => comp.water[ci(clamp(x), clamp(y))] === true;
   const edits: [number, number, number, number][] = [];
   for (let y = 0; y < T; y++) {
     for (let x = 0; x < T; x++) {
       if (wet(x, y)) {
         const touching = !wet(x - 1, y) || !wet(x + 1, y) || !wet(x, y - 1) || !wet(x, y + 1);
         const near = !wet(x - 2, y) || !wet(x + 2, y) || !wet(x, y - 2) || !wet(x, y + 2);
-        if (touching && rnd() < 0.8) edits.push([x, y, ACCENT.foam, 150 + Math.floor(rnd() * 80)]);
+        if (touching && rnd() < 0.85) edits.push([x, y, ACCENT.foam, 150 + Math.floor(rnd() * 80)]);
         else if (near && rnd() < 0.3) edits.push([x, y, ACCENT.foam, 90]);
         else edits.push([x, y, 0, 0]);
         continue;
       }
+      const k = comp.kinds[ci(x, y)] as GroundKind;
+      const bank = bankColor(k);
+      const earth = k === 'sand' ? ACCENT.wet : mix(DIRT_RAMP.dark, SHADE, 0.2);
       const c = px.colorAt(x, y);
       if (wet(x, y + 1)) edits.push([x, y, bank, 255]); // pied du talus, au ras de l'eau
-      else if (y + 2 <= T && wet(x, y + 2)) edits.push([x, y, earth, 255]); // face de terre éclairée de biais
+      else if (wet(x, y + 2)) edits.push([x, y, earth, 255]); // face de terre éclairée de biais
       else if (wet(x - 1, y) || wet(x + 1, y) || wet(x, y - 1)) edits.push([x, y, mix(bank, c, 0.25), 255]);
-      else if (spec.kind === 'sand' && (wet(x, y + 3) || wet(x - 2, y) || wet(x + 2, y))) edits.push([x, y, mix(c, ACCENT.wet, 0.5), 255]);
+      else if (k === 'sand' && (wet(x, y + 3) || wet(x - 2, y) || wet(x + 2, y))) edits.push([x, y, mix(c, ACCENT.wet, 0.5), 255]);
     }
   }
   for (const [x, y, color, alpha] of edits) px.set(x, y, color, alpha);
@@ -911,7 +897,7 @@ function paintShore(px: Px, rnd: Rnd, spec: GroundSpec, comp: Composite): void {
 
 export function paintGround(px: Px, rnd: Rnd, spec: GroundSpec): void {
   const comp = paintComposite(px, rnd, spec);
-  paintShore(px, rnd, spec, comp);
+  paintShore(px, rnd, comp);
 }
 
 /* ---------- Tuiles d'eau et de passage ---------- */
