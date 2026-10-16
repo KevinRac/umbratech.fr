@@ -171,6 +171,8 @@ interface Ctx {
   reserved: Uint8Array; // emprises des lieux : pas de décor aléatoire
   band: Uint8Array; // 0 aucune, 1 forêt, 2 marais, 3 falaise
   gateFlag: (string | undefined)[];
+  wheat: Uint8Array; // cases de champ « intérieures » : le jeu y pose le blé animé
+  chimneys: { x: number; y: number }[]; // sorties de cheminée (pixels) : fumée animée
   tiles: TilesetBuilder;
 }
 
@@ -221,6 +223,7 @@ function canPlace(c: Ctx, name: string, v: number, x: number, y: number, o: Plac
 
 function commit(c: Ctx, name: string, v: number, x: number, y: number): void {
   const s = getStamp(name, v);
+  if (s.chimney) c.chimneys.push({ x: x * TILE + s.chimney.x, y: y * TILE + s.chimney.y });
   for (let j = 0; j < s.h; j++) {
     for (let i = 0; i < s.w; i++) {
       const cx = x + i;
@@ -955,6 +958,7 @@ function resolveGround(c: Ctx, waterDepth: Uint8Array): Uint16Array {
       } else {
         variant = Math.floor(hash2(x, y, SEED + 71) * (transitional ? Math.min(2, GROUND_VARIANTS[kind]) : GROUND_VARIANTS[kind]));
       }
+      if (kind === 'field' && !transitional) c.wheat[k] = 1;
       const spec: GroundSpec = { kind, variant, sides: sides as unknown as Sides, corners: corners as unknown as Corners };
       ground[k] = c.tiles.tile(groundKey(spec), (px, rnd) => paintGround(px, rnd, spec), GROUND_TERRAIN[kind]);
     }
@@ -1029,6 +1033,8 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     reserved: new Uint8Array(N),
     band: new Uint8Array(N),
     gateFlag: new Array<string | undefined>(N).fill(undefined),
+    wheat: new Uint8Array(N),
+    chimneys: [],
     tiles: new TilesetBuilder(),
   };
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) c.zone[idx(x, y)] = zoneValueAt(x, y);
@@ -1179,6 +1185,39 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     }
   }
 
+  // Décors animés : blé (rectangles de cases) et cheminées (points).
+  const ambient: TiledObject[] = [];
+  const wOpen: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const wClosed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  for (let y = 0; y <= H; y++) {
+    const runs: { x0: number; x1: number }[] = [];
+    for (let x = 0; y < H && x < W; x++) {
+      if (!c.wheat[idx(x, y)]) continue;
+      const x0 = x;
+      while (x + 1 < W && c.wheat[idx(x + 1, y)]) x++;
+      runs.push({ x0, x1: x });
+    }
+    for (let i = wOpen.length - 1; i >= 0; i--) {
+      const o = wOpen[i] as { x0: number; x1: number; y0: number; y1: number };
+      const j = runs.findIndex((r) => r.x0 === o.x0 && r.x1 === o.x1);
+      if (j >= 0) {
+        o.y1 = y;
+        runs.splice(j, 1);
+      } else {
+        wClosed.push(o);
+        wOpen.splice(i, 1);
+      }
+    }
+    for (const r of runs) wOpen.push({ x0: r.x0, x1: r.x1, y0: y, y1: y });
+  }
+  wClosed.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
+  for (const r of wClosed) {
+    ambient.push({ id: nextId++, name: 'Champ de blé', type: 'wheat', x: r.x0 * TILE, y: r.y0 * TILE, width: (r.x1 - r.x0 + 1) * TILE, height: (r.y1 - r.y0 + 1) * TILE, rotation: 0, visible: true, properties: [] });
+  }
+  for (const chimney of c.chimneys) {
+    ambient.push({ id: nextId++, name: 'Cheminée', type: 'chimney', x: chimney.x, y: chimney.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [] });
+  }
+
   const tileset = c.tiles.build();
   const tileLayer = (id: number, name: string, data: ArrayLike<number>, visible = true): Record<string, unknown> => ({
     id,
@@ -1206,7 +1245,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     tiledversion: '1.10.2',
     version: '1.10',
     type: 'map',
-    nextlayerid: 9,
+    nextlayerid: 10,
     nextobjectid: nextId,
     layers: [
       tileLayer(1, 'ground', ground),
@@ -1217,6 +1256,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
       objectLayer(6, 'locations', locations),
       objectLayer(7, 'gates', gates),
       objectLayer(8, 'spawns', spawns),
+      objectLayer(9, 'ambient', ambient),
     ],
     tilesets: [
       {

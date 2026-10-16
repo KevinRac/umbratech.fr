@@ -66,6 +66,7 @@ export function makeWorldMap(zonesRows: readonly string[], locations: readonly M
     locations,
     gates: [],
     spawns: [],
+    ambient: [],
     gateFlagByCell: new Map(),
   };
 }

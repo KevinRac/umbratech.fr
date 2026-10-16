@@ -125,6 +125,8 @@ export interface WorldMap {
   readonly locations: readonly MapObject[];
   readonly gates: readonly MapObject[];
   readonly spawns: readonly MapObject[];
+  /** Décors animés posés par le jeu : champs de blé (`wheat`, rectangle) et cheminées (`chimney`, point). */
+  readonly ambient: readonly MapObject[];
   /** Pour chaque case de passage (collision 4) : drapeau qui l'ouvre. */
   readonly gateFlagByCell: ReadonlyMap<number, string>;
 }
@@ -312,6 +314,7 @@ export function parseWorldMap(raw: unknown, context: WorldMapContext): WorldMapR
       locations,
       gates,
       spawns,
+      ambient: byName.get('ambient')?.type === 'objectgroup' ? (byName.get('ambient')?.objects ?? []).map(toObject) : [],
       gateFlagByCell,
     },
   };

@@ -11,6 +11,7 @@
 import { ACCENT, RAMPS, line, speckle, type Ramp, type Rnd } from './art';
 import { mix, type Px } from './px';
 import { PALETTE as P } from '../../src/render/palette';
+import { paintWheatFrame } from '../../src/render/wheatTile';
 
 export const GROUND_KINDS = ['grass', 'forest', 'dirt', 'road', 'sand', 'rock', 'snow', 'marsh', 'field', 'cobble', 'planks', 'ruins', 'pond'] as const;
 export type GroundKind = (typeof GROUND_KINDS)[number];
@@ -294,19 +295,9 @@ function paintPond(px: Px, rnd: Rnd, variant: number): void {
   }
 }
 
-function paintField(px: Px, rnd: Rnd, variant: number): void {
-  const r = RAMPS.wheat;
-  fill(px, mix(RAMPS.dirt.dark, r.base, 0.3));
-  for (let row = 0; row < 4; row++) {
-    const y = row * 4 + (variant % 2);
-    for (let x = 0; x < T; x++) {
-      px.set(x, y % T, r.base);
-      px.set(x, (y + 1) % T, rnd() < 0.5 ? r.light : r.base);
-      px.set(x, (y + 2) % T, rnd() < 0.35 ? r.dark : r.base);
-      px.set(x, (y + 3) % T, RAMPS.dirt.deep);
-    }
-  }
-  speckle(px, rnd, 0, 0, T, T, r.hi, 4);
+/** Champ fixe (cases au bord d'un autre sol) : image 0 du blé animé que le jeu pose sur les cases intérieures. */
+function paintField(px: Px, _rnd: Rnd, variant: number): void {
+  paintWheatFrame({ set: (x, y, color, alpha) => px.set(x, y, color, alpha ?? 255) }, 0, 0, 0, variant);
 }
 
 function paintCobble(px: Px, rnd: Rnd, variant: number): void {
@@ -451,8 +442,9 @@ function bankColor(kind: GroundKind): number {
 }
 
 function cutShore(px: Px, rnd: Rnd, side: number, kind: GroundKind): void {
-  const thick = kind === 'sand' ? [2.2, 4.4] : [1.6, 3.6];
-  const depth = depthProfile(rnd, thick[0] as number, thick[1] as number);
+  // Profil lisse et identique d'une case à l'autre (sinusoïde de période 16) : berge continue, sans dents.
+  const base = kind === 'sand' ? 3.1 : 2.5;
+  const depth = Array.from({ length: T }, (_, i) => base + 0.65 * Math.sin((2 * Math.PI * (i + 0.5)) / T));
   const bank = bankColor(kind);
   const foamAlpha = [255, 220, 170];
   for (let y = 0; y < T; y++) {
@@ -487,9 +479,45 @@ function cutCorner(px: Px, corner: number, kind: GroundKind): void {
   for (let y = 0; y < T; y++) {
     for (let x = 0; x < T; x++) {
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-      if (d < 3.1) px.set(x, y, 0, 0);
-      else if (d < 4.1 && px.alphaAt(x, y) > 0) px.set(x, y, bank);
-      else if (d < 4.6 && px.alphaAt(x, y) === 0) px.set(x, y, ACCENT.foam, 160);
+      if (d < 4.7) px.set(x, y, 0, 0);
+      else if (d < 5.7 && px.alphaAt(x, y) > 0) px.set(x, y, bank);
+      else if (d < 6.3 && px.alphaAt(x, y) === 0) px.set(x, y, ACCENT.foam, 160);
+    }
+  }
+}
+
+/** Arrondit un coin de terre qui avance dans l'eau (eau sur deux côtés voisins) : berge en courbe, pas en équerre. */
+function roundConvexCorner(px: Px, corner: number, kind: GroundKind): void {
+  const R = 7;
+  const inset = 2.5 + R; // le cercle est tangent aux deux berges droites
+  const east = corner === 0 || corner === 1;
+  const south = corner === 1 || corner === 2;
+  const ccx = east ? T - inset : inset;
+  const ccy = south ? T - inset : inset;
+  const bank = bankColor(kind);
+  const inRegion = (x: number, y: number): boolean => (east ? x + 0.5 > ccx : x + 0.5 < ccx) && (south ? y + 0.5 > ccy : y + 0.5 < ccy);
+  const removed: boolean[] = new Array<boolean>(T * T).fill(false);
+  for (let y = 0; y < T; y++) {
+    for (let x = 0; x < T; x++) {
+      if (!inRegion(x, y)) continue;
+      if (Math.hypot(x + 0.5 - ccx, y + 0.5 - ccy) > R) {
+        px.set(x, y, 0, 0);
+        removed[y * T + x] = true;
+      }
+    }
+  }
+  const gone = (x: number, y: number): boolean => x < 0 || y < 0 || x >= T || y >= T || px.alphaAt(x, y) === 0;
+  for (let y = 0; y < T; y++) {
+    for (let x = 0; x < T; x++) {
+      if (!inRegion(x, y) || removed[y * T + x]) continue;
+      if (px.alphaAt(x, y) > 0 && (gone(x - 1, y) || gone(x + 1, y) || gone(x, y - 1) || gone(x, y + 1))) px.set(x, y, bank);
+    }
+  }
+  for (let y = 0; y < T; y++) {
+    for (let x = 0; x < T; x++) {
+      if (!removed[y * T + x]) continue;
+      const near = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < T && ny < T && !removed[ny * T + nx] && px.alphaAt(nx, ny) > 0;
+      if (near(x - 1, y) || near(x + 1, y) || near(x, y - 1) || near(x, y + 1)) px.set(x, y, ACCENT.foam, 170);
     }
   }
 }
@@ -504,6 +532,11 @@ export function paintGround(px: Px, rnd: Rnd, spec: GroundSpec): void {
   });
   spec.corners.forEach((on, i) => {
     if (on) cutCorner(px, i, spec.kind);
+  });
+  // Coins convexes (eau sur deux côtés voisins) : NE = N+E, SE = E+S, SW = S+W, NW = W+N.
+  const wet = spec.sides.map((side) => side === 'water');
+  ([[0, 1], [1, 2], [2, 3], [3, 0]] as const).forEach(([a, b], corner) => {
+    if (wet[a] && wet[b]) roundConvexCorner(px, corner, spec.kind);
   });
 }
 

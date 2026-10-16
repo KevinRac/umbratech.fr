@@ -119,12 +119,18 @@ export class WorldHudScene extends Phaser.Scene {
       this.banner?.destroy(true);
       const container = this.add.container(0, 0).setDepth(DEPTH.banner);
       const cx = this.scale.width / 2;
-      const titleText = addText(this, cx, 70 * S, title, { font: 'small', scale: 4 * S, shadow: false, color: PALETTE.parchemin, align: 'center' });
-      container.add(titleText);
+      // Bandeau sombre sur toute la largeur : le nom reste lisible sur n'importe quel décor.
+      const top = 62 * S;
+      const titleText = addText(this, cx, top + 10 * S, title, { scale: 2 * S, shadow: false, color: PALETTE.parchemin, align: 'center' });
       const width = Math.ceil(titleText.width);
-      const lineY = 70 * S + Math.ceil(titleText.height) + 6 * S;
-      container.add(this.add.rectangle(Math.round(cx - width / 2 - 12 * S), lineY, width + 24 * S, 2 * S, PALETTE.ambre, 0.9).setOrigin(0, 0));
-      if (subtitle) container.add(addText(this, cx, lineY + 10 * S, subtitle, { scale: S, color: PALETTE.cyanEclat, align: 'center' }));
+      const lineY = top + 10 * S + Math.ceil(titleText.height) + 4 * S;
+      const bottom = lineY + (subtitle ? 24 * S : 10 * S);
+      container.add(this.add.rectangle(0, top, this.scale.width, bottom - top, PALETTE.nuit, 0.72).setOrigin(0, 0));
+      container.add(this.add.rectangle(0, top, this.scale.width, S, PALETTE.ambre, 0.8).setOrigin(0, 0));
+      container.add(this.add.rectangle(0, bottom - S, this.scale.width, S, PALETTE.ambre, 0.8).setOrigin(0, 0));
+      container.add(titleText);
+      container.add(this.add.rectangle(Math.round(cx - width / 2 - 12 * S), lineY, width + 24 * S, S, PALETTE.ambre, 0.9).setOrigin(0, 0));
+      if (subtitle) container.add(addText(this, cx, lineY + 6 * S, subtitle, { scale: S, shadow: false, color: PALETTE.cyanEclat, align: 'center' }));
       container.setAlpha(0);
       this.banner = container;
       this.tweens.chain({

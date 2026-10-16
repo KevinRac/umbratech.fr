@@ -56,6 +56,7 @@ export const RAMPS = {
   pond: ramp(mix(P.bleuGris, P.nuitBleue, 0.5), P.nuit, P.ciel),
   wood: ramp(mix(P.ambre, P.grisRoux, 0.5), mix(P.rougeCendre, SHADE, 0.55), P.jauneBle),
   trunk: ramp(mix(P.grisRoux, P.ambre, 0.3), SHADE, P.sable),
+  rust: ramp(mix(P.rougeCendre, P.grisRoux, 0.25), mix(P.rougeCendre, SHADE, 0.5), P.orangeForge),
   wheat: ramp(P.jauneBle, mix(P.rougeCendre, SHADE, 0.2), P.parchemin),
   ruin: ramp(mix(P.pierre, P.grisRoux, 0.45), SHADE, P.parchemin),
 } as const;

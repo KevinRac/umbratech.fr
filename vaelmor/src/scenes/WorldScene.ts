@@ -25,22 +25,27 @@ import { worldView, type WorldView } from '../render/viewport';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
+import { WHEAT_FRAMES } from '../render/wheatTile';
 import { SCENES } from './keys';
 import type { WorldHudScene } from './WorldHudScene';
 
 const DEPTH = {
   water: -10,
   ground: 0,
+  wheat: 0.5,
   decor: 1,
   shadow: 2,
   entities: 2.1,
   canopy: 10,
+  smoke: 10.5,
   fog: 11,
   debug: 90,
 } as const;
 
 const TILESET_NAME = 'world_tiles';
 const WATER_FRAME_MS = 420;
+const WHEAT_FRAME_MS = 230;
+const SMOKE_PERIOD_MS = 520;
 const GATE_MESSAGE_COOLDOWN_MS = 4000;
 
 export interface WorldSceneData {
@@ -70,6 +75,10 @@ export class WorldScene extends Phaser.Scene {
 
   private lastGateMessage = -Infinity;
   private waterFrame = 0;
+  private wheatFrame = 0;
+  private wheatSprites: Phaser.GameObjects.TileSprite[] = [];
+  private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private chimneys: { x: number; y: number }[] = [];
   private debugCollisionOn = false;
   private debugOverlay!: Phaser.GameObjects.Graphics;
   private teleportIndex = -1;
@@ -113,6 +122,7 @@ export class WorldScene extends Phaser.Scene {
     };
 
     this.buildMapLayers(worldWidth, worldHeight);
+    this.buildAmbientDecor();
     this.buildHero();
     this.buildGateFog();
     this.debugOverlay = this.add.graphics().setDepth(DEPTH.debug);
@@ -162,6 +172,44 @@ export class WorldScene extends Phaser.Scene {
       if (!layer) throw new Error(`Couche « ${name} » impossible à créer.`);
       layer.setDepth(depth);
     }
+  }
+
+  /** Blé qui ondule et fumée de cheminée : décors animés posés sur la carte (couche `ambient`). */
+  private buildAmbientDecor(): void {
+    this.wheatSprites = this.map.ambient
+      .filter((o) => o.kind === 'wheat')
+      .map((o) => this.add.tileSprite(o.x, o.y, o.width, o.height, WORLD_TEX.wheat(0)).setOrigin(0, 0).setDepth(DEPTH.wheat));
+    this.time.addEvent({
+      delay: WHEAT_FRAME_MS,
+      loop: true,
+      callback: () => {
+        this.wheatFrame = (this.wheatFrame + 1) % WHEAT_FRAMES;
+        for (const sprite of this.wheatSprites) sprite.setTexture(WORLD_TEX.wheat(this.wheatFrame));
+      },
+    });
+
+    this.chimneys = this.map.ambient.filter((o) => o.kind === 'chimney').map((o) => ({ x: o.x, y: o.y }));
+    this.smoke = this.add.particles(0, 0, WORLD_TEX.smoke, {
+      emitting: false,
+      lifespan: { min: 1700, max: 2400 },
+      speedY: { min: -13, max: -8 },
+      speedX: { min: 2, max: 6 },
+      scale: { start: 0.5, end: 1.5 },
+      alpha: { start: 0.65, end: 0 },
+      tint: [0xe8e4ee, 0xc9bfd0, 0xb4aebf],
+    });
+    this.smoke.setDepth(DEPTH.smoke);
+    this.time.addEvent({
+      delay: SMOKE_PERIOD_MS,
+      loop: true,
+      callback: () => {
+        const view = this.cameras.main.worldView;
+        for (const chimney of this.chimneys) {
+          if (chimney.x < view.x - 24 || chimney.x > view.right + 24 || chimney.y < view.y - 48 || chimney.y > view.bottom + 24) continue;
+          if (Math.random() < 0.8) this.smoke.emitParticleAt(chimney.x + (Math.random() - 0.5) * 2, chimney.y);
+        }
+      },
+    });
   }
 
   private buildHero(): void {
@@ -419,6 +467,8 @@ export class WorldScene extends Phaser.Scene {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.registry.remove('debug.info');
     this.fog.clear();
+    this.wheatSprites = [];
+    this.chimneys = [];
     this.scene.stop(SCENES.worldHud);
     this.time.paused = false;
   }
