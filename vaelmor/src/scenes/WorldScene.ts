@@ -8,7 +8,7 @@
  * ces fonctions et dessiner le résultat.
  */
 import Phaser from 'phaser';
-import { WORLD_HEIGHT as GAME_HEIGHT, WORLD_WIDTH as GAME_WIDTH } from '../core/config';
+import { WORLD_HEIGHT, WORLD_WIDTH } from '../core/config';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getWorldState, setWorldState } from '../core/session';
@@ -21,16 +21,12 @@ import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '.
 import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker } from '../logic/world/zones';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
-import { setLogicalSize } from '../render/displayScaler';
-import { createAmbience } from '../render/ambience';
+import { fitCamera, type ViewOrigin } from '../render/viewport';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
-import { drawPanel } from '../ui/panel';
-import { addText, setText, type PixelText } from '../ui/text';
-import { Toasts } from '../ui/Toasts';
-import { VerticalMenu } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
+import type { WorldHudScene } from './WorldHudScene';
 
 const DEPTH = {
   water: -10,
@@ -40,18 +36,12 @@ const DEPTH = {
   entities: 2.1,
   canopy: 10,
   fog: 11,
-  ambience: 60,
-  tint: 80,
   debug: 90,
-  hud: 100,
-  banner: 110,
-  pause: 200,
 } as const;
 
 const TILESET_NAME = 'world_tiles';
 const WATER_FRAME_MS = 420;
 const GATE_MESSAGE_COOLDOWN_MS = 4000;
-const HINT_DURATION_MS = 9000;
 
 export interface WorldSceneData {
   /** Vrai pour une nouvelle partie : l'état du monde repart du point de départ. */
@@ -64,7 +54,8 @@ export class WorldScene extends Phaser.Scene {
   private grid!: CollisionGrid;
   private state!: WorldState;
   private actions!: ActionInput;
-  private toasts!: Toasts;
+  private hud!: WorldHudScene;
+  private viewOrigin: ViewOrigin = { x: 0, y: 0 };
   private tracker!: ZoneTracker;
   private body_!: BodyState;
   private camera_: Vec2 = { x: 0, y: 0 };
@@ -73,16 +64,9 @@ export class WorldScene extends Phaser.Scene {
   private hero!: Phaser.GameObjects.Sprite;
   private shadow!: Phaser.GameObjects.Image;
   private water!: Phaser.GameObjects.TileSprite;
-  private tint!: Phaser.GameObjects.Rectangle;
-  private ambience: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private fog = new Map<string, Phaser.GameObjects.TileSprite[]>();
-  private banner: Phaser.GameObjects.Container | null = null;
-  private zoneLabel!: PixelText;
-  private zonePanel!: Phaser.GameObjects.Graphics;
 
   private paused = false;
-  private pauseObjects: Phaser.GameObjects.GameObject[] = [];
-  private pauseMenu: VerticalMenu | null = null;
 
   private lastGateMessage = -Infinity;
   private waterFrame = 0;
@@ -96,7 +80,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(data: WorldSceneData = {}): void {
-    setLogicalSize(this.game, GAME_WIDTH, GAME_HEIGHT);
+    this.viewOrigin = fitCamera(this, WORLD_WIDTH);
     try {
       this.data_ = loadGameData();
       const raw = this.cache.tilemap.get(WORLD_MAP_KEY)?.data as unknown;
@@ -108,7 +92,8 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.actions = new ActionInput(this);
-    this.toasts = new Toasts(this);
+    this.scene.launch(SCENES.worldHud);
+    this.hud = this.scene.get(SCENES.worldHud) as WorldHudScene;
     ensureWorldTextures(this);
     ensureHeroAnimations(this);
 
@@ -121,7 +106,7 @@ export class WorldScene extends Phaser.Scene {
     const worldWidth = this.map.width * this.map.tileSize;
     const worldHeight = this.map.height * this.map.tileSize;
     this.cameraConfig = {
-      view: { width: GAME_WIDTH, height: GAME_HEIGHT },
+      view: { width: WORLD_WIDTH, height: WORLD_HEIGHT },
       world: { width: worldWidth, height: worldHeight },
       deadzone: { width: exploration.cameraDeadzoneWidth, height: exploration.cameraDeadzoneHeight },
       lerp: exploration.cameraLerp,
@@ -130,10 +115,8 @@ export class WorldScene extends Phaser.Scene {
     this.buildMapLayers(worldWidth, worldHeight);
     this.buildHero();
     this.buildGateFog();
-    this.buildHud();
     this.debugOverlay = this.add.graphics().setDepth(DEPTH.debug);
 
-    this.tint = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.tint);
     this.cameras.main.filters.external.addVignette(0.5, 0.5, 0.95, 0.22);
 
     this.camera_ = centerOn({ x: this.body_.x, y: this.body_.y - 10 }, this.cameraConfig);
@@ -207,15 +190,6 @@ export class WorldScene extends Phaser.Scene {
     this.refreshGates();
   }
 
-  private buildHud(): void {
-    this.zonePanel = drawPanel(this, 4, 4, 120, 18).setScrollFactor(0).setDepth(DEPTH.hud).setAlpha(0.9);
-    this.zoneLabel = addText(this, 11, 7, '', { font: 'small', color: PALETTE.parchemin }).setScrollFactor(0).setDepth(DEPTH.hud + 1) as PixelText;
-
-    const hintBar = this.add.rectangle(0, GAME_HEIGHT - 14, GAME_WIDTH, 14, PALETTE.nuit, 0.6).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.hud);
-    const hint = addText(this, 8, GAME_HEIGHT - 12, 'ZQSD / flèches : marcher   Maj : courir   Échap : pause', { font: 'small', color: PALETTE.metalClair }).setScrollFactor(0).setDepth(DEPTH.hud);
-    this.tweens.add({ targets: [hint, hintBar], alpha: 0, delay: HINT_DURATION_MS, duration: 800, onComplete: () => { hint.destroy(); hintBar.destroy(); } });
-  }
-
   /* ---------- Boucle ---------- */
 
   override update(time: number, delta: number): void {
@@ -223,10 +197,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.actions.justPressed('cancel')) {
       this.togglePause();
     }
-    if (this.paused) {
-      this.pauseMenu?.update();
-      return;
-    }
+    if (this.paused) return;
 
     const dt = delta / 1000;
     const input = {
@@ -246,7 +217,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private applyCamera(): void {
-    this.cameras.main.setScroll(Math.round(this.camera_.x), Math.round(this.camera_.y));
+    this.cameras.main.setScroll(Math.round(this.camera_.x) - this.viewOrigin.x, Math.round(this.camera_.y) - this.viewOrigin.y);
   }
 
   private syncHero(): void {
@@ -277,55 +248,17 @@ export class WorldScene extends Phaser.Scene {
     if (update.locationChanged && update.location) {
       const id = String(update.location.props['id']);
       const isNew = addUnique(this.state.discoveredLocations, id);
-      this.showBanner(update.location.name, isNew ? 'Lieu découvert' : '', 1400);
+      this.hud.showBanner(update.location.name, isNew ? 'Lieu découvert' : '', 1400);
     }
   }
 
   private onZoneEntered(zone: ZoneDef, announce: boolean): void {
     const isNew = addUnique(this.state.discoveredZones, zone.id);
-    setText(this.zoneLabel, `${zone.name}  Niv. ${zone.levelMin}-${zone.levelMax}`);
-    this.zonePanel.setVisible(true);
-    this.resizeZonePanel(Math.ceil(this.zoneLabel.width) + 14);
+    this.hud.setZone(`${zone.name}  Niv. ${zone.levelMin}-${zone.levelMax}`);
+    this.hud.setTint(Phaser.Display.Color.HexStringToColor(zone.ambient.color).color, zone.ambient.alpha);
+    this.hud.setAmbience(zone.ambience);
 
-    const color = Phaser.Display.Color.HexStringToColor(zone.ambient.color).color;
-    this.tint.setFillStyle(color, 1).setAlpha(0);
-    this.tweens.add({ targets: this.tint, alpha: zone.ambient.alpha, duration: 900 });
-
-    this.ambience?.destroy();
-    this.ambience = createAmbience(this, zone.ambience, DEPTH.ambience);
-
-    if (announce || isNew) this.showBanner(zone.name, `Niveau recommandé ${zone.levelMin}-${zone.levelMax}`, 2200);
-  }
-
-  private resizeZonePanel(width: number): void {
-    this.zonePanel.destroy();
-    this.zonePanel = drawPanel(this, 4, 4, width, 18).setScrollFactor(0).setDepth(DEPTH.hud).setAlpha(0.9);
-  }
-
-  private showBanner(title: string, subtitle: string, holdMs: number): void {
-    this.banner?.destroy(true);
-    const container = this.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH.banner);
-    const titleText = addText(this, GAME_WIDTH / 2, 30, title, { font: 'title', color: PALETTE.parchemin, align: 'center' });
-    container.add(titleText);
-    const width = Math.ceil(titleText.width);
-    const lineX = Math.round(GAME_WIDTH / 2 - width / 2 - 6);
-    const line = this.add.rectangle(lineX, 48, width + 12, 1, PALETTE.ambre, 0.9).setOrigin(0, 0);
-    container.add(line);
-    if (subtitle) container.add(addText(this, GAME_WIDTH / 2, 53, subtitle, { font: 'small', color: PALETTE.cyanEclat, align: 'center' }));
-    container.setAlpha(0);
-    this.banner = container;
-    this.tweens.chain({
-      targets: container,
-      tweens: [
-        { alpha: 1, duration: 400 },
-        { alpha: 1, duration: holdMs },
-        { alpha: 0, duration: 600 },
-      ],
-      onComplete: () => {
-        container.destroy(true);
-        if (this.banner === container) this.banner = null;
-      },
-    });
+    if (announce || isNew) this.hud.showBanner(zone.name, `Niveau recommandé ${zone.levelMin}-${zone.levelMax}`, 2200);
   }
 
   /* ---------- Passages ---------- */
@@ -334,7 +267,7 @@ export class WorldScene extends Phaser.Scene {
     if (time - this.lastGateMessage < GATE_MESSAGE_COOLDOWN_MS) return;
     this.lastGateMessage = time;
     const zone = this.data_.zones.find((z) => z.unlockFlag === flag);
-    this.toasts.push(zone?.gateMessage ?? 'Le passage est bloqué.');
+    this.hud.toast(zone?.gateMessage ?? 'Le passage est bloqué.');
   }
 
   private refreshGates(): void {
@@ -382,7 +315,7 @@ export class WorldScene extends Phaser.Scene {
       const allOpen = this.data_.zones.flatMap((z) => (z.unlockFlag === null ? [] : [z.unlockFlag]));
       const open = this.state.openFlags.length === 0;
       this.setFlags(open ? allOpen : []);
-      this.toasts.push(open ? 'Debug : tous les passages ouverts' : 'Debug : passages refermés');
+      this.hud.toast(open ? 'Debug : tous les passages ouverts' : 'Debug : passages refermés');
     }
     if (this.actions.justPressed('debugTeleport')) this.teleportNext();
     if (this.debugCollisionOn) this.drawCollisionOverlay();
@@ -421,17 +354,17 @@ export class WorldScene extends Phaser.Scene {
     this.camera_ = centerOn({ x: this.body_.x, y: this.body_.y - 10 }, this.cameraConfig);
     this.applyCamera();
     this.syncHero();
-    this.toasts.push(`Debug : ${place.name}`);
+    this.hud.toast(`Debug : ${place.name}`);
   }
 
   private drawCollisionOverlay(): void {
     const g = this.debugOverlay;
     g.clear();
     const size = this.map.tileSize;
-    const x0 = Math.max(0, Math.floor(this.cameras.main.scrollX / size));
-    const y0 = Math.max(0, Math.floor(this.cameras.main.scrollY / size));
-    const x1 = Math.min(this.map.width - 1, x0 + Math.ceil(GAME_WIDTH / size) + 1);
-    const y1 = Math.min(this.map.height - 1, y0 + Math.ceil(GAME_HEIGHT / size) + 1);
+    const x0 = Math.max(0, Math.floor(this.camera_.x / size));
+    const y0 = Math.max(0, Math.floor(this.camera_.y / size));
+    const x1 = Math.min(this.map.width - 1, x0 + Math.ceil(WORLD_WIDTH / size) + 1);
+    const y1 = Math.min(this.map.height - 1, y0 + Math.ceil(WORLD_HEIGHT / size) + 1);
     const colors: Record<number, number> = { [COLLISION.blocked]: 0xff3030, [COLLISION.water]: 0x3070ff, [COLLISION.slow]: 0xffd030, [COLLISION.gate]: 0xb050ff };
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
@@ -454,30 +387,14 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     this.paused = true;
-    const width = 150;
-    const x = Math.round((GAME_WIDTH - width) / 2);
-    const lineHeight = 17;
-    const y = Math.round((GAME_HEIGHT - (2 * lineHeight + 38)) / 2);
-    const items = [
-      { label: 'Reprendre', onSelect: () => this.closePause() },
-      { label: 'Retour au titre', onSelect: () => this.backToTitle() },
-    ];
-    const dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, PALETTE.nuit, 0.55).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.pause);
-    const panelHeight = items.length * lineHeight + 38;
-    const panel = drawPanel(this, x, y, width, panelHeight, { depth: DEPTH.pause + 1 }).setScrollFactor(0);
-    const title = addText(this, GAME_WIDTH / 2, y + 7, 'Pause', { color: PALETTE.cyanEclat, align: 'center' }).setScrollFactor(0).setDepth(DEPTH.pause + 2);
-    this.pauseObjects = [dim, panel, title];
-    this.pauseMenu = new VerticalMenu(this, x + 6, y + 24, items, this.actions, { width: width - 12, lineHeight, depth: DEPTH.pause + 2, fixed: true });
+    this.hud.showPause({ onResume: () => this.closePause(), onTitle: () => this.backToTitle() });
     this.tweens.pauseAll();
     this.time.paused = true;
   }
 
   private closePause(): void {
     this.paused = false;
-    this.pauseMenu?.destroy();
-    this.pauseMenu = null;
-    for (const object of this.pauseObjects) object.destroy();
-    this.pauseObjects = [];
+    this.hud.hidePause();
     this.tweens.resumeAll();
     this.time.paused = false;
   }
@@ -491,10 +408,7 @@ export class WorldScene extends Phaser.Scene {
   private onShutdown(): void {
     this.registry.remove('debug.info');
     this.fog.clear();
-    this.ambience = null;
-    this.banner = null;
-    this.pauseMenu = null;
-    this.pauseObjects = [];
+    this.scene.stop(SCENES.worldHud);
     this.time.paused = false;
   }
 }

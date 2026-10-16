@@ -10,14 +10,18 @@ export interface PanelOptions {
   readonly fill?: number;
   readonly fillAlpha?: number;
   readonly depth?: number;
+  /** Agrandissement entier du dessin (x, y, largeur et hauteur restent en pixels finaux). */
+  readonly scale?: number;
 }
 
 export function drawPanel(scene: Phaser.Scene, x: number, y: number, width: number, height: number, options: PanelOptions = {}): Phaser.GameObjects.Graphics {
   const g = scene.add.graphics();
-  const X = Math.round(x);
-  const Y = Math.round(y);
-  const W = Math.round(width);
-  const H = Math.round(height);
+  const k = options.scale ?? 1;
+  const X = Math.round(x / k);
+  const Y = Math.round(y / k);
+  const W = Math.round(width / k);
+  const H = Math.round(height / k);
+  if (k !== 1) g.setScale(k);
 
   // Fond.
   g.fillStyle(options.fill ?? 0x14121f, options.fillAlpha ?? 0.88);

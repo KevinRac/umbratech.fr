@@ -3,6 +3,7 @@ export const SCENES = {
   boot: 'Boot',
   title: 'Title',
   world: 'World',
+  worldHud: 'WorldHud',
   debug: 'Debug',
 } as const;
 

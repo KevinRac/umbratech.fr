@@ -5,7 +5,7 @@
  */
 import Phaser from 'phaser';
 import type { AmbienceKind } from '../data/schemas';
-import { WORLD_HEIGHT as GAME_HEIGHT, WORLD_WIDTH as GAME_WIDTH } from '../core/config';
+import { GAME_WIDTH } from '../core/config';
 import { PALETTE } from './palette';
 import { WORLD_TEX } from './worldTextures';
 
@@ -14,14 +14,14 @@ interface Recipe {
   readonly config: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig;
 }
 
-const FULL_WIDTH = { min: 0, max: GAME_WIDTH } as const;
+const FULL_WIDTH = { min: 0, max: 320 } as const;
 
 const RECIPES: Record<AmbienceKind, Recipe> = {
   pollen: {
     texture: WORLD_TEX.grain,
     config: {
       x: FULL_WIDTH,
-      y: { min: 0, max: GAME_HEIGHT },
+      y: { min: 0, max: 180 },
       speedX: { min: 2, max: 9 },
       speedY: { min: -7, max: -1 },
       lifespan: { min: 4000, max: 7000 },
@@ -34,7 +34,7 @@ const RECIPES: Record<AmbienceKind, Recipe> = {
   feuilles: {
     texture: WORLD_TEX.grain,
     config: {
-      x: { min: -40, max: GAME_WIDTH },
+      x: { min: -40, max: 320 },
       y: -4,
       speedX: { min: 10, max: 24 },
       speedY: { min: 14, max: 26 },
@@ -48,7 +48,7 @@ const RECIPES: Record<AmbienceKind, Recipe> = {
     texture: WORLD_TEX.mist,
     config: {
       x: { min: -60, max: 0 },
-      y: { min: 20, max: GAME_HEIGHT },
+      y: { min: 20, max: 180 },
       speedX: { min: 6, max: 14 },
       speedY: 0,
       lifespan: { min: 38000, max: 52000 },
@@ -62,7 +62,7 @@ const RECIPES: Record<AmbienceKind, Recipe> = {
     texture: WORLD_TEX.grain,
     config: {
       x: FULL_WIDTH,
-      y: GAME_HEIGHT + 2,
+      y: 182,
       speedX: { min: -8, max: 8 },
       speedY: { min: -26, max: -10 },
       lifespan: { min: 3500, max: 6500 },
@@ -75,7 +75,7 @@ const RECIPES: Record<AmbienceKind, Recipe> = {
   cendres: {
     texture: WORLD_TEX.grain,
     config: {
-      x: { min: 0, max: GAME_WIDTH + 80 },
+      x: { min: 0, max: 400 },
       y: -4,
       speedX: { min: -18, max: -6 },
       speedY: { min: 6, max: 16 },
@@ -88,9 +88,28 @@ const RECIPES: Record<AmbienceKind, Recipe> = {
   },
 };
 
+/** Les recettes sont écrites pour un écran de 320×180 : on les agrandit au canevas. */
+const SIZE_FACTOR = GAME_WIDTH / 320;
+const SCALED_KEYS = ['x', 'y', 'speedX', 'speedY'] as const;
+
+function scaledConfig(config: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig): Phaser.Types.GameObjects.Particles.ParticleEmitterConfig {
+  const out: Record<string, unknown> = { ...config };
+  const grow = (value: unknown): unknown => {
+    if (typeof value === 'number') return value * SIZE_FACTOR;
+    if (value && typeof value === 'object' && 'min' in value && 'max' in value) {
+      const range = value as { min: number; max: number };
+      return { min: range.min * SIZE_FACTOR, max: range.max * SIZE_FACTOR };
+    }
+    return value;
+  };
+  for (const key of SCALED_KEYS) if (key in out) out[key] = grow(out[key]);
+  out['scale'] = grow(config.scale ?? 1);
+  return out as Phaser.Types.GameObjects.Particles.ParticleEmitterConfig;
+}
+
 export function createAmbience(scene: Phaser.Scene, kind: AmbienceKind, depth: number): Phaser.GameObjects.Particles.ParticleEmitter {
   const recipe = RECIPES[kind];
-  const emitter = scene.add.particles(0, 0, recipe.texture, recipe.config);
+  const emitter = scene.add.particles(0, 0, recipe.texture, scaledConfig(recipe.config));
   emitter.setScrollFactor(0).setDepth(depth);
   // Régime établi dès l'arrivée : on avance l'émetteur pour ne pas voir l'air vide se remplir.
   emitter.fastForward(6000, 100);

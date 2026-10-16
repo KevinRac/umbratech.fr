@@ -4,15 +4,24 @@
  */
 
 /**
- * Résolution logique de l'écran titre et du chargement (décision n°4).
- * Le monde ouvert utilise une résolution plus basse (décision n°36) : voir WORLD_WIDTH.
+ * Canevas du jeu : résolution FIXE, quelle que soit la taille de l'écran (décision n°37).
+ * Le canevas est ensuite agrandi pour remplir la fenêtre. Les textes et l'interface
+ * sont dessinés à cette résolution (nets) ; le pixel art des scènes est agrandi
+ * par le zoom de leur caméra.
  */
-export const GAME_WIDTH = 480;
-export const GAME_HEIGHT = 270;
+export const GAME_WIDTH = 960;
+export const GAME_HEIGHT = 540;
 
-/** Résolution logique du monde ouvert : 320×180, pixels plus gros, rendu plus net (décision n°36). */
+/** Zone de conception de l'écran titre : 480×270, zoom de caméra ×2. */
+export const TITLE_WIDTH = 480;
+export const TITLE_HEIGHT = 270;
+
+/** Zone visible du monde ouvert : 320×180 pixels d'art, zoom de caméra ×3 (décision n°36). */
 export const WORLD_WIDTH = 320;
 export const WORLD_HEIGHT = 180;
+
+/** Échelle de l'interface (panneaux, curseurs) par rapport à leur dessin de base. */
+export const UI_SCALE = 2;
 
 /** Taille d'une tuile en pixels. */
 export const TILE_SIZE = 16;

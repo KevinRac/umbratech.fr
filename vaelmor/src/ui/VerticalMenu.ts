@@ -20,6 +20,8 @@ export interface VerticalMenuOptions {
   readonly depth?: number;
   /** Vrai dans une scène dont la caméra défile (monde ouvert) : le menu reste collé à l'écran. */
   readonly fixed?: boolean;
+  /** Agrandissement entier des repères (curseur, surbrillance, marges) ; le texte garde sa taille. */
+  readonly scale?: number;
 }
 
 const CURSOR_KEY = 'ui:cursor';
@@ -57,6 +59,7 @@ export class VerticalMenu {
   private readonly highlight: Phaser.GameObjects.Rectangle;
   private readonly cursor: Phaser.GameObjects.Image;
   private readonly lineHeight: number;
+  private readonly k: number;
   private index: number;
   private flickerTimer: Phaser.Time.TimerEvent;
   private locked = false;
@@ -71,14 +74,15 @@ export class VerticalMenu {
   ) {
     ensureCursorTexture(scene);
     this.lineHeight = options.lineHeight ?? 16;
+    const k = (this.k = options.scale ?? 1);
     const depth = options.depth ?? 0;
 
-    this.highlight = scene.add.rectangle(x, y, options.width, this.lineHeight - 2, PALETTE.violetBrume, 0.55).setOrigin(0, 0).setDepth(depth);
-    this.cursor = scene.add.image(x + 4, y, `${CURSOR_KEY}0`).setOrigin(0, 0).setDepth(depth + 1);
+    this.highlight = scene.add.rectangle(x, y, options.width, this.lineHeight - 2 * k, PALETTE.violetBrume, 0.55).setOrigin(0, 0).setDepth(depth);
+    this.cursor = scene.add.image(x + 4 * k, y, `${CURSOR_KEY}0`).setOrigin(0, 0).setScale(k).setDepth(depth + 1);
 
     items.forEach((item, i) => {
       const rowY = y + i * this.lineHeight;
-      this.labels.push(addText(scene, x + 14, rowY + 1, item.label).setDepth(depth + 1) as PixelText);
+      this.labels.push(addText(scene, x + 14 * k, rowY + k, item.label).setDepth(depth + 1) as PixelText);
       const zone = scene.add.zone(x, rowY, options.width, this.lineHeight).setOrigin(0, 0).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => this.isEnabled(i) && this.select(i));
       zone.on('pointerdown', () => this.isEnabled(i) && (this.select(i), this.activate()));
@@ -154,7 +158,7 @@ export class VerticalMenu {
   private refresh(): void {
     const rowY = this.y + this.index * this.lineHeight;
     this.highlight.setY(rowY);
-    this.cursor.setY(rowY + Math.floor((this.lineHeight - 2 - 7) / 2));
+    this.cursor.setY(rowY + Math.floor((this.lineHeight - 2 * this.k - 7 * this.k) / 2));
     this.labels.forEach((label, i) => {
       const color = !this.isEnabled(i) ? PALETTE.desactive : i === this.index ? PALETTE.jauneBle : PALETTE.parchemin;
       label.setTint(color);

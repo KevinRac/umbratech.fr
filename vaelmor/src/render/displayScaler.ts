@@ -1,18 +1,15 @@
 /**
- * Applique la mise à l'échelle entière au canvas Phaser et la recalcule quand
+ * Applique la mise à l'échelle (entière si possible) au canvas Phaser et la recalcule quand
  * la fenêtre change de taille ou d'écran (changement de devicePixelRatio).
  */
 import type Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
 import { computeDisplayScale, type DisplayScale } from '../core/displayScale';
 
-/** Résolution logique courante : elle change d'une scène à l'autre (titre 480×270, monde 320×180). */
-let logical = { width: GAME_WIDTH, height: GAME_HEIGHT };
 let current: DisplayScale = computeDisplayScale(GAME_WIDTH, GAME_HEIGHT, 1, GAME_WIDTH, GAME_HEIGHT);
-let applyScale: (() => void) | null = null;
 
 export function measureDisplayScale(): DisplayScale {
-  return computeDisplayScale(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1, logical.width, logical.height);
+  return computeDisplayScale(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1, GAME_WIDTH, GAME_HEIGHT, true);
 }
 
 /** Échelle actuellement appliquée (pour l'outil de debug). */
@@ -27,6 +24,8 @@ export function bindIntegerScaling(game: Phaser.Game): () => void {
     if (next.cssZoom !== current.cssZoom || game.scale.zoom !== next.cssZoom) {
       game.scale.setZoom(next.cssZoom);
     }
+    // Pixels francs quand l'échelle est entière, lissage léger sinon (évite des pixels de tailles inégales).
+    game.canvas.style.imageRendering = Number.isInteger(next.pixelsPerGamePixel) ? 'pixelated' : 'auto';
     current = next;
   };
 
@@ -41,7 +40,6 @@ export function bindIntegerScaling(game: Phaser.Game): () => void {
     watchDpr();
   }
 
-  applyScale = apply;
   window.addEventListener('resize', apply);
   watchDpr();
   apply();
@@ -50,15 +48,4 @@ export function bindIntegerScaling(game: Phaser.Game): () => void {
     window.removeEventListener('resize', apply);
     dprQuery?.removeEventListener('change', onDprChange);
   };
-}
-
-/**
- * Change la résolution logique du jeu (une scène la réclame au démarrage) et
- * recalcule aussitôt l'échelle entière. Sans effet si elle est déjà la bonne.
- */
-export function setLogicalSize(game: Phaser.Game, width: number, height: number): void {
-  if (logical.width === width && logical.height === height) return;
-  logical = { width, height };
-  game.scale.setGameSize(width, height);
-  applyScale?.();
 }
