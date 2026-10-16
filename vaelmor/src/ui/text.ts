@@ -10,8 +10,8 @@ export type TextAlign = 'left' | 'center' | 'right';
 
 export interface TextOptions {
   readonly font?: FontKey;
-  /** Agrandissement entier (×1, ×2, ×3) : garde les pixels carrés. */
-  readonly scale?: 1 | 2 | 3;
+  /** Agrandissement entier (entier ≥ 1) : garde les pixels carrés. */
+  readonly scale?: number;
   readonly color?: number;
   /** Ancrage horizontal par rapport à x (le texte reste sur des pixels entiers). */
   readonly align?: TextAlign;

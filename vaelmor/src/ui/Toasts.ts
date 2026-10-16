@@ -15,6 +15,8 @@ export interface ToastsOptions {
   readonly width?: number;
   /** Agrandissement entier du cadre et de la marge (×2 sur l'interface native). */
   readonly scale?: number;
+  /** Agrandissement entier du texte (par défaut : la moitié de `scale`, arrondie, au moins 1). */
+  readonly textScale?: number;
 }
 
 export class Toasts {
@@ -23,6 +25,7 @@ export class Toasts {
   private readonly depth: number;
   private readonly areaWidth: number;
   private readonly k: number;
+  private readonly textScale: number;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -31,6 +34,7 @@ export class Toasts {
     this.depth = options.depth ?? 1000;
     this.areaWidth = options.width ?? scene.scale.width;
     this.k = options.scale ?? 1;
+    this.textScale = options.textScale ?? 1;
   }
 
   push(message: string): void {
@@ -47,7 +51,7 @@ export class Toasts {
     }
     this.showing = true;
     const k = this.k;
-    const text = addText(this.scene, 0, 0, message, { color: PALETTE.parchemin, maxWidth: this.areaWidth - 48 * k });
+    const text = addText(this.scene, 0, 0, message, { scale: this.textScale, color: PALETTE.parchemin, maxWidth: this.areaWidth - 48 * k });
     const width = Math.ceil(text.width) + 16 * k;
     const height = Math.max(19 * k, Math.ceil(text.height) + 6 * k);
     const x = Math.round((this.areaWidth - width) / 2);

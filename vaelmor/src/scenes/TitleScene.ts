@@ -19,7 +19,7 @@ import {
   SEA_FRAMES,
   TEX,
 } from '../render/backdrops/titleBackdrop';
-import { fitCamera } from '../render/viewport';
+import { fitDesignArea } from '../render/viewport';
 import { paintLogo } from '../render/logo';
 import { PALETTE } from '../render/palette';
 import { drawPanel } from '../ui/panel';
@@ -60,7 +60,10 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
-    fitCamera(this, GAME_WIDTH);
+    fitDesignArea(this, GAME_WIDTH, GAME_HEIGHT);
+    const refit = (): void => void fitDesignArea(this, GAME_WIDTH, GAME_HEIGHT);
+    this.scale.on(Phaser.Scale.Events.RESIZE, refit);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, refit));
     this.actions = new ActionInput(this);
     this.toasts = new Toasts(this, { width: GAME_WIDTH });
     this.buildBackdrop();

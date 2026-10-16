@@ -1,32 +1,37 @@
 /**
- * Applique la mise à l'échelle (entière si possible) au canvas Phaser et la recalcule quand
- * la fenêtre change de taille ou d'écran (changement de devicePixelRatio).
+ * Fait suivre au canevas la taille réelle de la fenêtre, en pixels physiques
+ * (devicePixelRatio compris) : le canevas n'est jamais étiré, donc jamais flou
+ * ni pixellisé (décision n°38). Recalculé au redimensionnement et au changement d'écran.
  */
 import type Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
-import { computeDisplayScale, type DisplayScale } from '../core/displayScale';
 
-let current: DisplayScale = computeDisplayScale(GAME_WIDTH, GAME_HEIGHT, 1, GAME_WIDTH, GAME_HEIGHT);
-
-export function measureDisplayScale(): DisplayScale {
-  return computeDisplayScale(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1, GAME_WIDTH, GAME_HEIGHT, true);
+export interface DisplaySize {
+  /** Taille du canevas en pixels physiques. */
+  readonly width: number;
+  readonly height: number;
+  readonly dpr: number;
 }
 
-/** Échelle actuellement appliquée (pour l'outil de debug). */
-export function getDisplayScale(): DisplayScale {
+export function measureDisplay(): DisplaySize {
+  const dpr = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+  return { width: Math.max(320, Math.floor(window.innerWidth * dpr)), height: Math.max(180, Math.floor(window.innerHeight * dpr)), dpr };
+}
+
+let current: DisplaySize = { width: 0, height: 0, dpr: 1 };
+
+/** Taille actuelle (pour l'outil de debug). */
+export function getDisplaySize(): DisplaySize {
   return current;
 }
 
-/** Lie l'échelle entière au jeu ; renvoie une fonction de nettoyage. */
-export function bindIntegerScaling(game: Phaser.Game): () => void {
+/** Lie la taille du canevas à la fenêtre ; renvoie une fonction de nettoyage. */
+export function bindDisplaySize(game: Phaser.Game): () => void {
   const apply = (): void => {
-    const next = measureDisplayScale();
-    if (next.cssZoom !== current.cssZoom || game.scale.zoom !== next.cssZoom) {
-      game.scale.setZoom(next.cssZoom);
-    }
-    // Pixels francs quand l'échelle est entière, lissage léger sinon (évite des pixels de tailles inégales).
-    game.canvas.style.imageRendering = Number.isInteger(next.pixelsPerGamePixel) ? 'pixelated' : 'auto';
+    const next = measureDisplay();
     current = next;
+    game.scale.setZoom(1 / next.dpr);
+    if (game.scale.width !== next.width || game.scale.height !== next.height) game.scale.setGameSize(next.width, next.height);
+    game.canvas.style.imageRendering = 'pixelated';
   };
 
   let dprQuery: MediaQueryList | null = null;

@@ -5,7 +5,6 @@
  */
 import Phaser from 'phaser';
 import type { AmbienceKind } from '../data/schemas';
-import { GAME_WIDTH } from '../core/config';
 import { PALETTE } from './palette';
 import { WORLD_TEX } from './worldTextures';
 
@@ -88,28 +87,39 @@ const RECIPES: Record<AmbienceKind, Recipe> = {
   },
 };
 
-/** Les recettes sont écrites pour un écran de 320×180 : on les agrandit au canevas. */
-const SIZE_FACTOR = GAME_WIDTH / 320;
+export interface AmbienceView {
+  /** Taille du canevas en pixels d'écran. */
+  readonly width: number;
+  readonly height: number;
+  /** Pixels d'écran par pixel d'art (les grains et leur vitesse suivent). */
+  readonly zoom: number;
+}
+
 const SCALED_KEYS = ['x', 'y', 'speedX', 'speedY'] as const;
 
-function scaledConfig(config: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig): Phaser.Types.GameObjects.Particles.ParticleEmitterConfig {
+/** Les recettes sont écrites pour un écran de 320×180 pixels d'art : on les adapte au canevas réel. */
+function scaledConfig(config: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig, view: AmbienceView): Phaser.Types.GameObjects.Particles.ParticleEmitterConfig {
   const out: Record<string, unknown> = { ...config };
-  const grow = (value: unknown): unknown => {
-    if (typeof value === 'number') return value * SIZE_FACTOR;
+  const grow = (value: unknown, factor: number): unknown => {
+    if (typeof value === 'number') return value * factor;
     if (value && typeof value === 'object' && 'min' in value && 'max' in value) {
       const range = value as { min: number; max: number };
-      return { min: range.min * SIZE_FACTOR, max: range.max * SIZE_FACTOR };
+      return { min: range.min * factor, max: range.max * factor };
     }
     return value;
   };
-  for (const key of SCALED_KEYS) if (key in out) out[key] = grow(out[key]);
-  out['scale'] = grow(config.scale ?? 1);
+  const fx = view.width / 320;
+  const fy = view.height / 180;
+  if ('x' in out) out['x'] = grow(out['x'], fx);
+  if ('y' in out) out['y'] = grow(out['y'], fy);
+  for (const key of SCALED_KEYS) if (key === 'speedX' || key === 'speedY') if (key in out) out[key] = grow(out[key], view.zoom);
+  out['scale'] = grow(config.scale ?? 1, view.zoom);
   return out as Phaser.Types.GameObjects.Particles.ParticleEmitterConfig;
 }
 
-export function createAmbience(scene: Phaser.Scene, kind: AmbienceKind, depth: number): Phaser.GameObjects.Particles.ParticleEmitter {
+export function createAmbience(scene: Phaser.Scene, kind: AmbienceKind, depth: number, view: AmbienceView): Phaser.GameObjects.Particles.ParticleEmitter {
   const recipe = RECIPES[kind];
-  const emitter = scene.add.particles(0, 0, recipe.texture, scaledConfig(recipe.config));
+  const emitter = scene.add.particles(0, 0, recipe.texture, scaledConfig(recipe.config, view));
   emitter.setScrollFactor(0).setDepth(depth);
   // Régime établi dès l'arrivée : on avance l'émetteur pour ne pas voir l'air vide se remplir.
   emitter.fastForward(6000, 100);

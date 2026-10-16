@@ -1,31 +1,33 @@
 /**
- * Cadrage des scènes dans le canevas fixe (décision n°37) : une scène conçue
- * pour une zone de `designWidth` pixels d'art de large (16:9) règle le zoom de sa
- * caméra pour remplir le canevas. Les caméras Phaser zooment autour de leur
- * centre ; on décale donc le défilement pour que la zone commence en (0, 0).
+ * Cadrage des caméras Phaser dans un canevas à la taille de l'écran
+ * (décision n°38). Voir `core/viewport.ts` pour le choix des facteurs.
  */
 import type Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
+import { titleZoomFor, zoomOrigin } from '../core/viewport';
 
-export interface ViewOrigin {
-  readonly x: number;
-  readonly y: number;
+export interface WorldView {
+  readonly zoom: number;
+  /** À retrancher de la position voulue du coin haut-gauche pour obtenir le défilement Phaser. */
+  readonly origin: { x: number; y: number };
+  /** Taille visible en pixels d'art. */
+  readonly width: number;
+  readonly height: number;
 }
 
-/** Zoom entier de la caméra pour une zone de conception donnée. */
-export function zoomFor(designWidth: number): number {
-  return GAME_WIDTH / designWidth;
+/** Zoom du monde : `zoom` pixels d'écran par pixel d'art. */
+export function worldView(scene: Phaser.Scene, zoom: number): WorldView {
+  const { width, height } = scene.scale;
+  scene.cameras.main.setZoom(zoom);
+  return { zoom, origin: zoomOrigin(width, height, zoom), width: width / zoom, height: height / zoom };
 }
 
-/** Défilement à retrancher pour que le point (0, 0) du monde soit en haut à gauche de l'écran. */
-export function viewOrigin(designWidth: number): ViewOrigin {
-  const zoom = zoomFor(designWidth);
-  return { x: (GAME_WIDTH / 2) * (1 - 1 / zoom), y: (GAME_HEIGHT / 2) * (1 - 1 / zoom) };
-}
-
-/** Règle zoom et défilement de la caméra principale ; renvoie l'origine pour les scènes qui défilent. */
-export function fitCamera(scene: Phaser.Scene, designWidth: number): ViewOrigin {
-  const origin = viewOrigin(designWidth);
-  scene.cameras.main.setZoom(zoomFor(designWidth)).setScroll(-origin.x, -origin.y);
-  return origin;
+/** Écran titre : zone de conception centrée, zoom entier. Renvoie le zoom choisi. */
+export function fitDesignArea(scene: Phaser.Scene, designWidth: number, designHeight: number): number {
+  const { width, height } = scene.scale;
+  const zoom = titleZoomFor(width, height, designWidth, designHeight);
+  const origin = zoomOrigin(width, height, zoom);
+  const marginX = (width / zoom - designWidth) / 2;
+  const marginY = (height / zoom - designHeight) / 2;
+  scene.cameras.main.setZoom(zoom).setScroll(Math.round(-origin.x - marginX), Math.round(-origin.y - marginY));
+  return zoom;
 }
