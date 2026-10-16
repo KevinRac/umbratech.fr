@@ -43,9 +43,9 @@ Ensuite, dans l'ordre du GDD §17 : M2 (villages, PNJ, dialogues, `locations.jso
 - **Vérifié dans Chromium** (WebGL logiciel, 960×540) : arrivée sur l'île, marche, course, collisions, passage verrouillé et son message, téléportation, pause, aucune erreur console, tas JS stable sur 40 s de marche aléatoire.
 
 ### Mesure de performance (critère « 60 FPS, 10 min »)
-Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftShader : ~33 ips en 960×540, ~50 ips sur l'écran titre dans les mêmes conditions). Ce qui garantit la marge : sol, décor et cimes = 3 couches GPU (3 quads, quelle que soit la taille de l'île), eau = 1 TileSprite, boucle de jeu sans allocation (`stepBody` modifie l'état en place), 1 émetteur de particules. **À vérifier par l'auteur** sur sa machine : F3 puis marcher 10 min (FPS visible en haut à gauche).
+Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftShader : ~33 ips en 960×540, ~50 ips sur l'écran titre dans les mêmes conditions). Ce qui garantit la marge : sol, décor et cimes = 3 couches GPU (3 quads, quelle que soit la taille de l'île), eau = 1 TileSprite, boucle de jeu sans allocation (`stepBody` modifie l'état en place), 1 émetteur de particules. **Reste à vérifier par l'auteur** sur sa machine : F3 puis marcher 10 min (FPS visible en haut à gauche).
 
-### À valider par l'auteur (n°32 à 35)
+### Décisions n°32 à 35 — validées par l'auteur le 16/10/2026
 - **n°32 — Sprites à 4 orientations** pour un déplacement à 8 directions : face, dos, profil (retourné pour la gauche) ; les diagonales réutilisent la pose verticale ou latérale selon `spritePose`. Évite 8 jeux d'images à dessiner ; changeable plus tard (`logic/world/movement.ts` → `spritePose`).
 - **n°33 — Passages fermés par défaut** : la partie démarre avec tous les drapeaux de boss à faux, donc seule la zone 1 est accessible tant qu'on n'a pas battu les boss (ils arrivent en M4/M6). Le debug (F9) les ouvre.
 - **n°34 — Vallée de Valcendre dans la zone 2** (Forêt-Racine, niveaux 4-9) : la ville est accessible dès Brakk vaincu, côté est de la rivière, par le Vieux Pont. Le polygone est dans `tools/world/layout.ts`.
