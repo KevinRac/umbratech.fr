@@ -119,7 +119,7 @@ export class WorldHudScene extends Phaser.Scene {
       this.banner?.destroy(true);
       const container = this.add.container(0, 0).setDepth(DEPTH.banner);
       const cx = this.scale.width / 2;
-      const titleText = addText(this, cx, 70 * S, title, { font: 'title', scale: 3 * S, color: PALETTE.parchemin, align: 'center' });
+      const titleText = addText(this, cx, 70 * S, title, { scale: 3 * S, color: PALETTE.parchemin, align: 'center' });
       container.add(titleText);
       const width = Math.ceil(titleText.width);
       const lineY = 70 * S + Math.ceil(titleText.height) + 6 * S;
