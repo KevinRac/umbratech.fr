@@ -1,30 +1,37 @@
 /**
- * Applique la mise à l'échelle entière au canvas Phaser et la recalcule quand
- * la fenêtre change de taille ou d'écran (changement de devicePixelRatio).
+ * Affiche le canevas à TAILLE FIXE (960×540 pixels physiques), sans agrandissement :
+ * une fenêtre plus grande montre le même jeu entouré de noir, une fenêtre plus petite
+ * le réduit pour qu'il tienne (décision n°40). Le devicePixelRatio est compensé pour
+ * que 1 pixel de jeu = 1 pixel physique de l'écran.
  */
 import type Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
-import { computeDisplayScale, type DisplayScale } from '../core/displayScale';
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../core/config';
 
-let current: DisplayScale = computeDisplayScale(GAME_WIDTH, GAME_HEIGHT, 1, GAME_WIDTH, GAME_HEIGHT);
-
-export function measureDisplayScale(): DisplayScale {
-  return computeDisplayScale(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1, GAME_WIDTH, GAME_HEIGHT);
+export interface DisplayInfo {
+  /** Zoom CSS à appliquer au canevas. */
+  readonly cssZoom: number;
+  readonly dpr: number;
 }
 
-/** Échelle actuellement appliquée (pour l'outil de debug). */
-export function getDisplayScale(): DisplayScale {
+export function measureDisplay(): DisplayInfo {
+  const dpr = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+  const cssZoom = Math.min(1 / dpr, window.innerWidth / CANVAS_WIDTH, window.innerHeight / CANVAS_HEIGHT);
+  return { cssZoom, dpr };
+}
+
+let current: DisplayInfo = { cssZoom: 1, dpr: 1 };
+
+/** Zoom actuellement appliqué (pour l'outil de debug). */
+export function getDisplayInfo(): DisplayInfo {
   return current;
 }
 
-/** Lie l'échelle entière au jeu ; renvoie une fonction de nettoyage. */
-export function bindIntegerScaling(game: Phaser.Game): () => void {
+/** Lie le zoom CSS du canevas à la fenêtre ; renvoie une fonction de nettoyage. */
+export function bindDisplaySize(game: Phaser.Game): () => void {
   const apply = (): void => {
-    const next = measureDisplayScale();
-    if (next.cssZoom !== current.cssZoom || game.scale.zoom !== next.cssZoom) {
-      game.scale.setZoom(next.cssZoom);
-    }
-    current = next;
+    current = measureDisplay();
+    game.scale.setZoom(current.cssZoom);
+    game.canvas.style.imageRendering = 'pixelated';
   };
 
   let dprQuery: MediaQueryList | null = null;

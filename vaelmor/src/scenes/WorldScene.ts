@@ -8,7 +8,7 @@
  * ces fonctions et dessiner le résultat.
  */
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
+import { worldZoomFor } from '../core/viewport';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getWorldState, setWorldState } from '../core/session';
@@ -21,6 +21,7 @@ import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '.
 import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker } from '../logic/world/zones';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
+import { worldView, type WorldView } from '../render/viewport';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
@@ -54,6 +55,7 @@ export class WorldScene extends Phaser.Scene {
   private state!: WorldState;
   private actions!: ActionInput;
   private hud!: WorldHudScene;
+  private view!: WorldView;
   private tracker!: ZoneTracker;
   private body_!: BodyState;
   private camera_: Vec2 = { x: 0, y: 0 };
@@ -78,6 +80,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(data: WorldSceneData = {}): void {
+    this.view = worldView(this, worldZoomFor(this.scale.height));
     try {
       this.data_ = loadGameData();
       const raw = this.cache.tilemap.get(WORLD_MAP_KEY)?.data as unknown;
@@ -103,7 +106,7 @@ export class WorldScene extends Phaser.Scene {
     const worldWidth = this.map.width * this.map.tileSize;
     const worldHeight = this.map.height * this.map.tileSize;
     this.cameraConfig = {
-      view: { width: GAME_WIDTH, height: GAME_HEIGHT },
+      view: { width: this.view.width, height: this.view.height },
       world: { width: worldWidth, height: worldHeight },
       deadzone: { width: exploration.cameraDeadzoneWidth, height: exploration.cameraDeadzoneHeight },
       lerp: exploration.cameraLerp,
@@ -120,7 +123,17 @@ export class WorldScene extends Phaser.Scene {
     this.applyCamera();
     this.cameras.main.fadeIn(600, 0, 0, 0);
 
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
+  }
+
+  /** La fenêtre change de taille : nouveau zoom entier, nouvelle zone visible. */
+  private onResize(): void {
+    if (!this.cameraConfig) return;
+    this.view = worldView(this, worldZoomFor(this.scale.height));
+    this.cameraConfig = { ...this.cameraConfig, view: { width: this.view.width, height: this.view.height } };
+    this.camera_ = centerOn({ x: this.body_.x, y: this.body_.y - 10 }, this.cameraConfig);
+    this.applyCamera();
   }
 
   /* ---------- Construction ---------- */
@@ -214,7 +227,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private applyCamera(): void {
-    this.cameras.main.setScroll(Math.round(this.camera_.x), Math.round(this.camera_.y));
+    this.cameras.main.setScroll(Math.round(this.camera_.x) - this.view.origin.x, Math.round(this.camera_.y) - this.view.origin.y);
   }
 
   private syncHero(): void {
@@ -360,8 +373,8 @@ export class WorldScene extends Phaser.Scene {
     const size = this.map.tileSize;
     const x0 = Math.max(0, Math.floor(this.camera_.x / size));
     const y0 = Math.max(0, Math.floor(this.camera_.y / size));
-    const x1 = Math.min(this.map.width - 1, x0 + Math.ceil(GAME_WIDTH / size) + 1);
-    const y1 = Math.min(this.map.height - 1, y0 + Math.ceil(GAME_HEIGHT / size) + 1);
+    const x1 = Math.min(this.map.width - 1, x0 + Math.ceil(this.view.width / size) + 1);
+    const y1 = Math.min(this.map.height - 1, y0 + Math.ceil(this.view.height / size) + 1);
     const colors: Record<number, number> = { [COLLISION.blocked]: 0xff3030, [COLLISION.water]: 0x3070ff, [COLLISION.slow]: 0xffd030, [COLLISION.gate]: 0xb050ff };
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
@@ -403,6 +416,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onShutdown(): void {
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.registry.remove('debug.info');
     this.fog.clear();
     this.scene.stop(SCENES.worldHud);

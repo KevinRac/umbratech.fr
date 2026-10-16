@@ -5,7 +5,7 @@
  * Options. « Nouvelle partie » mène à l'île (M1) ; les autres entrées annoncent leur jalon.
  */
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_SUBTITLE, GAME_VERSION, GAME_WIDTH, MILESTONE } from '../core/config';
+import { GAME_SUBTITLE, GAME_VERSION, MILESTONE, TITLE_HEIGHT as GAME_HEIGHT, TITLE_WIDTH as GAME_WIDTH } from '../core/config';
 import { ActionInput } from '../core/input';
 import { hasKey } from '../core/storage';
 import { GAME_SAVE_KEYS } from '../logic/save/keys';
@@ -19,6 +19,7 @@ import {
   SEA_FRAMES,
   TEX,
 } from '../render/backdrops/titleBackdrop';
+import { fitDesignArea } from '../render/viewport';
 import { paintLogo } from '../render/logo';
 import { PALETTE } from '../render/palette';
 import { drawPanel } from '../ui/panel';
@@ -59,6 +60,10 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    fitDesignArea(this, GAME_WIDTH, GAME_HEIGHT);
+    const refit = (): void => void fitDesignArea(this, GAME_WIDTH, GAME_HEIGHT);
+    this.scale.on(Phaser.Scale.Events.RESIZE, refit);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, refit));
     this.actions = new ActionInput(this);
     this.toasts = new Toasts(this, { width: GAME_WIDTH });
     this.buildBackdrop();

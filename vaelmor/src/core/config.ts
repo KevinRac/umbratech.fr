@@ -4,12 +4,20 @@
  */
 
 /**
- * Résolution logique FIXE du jeu (décision n°39) : 480×270 pixels, la même sur tous
- * les écrans. Le canevas est agrandi par le plus grand facteur ENTIER qui tient dans
- * la fenêtre, avec des bandes noires autour : jamais étiré, jamais flou.
+ * Le canevas a la taille réelle de l'écran (décision n°38) : voir `core/viewport.ts`.
+ * Ces deux zones sont les surfaces de conception du pixel art, en pixels d'art.
  */
-export const GAME_WIDTH = 480;
-export const GAME_HEIGHT = 270;
+/**
+ * Canevas à taille FIXE (décision n°40) : 960×540 pixels physiques, affiché 1:1 (sans aucun
+ * agrandissement CSS) et centré, sur tous les écrans. Texte et interface y sont nets ;
+ * le pixel art du monde est zoomé ×2 (480×270 pixels d'art visibles).
+ */
+export const CANVAS_WIDTH = 960;
+export const CANVAS_HEIGHT = 540;
+
+/** Écran titre : décor dessiné en 480×270, centré et zoomé d'un facteur entier. */
+export const TITLE_WIDTH = 480;
+export const TITLE_HEIGHT = 270;
 
 /** Taille d'une tuile en pixels. */
 export const TILE_SIZE = 16;

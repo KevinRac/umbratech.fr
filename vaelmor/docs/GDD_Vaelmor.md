@@ -1062,7 +1062,7 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 
 | Paramètre | Valeur |
 |---|---|
-| **Résolution logique** | **480×270** fixe (16:9), échelle entière avec bandes noires (décision n°39) |
+| **Résolution** | **Canevas fixe 960×540** affiché 1:1 et centré sur tous les écrans ; pixel art zoomé ×2 (480×270 visibles) ; interface native (décision n°40) |
 | **Tuile** | 16×16 px |
 | **Affichage** | Mise à l'échelle entière (×2 à ×6) avec bandes noires si besoin ; `image-rendering: pixelated` |
 | **Plein écran** | Option |
@@ -1417,7 +1417,7 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 1. **Stack** : Phaser 3 + TypeScript + Vite + Tiled (version précise à vérifier au démarrage).
 2. **Nom de l'île et du jeu** : Vaelmor, « Les Marées de Cendre ».
 3. **Perspective** : top-down 2D pixel art, pas d'isométrique.
-4. **Résolution** : 480×270 fixe, tuile 16 px, mise à l'échelle entière (confirmé par la décision n°39).
+4. **Résolution** : canevas fixe 960×540 affiché 1:1 (décision n°40), tuile 16 px, pixel art ×2.
 5. **Taille de l'île** : ~160×120 tuiles (paramétrable), 5 zones.
 6. **Nombre de lieux** : 4 villages + 1 grande ville (Haut-Gué, Ronceval, Port-Brume, Pierre-Haute, Valcendre).
 7. **Fast travel** : oui, entre autels des Lanternes découverts.
