@@ -1738,7 +1738,7 @@ function openTitle(){
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v13</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v14</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -1863,7 +1863,7 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>keys.delete(e.code));
 addEventListener('pointerdown',musicKick);
 addEventListener('blur',()=>{keys.clear();mouse.l=mouse.r=false;if(state==='play'&&overlayEl.hidden&&P&&!P.dead)openPause();});
-$('#hPause').addEventListener('click',openPause);
+$('#hPause').addEventListener('click',()=>openPause());
 
 // ═════════════════════════ Direction artistique : « gravure à la lanterne »
 // Silhouettes cernées d'encre, volumes en dégradé, seuls les yeux, les flammes et la Brume émettent de la lumière.
@@ -5305,7 +5305,7 @@ openTitle=function(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
  const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v13</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v14</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
  <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
  <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
  <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
@@ -5738,13 +5738,13 @@ function openPacte(){
  const card=(o,i)=>{const B=PBOON[o.boon],C=PCONS[o.cons];return `<button type="button" class="card pact" data-i="${i}" style="--c:#b48cff"><span class="meta"><span class="br">● Pacte</span><span>touche ${i+1}</span></span><h3>${B.n} · ${C.n}</h3><p class="boon">+ ${esc(B.d)}</p><p class="cons">− ${esc(C.d)}</p><p class="why">${o.known?`Il a vu que ${esc(C.why)}.`:'Il ne te connaît pas encore : il choisit au hasard.'}</p></button>`;};
  openOverlay(`<div class="panel narrow"><p class="eyebrow">Acte ${ROM[RUN.act]} · Le Pacte de la Brume</p><h2>Le Brumeux te tend la main</h2><p class="sub">Un avantage fort, contre une contrainte qu’il choisit en te regardant jouer. Le pacte dure tout l’acte. Chaque pacte accepté rend les gardiens plus agressifs${n?` (déjà ${n} accepté${n>1?'s':''} : gardiens ${Math.round((1-pactAgg())*100)} % plus rapides)`:''}.</p><div class="three">${offers.map(card).join('')}<button type="button" class="card" data-i="r"><span class="meta"><span class="br">● Refus</span><span>touche 3</span></span><h3>Refuser</h3><p>Tu descends sans rien devoir à la Brume.</p></button></div></div>`);
  const choose=i=>{if(!armed())return;if(i!=='r'){const o=offers[i];RUN.pact={boon:o.boon,cons:o.cons};RUN.pactN=(RUN.pactN||0)+1;const B=PBOON[o.boon],C=PCONS[o.cons];if(B.on)B.on(P.s);if(C.on)C.on(P.s);if(o.cons==='brume')RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.07);
-   sfx('murmur');murmur(`Pacte scellé · ${B.n}`,`${B.d} En échange : ${C.d}`,4.2);if(P.eq==='murmure')murRank(1);}
+   sfx('murmur');murmur(`Pacte scellé · ${B.n}`,`${B.d} En échange : ${C.d}`,4.2);if(eqIs('murmure'))murRank(1);}
   else toast('Tu refuses le pacte. La Brume t’observe en silence.',2.2);
   closeOverlay();renderRelics();};
  overlayEl.querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.i==='r'?'r':+b.dataset.i)));
  overlayKeys=c=>{const m=NUMKEY[c];if(m===0||m===1)choose(m);else if(m===2)choose('r');};}
 const _sr13=startRun;
-startRun=function(){_sr13();if(RUN&&!RUN.hub){RUN.pactN=0;RUN.pact=null;P.eq=null;P.eqS={};enqueue(openPacte);renderRelics();}};
+startRun=function(){_sr13();if(RUN&&!RUN.hub){RUN.pactN=0;RUN.pact=null;P.eq=null;P.eq2=null;P.eqS={};P.sets={};enqueue(openPacte);renderRelics();}};
 const _de13=doEnter;
 doEnter=function(type){const a0=RUN&&RUN.act;_de13(type);if(RUN&&!RUN.hub&&RUN.act!==a0){RUN.fiole=false;RUN.larme=false;enqueue(openPacte);}};
 
@@ -5806,7 +5806,7 @@ function drawRolePost(e){const R=ROLES[e.role];if(!R)return;const c=ctx,x=e.x,y=
  c.restore();}
 
 // ───────────────────────── Équipements
-const RAR={commun:{n:'Commun',col:'207,198,176'},rare:{n:'Rare',col:'111,178,255'},unique:{n:'Unique',col:'255,198,92'}};
+const RAR={commun:{n:'Commun',col:'207,198,176'},rare:{n:'Rare',col:'111,178,255'},epique:{n:'Épique',col:'196,128,255'},legendaire:{n:'Légendaire',col:'255,140,64'},unique:{n:'Unique',col:'255,198,92'}};
 const EQ_IC={arme:'M5 19l9-9m0 0l4-6 2 2-6 4m-5 4l2 2m-6 0l3 3',armure:'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z',relique:'M9 4h6l1 3H8zM8 7h8v9a4 4 0 01-8 0zM12 11v4',talisman:'M7 4c2 3 8 3 10 0M12 7v3M12 10a4 4 0 104 4 4 4 0 00-4-4z'};
 const EQS={
  lame:{n:'Lame émoussée',r:'commun',slot:'arme',up:'+15 % de dégâts.',down:'−10 % de vitesse d’attaque.',on(s){s.atkSpeed*=0.9;},off(s){s.atkSpeed/=0.9;}},
@@ -5823,18 +5823,25 @@ const EQS={
  murmure:{n:'Le Premier Murmure',r:'unique',slot:'relique',src:'La Mère-Brume',up:'Une salle sur deux, le Brumeux te propose un pacte de salle. Chaque pacte accepté renforce l’objet : +4 % de dégâts par rang (5 rangs).',down:'Chaque pacte de salle impose sa contrainte pour la salle.'},
  larme:{n:'Larme du Gardien',r:'unique',slot:'talisman',src:'Le Héraut Noyé',up:'Protège ton dernier PV une fois par acte.',down:'Le gardien suivant t’identifie : il copie ta façon de jouer dès son premier temps.'}};
 function eqDiscover(id){const m=M();if(!m.codex)m.codex={};if(!m.codex[id]){m.codex[id]=1;persist();return true;}return false;}
-function equip(id){const s=P.s;if(P.eq&&EQS[P.eq].off)EQS[P.eq].off(s);P.eq=id;P.eqS={};if(id&&EQS[id].on)EQS[id].on(s);renderRelics();}
-function rollEquip(){const r=Math.random()<0.7?'commun':'rare',pool=Object.keys(EQS).filter(k=>EQS[k].r===r&&k!==P.eq&&(!EQS[k].cls||EQS[k].cls===P.cls));return pick(pool.length?pool:Object.keys(EQS).filter(k=>EQS[k].r!=='unique'&&k!==P.eq));}
+function equip(id,slot){const s=P.s,key=slot===2?'eq2':'eq',old=P[key];if(old&&EQS[old].off)EQS[old].off(s);if(old==='murmure')delete P.eqS.rank;if(old==='coeur')delete P.eqS.st;P[key]=id;if(!P.eqS)P.eqS={};if(id&&EQS[id].on)EQS[id].on(s);renderRelics();if(typeof refreshSets==='function')refreshSets();}
+function rollEquip(){const a=(RUN&&RUN.act)||1,x=Math.random();let r='commun';
+ if(a>=3)r=x<0.06?'legendaire':x<0.2?'epique':x<0.5?'rare':'commun';else if(a===2)r=x<0.03?'legendaire':x<0.15?'epique':x<0.45?'rare':'commun';else r=x<0.3?'rare':'commun';
+ const ok=k=>k!==P.eq&&k!==P.eq2&&(!EQS[k].cls||EQS[k].cls===P.cls);let pool=Object.keys(EQS).filter(k=>EQS[k].r===r&&ok(k));
+ if(!pool.length)pool=Object.keys(EQS).filter(k=>EQS[k].r!=='unique'&&EQS[k].r!=='legendaire'&&ok(k));return pick(pool);}
 function eqCard(id,tag){if(!id)return `<div class="card eqc empty"><span class="meta"><span class="br">● ${tag}</span></span><h3>Rien</h3><p>Aucun équipement porté.</p></div>`;
  const E=EQS[id],R=RAR[E.r];return `<div class="card eqc" style="--c:rgb(${R.col})"><span class="meta"><span class="br">● ${R.n} · ${E.slot}</span><span>${tag}</span></span><h3><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg> ${esc(E.n)}</h3><p class="boon">+ ${esc(E.up)}</p><p class="cons">− ${esc(E.down)}</p>${E.src?`<p class="why">Arraché à ${esc(E.src)}.</p>`:''}${id==='murmure'&&P.eqS&&P.eqS.rank?`<p class="k">Rang ${P.eqS.rank} / 5</p>`:''}</div>`;}
+function setHint(id,keep){const o=keep;if(!o)return '';for(const k in SETS){const S=SETS[k];if(S.items.includes(id)&&S.items.includes(o))return `<p class="k set">Set · ${esc(S.n)} : ${esc(S.d)}</p>`;}return '';}
 function openEquip(id,title){
- if(!RUN||RUN.hub||P.dead||!id)return;const E=EQS[id],R=RAR[E.r],isNew=eqDiscover(id);
- sfx(E.r==='unique'?'level':E.r==='rare'?'buy':'pick');
- openOverlay(`<div class="panel narrow"><p class="eyebrow">Équipement · ${R.n}${isNew?' · nouveau dans le codex':''}</p><h2>${esc(title)}</h2><p class="sub">Tu ne peux porter qu’un seul équipement. S’il remplace l’ancien, l’ancien est perdu.</p><div class="two eqrow">${eqCard(id,'Trouvé')}${eqCard(P.eq,'Porté')}</div><div class="row"><button type="button" class="btn primary" id="eqy">Équiper · 1</button><button type="button" class="btn" id="eqn">Laisser · 2</button><span class="k">Codex : ${Object.keys(M().codex||{}).length} / ${Object.keys(EQS).length}</span></div></div>`,E.r==='unique'?'eq-unique':'');
- const go=y=>{if(!armed())return;if(y){equip(id);toast(`Tu portes ${E.n}.`,2);}closeOverlay();};
- $('#eqy').addEventListener('click',()=>go(true));$('#eqn').addEventListener('click',()=>go(false));
- overlayKeys=c=>{const m=NUMKEY[c];if(m===0)go(true);else if(m===1)go(false);};}
-function murRank(n){if(P.eq!=='murmure')return;P.eqS.rank=Math.min(5,(P.eqS.rank||0)+n);addNum(P.x,P.y-40,`Murmure rang ${P.eqS.rank}`,'echo');renderRelics();}
+ if(!RUN||RUN.hub||P.dead||!id)return;const E=EQS[id],R=RAR[E.r],isNew=eqDiscover(id),two=slot2();
+ sfx(E.r==='unique'||E.r==='legendaire'?'level':E.r==='rare'||E.r==='epique'?'buy':'pick');
+ const cur=two?`${eqCard(P.eq,'Emplacement I')}${eqCard(P.eq2,'Emplacement II')}`:eqCard(P.eq,'Porté');
+ const lbl=(k,n)=>P[k]?`Remplacer ${n}`:`Équiper en ${n}`;
+ const btns=two?`<button type="button" class="btn primary" id="eqy">${lbl('eq','I')} · 1</button><button type="button" class="btn primary" id="eqy2">${lbl('eq2','II')} · 2</button><button type="button" class="btn" id="eqn">Laisser · 3</button>`:`<button type="button" class="btn primary" id="eqy">Équiper · 1</button><button type="button" class="btn" id="eqn">Laisser · 2</button>`;
+ openOverlay(`<div class="panel narrow${two?' wide3':''}"><p class="eyebrow">Équipement · ${R.n}${isNew?' · nouveau dans le codex':''}</p><h2>${esc(title)}</h2><p class="sub">${two?'Tu portes deux équipements. Celui que tu remplaces est perdu.':'Tu ne peux porter qu’un seul équipement. S’il remplace l’ancien, l’ancien est perdu.'}</p><div class="two eqrow${two?' three':''}">${eqCard(id,'Trouvé')}${cur}</div>${two?(setHint(id,P.eq2)||'')+(setHint(id,P.eq)||''):''}<div class="row">${btns}<span class="k">Codex : ${Object.keys(M().codex||{}).length} / ${Object.keys(EQS).length}</span></div></div>`,E.r==='unique'||E.r==='legendaire'?'eq-unique':'');
+ const go=y=>{if(!armed())return;if(y){const sl=y===2?2:1,old=sl===2?P.eq2:P.eq;equip(id,sl);toast(`Tu portes ${E.n}.`,2);if(typeof chron==='function')chron('eq',{id,old});}else if(typeof chron==='function')chron('eqleft',{id});closeOverlay();};
+ $('#eqy').addEventListener('click',()=>go(1));const y2=$('#eqy2');if(y2)y2.addEventListener('click',()=>go(2));$('#eqn').addEventListener('click',()=>go(0));
+ overlayKeys=c=>{const m=NUMKEY[c];if(m===0)go(1);else if(m===1)go(two?2:0);else if(m===2&&two)go(0);};}
+function murRank(n){if(!eqIs('murmure'))return;P.eqS.rank=Math.min(5,(P.eqS.rank||0)+n);addNum(P.x,P.y-40,`Murmure rang ${P.eqS.rank}`,'echo');renderRelics();}
 function openMurmure(){
  if(!room||room.cleared||P.dead)return;const k=pick(['avare','fragile','brume']),C=PCONS[k];
  openOverlay(`<div class="panel narrow"><p class="eyebrow">Le Premier Murmure · rang ${P.eqS.rank||0} / 5</p><h2>Un pacte pour cette salle</h2><p class="sub">Le Brumeux murmure une offre. Elle ne vaut que pour cette salle.</p><div class="two">${`<button type="button" class="card pact" data-y="1" style="--c:#ffc65c"><span class="meta"><span class="br">● Pacte de salle</span><span>touche 1</span></span><h3>Accepter</h3><p class="boon">+ 25 % de dégâts dans cette salle, et le Murmure gagne un rang.</p><p class="cons">− ${esc(C.d)}</p></button>`}<button type="button" class="card" data-y="0"><span class="meta"><span class="br">● Refus</span><span>touche 2</span></span><h3>Refuser</h3><p>La salle reste telle quelle.</p></button></div></div>`);
@@ -5842,25 +5849,33 @@ function openMurmure(){
  overlayEl.querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>go(b.dataset.y==='1')));
  overlayKeys=c=>{const m=NUMKEY[c];if(m===0)go(true);else if(m===1)go(false);};}
 const _rr13=renderRelics;
-renderRelics=function(){_rr13();if(!P||!P.eq||!RUN||RUN.hub)return;const E=EQS[P.eq],R=RAR[E.r];const box=$('#hRelics');if(!box)return;
- box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${P.eq==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${P.eq==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg></span>`);const ic=box.querySelector('.relic.eq');if(ic)ic.addEventListener('click',()=>{if(state==='play')openPause();});};
-const eqIs=id=>!!(P&&P.eq===id&&RUN&&!RUN.hub);
+renderRelics=function(){_rr13();if(!P||!RUN||RUN.hub)return;const box=$('#hRelics');if(!box)return;
+ for(const k of ['eq2','eq']){const id=P[k];if(!id)continue;const E=EQS[id],R=RAR[E.r];
+  box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${id==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${id==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg></span>`);}
+ box.querySelectorAll('.relic.eq').forEach(ic=>ic.addEventListener('click',()=>{if(state==='play')openPause();}));};
+const eqIs=id=>!!(P&&(P.eq===id||P.eq2===id)&&RUN&&!RUN.hub);
+const slot2=()=>!!(RUN&&!RUN.hub&&RUN.act>=2);
 // Panneau « Équipement » du menu pause et codex consultable
-function eqDetail(){if(!P.eq)return '<p class="muted" style="margin:0">Aucun équipement porté. Les élites et les gardiens en laissent parfois.</p>';
- const E=EQS[P.eq],R=RAR[E.r];let extra='';
- if(P.eq==='murmure')extra=`Rang ${P.eqS.rank||0} / 5 · +${4*(P.eqS.rank||0)} % de dégâts.`;
- else if(P.eq==='coeur')extra=`Bonus actuel : +${P.eqS.st||0} % (max 25 %).`;
- else if(P.eq==='fiole')extra=RUN.fiole?'Brisée pour cet acte.':'Intacte : prête à annuler un coup.';
- else if(P.eq==='larme')extra=RUN.larme?'Utilisée pour cet acte.':'Prête à protéger ton dernier PV.';
- else if(P.eq==='anneau'&&room&&room.ring)extra=room.ring>1?'Cette salle : +20 % de dégâts.':'Cette salle : −20 % de dégâts.';
- return `<div class="eqpause" style="--c:rgb(${R.col})"><p class="eqh"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg><strong>${esc(E.n)}</strong><span class="eqr">${R.n} · ${E.slot}</span></p><p class="boon">+ ${esc(E.up)}</p><p class="cons">− ${esc(E.down)}</p>${extra?`<p class="k">${extra}</p>`:''}</div>`;}
+function eqExtra(id){
+ if(id==='murmure')return `Rang ${P.eqS.rank||0} / 5 · +${4*(P.eqS.rank||0)} % de dégâts.`;
+ if(id==='coeur')return `Bonus actuel : +${P.eqS.st||0} % (max 25 %).`;
+ if(id==='fiole')return RUN.fiole?'Brisée pour cet acte.':'Intacte : prête à annuler un coup.';
+ if(id==='larme')return RUN.larme?'Utilisée pour cet acte.':'Prête à protéger ton dernier PV.';
+ if(id==='phenix')return RUN.phenix?'Consumée pour cette run.':'Prête à te relever une fois.';
+ if(id==='anneau'&&room&&room.ring)return room.ring>1?'Cette salle : +20 % de dégâts.':'Cette salle : −20 % de dégâts.';return '';}
+function eqOne(id,tag){const E=EQS[id],R=RAR[E.r],extra=eqExtra(id);
+ return `<div class="eqpause" style="--c:rgb(${R.col})"><p class="eqh"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg><strong>${esc(E.n)}</strong><span class="eqr">${tag?tag+' · ':''}${R.n} · ${E.slot}</span></p><p class="boon">+ ${esc(E.up)}</p><p class="cons">− ${esc(E.down)}</p>${extra?`<p class="k">${extra}</p>`:''}</div>`;}
+function setsDetail(){const on=Object.keys(SETS).filter(k=>P.sets&&P.sets[k]);if(!on.length)return '';return on.map(k=>`<div class="eqpause setp"><p class="eqh"><strong>Set · ${esc(SETS[k].n)}</strong></p><p class="boon">+ ${esc(SETS[k].d)}</p></div>`).join('');}
+function eqDetail(){const two=slot2();
+ if(!P.eq&&!P.eq2)return `<p class="muted" style="margin:0 0 8px">Aucun équipement porté. Les élites et les gardiens en laissent parfois.${two?'' :' Un second emplacement s’ouvre à l’acte II.'}</p>`;
+ return (P.eq?eqOne(P.eq,two?'I':''):'')+(two?(P.eq2?eqOne(P.eq2,'II'):'<p class="muted" style="margin:0 0 8px">Emplacement II libre.</p>'):'')+setsDetail();}
 function pactDetail(){const p=RUN.pact;if(!p)return '';const B=PBOON[p.boon],C=PCONS[p.cons];
  return `<p class="h-sec">Pacte de la Brume · acte ${ROM[RUN.act]}</p><div class="eqpause pactp"><p class="boon">+ ${esc(B.n)} : ${esc(B.d)}</p><p class="cons">− ${esc(C.n)} : ${esc(C.d)}</p></div>`;}
 function openCodex(back){
  const got=M().codex||{},ids=Object.keys(EQS),n=ids.filter(k=>got[k]).length;
  const cell=k=>{const E=EQS[k],R=RAR[E.r];
-  if(!got[k])return `<div class="card eqc empty" style="--c:rgb(${R.col})"><span class="meta"><span class="br">● ${R.n}</span></span><h3>? ? ?</h3><p>${E.r==='unique'?`Se gagne en vainquant ${esc(E.src)}.`:E.r==='rare'?'Se trouve sur certains élites.':'Se trouve sur les élites.'}</p></div>`;
-  return eqCard(k,k===P.eq?'Porté':'Découvert');};
+  if(!got[k])return `<div class="card eqc empty" style="--c:rgb(${R.col})"><span class="meta"><span class="br">● ${R.n}</span></span><h3>? ? ?</h3><p>${E.r==='unique'?`Se gagne en vainquant ${esc(E.src)}.`:E.r==='legendaire'?'Une trouvaille très rare, dans les Cryptes ou le Cœur.':E.r==='epique'?'Se trouve sur les élites des actes II et III.':E.r==='rare'?'Se trouve sur certains élites.':'Se trouve sur les élites.'}</p></div>`;
+  return eqCard(k,(k===P.eq||k===P.eq2)?'Porté':'Découvert');};
  openOverlay(`<div class="panel"><p class="eyebrow">Codex des équipements · ${n} / ${ids.length}</p><h2>Ce que la Brume t’a déjà donné</h2><div class="codexg">${ids.map(cell).join('')}</div><div class="row"><button type="button" class="btn primary" id="cdx">Retour</button></div></div>`);
  const done=()=>{closeOverlay();if(back)back();};
  $('#cdx').addEventListener('click',done);overlayKeys=c=>{if(c==='Escape'||c==='KeyP'||c==='Enter')done();};}
@@ -6039,13 +6054,13 @@ const _oe13=openEnd;
 openEnd=function(win,abandon){
  _oe13(win,abandon);
  try{if(!RUN||RUN.hub)return;const box=overlayEl.querySelector('.prof12')||overlayEl.querySelector('.two>div:last-child');if(!box||overlayEl.querySelector('.eq13'))return;
-  const cx=Object.keys(M().codex||{}).length,E=P.eq&&EQS[P.eq];
-  box.insertAdjacentHTML('beforeend',`<div class="eq13"><p class="h-sec">Équipement et pactes</p><p class="k">${E?`Porté : ${esc(E.n)} (${RAR[E.r].n}).`:'Aucun équipement porté.'} Pactes acceptés : ${RUN.pactN||0}. Codex des équipements : ${cx} / ${Object.keys(EQS).length}.</p></div>`);}catch(err){console.error(err);}};
+  const cx=Object.keys(M().codex||{}).length,E=[P.eq,P.eq2].filter(Boolean).map(k=>EQS[k].n).join(' et ');
+  box.insertAdjacentHTML('beforeend',`<div class="eq13"><p class="h-sec">Équipement et pactes</p><p class="k">${E?`Porté : ${esc(E)}.`:'Aucun équipement porté.'} Pactes acceptés : ${RUN.pactN||0}. Codex des équipements : ${cx} / ${Object.keys(EQS).length}.</p></div>`);}catch(err){console.error(err);}};
 (function(){const st=document.createElement('style');st.textContent=`
 .card .boon{color:#bfe8b0;margin:0}.card .cons{color:#f2a3a3;margin:0}.card .why{color:#c9a8ff;font-style:italic;font-size:13.5px;margin:0}
 .card.pact{border-color:#5d4594;background:linear-gradient(180deg,rgba(60,36,100,.35),var(--card))}
 .card.eqc{cursor:default;border-top:3px solid var(--c,var(--line))}.card.eqc h3{display:flex;align-items:center;gap:8px}.card.eqc h3 .ic{width:22px;height:22px;stroke:var(--c);fill:none;stroke-width:1.8}
-.card.eqc.empty{opacity:.6}.eqrow{gap:12px}
+.card.eqc.empty{opacity:.6}.eqrow{gap:12px}.eqrow.three{grid-template-columns:repeat(3,minmax(0,1fr))}.panel.wide3{max-width:min(980px,96vw)}.k.set{color:#ffdf9a}
 .eqpause{border-left:3px solid var(--c,#5d4594);padding:6px 12px;margin:0 0 8px;background:rgba(255,255,255,.03)}.eqpause p{margin:3px 0}.eqpause .eqh{display:flex;align-items:center;gap:8px}.eqpause .ic{width:20px;height:20px;stroke:var(--c);fill:none;stroke-width:1.8}.eqpause .eqr{margin-left:auto;font-size:12.5px;color:var(--c)}
 #eqsec .boon{color:#bfe8b0}#eqsec .cons{color:#f2a3a3}#cdxb{margin-top:4px}
 .codexg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;max-height:56vh;overflow:auto;margin:10px 0}
@@ -6053,6 +6068,249 @@ openEnd=function(win,abandon){
 #overlay.eq-unique .panel{box-shadow:0 0 60px rgba(255,198,92,.25);border-color:#8a6a2a}
 .relic.eq{border-color:rgb(var(--rc));box-shadow:0 0 10px rgba(var(--rc),.35)}.relic.eq .ic{stroke:rgb(var(--rc));fill:none;stroke-width:1.8;width:18px;height:18px}`;document.head.appendChild(st);})();
 window.__v13={EQS,PBOON,PCONS,ROLES,equip,openEquip,openPacte,pactOffers,rollEquip};
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v14 · Équipements épiques et légendaires, deuxième emplacement et sets,
+// bluff du Brumeux, salles à règles mutantes, Chroniqueur, aide adaptative.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ───────────────────────── Équipements épiques et légendaires
+Object.assign(EQS,{
+ sablier:{n:'Sablier fendu',r:'epique',slot:'talisman',up:'+1 charge d’esquive.',down:'−15 % de PV max.',on(s){s.dashCharges+=1;P.dashCh=Math.min(s.dashCharges,P.dashCh+1);s.maxHp*=0.85;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.dashCharges-=1;P.dashCh=Math.min(P.dashCh,s.dashCharges);s.maxHp/=0.85;}},
+ faux:{n:'Faux de la Brume',r:'epique',slot:'arme',up:'+30 % de dégâts sur les ennemis sous la moitié de leurs PV.',down:'−20 % de dégâts sur ceux qui sont au-dessus.'},
+ egide:{n:'Égide de givre',r:'epique',slot:'armure',up:'−25 % de dégâts subis.',down:'−15 % de vitesse de déplacement.',on(s){s.dmgTaken*=0.75;s.speed*=0.85;},off(s){s.dmgTaken/=0.75;s.speed/=0.85;}},
+ chaine:{n:'Chaîne d’âmes',r:'epique',slot:'relique',up:'Chaque ennemi vaincu te rend 1 PV.',down:'+12 % de dégâts subis.',on(s){s.dmgTaken*=1.12;},off(s){s.dmgTaken/=1.12;}},
+ couronne:{n:'Couronne de la Brume',r:'legendaire',slot:'talisman',up:'+45 % de dégâts.',down:'La Brume s’épaissit durablement : tu vois moins loin.',on(){RUN.fogBoost=(RUN.fogBoost||0)+0.07;},off(){RUN.fogBoost=Math.max(0,(RUN.fogBoost||0)-0.07);}},
+ phenix:{n:'Plume du Phénix noir',r:'legendaire',slot:'relique',up:'Une fois par run, la mort te relève avec 60 % de PV et une onde de feu frappe la salle.',down:'−20 % de PV max.',on(s){s.maxHp*=0.8;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.8;}}});
+
+// ───────────────────────── Sets : deux pièces qui se répondent
+const SETS={
+ guet:{n:'Duo du guetteur',items:['dague','lame'],d:'+10 % de chances de coup critique.',on(s){s.crit+=0.1;},off(s){s.crit-=0.1;}},
+ cendre:{n:'Marche de cendre',items:['bottes','egide'],d:'−10 % de dégâts subis.',on(s){s.dmgTaken*=0.9;},off(s){s.dmgTaken/=0.9;}},
+ serment:{n:'Serment brisé',items:['murmure','larme'],d:'+20 % de dégâts.',on(){},off(){}},
+ joueur:{n:'Mains de joueur',items:['piece','anneau'],d:'+30 % d’or.',on(){RUN.goldMul*=1.3;},off(){RUN.goldMul/=1.3;}},
+ roi:{n:'Cendres du roi',items:['couronne','phenix'],d:'Le Phénix noir te relève avec 85 % de PV au lieu de 60 %.',on(){},off(){}}};
+function refreshSets(){if(!P)return;if(!P.sets)P.sets={};
+ for(const k in SETS){const S=SETS[k],on=!!(RUN&&!RUN.hub)&&S.items.every(i=>eqIs(i));
+  if(on&&!P.sets[k]){P.sets[k]=1;S.on(P.s);toast(`Set · ${S.n} : ${S.d}`,3.2);sfx('level');chron('set',{k});}
+  else if(!on&&P.sets[k]){P.sets[k]=0;S.off(P.s);}}}
+
+// ───────────────────────── Chroniqueur : le journal de la run
+function ensure14(){if(!RUN)return;if(!RUN.ch)RUN.ch={notes:[],hits:0,kills:0,flawless:0,bluffs:0,bluffBait:0,bluffPunish:0,bluffDodged:0,rules:0,assist:0,left:0,lastPact:null};
+ if(!RUN.as)RUN.as={offers:0,hitsT:[],lastOffer:-99,busy:false};}
+const fmtT=t=>{const m=Math.floor(t/60),s=Math.floor(t%60);return m?`${m} min ${s} s`:`${s} s`;};
+const CW={boss:3,phenix:3,set:3,pact:2,eq:2,rule:2,rulemut:1,ruleclear:2,assist:2,eqleft:1,refus:1};
+function chron(k,d){if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch,a=ROM[RUN.act]||'I';let t='';d=d||{};
+ switch(k){
+  case 'pact':t=pick([`À l’acte ${a}, tu as scellé un pacte : ${PBOON[d.boon].n} contre ${PCONS[d.cons].n}.`,`Acte ${a} : la Brume t’a offert ${PBOON[d.boon].n}, au prix de ${PCONS[d.cons].n}. Tu as signé.`]);break;
+  case 'eq':{const E=EQS[d.id];t=d.old?pick([`Tu as laissé ${EQS[d.old].n} pour ${E.n}.`,`${E.n} a pris la place de ${EQS[d.old].n}.`]):pick([`Tu as ramassé ${E.n} (${RAR[E.r].n.toLowerCase()}).`,`${E.n} est venu s’ajouter à ton paquetage.`]);break;}
+  case 'eqleft':c.left++;t=`Tu as laissé ${EQS[d.id].n} derrière toi.`;break;
+  case 'boss':t=pick([`${d.n} est tombé après ${fmtT(d.t)}.`,`Le gardien ${d.n} a cédé en ${fmtT(d.t)}.`]);break;
+  case 'rule':t=`Une salle a pris une règle : « ${RULES[d.k].n} ».`;break;
+  case 'rulemut':t=`En plein combat, la règle a mué : « ${RULES[d.k].n} ».`;break;
+  case 'ruleclear':t=`Tu as purifié la salle « ${RULES[d.k].n} »${d.flawless?' sans une égratignure':''}.`;break;
+  case 'set':t=`Deux pièces se sont répondues : ${SETS[d.k].n}.`;break;
+  case 'phenix':t='La plume noire t’a relevé une fois. Il n’y en aura pas deux.';break;
+  case 'assist':t=`Tu as accepté de l’aide : ${d.n}.`;break;
+  case 'refus':t='Tu as refusé la main de la Brume, par fierté ou par obstination.';break;
+  default:return;}
+ if(c.notes.length&&c.notes[c.notes.length-1].t===t)return;c.notes.push({a:RUN.act,k,t});if(c.notes.length>70)c.notes.shift();}
+function chronBuild(win){const c=RUN.ch;if(!c)return null;const cl=CLS[P.cls].name;
+ const sel=c.notes.map((n,i)=>({n,i,w:(CW[n.k]||1)+Math.random()*0.4})).sort((x,y)=>y.w-x.w).slice(0,9).sort((x,y)=>x.i-y.i).map(x=>x.n.t);
+ const L=[`${cl}, ${fmtT(RUN.time)} dans la Brume.`,...sel];
+ if(c.flawless>=3)L.push(`Tu as traversé ${c.flawless} salles sans une égratignure.`);
+ if(c.hits>0)L.push(`La Brume t’a touché ${c.hits} fois ; tu as continué ${c.hits>20?'avec un entêtement admirable':'sans trop de bruit'}.`);
+ if(c.bluffs)L.push(`Le Brumeux a feint ${c.bluffs} fois : ${c.bluffBait?`tu as mordu ${c.bluffBait} fois`:'tu n’as pas mordu'}${c.bluffPunish?`, et il t’a puni ${c.bluffPunish} fois`:''}.`);
+ L.push(win?'Le Cœur a cessé de battre. Pour un temps.':`Tu es tombé à l’acte ${ROM[RUN.act]||'I'}, salle ${RUN.roomIdx}. La Brume s’en souviendra.`);
+ return{title:win?'La Descente achevée':`La chute · acte ${ROM[RUN.act]||'I'}, salle ${RUN.roomIdx}`,lines:L};}
+function chronText(ch){return `${ch.title}\n\n${ch.lines.join('\n')}\n\n— La Brume`;}
+function copyText(t,btn){const ok=()=>{if(btn){const o=btn.textContent;btn.textContent='Copié';setTimeout(()=>{btn.textContent=o;},1400);}};
+ try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,()=>fb());return;}}catch(e){}
+ function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;left:-999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();ok();}catch(e){}}fb();}
+function chronHTML(ch,i,tag){return `<div class="chronc"><p class="eyebrow">${tag}</p><h3>${esc(ch.title)}</h3>${ch.lines.map(l=>`<p>${esc(l)}</p>`).join('')}<button type="button" class="btn" data-cp="${i}">Copier</button></div>`;}
+function openChron(back){
+ const list=[];if(RUN&&!RUN.hub&&RUN.ch){const b=chronBuild(false);if(b){b.title='En cours · '+b.title.replace(/^La chute · /,'');b.lines.pop();list.push([b,'Cette run']);}}
+ for(const c of (M().chron||[]))list.push([c,c.d||'Passée']);
+ openOverlay(`<div class="panel narrow"><p class="eyebrow">Le Chroniqueur</p><h2>Ce que la Brume retient de toi</h2><div class="chrl">${list.length?list.map(([c,t],i)=>chronHTML(c,i,t)).join(''):'<p class="muted">Aucune chronique pour l’instant. Elle s’écrit pendant la run.</p>'}</div><div class="row"><button type="button" class="btn primary" id="chb">Retour</button></div></div>`);
+ overlayEl.querySelectorAll('[data-cp]').forEach(b=>b.addEventListener('click',()=>copyText(chronText(list[+b.dataset.cp][0]),b)));
+ const done=()=>{closeOverlay();if(back)back();};$('#chb').addEventListener('click',done);overlayKeys=c=>{if(c==='Escape'||c==='Enter'||c==='KeyP')done();};}
+
+// ───────────────────────── Salles à règles mutantes
+const RULES={
+ verre:{n:'Verre',d:'Tout est fragile : tes coups et les leurs font 40 % de dégâts en plus.'},
+ sol:{n:'Sol qui se dérobe',d:'Des dalles cèdent après un instant et écrasent tout ce qu’elles couvrent. Attire-y les ennemis.'},
+ brume:{n:'Brume plombée',d:'La moitié de la salle est voilée, mais tu frappes 25 % plus fort.'},
+ braseros:{n:'Braseros',d:'Hors de la lumière des braseros, les ennemis ne subissent que 40 % des dégâts.'}};
+function rulePool(){const f=P.hp/P.s.maxHp;return f<0.45?['brume']:f<0.75?['brume','sol']:['brume','sol','verre','braseros'];}
+function setRule(k,mut){room.rule=k;room.ruleT=mut?room.ruleT:0;
+ if(k==='brume')room.veil=Math.random()<0.5?-1:1;
+ if(k==='sol'){room.holes=[];room.holeT=1.4;}
+ if(k==='braseros'){const y=()=>AR.y0+(AR.y1-AR.y0)*rand(0.35,0.65);room.braz=[{x:W*0.3+rand(-40,40),y:y()},{x:W*0.7+rand(-40,40),y:y()}];}
+ murmur(mut?'La règle mute':'Salle à règle',`${RULES[k].n} : ${RULES[k].d}`,5.5);sfx('murmur');chron(mut?'rulemut':'rule',{k});}
+const nearBrazier=e=>!!(room&&room.braz&&room.braz.some(b=>hyp(e.x-b.x,e.y-b.y)<190));
+function ruleTick(dt){if(!room||!room.rule||room.cleared)return;room.ruleT+=dt;
+ if(!room.mutDone&&room.ruleT>room.mutAt){room.mutDone=true;const p=rulePool().filter(x=>x!==room.rule);if(p.length)setRule(pick(p),true);}
+ if(room.rule==='sol')holesTick(dt);}
+function holesTick(dt){room.holeT-=dt;
+ if(room.holeT<=0&&room.holes.length<3){room.holeT=rand(3.2,4.5);const al=enemies.filter(e=>!e.dead&&e.type!=='boss'),t=al.length&&Math.random()<0.6?pick(al):P;
+  room.holes.push({x:clamp(t.x+rand(-30,30),AR.x0+70,AR.x1-70),y:clamp(t.y+rand(-30,30),AR.y0+70,AR.y1-70),r:66,w:1.3,o:2.4,tick:0});}
+ for(const h of room.holes){if(h.w>0){h.w-=dt;continue;}h.o-=dt;h.tick-=dt;
+  if(h.tick<=0){h.tick=0.4;for(const e of enemies)if(!e.dead&&e.type!=='boss'&&!e.fixed&&hyp(e.x-h.x,e.y-h.y)<h.r+e.r*0.3)hitEnemy(e,20,{crit:false,color:'#9a86c8'});
+   if(!P.dead&&hyp(P.x-h.x,P.y-h.y)<h.r)hurtPlayer(10,null);}}
+ room.holes=room.holes.filter(h=>h.o>0);}
+function drawRuleWorld(){if(!room||!room.rule)return;const c=ctx;
+ if(room.rule==='sol'){for(const h of room.holes||[]){const warn=h.w>0,k=warn?1-h.w/1.3:1;c.save();
+  c.fillStyle=warn?`rgba(20,14,30,${0.25+0.3*k})`:'rgba(4,2,8,.92)';c.beginPath();c.arc(h.x,h.y,h.r,0,TAU);c.fill();
+  c.strokeStyle=warn?`rgba(${TELE.zone},${0.5+0.4*Math.sin(T*24)})`:'rgba(150,120,210,.7)';c.lineWidth=2;c.setLineDash(warn?[6,6]:[]);c.stroke();c.restore();}}
+ if(room.rule==='braseros'){for(const b of room.braz||[]){c.save();c.strokeStyle='rgba(255,170,80,.22)';c.setLineDash([6,8]);c.lineDashOffset=-T*10;c.beginPath();c.arc(b.x,b.y,190,0,TAU);c.stroke();c.setLineDash([]);
+  c.fillStyle='#2a2018';c.fillRect(b.x-13,b.y-2,26,10);c.globalCompositeOperation='lighter';glow(c,b.x,b.y-8,26,'255,150,60',0.7+0.2*Math.sin(T*12+b.x));c.restore();}}}
+const _cl14=computeLights;
+computeLights=function(){_cl14();if(room&&room.rule==='braseros'&&room.braz)for(const b of room.braz)lights.push({x:b.x,y:b.y,r:210,c:'warm'});};
+const _dv14=drawVignette;
+drawVignette=function(){_dv14();if(!room||room.rule!=='brume'||!P)return;const c=ctx;c.save();c.beginPath();c.rect(room.veil<0?0:W/2,0,W/2,H);c.clip();
+ const g=c.createRadialGradient(P.x,P.y,60,P.x,P.y,200);g.addColorStop(0,'rgba(5,6,12,0)');g.addColorStop(1,'rgba(5,6,12,.84)');c.fillStyle=g;c.fillRect(0,0,W,H);c.restore();
+ c.save();c.strokeStyle='rgba(180,160,230,.25)';c.setLineDash([8,10]);c.beginPath();c.moveTo(W/2,AR.y0);c.lineTo(W/2,AR.y1);c.stroke();c.restore();};
+let ruleTagEl=null,ruleTagTxt='';
+function ruleTagUpdate(){const txt=(RUN&&!RUN.hub&&room&&room.rule&&!room.cleared&&state==='play')?`Règle · ${RULES[room.rule].n}`:'';
+ if(txt===ruleTagTxt)return;ruleTagTxt=txt;if(!ruleTagEl){if(!txt)return;ruleTagEl=document.createElement('div');ruleTagEl.id='ruleTag';toastEl.parentNode.appendChild(ruleTagEl);}
+ ruleTagEl.textContent=txt;ruleTagEl.classList.toggle('show',!!txt);}
+
+// ───────────────────────── Le Brumeux bluffe
+const bluffDmg=()=>Math.round(15*(1+0.03*(RUN.roomIdx||0))*(1+0.25*((RUN.act||1)-1)));
+function bluffTick(dt){
+ if(!RUN||RUN.hub||!room||room.cleared||P.dead||!(room.type==='combat'||room.type==='elite')||!(RUN.act>=2||G()>=6))return;
+ if(room.blT==null)room.blT=rand(6,9);
+ const B=room.bl;
+ if(!B){room.blT-=dt;if(room.blT<=0&&enemies.some(e=>!e.dead&&e.type!=='boss'))startBluff();return;}
+ B.t-=dt;if(P.dashT>0&&!B.real)B.wasted=true;
+ if(B.follow&&B.t>B.lock){const k=Math.min(1,dt*6);B.x+=(P.x-B.x)*k;B.y+=(P.y-B.y)*k;}
+ if(B.t<=0)endBluff(B);}
+function startBluff(){const tot=1.15;room.bl={x:P.x,y:P.y,r:86,t:tot,tot,lock:0.35,follow:true,real:Math.random()<0.5};RUN.ch.bluffs++;
+ if(!SAVE.flags.bluff){SAVE.flags.bluff=1;persist();murmur('Le Brumeux feint','Un cercle ocre est sincère. Un cercle voilé de violet ment : ne gaspille pas ton esquive.',6.5);sfx('murmur');}}
+function endBluff(B){room.bl=null;room.blT=rand(8,13)*(RUN.act>=3?0.8:1);
+ if(B.real||B.second){fx.push({k:'ring',x:B.x,y:B.y,r0:B.r*0.3,r1:B.r*1.1,w:10,t:0.35,max:0.35,col:`rgba(${TELE.zone},`,fill:true});sparks(B.x,B.y,14,'#ffb36b');shake(4,0.15);sfx('explode');
+  if(hyp(P.x-B.x,P.y-B.y)<B.r+P.r*0.5)hurtPlayer(bluffDmg(),null);else if(!B.second)RUN.ch.bluffDodged++;}
+ else{mist(B.x,B.y,22,'#2a2440');sparks(B.x,B.y,10,'#b9a6ff');
+  if(B.wasted)RUN.ch.bluffBait++;
+  if(B.wasted&&(P.dashCh<=0||P.dashT>0)){room.bl={x:P.x,y:P.y,r:72,t:0.6,tot:0.6,lock:9,follow:false,real:true,second:true};RUN.ch.bluffPunish++;addNum(P.x,P.y-40,'esquive lue','echo');}}}
+function drawBluff(){const B=room&&room.bl;if(!B)return;const c=ctx,k=1-B.t/B.tot,col=TELE.zone;c.save();
+ c.fillStyle=`rgba(${col},${0.07+0.2*k})`;c.beginPath();c.arc(B.x,B.y,B.r,0,TAU);c.fill();
+ if(!B.real&&!B.second){c.fillStyle=`rgba(170,120,255,${0.1+0.1*k})`;c.beginPath();c.arc(B.x,B.y,B.r*0.72,0,TAU);c.fill();}
+ c.strokeStyle=`rgba(${col},${0.55+0.35*Math.sin(T*28)})`;c.lineWidth=2.4;c.beginPath();c.arc(B.x,B.y,B.r,0,TAU);c.stroke();
+ c.strokeStyle=`rgba(${col},.8)`;c.lineWidth=1.5;c.beginPath();c.arc(B.x,B.y,Math.max(2,B.r*k),0,TAU);c.stroke();c.restore();}
+const _dt14=drawTelegraphs;
+drawTelegraphs=function(){_dt14();
+ if(RUN&&RUN.as&&RUN.as.tele){const c=ctx;c.save();c.globalAlpha=0.55;c.globalCompositeOperation='lighter';_dt14();c.restore();}
+ if(room){drawBluff();drawRuleWorld();}};
+
+// ───────────────────────── Aide adaptative : une main tendue, jamais imposée
+const AIDS={
+ tele:{n:'Télégraphes renforcés',d:'Les zones d’attaque ressortent davantage jusqu’à la fin de la run.',ok:()=>!RUN.as.tele,go(){RUN.as.tele=true;}},
+ clem:{n:'Brume clémente',d:'−20 % de dégâts subis jusqu’à la fin de cette salle.',ok:()=>RUN.as.clem!==room,go(){RUN.as.clem=room;}},
+ lent:{n:'Phase ralentie',d:'Les ennemis présents sont 15 % plus lents et le gardien attaque plus lentement dans cette salle.',ok:()=>RUN.as.slow!==room,go(){RUN.as.slow=room;for(const e of enemies)if(!e.dead&&e.spd)e.spd*=0.85;}},
+ souffle:{n:'Un souffle de lumière',d:'Tu récupères 40 % de tes PV, une seule fois.',ok:()=>!RUN.as.souf&&P.hp/P.s.maxHp<0.6,go(){RUN.as.souf=true;heal(P.s.maxHp*0.4,'halte');}}};
+const WHY={coups:'Tu encaisses beaucoup de coups d’affilée.',pv:'Tes forces sont presque épuisées.',spot:'Ce passage t’a déjà arrêté plusieurs fois.',hesite:'Tu sembles chercher ton souffle.'};
+const _pa14=pactAgg;
+pactAgg=function(){return _pa14()*(RUN&&RUN.as&&RUN.as.slow&&RUN.as.slow===room?1.25:1);};
+function assistTick(){
+ const A=RUN.as;if(!A||SAVE.flags.noAssist||A.offers>=2||A.busy||!room||room.cleared||state!=='play'||P.dead)return;
+ if(RUN.time-A.lastOffer<50)return;if(!(room.type==='combat'||room.type==='elite'||room.type==='boss')||(room.type==='boss'&&!room.started))return;
+ const now=RUN.time;A.hitsT=A.hitsT.filter(t=>now-t<20);
+ const h14=A.hitsT.filter(t=>now-t<14).length,low=P.hp/P.s.maxHp,spot=(M().spots||{})[room.spot]||0,inRoom=now-(room.t0||now),hr=room.hitsTaken||0;
+ let why=null;
+ if(h14>=4)why='coups';else if(low<0.3&&A.hitsT.length>=2)why='pv';else if(spot>=2&&inRoom>6&&hr>=2)why='spot';
+ else if(room.type!=='boss'&&inRoom>16&&hr>=1&&now-(RUN.lastHitT||room.t0||0)>10&&enemies.some(e=>!e.dead))why='hesite';
+ if(!why)return;
+ const pref=room.type==='boss'?['tele','clem','lent']:why==='pv'?['souffle','clem']:['clem','tele','lent'];
+ const id=pref.find(k=>AIDS[k].ok());if(id)showAssist(id,why);}
+let assistEl=null,assistTimer=0,assistCur=null;
+function showAssist(id,why){const A=RUN.as,a=AIDS[id];A.busy=true;A.offers++;A.lastOffer=RUN.time;assistCur=id;
+ if(!assistEl){assistEl=document.createElement('div');assistEl.id='assist';assistEl.setAttribute('role','dialog');assistEl.setAttribute('aria-label','Aide adaptative');toastEl.parentNode.appendChild(assistEl);
+  assistEl.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)answerAssist(b.dataset.a);});}
+ assistEl.innerHTML=`<b>La Brume te tend la main</b><span>${esc(WHY[why])}</span><span class="aid"><strong>${esc(a.n)}</strong> : ${esc(a.d)}</span><div class="ab"><button type="button" class="btn primary" data-a="y">Accepter · G</button><button type="button" class="btn" data-a="n">Refuser · B</button><button type="button" class="btn lnk" data-a="x">Ne plus proposer</button></div>`;
+ assistEl.classList.add('show');clearTimeout(assistTimer);assistTimer=setTimeout(()=>answerAssist('t'),14000);}
+function answerAssist(r){if(!assistEl||!assistEl.classList.contains('show'))return;clearTimeout(assistTimer);assistEl.classList.remove('show');
+ const A=RUN&&RUN.as;if(A)A.busy=false;if(!A||!assistCur)return;const a=AIDS[assistCur];assistCur=null;
+ if(r==='y'){a.go();RUN.ch.assist++;chron('assist',{n:a.n});toast(`${a.n} : accordé.`,2);sfx('pick');}
+ else if(r==='n'||r==='x'){chron('refus');const m=M();m.assistRef=(m.assistRef||0)+1;
+  if(r==='x'||m.assistRef>=3){SAVE.flags.noAssist=1;toast('Compris : la Brume ne proposera plus d’aide. Réglable dans la pause.',3.2);}persist();}}
+addEventListener('keydown',e=>{if(!assistEl||!assistEl.classList.contains('show')||e.repeat)return;if(e.code==='KeyG')answerAssist('y');else if(e.code==='KeyB')answerAssist('n');});
+
+// ───────────────────────── Effets en combat (v14)
+const _hit14=hitEnemy;
+hitEnemy=function(e,base,o){
+ if(!RUN||RUN.hub||!P||!e||e.dead||e.fixed)return _hit14(e,base,o);
+ let m=1;
+ if(eqIs('faux'))m*=(e.hp/e.maxHp)<0.5?1.3:0.8;
+ if(eqIs('couronne'))m*=1.45;
+ if(P.sets&&P.sets.serment)m*=1.2;
+ const r=room&&room.rule;
+ if(r==='verre')m*=1.4;else if(r==='brume')m*=1.25;else if(r==='braseros'&&!nearBrazier(e))m*=0.4;
+ RUN.lastHitT=RUN.time;
+ return _hit14(e,base*m,o);};
+const _hp14=hurtPlayer;
+hurtPlayer=function(dmg,src){
+ if(!RUN||RUN.hub||!P||P.iT>0||P.dashT>0||P.dead||state!=='play')return _hp14(dmg,src);
+ ensure14();
+ if(room&&room.rule==='verre')dmg*=1.4;
+ if(RUN.as.clem&&RUN.as.clem===room)dmg*=0.8;
+ const h0=P.hp;_hp14(dmg,src);
+ if(P.hp<h0){RUN.ch.hits++;if(room)room.hitsTaken=(room.hitsTaken||0)+1;RUN.as.hitsT.push(RUN.time);}};
+const _lh14=loseHp;
+loseHp=function(n){
+ if(RUN&&!RUN.hub&&P&&!P.dead&&n>0&&eqIs('phenix')&&!RUN.phenix&&P.hp-n<1){
+  RUN.phenix=true;P.hp=P.s.maxHp*(P.sets&&P.sets.roi?0.85:0.6);P.iT=2;P.cor=0;
+  for(const e of enemies)if(!e.dead)hitEnemy(e,e.type==='boss'?60:140,{crit:false,color:'#ffb36b'});
+  fx.push({k:'ring',x:P.x,y:P.y,r0:10,r1:260,w:16,t:0.6,max:0.6,col:'rgba(255,150,70,',fill:true});shake(8,0.3);sfx('rupture');
+  toast('La Plume du Phénix noir te relève.',2.6);chron('phenix');return;}
+ _lh14(n);};
+const _ke14=killEnemy;
+killEnemy=function(e){const was=!e.dead;_ke14(e);if(!was||!RUN||RUN.hub)return;ensure14();RUN.ch.kills++;
+ if(e.type!=='boss'&&eqIs('chaine'))heal(1,'equip');
+ if(e.type==='boss')chron('boss',{n:e.name||(ACTS[RUN.act]&&ACTS[RUN.act].boss)||'Le gardien',t:RUN.time-(room.t0||0)});};
+
+// ───────────────────────── Cycle de vie
+const _er14=enterRoom;
+enterRoom=function(type){_er14(type);if(!RUN||RUN.hub||!room)return;ensure14();
+ room.t0=RUN.time;room.spot=`${RUN.act}:${type==='boss'?'boss':RUN.roomIdx}`;room.hitsTaken=0;
+ if(eqIs('couronne'))RUN.fogBoost=(RUN.fogBoost||0)+0.07;
+ if(RUN.act>=2&&!RUN.s2say){RUN.s2say=true;toast('Un second emplacement d’équipement s’ouvre.',3.2);}
+ if(RUN.pact&&RUN.ch.lastPact!==RUN.pact){RUN.ch.lastPact=RUN.pact;chron('pact',RUN.pact);}
+ if((type==='combat'||type==='elite')&&RUN.roomIdx>=3&&Math.random()<(RUN.act===1?0.2:0.3)){
+  const r=room;later(2.2,()=>{if(room!==r||r.cleared)return;r.mutAt=rand(14,18);setRule(pick(rulePool()),false);});}};
+const _orc14=onRoomCleared;
+onRoomCleared=function(){const r=room.rule,hit=room.hitsTaken||0,t=room.type;_orc14();if(!RUN||RUN.hub)return;ensure14();
+ if((t==='combat'||t==='elite'||t==='boss')&&!hit)RUN.ch.flawless++;
+ if(r){RUN.rerolls++;addGold(20+10*RUN.act,true);toast(`Salle « ${RULES[r].n} » purifiée : +1 relance de talents.`,2.8);chron('ruleclear',{k:r,flawless:!hit});RUN.ch.rules++;}};
+const _sr14=startRun;
+startRun=function(){_sr14();if(RUN&&!RUN.hub){RUN.ch=null;RUN.as=null;ensure14();P.sets={};P.eq2=null;}};
+const _ue14=updateEnemies;
+updateEnemies=function(dt){_ue14(dt);
+ if(RUN&&!RUN.hub&&room){ensure14();try{ruleTick(dt);bluffTick(dt);assistTick();}catch(err){console.error(err);}}
+ ruleTagUpdate();};
+const _oe14=openEnd;
+openEnd=function(win,abandon){
+ _oe14(win,abandon);
+ try{if(!RUN||RUN.hub||!RUN.ch||RUN.ch.saved)return;RUN.ch.saved=true;const m=M();
+  if(!win&&!abandon&&room&&room.spot){m.spots=m.spots||{};m.spots[room.spot]=(m.spots[room.spot]||0)+1;}
+  const ch=chronBuild(!!win);if(!ch)return;ch.d=new Date().toISOString().slice(0,10);m.chron=[ch].concat(m.chron||[]).slice(0,6);persist();
+  const anchor=overlayEl.querySelector('.eq13')||overlayEl.querySelector('.prof12')||overlayEl.querySelector('.two>div:last-child');
+  if(anchor&&!overlayEl.querySelector('.chron14')){anchor.insertAdjacentHTML('afterend',`<div class="chron14"><p class="h-sec">Chronique</p>${ch.lines.map(l=>`<p>${esc(l)}</p>`).join('')}<button type="button" class="btn" id="cpch">Copier la chronique</button></div>`);
+   $('#cpch').addEventListener('click',e=>copyText(chronText(ch),e.target));}}catch(err){console.error(err);}};
+const _op14=openPause;
+openPause=function(){_op14();const box=overlayEl.querySelector('#eqsec');if(!box||box.querySelector('#chronb'))return;
+ box.insertAdjacentHTML('beforeend',`<button type="button" class="btn" id="chronb">Chronique</button><button type="button" class="btn" id="asb">Aide adaptative : ${SAVE.flags.noAssist?'désactivée':'activée'}</button>`);
+ $('#chronb').addEventListener('click',()=>{closeOverlay();openChron(openPause);});
+ $('#asb').addEventListener('click',e=>{SAVE.flags.noAssist=SAVE.flags.noAssist?0:1;if(!SAVE.flags.noAssist)M().assistRef=0;persist();e.target.textContent=`Aide adaptative : ${SAVE.flags.noAssist?'désactivée':'activée'}`;});};
+(function(){const st=document.createElement('style');st.textContent=`
+#ruleTag{position:absolute;left:50%;top:calc(104px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:3px 12px;border:1px solid #5d4594;border-radius:12px;background:rgba(24,16,44,.85);color:#d8c8ff;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:0;transition:opacity .25s;pointer-events:none;z-index:14}#ruleTag.show{opacity:1}
+#assist{position:absolute;left:16px;bottom:140px;max-width:340px;display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:linear-gradient(180deg,rgba(26,22,44,.96),rgba(12,10,22,.96));border:1px solid #5d4594;border-left:3px solid #8fe9ff;border-radius:4px;color:#e6defa;opacity:0;transform:translateY(8px);transition:opacity .3s,transform .3s;pointer-events:none;z-index:16}
+#assist.show{opacity:1;transform:none;pointer-events:auto}#assist b{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8fe9ff}#assist .aid strong{color:#fff}
+#assist .ab{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}#assist .btn{padding:5px 10px;font-size:13px}#assist .btn.lnk{background:none;border-color:transparent;text-decoration:underline;color:#a79cc4}
+.chronc{border-left:3px solid #5d4594;padding:4px 12px;margin:0 0 12px;background:rgba(255,255,255,.03)}.chronc h3{margin:2px 0 6px}.chronc p{margin:3px 0}.chrl{max-height:56vh;overflow:auto;margin:8px 0}
+.chron14 p{margin:3px 0}.chron14 .btn{margin-top:6px}`;document.head.appendChild(st);})();
+window.__v14={SETS,RULES,AIDS,refreshSets,setRule,chron,chronBuild,openChron,startBluff,endBluff,showAssist,answerAssist,ensure14,assistTick,slot2,rulePool,get room(){return room;}};
 
 
 // ───────────────────────── Démarrage
