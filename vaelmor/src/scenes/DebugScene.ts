@@ -8,8 +8,7 @@
 import Phaser from 'phaser';
 import { GAME_VERSION, MILESTONE } from '../core/config';
 import { ActionInput } from '../core/input';
-import { uiScaleFor, worldZoomFor } from '../core/viewport';
-import { getDisplaySize } from '../render/displayScaler';
+import { getDisplayScale } from '../render/displayScaler';
 import { PALETTE } from '../render/palette';
 import { addText, setText, type PixelText } from '../ui/text';
 import { SCENES } from './keys';
@@ -26,8 +25,8 @@ export class DebugScene extends Phaser.Scene {
 
   create(): void {
     this.actions = new ActionInput(this);
-    this.background = this.add.rectangle(4, 4, 10, 10, PALETTE.encre, 0.75).setOrigin(0, 0);
-    this.label = addText(this, 10, 8, '', { font: 'small', scale: 2 * uiScaleFor(this.scale.height), color: PALETTE.cyanEclat, shadow: false });
+    this.background = this.add.rectangle(2, 2, 10, 10, PALETTE.encre, 0.75).setOrigin(0, 0);
+    this.label = addText(this, 5, 4, '', { font: 'small', color: PALETTE.cyanEclat, shadow: false });
     this.setVisible(new URLSearchParams(window.location.search).has('debug'));
     this.scene.bringToTop();
   }
@@ -39,7 +38,7 @@ export class DebugScene extends Phaser.Scene {
     if (this.elapsed < 250) return;
     this.elapsed = 0;
 
-    const size = getDisplaySize();
+    const scale = getDisplayScale();
     const active = this.game.scene
       .getScenes(true)
       .map((s) => s.scene.key)
@@ -51,13 +50,13 @@ export class DebugScene extends Phaser.Scene {
       this.label,
       [
         `FPS ${Math.round(this.game.loop.actualFps)}`,
-        `ÉCRAN ${size.width}×${size.height} (DPR ${size.dpr}) · MONDE ×${worldZoomFor(size.height)} · UI ×${uiScaleFor(size.height)}`,
+        `ÉCHELLE ×${scale.pixelsPerGamePixel} (DPR ${window.devicePixelRatio || 1})`,
         `SCÈNE ${active || '-'}`,
         `V${GAME_VERSION} ${MILESTONE}`,
         ...extra,
       ].join('\n'),
     );
-    this.background.setSize(Math.ceil(this.label.width) + 12, Math.ceil(this.label.height) + 8);
+    this.background.setSize(Math.ceil(this.label.width) + 7, Math.ceil(this.label.height) + 4);
     this.scene.bringToTop();
   }
 

@@ -1,11 +1,11 @@
 /**
- * Point d'entrée du jeu : crée le jeu Phaser (canevas à la taille réelle de l'écran, pixel art
- * agrandi par le zoom des caméras) et enregistre les scènes.
+ * Point d'entrée du jeu : crée le jeu Phaser 480×270 en pixel art (résolution fixe), applique la
+ * mise à l'échelle entière et enregistre les scènes.
  */
 import Phaser from 'phaser';
-import { GAME_TITLE, GAME_VERSION } from './core/config';
+import { GAME_HEIGHT, GAME_TITLE, GAME_VERSION, GAME_WIDTH } from './core/config';
 import { showFatalError } from './core/fatal';
-import { bindDisplaySize, measureDisplay } from './render/displayScaler';
+import { bindIntegerScaling, measureDisplayScale } from './render/displayScaler';
 import { PALETTE, toCss } from './render/palette';
 import { BootScene } from './scenes/BootScene';
 import { DebugScene } from './scenes/DebugScene';
@@ -14,12 +14,12 @@ import { WorldHudScene } from './scenes/WorldHudScene';
 import { WorldScene } from './scenes/WorldScene';
 
 function start(): void {
-  const initial = measureDisplay();
+  const initial = measureDisplayScale();
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: 'game',
-    width: initial.width,
-    height: initial.height,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
     backgroundColor: toCss(PALETTE.nuit),
     title: GAME_TITLE,
     version: GAME_VERSION,
@@ -30,12 +30,12 @@ function start(): void {
     input: { keyboard: true, mouse: true, touch: false, gamepad: false },
     scale: {
       mode: Phaser.Scale.NONE,
-      zoom: 1 / initial.dpr,
+      zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
     scene: [BootScene, TitleScene, WorldScene, WorldHudScene, DebugScene],
   });
-  bindDisplaySize(game);
+  bindIntegerScaling(game);
 }
 
 try {

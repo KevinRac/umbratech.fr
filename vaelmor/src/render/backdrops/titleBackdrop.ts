@@ -5,7 +5,7 @@
  * externe, et sera remplacé par une illustration dessinée plus tard.
  */
 import type Phaser from 'phaser';
-import { TITLE_HEIGHT as GAME_HEIGHT, TITLE_WIDTH as GAME_WIDTH } from '../../core/config';
+import { GAME_HEIGHT, GAME_WIDTH } from '../../core/config';
 import { Rng } from '../../logic/rng';
 import { PALETTE, mixColor } from '../palette';
 import { PixelCanvas, bayer, tileableNoise2D, valueNoise1D, type GradientStop } from '../pixelCanvas';

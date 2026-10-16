@@ -4,8 +4,7 @@
  * d'erreur HTML) au lieu d'un écran noir.
  */
 import Phaser from 'phaser';
-import { assetUrl } from '../core/config';
-import { uiScaleFor } from '../core/viewport';
+import { GAME_HEIGHT, GAME_WIDTH, assetUrl } from '../core/config';
 import { showFatalError } from '../core/fatal';
 import { GameDataError, loadGameData } from '../data';
 import { paintTitleBackdrop } from '../render/backdrops/titleBackdrop';
@@ -68,16 +67,14 @@ export class BootScene extends Phaser.Scene {
 
   /** Barre de chargement dessinée sans police (les polices ne sont pas encore prêtes). */
   private drawProgress(ratio: number): void {
-    const k = uiScaleFor(this.scale.height);
-    const barWidth = BAR_WIDTH * k;
-    const x = Math.round((this.scale.width - barWidth) / 2);
-    const y = Math.round(this.scale.height / 2);
+    const x = Math.round((GAME_WIDTH - BAR_WIDTH) / 2);
+    const y = Math.round(GAME_HEIGHT / 2);
     const g = this.bar;
     g.clear();
-    g.fillStyle(PALETTE.encre, 1).fillRect(x - 2 * k, y - 2 * k, barWidth + 4 * k, 7 * k);
-    g.fillStyle(PALETTE.metal, 1).fillRect(x - k, y - k, barWidth + 2 * k, 5 * k);
-    g.fillStyle(PALETTE.ombre, 1).fillRect(x, y, barWidth, 3 * k);
-    g.fillStyle(PALETTE.orangeForge, 1).fillRect(x, y, Math.round(barWidth * ratio), 3 * k);
-    g.fillStyle(PALETTE.braise, 1).fillRect(x, y, Math.round(barWidth * ratio), k);
+    g.fillStyle(PALETTE.encre, 1).fillRect(x - 2, y - 2, BAR_WIDTH + 4, 7);
+    g.fillStyle(PALETTE.metal, 1).fillRect(x - 1, y - 1, BAR_WIDTH + 2, 5);
+    g.fillStyle(PALETTE.ombre, 1).fillRect(x, y, BAR_WIDTH, 3);
+    g.fillStyle(PALETTE.orangeForge, 1).fillRect(x, y, Math.round(BAR_WIDTH * ratio), 3);
+    g.fillStyle(PALETTE.braise, 1).fillRect(x, y, Math.round(BAR_WIDTH * ratio), 1);
   }
 }

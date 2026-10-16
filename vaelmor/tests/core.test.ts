@@ -1,40 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
 import { assetUrl } from '../src/core/config';
-import { titleZoomFor, uiScaleFor, worldZoomFor, zoomOrigin } from '../src/core/viewport';
+import { computeDisplayScale } from '../src/core/displayScale';
 import { EventBus } from '../src/core/events';
 
-describe('tailles d’affichage (canevas non étiré)', () => {
-  it('zoom du monde entier, croissant avec la hauteur, borné', () => {
-    expect(worldZoomFor(1080)).toBe(4);
-    expect(worldZoomFor(720)).toBe(2);
-    expect(worldZoomFor(1440)).toBe(5);
-    expect(worldZoomFor(100)).toBe(2);
-    expect(worldZoomFor(10000)).toBe(8);
-    for (const h of [600, 768, 900, 1080, 1200, 1440, 2160]) expect(Number.isInteger(worldZoomFor(h))).toBe(true);
+describe('mise à l’échelle entière', () => {
+  it('écran 1080p : ×4', () => {
+    const s = computeDisplayScale(1920, 1080, 1, 480, 270);
+    expect(s.pixelsPerGamePixel).toBe(4);
+    expect(s.cssZoom).toBe(4);
+    expect([s.cssWidth, s.cssHeight]).toEqual([1920, 1080]);
   });
 
-  it('échelle d’interface entière, au moins ×1', () => {
-    expect(uiScaleFor(1080)).toBe(2);
-    expect(uiScaleFor(540)).toBe(1);
-    expect(uiScaleFor(768)).toBe(1);
-    expect(uiScaleFor(100)).toBe(1);
-    expect(uiScaleFor(2160)).toBe(4);
+  it('écran à 125 % : entier en pixels physiques, fractionnaire en CSS', () => {
+    // 1536×864 CSS × 1,25 = 1920×1080 physiques → ×4 physique = zoom CSS 3,2.
+    const s = computeDisplayScale(1536, 864, 1.25, 480, 270);
+    expect(s.pixelsPerGamePixel).toBe(4);
+    expect(s.cssZoom).toBeCloseTo(3.2);
   });
 
-  it('zoom du titre : plus grand entier qui tient', () => {
-    expect(titleZoomFor(1920, 1080, 480, 270)).toBe(4);
-    expect(titleZoomFor(1000, 2000, 480, 270)).toBe(2);
-    expect(titleZoomFor(300, 200, 480, 270)).toBe(1);
+  it('écran Retina : ×6 physique pour une fenêtre de 1440×900', () => {
+    const s = computeDisplayScale(1440, 900, 2, 480, 270);
+    expect(s.pixelsPerGamePixel).toBe(6);
+    expect(s.cssZoom).toBe(3);
   });
 
-  it('origine de caméra : nulle sans zoom, et alignement exact des pixels avec zoom', () => {
-    expect(zoomOrigin(1920, 1080, 1)).toEqual({ x: 0, y: 0 });
-    const o = zoomOrigin(1920, 1080, 4);
-    // Position écran d'un point du monde x pour un défilement (cam - origine) : (x - cam) * zoom.
-    const cam = 123;
-    const scroll = cam - o.x;
-    const screenX = (50 - scroll - 1920 / 2) * 4 + 1920 / 2;
-    expect(screenX).toBe((50 - cam) * 4);
+  it('prend la contrainte la plus forte (fenêtre étroite)', () => {
+    expect(computeDisplayScale(1000, 2000, 1, 480, 270).pixelsPerGamePixel).toBe(2);
+  });
+
+  it('ne descend jamais sous ×1 et ignore un devicePixelRatio invalide', () => {
+    expect(computeDisplayScale(300, 200, 1, 480, 270).pixelsPerGamePixel).toBe(1);
+    expect(computeDisplayScale(1920, 1080, 0, 480, 270).pixelsPerGamePixel).toBe(4);
+    expect(computeDisplayScale(1920, 1080, Number.NaN, 480, 270).pixelsPerGamePixel).toBe(4);
   });
 });
 
