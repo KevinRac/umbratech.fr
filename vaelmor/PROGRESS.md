@@ -75,6 +75,8 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
   - **Collisions inchangées** (case par case) : le rivage dessiné s'écarte désormais du bord des cases d'au plus ~½ case dans les angles ; le héros peut donc mordre un peu sur l'eau dessinée ou buter un peu avant la berge à ces endroits.
   - **Coût** : le tileset passe de ~1 230 à ~13 500 tuiles (atlas 2048×1696 px, 128 colonnes, ~560 Ko) ; génération de la carte ~13 s ; aucune collision ni disposition changée.
 
+- **GDD §12 mis à jour (17/10/2026)** : la direction artistique décrit l'art généré (palette « fin d'après-midi », étalonnage par zone, sol organique) avec l'état de chaque principe (réalisé / prévu par étape de la refonte). Étape 1 validée par l'auteur.
+
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).
 

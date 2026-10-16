@@ -104,7 +104,7 @@ quêtes, réputation                │
 
 ### 2.3 Limites assumées
 
-- Placeholders de qualité pour l'art et l'audio (voir §12.8).
+- Placeholders de qualité pour l'art et l'audio (voir §12.7).
 - Équilibrage « raisonnable » et non définitif ; des paramètres centralisés permettent d'itérer.
 - Pas de scénario long : une quête principale de ~8 étapes + ~12 quêtes secondaires.
 - Durée de jeu cible : **3 à 5 heures** pour finir le prototype, 45 minutes pour la première zone.
@@ -1051,82 +1051,166 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 
 ## 12. Direction artistique
 
+> **Mise à jour du 17/10/2026 (décisions n°43 et suivantes).** Cette section décrit l'art *tel qu'il est généré* depuis la refonte graphique du monde ouvert. Légende : ✅ réalisé et validé · 🔧 prévu, étape de la refonte indiquée · ⏳ différé (M2 et après). Références : *Eastward* (pixel art dense et chaleureux) et *Octopath Traveler* (HD-2D : lumière, profondeur, atmosphère), en restant médiéval-fantastique (chaume, colombages, pierre, bois, forges, autels, ruines, forêts anciennes ; rien de moderne).
+
 ### 12.1 Style visuel (choix et justification)
 
-**Pixel art moderne haute qualité** avec **éclairage et particules modernes** (esprit « HD-2D allégé »).
+**Pixel art « chaud et dense » à éclairage HD-2D allégé**, entièrement **généré par code** (`tools/world/*` pour la carte, `src/render/*` pour le reste) : aucune image tierce, tout est recoloré sur la palette globale (`render/palette.ts`).
 
-- Justification : coût d'art maîtrisable, authenticité Fire Emblem GBA, rendu « beau » par la lumière (bloom léger, ombres, brume), parfait pour Phaser/Canvas/WebGL.
-- Rejetés : 3D/HD-2D complet (trop lourd), vectoriel (moins d'identité).
+Les sept principes de la refonte :
+
+| # | Principe | Règle concrète | État |
+|---|---|---|---|
+| 1 | **Palette et étalonnage** | Tons chauds légèrement désaturés (ocres, terre cuite, olive, bleu ardoise). Ombres **violet-bleu**, jamais grises ni noires. Lumières jaune-orangé. Un étalonnage « fin d'après-midi » **par zone**. | ✅ |
+| 2 | **Densité de détail** | Décors racontés : toits en rangées d'ardoises/bardeaux avec ombre sous chaque rang, colombages, volets, enseignes en fer forgé, jardinières, tonneaux, sacs, outils, lanternes, linge, herbes folles au pied des murs, mousse et fissures. Chaque bâtiment a **sa silhouette** : chaumière, forge, auberge, temple, moulin, tour de garde. | 🔧 étapes 2 et 4 |
+| 3 | **Volume et relief** | Lumière **fixe en haut à gauche** sur tout le jeu. Faces de murs plus sombres que les toits. Ombres portées douces vers le bas à droite. Occlusion ambiante au contact sol/mur. Contours sombres **colorés** (teinte du matériau assombrie), plus épais sur les personnages (2 px) que sur les décors (1 px). | ✅ sol · 🔧 reste |
+| 4 | **Sol** | Peu de bruit, **larges plaques de 3 tons**, transitions organiques sans bords droits ni escaliers (voir 12.2b). | ✅ |
+| 5 | **Végétation** | Arbres volumineux en 3-4 masses de feuillage éclairées, troncs avec racines, buissons, fleurs sauvages, tournesols et lavande près des villages, légère animation au vent (le blé est déjà animé). | 🔧 étape 3 |
+| 6 | **Atmosphère HD-2D** | Via les filtres de Phaser 4, réglables et désactivables : flou de profondeur (tilt-shift) en haut et en bas, bloom doux, vignettage, rayons de lumière obliques et poussière, halos animés (scintillement des feux), éclairage jour/soir préparé. | ✅ étalonnage · 🔧 étape 5 |
+| 7 | **Personnages** | Proportions *Eastward* (tête un peu grosse), contour sombre, **3 tons par matériau**, petite ombre au sol. | 🔧 étape 6 |
+
+- Justification : coût d'art maîtrisable (tout est du code), rendu « beau » par la lumière et l'étalonnage plutôt que par le nombre de pixels, parfaitement adapté à Phaser/WebGL.
+- Rejetés : 3D/HD-2D complet (trop lourd), vectoriel (moins d'identité), packs d'images libres (cohérence difficile, voir décision n°22).
 
 ### 12.2 Résolution et affichage
 
 | Paramètre | Valeur |
 |---|---|
-| **Résolution** | **Canevas fixe 960×540** affiché 1:1 et centré sur tous les écrans ; pixel art zoomé ×2 (480×270 visibles) ; interface native (décision n°40) |
-| **Tuile** | 16×16 px |
-| **Affichage** | Mise à l'échelle entière (×2 à ×6) avec bandes noires si besoin ; `image-rendering: pixelated` |
+| **Résolution** | **Canevas fixe 960×540** affiché 1:1 et centré sur tous les écrans ; pixel art zoomé ×2 (480×270 visibles) ; interface native (décision n°40, inchangée par la refonte) |
+| **Tuile** | 16×16 px (grille, collisions et disposition de la carte inchangées) |
+| **Affichage** | Pas d'agrandissement ; `image-rendering: pixelated` |
 | **Plein écran** | Option |
-| **Sprites carte** | 16×24 px (personnages), 32×32 (gros ennemis), 48×48 (boss) |
+| **Sprites carte** | Héros **16×28 px** (pied et boîte de collision 10×8 inchangés) ; PNJ : même gabarit, réutilisant le modèle du héros (M2) ; 32×32 (gros ennemis), 48×48 (boss) |
 | **Sprites combat** | 64×64 px (personnages), jusqu'à 96×96 (boss) |
 | **Portraits dialogue** | 64×64 px, 4 expressions (neutre, content, fâché, triste) |
 | **Mobile** | Non ciblé au prototype (décision n°21) |
 
-### 12.3 Palettes par biome
+### 12.2b Sol organique (réalisé — décision n°43)
+
+Le sol n'est plus peint case par case : le générateur **floute la présence de chaque terrain et de l'eau à l'échelle de l'île**, puis chaque pixel prend le terrain le plus présent (plus un bruit très doux, continu d'une tuile à l'autre).
+
+| Élément | Règle |
+|---|---|
+| **Contours** | Rivière, côte, étangs, lisières, clairières, cours en terre et places pavées suivent des courbes ; plus de marche d'une case. Rayon de flou de 0,4 à 0,95 case selon le terrain. Les chemins d'une case de large gardent un léger avantage pour rester visibles. |
+| **Plaques de ton** | 3 tons par terrain, en larges plaques (même flou), jamais de grain pixel par pixel. |
+| **Herbe** | Base presque unie, touffes d'herbe groupées en massifs, tapis de fleurs, brins d'herbe folle qui débordent sur les chemins. |
+| **Chemins de terre** | Deux ornières dont le sens suit le tracé de la route (rien dans les virages), cailloux rares. |
+| **Pavés** | Pierres irrégulières (Voronoï sur trame de 32 px), claires et usées au centre des places, joints moussus au bord, angles arrondis. |
+| **Eau** | Animée, bleu ardoise ; reflets chauds ; berges courbes avec talus sombre, face de terre quand l'eau est plus basse, écume ; eau profonde plus sombre (ombre profonde violette). Les étangs sont de l'eau animée. |
+| **Relief entre terrains** | Un sol plus haut (herbe) ombre son voisin plus bas (chemin) vers le bas à droite ; son rebord s'assombrit. |
+| **Forêt, marais, montagne** | Feuilles mortes et champignons en forêt, flaques en marais, dalles et fissures en montagne : détails rares et groupés. |
+| **Bords volontairement nets** | Champs de blé et quais (ouvrages humains). |
+
+Limite assumée : les **collisions restent case par case** ; le rivage dessiné peut s'écarter du bord des cases d'au plus ~½ case dans les angles.
+
+### 12.3 Palettes et étalonnage
+
+#### Palette globale (enrichie, rien de retiré)
+
+| Famille | Couleurs |
+|---|---|
+| **Terres chaudes** (nouveau) | ocre `#C89B55`, ocre clair `#E2C07F`, terre cuite `#B8653F`, brique `#8F4A35`, terre sèche `#A98A63`, terre sombre `#6F5844` |
+| **Verts** (nouveau) | olive `#7C8A46`, olive clair `#A9B061`, olive sombre `#4B5634`, mousse `#5F7A45` |
+| **Bleus ardoise** (nouveau) | ardoise `#56677A`, ardoise sombre `#3A4658` |
+| **Ombres** (nouveau) | ombre violette `#3D3658`, ombre profonde `#26233F` |
+| **Lumières** (nouveau) | lumière chaude `#F3C97A`, lumière dorée `#FFDF9A` |
+| **Biomes d'origine** | vert doré `#9CC55A`, jaune blé `#E3C36B`, ciel `#8FC7E8`, vert profond `#2F5D3A`, ambre `#D69B3C`, bleu-gris `#5D7B96`, sable `#D6C49A`, écume `#E8F1F5`, gris-roux `#7A6C66`, orange forge `#E07B39`, pierre `#C9BFA9`, rouge cendre `#A64B3C`, bleu nuit `#2C3550`, nuit `#12121F`, violet brume `#4B2E6F`, cyan éclat `#7FE0E8` |
+
+Dans le dessin, **les rampes de couleur** (`tools/world/art.ts`) décalent la teinte : ombres vers le violet-bleu, lumières vers le jaune-orangé. Le noir pur n'est jamais utilisé dans le décor.
+
+#### Étalonnage « fin d'après-midi » par zone (réalisé)
+
+Chaque zone porte un champ `grade` dans `data/zones.json`, converti en matrice de couleur (`render/grade.ts`, calcul pur et testé) et appliqué par un filtre `ColorMatrix` sur la caméra du monde, avec **fondu de 1,4 s** en changeant de zone.
+
+| Zone | Ombres | Lumières | Saturation | Contraste | Ambiance |
+|---|---|---|---|---|---|
+| **Z1 Plaines d'Aubemer** | violet `#3D3658` (12 %) | or pâle `#FFD9A0` (12 %) | −6 % | +6 % | Chaleureux, ouvert, fin d'après-midi |
+| **Z2 Forêt-Racine** | bleu-violet `#2F3652` (14 %) | `#FFE2A8` (9 %) | −10 % | +8 % | Dense, voile vert, lucioles |
+| **Z3 Côte des Brumes** | bleu `#3A4766` (16 %) | `#F4DCBC` (7 %) | −18 % | +3 % | Brumeux, venteux |
+| **Z4 Monts de Cendre** | prune `#3D3050` (14 %) | orangé `#FFC890` (14 %) | −12 % | +8 % | Austère, braise |
+| **Z5 Citadelle Engloutie** | indigo `#2A2A52` (20 %) | bleu froid `#C8D0E8` (5 %) | −25 % | +10 % | Froid, corrompu |
+
+La teinte plein écran `ambient` de chaque zone est conservée, en plus léger (alpha 0 à 0,14). Garde-fou testé : l'étalonnage ne fait jamais dériver le gris moyen de plus de 40/255.
+
+#### Biomes (couleurs repères)
 
 | Biome | Couleurs principales | Ambiance |
 |---|---|---|
-| **Plaines** | Vert doré `#9CC55A`, jaune blé `#E3C36B`, ciel `#8FC7E8` | Chaleureux, ouvert |
-| **Forêts** | Vert profond `#2F5D3A`, ambre `#D69B3C`, brume vert `#6C9A7B` | Dense, lucioles |
-| **Côtes** | Bleu-gris `#5D7B96`, sable `#D6C49A`, écume `#E8F1F5` | Brumeux, venteux |
-| **Montagnes** | Gris-roux `#7A6C66`, orange forge `#E07B39`, neige `#EDEFF2` | Austère, braise |
-| **Marais** | Vert olive `#5B6B3A`, violet brume `#6B5A7A`, vase `#3A3A2F` | Inquiétant |
-| **Ville (Valcendre)** | Pierre `#C9BFA9`, rouge cendre `#A64B3C`, bleu nuit `#2C3550` | Majestueux, déchu |
-| **Brume Noire** | Noir bleuté `#12121F`, violet `#4B2E6F`, éclats cyan `#7FE0E8` | Corruption |
+| **Plaines** | olive et ocre, jaune blé `#E3C36B`, ciel `#8FC7E8` | Chaleureux, ouvert |
+| **Forêts** | vert profond `#2F5D3A`, ambre `#D69B3C`, mousse | Dense, lucioles |
+| **Côtes** | ardoise/bleu-gris `#5D7B96`, sable `#D6C49A`, écume `#E8F1F5` | Brumeux, venteux |
+| **Montagnes** | gris-roux `#7A6C66`, orange forge `#E07B39`, neige `#EDEFF2` | Austère, braise |
+| **Marais** | olive `#5B6B3A`, violet brume `#6B5A7A`, vase `#3A3A2F` | Inquiétant |
+| **Ville (Valcendre)** | pierre `#C9BFA9`, rouge cendre `#A64B3C`, bleu nuit `#2C3550` | Majestueux, déchu |
+| **Brume Noire** | noir bleuté `#12121F`, violet `#4B2E6F`, éclats cyan `#7FE0E8` | Corruption |
 
-Contrainte : **palette globale limitée à ~64 couleurs** pour la cohérence, avec 4 à 6 teintes par biome.
+Contrainte : palette globale limitée à quelques dizaines de couleurs de base ; les variations viennent des rampes et de l'étalonnage, pas de nouvelles teintes.
 
 ### 12.4 Personnages, ennemis, bâtiments, interface
 
-- **Personnages** : silhouettes très lisibles (couleur de classe dominante), contour sombre 1 px, accessoires emblématiques (lanterne, bannière, harpon).
-- **Ennemis** : formes distinctes par famille (Écumeurs : bandanas rouges ; Brume : silhouettes fluides violacées ; Golems : blocs de pierre).
-- **Bâtiments** : toits colorés par village (chaume jaune, bois vert, ardoise bleue, pierre rouge).
-- **Interface** : cadres en parchemin et métal patiné, bordures ornées, police pixel (**« m5x7 » ou équivalent libre**), couleurs de statut (vert/jaune/rouge).
+- **Personnages** 🔧 (étape 6) : sprite **16×28 px**, tête un peu grosse (proportions *Eastward*), contour sombre de 2 px teinté, 3 tons par matériau, petite ombre au sol, accessoires emblématiques (lanterne, bannière, harpon). Le héros sert de **modèle** que les PNJ réutilisent en M2 (changement de couleurs, coiffure, accessoire).
+- **Ennemis** ⏳ : formes distinctes par famille (Écumeurs : bandanas rouges ; Brume : silhouettes fluides violacées ; Golems : blocs de pierre).
+- **Bâtiments** 🔧 (étape 2) : six silhouettes de base — **chaumière, forge, auberge, temple, moulin, tour de garde** — plus grandes qu'avant si besoin (mêmes positions de village, mêmes routes, collision au pied). Toits en rangées avec ombre sous chaque rang, façades à colombages plus sombres que les toits, volets, enseignes en fer forgé, mousse et fissures ; toit coloré par village (chaume jaune, bois vert, ardoise bleue, pierre rouge).
+- **Petits décors** 🔧 (étape 4) : jardinières, tonneaux, sacs, outils, lanternes, linge, caisses, herbes folles au pied des murs.
+- **Végétation** 🔧 (étape 3) : arbres en 3-4 masses de feuillage éclairées (jusqu'à 3×3 cases), racines, buissons, fleurs sauvages, tournesols et lavande près des villages, vent léger.
+- **Interface** : cadres en parchemin et métal patiné, bordures ornées, police pixel (Jersey 10 pour le bandeau de zone), couleurs de statut (vert/jaune/rouge). Texte et interface restent natifs 960×540.
 
-### 12.5 Effets
+### 12.5 Effets et atmosphère HD-2D
 
-- Particules (poussière, feuilles, braises, bulles, lucioles).
-- Brume en couches (parallaxe), halos de lanternes (blend additif), ombres douces.
-- Vagues animées sur l'eau (2–3 frames de tuile).
+| Effet | Technique (Phaser 4) | Réglage | État |
+|---|---|---|---|
+| **Étalonnage par zone** | `ColorMatrix` interne sur la caméra, fondu 1,4 s | — | ✅ |
+| **Vignettage** | Filtre `Vignette` externe | léger | ✅ (déjà en place) |
+| **Flou de profondeur (tilt-shift)** | Filtre `TiltShift` : flou haut/bas de l'écran | intensité en options | 🔧 étape 5 |
+| **Bloom doux** | `ParallelFilters` + seuil + flou (pas de filtre Bloom dédié en Phaser 4) sur fenêtres, feux, braseros, cristaux | intensité en options | 🔧 étape 5 |
+| **Rayons de lumière et poussière** | Bandes obliques additives et particules en suspension, zones ensoleillées | intensité en options | 🔧 étape 5 |
+| **Halos ponctuels** | Sprites additifs, scintillement des feux | — | 🔧 étape 5 |
+| **Jour / soir** | Un second jeu de `grade` par zone, interpolé (préparé, non activé) | — | 🔧 étape 5 |
+| **Ombres douces et ombres portées** | Dessinées dans les sprites (bas-droite) | — | 🔧 étapes 2 et 3 |
+| **Particules** | Poussière, feuilles, braises, bulles, lucioles ; fumée de cheminée animée | — | ✅ (cheminées) · ⏳ reste |
+| **Eau** | Vagues animées (TileSprite) | — | ✅ |
+| **Blé** | Épis dorés animés | — | ✅ (à reprendre à l'étape 3) |
+
+**Réglage « Qualité »** (options) : *Haute* (tous les effets), *Basse* (étalonnage et vignettage seulement), *Désactivée* (aucun filtre, sauf la teinte `ambient`). Les effets doivent rester légers : à vérifier sur GPU réel avec F3 (60 FPS visé, voir PROGRESS.md).
 
 ### 12.6 Liste des assets nécessaires
 
-| Catégorie | Contenu | Quantité |
-|---|---|---|
-| **Tilesets** | Plaine, forêt, côte, marais, montagne, village, ville, ruines, intérieurs | ~9 tilesets de 256 tuiles |
-| **Personnages carte** | 12 classes × 4 directions × 4 frames (24 évolutions = recolorations) | 12 + 24 variantes |
-| **Personnages combat** | 12 classes × 5 animations | 12 feuilles |
-| **Portraits** | 30 PNJ + 12 recrues | ~40 |
-| **Ennemis** | 12 types monde + 12 sprites combat + 5 boss | ~30 |
-| **Icônes** | Armes, objets, compétences, statuts | ~120 |
-| **UI** | Cadres, boutons, barres, curseurs, jauges de réputation | ~60 éléments |
-| **Effets** | Slashs, flashs, runes, projectiles, soins, impacts | ~40 |
-| **Musique** | Titre, 5 zones, ville, combat normal, combat boss, victoire, défaite | ~13 pistes |
-| **Sons** | Pas, UI, coups, magie, soins, critique, ambiance | ~60 |
+| Catégorie | Contenu | Quantité | État |
+|---|---|---|---|
+| **Tileset du monde** | Une seule texture générée par code (≈13 500 tuiles, atlas 2048×1696 px, 128 colonnes) : sols, berges, ponts, décors | 1 atlas | ✅ sols · 🔧 reste |
+| **Bâtiments** | 6 silhouettes × variantes de toit par village | ~6 + variantes | 🔧 |
+| **Végétation** | Arbres (3-4 variantes), buissons, fleurs, tournesols, lavande | ~15 | 🔧 |
+| **Petits décors** | Tonneaux, sacs, jardinières, lanternes, linge, outils, enseignes | ~30 | 🔧 |
+| **Personnages carte** | Héros 16×28 puis 12 classes × 4 directions × 4 frames (24 évolutions = recolorations) | 12 + 24 variantes | 🔧 héros · ⏳ reste |
+| **Personnages combat** | 12 classes × 5 animations | 12 feuilles | ⏳ |
+| **Portraits** | 30 PNJ + 12 recrues | ~40 | ⏳ |
+| **Ennemis** | 12 types monde + 12 sprites combat + 5 boss | ~30 | ⏳ |
+| **Icônes** | Armes, objets, compétences, statuts | ~120 | ⏳ |
+| **UI** | Cadres, boutons, barres, curseurs, jauges de réputation | ~60 éléments | partiel |
+| **Effets** | Slashs, flashs, runes, projectiles, soins, impacts | ~40 | ⏳ |
+| **Musique** | Titre, 5 zones, ville, combat normal, combat boss, victoire, défaite | ~13 pistes | partiel (Suno) |
+| **Sons** | Pas, UI, coups, magie, soins, critique, ambiance | ~60 | ⏳ |
 
 ### 12.7 Placeholders de qualité (au départ)
 
-| Élément | Placeholder |
+L'art du monde n'est plus un « placeholder » : il est généré par code selon les règles ci-dessus et se remplace en changeant le générateur, sans toucher au moteur.
+
+| Élément | Approche |
 |---|---|
-| Tilesets | Packs pixel art libres/licenciés (cohérents entre eux), recolorés à la palette |
-| Personnages | Sprites modulaires (corps + tête + couleur de classe) générés ou achetés |
+| Tilesets, bâtiments, végétation | **Générés par code** (`tools/world/*`), régénérés par `npm run generate-world` ; le test d'identité garantit que la carte livrée correspond au générateur |
+| Personnages | Modèle de héros 16×28 généré par code, décliné en PNJ par recoloration (M2) |
 | Portraits | Silhouettes colorées avec expression en texte |
 | Ennemis | Formes simplifiées (blobs et silhouettes) |
 | UI | Cadres générés par code (9-slice) |
-| Effets | Particules générées par code (cercles, étincelles) |
-| Musique/sons | Pistes libres de droits (CC0) + générateur de sons simples |
+| Effets | Particules et filtres générés par code |
+| Musique/sons | Pistes générées (Suno, tracées dans `CREDITS.md`) + sons simples |
 | Animations de combat | Transformations de code (dash, squash/stretch) sur sprites fixes |
 
 **Règle** : jamais d'asset sous licence incertaine ; toutes les sources sont listées dans `CREDITS.md`.
+
+### 12.8 Méthode de la refonte (rappel)
+
+Ordre imposé, une validation de l'auteur après chaque étape (capture 960×540 + détail ×3) : **1)** palette, étalonnage, sol ✅ validé le 17/10/2026 · **2)** bâtiments · **3)** végétation · **4)** petits décors · **5)** post-effets HD-2D · **6)** héros. Chaque étape : `generate-world`, tests, build, commit sur `main` avec `play/`, décision numérotée dans PROGRESS.md (n°43 à ce jour).
 
 ---
 
