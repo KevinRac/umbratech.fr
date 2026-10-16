@@ -5843,8 +5843,33 @@ function openMurmure(){
  overlayKeys=c=>{const m=NUMKEY[c];if(m===0)go(true);else if(m===1)go(false);};}
 const _rr13=renderRelics;
 renderRelics=function(){_rr13();if(!P||!P.eq||!RUN||RUN.hub)return;const E=EQS[P.eq],R=RAR[E.r];const box=$('#hRelics');if(!box)return;
- box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${P.eq==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${P.eq==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg></span>`);};
+ box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${P.eq==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${P.eq==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg></span>`);const ic=box.querySelector('.relic.eq');if(ic)ic.addEventListener('click',()=>{if(state==='play')openPause();});};
 const eqIs=id=>!!(P&&P.eq===id&&RUN&&!RUN.hub);
+// Panneau « Équipement » du menu pause et codex consultable
+function eqDetail(){if(!P.eq)return '<p class="muted" style="margin:0">Aucun équipement porté. Les élites et les gardiens en laissent parfois.</p>';
+ const E=EQS[P.eq],R=RAR[E.r];let extra='';
+ if(P.eq==='murmure')extra=`Rang ${P.eqS.rank||0} / 5 · +${4*(P.eqS.rank||0)} % de dégâts.`;
+ else if(P.eq==='coeur')extra=`Bonus actuel : +${P.eqS.st||0} % (max 25 %).`;
+ else if(P.eq==='fiole')extra=RUN.fiole?'Brisée pour cet acte.':'Intacte : prête à annuler un coup.';
+ else if(P.eq==='larme')extra=RUN.larme?'Utilisée pour cet acte.':'Prête à protéger ton dernier PV.';
+ else if(P.eq==='anneau'&&room&&room.ring)extra=room.ring>1?'Cette salle : +20 % de dégâts.':'Cette salle : −20 % de dégâts.';
+ return `<div class="eqpause" style="--c:rgb(${R.col})"><p class="eqh"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg><strong>${esc(E.n)}</strong><span class="eqr">${R.n} · ${E.slot}</span></p><p class="boon">+ ${esc(E.up)}</p><p class="cons">− ${esc(E.down)}</p>${extra?`<p class="k">${extra}</p>`:''}</div>`;}
+function pactDetail(){const p=RUN.pact;if(!p)return '';const B=PBOON[p.boon],C=PCONS[p.cons];
+ return `<p class="h-sec">Pacte de la Brume · acte ${ROM[RUN.act]}</p><div class="eqpause pactp"><p class="boon">+ ${esc(B.n)} : ${esc(B.d)}</p><p class="cons">− ${esc(C.n)} : ${esc(C.d)}</p></div>`;}
+function openCodex(back){
+ const got=M().codex||{},ids=Object.keys(EQS),n=ids.filter(k=>got[k]).length;
+ const cell=k=>{const E=EQS[k],R=RAR[E.r];
+  if(!got[k])return `<div class="card eqc empty" style="--c:rgb(${R.col})"><span class="meta"><span class="br">● ${R.n}</span></span><h3>? ? ?</h3><p>${E.r==='unique'?`Se gagne en vainquant ${esc(E.src)}.`:E.r==='rare'?'Se trouve sur certains élites.':'Se trouve sur les élites.'}</p></div>`;
+  return eqCard(k,k===P.eq?'Porté':'Découvert');};
+ openOverlay(`<div class="panel"><p class="eyebrow">Codex des équipements · ${n} / ${ids.length}</p><h2>Ce que la Brume t’a déjà donné</h2><div class="codexg">${ids.map(cell).join('')}</div><div class="row"><button type="button" class="btn primary" id="cdx">Retour</button></div></div>`);
+ const done=()=>{closeOverlay();if(back)back();};
+ $('#cdx').addEventListener('click',done);overlayKeys=c=>{if(c==='Escape'||c==='KeyP'||c==='Enter')done();};}
+const _op13=openPause;
+openPause=function(){_op13();if(!RUN||!P||overlayEl.querySelector('#eqsec'))return;
+ const row=overlayEl.querySelector('.panel .row');if(!row)return;
+ const m=RUN.hub?'':pactDetail();
+ row.insertAdjacentHTML('beforebegin',`<div id="eqsec"><p class="h-sec">Équipement</p>${RUN.hub?'<p class="muted" style="margin:0">L’équipement se trouve en run, sur les élites et les gardiens.</p>':eqDetail()}${m}<button type="button" class="btn" id="cdxb">Codex · ${Object.keys(M().codex||{}).length} / ${Object.keys(EQS).length}</button></div>`);
+ $('#cdxb').addEventListener('click',()=>{closeOverlay();openCodex(openPause);});};
 
 // ───────────────────────── Effets en combat (équipements, pactes, rôles)
 const _hit13=hitEnemy;
@@ -6021,6 +6046,10 @@ openEnd=function(win,abandon){
 .card.pact{border-color:#5d4594;background:linear-gradient(180deg,rgba(60,36,100,.35),var(--card))}
 .card.eqc{cursor:default;border-top:3px solid var(--c,var(--line))}.card.eqc h3{display:flex;align-items:center;gap:8px}.card.eqc h3 .ic{width:22px;height:22px;stroke:var(--c);fill:none;stroke-width:1.8}
 .card.eqc.empty{opacity:.6}.eqrow{gap:12px}
+.eqpause{border-left:3px solid var(--c,#5d4594);padding:6px 12px;margin:0 0 8px;background:rgba(255,255,255,.03)}.eqpause p{margin:3px 0}.eqpause .eqh{display:flex;align-items:center;gap:8px}.eqpause .ic{width:20px;height:20px;stroke:var(--c);fill:none;stroke-width:1.8}.eqpause .eqr{margin-left:auto;font-size:12.5px;color:var(--c)}
+#eqsec .boon{color:#bfe8b0}#eqsec .cons{color:#f2a3a3}#cdxb{margin-top:4px}
+.codexg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;max-height:56vh;overflow:auto;margin:10px 0}
+.relic.eq{cursor:pointer;pointer-events:auto}
 #overlay.eq-unique .panel{box-shadow:0 0 60px rgba(255,198,92,.25);border-color:#8a6a2a}
 .relic.eq{border-color:rgb(var(--rc));box-shadow:0 0 10px rgba(var(--rc),.35)}.relic.eq .ic{stroke:rgb(var(--rc));fill:none;stroke-width:1.8;width:18px;height:18px}`;document.head.appendChild(st);})();
 window.__v13={EQS,PBOON,PCONS,ROLES,equip,openEquip,openPacte,pactOffers,rollEquip};
