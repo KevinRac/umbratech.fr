@@ -1,7 +1,7 @@
-# VAELMOR — Game Design Document v0.1
+# VAELMOR — Game Design Document v0.2
 
 > RPG tactique en monde ouvert, fantasy médiévale, jouable dans le navigateur.
-> Statut : **brouillon à valider**. Aucun code n'est produit à cette étape.
+> Statut : **validé le 16/10/2026** (les 28 décisions du §19 sont acceptées telles quelles). Toute modification passe désormais par une nouvelle décision.
 > Nom de travail du jeu : **Vaelmor : Les Marées de Cendre** (modifiable).
 
 ---
@@ -26,7 +26,7 @@
 16. Architecture logicielle
 17. Plan de développement
 18. Risques et solutions
-19. Décisions à valider
+19. Décisions validées
 
 ---
 
@@ -1410,9 +1410,9 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 
 ---
 
-## 19. Décisions à valider
+## 19. Décisions validées
 
-> Pour chaque point : **choix proposé** (entre parenthèses). Réponds simplement « OK » ou indique ta modification.
+> **Validées le 16/10/2026** : les 28 décisions ci-dessous sont acceptées telles quelles. Les décisions prises ensuite sont ajoutées en fin de liste avec leur date.
 
 1. **Stack** : Phaser 3 + TypeScript + Vite + Tiled (version précise à vérifier au démarrage).
 2. **Nom de l'île et du jeu** : Vaelmor, « Les Marées de Cendre ».
@@ -1443,6 +1443,11 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 27. **Langue** : français uniquement, textes externalisés pour une future localisation.
 28. **Boss final** : Orvane, le Roi-Marée Brisé, boss à 2 phases ; chaque rencontre « boss » a une condition de victoire « vaincre le boss ».
 
+### Décisions ajoutées après validation
+
+29. **Hébergement** (16/10/2026) : le jeu compilé est servi sur `umbratech.fr/vaelmor/play/`. Le serveur fait un simple `git pull` du dépôt, sans étape de build : la sortie du build (`vaelmor/play/`) est donc commitée. La page d'attente reste sur `/vaelmor/` avec un lien « Jouer ».
+30. **Musique** (précision de la n°23) : les pistes sont générées avec Suno par l'auteur (voir `music/README.md`) ; chaque piste retenue est tracée dans `CREDITS.md`.
+
 ---
 
-*Fin du document v0.1. Aucune implémentation n'a été produite. Dès ta validation (ou tes corrections), je pourrai démarrer le jalon M1.*
+*Fin du document v0.2.*
