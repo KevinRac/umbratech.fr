@@ -1768,7 +1768,7 @@ function openTitle(){
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.6</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.7</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -5356,7 +5356,7 @@ openTitle=function(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
  const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.6</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.7</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
  <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
  <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
  <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
@@ -6847,6 +6847,49 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 @media (max-width:760px){.slot{height:64px}.slot .sic{width:30px;height:30px}.slot .sic .ic{width:20px;height:20px}}
 `;document.head.appendChild(st);
 })();
+// ───────────────────────── v15.7 · Wiki en jeu
+(function(){
+ const st=document.createElement('style');st.id='v157css';st.textContent=`
+#overlay.wiki{padding:10px}
+#overlay.wiki .panel{width:100%;max-width:1500px;height:100%;padding:0;overflow:hidden;border-radius:8px}
+#overlay.wiki iframe{display:block;width:100%;height:100%;border:0;background:#07080d}
+#hWiki{pointer-events:auto}
+`;document.head.appendChild(st);
+ let onMsg=null;
+ function openWiki(back){
+  const cls=(P&&P.cls)||chosenCls||'lum';
+  openOverlay(`<div class="panel"><iframe id="wikiFrame" title="Wiki de La Brume" src="wiki.html?embed=1&cls=${encodeURIComponent(cls)}"></iframe></div>`,'wiki');
+  const done=()=>{removeEventListener('message',onMsg);onMsg=null;if(back)back();else closeOverlay();};
+  onMsg=e=>{if(e.data&&e.data.wiki==='close')done();};
+  addEventListener('message',onMsg);
+  overlayKeys=c=>{if(c==='Escape')done();};
+  const f=$('#wikiFrame');if(f)f.addEventListener('load',()=>{try{f.contentWindow.focus();}catch(_){}});
+ }
+ window.openWiki=openWiki;
+ const canOpen=()=>state==='play'&&overlayEl.hidden&&P&&!P.dead&&!trans;
+ // HUD
+ const wbtn=document.createElement('button');wbtn.type='button';wbtn.className='pausebtn';wbtn.id='hWiki';wbtn.textContent='Wiki · K';
+ const anchor=$('#hGuide')||$('#hPause');anchor.insertAdjacentElement('afterend',wbtn);
+ wbtn.addEventListener('click',()=>{if(canOpen())openWiki();});
+ // Raccourci K (en jeu, sur l’écran titre et dans le menu pause)
+ addEventListener('keydown',e=>{
+  if(e.code!=='KeyK'||e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+  const t=e.target&&e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;
+  if(canOpen()){e.preventDefault();openWiki();}
+  else if(state==='title'&&!overlayEl.hidden&&overlayEl.querySelector('#howto')){e.preventDefault();openWiki(openTitle);}
+ });
+ // Écran titre
+ const _ot157=openTitle;
+ openTitle=function(){_ot157();const h=$('#howto');if(!h||$('#wikibtn'))return;
+  h.insertAdjacentHTML('afterend','<button type="button" class="btn big" id="wikibtn">Wiki · K</button>');
+  $('#wikibtn').addEventListener('click',()=>openWiki(openTitle));};
+ // Menu pause
+ const _op157=openPause;
+ openPause=function(){_op157();const g=$('#pguide')||$('#resume');if(!g||$('#pwiki'))return;
+  g.insertAdjacentHTML('afterend','<button type="button" class="btn" id="pwiki">Wiki</button>');
+  $('#pwiki').addEventListener('click',()=>openWiki(()=>{closeOverlay();openPause();}));};
+})();
+
 if(window.claude&&window.claude.hot&&window.claude.hot.ready)window.claude.hot.ready(()=>start());else start();
 })();
 </script>
