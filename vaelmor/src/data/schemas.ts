@@ -90,6 +90,17 @@ export const balanceFileSchema = z.strictObject({
     accelerationMs: z.number().min(0),
     sprintDetectionMultiplier: z.number().positive(),
     forestDetectionMultiplier: z.number().positive(),
+    /** Multiplicateur de vitesse sur les zones lentes (marais, gué). */
+    slowZoneMultiplier: z.number().positive().max(1),
+    /** Boîte de collision du héros, aux pieds (GDD §4.4), en pixels. */
+    hitboxWidth: z.number().int().positive(),
+    hitboxHeight: z.number().int().positive(),
+    /** Aide dans les angles : décalage maximal (px) pour contourner un coin de tuile. */
+    cornerAssist: z.number().int().min(0),
+    /** Lissage de la caméra (GDD §4.3), par image à 60 Hz. */
+    cameraLerp: z.number().gt(0).max(1),
+    cameraDeadzoneWidth: z.number().int().min(0),
+    cameraDeadzoneHeight: z.number().int().min(0),
   }),
   combat: z.strictObject({
     hitChanceMin: percent,
@@ -122,6 +133,33 @@ export const balanceFileSchema = z.strictObject({
   }),
   defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1) }),
   injury: z.strictObject({ mobilityPenalty: z.number().int().min(0), statPenaltyRatio: z.number().min(0).max(1) }),
+});
+
+/* ---------- Zones de niveau (GDD §3.4, §8) ---------- */
+
+export const AMBIENCE_KINDS = ['pollen', 'feuilles', 'brume', 'braises', 'cendres'] as const;
+
+export const zoneSchema = z.strictObject({
+  id: idSchema,
+  /** Valeur écrite dans la couche `zones` de la carte du monde (1, 2, 3…). */
+  value: z.number().int().min(1).max(255),
+  /** Nom de la région, affiché dans le HUD (« Plaines d'Aubemer »). */
+  name: z.string().min(1),
+  /** Niveaux recommandés (GDD §3.4). */
+  levelMin: z.number().int().min(1),
+  levelMax: z.number().int().min(1),
+  /** Drapeau qui ouvre les passages vers cette zone ; null = toujours ouverte. */
+  unlockFlag: idSchema.nullable(),
+  /** Message affiché quand le joueur heurte un passage verrouillé de cette zone. */
+  gateMessage: z.string().min(1).nullable(),
+  /** Teinte douce posée sur l'écran dans la zone (ambiance). */
+  ambient: z.strictObject({ color: hexColor, alpha: z.number().min(0).max(0.5) }),
+  ambience: z.enum(AMBIENCE_KINDS),
+});
+
+export const zonesFileSchema = z.strictObject({
+  $comment: comment,
+  zones: z.array(zoneSchema).min(1),
 });
 
 /* ---------- Classes ---------- */
@@ -209,6 +247,8 @@ export const classesFileSchema = z.strictObject({
 /* ---------- Types dérivés ---------- */
 
 export type ElementDef = z.infer<typeof elementSchema>;
+export type ZoneDef = z.infer<typeof zoneSchema>;
+export type AmbienceKind = (typeof AMBIENCE_KINDS)[number];
 export type TerrainDef = z.infer<typeof terrainSchema>;
 export type ReputationTier = z.infer<typeof reputationTierSchema>;
 export type ReputationConfig = z.infer<typeof reputationFileSchema>;

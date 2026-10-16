@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.pure.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "validate-data": "tsx tools/validate-data.ts"
+    "validate-data": "tsx tools/validate-data.ts",
+    "generate-world": "tsx tools/generate-world.ts"
   },
   "dependencies": {
     "phaser": "4.2.1",

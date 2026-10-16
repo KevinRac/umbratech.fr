@@ -4,12 +4,13 @@
  * d'erreur HTML) au lieu d'un écran noir.
  */
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
+import { GAME_HEIGHT, GAME_WIDTH, assetUrl } from '../core/config';
 import { showFatalError } from '../core/fatal';
 import { GameDataError, loadGameData } from '../data';
 import { paintTitleBackdrop } from '../render/backdrops/titleBackdrop';
 import { PALETTE } from '../render/palette';
 import { PIXEL_FONTS, buildPixelFont, loadPixelFontFaces, type FontKey } from '../render/pixelFont';
+import { WORLD_MAP_KEY, WORLD_TILESET_KEY } from '../render/worldTextures';
 import { SCENES } from './keys';
 
 const BAR_WIDTH = 120;
@@ -19,6 +20,15 @@ export class BootScene extends Phaser.Scene {
 
   constructor() {
     super(SCENES.boot);
+  }
+
+  /** Carte et tileset du monde : petits fichiers, chargés avant l'écran titre pour que « Nouvelle partie » soit instantané. */
+  preload(): void {
+    this.load.tilemapTiledJSON(WORLD_MAP_KEY, assetUrl('assets/maps/world.json'));
+    this.load.image(WORLD_TILESET_KEY, assetUrl('assets/tilesets/world_tiles.png'));
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      showFatalError('Un fichier du jeu est introuvable.', [`${file.key} : ${file.url as string}`]);
+    });
   }
 
   create(): void {

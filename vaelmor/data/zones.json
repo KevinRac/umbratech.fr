@@ -1,0 +1,60 @@
+{
+  "$comment": "Zones de niveau (GDD §3.4, §8). `value` est la valeur écrite dans la couche « zones » de assets/maps/world.json. `unlockFlag` : drapeau de progression qui ouvre les passages verrouillés de la zone (le boss de la zone précédente, §4.6). `ambient` : teinte douce posée sur l'écran.",
+  "zones": [
+    {
+      "id": "z1",
+      "value": 1,
+      "name": "Plaines d'Aubemer",
+      "levelMin": 1,
+      "levelMax": 5,
+      "unlockFlag": null,
+      "gateMessage": null,
+      "ambient": { "color": "#ffe2a0", "alpha": 0.05 },
+      "ambience": "pollen"
+    },
+    {
+      "id": "z2",
+      "value": 2,
+      "name": "Forêt-Racine",
+      "levelMin": 4,
+      "levelMax": 9,
+      "unlockFlag": "boss_brakk",
+      "gateMessage": "Des ronces noires barrent la route. Les Écumeurs de Brakk tiennent encore le passage.",
+      "ambient": { "color": "#1f4a35", "alpha": 0.14 },
+      "ambience": "feuilles"
+    },
+    {
+      "id": "z3",
+      "value": 3,
+      "name": "Côte des Brumes",
+      "levelMin": 8,
+      "levelMax": 14,
+      "unlockFlag": "boss_roi_cerf",
+      "gateMessage": "Une brume épaisse engloutit le chemin. La forêt doit d'abord être apaisée.",
+      "ambient": { "color": "#5d7b96", "alpha": 0.16 },
+      "ambience": "brume"
+    },
+    {
+      "id": "z4",
+      "value": 4,
+      "name": "Monts de Cendre",
+      "levelMin": 12,
+      "levelMax": 18,
+      "unlockFlag": "boss_merrow",
+      "gateMessage": "Les éboulis fument et le col reste bloqué. Sœur Mérrow garde encore la côte.",
+      "ambient": { "color": "#7a4a3a", "alpha": 0.13 },
+      "ambience": "braises"
+    },
+    {
+      "id": "z5",
+      "value": 5,
+      "name": "Citadelle Engloutie",
+      "levelMin": 16,
+      "levelMax": 20,
+      "unlockFlag": "boss_gardien_cendre",
+      "gateMessage": "La marée recouvre la chaussée. Elle ne se retirera pas avant la chute du Gardien de Cendre.",
+      "ambient": { "color": "#2c3550", "alpha": 0.24 },
+      "ambience": "cendres"
+    }
+  ]
+}

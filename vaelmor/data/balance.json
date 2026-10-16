@@ -6,7 +6,14 @@
     "sprintSpeed": 120,
     "accelerationMs": 80,
     "sprintDetectionMultiplier": 2,
-    "forestDetectionMultiplier": 0.6
+    "forestDetectionMultiplier": 0.6,
+    "slowZoneMultiplier": 0.6,
+    "hitboxWidth": 10,
+    "hitboxHeight": 8,
+    "cornerAssist": 4,
+    "cameraLerp": 0.12,
+    "cameraDeadzoneWidth": 24,
+    "cameraDeadzoneHeight": 16
   },
   "combat": {
     "hitChanceMin": 5,

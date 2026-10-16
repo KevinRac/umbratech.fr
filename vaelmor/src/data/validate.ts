@@ -13,11 +13,13 @@ import {
   elementsFileSchema,
   reputationFileSchema,
   terrainsFileSchema,
+  zonesFileSchema,
   type BalanceConfig,
   type ClassDef,
   type ElementDef,
   type ReputationConfig,
   type TerrainDef,
+  type ZoneDef,
 } from './schemas';
 
 z.config(z.locales.fr());
@@ -29,6 +31,7 @@ export const DATA_SCHEMAS = {
   reputation: reputationFileSchema,
   balance: balanceFileSchema,
   classes: classesFileSchema,
+  zones: zonesFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -45,6 +48,7 @@ export interface GameData {
   readonly reputation: ReputationConfig;
   readonly balance: BalanceConfig;
   readonly classes: readonly ClassDef[];
+  readonly zones: readonly ZoneDef[];
 }
 
 export type ValidationResult =
@@ -115,6 +119,28 @@ function crossCheck(data: GameData): string[] {
   if (b.levels.baseClassCap > b.levels.advancedClassCap) issues.push('balance.json › levels.baseClassCap > advancedClassCap');
   if (b.levels.promotionMinLevel > b.levels.baseClassCap) issues.push('balance.json › levels.promotionMinLevel > baseClassCap');
   if (b.exploration.sprintSpeed < b.exploration.walkSpeed) issues.push('balance.json › exploration.sprintSpeed < walkSpeed');
+  if (b.exploration.hitboxWidth > b.exploration.tileSize || b.exploration.hitboxHeight > b.exploration.tileSize) {
+    issues.push('balance.json › exploration.hitbox dépasse une tuile : le héros ne passerait plus dans les couloirs d’une case');
+  }
+
+  // Zones : identifiants et valeurs uniques, niveaux cohérents, drapeaux de déverrouillage distincts
+  checkUniqueIds('zones.json', 'zone', data.zones, issues);
+  const zoneValues = new Map<number, string>();
+  const unlockFlags = new Map<string, string>();
+  for (const zone of data.zones) {
+    const sameValue = zoneValues.get(zone.value);
+    if (sameValue !== undefined) issues.push(`zones.json › valeur ${zone.value} utilisée par « ${sameValue} » et « ${zone.id} »`);
+    zoneValues.set(zone.value, zone.id);
+    if (zone.levelMin > zone.levelMax) issues.push(`zones.json › « ${zone.id} » : levelMin > levelMax`);
+    if ((zone.unlockFlag === null) !== (zone.gateMessage === null)) {
+      issues.push(`zones.json › « ${zone.id} » : unlockFlag et gateMessage vont ensemble (tous deux null ou tous deux renseignés)`);
+    }
+    if (zone.unlockFlag !== null) {
+      const sameFlag = unlockFlags.get(zone.unlockFlag);
+      if (sameFlag !== undefined) issues.push(`zones.json › drapeau « ${zone.unlockFlag} » partagé par « ${sameFlag} » et « ${zone.id} »`);
+      unlockFlags.set(zone.unlockFlag, zone.id);
+    }
+  }
 
   // Classes : identifiants uniques (classes + évolutions), références, rôles
   const classAndEvolutionIds = new Map<string, string>();
@@ -158,6 +184,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     reputation: z.infer<typeof reputationFileSchema>;
     balance: z.infer<typeof balanceFileSchema>;
     classes: z.infer<typeof classesFileSchema>;
+    zones: z.infer<typeof zonesFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -165,6 +192,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     reputation: files.reputation,
     balance: files.balance,
     classes: files.classes.classes,
+    zones: files.zones.zones,
   };
 
   const crossIssues = crossCheck(data);

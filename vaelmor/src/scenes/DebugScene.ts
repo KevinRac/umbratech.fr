@@ -1,7 +1,9 @@
 /**
  * Outil de debug superposé à toutes les scènes (GDD §16.2, module Debug).
  * F3 (ou `?debug` dans l'URL) : affiche/masque FPS, échelle, scène active et version.
- * Les outils de test (téléport, niveau…) s'y ajouteront aux jalons suivants.
+ * Quand il est visible, il lève le drapeau `debug.enabled` du registre : les scènes
+ * y branchent leurs outils (monde : F2 téléportation, F4 collisions, F9 passages)
+ * et y publient leurs lignes de diagnostic (`debug.info`).
  */
 import Phaser from 'phaser';
 import { GAME_VERSION, MILESTONE } from '../core/config';
@@ -42,6 +44,8 @@ export class DebugScene extends Phaser.Scene {
       .map((s) => s.scene.key)
       .filter((k) => k !== SCENES.debug)
       .join(', ');
+    const info = this.registry.get('debug.info') as string | undefined;
+    const extra = info ? [info] : [];
     setText(
       this.label,
       [
@@ -49,6 +53,7 @@ export class DebugScene extends Phaser.Scene {
         `ÉCHELLE ×${scale.pixelsPerGamePixel} (DPR ${window.devicePixelRatio || 1})`,
         `SCÈNE ${active || '-'}`,
         `V${GAME_VERSION} ${MILESTONE}`,
+        ...extra,
       ].join('\n'),
     );
     this.background.setSize(Math.ceil(this.label.width) + 7, Math.ceil(this.label.height) + 4);
@@ -58,6 +63,7 @@ export class DebugScene extends Phaser.Scene {
   private setVisible(visible: boolean): void {
     this.label.setVisible(visible);
     this.background.setVisible(visible);
+    this.registry.set('debug.enabled', visible);
     this.elapsed = 1000;
   }
 }

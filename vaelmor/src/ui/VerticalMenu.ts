@@ -18,6 +18,8 @@ export interface VerticalMenuOptions {
   readonly width: number;
   readonly lineHeight?: number;
   readonly depth?: number;
+  /** Vrai dans une scène dont la caméra défile (monde ouvert) : le menu reste collé à l'écran. */
+  readonly fixed?: boolean;
 }
 
 const CURSOR_KEY = 'ui:cursor';
@@ -89,6 +91,9 @@ export class VerticalMenu {
       loop: true,
       callback: () => this.cursor.setTexture(`${CURSOR_KEY}${this.cursor.texture.key.endsWith('0') ? 1 : 0}`),
     });
+    if (options.fixed) {
+      for (const obj of [...this.labels, ...this.zones, this.highlight, this.cursor]) obj.setScrollFactor(0);
+    }
     this.refresh();
   }
 

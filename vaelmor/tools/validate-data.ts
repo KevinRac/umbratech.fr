@@ -5,6 +5,7 @@
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { parseWorldMap } from '../src/data/worldMap';
 import { DATA_KEYS, dataFileName, validateGameData, type RawGameData } from '../src/data/validate';
 
 const dataDir = resolve(import.meta.dirname, '..', 'data');
@@ -32,14 +33,27 @@ async function main(): Promise<number> {
     const result = validateGameData(raw as RawGameData);
     if (result.ok) {
       const d = result.data;
-      console.log(
-        `✓ Données valides : ${d.classes.length} classes, ` +
-          `${d.classes.reduce((n, c) => n + c.evolutions.length, 0)} évolutions, ` +
-          `${d.terrains.length} terrains, ${d.elements.length} éléments, ${d.reputation.tiers.length} paliers de réputation.`,
-      );
-      return 0;
+      // La carte du monde dépend des zones et des terrains : on la valide avec eux.
+      let mapSummary = '';
+      try {
+        const rawMap = JSON.parse(await readFile(resolve(dataDir, '..', 'assets', 'maps', 'world.json'), 'utf8')) as unknown;
+        const map = parseWorldMap(rawMap, { zones: d.zones, terrains: d.terrains, tileSize: d.balance.exploration.tileSize });
+        if (map.ok) mapSummary = ` Carte du monde ${map.map.width}×${map.map.height} : ${map.map.locations.length} lieux, ${map.map.gates.length} passages.`;
+        else problems.push(...map.issues);
+      } catch (error) {
+        problems.push(`assets/maps/world.json › illisible : ${(error as Error).message}`);
+      }
+      if (problems.length === 0) {
+        console.log(
+          `✓ Données valides : ${d.classes.length} classes, ` +
+            `${d.classes.reduce((n, c) => n + c.evolutions.length, 0)} évolutions, ` +
+            `${d.terrains.length} terrains, ${d.elements.length} éléments, ${d.reputation.tiers.length} paliers de réputation.${mapSummary}`,
+        );
+        return 0;
+      }
+    } else {
+      problems.push(...result.issues);
     }
-    problems.push(...result.issues);
   }
 
   console.error(`✗ ${problems.length} problème(s) dans les données :`);

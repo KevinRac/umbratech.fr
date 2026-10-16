@@ -26,6 +26,9 @@ export const ACTION_BINDINGS = {
   map: ['N'],
   journal: ['J'],
   debug: ['F3'],
+  debugTeleport: ['F2'],
+  debugCollision: ['F4'],
+  debugGates: ['F9'],
 } as const satisfies Record<string, readonly KeyName[]>;
 
 export type Action = keyof typeof ACTION_BINDINGS;

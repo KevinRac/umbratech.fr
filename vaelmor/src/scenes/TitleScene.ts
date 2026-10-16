@@ -2,7 +2,7 @@
  * Écran titre (GDD §13). Décor animé : mer scintillante, brumes et nuages en
  * parallaxe, lanterne vacillante, braises et cendres, fenêtres de la Citadelle
  * qui palpitent. Menu : Nouvelle partie, Continuer (si une sauvegarde existe),
- * Options. Au jalon M0, les entrées affichent ce qui arrive ensuite.
+ * Options. « Nouvelle partie » mène à l'île (M1) ; les autres entrées annoncent leur jalon.
  */
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_SUBTITLE, GAME_VERSION, GAME_WIDTH, MILESTONE } from '../core/config';
@@ -52,6 +52,7 @@ export class TitleScene extends Phaser.Scene {
   private mistFar!: Phaser.GameObjects.TileSprite;
   private mistNear!: Phaser.GameObjects.TileSprite;
   private clouds!: Phaser.GameObjects.TileSprite;
+  private starting = false;
 
   constructor() {
     super(SCENES.title);
@@ -192,6 +193,15 @@ export class TitleScene extends Phaser.Scene {
     this.cameras.main.filters.external.addVignette(0.5, 0.5, 0.85, 0.35);
   }
 
+  /** Fondu au noir puis arrivée sur l'île, au point de départ. */
+  private startNewGame(): void {
+    if (this.starting) return;
+    this.starting = true;
+    this.menu.setLocked(true);
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.world, { newGame: true }));
+  }
+
   /* ---------- Titre et menu ---------- */
 
   private buildTitle(): void {
@@ -206,7 +216,7 @@ export class TitleScene extends Phaser.Scene {
     const hasSave = GAME_SAVE_KEYS.some((key) => hasKey(key));
     const lineHeight = 17;
     const items = [
-      { label: 'Nouvelle partie', onSelect: () => this.toasts.push('L’exploration de l’île arrive au jalon M1.') },
+      { label: 'Nouvelle partie', onSelect: () => this.startNewGame() },
       { label: 'Continuer', enabled: hasSave, onSelect: () => this.toasts.push('Le chargement arrive au jalon M9.') },
       { label: 'Options', onSelect: () => this.toasts.push('Les options arrivent au jalon M10.') },
     ];

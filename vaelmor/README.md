@@ -10,12 +10,13 @@ RPG tactique en monde ouvert, jouable dans le navigateur. Conception : `docs/GDD
 | `npm run dev` | Serveur de développement avec rechargement à chaud (ouvre `game.html`) |
 | `npm test` | Tests Vitest de la logique pure, des données et de l'architecture |
 | `npm run validate-data` | Valide `data/*.json` (schémas + références) |
+| `npm run generate-world` | Régénère la carte de l'île (`assets/maps/world.json` + tileset) ; `-- --preview <dossier>` écrit des aperçus PNG |
 | `npm run typecheck` | Vérifie les types (dont la règle « logique sans DOM ni Phaser ») |
 | `npm run build` | Tout ce qui précède, puis compile le jeu dans `play/` |
 
 `play/` est **commité** : le serveur publie le dépôt tel quel (`umbratech.fr/vaelmor/play/`). Toujours lancer `npm run build` avant de commiter une modification du jeu.
 
-Outil de debug : touche **F3**, ou `?debug` dans l'URL.
+Outil de debug : touche **F3**, ou `?debug` dans l'URL. Dans le monde : **F2** téléportation au lieu suivant, **F4** collisions, **F9** passages ouverts / fermés, `?debug&at=31,58` pose le héros sur une case.
 
 ## Organisation
 
@@ -33,10 +34,10 @@ vaelmor/
 │  ├─ logic/         règles du jeu en TypeScript pur (ni DOM ni Phaser), testées
 │  ├─ render/        palette, polices pixel, dessin procédural, décors
 │  ├─ ui/            texte, cadres, menus, notifications
-│  ├─ scenes/        scènes Phaser (Boot, Titre, Debug…)
+│  ├─ scenes/        scènes Phaser (Boot, Titre, Monde, Debug…)
 │  ├─ world/ audio/  modules des jalons suivants
 ├─ tests/            tests Vitest
-└─ tools/            scripts (validation des données)
+└─ tools/            scripts (validation des données, générateur de la carte du monde)
 ```
 
 ## Ajouter du contenu

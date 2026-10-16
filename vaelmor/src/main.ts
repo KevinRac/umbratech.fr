@@ -10,6 +10,7 @@ import { PALETTE, toCss } from './render/palette';
 import { BootScene } from './scenes/BootScene';
 import { DebugScene } from './scenes/DebugScene';
 import { TitleScene } from './scenes/TitleScene';
+import { WorldScene } from './scenes/WorldScene';
 
 function start(): void {
   const initial = measureDisplayScale();
@@ -31,7 +32,7 @@ function start(): void {
       zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, TitleScene, DebugScene],
+    scene: [BootScene, TitleScene, WorldScene, DebugScene],
   });
   bindIntegerScaling(game);
 }

@@ -11,9 +11,10 @@ import classes from '../../data/classes.json';
 import elements from '../../data/elements.json';
 import reputation from '../../data/reputation.json';
 import terrains from '../../data/terrains.json';
+import zones from '../../data/zones.json';
 import { GameDataError, validateGameData, type GameData, type RawGameData } from './validate';
 
-export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes };
+export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones };
 
 let cache: GameData | null = null;
 

@@ -32,11 +32,11 @@ export class Toasts {
       return;
     }
     this.showing = true;
-    const text = addText(this.scene, 0, 0, message, { color: PALETTE.parchemin });
+    const text = addText(this.scene, 0, 0, message, { color: PALETTE.parchemin, maxWidth: GAME_WIDTH - 64 });
     const width = Math.ceil(text.width) + 16;
-    const height = 19;
+    const height = Math.max(19, Math.ceil(text.height) + 6);
     const x = Math.round((GAME_WIDTH - width) / 2);
-    const container = this.scene.add.container(x, -height - 2).setDepth(this.depth);
+    const container = this.scene.add.container(x, -height - 2).setDepth(this.depth).setScrollFactor(0);
     const panel = drawPanel(this.scene, 0, 0, width, height);
     text.setPosition(8, 2);
     container.add([panel, text]);
