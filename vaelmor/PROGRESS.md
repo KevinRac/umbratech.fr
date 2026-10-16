@@ -35,7 +35,7 @@ Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élev�
 - Les 28 décisions du GDD §19 sont validées telles quelles (16/10/2026).
 - n°29 Hébergement : jeu compilé servi sur `umbratech.fr/vaelmor/play/` ; la sortie du build `vaelmor/play/` est commitée (le serveur IONOS fait un `git pull` sans build).
 - n°30 Musique : pistes générées avec Suno (`music/README.md`), tracées dans `CREDITS.md`.
-- n°31 Version de Phaser : **Phaser 4.2.1** (16/10/2026). La 3.x n'évolue plus depuis mai 2025 ; la décision n°1 laissait la version ouverte. Ajoutée au GDD §19.
+- n°31 Version de Phaser : **Phaser 4.2.1** (16/10/2026, validée par l’auteur). La 3.x n'évolue plus depuis mai 2025 ; la décision n°1 laissait la version ouverte. Ajoutée au GDD §19.
 
 ## Conventions
 - **Langue** : textes du jeu, commentaires et messages d'erreur en français ; identifiants de code (fonctions, classes, variables) en anglais.
