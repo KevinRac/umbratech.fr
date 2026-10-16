@@ -22,6 +22,7 @@ import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker } from '../logic/world/zones';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
 import { worldView, type WorldView } from '../render/viewport';
+import { gradeMatrix, lerpMatrix } from '../render/grade';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
@@ -72,6 +73,11 @@ export class WorldScene extends Phaser.Scene {
   private fog = new Map<string, Phaser.GameObjects.TileSprite[]>();
 
   private paused = false;
+
+  /** Étalonnage de la zone (décision n°43) : filtre de couleur de la caméra et fondu entre zones. */
+  private gradeFilter: Phaser.Filters.ColorMatrix | null = null;
+  private gradeMatrix_: number[] | null = null;
+  private gradeTween: Phaser.Tweens.Tween | null = null;
 
   private lastGateMessage = -Infinity;
   private waterFrame = 0;
@@ -127,6 +133,8 @@ export class WorldScene extends Phaser.Scene {
     this.buildGateFog();
     this.debugOverlay = this.add.graphics().setDepth(DEPTH.debug);
 
+    this.gradeMatrix_ = null;
+    this.gradeFilter = this.cameras.main.filters.internal.addColorMatrix();
     this.cameras.main.filters.external.addVignette(0.5, 0.5, 0.95, 0.22);
 
     this.camera_ = centerOn({ x: this.body_.x, y: this.body_.y - 10 }, this.cameraConfig);
@@ -315,8 +323,34 @@ export class WorldScene extends Phaser.Scene {
     this.hud.setZone(`${zone.name}  Niv. ${zone.levelMin}-${zone.levelMax}`);
     this.hud.setTint(Phaser.Display.Color.HexStringToColor(zone.ambient.color).color, zone.ambient.alpha);
     this.hud.setAmbience(zone.ambience);
+    this.applyGrade(zone);
 
     if (announce || isNew) this.hud.showBanner(zone.name, `Niveau recommandé ${zone.levelMin}-${zone.levelMax}`, 2200);
+  }
+
+  /** Fond l'étalonnage courant vers celui de la zone (instantané à l'arrivée sur l'île). */
+  private applyGrade(zone: ZoneDef): void {
+    const filter = this.gradeFilter;
+    if (!filter) return;
+    const target = gradeMatrix(zone.grade);
+    const from = this.gradeMatrix_;
+    this.gradeTween?.stop();
+    if (!from) {
+      this.gradeMatrix_ = target;
+      filter.colorMatrix.set(target);
+      return;
+    }
+    const state = { t: 0 };
+    this.gradeTween = this.tweens.add({
+      targets: state,
+      t: 1,
+      duration: 1400,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        this.gradeMatrix_ = lerpMatrix(from, target, state.t);
+        filter.colorMatrix.set(this.gradeMatrix_);
+      },
+    });
   }
 
   /* ---------- Passages ---------- */

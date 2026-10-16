@@ -30,6 +30,24 @@ export const PALETTE = {
   ecume: 0xe8f1f5,
   // Montagne
   grisRoux: 0x7a6c66,
+  // Étalonnage « fin d'après-midi » (décision n°43, inspiration Eastward) :
+  // tons chauds légèrement désaturés, ombres violet-bleu, lumières jaune-orangé.
+  ocre: 0xc89b55,
+  ocreClair: 0xe2c07f,
+  terreCuite: 0xb8653f,
+  brique: 0x8f4a35,
+  terreSeche: 0xa98a63,
+  terreSombre: 0x6f5844,
+  olive: 0x7c8a46,
+  oliveClair: 0xa9b061,
+  oliveSombre: 0x4b5634,
+  mousse: 0x5f7a45,
+  ardoise: 0x56677a,
+  ardoiseSombre: 0x3a4658,
+  ombreViolette: 0x3d3658,
+  ombreProfonde: 0x26233f,
+  lumiereChaude: 0xf3c97a,
+  lumiereDoree: 0xffdf9a,
   // Neutres d'interface
   encre: 0x0b0b14,
   ombre: 0x1a1626,

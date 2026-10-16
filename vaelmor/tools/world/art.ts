@@ -32,9 +32,9 @@ function ramp(base: number, shadow: number, highlight: number): Ramp {
 }
 
 /** Teinte d'ombre commune : bleu nuit légèrement violet (jamais du noir pur). */
-export const SHADE = mix(P.nuitBleue, P.violetBrume, 0.35);
-/** Lumière commune : jaune doux. */
-export const SUN = mix(P.jauneBle, P.parchemin, 0.35);
+export const SHADE = mix(P.ombreViolette, P.ombreProfonde, 0.3);
+/** Lumière commune : jaune-orangé chaud de fin d'après-midi (décision n°43). */
+export const SUN = P.lumiereChaude;
 
 export const INK = mix(SHADE, P.nuit, 0.45); // contour des objets
 export const INK_DEEP = P.encre;
@@ -43,22 +43,22 @@ export const INK_DEEP = P.encre;
 export const inkOf = (r: Ramp): number => mix(r.deep, SHADE, 0.45);
 
 export const RAMPS = {
-  grass: ramp(mix(P.vertDore, P.vertProfond, 0.3), SHADE, SUN),
-  forest: ramp(mix(P.vertProfond, P.vertDore, 0.12), SHADE, P.vertDore),
-  foliage: ramp(mix(P.vertProfond, P.vertDore, 0.38), SHADE, SUN),
-  foliageAutumn: ramp(mix(P.ambre, P.orangeForge, 0.25), mix(P.rougeCendre, SHADE, 0.4), P.jauneBle),
-  dirt: ramp(mix(P.sable, P.grisRoux, 0.38), mix(P.grisRoux, SHADE, 0.5), P.parchemin),
-  sand: ramp(P.sable, mix(P.rougeCendre, SHADE, 0.3), P.ecume),
-  rock: ramp(mix(P.grisRoux, P.bleuGris, 0.2), SHADE, P.pierre),
-  stone: ramp(mix(P.pierre, P.grisRoux, 0.25), SHADE, P.parchemin),
-  snow: ramp(P.ecume, mix(P.bleuGris, P.violetPale, 0.4), 0xffffff),
-  marsh: ramp(mix(P.vertProfond, P.grisRoux, 0.35), SHADE, P.vertDore),
-  pond: ramp(mix(P.bleuGris, P.nuitBleue, 0.5), P.nuit, P.ciel),
-  wood: ramp(mix(P.ambre, P.grisRoux, 0.5), mix(P.rougeCendre, SHADE, 0.55), P.jauneBle),
-  trunk: ramp(mix(P.grisRoux, P.ambre, 0.3), SHADE, P.sable),
+  grass: ramp(mix(P.olive, P.vertDore, 0.38), SHADE, SUN),
+  forest: ramp(mix(P.oliveSombre, P.mousse, 0.45), SHADE, P.oliveClair),
+  foliage: ramp(mix(P.mousse, P.vertDore, 0.3), SHADE, SUN),
+  foliageAutumn: ramp(mix(P.ocre, P.terreCuite, 0.35), mix(P.brique, SHADE, 0.4), P.ocreClair),
+  dirt: ramp(mix(P.terreSeche, P.ocre, 0.18), mix(P.terreSombre, SHADE, 0.35), P.ocreClair),
+  sand: ramp(mix(P.sable, P.ocreClair, 0.3), mix(P.terreCuite, SHADE, 0.35), P.parchemin),
+  rock: ramp(mix(P.grisRoux, P.ardoise, 0.3), SHADE, P.pierre),
+  stone: ramp(mix(P.pierre, P.ocre, 0.14), SHADE, P.parchemin),
+  snow: ramp(P.ecume, mix(P.ardoise, P.violetPale, 0.4), 0xffffff),
+  marsh: ramp(mix(P.oliveSombre, P.violetPale, 0.22), SHADE, P.oliveClair),
+  pond: ramp(mix(P.ardoise, P.nuitBleue, 0.45), P.ombreProfonde, P.ciel),
+  wood: ramp(mix(P.ambre, P.terreSombre, 0.55), mix(P.brique, SHADE, 0.55), P.ocreClair),
+  trunk: ramp(mix(P.terreSombre, P.grisRoux, 0.3), SHADE, P.terreSeche),
   rust: ramp(mix(P.rougeCendre, P.grisRoux, 0.25), mix(P.rougeCendre, SHADE, 0.5), P.orangeForge),
-  wheat: ramp(P.jauneBle, mix(P.rougeCendre, SHADE, 0.2), P.parchemin),
-  ruin: ramp(mix(P.pierre, P.grisRoux, 0.45), SHADE, P.parchemin),
+  wheat: ramp(mix(P.jauneBle, P.ocre, 0.3), mix(P.terreCuite, SHADE, 0.25), P.parchemin),
+  ruin: ramp(mix(P.pierre, P.ardoise, 0.35), SHADE, P.parchemin),
 } as const;
 
 export const ACCENT = {

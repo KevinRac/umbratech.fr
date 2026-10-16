@@ -155,6 +155,20 @@ export const zoneSchema = z.strictObject({
   /** Teinte douce posée sur l'écran dans la zone (ambiance). */
   ambient: z.strictObject({ color: hexColor, alpha: z.number().min(0).max(0.5) }),
   ambience: z.enum(AMBIENCE_KINDS),
+  /**
+   * Étalonnage de la zone (décision n°43) : appliqué au monde par une matrice de
+   * couleur. Les ombres sont teintées (`shadow`), les lumières réchauffées (`light`),
+   * la saturation et le contraste ajustés (0 = neutre).
+   */
+  grade: z.strictObject({
+    shadow: hexColor,
+    shadowAmount: z.number().min(0).max(0.5),
+    light: hexColor,
+    lightAmount: z.number().min(0).max(0.5),
+    saturation: z.number().min(-0.6).max(0.6),
+    contrast: z.number().min(-0.4).max(0.4),
+    brightness: z.number().min(-0.3).max(0.3),
+  }),
 });
 
 export const zonesFileSchema = z.strictObject({

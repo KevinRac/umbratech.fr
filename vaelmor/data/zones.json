@@ -1,5 +1,5 @@
 {
-  "$comment": "Zones de niveau (GDD §3.4, §8). `value` est la valeur écrite dans la couche « zones » de assets/maps/world.json. `unlockFlag` : drapeau de progression qui ouvre les passages verrouillés de la zone (le boss de la zone précédente, §4.6). `ambient` : teinte douce posée sur l'écran.",
+  "$comment": "Zones de niveau (GDD §3.4, §8). `value` est la valeur écrite dans la couche « zones » de assets/maps/world.json. `unlockFlag` : drapeau de progression qui ouvre les passages verrouillés de la zone (le boss de la zone précédente, §4.6). `ambient` : teinte douce posée sur l'écran. `grade` : étalonnage « fin d'après-midi » du monde (ombres teintées, lumières chaudes, saturation, contraste ; décision n°43).",
   "zones": [
     {
       "id": "z1",
@@ -9,8 +9,9 @@
       "levelMax": 5,
       "unlockFlag": null,
       "gateMessage": null,
-      "ambient": { "color": "#ffe2a0", "alpha": 0.05 },
-      "ambience": "pollen"
+      "ambient": { "color": "#ffe2a0", "alpha": 0.0 },
+      "ambience": "pollen",
+      "grade": { "shadow": "#3d3658", "shadowAmount": 0.12, "light": "#ffd9a0", "lightAmount": 0.12, "saturation": -0.06, "contrast": 0.06, "brightness": 0.0 }
     },
     {
       "id": "z2",
@@ -20,8 +21,9 @@
       "levelMax": 9,
       "unlockFlag": "boss_brakk",
       "gateMessage": "Des ronces noires barrent la route. Les Écumeurs de Brakk tiennent encore le passage.",
-      "ambient": { "color": "#1f4a35", "alpha": 0.14 },
-      "ambience": "feuilles"
+      "ambient": { "color": "#1f4a35", "alpha": 0.07 },
+      "ambience": "feuilles",
+      "grade": { "shadow": "#2f3652", "shadowAmount": 0.14, "light": "#ffe2a8", "lightAmount": 0.09, "saturation": -0.1, "contrast": 0.08, "brightness": -0.02 }
     },
     {
       "id": "z3",
@@ -31,8 +33,9 @@
       "levelMax": 14,
       "unlockFlag": "boss_roi_cerf",
       "gateMessage": "Une brume épaisse engloutit le chemin. La forêt doit d'abord être apaisée.",
-      "ambient": { "color": "#5d7b96", "alpha": 0.16 },
-      "ambience": "brume"
+      "ambient": { "color": "#5d7b96", "alpha": 0.1 },
+      "ambience": "brume",
+      "grade": { "shadow": "#3a4766", "shadowAmount": 0.16, "light": "#f4dcbc", "lightAmount": 0.07, "saturation": -0.18, "contrast": 0.03, "brightness": 0.0 }
     },
     {
       "id": "z4",
@@ -42,8 +45,9 @@
       "levelMax": 18,
       "unlockFlag": "boss_merrow",
       "gateMessage": "Les éboulis fument et le col reste bloqué. Sœur Mérrow garde encore la côte.",
-      "ambient": { "color": "#7a4a3a", "alpha": 0.13 },
-      "ambience": "braises"
+      "ambient": { "color": "#7a4a3a", "alpha": 0.06 },
+      "ambience": "braises",
+      "grade": { "shadow": "#3d3050", "shadowAmount": 0.14, "light": "#ffc890", "lightAmount": 0.14, "saturation": -0.12, "contrast": 0.08, "brightness": -0.02 }
     },
     {
       "id": "z5",
@@ -53,8 +57,9 @@
       "levelMax": 20,
       "unlockFlag": "boss_gardien_cendre",
       "gateMessage": "La marée recouvre la chaussée. Elle ne se retirera pas avant la chute du Gardien de Cendre.",
-      "ambient": { "color": "#2c3550", "alpha": 0.24 },
-      "ambience": "cendres"
+      "ambient": { "color": "#2c3550", "alpha": 0.14 },
+      "ambience": "cendres",
+      "grade": { "shadow": "#2a2a52", "shadowAmount": 0.2, "light": "#c8d0e8", "lightAmount": 0.05, "saturation": -0.25, "contrast": 0.1, "brightness": -0.04 }
     }
   ]
 }

@@ -28,21 +28,21 @@ import {
   type Pt,
 } from './layout';
 import {
-  GROUND_PRIORITY,
+  GROUND_DECOS,
   GROUND_TERRAIN,
-  GROUND_VARIANTS,
+  HARD_KINDS,
   TONED,
   groundKey,
+  normalizeSpec,
   paintBridge,
   paintClear,
   paintDeepWater,
   paintFord,
   paintGround,
-  type Corners,
   type GroundKind,
   type GroundSpec,
-  type Side,
-  type Sides,
+  type HoodCell,
+  type Rut,
 } from './ground';
 import { Px } from './px';
 import { getStamp } from './props';
@@ -167,6 +167,8 @@ interface Ctx {
   decorOcc: Uint8Array;
   canopyOcc: Uint8Array;
   road: Uint8Array;
+  /** Ornières : 0 aucune, sinon 1 + axe (0 h, 1 v) × 2 + voie ; 255 = croisement (pas d'ornière). */
+  rut: Uint8Array;
   noBuild: Uint8Array; // places, champs, routes dilatées : pas de maison
   reserved: Uint8Array; // emprises des lieux : pas de décor aléatoire
   band: Uint8Array; // 0 aucune, 1 forêt, 2 marais, 3 falaise
@@ -539,12 +541,19 @@ function carveRoads(c: Ctx): void {
       const next = path[i + 1] ?? path[i - 1] ?? k;
       const horizontal = Math.floor(next / W) === y;
       const widen = horizontal ? idx(x, y + 1) : idx(x + 1, y);
-      for (const cell of [k, widen]) {
+      // Virage : la case précédente et la suivante ne sont pas sur le même axe → pas d'ornière ici.
+      const prevK = path[i - 1];
+      const nextK = path[i + 1];
+      const turning = prevK !== undefined && nextK !== undefined && (Math.floor(prevK / W) === y) !== (Math.floor(nextK / W) === y);
+      [k, widen].forEach((cell, lane) => {
         if (cell >= N || !c.land[cell]) {
-          if (at(c.code, cell) !== BRIDGE && at(c.code, cell) !== FORD) continue;
+          if (at(c.code, cell) !== BRIDGE && at(c.code, cell) !== FORD) return;
         }
         c.road[cell] = 1;
-      }
+        const code = turning ? 255 : 1 + (horizontal ? 0 : 2) + lane;
+        const prev = at(c.rut, cell);
+        c.rut[cell] = prev === 0 || prev === code ? code : 255;
+      });
     });
   }
   for (let k = 0; k < N; k++) {
@@ -899,10 +908,82 @@ function fillBands(c: Ctx): void {
   }
 }
 
+/** Larges plaques de nuances : ton 0 (sombre), 1 (moyen) ou 2 (clair) par case, bruit de basse fréquence. */
+function groundTones(c: Ctx): Uint8Array {
+  const out = new Uint8Array(N);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const k = idx(x, y);
+      const code = at(c.code, k);
+      if (!isLandCode(code) || !TONED.has(kindOf(code))) {
+        out[k] = 1;
+        continue;
+      }
+      const n = fbm(x / 9, y / 9, SEED + 81, 3);
+      out[k] = n < 0.41 ? 0 : n > 0.59 ? 2 : 1;
+    }
+  }
+  return out;
+}
+
+/** Usure des pavés : distance au bord de la place (0 au bord, 2 au cœur). */
+function cobbleWear(c: Ctx): Uint8Array {
+  const dist = new Int16Array(N).fill(-1);
+  const queue: number[] = [];
+  const isCobble = (k: number): boolean => isLandCode(at(c.code, k)) && kindOf(at(c.code, k)) === 'cobble';
+  for (let k = 0; k < N; k++) {
+    if (!isCobble(k)) {
+      dist[k] = 0;
+      queue.push(k);
+    }
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const k = queue[head] as number;
+    const x = k % W;
+    const y = Math.floor(k / W);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      if (!inb(x + dx, y + dy)) continue;
+      const n = idx(x + dx, y + dy);
+      if (dist[n] === -1) {
+        dist[n] = (dist[k] as number) + 1;
+        queue.push(n);
+      }
+    }
+  }
+  const out = new Uint8Array(N);
+  for (let k = 0; k < N; k++) out[k] = Math.max(0, Math.min(2, (dist[k] as number) - 1));
+  return out;
+}
+
+/** Décor du sol d'une case : touffes groupées en massifs, fleurs en tapis, cailloux épars. */
+function decoFor(kind: GroundKind, x: number, y: number): number {
+  const h = hash2(x, y, SEED + 71);
+  const count = GROUND_DECOS[kind];
+  if (kind === 'marsh') return h < 0.22 ? 1 : h < 0.5 ? 2 : 0;
+  if (kind === 'grass') {
+    const flowers = fbm(x / 6, y / 6, SEED + 93, 2);
+    const clump = fbm(x / 4, y / 4, SEED + 91, 2);
+    if (flowers > 0.66 && h < 0.75) return 3;
+    if (clump > 0.56) return h < 0.8 ? 2 : 1;
+    if (clump > 0.46) return h < 0.6 ? 1 : 0;
+    return h < 0.05 ? 4 % count : 0;
+  }
+  if (kind === 'forest') {
+    const litter = fbm(x / 5, y / 5, SEED + 95, 2);
+    if (litter > 0.6) return h < 0.7 ? 2 : 1;
+    return h < 0.3 ? 1 : h < 0.36 ? 3 : 0;
+  }
+  if (kind === 'field' || kind === 'planks' || kind === 'pond' || kind === 'ruins') return Math.floor(h * count);
+  if (kind === 'rock') return h < 0.3 ? 1 : h < 0.48 ? 2 : 0;
+  return h < 0.25 ? 1 : h < 0.35 ? Math.min(2, count - 1) : 0;
+}
+
 /* ---------- Résolution des tuiles ---------- */
 
 function resolveGround(c: Ctx, waterDepth: Uint8Array): Uint16Array {
   const ground = new Uint16Array(N);
+  const tones = groundTones(c);
+  const wear = cobbleWear(c);
   const isWaterLike = (x: number, y: number): boolean => {
     if (!inb(x, y)) return true;
     const code = at(c.code, idx(x, y));
@@ -930,36 +1011,36 @@ function resolveGround(c: Ctx, waterDepth: Uint8Array): Uint16Array {
         continue;
       }
       const kind = kindOf(code);
-      const neighbors: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-      const sides: Side[] = neighbors.map(([dx, dy]) => {
-        const nx = x + dx;
-        const ny = y + dy;
-        if (kind === 'planks' || kind === 'pond') return null;
-        if (isWaterLike(nx, ny)) return 'water';
-        const nc = at(c.code, idx(nx, ny));
-        if (!isLandCode(nc)) return null;
-        const nk = kindOf(nc);
-        if (nk === kind || nk === 'pond') return null;
-        return GROUND_PRIORITY[nk] > GROUND_PRIORITY[kind] ? nk : null;
-      });
-      const corners = [[1, -1, 0, 1], [1, 1, 1, 2], [-1, 1, 2, 3], [-1, -1, 3, 0]].map(([dx, dy, s1, s2]) => {
-        if (kind === 'planks' || kind === 'pond') return false;
-        if (sides[s1 as number] === 'water' || sides[s2 as number] === 'water') return false;
-        return isWaterLike(x + (dx as number), y + (dy as number));
-      });
-      const transitional = sides.some((s) => s !== null) || corners.some(Boolean);
-      let variant: number;
-      if (TONED.has(kind)) {
-        // Larges nuances douces (3 tons) ; les décors fins n'apparaissent que sur les cases sans transition.
-        const n = fbm(x / 7, y / 7, SEED + 81, 3);
-        const tone = n < 0.42 ? 2 : n > 0.58 ? 1 : 0;
-        const decos = GROUND_VARIANTS[kind] / 3;
-        variant = tone + (transitional ? 0 : 3 * Math.floor(hash2(x, y, SEED + 71) * decos));
-      } else {
-        variant = Math.floor(hash2(x, y, SEED + 71) * (transitional ? Math.min(2, GROUND_VARIANTS[kind]) : GROUND_VARIANTS[kind]));
+      const hard = HARD_KINDS.has(kind);
+      const wet: boolean[] = [];
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) wet.push(kind !== 'planks' && kind !== 'pond' && (dx !== 0 || dy !== 0) && isWaterLike(x + dx, y + dy));
+      const hood: HoodCell[] = [];
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (!inb(nx, ny) || !isLandCode(at(c.code, idx(nx, ny)))) {
+            hood.push(null);
+            continue;
+          }
+          const nk = kindOf(at(c.code, idx(nx, ny)));
+          hood.push(HARD_KINDS.has(nk) ? null : { kind: nk, tone: tones[idx(nx, ny)] as number });
+        }
       }
+      const transitional = wet.some(Boolean);
       if (kind === 'field' && !transitional) c.wheat[k] = 1;
-      const spec: GroundSpec = { kind, variant, sides: sides as unknown as Sides, corners: corners as unknown as Corners };
+      const rutCode = at(c.rut, k);
+      const rut: Rut | null = kind === 'road' && rutCode > 0 && rutCode < 255 ? { axis: rutCode >= 3 ? 'v' : 'h', lane: ((rutCode - 1) % 2) as 0 | 1 } : null;
+      const spec: GroundSpec = normalizeSpec({
+        kind,
+        tone: hard ? 1 : (tones[k] as number),
+        deco: decoFor(kind, x, y),
+        hood,
+        phase: (x & 1) + 2 * (y & 1),
+        wet,
+        rut,
+        wear: kind === 'cobble' ? (wear[k] as number) : 0,
+      });
       ground[k] = c.tiles.tile(groundKey(spec), (px, rnd) => paintGround(px, rnd, spec), GROUND_TERRAIN[kind]);
     }
   }
@@ -1029,6 +1110,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     decorOcc: new Uint8Array(N),
     canopyOcc: new Uint8Array(N),
     road: new Uint8Array(N),
+    rut: new Uint8Array(N),
     noBuild: new Uint8Array(N),
     reserved: new Uint8Array(N),
     band: new Uint8Array(N),

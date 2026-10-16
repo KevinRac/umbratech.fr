@@ -16,10 +16,11 @@ export const WATER_TILE = 16;
 
 /** Couleurs de l'eau : fond, creux, crête, éclat. */
 export const WATER_COLORS = {
-  base: mixColor(PALETTE.bleuGris, PALETTE.nuitBleue, 0.38),
-  trough: mixColor(PALETTE.bleuGris, PALETTE.nuitBleue, 0.58),
-  crest: mixColor(PALETTE.bleuGris, PALETTE.ciel, 0.42),
-  glint: PALETTE.ecume,
+  base: mixColor(PALETTE.ardoise, PALETTE.bleuGris, 0.62),
+  trough: mixColor(PALETTE.ardoise, PALETTE.ombreProfonde, 0.4),
+  crest: mixColor(PALETTE.bleuGris, PALETTE.ciel, 0.45),
+  // Reflet chaud du soleil de fin d'après-midi (décision n°43).
+  glint: mixColor(PALETTE.ecume, PALETTE.lumiereChaude, 0.45),
 } as const;
 
 /** Positions (x, y, longueur) des crêtes de vagues ; chaque image les décale pour donner un mouvement doux. */

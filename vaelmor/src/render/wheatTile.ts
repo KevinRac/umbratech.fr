@@ -17,20 +17,20 @@ import type { PixelSink } from './waterTile';
 export const WHEAT_FRAMES = 4;
 export const WHEAT_TILE = 16;
 
-const SHADE = mix(P.nuitBleue, P.violetBrume, 0.35);
+const SHADE = mix(P.ombreViolette, P.ombreProfonde, 0.3);
 
 const C = {
-  soil: mix(P.grisRoux, P.nuit, 0.6),
-  soilLight: mix(P.grisRoux, P.nuit, 0.4),
-  soilHi: mix(P.grisRoux, P.ambre, 0.25),
+  soil: mix(P.terreSombre, P.ombreProfonde, 0.55),
+  soilLight: mix(P.terreSombre, P.ombreProfonde, 0.3),
+  soilHi: mix(P.terreSeche, P.ocre, 0.3),
   ink: mix(P.rougeCendre, P.nuitBleue, 0.7),
   hi: mix(P.jauneBle, P.parchemin, 0.55),
   light: mix(P.jauneBle, P.braise, 0.1),
   mid: mix(P.jauneBle, P.ambre, 0.55),
   dark: mix(P.ambre, P.rougeCendre, 0.5),
-  stem: mix(P.vertDore, P.jauneBle, 0.35),
-  stemDark: mix(P.vertProfond, P.vertDore, 0.3),
-  leaf: mix(P.vertDore, P.vertProfond, 0.25),
+  stem: mix(P.oliveClair, P.jauneBle, 0.35),
+  stemDark: mix(P.oliveSombre, P.olive, 0.3),
+  leaf: mix(P.olive, P.vertDore, 0.3),
   poppy: P.rougeCendre,
   poppyHi: P.orangeForge,
   cornflower: mix(P.bleuGris, P.ciel, 0.5),

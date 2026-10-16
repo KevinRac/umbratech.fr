@@ -11,7 +11,7 @@ import { Px } from './px';
 import type { Rnd } from './art';
 
 export const TILE = 16;
-export const TILESET_COLUMNS = 16;
+export const TILESET_COLUMNS = 64;
 export const TILESET_NAME = 'world_tiles';
 
 export interface TilesetResult {

@@ -9,6 +9,16 @@ Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). 
 **M4 : combat de base** (GDD §5, §17) — carte tactique sur grille, tour par tour, déplacement, attaques et ripostes, triangle des éléments, victoire / défaite. Le monde ouvert (M1) est prêt à déclencher un combat : il manque les ennemis visibles (M3) pour y entrer, on peut donc lancer M4 depuis une scène de test, puis M3 branchera le contact.
 Ensuite, dans l'ordre du GDD §17 : M2 (villages, PNJ, dialogues, `locations.json`), M3 (ennemis du monde), M5…
 
+## Refonte graphique du monde ouvert (en cours, 17/10/2026)
+Objectif : qualité visuelle proche d'Eastward (pixel art dense et chaud) et d'Octopath Traveler (lumière, profondeur, atmosphère « HD-2D »), univers médiéval-fantastique. Six étapes, chacune validée par l'auteur sur captures avant la suivante : 1) palette, étalonnage et sol ; 2) bâtiments ; 3) végétation ; 4) petits décors ; 5) post-effets HD-2D (réglage qualité haute/basse/désactivé) ; 6) héros (16×28, gabarit réutilisé par les PNJ en M2).
+Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taille et de forme (mêmes emplacements de village, mêmes routes, collision au pied) ; héros en 16×28 (même pied, même boîte 10×8) ; seul le héros est refait, les PNJ reprendront son gabarit en M2.
+- [x] Étape 1 : palette, étalonnage et sol — décision n°43 (en attente de validation)
+- [ ] Étape 2 : bâtiments
+- [ ] Étape 3 : végétation
+- [ ] Étape 4 : petits décors et accessoires
+- [ ] Étape 5 : post-effets HD-2D
+- [ ] Étape 6 : héros
+
 ## État
 - [x] M0a : GDD v0.1 rédigé, validé le 16/10/2026 (v0.2, 28 décisions)
 - [x] Dossier du jeu créé dans le dépôt (page d'attente, music/, assets/, src/, data/, docs/)
@@ -58,6 +68,12 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
 - **n°41 — Décors animés et retouches visuelles** (retours de l'utilisateur) : champs de blé détaillés et animés (`render/wheatTile.ts`, 4 images posées sur les cases de champ via la couche Tiled `ambient`), cheminées en briques avec fumée animée (points `chimney` de la couche `ambient`), portes de 10×18 px à l'échelle du héros (façades de 24 px ; `hut` passe à 2×4 cases), berges de rivière lissées et coins arrondis, nom de zone sur un bandeau sombre en police Jersey 10.
 - **n°42 — Relief des textures** (retour de l'utilisateur) : `tools/world/relief.ts` ajoute un éclairage « bump » au sol (carte de hauteur périodique, lumière en haut à gauche) et un biseau (liseré clair haut/gauche, ombre bas/droite) à tous les décors ; le héros reçoit le même biseau ; le blé est redessiné en gros épis dorés cerclés d'un contour sombre, sur deux rangs (fond assombri), toujours animés.
 
+- **n°43 — Palette « fin d'après-midi », étalonnage par zone et sols organiques** (refonte graphique, étape 1) :
+  - **Palette** (`render/palette.ts`, enrichie sans rien retirer) : ocres, terre cuite, brique, terre sèche/sombre, olives, mousse, ardoises, ombre violette, lumières chaudes. Les rampes de `tools/world/art.ts` en dérivent : ombres violet-bleu (`SHADE`), lumière jaune-orangé (`SUN`), herbe olive, terre ocre, roche gris-roux, eau ardoise avec reflets chauds.
+  - **Étalonnage par zone** : champ `grade` de `data/zones.json` (teinte et force des ombres, teinte et force des lumières, saturation, contraste, luminosité), converti en matrice de couleur par `render/grade.ts` (calcul pur, testé) et appliqué par un filtre `ColorMatrix` interne de la caméra du monde ; fondu de 1,4 s en changeant de zone. La teinte plein écran `ambient` reste, plus légère.
+  - **Sols** (`tools/world/ground.ts`) : chaque tuile connaît ses 9 cases voisines ; le sol de chaque pixel vient d'un champ interpolé entre les centres des cases plus un bruit de période 32 px, identique des deux côtés d'un raccord → bords en courbes, sans escalier ni coupure. Même principe pour de larges plaques de 3 tons par sol et pour les berges (l'eau découpe la terre en courbe, talus sombre, écume). Textures de base presque unies (le « bump » bruité de la n°42 est retiré du sol), détails rares et groupés : touffes d'herbe en massifs, tapis de fleurs, feuilles mortes et champignons en forêt, flaques de marais, dalles et fissures en montagne. Un sol plus haut (herbe) ombre son voisin plus bas (chemin) vers le bas à droite, son rebord s'assombrit, des brins d'herbe folle débordent. Routes : deux ornières qui ondulent (sens noté par le tracé A*, rien dans les virages). Pavés : pierres irrégulières (Voronoï sur une trame de 32 px), joints moussus au bord des places, pierres claires et lisses au centre. Champs, quais et étangs gardent des bords nets.
+  - **Coût** : le tileset passe de ~1 230 à ~9 350 tuiles (atlas 1024×2352 px, 64 colonnes, ~470 Ko) ; aucune collision ni disposition changée.
+
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).
 
@@ -85,6 +101,7 @@ Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élev�
 - Vite 8 : l'option de build s'appelle `build.rolldownOptions` (et non `rollupOptions`). Le plugin `vaelmor-entry-as-index` renomme `play/game.html` en `play/index.html`.
 - **Couches GPU Phaser 4 (`createLayer(..., true)`)** : les cases vides sont dessinées avec la tuile d'indice 0 du tileset ! La tuile n°1 du tileset est donc volontairement **transparente** (le générateur la réserve) ; sans cela tout l'écran passe en rouge (le repère de collision « bloqué »). Une seule texture par couche, tuiles nettes. Les couches `collision` et `zones` (valeurs brutes) ne sont jamais créées côté Phaser.
 - Les composants d'interface créés dans une scène qui défile (`Toasts`, `VerticalMenu` avec `fixed: true`, HUD) doivent être en `setScrollFactor(0)` : sinon ils restent à leur position du monde et sortent de l'écran.
+- Tileset du monde : 64 colonnes (`TILESET_COLUMNS`), ~9 350 tuiles depuis la n°43 (une tuile par combinaison de voisinage). Garder la hauteur de l'atlas sous 4096 px (limite de texture de certains GPU) : élargir l'atlas plutôt que l'allonger.
 - Pour modifier la carte : soit éditer `tools/world/layout.ts` / le générateur puis `npm run generate-world` (le test d'identité échoue tant qu'on n'a pas régénéré), soit éditer `assets/maps/world.json` dans Tiled (alors supprimer ou adapter le test « identique à la sortie du générateur » : le générateur écraserait les retouches).
 - Vérification visuelle dans une session Claude : `npx playwright install chromium` fonctionne (dans le dossier temporaire, pas dans `vaelmor/`) ; lancer Chromium avec `--use-angle=swiftshader --enable-unsafe-swiftshader` pour avoir WebGL, servir la racine du dépôt (`python3 -m http.server`) et ouvrir `/vaelmor/play/`.
 - Accès réseau des sessions Claude : le registre npm était bloqué le 16/10/2026 au matin, ouvert le soir même. En cas de refus du proxy, autoriser les registres de paquets dans les réglages d'exécution de code.
