@@ -1,5 +1,5 @@
 /**
- * Point d'entrée du jeu : crée le jeu Phaser 480×270 en pixel art, applique la
+ * Point d'entrée du jeu : crée le jeu Phaser en pixel art (480×270 au titre, 320×180 dans le monde), applique la
  * mise à l'échelle entière et enregistre les scènes.
  */
 import Phaser from 'phaser';

@@ -31,6 +31,7 @@ import {
   GROUND_PRIORITY,
   GROUND_TERRAIN,
   GROUND_VARIANTS,
+  TONED,
   groundKey,
   paintBridge,
   paintClear,
@@ -944,8 +945,17 @@ function resolveGround(c: Ctx, waterDepth: Uint8Array): Uint16Array {
         return isWaterLike(x + (dx as number), y + (dy as number));
       });
       const transitional = sides.some((s) => s !== null) || corners.some(Boolean);
-      const variants = transitional ? Math.min(2, GROUND_VARIANTS[kind]) : GROUND_VARIANTS[kind];
-      const spec: GroundSpec = { kind, variant: Math.floor(hash2(x, y, SEED + 71) * variants), sides: sides as unknown as Sides, corners: corners as unknown as Corners };
+      let variant: number;
+      if (TONED.has(kind)) {
+        // Larges nuances douces (3 tons) ; les décors fins n'apparaissent que sur les cases sans transition.
+        const n = fbm(x / 7, y / 7, SEED + 81, 3);
+        const tone = n < 0.42 ? 2 : n > 0.58 ? 1 : 0;
+        const decos = GROUND_VARIANTS[kind] / 3;
+        variant = tone + (transitional ? 0 : 3 * Math.floor(hash2(x, y, SEED + 71) * decos));
+      } else {
+        variant = Math.floor(hash2(x, y, SEED + 71) * (transitional ? Math.min(2, GROUND_VARIANTS[kind]) : GROUND_VARIANTS[kind]));
+      }
+      const spec: GroundSpec = { kind, variant, sides: sides as unknown as Sides, corners: corners as unknown as Corners };
       ground[k] = c.tiles.tile(groundKey(spec), (px, rnd) => paintGround(px, rnd, spec), GROUND_TERRAIN[kind]);
     }
   }

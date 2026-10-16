@@ -23,7 +23,7 @@ Ensuite, dans l'ordre du GDD §17 : M2 (villages, PNJ, dialogues, `locations.jso
 - Architecture du GDD §16 : `core/`, `data/`, `logic/`, `render/`, `ui/`, `scenes/` (+ `world/`, `audio/` vides). La séparation est **imposée** : `tsconfig.pure.json` compile `logic/` et `data/` sans DOM, et `tests/architecture.test.ts` interdit Phaser, les couches de rendu et `Math.random` dans la logique.
 - Données (`data/`) validées par schémas Zod stricts + contrôles croisés : 12 classes et 24 évolutions (stats, croissances, armes, éléments, conditions du GDD §10), 12 terrains (§3.5), 5 éléments et le triangle (§9.7), échelle de réputation (§6.2), équilibrage (`balance.json`). `npm run validate-data` bloque le build si une donnée est cassée.
 - Logique pure testée : générateur aléatoire déterministe et sérialisable (`Rng`), règles de réputation (paliers, bornes, décroissance, prix), clés de sauvegarde (§14.2).
-- Affichage 480×270 en échelle entière **en pixels physiques** (net aussi sur écran à 125 % ou Retina), recalculé au redimensionnement.
+- Affichage 480×270 (titre) / 320×180 (monde) en échelle entière **en pixels physiques** (net aussi sur écran à 125 % ou Retina), recalculé au redimensionnement.
 - Polices pixel nettes générées au démarrage (glyphes seuillés → police bitmap) : Jersey 10 (texte), Tiny5 (petites étiquettes), Jacquarda Bastarda 9 (gothique décoratif).
 - Scènes : Boot (chargement, validation, erreurs affichées clairement), Titre (logotype pixel « VAELMOR » fait main, décor nocturne animé : Citadelle Engloutie, mer, falaise, lanterne, brumes, cendres ; menu clavier + souris ; notifications), Debug (F3 ou `?debug` : FPS, échelle, scène).
 - 48 tests Vitest au vert ; rendu vérifié dans Chromium sans interface (1080p, 125 %, petite fenêtre, clavier AZERTY/QWERTY, souris).
@@ -50,6 +50,7 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
 - **n°33 — Passages fermés par défaut** : la partie démarre avec tous les drapeaux de boss à faux, donc seule la zone 1 est accessible tant qu'on n'a pas battu les boss (ils arrivent en M4/M6). Le debug (F9) les ouvre.
 - **n°34 — Vallée de Valcendre dans la zone 2** (Forêt-Racine, niveaux 4-9) : la ville est accessible dès Brakk vaincu, côté est de la rivière, par le Vieux Pont. Le polygone est dans `tools/world/layout.ts`.
 - **n°35 — `locations.json` reporté à M2** : les lieux ont pour l'instant `id`, nom français et genre dans la carte ; leurs PNJ, marchands, quêtes et réputation locale arrivent avec les villages (M2), où le fichier de données les décrira par `id`.
+- **n°36 — Résolution du monde 320×180, direction « pixel art propre moderne »** (demandé par l'utilisateur après M1) : l'exploration passe de 480×270 à **320×180** (le titre reste en 480×270 ; `setLogicalSize` change la résolution à chaque scène). Le héros, les maisons et les arbres paraissent donc plus gros. Art refait : rampes de couleurs à décalage de teinte (ombres bleu-violet, lumières chaudes), sols plats à 3 tons au lieu du grain, maisons à toit en bardeaux/façade à pans de bois/ombre portée, contours teintés plutôt que noirs, héros plus ombré. Le GDD §12.2 et la décision n°4 sont mis à jour en conséquence.
 
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).

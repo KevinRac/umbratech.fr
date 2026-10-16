@@ -16,7 +16,7 @@ export interface Size {
 }
 
 export interface CameraConfig {
-  /** Taille de l'écran logique (480×270). */
+  /** Taille de l'écran logique (320×180 dans le monde). */
   readonly view: Size;
   /** Taille de la carte en pixels. */
   readonly world: Size;

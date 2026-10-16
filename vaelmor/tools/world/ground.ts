@@ -49,16 +49,17 @@ export const GROUND_PRIORITY: Record<GroundKind, number> = {
   pond: 12,
 };
 
-/** Nombre de variantes de la texture de base de chaque sol. */
+/** Nombre de variantes de la texture de base de chaque sol (tons × décors ; voir `toneColor`). */
+export const TONED: ReadonlySet<GroundKind> = new Set<GroundKind>(['grass', 'forest', 'dirt', 'sand', 'rock', 'snow', 'marsh']);
 export const GROUND_VARIANTS: Record<GroundKind, number> = {
-  grass: 6,
-  forest: 4,
-  dirt: 3,
+  grass: 12, // 3 tons × 4 décors
+  forest: 9,
+  dirt: 6,
   road: 3,
-  sand: 3,
-  rock: 4,
-  snow: 3,
-  marsh: 4,
+  sand: 6,
+  rock: 6,
+  snow: 6,
+  marsh: 6,
   field: 2,
   cobble: 3,
   planks: 2,
@@ -100,158 +101,185 @@ function fill(px: Px, color: number): void {
   px.rect(0, 0, T, T, color);
 }
 
-function tuft(px: Px, x: number, y: number, color: number): void {
-  px.set(x, y, color);
-  px.set(x - 1, y - 1, color);
-  px.set(x + 1, y - 1, color);
+/** Touffe d'herbe : trois pixels en « Y » et un éclat clair au sommet. */
+function tuft(px: Px, x: number, y: number, dark: number, tip: number): void {
+  px.set(x, y, dark);
+  px.set(x - 1, y - 1, dark);
+  px.set(x + 1, y - 1, dark);
+  px.set(x, y - 1, tip);
+}
+
+/** Teinte de fond : 3 tons très proches (0 neutre, 1 plus clair, 2 plus sombre) pour de larges nuances douces. */
+function toneColor(r: Ramp, v: number): number {
+  const t = v % 3;
+  return t === 0 ? r.base : t === 1 ? mix(r.base, r.light, 0.09) : mix(r.base, r.dark, 0.1);
+}
+const decoOf = (v: number): number => Math.floor(v / 3);
+
+/** Pose un caillou : lumière en haut, ombre dessous (2 × 2 px). */
+function pebble(px: Px, x: number, y: number, r: Ramp): void {
+  px.set(x, y, r.hi);
+  px.set(x + 1, y, r.light);
+  px.set(x, y + 1, r.dark);
+  px.set(x + 1, y + 1, r.deep);
 }
 
 function paintGrass(px: Px, rnd: Rnd, variant: number): void {
   const r: Ramp = RAMPS.grass;
-  fill(px, r.base);
-  speckle(px, rnd, 0, 0, T, T, r.dark, 22);
-  speckle(px, rnd, 0, 0, T, T, r.light, 14);
-  speckle(px, rnd, 0, 0, T, T, r.deep, 3);
-  const tufts = 2 + (variant % 3);
-  for (let i = 0; i < tufts; i++) tuft(px, 1 + Math.floor(rnd() * 14), 2 + Math.floor(rnd() * 13), rnd() < 0.5 ? r.dark : r.deep);
-  if (variant >= 3) {
+  fill(px, toneColor(r, variant));
+  const deco = decoOf(variant);
+  const at = (): [number, number] => [2 + Math.floor(rnd() * 12), 3 + Math.floor(rnd() * 11)];
+  if (deco === 0) {
+    for (let i = 0; i < 2; i++) tuft(px, ...at(), r.dark, r.light);
+  } else if (deco === 1) {
+    tuft(px, ...at(), r.dark, r.light);
+    const [x, y] = at();
+    pebble(px, x, y, RAMPS.rock);
+  } else if (deco === 2) {
     const colors = [ACCENT.flowerYellow, ACCENT.flowerWhite, ACCENT.flowerRed, ACCENT.flowerBlue];
-    const count = variant === 5 ? 4 : 2;
-    for (let i = 0; i < count; i++) {
-      const x = 1 + Math.floor(rnd() * 13);
-      const y = 1 + Math.floor(rnd() * 13);
+    for (let i = 0; i < 3; i++) {
+      const [x, y] = at();
       px.set(x, y, colors[Math.floor(rnd() * colors.length)] as number);
-      px.set(x, y + 1, r.deep);
+      px.set(x, y + 1, r.dark);
     }
+  } else {
+    // Trèfles : petit bouquet de pixels clairs et sombres.
+    const [x, y] = at();
+    px.set(x, y, r.light);
+    px.set(x + 1, y, r.hi);
+    px.set(x, y + 1, r.dark);
+    px.set(x + 1, y + 1, r.light);
+    tuft(px, ...at(), r.dark, r.light);
   }
 }
 
 function paintForest(px: Px, rnd: Rnd, variant: number): void {
   const r = RAMPS.forest;
-  fill(px, r.base);
-  speckle(px, rnd, 0, 0, T, T, r.dark, 26);
-  speckle(px, rnd, 0, 0, T, T, r.light, 8);
-  speckle(px, rnd, 0, 0, T, T, RAMPS.foliageAutumn.base, 6);
-  speckle(px, rnd, 0, 0, T, T, RAMPS.foliageAutumn.dark, 3);
-  // Racines et feuilles mortes.
+  fill(px, toneColor(r, variant));
+  const deco = decoOf(variant);
+  // Feuilles mortes : deux pixels chauds isolés.
   for (let i = 0; i < 2; i++) {
-    const x = Math.floor(rnd() * 12);
-    const y = Math.floor(rnd() * 12);
-    line(px, x, y, x + 2 + Math.floor(rnd() * 3), y + Math.floor(rnd() * 3) - 1, r.deep);
+    const x = 1 + Math.floor(rnd() * 13);
+    const y = 1 + Math.floor(rnd() * 13);
+    px.set(x, y, RAMPS.foliageAutumn.base);
+    px.set(x + 1, y, RAMPS.foliageAutumn.dark);
   }
-  if (variant === 2) {
-    // Champignon.
+  if (deco === 0) {
+    const x = 2 + Math.floor(rnd() * 10);
+    line(px, x, 12, x + 3, 13, r.deep);
+    line(px, x + 3, 13, x + 5, 12, r.deep);
+  } else if (deco === 1) {
     const x = 3 + Math.floor(rnd() * 9);
     const y = 4 + Math.floor(rnd() * 8);
     px.set(x, y, ACCENT.flowerRed);
     px.set(x + 1, y, ACCENT.flowerRed);
     px.set(x, y - 1, ACCENT.flowerWhite);
     px.set(x, y + 1, P.parchemin);
+  } else {
+    tuft(px, 3 + Math.floor(rnd() * 10), 5 + Math.floor(rnd() * 8), r.deep, r.light);
   }
 }
 
 function paintDirt(px: Px, rnd: Rnd, variant: number, ramp: Ramp = RAMPS.dirt): void {
-  fill(px, ramp.base);
-  speckle(px, rnd, 0, 0, T, T, ramp.dark, 20);
-  speckle(px, rnd, 0, 0, T, T, ramp.light, 12);
-  speckle(px, rnd, 0, 0, T, T, ramp.deep, 3);
-  // Cailloux clairs avec une ombre dessous.
-  for (let i = 0; i < 2 + (variant % 2); i++) {
-    const x = 1 + Math.floor(rnd() * 13);
-    const y = 1 + Math.floor(rnd() * 13);
-    px.set(x, y, ramp.hi);
-    px.set(x + 1, y + 1, ramp.deep);
-  }
+  fill(px, toneColor(ramp, variant));
+  const n = 1 + decoOf(variant);
+  for (let i = 0; i < n; i++) pebble(px, 2 + Math.floor(rnd() * 11), 2 + Math.floor(rnd() * 11), ramp);
+  // Un trait de terre sombre, comme une trace.
+  const y = 3 + Math.floor(rnd() * 10);
+  const x = Math.floor(rnd() * 8);
+  px.rect(x, y, 4, 1, ramp.dark);
 }
 
 function paintRoad(px: Px, rnd: Rnd, variant: number): void {
-  paintDirt(px, rnd, variant, { ...RAMPS.dirt, base: mix(RAMPS.dirt.base, P.sable, 0.25), light: mix(RAMPS.dirt.light, P.parchemin, 0.2) });
-  // Ornières légères.
-  if (variant === 1) {
-    for (let x = 0; x < T; x += 1) if ((x + Math.floor(rnd() * 2)) % 3 !== 0) px.set(x, 5, RAMPS.dirt.dark);
-  }
-  if (variant === 2) {
-    for (let x = 0; x < T; x += 1) if ((x + Math.floor(rnd() * 2)) % 3 !== 0) px.set(x, 11, RAMPS.dirt.dark);
+  const ramp: Ramp = { ...RAMPS.dirt, base: mix(RAMPS.dirt.base, P.sable, 0.3), light: mix(RAMPS.dirt.light, P.parchemin, 0.25) };
+  fill(px, ramp.base);
+  px.rect(0, 0, T, 1, mix(ramp.base, ramp.light, 0.35));
+  const n = 2 + (variant % 2);
+  for (let i = 0; i < n; i++) pebble(px, 1 + Math.floor(rnd() * 12), 2 + Math.floor(rnd() * 11), ramp);
+  if (variant >= 1) {
+    const y = variant === 1 ? 5 : 11;
+    for (let x = 0; x < T; x += 1) if (x % 5 !== 3) px.set(x, y, ramp.dark);
   }
 }
 
 function paintSand(px: Px, rnd: Rnd, variant: number): void {
   const r = RAMPS.sand;
-  fill(px, r.base);
-  speckle(px, rnd, 0, 0, T, T, r.light, 18);
-  speckle(px, rnd, 0, 0, T, T, r.dark, 10);
-  for (let i = 0; i < 1 + (variant % 2); i++) {
-    const x = Math.floor(rnd() * 11);
+  fill(px, toneColor(r, variant));
+  const deco = decoOf(variant);
+  for (let i = 0; i < 2; i++) {
+    const x = Math.floor(rnd() * 9);
     const y = 2 + Math.floor(rnd() * 12);
-    line(px, x, y, x + 3 + Math.floor(rnd() * 2), y, r.dark);
+    px.rect(x, y, 4 + Math.floor(rnd() * 3), 1, r.light);
+    px.rect(x + 1, y + 1, 3, 1, r.dark);
   }
-  if (variant === 2) {
-    const x = 2 + Math.floor(rnd() * 11);
-    const y = 2 + Math.floor(rnd() * 11);
+  if (deco === 1) {
+    const x = 3 + Math.floor(rnd() * 9);
+    const y = 3 + Math.floor(rnd() * 9);
     px.set(x, y, ACCENT.flowerWhite);
     px.set(x + 1, y, P.parchemin);
+    px.set(x, y + 1, r.dark);
   }
 }
 
 function paintRock(px: Px, rnd: Rnd, variant: number): void {
   const r = RAMPS.rock;
-  fill(px, r.base);
-  speckle(px, rnd, 0, 0, T, T, r.dark, 24);
-  speckle(px, rnd, 0, 0, T, T, r.light, 16);
-  // Plaques de roche claires et fissures sombres.
+  fill(px, toneColor(r, variant));
+  // Dalles inclinées : arête claire en haut, ombre en bas.
   for (let i = 0; i < 2; i++) {
-    const x = Math.floor(rnd() * 12);
-    const y = Math.floor(rnd() * 12);
-    px.rect(x, y, 3, 2, r.light);
-    px.rect(x, y + 2, 3, 1, r.dark);
+    const x = Math.floor(rnd() * 9);
+    const y = 1 + Math.floor(rnd() * 11);
+    px.rect(x, y, 5, 1, r.hi);
+    px.rect(x, y + 1, 5, 2, r.light);
+    px.rect(x, y + 3, 5, 1, r.dark);
+    px.set(x + 5, y + 1, r.dark);
+    px.set(x + 5, y + 2, r.deep);
   }
-  let x = 2 + Math.floor(rnd() * 10);
-  let y = 1 + Math.floor(rnd() * 5);
-  for (let i = 0; i < 6 + variant; i++) {
+  let x = 2 + Math.floor(rnd() * 11);
+  let y = 1 + Math.floor(rnd() * 4);
+  for (let i = 0; i < 5 + decoOf(variant); i++) {
     px.set(x, y, r.deep);
-    x += rnd() < 0.5 ? 1 : 0;
+    x += rnd() < 0.4 ? 1 : 0;
     y += 1;
   }
 }
 
 function paintSnow(px: Px, rnd: Rnd, variant: number): void {
   const r = RAMPS.snow;
-  fill(px, r.base);
-  speckle(px, rnd, 0, 0, T, T, r.dark, 14);
-  speckle(px, rnd, 0, 0, T, T, 0xffffff, 10);
-  for (let i = 0; i < 2 + (variant % 2); i++) {
-    const x = Math.floor(rnd() * 12);
-    const y = 2 + Math.floor(rnd() * 12);
-    px.rect(x, y, 3, 1, r.dark);
-    px.rect(x + 1, y + 1, 2, 1, mix(r.dark, r.base, 0.5));
+  fill(px, toneColor(r, variant));
+  // Creux ombrés (bleutés) et étincelles.
+  for (let i = 0; i < 2; i++) {
+    const x = 1 + Math.floor(rnd() * 9);
+    const y = 3 + Math.floor(rnd() * 10);
+    px.rect(x, y, 4, 1, mix(r.base, r.dark, 0.55));
+    px.rect(x + 1, y + 1, 3, 1, mix(r.base, r.dark, 0.3));
   }
-  px.set(Math.floor(rnd() * T), Math.floor(rnd() * T), ACCENT.cyan);
+  px.set(Math.floor(rnd() * T), Math.floor(rnd() * T), 0xffffff);
+  if (decoOf(variant) === 1) px.set(Math.floor(rnd() * T), Math.floor(rnd() * T), ACCENT.cyan);
 }
 
 function paintMarsh(px: Px, rnd: Rnd, variant: number): void {
   const r = RAMPS.marsh;
-  fill(px, r.base);
-  speckle(px, rnd, 0, 0, T, T, r.dark, 28);
-  speckle(px, rnd, 0, 0, T, T, r.light, 8);
-  // Flaques de vase sombre et reflets d'eau stagnante.
-  for (let i = 0; i < 2; i++) {
-    const x = 1 + Math.floor(rnd() * 11);
-    const y = 2 + Math.floor(rnd() * 11);
-    px.rect(x, y, 3 + Math.floor(rnd() * 3), 2, r.deep);
-    px.set(x + 1, y, mix(P.bleuGris, r.deep, 0.35));
-  }
-  for (let i = 0; i < 2 + (variant % 2); i++) tuft(px, 1 + Math.floor(rnd() * 14), 3 + Math.floor(rnd() * 12), RAMPS.grass.dark);
-  if (variant === 3) {
-    const x = 3 + Math.floor(rnd() * 9);
-    px.set(x, 3, ACCENT.violet);
-    px.set(x, 4, r.dark);
+  fill(px, toneColor(r, variant));
+  // Flaques sombres avec un reflet de ciel.
+  const x = 1 + Math.floor(rnd() * 8);
+  const y = 3 + Math.floor(rnd() * 8);
+  px.rect(x, y, 6, 3, mix(P.bleuGris, r.deep, 0.55));
+  px.rect(x + 1, y - 1, 4, 1, mix(P.bleuGris, r.deep, 0.55));
+  px.rect(x + 1, y + 3, 4, 1, mix(P.bleuGris, r.deep, 0.55));
+  px.set(x + 2, y + 1, P.ciel);
+  px.set(x + 3, y + 1, P.ecume);
+  tuft(px, 2 + Math.floor(rnd() * 12), 12 + Math.floor(rnd() * 3), RAMPS.grass.dark, RAMPS.grass.light);
+  if (decoOf(variant) === 1) {
+    const vx = 3 + Math.floor(rnd() * 9);
+    px.set(vx, 2, ACCENT.violet);
+    px.set(vx, 3, r.dark);
   }
 }
 
 function paintPond(px: Px, rnd: Rnd, variant: number): void {
   const r = RAMPS.pond;
   fill(px, r.base);
-  speckle(px, rnd, 0, 0, T, T, r.dark, 18);
+  speckle(px, rnd, 0, 0, T, T, r.dark, 5);
   for (let i = 0; i < 3; i++) {
     const x = Math.floor(rnd() * 12);
     const y = 1 + Math.floor(rnd() * 14);
@@ -278,7 +306,7 @@ function paintField(px: Px, rnd: Rnd, variant: number): void {
       px.set(x, (y + 3) % T, RAMPS.dirt.deep);
     }
   }
-  speckle(px, rnd, 0, 0, T, T, r.hi, 10);
+  speckle(px, rnd, 0, 0, T, T, r.hi, 4);
 }
 
 function paintCobble(px: Px, rnd: Rnd, variant: number): void {
@@ -327,7 +355,7 @@ function paintRuins(px: Px, rnd: Rnd, variant: number): void {
       px.rect(tx * 8 + 1, ty * 8 + 1, 7, 1, r.hi);
     }
   }
-  speckle(px, rnd, 0, 0, T, T, r.deep, 8);
+  speckle(px, rnd, 0, 0, T, T, r.deep, 3);
   let x = 2 + Math.floor(rnd() * 11);
   let y = Math.floor(rnd() * 5);
   for (let i = 0; i < 6; i++) {
@@ -336,8 +364,8 @@ function paintRuins(px: Px, rnd: Rnd, variant: number): void {
     y += 1;
   }
   if (variant % 2 === 1) {
-    speckle(px, rnd, 0, 0, T, T, RAMPS.grass.dark, 5);
-    speckle(px, rnd, 0, 0, T, T, RAMPS.foliage.base, 3);
+    speckle(px, rnd, 0, 0, T, T, RAMPS.grass.dark, 3);
+    speckle(px, rnd, 0, 0, T, T, RAMPS.foliage.base, 2);
   }
 }
 
@@ -511,7 +539,7 @@ export function paintFord(px: Px, rnd: Rnd, variant: number): void {
     px.rect(x, y + 2, 4, 1, RAMPS.rock.dark);
     px.rect(x, y, 4, 1, RAMPS.rock.hi);
   }
-  speckle(px, rnd, 0, 0, T, T, ACCENT.foam, 6);
+  speckle(px, rnd, 0, 0, T, T, ACCENT.foam, 2);
 }
 
 export type BridgeOrientation = 'h' | 'v';
@@ -534,7 +562,7 @@ export function paintBridge(px: Px, rnd: Rnd, orientation: BridgeOrientation, pa
       px.set(x, y, j % 4 === 3 ? r.deep : shade);
     }
   }
-  speckle(px, rnd, 0, 0, T, T, r.dark, 10);
+  speckle(px, rnd, 0, 0, T, T, r.dark, 3);
   // Rambardes : bandes sombres sur les deux bords du pont (le long de l'axe de marche).
   for (let i = 0; i < T; i++) {
     for (const j of [0, 1, T - 2, T - 1]) {

@@ -7,7 +7,7 @@
  *   (dessinée SUR le héros) ; les autres vont dans `decor` (SOUS le héros).
  */
 import { hashString, mulberry32 } from './noise';
-import { ACCENT, INK, RAMPS, ellipse, line, outline, shadedBlob, speckle, type Ramp, type Rnd } from './art';
+import { ACCENT, INK, RAMPS, SHADE, ellipse, inkOf, line, outline, shadedBlob, speckle, type Ramp, type Rnd } from './art';
 import { mix, Px } from './px';
 import { PALETTE as P } from '../../src/render/palette';
 
@@ -21,6 +21,8 @@ export interface Stamp {
   readonly px: Px;
   readonly blocked: readonly boolean[];
   readonly canopyRows: number;
+  /** Rangées du bas qui ne portent que l'ombre portée (jamais bloquantes). */
+  readonly shadowRows: number;
 }
 
 type Painter = (px: Px, rnd: Rnd, variant: number) => void;
@@ -30,6 +32,7 @@ interface Def {
   readonly h: number;
   readonly variants: number;
   readonly canopyRows: number;
+  readonly shadowRows?: number;
   /** Cases bloquées : `all`, `bottom` (rangée du bas) ou une liste « x,y ». */
   readonly block: 'all' | 'bottom' | 'none' | readonly string[];
   readonly paint: Painter;
@@ -37,12 +40,14 @@ interface Def {
 
 /* ---------- Outils ---------- */
 
+/** Ombre portée : ellipse bleu nuit translucide, décalée vers le bas-droite (lumière en haut à gauche). */
 function shadow(px: Px, cx: number, cy: number, rx: number, ry: number): void {
+  const ox = Math.round(rx * 0.25);
   for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
-    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-      const dx = (x + 0.5 - cx) / rx;
+    for (let x = Math.floor(cx + ox - rx); x <= Math.ceil(cx + ox + rx); x++) {
+      const dx = (x + 0.5 - cx - ox) / rx;
       const dy = (y + 0.5 - cy) / ry;
-      if (dx * dx + dy * dy <= 1 && px.alphaAt(x, y) === 0) px.set(x, y, P.encre, 70);
+      if (dx * dx + dy * dy <= 1 && px.alphaAt(x, y) === 0) px.set(x, y, SHADE, dx * dx + dy * dy > 0.6 ? 70 : 105);
     }
   }
 }
@@ -84,9 +89,9 @@ function conifer(px: Px, rnd: Rnd, ramp: Ramp, tiers: number): void {
       }
     }
   }
-  speckle(px, rnd, 3, 4, 10, 22, ramp.deep, 6);
-  outline(px, INK);
-  shadow(px, 8, 30, 6, 1.5);
+  speckle(px, rnd, 3, 4, 10, 22, ramp.deep, 4);
+  outline(px, inkOf(ramp));
+  shadow(px, 8, 30, 7, 1.8);
 }
 
 function paintPine(px: Px, rnd: Rnd, variant: number): void {
@@ -113,8 +118,8 @@ function paintOak(px: Px, rnd: Rnd, variant: number): void {
   if (variant === 2) {
     for (let i = 0; i < 4; i++) px.set(6 + Math.floor(rnd() * 20), 6 + Math.floor(rnd() * 16), ACCENT.flowerRed);
   }
-  outline(px, INK);
-  shadow(px, 16, 30, 10, 2);
+  outline(px, inkOf(leaf));
+  shadow(px, 16, 30, 12, 2.4);
 }
 
 function paintDeadTree(px: Px, rnd: Rnd, variant: number): void {
@@ -129,8 +134,8 @@ function paintDeadTree(px: Px, rnd: Rnd, variant: number): void {
   line(px, 3, 11, 2, 7, t.dark);
   line(px, 12, 8, 13, 4, t.dark);
   line(px, 12, 8, 10, 3, t.dark);
-  speckle(px, rnd, 6, 12, 4, 18, t.deep, 4);
-  outline(px, INK);
+  speckle(px, rnd, 6, 12, 4, 18, t.deep, 3);
+  outline(px, inkOf(t));
   shadow(px, 8, 30, 5, 1.5);
 }
 
@@ -139,7 +144,8 @@ function paintBush(px: Px, rnd: Rnd, variant: number): void {
   shadedBlob(px, 8, 10, 6.5, 5, variant === 1 ? RAMPS.foliageAutumn : RAMPS.foliage, rnd);
   shadedBlob(px, 5, 11, 4, 3.5, RAMPS.foliage, rnd);
   if (berry) for (let i = 0; i < 4; i++) px.set(4 + Math.floor(rnd() * 9), 8 + Math.floor(rnd() * 5), ACCENT.flowerRed);
-  outline(px, INK);
+  outline(px, inkOf(RAMPS.foliage));
+  shadow(px, 8, 14, 7, 1.5);
 }
 
 function paintRock(px: Px, rnd: Rnd, variant: number): void {
@@ -169,67 +175,118 @@ interface HouseStyle {
   readonly timber: boolean;
 }
 
+const roofRamp = (base: number): Ramp => ({
+  deep: mix(base, SHADE, 0.7),
+  dark: mix(base, SHADE, 0.38),
+  base,
+  light: mix(base, P.jauneBle, 0.22),
+  hi: mix(base, P.parchemin, 0.5),
+});
+
 const HOUSE_STYLES: readonly HouseStyle[] = [
-  { wall: RAMPS.dirt, roof: { ...RAMPS.wood, base: mix(P.ambre, P.grisRoux, 0.35) }, timber: true }, // chaume d'Aubemer
-  { wall: RAMPS.stone, roof: { ...RAMPS.wood, base: P.rougeCendre }, timber: false }, // tuiles rouges
-  { wall: RAMPS.stone, roof: RAMPS.rock, timber: false }, // ardoise (port, montagne)
-  { wall: RAMPS.wood, roof: RAMPS.trunk, timber: true }, // bois (forêt)
-  { wall: RAMPS.ruin, roof: { ...RAMPS.rock, base: mix(P.grisRoux, P.bleuGris, 0.4) }, timber: false }, // pierre froide
+  { wall: { ...RAMPS.sand, base: mix(P.parchemin, P.sable, 0.35) }, roof: roofRamp(mix(P.ambre, P.grisRoux, 0.3)), timber: true }, // chaume d'Aubemer
+  { wall: { ...RAMPS.stone, base: mix(P.parchemin, P.pierre, 0.45) }, roof: roofRamp(mix(P.rougeCendre, P.orangeForge, 0.2)), timber: true }, // tuiles rouges
+  { wall: RAMPS.stone, roof: roofRamp(mix(P.bleuGris, P.nuitBleue, 0.25)), timber: false }, // ardoise (port, montagne)
+  { wall: RAMPS.wood, roof: roofRamp(mix(P.vertProfond, P.grisRoux, 0.3)), timber: true }, // bois (forêt)
+  { wall: RAMPS.ruin, roof: roofRamp(mix(P.grisRoux, P.violetPale, 0.35)), timber: false }, // pierre froide
 ];
 
+/**
+ * Maison vue de trois quarts : grand toit à bardeaux, façade crépie à pans de
+ * bois, volets, porte cintrée, soubassement de pierre et ombre portée sur la
+ * dernière rangée du tampon. `H` = hauteur du bâtiment (sans la rangée d'ombre).
+ */
 function paintHouse(px: Px, rnd: Rnd, style: HouseStyle, wTiles: number, hTiles: number): void {
   const W = wTiles * T;
   const H = hTiles * T;
-  const wallTop = H - 18;
-  const roofTop = 2;
-  const roofBottom = wallTop + 3;
+  const wallTop = H - 19;
+  const roofTop = 3;
+  const roofBottom = wallTop + 2;
   const { wall, roof } = style;
-  // Murs.
-  slab(px, 4, wallTop, W - 8, H - wallTop - 2, wall, rnd);
+  // Murs : fond, face éclairée à gauche, ombre propre à droite.
+  px.rect(4, wallTop, W - 8, H - wallTop - 3, wall.base);
+  px.rect(4, wallTop, 2, H - wallTop - 3, wall.light);
+  px.rect(W - 7, wallTop, 3, H - wallTop - 3, wall.dark);
+  // Pans de bois ou joints de pierre.
   if (style.timber) {
-    for (let x = 4; x < W - 4; x += 10) px.rect(x, wallTop, 2, H - wallTop - 2, RAMPS.trunk.dark);
-    px.rect(4, wallTop + 7, W - 8, 1, RAMPS.trunk.dark);
+    const beam = RAMPS.trunk.dark;
+    px.rect(4, wallTop, 2, H - wallTop - 3, beam);
+    px.rect(W - 6, wallTop, 2, H - wallTop - 3, beam);
+    px.rect(Math.floor(W / 2) - 1, wallTop, 2, H - wallTop - 3, beam);
+    px.rect(4, wallTop + 6, W - 8, 1, beam);
+    for (let i = 0; i < 3; i++) {
+      line(px, 6, wallTop + 6 + i * 0, 6, wallTop + 6, beam);
+    }
   } else {
-    for (let y = wallTop + 4; y < H - 3; y += 5) for (let x = 5 + ((y / 5) % 2) * 3; x < W - 5; x += 7) px.set(x, y, wall.dark);
-  }
-  px.rect(4, H - 4, W - 8, 2, RAMPS.rock.dark); // soubassement
-  // Porte.
-  const doorX = Math.floor(W / 2) - 3;
-  px.rect(doorX, H - 12, 6, 10, RAMPS.wood.deep);
-  px.rect(doorX + 1, H - 11, 4, 9, RAMPS.wood.base);
-  px.rect(doorX + 1, H - 11, 4, 1, RAMPS.wood.light);
-  px.set(doorX + 4, H - 7, P.jauneBle);
-  px.rect(doorX - 1, H - 3, 8, 1, RAMPS.rock.light);
-  // Fenêtres.
-  const windows = wTiles >= 4 ? [10, W - 15] : [8, W - 13];
-  for (const wx of windows) {
-    px.rect(wx, wallTop + 4, 5, 5, RAMPS.wood.deep);
-    px.rect(wx + 1, wallTop + 5, 3, 3, ACCENT.window);
-    px.set(wx + 1, wallTop + 5, P.jauneBle);
-    px.rect(wx + 2, wallTop + 5, 1, 3, RAMPS.wood.deep);
-  }
-  // Toit : trapèze à bardeaux, débord sur les côtés.
-  for (let y = roofTop; y <= roofBottom; y++) {
-    const f = (y - roofTop) / (roofBottom - roofTop);
-    const inset = Math.round((1 - f) * (W / 2 - 6));
-    for (let x = 1 + inset; x < W - 1 - inset; x++) {
-      const row = Math.floor((y - roofTop) / 4);
-      const offset = (row % 2) * 3;
-      const edge = (x + offset) % 6 === 0;
-      let color = row % 3 === 0 ? roof.light : roof.base;
-      if (edge) color = roof.dark;
-      if ((y - roofTop) % 4 === 3) color = roof.dark;
-      if (x - (1 + inset) < 2) color = roof.hi;
-      if (W - 2 - inset - x < 2) color = roof.deep;
-      px.set(x, y, color);
+    for (let y = wallTop + 3; y < H - 5; y += 4) {
+      px.rect(5, y, W - 10, 1, wall.dark);
+      for (let x = 6 + (((y / 4) | 0) % 2) * 5; x < W - 6; x += 10) px.rect(x, y - 3, 1, 3, wall.dark);
     }
   }
+  // Soubassement de pierre.
+  px.rect(4, H - 6, W - 8, 3, RAMPS.rock.base);
+  px.rect(4, H - 6, W - 8, 1, RAMPS.rock.light);
+  px.rect(4, H - 4, W - 8, 1, RAMPS.rock.dark);
+  speckle(px, rnd, 5, H - 6, W - 10, 3, RAMPS.rock.deep, 3);
+  // Porte cintrée.
+  const doorX = Math.floor(W / 2) - 3;
+  px.rect(doorX - 1, H - 15, 8, 12, RAMPS.wood.deep);
+  px.rect(doorX, H - 14, 6, 11, RAMPS.wood.base);
+  px.rect(doorX + 1, H - 15, 4, 1, RAMPS.wood.deep);
+  px.rect(doorX, H - 14, 1, 11, RAMPS.wood.light);
+  px.rect(doorX + 3, H - 14, 1, 11, RAMPS.wood.dark);
+  px.set(doorX + 4, H - 9, P.jauneBle);
+  px.rect(doorX - 1, H - 3, 8, 1, RAMPS.rock.light);
+  // Fenêtres à volets, vitres éclairées de l'intérieur.
+  const windows = wTiles >= 4 ? [9, W - 17] : [7, W - 15];
+  for (const wx of windows) {
+    px.rect(wx, wallTop + 3, 8, 8, RAMPS.wood.deep);
+    px.rect(wx + 2, wallTop + 4, 4, 6, ACCENT.window);
+    px.rect(wx + 2, wallTop + 4, 4, 1, P.jauneBle);
+    px.rect(wx + 4, wallTop + 4, 1, 6, RAMPS.wood.deep);
+    px.rect(wx + 2, wallTop + 7, 4, 1, RAMPS.wood.deep);
+    px.rect(wx, wallTop + 3, 2, 8, RAMPS.wood.base);
+    px.rect(wx + 6, wallTop + 3, 2, 8, RAMPS.wood.dark);
+    px.rect(wx - 1, wallTop + 11, 10, 1, RAMPS.wood.dark);
+  }
+  // Toit : grand plan incliné à bardeaux, pente gauche éclairée, rive et faîtage.
+  for (let y = roofTop; y <= roofBottom; y++) {
+    const f = (y - roofTop) / (roofBottom - roofTop);
+    const inset = Math.round((1 - f) * (W / 2 - 9));
+    const row = Math.floor((y - roofTop) / 3);
+    for (let x = 1 + inset; x < W - 1 - inset; x++) {
+      const edge = (x + (row % 2) * 3) % 6 === 0;
+      const rel = (x - (1 + inset)) / (W - 2 - 2 * inset);
+      let color = rel < 0.3 ? roof.light : rel > 0.72 ? roof.dark : roof.base;
+      if ((y - roofTop) % 3 === 2) color = rel < 0.3 ? roof.base : roof.dark;
+      else if (edge && (y - roofTop) % 3 === 1) color = rel < 0.5 ? roof.base : roof.dark;
+      px.set(x, y, color);
+    }
+    px.set(1 + inset, y, roof.hi);
+    px.set(W - 2 - inset, y, roof.deep);
+  }
   px.rect(1, roofBottom, W - 2, 1, roof.deep);
+  px.rect(1, roofBottom - 1, W - 2, 1, roof.dark);
+  // Faîtage clair.
+  const ridge = 1 + Math.round(W / 2 - 9);
+  px.rect(ridge, roofTop, W - 2 * ridge, 1, roof.hi);
+  // Ombre de l'avant-toit sur la façade.
+  px.rect(4, roofBottom + 1, W - 8, 2, SHADE, );
+  for (let x = 4; x < W - 4; x++) px.set(x, roofBottom + 3, wall.dark);
   // Cheminée.
-  const chimX = W - 14;
-  slab(px, chimX, 0, 5, 9, RAMPS.stone, rnd);
+  const chimX = W - 15;
+  px.rect(chimX, 0, 6, 9, RAMPS.stone.base);
+  px.rect(chimX, 0, 6, 2, RAMPS.stone.light);
+  px.rect(chimX + 4, 2, 2, 7, RAMPS.stone.dark);
+  px.rect(chimX - 1, 0, 8, 1, RAMPS.stone.hi);
   outline(px, INK);
-  shadow(px, W / 2, H - 1, W / 2 - 2, 1.5);
+  // Ombre portée sur la rangée suivante.
+  for (let y = H - 1; y < H + 8; y++) {
+    const k = y - (H - 1);
+    for (let x = 5 + k; x < W - 1 + Math.min(k, 5); x++) {
+      if (x < W && px.alphaAt(x, y) === 0) px.set(x, y, SHADE, k < 4 ? 105 : 70);
+    }
+  }
 }
 
 function paintInn(px: Px, rnd: Rnd): void {
@@ -528,13 +585,13 @@ export const STAMP_DEFS: Readonly<Record<string, Def>> = {
   bush: { w: 1, h: 1, variants: 3, canopyRows: 0, block: 'none', paint: paintBush },
   rock: { w: 1, h: 1, variants: 3, canopyRows: 0, block: 'all', paint: paintRock },
   reeds: { w: 1, h: 1, variants: 2, canopyRows: 0, block: 'none', paint: (px, rnd) => paintReeds(px, rnd) },
-  house_thatch: { w: 3, h: 3, variants: 1, canopyRows: 0, block: 'all', paint: house(0, 3, 3) },
-  house_tile: { w: 3, h: 3, variants: 1, canopyRows: 0, block: 'all', paint: house(1, 3, 3) },
-  house_slate: { w: 3, h: 3, variants: 1, canopyRows: 0, block: 'all', paint: house(2, 3, 3) },
-  house_wood: { w: 3, h: 3, variants: 1, canopyRows: 0, block: 'all', paint: house(3, 3, 3) },
-  house_stone: { w: 3, h: 3, variants: 1, canopyRows: 0, block: 'all', paint: house(4, 3, 3) },
-  inn: { w: 4, h: 3, variants: 1, canopyRows: 0, block: 'all', paint: (px, rnd) => paintInn(px, rnd) },
-  hut: { w: 2, h: 2, variants: 2, canopyRows: 0, block: 'all', paint: paintHut },
+  house_thatch: { w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(0, 3, 3) },
+  house_tile: { w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(1, 3, 3) },
+  house_slate: { w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(2, 3, 3) },
+  house_wood: { w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(3, 3, 3) },
+  house_stone: { w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(4, 3, 3) },
+  inn: { w: 4, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: (px, rnd) => paintInn(px, rnd) },
+  hut: { w: 2, h: 3, variants: 2, canopyRows: 0, shadowRows: 1, block: 'all', paint: paintHut },
   tent: { w: 2, h: 2, variants: 2, canopyRows: 0, block: 'bottom', paint: paintTent },
   campfire: { w: 1, h: 1, variants: 1, canopyRows: 0, block: 'all', paint: (px, rnd) => paintCampfire(px, rnd) },
   wall_h: { w: 1, h: 1, variants: 2, canopyRows: 0, block: 'all', paint: paintWallH },
@@ -577,13 +634,13 @@ export function getStamp(name: string, variant = 0): Stamp {
   for (let y = 0; y < def.h; y++) {
     for (let x = 0; x < def.w; x++) {
       let b = false;
-      if (def.block === 'all') b = true;
+      if (def.block === 'all') b = y < def.h - (def.shadowRows ?? 0);
       else if (def.block === 'bottom') b = y === def.h - 1;
       else if (def.block !== 'none') b = def.block.includes(`${x},${y}`);
       blocked.push(b);
     }
   }
-  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows };
+  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows, shadowRows: def.shadowRows ?? 0 };
   cache.set(key, stamp);
   return stamp;
 }

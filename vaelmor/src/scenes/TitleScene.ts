@@ -19,6 +19,7 @@ import {
   SEA_FRAMES,
   TEX,
 } from '../render/backdrops/titleBackdrop';
+import { setLogicalSize } from '../render/displayScaler';
 import { paintLogo } from '../render/logo';
 import { PALETTE } from '../render/palette';
 import { drawPanel } from '../ui/panel';
@@ -59,6 +60,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    setLogicalSize(this.game, GAME_WIDTH, GAME_HEIGHT);
     this.actions = new ActionInput(this);
     this.toasts = new Toasts(this);
     this.buildBackdrop();

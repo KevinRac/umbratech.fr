@@ -5,7 +5,7 @@
  */
 import Phaser from 'phaser';
 import type { AmbienceKind } from '../data/schemas';
-import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
+import { WORLD_HEIGHT as GAME_HEIGHT, WORLD_WIDTH as GAME_WIDTH } from '../core/config';
 import { PALETTE } from './palette';
 import { WORLD_TEX } from './worldTextures';
 

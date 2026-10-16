@@ -3,7 +3,6 @@
  * 2,5 s chacune, glissement d'entrée et fondu de sortie.
  */
 import type Phaser from 'phaser';
-import { GAME_WIDTH } from '../core/config';
 import { PALETTE } from '../render/palette';
 import { drawPanel } from './panel';
 import { addText } from './text';
@@ -32,10 +31,10 @@ export class Toasts {
       return;
     }
     this.showing = true;
-    const text = addText(this.scene, 0, 0, message, { color: PALETTE.parchemin, maxWidth: GAME_WIDTH - 64 });
+    const text = addText(this.scene, 0, 0, message, { color: PALETTE.parchemin, maxWidth: this.scene.scale.width - 48 });
     const width = Math.ceil(text.width) + 16;
     const height = Math.max(19, Math.ceil(text.height) + 6);
-    const x = Math.round((GAME_WIDTH - width) / 2);
+    const x = Math.round((this.scene.scale.width - width) / 2);
     const container = this.scene.add.container(x, -height - 2).setDepth(this.depth).setScrollFactor(0);
     const panel = drawPanel(this.scene, 0, 0, width, height);
     text.setPosition(8, 2);

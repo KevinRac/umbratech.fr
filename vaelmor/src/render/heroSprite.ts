@@ -16,13 +16,14 @@ export const HERO_POSES = ['down', 'up', 'side'] as const;
 export type HeroPose = (typeof HERO_POSES)[number];
 
 const C = {
-  ink: P.encre,
-  cloak: mixColor(P.bleuNuit, P.bleuGris, 0.35),
-  cloakLight: mixColor(P.bleuNuit, P.bleuGris, 0.7),
-  cloakDark: mixColor(P.bleuNuit, P.nuit, 0.5),
+  ink: mixColor(P.nuitBleue, P.nuit, 0.5),
+  cloak: mixColor(P.bleuNuit, P.bleuGris, 0.45),
+  cloakLight: mixColor(P.bleuGris, P.ciel, 0.3),
+  cloakDark: mixColor(P.bleuNuit, P.violetBrume, 0.45),
   scarf: P.rougeCendre,
   scarfLight: P.orangeForge,
-  skin: mixColor(P.sable, P.orangeForge, 0.22),
+  skin: mixColor(P.sable, P.orangeForge, 0.18),
+  skinLight: mixColor(P.parchemin, P.sable, 0.3),
   skinDark: mixColor(P.sable, P.rougeCendre, 0.4),
   hair: mixColor(P.grisRoux, P.nuit, 0.55),
   belt: mixColor(P.ambre, P.grisRoux, 0.5),
@@ -90,12 +91,18 @@ function drawFrontBack(g: Grid, back: boolean, step: number, bob: number): void 
     px(g, 10, 12 + y0, C.buckle);
   } else {
     rect(g, 5, 5 + y0, 6, 5, C.skin);
-    rect(g, 5, 5 + y0, 6, 1, C.hair);
-    px(g, 5, 6 + y0, C.hair);
-    px(g, 10, 6 + y0, C.hair);
-    px(g, 6, 7 + y0, C.eye);
-    px(g, 9, 7 + y0, C.eye);
+    rect(g, 5, 5 + y0, 6, 1, C.cloakDark); // ombre du capuchon sur le front
+    rect(g, 5, 6 + y0, 6, 1, C.hair);
+    px(g, 5, 7 + y0, C.hair);
+    px(g, 10, 7 + y0, C.hair);
+    px(g, 6, 7 + y0, C.skinLight);
+    px(g, 6, 8 + y0, C.eye);
+    px(g, 9, 8 + y0, C.eye);
+    px(g, 7, 7 + y0, C.skinLight);
+    px(g, 8, 9 + y0, C.skinDark);
     rect(g, 5, 9 + y0, 6, 1, C.skinDark);
+    px(g, 7, 4 + y0, C.cloakLight);
+    px(g, 6, 3 + y0, C.cloakLight);
   }
 }
 
@@ -138,9 +145,13 @@ function drawSide(g: Grid, frame: number, bob: number): void {
   rect(g, 5, 2 + y0, 6, 1, C.cloak);
   rect(g, 4, 3 + y0, 3, 8, C.cloakDark);
   rect(g, 8, 5 + y0, 4, 5, C.skin);
-  rect(g, 8, 5 + y0, 4, 1, C.hair);
-  px(g, 10, 7 + y0, C.eye);
-  px(g, 11, 8 + y0, C.skinDark);
+  rect(g, 8, 5 + y0, 4, 1, C.cloakDark);
+  rect(g, 8, 6 + y0, 3, 1, C.hair);
+  px(g, 9, 7 + y0, C.skinLight);
+  px(g, 10, 8 + y0, C.eye);
+  px(g, 8, 3 + y0, C.cloakLight);
+  px(g, 9, 2 + y0, C.cloakLight);
+  px(g, 12, 8 + y0, C.skinDark);
   rect(g, 8, 9 + y0, 3, 1, C.skinDark);
 }
 
@@ -157,7 +168,13 @@ export function paintHeroFrame(sink: PixelSink, ox: number, oy: number, pose: He
   for (let y = 0; y < HERO_H; y++) {
     for (let x = 0; x < HERO_W; x++) {
       if (solid(x, y)) sink.set(ox + x, oy + y, g[y * HERO_W + x] as number);
-      else if (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1)) sink.set(ox + x, oy + y, C.ink);
+      else {
+        const near = [g[y * HERO_W + x - 1], g[y * HERO_W + x + 1], g[(y - 1) * HERO_W + x], g[(y + 1) * HERO_W + x]].find(
+          (c, i) => c != null && (i === 0 ? x > 0 : i === 1 ? x < HERO_W - 1 : i === 2 ? y > 0 : y < HERO_H - 1),
+        );
+        // Contour « sélectif » : la teinte du voisin, assombrie, plutôt qu'un noir uniforme.
+        if (near != null) sink.set(ox + x, oy + y, mixColor(near, C.ink, 0.72));
+      }
     }
   }
 }

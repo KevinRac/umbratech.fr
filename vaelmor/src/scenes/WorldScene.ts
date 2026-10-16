@@ -8,7 +8,7 @@
  * ces fonctions et dessiner le résultat.
  */
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../core/config';
+import { WORLD_HEIGHT as GAME_HEIGHT, WORLD_WIDTH as GAME_WIDTH } from '../core/config';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getWorldState, setWorldState } from '../core/session';
@@ -21,6 +21,7 @@ import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '.
 import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker } from '../logic/world/zones';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
+import { setLogicalSize } from '../render/displayScaler';
 import { createAmbience } from '../render/ambience';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
@@ -95,6 +96,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(data: WorldSceneData = {}): void {
+    setLogicalSize(this.game, GAME_WIDTH, GAME_HEIGHT);
     try {
       this.data_ = loadGameData();
       const raw = this.cache.tilemap.get(WORLD_MAP_KEY)?.data as unknown;
@@ -209,8 +211,9 @@ export class WorldScene extends Phaser.Scene {
     this.zonePanel = drawPanel(this, 4, 4, 120, 18).setScrollFactor(0).setDepth(DEPTH.hud).setAlpha(0.9);
     this.zoneLabel = addText(this, 11, 7, '', { font: 'small', color: PALETTE.parchemin }).setScrollFactor(0).setDepth(DEPTH.hud + 1) as PixelText;
 
+    const hintBar = this.add.rectangle(0, GAME_HEIGHT - 14, GAME_WIDTH, 14, PALETTE.nuit, 0.6).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.hud);
     const hint = addText(this, 8, GAME_HEIGHT - 12, 'ZQSD / flèches : marcher   Maj : courir   Échap : pause', { font: 'small', color: PALETTE.metalClair }).setScrollFactor(0).setDepth(DEPTH.hud);
-    this.tweens.add({ targets: hint, alpha: 0, delay: HINT_DURATION_MS, duration: 800, onComplete: () => hint.destroy() });
+    this.tweens.add({ targets: [hint, hintBar], alpha: 0, delay: HINT_DURATION_MS, duration: 800, onComplete: () => { hint.destroy(); hintBar.destroy(); } });
   }
 
   /* ---------- Boucle ---------- */
@@ -302,13 +305,13 @@ export class WorldScene extends Phaser.Scene {
   private showBanner(title: string, subtitle: string, holdMs: number): void {
     this.banner?.destroy(true);
     const container = this.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH.banner);
-    const titleText = addText(this, GAME_WIDTH / 2, 40, title, { scale: 2, color: PALETTE.parchemin, align: 'center' });
+    const titleText = addText(this, GAME_WIDTH / 2, 30, title, { font: 'title', color: PALETTE.parchemin, align: 'center' });
     container.add(titleText);
     const width = Math.ceil(titleText.width);
     const lineX = Math.round(GAME_WIDTH / 2 - width / 2 - 6);
-    const line = this.add.rectangle(lineX, 62, width + 12, 1, PALETTE.ambre, 0.9).setOrigin(0, 0);
+    const line = this.add.rectangle(lineX, 48, width + 12, 1, PALETTE.ambre, 0.9).setOrigin(0, 0);
     container.add(line);
-    if (subtitle) container.add(addText(this, GAME_WIDTH / 2, 66, subtitle, { font: 'small', color: PALETTE.cyanEclat, align: 'center' }));
+    if (subtitle) container.add(addText(this, GAME_WIDTH / 2, 53, subtitle, { font: 'small', color: PALETTE.cyanEclat, align: 'center' }));
     container.setAlpha(0);
     this.banner = container;
     this.tweens.chain({
@@ -453,8 +456,8 @@ export class WorldScene extends Phaser.Scene {
     this.paused = true;
     const width = 150;
     const x = Math.round((GAME_WIDTH - width) / 2);
-    const y = 86;
     const lineHeight = 17;
+    const y = Math.round((GAME_HEIGHT - (2 * lineHeight + 38)) / 2);
     const items = [
       { label: 'Reprendre', onSelect: () => this.closePause() },
       { label: 'Retour au titre', onSelect: () => this.backToTitle() },
