@@ -43,6 +43,21 @@
       letter-spacing: 0.06em;
     }
     p { line-height: 1.6; margin: 0 0 22px; }
+    .play {
+      display: inline-block;
+      margin-bottom: 18px;
+      padding: 12px 34px;
+      border: 1px solid var(--ember);
+      border-radius: 4px;
+      background: linear-gradient(#2a1d2e, #1a1424);
+      color: #f2e9d4;
+      font-size: 1.15rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-decoration: none;
+      box-shadow: 0 0 18px rgba(224, 123, 57, 0.35);
+    }
+    .play:hover, .play:focus-visible { background: linear-gradient(#3a2536, #241a30); box-shadow: 0 0 26px rgba(224, 123, 57, 0.6); }
     .badge {
       display: inline-block;
       padding: 8px 18px;
@@ -61,7 +76,8 @@
     <h1>Vaelmor</h1>
     <h2>Les Marées de Cendre</h2>
     <p>RPG tactique en monde ouvert, fantasy médiévale, jouable dans le navigateur.</p>
-    <span class="badge">Prototype en préparation</span>
+    <a class="play" href="play/">Jouer</a><br />
+    <span class="badge">Prototype · jalon M0</span>
     <p style="margin-top:28px;font-size:0.9rem;">
       <a href="docs/GDD_Vaelmor.md">Game Design Document</a>
     </p>

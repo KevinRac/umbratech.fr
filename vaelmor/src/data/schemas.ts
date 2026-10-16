@@ -1,0 +1,220 @@
+/**
+ * Schémas Zod des fichiers de données (`vaelmor/data/*.json`).
+ *
+ * Règles :
+ * - Objets stricts : une clé inconnue est une erreur (attrape les fautes de frappe).
+ * - Identifiants en snake_case ASCII (`gardien_des_marees`).
+ * - Chaque fichier peut porter un `$comment` libre.
+ * Ce module est « pur » : ni DOM ni Phaser (vérifié par tsconfig.pure.json).
+ */
+import { z } from 'zod';
+
+export const idSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9_]*$/, 'identifiant attendu en snake_case ASCII (ex. « gardien_des_marees »)');
+
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i, 'couleur attendue au format #rrggbb');
+const percent = z.number().int().min(0).max(100);
+const comment = z.string().optional();
+
+/* ---------- Éléments ---------- */
+
+export const elementSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  beats: idSchema.nullable(),
+  color: hexColor,
+});
+
+export const elementsFileSchema = z.strictObject({
+  $comment: comment,
+  elements: z.array(elementSchema).min(1),
+});
+
+/* ---------- Terrains ---------- */
+
+export const terrainSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  moveCost: z.number().int().min(1).nullable(),
+  defense: z.number().int(),
+  avoid: z.number().int(),
+  heal: z.number().min(0).max(1),
+  tags: z.array(idSchema),
+});
+
+export const terrainsFileSchema = z.strictObject({
+  $comment: comment,
+  terrains: z.array(terrainSchema).min(1),
+});
+
+/* ---------- Réputation ---------- */
+
+export const reputationTierSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  min: z.number().int(),
+  max: z.number().int(),
+  priceMultiplier: z.number().positive(),
+  refusesTrade: z.boolean(),
+  color: hexColor,
+});
+
+export const reputationFileSchema = z.strictObject({
+  $comment: comment,
+  min: z.number().int(),
+  max: z.number().int(),
+  tiers: z.array(reputationTierSchema).min(1),
+  decay: z.strictObject({
+    threshold: z.number().int().min(0),
+    stepPerVisit: z.number().int().min(0),
+  }),
+  sellRatio: z.number().min(0).max(1),
+});
+
+/* ---------- Équilibrage ---------- */
+
+const clampedGain = z.strictObject({
+  base: z.number(),
+  perLevelGap: z.number(),
+  min: z.number(),
+  max: z.number(),
+});
+
+export const balanceFileSchema = z.strictObject({
+  $comment: comment,
+  exploration: z.strictObject({
+    tileSize: z.number().int().positive(),
+    walkSpeed: z.number().positive(),
+    sprintSpeed: z.number().positive(),
+    accelerationMs: z.number().min(0),
+    sprintDetectionMultiplier: z.number().positive(),
+    forestDetectionMultiplier: z.number().positive(),
+  }),
+  combat: z.strictObject({
+    hitChanceMin: percent,
+    hitChanceMax: percent,
+    critMultiplier: z.number().positive(),
+    doubleAttackSpeedGap: z.number().int().min(1),
+    elementAdvantage: z.strictObject({ damage: z.number().int(), hit: z.number().int() }),
+    effectiveMultiplier: z.number().positive(),
+    resonance: z.strictObject({
+      max: z.number().int().positive(),
+      perAttack: z.number().int().min(0),
+      perHitTaken: z.number().int().min(0),
+    }),
+  }),
+  xp: z.strictObject({
+    perLevel: z.number().int().positive(),
+    nonLethal: clampedGain,
+    kill: clampedGain,
+    bossKillBonus: z.number().int().min(0),
+    heal: z.number().int().min(0),
+    support: z.number().int().min(0),
+    victoryBonus: z.number().int().min(0),
+    catchUp: z.strictObject({ levelsBelowTeamAverage: z.number().int().positive(), multiplier: z.number().positive() }),
+    overLevel: z.strictObject({ levelsAboveZone: z.number().int().positive(), multiplier: z.number().positive() }),
+  }),
+  levels: z.strictObject({
+    baseClassCap: z.number().int().positive(),
+    advancedClassCap: z.number().int().positive(),
+    promotionMinLevel: z.number().int().positive(),
+  }),
+  defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1) }),
+  injury: z.strictObject({ mobilityPenalty: z.number().int().min(0), statPenaltyRatio: z.number().min(0).max(1) }),
+});
+
+/* ---------- Classes ---------- */
+
+/** Les 12 rôles exigés par le GDD (§10.2) : chacun doit être couvert. */
+export const CLASS_ROLES = [
+  'tank',
+  'degats_melee',
+  'degats_distance',
+  'magie_offensive',
+  'soin',
+  'soutien',
+  'controle',
+  'mobilite',
+  'invocation',
+  'terrain',
+  'anti_armure',
+  'tueur_de_boss',
+] as const;
+
+export const STAT_KEYS = ['pv', 'fo', 'mag', 'dex', 'vit', 'def', 'res', 'chc', 'mob'] as const;
+export const GROWTH_KEYS = ['pv', 'fo', 'mag', 'dex', 'vit', 'def', 'res', 'chc'] as const;
+
+const statBlock = z.strictObject({
+  pv: z.number().int().min(1),
+  fo: z.number().int().min(0),
+  mag: z.number().int().min(0),
+  dex: z.number().int().min(0),
+  vit: z.number().int().min(0),
+  def: z.number().int().min(0),
+  res: z.number().int().min(0),
+  chc: z.number().int().min(0),
+  mob: z.number().int().min(1),
+});
+
+const growthBlock = z.strictObject({
+  pv: percent,
+  fo: percent,
+  mag: percent,
+  dex: percent,
+  vit: percent,
+  def: percent,
+  res: percent,
+  chc: percent,
+});
+
+export const classSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  role: z.enum(CLASS_ROLES),
+  description: z.string().min(1),
+  weapon: z.strictObject({
+    type: idSchema,
+    name: z.string().min(1),
+    range: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    damage: z.enum(['physique', 'magique']),
+  }),
+  element: idSchema.nullable(),
+  armor: z.enum(['legere', 'lourde']),
+  resource: z
+    .strictObject({
+      id: idSchema,
+      name: z.string().min(1),
+      perBattle: z.number().int().positive().optional(),
+    })
+    .optional(),
+  baseStats: statBlock,
+  growths: growthBlock,
+  evolutions: z
+    .array(
+      z.strictObject({
+        id: idSchema,
+        name: z.string().min(1),
+        condition: z.string().min(1),
+      }),
+    )
+    .length(2, 'chaque classe doit avoir exactement 2 évolutions'),
+});
+
+export const classesFileSchema = z.strictObject({
+  $comment: comment,
+  classes: z.array(classSchema).min(1),
+});
+
+/* ---------- Types dérivés ---------- */
+
+export type ElementDef = z.infer<typeof elementSchema>;
+export type TerrainDef = z.infer<typeof terrainSchema>;
+export type ReputationTier = z.infer<typeof reputationTierSchema>;
+export type ReputationConfig = z.infer<typeof reputationFileSchema>;
+export type BalanceConfig = z.infer<typeof balanceFileSchema>;
+export type ClassDef = z.infer<typeof classSchema>;
+export type ClassRole = (typeof CLASS_ROLES)[number];
+export type StatKey = (typeof STAT_KEYS)[number];
+export type StatBlock = z.infer<typeof statBlock>;
+export type GrowthBlock = z.infer<typeof growthBlock>;

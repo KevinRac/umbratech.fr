@@ -1,0 +1,9 @@
+{
+  "//": "Couches pures (logic/ et data/) : sans DOM ni Phaser. Toute API du navigateur y provoque une erreur de compilation.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/logic", "src/data"]
+}

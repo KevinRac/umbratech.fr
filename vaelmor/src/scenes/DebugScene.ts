@@ -1,0 +1,63 @@
+/**
+ * Outil de debug superposé à toutes les scènes (GDD §16.2, module Debug).
+ * F3 (ou `?debug` dans l'URL) : affiche/masque FPS, échelle, scène active et version.
+ * Les outils de test (téléport, niveau…) s'y ajouteront aux jalons suivants.
+ */
+import Phaser from 'phaser';
+import { GAME_VERSION, MILESTONE } from '../core/config';
+import { ActionInput } from '../core/input';
+import { getDisplayScale } from '../render/displayScaler';
+import { PALETTE } from '../render/palette';
+import { addText, setText, type PixelText } from '../ui/text';
+import { SCENES } from './keys';
+
+export class DebugScene extends Phaser.Scene {
+  private actions!: ActionInput;
+  private label!: PixelText;
+  private background!: Phaser.GameObjects.Rectangle;
+  private elapsed = 0;
+
+  constructor() {
+    super({ key: SCENES.debug, active: false });
+  }
+
+  create(): void {
+    this.actions = new ActionInput(this);
+    this.background = this.add.rectangle(2, 2, 10, 10, PALETTE.encre, 0.75).setOrigin(0, 0);
+    this.label = addText(this, 5, 4, '', { font: 'small', color: PALETTE.cyanEclat, shadow: false });
+    this.setVisible(new URLSearchParams(window.location.search).has('debug'));
+    this.scene.bringToTop();
+  }
+
+  override update(_time: number, delta: number): void {
+    if (this.actions.justPressed('debug')) this.setVisible(!this.label.visible);
+    if (!this.label.visible) return;
+    this.elapsed += delta;
+    if (this.elapsed < 250) return;
+    this.elapsed = 0;
+
+    const scale = getDisplayScale();
+    const active = this.game.scene
+      .getScenes(true)
+      .map((s) => s.scene.key)
+      .filter((k) => k !== SCENES.debug)
+      .join(', ');
+    setText(
+      this.label,
+      [
+        `FPS ${Math.round(this.game.loop.actualFps)}`,
+        `ÉCHELLE ×${scale.pixelsPerGamePixel} (DPR ${window.devicePixelRatio || 1})`,
+        `SCÈNE ${active || '-'}`,
+        `V${GAME_VERSION} ${MILESTONE}`,
+      ].join('\n'),
+    );
+    this.background.setSize(Math.ceil(this.label.width) + 7, Math.ceil(this.label.height) + 4);
+    this.scene.bringToTop();
+  }
+
+  private setVisible(visible: boolean): void {
+    this.label.setVisible(visible);
+    this.background.setVisible(visible);
+    this.elapsed = 1000;
+  }
+}

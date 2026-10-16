@@ -1,0 +1,18 @@
+{
+  "$comment": "Échelle de réputation (GDD §6.2) et décroissance (§6.3, décision n°10). Les paliers doivent couvrir [min, max] sans trou ni chevauchement.",
+  "min": -100,
+  "max": 100,
+  "tiers": [
+    { "id": "hostile", "name": "Hostile", "min": -100, "max": -61, "priceMultiplier": 1.5, "refusesTrade": true, "color": "#c0392b" },
+    { "id": "mefiant", "name": "Méfiant", "min": -60, "max": -21, "priceMultiplier": 1.2, "refusesTrade": false, "color": "#e07b39" },
+    { "id": "neutre", "name": "Neutre", "min": -20, "max": 20, "priceMultiplier": 1.0, "refusesTrade": false, "color": "#c9bfa9" },
+    { "id": "amical", "name": "Amical", "min": 21, "max": 50, "priceMultiplier": 0.95, "refusesTrade": false, "color": "#9cc55a" },
+    { "id": "allie", "name": "Allié", "min": 51, "max": 80, "priceMultiplier": 0.85, "refusesTrade": false, "color": "#5fb3d9" },
+    { "id": "heros_local", "name": "Héros local", "min": 81, "max": 100, "priceMultiplier": 0.75, "refusesTrade": false, "color": "#e3c36b" }
+  ],
+  "decay": {
+    "threshold": 50,
+    "stepPerVisit": 1
+  },
+  "sellRatio": 0.4
+}

@@ -1,0 +1,4 @@
+node_modules/
+*.log
+.vite/
+# play/ est volontairement commité (décision n°29 : le serveur ne compile pas).

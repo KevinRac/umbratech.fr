@@ -1,0 +1,192 @@
+{
+  "$comment": "12 classes de départ et 24 évolutions (GDD §10). Stats de base = niveau 1 (§10.3) ; croissances en % (§10.4). Les bonus de promotion, croissances avancées et compétences seront ajoutés au jalon M6.",
+  "classes": [
+    {
+      "id": "gardien_des_marees",
+      "name": "Gardien des Marées",
+      "role": "tank",
+      "description": "Sentinelle des digues, formée à tenir un quai sous la tempête. Bouclier-tour et lance d'estoc courte.",
+      "weapon": { "type": "lance_courte", "name": "Lance courte", "range": [1, 2], "damage": "physique" },
+      "element": "maree",
+      "armor": "lourde",
+      "baseStats": { "pv": 24, "fo": 6, "mag": 0, "dex": 4, "vit": 3, "def": 8, "res": 3, "chc": 3, "mob": 4 },
+      "growths": { "pv": 90, "fo": 50, "mag": 5, "dex": 40, "vit": 25, "def": 65, "res": 30, "chc": 25 },
+      "evolutions": [
+        { "id": "rempart_de_recif", "name": "Rempart de Récif", "condition": "Défendre un village (quête « Le phare éteint » ou embuscade vaincue avec ce Gardien à ≥ 50 % PV)." },
+        { "id": "sentinelle_des_abysses", "name": "Sentinelle des Abysses", "condition": "Port-Brume ≥ Amical et Sœur Mérrow vaincue avec ce Gardien déployé." }
+      ]
+    },
+    {
+      "id": "lame_du_serment",
+      "name": "Lame du Serment",
+      "role": "degats_melee",
+      "description": "Épéiste liée par serment à une cause ; plus elle respecte son serment, plus elle frappe fort.",
+      "weapon": { "type": "epee", "name": "Épée", "range": [1, 1], "damage": "physique" },
+      "element": null,
+      "armor": "legere",
+      "resource": { "id": "serment", "name": "Serment" },
+      "baseStats": { "pv": 20, "fo": 7, "mag": 0, "dex": 7, "vit": 7, "def": 4, "res": 2, "chc": 4, "mob": 5 },
+      "growths": { "pv": 80, "fo": 60, "mag": 0, "dex": 55, "vit": 55, "def": 30, "res": 20, "chc": 35 },
+      "evolutions": [
+        { "id": "champion_du_serment", "name": "Champion du Serment", "condition": "Respecter le Serment pendant 5 combats." },
+        { "id": "executeur_lige", "name": "Exécuteur Lige", "condition": "Tuer 3 ennemis d'affilée pendant un Serment brisé." }
+      ]
+    },
+    {
+      "id": "veilleur_des_falaises",
+      "name": "Veilleur des Falaises",
+      "role": "degats_distance",
+      "description": "Archer perché des hauteurs, expert du tir précis par vent fort.",
+      "weapon": { "type": "arc", "name": "Arc long", "range": [2, 2], "damage": "physique" },
+      "element": null,
+      "armor": "legere",
+      "baseStats": { "pv": 18, "fo": 5, "mag": 0, "dex": 9, "vit": 6, "def": 3, "res": 2, "chc": 5, "mob": 5 },
+      "growths": { "pv": 70, "fo": 45, "mag": 0, "dex": 65, "vit": 50, "def": 25, "res": 20, "chc": 40 },
+      "evolutions": [
+        { "id": "faucon_de_vent", "name": "Faucon de Vent", "condition": "20 ennemis vaincus à l'arc à distance ≥ 3." },
+        { "id": "tireur_de_brume", "name": "Tireur de Brume", "condition": "Explorer la zone Z3 et vaincre un ennemi caché dans le brouillard." }
+      ]
+    },
+    {
+      "id": "heritier_des_cendres",
+      "name": "Héritier des Cendres",
+      "role": "magie_offensive",
+      "description": "Mage issu des lignées de Cendrelune, héritier d'un feu froid qui consume tout.",
+      "weapon": { "type": "tome", "name": "Tome des Cendres", "range": [1, 2], "damage": "magique" },
+      "element": "cendre",
+      "armor": "legere",
+      "baseStats": { "pv": 16, "fo": 0, "mag": 8, "dex": 6, "vit": 5, "def": 2, "res": 6, "chc": 3, "mob": 5 },
+      "growths": { "pv": 60, "fo": 0, "mag": 65, "dex": 45, "vit": 40, "def": 15, "res": 40, "chc": 30 },
+      "evolutions": [
+        { "id": "maitre_de_braise", "name": "Maître de Braise", "condition": "Brûler 15 ennemis." },
+        { "id": "spectre_de_cendre", "name": "Spectre de Cendre", "condition": "Vaincre un boss avec cette unité sous 5 PV." }
+      ]
+    },
+    {
+      "id": "porte_lanterne",
+      "name": "Porte-Lanterne",
+      "role": "soin",
+      "description": "Prêtre ou prêtresse des Veilleurs, soigne par la lumière et repousse la Brume.",
+      "weapon": { "type": "baton", "name": "Bâton-lanterne", "range": [1, 2], "damage": "magique" },
+      "element": "lanterne",
+      "armor": "legere",
+      "baseStats": { "pv": 17, "fo": 0, "mag": 5, "dex": 5, "vit": 5, "def": 2, "res": 8, "chc": 6, "mob": 5 },
+      "growths": { "pv": 65, "fo": 0, "mag": 55, "dex": 40, "vit": 40, "def": 15, "res": 60, "chc": 50 },
+      "evolutions": [
+        { "id": "archi_lanterne", "name": "Archi-Lanterne", "condition": "Soigner 500 PV au total." },
+        { "id": "veilleuse_des_ames", "name": "Veilleuse des Âmes", "condition": "Terminer la quête « Les lanternes éteintes »." }
+      ]
+    },
+    {
+      "id": "heraut_des_bannieres",
+      "name": "Héraut des Bannières",
+      "role": "soutien",
+      "description": "Porteur de bannière et de chant ; il électrise la compagnie.",
+      "weapon": { "type": "banniere", "name": "Bannière-lance", "range": [1, 1], "damage": "physique" },
+      "element": null,
+      "armor": "legere",
+      "resource": { "id": "fanfare", "name": "Fanfare" },
+      "baseStats": { "pv": 18, "fo": 3, "mag": 3, "dex": 6, "vit": 6, "def": 3, "res": 5, "chc": 7, "mob": 5 },
+      "growths": { "pv": 70, "fo": 25, "mag": 25, "dex": 45, "vit": 45, "def": 25, "res": 40, "chc": 55 },
+      "evolutions": [
+        { "id": "marechal_de_cendre", "name": "Maréchal de Cendre", "condition": "Réputation Couronne ≥ Amical." },
+        { "id": "chantre_des_saisons", "name": "Chantre des Saisons", "condition": "Réputation Racines ≥ Amical." }
+      ]
+    },
+    {
+      "id": "alchimiste_des_saisons",
+      "name": "Alchimiste des Saisons",
+      "role": "controle",
+      "description": "Il distille des fioles liées aux quatre saisons : gel, poison, éclat, vent.",
+      "weapon": { "type": "fioles", "name": "Fioles", "range": [1, 2], "damage": "magique" },
+      "element": null,
+      "armor": "legere",
+      "resource": { "id": "saisons", "name": "Cycle des Saisons" },
+      "baseStats": { "pv": 16, "fo": 2, "mag": 6, "dex": 6, "vit": 5, "def": 2, "res": 6, "chc": 4, "mob": 5 },
+      "growths": { "pv": 60, "fo": 10, "mag": 60, "dex": 50, "vit": 40, "def": 15, "res": 45, "chc": 35 },
+      "evolutions": [
+        { "id": "grand_alchimiste_du_gel", "name": "Grand Alchimiste du Gel", "condition": "Étourdir 15 ennemis." },
+        { "id": "distillateur_de_venin", "name": "Distillateur de Venin", "condition": "Empoisonner un boss." }
+      ]
+    },
+    {
+      "id": "danseur_des_courants",
+      "name": "Danseur des Courants",
+      "role": "mobilite",
+      "description": "Il danse sur les flots et traverse l'eau sans couler ; éclaireur et harceleur.",
+      "weapon": { "type": "dagues", "name": "Dagues jumelles", "range": [1, 1], "damage": "physique" },
+      "element": null,
+      "armor": "legere",
+      "resource": { "id": "fil_d_eau", "name": "Fil d'eau" },
+      "baseStats": { "pv": 17, "fo": 4, "mag": 0, "dex": 8, "vit": 10, "def": 2, "res": 3, "chc": 6, "mob": 7 },
+      "growths": { "pv": 65, "fo": 40, "mag": 0, "dex": 55, "vit": 65, "def": 15, "res": 25, "chc": 45 },
+      "evolutions": [
+        { "id": "fil_de_vent", "name": "Fil-de-Vent", "condition": "Parcourir 100 cases sur l'eau." },
+        { "id": "tempete_dansante", "name": "Tempête-Dansante", "condition": "Réussir 10 doubles attaques au total." }
+      ]
+    },
+    {
+      "id": "invocateur_de_pierres_anciennes",
+      "name": "Invocateur de Pierres Anciennes",
+      "role": "invocation",
+      "description": "Il éveille des menhirs et des gardiens de pierre en échange d'une part de sa vitalité.",
+      "weapon": { "type": "baton", "name": "Bâton-menhir", "range": [1, 2], "damage": "magique" },
+      "element": "pierre",
+      "armor": "legere",
+      "resource": { "id": "pierres", "name": "Pierres", "perBattle": 3 },
+      "baseStats": { "pv": 17, "fo": 0, "mag": 7, "dex": 5, "vit": 3, "def": 3, "res": 6, "chc": 3, "mob": 5 },
+      "growths": { "pv": 65, "fo": 0, "mag": 60, "dex": 40, "vit": 25, "def": 25, "res": 45, "chc": 25 },
+      "evolutions": [
+        { "id": "eveilleur_de_colosse", "name": "Éveilleur de Colosse", "condition": "Réaliser 10 invocations." },
+        { "id": "chuchoteur_de_menhirs", "name": "Chuchoteur de Menhirs", "condition": "Visiter 3 menhirs sur l'île." }
+      ]
+    },
+    {
+      "id": "faconneur_de_racines",
+      "name": "Façonneur de Racines",
+      "role": "terrain",
+      "description": "Il fait croître racines et ronces pour redessiner le champ de bataille.",
+      "weapon": { "type": "baton", "name": "Bâton-branche", "range": [1, 2], "damage": "magique" },
+      "element": "racine",
+      "armor": "legere",
+      "baseStats": { "pv": 19, "fo": 2, "mag": 5, "dex": 5, "vit": 4, "def": 4, "res": 5, "chc": 3, "mob": 5 },
+      "growths": { "pv": 75, "fo": 15, "mag": 45, "dex": 40, "vit": 30, "def": 35, "res": 40, "chc": 25 },
+      "evolutions": [
+        { "id": "sylvarque", "name": "Sylvarque", "condition": "Terminer la quête « Le Roi-Cerf souffre »." },
+        { "id": "tisseur_de_ronces", "name": "Tisseur de Ronces", "condition": "Infliger 100 dégâts via les ronces." }
+      ]
+    },
+    {
+      "id": "ingenieur_des_ruines",
+      "name": "Ingénieur des Ruines",
+      "role": "anti_armure",
+      "description": "Technicien de reliques anciennes, avec arbalète à vérin et charges de pierre-foudre.",
+      "weapon": { "type": "arbalete", "name": "Arbalète", "range": [2, 2], "damage": "physique" },
+      "element": null,
+      "armor": "legere",
+      "resource": { "id": "charges", "name": "Charges", "perBattle": 4 },
+      "baseStats": { "pv": 19, "fo": 6, "mag": 0, "dex": 8, "vit": 4, "def": 5, "res": 2, "chc": 4, "mob": 5 },
+      "growths": { "pv": 75, "fo": 45, "mag": 0, "dex": 55, "vit": 30, "def": 40, "res": 15, "chc": 30 },
+      "evolutions": [
+        { "id": "artificier_sapeur", "name": "Artificier Sapeur", "condition": "Détruire 10 armures lourdes." },
+        { "id": "maitre_de_siege", "name": "Maître de Siège", "condition": "Visiter l'Aiguille brisée." }
+      ]
+    },
+    {
+      "id": "chasseur_de_serpents_de_mer",
+      "name": "Chasseur de Serpents de Mer",
+      "role": "tueur_de_boss",
+      "description": "Harponneur expérimenté, spécialiste des monstres colossaux.",
+      "weapon": { "type": "harpon", "name": "Harpon lourd", "range": [1, 2], "damage": "physique" },
+      "element": null,
+      "armor": "legere",
+      "resource": { "id": "prise", "name": "Prise" },
+      "baseStats": { "pv": 21, "fo": 8, "mag": 0, "dex": 5, "vit": 4, "def": 4, "res": 1, "chc": 3, "mob": 5 },
+      "growths": { "pv": 85, "fo": 60, "mag": 0, "dex": 40, "vit": 30, "def": 35, "res": 10, "chc": 25 },
+      "evolutions": [
+        { "id": "harponneur_abyssal", "name": "Harponneur Abyssal", "condition": "Vaincre Sœur Mérrow." },
+        { "id": "traqueur_de_leviathans", "name": "Traqueur de Léviathans", "condition": "Vaincre 3 boss." }
+      ]
+    }
+  ]
+}

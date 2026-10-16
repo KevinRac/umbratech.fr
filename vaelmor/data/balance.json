@@ -1,0 +1,43 @@
+{
+  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). Toute valeur de réglage passe par ce fichier.",
+  "exploration": {
+    "tileSize": 16,
+    "walkSpeed": 80,
+    "sprintSpeed": 120,
+    "accelerationMs": 80,
+    "sprintDetectionMultiplier": 2,
+    "forestDetectionMultiplier": 0.6
+  },
+  "combat": {
+    "hitChanceMin": 5,
+    "hitChanceMax": 100,
+    "critMultiplier": 3,
+    "doubleAttackSpeedGap": 4,
+    "elementAdvantage": { "damage": 2, "hit": 15 },
+    "effectiveMultiplier": 1.5,
+    "resonance": { "max": 100, "perAttack": 20, "perHitTaken": 10 }
+  },
+  "xp": {
+    "perLevel": 100,
+    "nonLethal": { "base": 8, "perLevelGap": 2, "min": 1, "max": 20 },
+    "kill": { "base": 20, "perLevelGap": 4, "min": 5, "max": 100 },
+    "bossKillBonus": 40,
+    "heal": 15,
+    "support": 10,
+    "victoryBonus": 20,
+    "catchUp": { "levelsBelowTeamAverage": 3, "multiplier": 1.25 },
+    "overLevel": { "levelsAboveZone": 5, "multiplier": 0.5 }
+  },
+  "levels": {
+    "baseClassCap": 20,
+    "advancedClassCap": 30,
+    "promotionMinLevel": 10
+  },
+  "defeat": {
+    "goldLossRatio": 0.1
+  },
+  "injury": {
+    "mobilityPenalty": 2,
+    "statPenaltyRatio": 0.1
+  }
+}

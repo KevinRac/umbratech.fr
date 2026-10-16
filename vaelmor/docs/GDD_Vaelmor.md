@@ -1255,7 +1255,7 @@ Messages brefs en haut : « +15 Réputation (Haut-Gué) », « Niveau 4 ! », «
 
 **Plan B** : si le projet doit à terme devenir une application mobile/console, la logique pure en TS reste réutilisable, et un portage vers Godot ou Pixi reste faisable (c'est l'intérêt de la séparation).
 
-> Note : la version exacte de Phaser (3.x stable ou version suivante) sera vérifiée au démarrage du développement (décision n°1).
+> Note : version retenue au démarrage du développement : **Phaser 4.2.1** (décision n°31).
 
 ---
 
@@ -1447,6 +1447,7 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 
 29. **Hébergement** (16/10/2026) : le jeu compilé est servi sur `umbratech.fr/vaelmor/play/`. Le serveur fait un simple `git pull` du dépôt, sans étape de build : la sortie du build (`vaelmor/play/`) est donc commitée. La page d'attente reste sur `/vaelmor/` avec un lien « Jouer ».
 30. **Musique** (précision de la n°23) : les pistes sont générées avec Suno par l'auteur (voir `music/README.md`) ; chaque piste retenue est tracée dans `CREDITS.md`.
+31. **Version de Phaser** (16/10/2026, précision de la n°1) : **Phaser 4** (4.2.1). La branche 3.x n'évolue plus depuis la 3.90 (mai 2025) ; Phaser 4 est stable depuis avril 2026, garde la même API de haut niveau et apporte un nouveau moteur de rendu (filtres, éclairage) utile au pilier « Beauté d'abord ». Le reste de la pile n° 1 est inchangé (TypeScript, Vite, Tiled).
 
 ---
 

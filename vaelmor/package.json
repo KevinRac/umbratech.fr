@@ -1,0 +1,31 @@
+{
+  "name": "vaelmor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vaelmor : Les Marées de Cendre — RPG tactique en monde ouvert (prototype navigateur)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run check && vite build",
+    "check": "npm run validate-data && npm run typecheck && npm test",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.pure.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate-data": "tsx tools/validate-data.ts"
+  },
+  "dependencies": {
+    "phaser": "4.2.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

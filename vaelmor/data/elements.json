@@ -1,0 +1,10 @@
+{
+  "$comment": "Éléments et triangle élémentaire (GDD §9.7, décision n°11) : Marée > Cendre > Racine > Marée. Pierre et Lanterne sont neutres. color : teinte des effets de sorts (§11.4).",
+  "elements": [
+    { "id": "maree", "name": "Marée", "beats": "cendre", "color": "#5fb3d9" },
+    { "id": "cendre", "name": "Cendre", "beats": "racine", "color": "#e07b39" },
+    { "id": "racine", "name": "Racine", "beats": "maree", "color": "#6fae4f" },
+    { "id": "pierre", "name": "Pierre", "beats": null, "color": "#a89a8a" },
+    { "id": "lanterne", "name": "Lanterne", "beats": null, "color": "#e3c36b" }
+  ]
+}
