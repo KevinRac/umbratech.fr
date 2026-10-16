@@ -8,7 +8,8 @@
  * prioritaire : la tuile de terre se découpe, laissant voir l'eau animée du
  * jeu, avec une berge sombre et un liseré d'écume.
  */
-import { ACCENT, RAMPS, line, speckle, type Ramp, type Rnd } from './art';
+import { groundRelief } from './relief';
+import { ACCENT, RAMPS, SHADE, line, speckle, type Ramp, type Rnd } from './art';
 import { mix, type Px } from './px';
 import { PALETTE as P } from '../../src/render/palette';
 import { paintWheatFrame } from '../../src/render/wheatTile';
@@ -108,6 +109,8 @@ function tuft(px: Px, x: number, y: number, dark: number, tip: number): void {
   px.set(x - 1, y - 1, dark);
   px.set(x + 1, y - 1, dark);
   px.set(x, y - 1, tip);
+  px.set(x - 1, y - 2, tip);
+  px.set(x + 1, y, mix(dark, SHADE, 0.45));
 }
 
 /** Teinte de fond : 3 tons très proches (0 neutre, 1 plus clair, 2 plus sombre) pour de larges nuances douces. */
@@ -378,6 +381,7 @@ const PAINTERS: Record<GroundKind, (px: Px, rnd: Rnd, variant: number) => void> 
 
 export function paintBase(px: Px, rnd: Rnd, kind: GroundKind, variant: number): void {
   PAINTERS[kind](px, rnd, variant);
+  if (kind !== 'pond' && kind !== 'field') groundRelief(px, variant, kind === 'grass' || kind === 'forest' ? 0.9 : 1.15);
 }
 
 /* ---------- Transitions et rivages ---------- */

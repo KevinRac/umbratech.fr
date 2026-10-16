@@ -6,6 +6,7 @@
  * - `canopyRows` : nombre de rangées du haut posées sur la couche `canopy`
  *   (dessinée SUR le héros) ; les autres vont dans `decor` (SOUS le héros).
  */
+import { propRelief } from './relief';
 import { hashString, mulberry32 } from './noise';
 import { ACCENT, INK, RAMPS, SHADE, ellipse, inkOf, line, outline, shadedBlob, speckle, type Ramp, type Rnd } from './art';
 import { mix, Px } from './px';
@@ -649,6 +650,7 @@ export function getStamp(name: string, variant = 0): Stamp {
   if (cached) return cached;
   const px = new Px(def.w * T, def.h * T);
   def.paint(px, mulberry32(hashString(`stamp:${key}`)), v);
+  propRelief(px);
   const blocked: boolean[] = [];
   for (let y = 0; y < def.h; y++) {
     for (let x = 0; x < def.w; x++) {

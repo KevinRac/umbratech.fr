@@ -163,6 +163,23 @@ export function paintHeroFrame(sink: PixelSink, ox: number, oy: number, pose: He
   if (pose === 'side') drawSide(g, frame, bob);
   else drawFrontBack(g, pose === 'up', step, bob);
 
+  // Relief : liseré clair sur les bords haut/gauche, ombre sur les bords bas/droite.
+  const filled = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < HERO_W && y < HERO_H && g[y * HERO_W + x] !== null;
+  const relief = new Map<number, number>();
+  for (let y = 0; y < HERO_H; y++) {
+    for (let x = 0; x < HERO_W; x++) {
+      const c = g[y * HERO_W + x];
+      if (c == null) continue;
+      const lit = !filled(x - 1, y) || !filled(x, y - 1);
+      const dark = !filled(x + 1, y) || !filled(x, y + 1);
+      if (lit && !dark) relief.set(y * HERO_W + x, mixColor(c, P.parchemin, 0.22));
+      else if (dark && !lit) relief.set(y * HERO_W + x, mixColor(c, P.nuitBleue, 0.3));
+    }
+  }
+  relief.forEach((c, i) => {
+    g[i] = c;
+  });
+
   // Contour.
   const solid = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < HERO_W && y < HERO_H && g[y * HERO_W + x] !== null;
   for (let y = 0; y < HERO_H; y++) {
