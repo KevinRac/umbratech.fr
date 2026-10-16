@@ -1768,7 +1768,7 @@ function openTitle(){
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.5</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.6</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -5356,7 +5356,7 @@ openTitle=function(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
  const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.5</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.6</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
  <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
  <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
  <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
@@ -6690,6 +6690,26 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 .bc .bn{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:var(--c);border:1px solid var(--c);opacity:.85}
 .bc h3{margin:0 34px 8px 0;font-size:19px;color:var(--c);line-height:1.2}
 .bc p{margin:0;font-size:16.5px;line-height:1.55;color:var(--bone)}
+`;document.head.appendChild(st);
+})();
+
+// ───────────────────────── v15.6 · portail : mise en page large, bouton toujours visible
+(function(){
+ const _rp=renderPortail;
+ renderPortail=function(){_rp.apply(this,arguments);
+  const panel=overlayEl.querySelector('.panel');const two=panel&&panel.querySelector('.two');if(!two||two.classList.contains('portal3'))return;
+  panel.classList.add('portal');two.classList.add('portal3');
+  const c1=two.children[0];const secs=[...c1.children];
+  const i=secs.findIndex(e=>e.classList&&e.classList.contains('h-sec')&&/Palier/.test(e.textContent));
+  if(i>0){const col=document.createElement('div');secs.slice(i).forEach(e=>col.appendChild(e));two.insertBefore(col,two.children[1]);}
+  const row=panel.querySelector('.row');if(row)row.classList.add('portalbar');};
+ const st=document.createElement('style');st.textContent=`
+.panel.portal{width:min(1500px,100%)}
+.portal3{grid-template-columns:minmax(300px,1.1fr) minmax(300px,1fr) minmax(260px,.8fr)!important;gap:clamp(16px,2.4vw,32px)!important}
+@media (max-width:1100px){.portal3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}}
+@media (max-width:760px){.portal3{grid-template-columns:1fr!important}}
+.portal .palbtn{padding:6px 12px}
+.portalbar{position:sticky;bottom:-1px;z-index:5;margin:18px -4px 0!important;padding:14px 4px 6px;background:linear-gradient(0deg,var(--panel) 80%,rgba(0,0,0,0));border-top:1px solid var(--line-hi)}
 `;document.head.appendChild(st);
 })();
 
