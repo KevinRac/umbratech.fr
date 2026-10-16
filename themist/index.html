@@ -6375,9 +6375,76 @@ window.__v14={SETS,RULES,AIDS,refreshSets,setRule,chron,chronBuild,openChron,sta
 // ───────────────────────── Démarrage
 function start(){resize();initTitle();requestAnimationFrame(frame);}
 // Accès de débogage pour les tests (console)
-window.__brume={get P(){return P;},get RUN(){return RUN;},get room(){return room;},get enemies(){return enemies;},get SAVE(){return SAVE;},xp:n=>gainXp(n),go:t=>{trans={phase:'out',t:0,type:t};},take:id=>takeNode(id),relic:id=>applyRelic(RELICS.find(r=>r.id===id)),killAll:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)hitEnemy(e,99999,{crit:false});},cls:c=>{chosenCls=c;},start:()=>startRun(),hub:()=>enterHub(),gold:n=>{RUN.goldF+=n;},shards:n=>{SAVE.shards+=n;},npc:id=>openNpc(id)};
+window.__brume={showToast:(...a)=>showToast(...a),showMur:(...a)=>showMur(...a),hideMsg:()=>{toastEl.classList.remove('show');if(murEl)murEl.classList.remove('show');},PBOON:()=>PBOON,PCONS:()=>PCONS,get P(){return P;},get RUN(){return RUN;},get room(){return room;},get enemies(){return enemies;},get SAVE(){return SAVE;},xp:n=>gainXp(n),go:t=>{trans={phase:'out',t:0,type:t};},take:id=>takeNode(id),relic:id=>applyRelic(RELICS.find(r=>r.id===id)),killAll:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)hitEnemy(e,99999,{crit:false});},cls:c=>{chosenCls=c;},start:()=>startRun(),hub:()=>enterHub(),gold:n=>{RUN.goldF+=n;},shards:n=>{SAVE.shards+=n;},npc:id=>openNpc(id)};
 Object.assign(window.__brume,{step:(dt,n=1)=>{for(let i=0;i<n;i++)step(dt);},nodes:()=>NODES,excl:()=>EXCL,bridges:()=>BR,rings:()=>rings,fxp:o=>fx.push(o),murmur:(a,b,c)=>murmur(a,b,c),toastP:(t)=>toastPause(t),fz:()=>freezeT,hp:()=>hintPaused,res:n=>{RZS().earned+=n;persist();},node:(id,on=true)=>{if(on)RZS().nodes[id]=1;else delete RZS().nodes[id];persist();},RZN,has:id=>has9(id),fin:(w,a)=>openEnd(w,a),hit:(e,d,o)=>hitEnemy(e,d,o||{}),create:(t,x,y,el)=>createEnemy(t,x,y,el),hurt:(d)=>hurtPlayer(d),theme:()=>room&&room.wtheme,doors:()=>room&&room.doors.map(d=>d.type),clearRoom:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)e.dead=true;room.waveI=room.waves.length;room.spawning=[];},frag:(s)=>giveFrag(s,W/2,H/2,0)});
 Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
+// ───────────────────────── v15.3 · lisibilité des textes (messages, équipements, pactes)
+(function(){
+ const COL={orange:'#ffa24a',violet:'#b48cff',cyan:'#4fe3ff',rouge:'#ff6b6b',bleu:'#6fb4ff',vert:'#8fe08a',jaune:'#ffd766',blanc:'#ffffff'};
+ const sentences=t=>String(t).split(/(?<=[.!?])\s+(?=[A-ZÉÈÀÂÎÔÛ«])/).map(x=>x.trim()).filter(Boolean);
+ // « Orange : zone · Violet : tirs » → une ligne par information, avec le mot-clé coloré
+ function rows(text,tone){
+  const out=[];
+  for(const seg of String(text).split(/\s+·\s+/)){
+   const ss=sentences(seg);
+   ss.forEach((sn,i)=>{
+    const m=sn.match(/^([A-ZÉÈÀa-zéèêàç’' -]{2,22})\s:\s(.+)$/);
+    if(m){const c=COL[m[1].trim().toLowerCase()];out.push(`<div class="mrow2"><b class="lab"${c?` style="color:${c};border-color:${c}"`:''}>${esc(m[1])}</b><span>${esc(m[2])}</span></div>`);}
+    else out.push(`<div class="mrow2 ${out.length&&i>0&&ss.length>1&&i===ss.length-1?'concl':'plain'}"><span>${esc(sn)}</span></div>`);
+   });}
+  return `<div class="mrows">${out.join('')}</div>`;}
+ window.__fmtRows=rows;
+ showToast=function(t,d,pause){
+  toastEl.innerHTML=rows(t)+(pause?'<span class="sub">Espace · Entrée · clic pour continuer</span>':'');
+  toastEl.classList.toggle('pause',!!pause);
+  stackBelow(toastEl,(()=>{try{return murEl;}catch(e){return null;}})());
+  toastEl.classList.add('show');clearTimeout(toastTimer);
+  if(!pause)toastTimer=setTimeout(()=>{toastEl.classList.remove('show');toastEl.classList.remove('pause');},d*1000);};
+ const _sm=showMur;
+ showMur=function(title,text,d,pause,who){
+  _sm.apply(this,arguments);
+  const sp=murEl&&murEl.querySelector('div>span');
+  if(sp){const w=document.createElement('div');w.innerHTML=rows(text);sp.replaceWith(w.firstChild);}};
+ // plus de texte = plus de temps de lecture
+ const _mp=msgPush;
+ msgPush=function(m){const len=(m.k==='t'?m.t:m.text||'').length;m.secs=clamp(2.6+len*0.06,3.6,10);return _mp(m);};
+
+ // équipements, sets et pacte : lignes courtes, gain / coût bien séparés
+ const ln=(k,t)=>`<div class="ln ${k}"><i>${k==='boon'?'+':'−'}</i><div>${sentences(t).map(x=>`<span>${esc(x)}</span>`).join('')}</div></div>`;
+ eqOne=function(id,tag){const E=EQS[id],R=RAR[E.r],extra=eqExtra(id);
+  return `<div class="eqpause" style="--c:rgb(${R.col})"><p class="eqh"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg><strong>${esc(E.n)}</strong></p><p class="eqr">${tag?'Emplacement '+tag+' · ':''}${R.n} · ${E.slot}</p>${ln('boon',E.up)}${ln('cons',E.down)}${extra?`<p class="eqx">${extra}</p>`:''}</div>`;};
+ setsDetail=function(){const on=Object.keys(SETS).filter(k=>P.sets&&P.sets[k]);if(!on.length)return '';return on.map(k=>`<div class="eqpause setp"><p class="eqh"><strong>Set · ${esc(SETS[k].n)}</strong></p>${ln('boon',SETS[k].d)}</div>`).join('');};
+ pactDetail=function(){const p=RUN.pact;if(!p)return '';const B=PBOON[p.boon],C=PCONS[p.cons];
+  return `<p class="h-sec">Pacte de la Brume · acte ${ROM[RUN.act]}</p><div class="eqpause pactp"><p class="eqh"><strong>${esc(B.n)} · ${esc(C.n)}</strong></p>${ln('boon',B.n+' : '+B.d)}${ln('cons',C.n+' : '+C.d)}</div>`;};
+
+ const st=document.createElement('style');st.textContent=`
+#toast,#murmur{font-size:19px;max-width:min(760px,calc(100% - 28px))}
+#toast{text-align:left;padding:14px 24px}
+#toast.pause{font-size:20px;padding:16px 28px}
+.mrows{display:flex;flex-direction:column;gap:9px}
+.mrow2{display:flex;gap:12px;align-items:baseline;line-height:1.45;font-size:inherit}
+.mrow2 .lab{flex:none;min-width:88px;text-align:center;font-size:.8em;letter-spacing:.1em;text-transform:uppercase;padding:2px 9px;border:1px solid currentColor;border-radius:3px;color:var(--flame,#f3b94d);background:rgba(255,255,255,.05)}
+#murmur .mrow2 .lab{color:#c9a8ff}
+.mrow2 .lab+span{flex:1}
+.mrow2.concl{margin-top:4px;padding-top:9px;border-top:1px solid rgba(255,255,255,.16);font-weight:800}
+#murmur span{font-size:inherit;line-height:1.45}
+#murmur .sub,#toast .sub{display:block;margin-top:12px;font-size:14px}
+#murmur b:not(.lab){font-size:14px}
+.eqpause{padding:12px 16px;margin:0 0 12px;background:rgba(255,255,255,.04)}
+.eqpause .eqh{font-size:18px;gap:10px}
+.eqpause .eqr{margin:2px 0 10px 30px;font-size:14px;letter-spacing:.06em;text-transform:uppercase;opacity:.9}
+.ln{display:flex;gap:10px;align-items:flex-start;margin:7px 0;font-size:16.5px;line-height:1.5}
+.ln i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:15px;line-height:1;margin-top:1px}
+.ln.boon i{background:rgba(143,224,138,.18);color:#9be98f}.ln.cons i{background:rgba(255,120,120,.18);color:#ff8a8a}
+.ln.boon{color:#d4f3cb}.ln.cons{color:#f7c0c0}
+.ln div{display:flex;flex-direction:column;gap:3px}
+.eqpause .eqx{margin:8px 0 0;padding-top:8px;border-top:1px solid rgba(255,255,255,.1);font-size:15px;color:#c9c3b8}
+#eqsec .h-sec{font-size:14.5px;margin-top:20px}
+.card .boon,.card .cons,.card .why{font-size:16px;line-height:1.5}
+.card p{line-height:1.5}
+`;document.head.appendChild(st);
+})();
+
 // ───────────────────────── v15.2 · cohérence de l'arbre de talents
 // Règle générale : un talent qui suppose un état que ton build rend impossible est verrouillé (dans les deux sens, quel que soit l'ordre de choix).
 (function(){
