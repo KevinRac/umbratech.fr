@@ -1220,7 +1220,7 @@ function computeLights(){
   else lights.push({x:P.x,y:P.y,r:night?40:68,ex:false,c:'none'});
   if(L.state==='ground')lights.push({x:L.x,y:L.y,r:s.groundLight*k,ex:!night,c:'warm'});
   if(L.state==='fly'||L.state==='return')lights.push({x:L.x,y:L.y,r:95*k,ex:!night,c:'warm'});
-  if(L.state==='orbit')lights.push({x:L.x,y:L.y,r:125*k,ex:!night,c:'warm'});
+  if(L.state==='orbit')lights.push({x:L.x,y:L.y,r:125*k*(s.orbitR||1),ex:!night,c:'warm'});
   for(const sp of spectrals)lights.push({x:sp.x,y:sp.y,r:100*k,ex:!night,c:'cold'});
   if(P.beam){for(const r of P.beam.rays)for(let d=40;d<P.beam.len;d+=85)lights.push({x:P.beam.x+Math.cos(P.beam.a+r)*d,y:P.beam.y+Math.sin(P.beam.a+r)*d,r:72,ex:false,c:s.sub==='sol'?'sol':'warm'});}
   if(s.couronne){const n=s.couronne>=2?5:3;for(let i=0;i<n;i++){const a=P.couronneA+i*TAU/n;lights.push({x:P.x+Math.cos(a)*80,y:P.y+Math.sin(a)*80,r:46,ex:false,c:'sol'});}}
@@ -1241,7 +1241,7 @@ function inExposeLight(x,y){for(const l of lights)if(l.ex&&(x-l.x)**2+(y-l.y)**2
 // ───────────────────────── Ennemis
 function tokMax(k){const g=G();return k==='m'?2+(g>=4?1:0)+(g>=9?1:0):1+(g>=3?1:0)+(g>=9?1:0);}
 function tryTok(e,k){if(e.tok===k)return true;let n=0;for(const o of enemies)if(!o.dead&&o.tok===k&&!o.elite)n++;if(e.elite||n<tokMax(k)){e.tok=k;return true;}return false;}
-function enemyTarget(e){if(!P.invisible&&!P.dead)return{x:P.x,y:P.y,pl:true};const L=P.lan;if(L.state==='ground'&&P.nightT<=0)return{x:L.x,y:L.y,pl:false};if(e.wT<=0){e.wx=rand(AR.x0+60,AR.x1-60);e.wy=rand(AR.y0+60,AR.y1-60);e.wT=rand(1.5,3);}return{x:e.wx,y:e.wy,pl:false};}
+function enemyTarget(e){if(!P.invisible&&!P.dead)return{x:P.x,y:P.y,pl:true};const L=P.lan;if((L.state==='ground'||L.state==='orbit')&&P.nightT<=0)return{x:L.x,y:L.y,pl:false};if(e.wT<=0){e.wx=rand(AR.x0+60,AR.x1-60);e.wy=rand(AR.y0+60,AR.y1-60);e.wT=rand(1.5,3);}return{x:e.wx,y:e.wy,pl:false};}
 // v15 · contournement des piliers : l’ennemi longe l’obstacle au lieu de s’y coller (côté mémorisé pour éviter les oscillations)
 function steerAround(e,dx,dy,d){
  if(!room||!room.pillars||!room.pillars.length)return[dx/d,dy/d];
@@ -1697,7 +1697,7 @@ function openAscension(){
  const list=br=>['s2','s3','s4','s5','sk'].map(sl=>{const n=NODES[br+'_'+sl];return `<li><strong>${esc(n.name)}</strong> · ${KIND[n.kind]}</li>`;}).join('');
  const opt=br=>`<button type="button" class="card asc" data-br="${br}" style="--c:${BR[br].color}"><span class="meta"><span class="br">● Sous-classe</span><span>${BR[br].voie}</span></span><h3>${BR[br].name}</h3><p>${esc(NODES[br+'_s1'].desc)}</p><ul>${list(br)}</ul></button>`;
  openOverlay(`<div class="panel narrow"><p class="eyebrow">Rituel d’Ascension</p><h2>Choisis ta voie</h2><p class="sub">La Mère-Brume est tombée et ta nature change. Ce choix ouvre une nouvelle branche au centre de ton arbre. Il est définitif pour cette run.</p><div class="asc-grid">${subs.map(opt).join('')}</div></div>`);
- const choose=br=>{if(!armed())return;SAVE.flags.asc=1;persist();P.ranks[br+'_s1']=1;NODES[br+'_s1'].apply(P.s,1);toast(`Tu deviens ${BR[br].name}`,2.4);sfx('level');closeOverlay();};
+ const choose=br=>{if(!armed())return;if(subBlocked(br)){toast(subBlocked(br),3);return;}SAVE.flags.asc=1;persist();P.ranks[br+'_s1']=1;NODES[br+'_s1'].apply(P.s,1);toast(`Tu deviens ${BR[br].name}`,2.4);sfx('level');closeOverlay();};
  overlayEl.querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.br)));
  overlayKeys=c=>{const m=NUMKEY[c];if(m!==undefined&&subs[m])choose(subs[m]);};
 }
@@ -6376,8 +6376,71 @@ window.__v14={SETS,RULES,AIDS,refreshSets,setRule,chron,chronBuild,openChron,sta
 function start(){resize();initTitle();requestAnimationFrame(frame);}
 // Accès de débogage pour les tests (console)
 window.__brume={get P(){return P;},get RUN(){return RUN;},get room(){return room;},get enemies(){return enemies;},get SAVE(){return SAVE;},xp:n=>gainXp(n),go:t=>{trans={phase:'out',t:0,type:t};},take:id=>takeNode(id),relic:id=>applyRelic(RELICS.find(r=>r.id===id)),killAll:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)hitEnemy(e,99999,{crit:false});},cls:c=>{chosenCls=c;},start:()=>startRun(),hub:()=>enterHub(),gold:n=>{RUN.goldF+=n;},shards:n=>{SAVE.shards+=n;},npc:id=>openNpc(id)};
-Object.assign(window.__brume,{step:(dt,n=1)=>{for(let i=0;i<n;i++)step(dt);},rings:()=>rings,fxp:o=>fx.push(o),murmur:(a,b,c)=>murmur(a,b,c),toastP:(t)=>toastPause(t),fz:()=>freezeT,hp:()=>hintPaused,res:n=>{RZS().earned+=n;persist();},node:(id,on=true)=>{if(on)RZS().nodes[id]=1;else delete RZS().nodes[id];persist();},RZN,has:id=>has9(id),fin:(w,a)=>openEnd(w,a),hit:(e,d,o)=>hitEnemy(e,d,o||{}),create:(t,x,y,el)=>createEnemy(t,x,y,el),hurt:(d)=>hurtPlayer(d),theme:()=>room&&room.wtheme,doors:()=>room&&room.doors.map(d=>d.type),clearRoom:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)e.dead=true;room.waveI=room.waves.length;room.spawning=[];},frag:(s)=>giveFrag(s,W/2,H/2,0)});
+Object.assign(window.__brume,{step:(dt,n=1)=>{for(let i=0;i<n;i++)step(dt);},nodes:()=>NODES,excl:()=>EXCL,bridges:()=>BR,rings:()=>rings,fxp:o=>fx.push(o),murmur:(a,b,c)=>murmur(a,b,c),toastP:(t)=>toastPause(t),fz:()=>freezeT,hp:()=>hintPaused,res:n=>{RZS().earned+=n;persist();},node:(id,on=true)=>{if(on)RZS().nodes[id]=1;else delete RZS().nodes[id];persist();},RZN,has:id=>has9(id),fin:(w,a)=>openEnd(w,a),hit:(e,d,o)=>hitEnemy(e,d,o||{}),create:(t,x,y,el)=>createEnemy(t,x,y,el),hurt:(d)=>hurtPlayer(d),theme:()=>room&&room.wtheme,doors:()=>room&&room.doors.map(d=>d.type),clearRoom:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)e.dead=true;room.waveI=room.waves.length;room.spawning=[];},frag:(s)=>giveFrag(s,W/2,H/2,0)});
 Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
+// ───────────────────────── v15.2 · cohérence de l'arbre de talents
+// Règle générale : un talent qui suppose un état que ton build rend impossible est verrouillé (dans les deux sens, quel que soit l'ordre de choix).
+(function(){
+ // nœuds clés qui posent un état : lanterne jamais posée, jamais lancée, jamais rappelée, plus d'esquive, etc.
+ const KFLAG={ray_k1:'coeur',fan_k1:'vivante',pen_k1:'enfant',dif_k1:'colosse',reg_k2:'canon',trm_k2:'filRouge',vor_k1:'faim'};
+ const KNAME={coeur:'Cœur de Soleil',vivante:'Lanterne Vivante',enfant:'Enfant de la Nuit',colosse:'Colosse',canon:'Ventre-Canon',filRouge:'Fil Rouge',faim:'Faim Éternelle'};
+ const SUBKEY={ray_k1:['omb'],reg_k2:['sai']};          // sous-classes incompatibles avec un nœud clé
+ const SUBWHY={omb:['coeur','Ombrelame vit dans l’Obscur, et Cœur de Soleil t’en interdit : ta lanterne ne quitte plus ta main.'],sai:['canon','Saint Dévorant se nourrit de Recracher, que Ventre-Canon remplace par un rayon continu.']};
+ const add=(id,fl)=>{const n=NODES[id];if(!n)return;n.blk=Array.from(new Set([].concat(n.blk||[],fl)));};
+
+ // Lanterne Vivante : elle ne se pose jamais, tu n'as plus d'aura
+ add('fan_n1','vivante');add('fan_n2','vivante');add('fan_n4','vivante');
+ add('ray_n3','vivante');                                   // Aube Brûlante : aura
+ add('fan_x1a','vivante');add('fan_x1b','vivante');         // Boomerang (déjà son comportement) · Lanterne-mine (se plante)
+ add('fan_x2a','vivante');add('fan_x2b','vivante');         // lanterne posée
+ add('fan_x3b','vivante');                                  // Fil de lumière : corde vers la lanterne posée
+ // Enfant de la Nuit : pas de rappel, la lanterne reste où elle est tombée
+ add('fan_n6','enfant');
+ // Cœur de Soleil : la lanterne ne quitte jamais ta main, donc jamais d'Obscur
+ add('pen_n1','coeur');add('pen_n2','coeur');add('pen_n6','coeur');add('pen_k2','coeur');
+ // Faim Éternelle : seule la dévoration soigne
+ add('dif_x3a','faim');
+ // Ventre-Canon : plus de Recracher, donc plus de flaques de Bile
+ add('reg_n3','canon');add('reg_n5','canon');
+ // Fil Rouge : un seul fil
+ add('trm_x1a','filRouge');add('trm_x2a','filRouge');add('mdp_s4','filRouge');
+ // « Fil de lumière » ne dépend pas du rappel : il ne doit pas être verrouillé par lui
+ if(NODES.fan_x3b)NODES.fan_x3b.reqS='';
+ // Cloche majeure = une seule cloche : incompatible avec « Timbre clair » (+1 cloche max)
+ if(typeof EXCL!=='undefined'){EXCL.car_x2b=(EXCL.car_x2b||[]).concat('car_n5');EXCL.car_n5=(EXCL.car_n5||[]).concat('car_x2b');}
+ // Solstice agrandit aussi la lumière de la lanterne vivante
+ if(NODES.sol_s3){const ap=NODES.sol_s3.apply;NODES.sol_s3.apply=(st,r)=>{ap(st,r);st.orbitR=(st.orbitR||1)*1.12;};NODES.sol_s3.desc='+12 % de rayon pour toutes tes lumières (aura, lanterne posée, lanterne vivante).';}
+ // précisions dans les descriptions
+ const note=(id,t)=>{const n=NODES[id];if(n&&!n.desc.includes(t))n.desc+=' '+t;};
+ note('fan_k1','Incompatible avec les talents de lanterne posée et d’aura.');
+ note('pen_k1','Incompatible avec les talents de rappel.');
+ note('ray_k1','Incompatible avec les talents de lancer, de rappel et d’Obscur.');
+ note('reg_k2','Incompatible avec les talents de Recracher et de flaques.');
+ note('vor_k1','Incompatible avec les soins hors dévoration.');
+ note('trm_k2','Incompatible avec les talents qui attachent plusieurs fils.');
+ note('dif_k1','Incompatible avec les talents de Ruée.');
+
+ // verrouillage dans les deux sens
+ const _db=depBlocked;
+ depBlocked=function(id){
+  if(_db(id))return true;
+  const f=KFLAG[id];if(!f||!P)return false;
+  if(SUBKEY[id]&&SUBKEY[id].includes(P.s.sub))return true;
+  for(const o in P.ranks){if(!(P.ranks[o]>0))continue;const m=NODES[o];if(m&&m.blk&&m.blk.includes(f))return true;}
+  return false;};
+ function blockReason(id){const n=NODES[id];if(!n||!P)return '';
+  if(n.blk)for(const f of n.blk)if(P.s[f])return 'Incompatible avec '+KNAME[f];
+  const f=KFLAG[id];if(f){if(SUBKEY[id]&&SUBKEY[id].includes(P.s.sub))return 'Incompatible avec la sous-classe '+BR[P.s.sub].name;for(const o in P.ranks){const m=NODES[o];if(P.ranks[o]>0&&m&&m.blk&&m.blk.includes(f))return 'Incompatible avec '+m.name;}}
+  return '';}
+ const _nc=nodeCaption;
+ nodeCaption=function(id){let t=_nc(id);const r=blockReason(id);return r?t.replace(/Incompatible avec (un nœud clé acquis|l’autre option)/,r):t;};
+ // ascension : une voie incompatible avec ton build est grisée
+ window.subBlocked=function(br){const w=SUBWHY[br];return w&&P&&P.s[w[0]]?w[1]:'';};
+ const _oa=openAscension;
+ openAscension=function(){_oa();overlayEl.querySelectorAll('.card.asc').forEach(b=>{const m=subBlocked(b.dataset.br);if(m){b.style.opacity='.42';b.style.filter='grayscale(.7)';b.insertAdjacentHTML('beforeend','<p class="k" style="color:#ff9aa4;margin-top:8px">'+m+'</p>');}});};
+ // l'arbre se redessine avec les nouvelles règles
+ window.__cohere={KFLAG,blockReason,dep:id=>depBlocked(id)};
+})();
 // ───────────────────────── v15 · cris des PNJ, cercles de boss, auras et incantations
 (function(){
  // --- voix démoniaques : une signature par PNJ
