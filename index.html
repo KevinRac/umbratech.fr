@@ -3,329 +3,488 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mes Builds</title>
+  <title>Umbratech · Guides &amp; builds</title>
+  <meta name="description" content="Configurations, builds et guides en français pour Guild Wars 1 et Diablo IV, ainsi que La Brume, mon jeu indépendant." />
+  <meta name="theme-color" content="#07080c" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <style>
     :root {
-      --bg: #0b0d12;
-      --card: rgba(18, 21, 28, 0.72);
-      --text: #f5f7fa;
-      --muted: #a7b0bd;
-      --accent: #7c5cff;
-      --accent-2: #00d4ff;
-      --radius: 22px;
-      --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      --bg: #07080c;
+      --surface: rgba(16, 18, 25, 0.78);
+      --text: #f4f6fa;
+      --muted: #9aa3b2;
+      --line: rgba(255, 255, 255, 0.10);
+      --accent: #8b6cff;
+      --accent-2: #22d3ee;
+      --radius: 26px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --serif: "Fraunces", Georgia, "Times New Roman", serif;
+      --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
 
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      font-family: var(--sans);
       color: var(--text);
+      background: var(--bg);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---------- Ambiance de fond ---------- */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
       background:
-        radial-gradient(circle at 12% 10%, rgba(124, 92, 255, 0.22), transparent 40%),
-        radial-gradient(circle at 88% 85%, rgba(0, 212, 255, 0.16), transparent 42%),
+        radial-gradient(60% 50% at 12% 8%, rgba(139, 108, 255, 0.20), transparent 70%),
+        radial-gradient(50% 45% at 90% 90%, rgba(34, 211, 238, 0.14), transparent 70%),
         var(--bg);
     }
 
-    .page {
-      width: min(1180px, calc(100% - 40px));
-      margin: 0 auto;
-      padding: 64px 0 80px;
+    .mist {
+      position: fixed;
+      inset: -20%;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(40% 25% at 20% 30%, rgba(255, 255, 255, 0.05), transparent 70%),
+        radial-gradient(45% 28% at 75% 60%, rgba(160, 230, 220, 0.05), transparent 70%);
+      animation: drift 28s ease-in-out infinite alternate;
     }
 
-    header {
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.06;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    @keyframes drift {
+      from { transform: translate3d(-3%, -2%, 0) scale(1); }
+      to   { transform: translate3d(3%, 2%, 0) scale(1.08); }
+    }
+
+    /* ---------- Mise en page ---------- */
+    .page {
+      width: min(1220px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0 0;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-size: 0.82rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 8px 24px rgba(139, 108, 255, 0.4);
+    }
+
+    .brand-mark svg { display: block; }
+
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav-links a {
+      padding: 8px 16px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 0.25s, background 0.25s;
+    }
+
+    .nav-links a:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+
+    /* ---------- Hero ---------- */
+    header.hero {
       text-align: center;
-      margin-bottom: 48px;
+      padding: clamp(56px, 9vw, 112px) 0 clamp(44px, 6vw, 72px);
     }
 
     .eyebrow {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
       padding: 8px 16px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid var(--line);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.05);
       color: var(--muted);
-      font-size: 13px;
-      letter-spacing: 0.14em;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      margin-bottom: 20px;
+    }
+
+    .eyebrow i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-2);
+      box-shadow: 0 0 12px var(--accent-2);
     }
 
     h1 {
-      margin: 0;
-      font-size: clamp(2.2rem, 5vw, 3.6rem);
-      line-height: 1.05;
-      letter-spacing: -0.03em;
+      margin: 26px auto 0;
+      max-width: 15ch;
+      font-family: var(--serif);
+      font-weight: 700;
+      font-size: clamp(2.7rem, 7vw, 5.4rem);
+      line-height: 1.02;
+      letter-spacing: -0.035em;
     }
 
-    h1 span {
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    h1 em {
+      font-style: italic;
+      font-weight: 500;
+      background: linear-gradient(95deg, #b8a4ff 0%, var(--accent-2) 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
     }
 
     .subtitle {
-      max-width: 620px;
-      margin: 16px auto 0;
+      max-width: 640px;
+      margin: 24px auto 0;
       color: var(--muted);
-      font-size: 1.05rem;
-      line-height: 1.6;
+      font-size: clamp(1rem, 1.6vw, 1.14rem);
+      line-height: 1.7;
     }
 
+    .subtitle strong { color: var(--text); font-weight: 600; }
+
+    /* ---------- Tuiles ---------- */
     .tiles {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 26px;
+      gap: 24px;
     }
 
     .tile {
+      --tile-color: #fff;
       position: relative;
-      min-height: 430px;
+      isolation: isolate;
+      min-height: 560px;
       border-radius: var(--radius);
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      box-shadow: var(--shadow);
       display: flex;
       align-items: flex-end;
-      text-decoration: none;
       color: inherit;
-      transform: translateZ(0);
-      transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+      text-decoration: none;
+      background: #0d0f15;
+      border: 1px solid var(--line);
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+      transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease), border-color 0.4s;
+      opacity: 0;
+      transform: translateY(28px);
+      animation: rise 0.9s var(--ease) forwards;
     }
 
-    .tile:hover {
-      transform: translateY(-8px);
-      border-color: rgba(255, 255, 255, 0.25);
-      box-shadow: 0 32px 70px rgba(0, 0, 0, 0.55);
+    .tile:nth-child(2) { animation-delay: 0.12s; }
+    .tile:nth-child(3) { animation-delay: 0.24s; }
+
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    .tile:hover,
+    .tile:focus-visible {
+      transform: translateY(-10px);
+      border-color: color-mix(in srgb, var(--tile-color) 55%, transparent);
+      box-shadow:
+        0 40px 90px rgba(0, 0, 0, 0.6),
+        0 0 70px color-mix(in srgb, var(--tile-color) 22%, transparent);
+      outline: none;
     }
 
-    .tile-background {
+    .tile-bg {
       position: absolute;
       inset: 0;
+      z-index: -3;
       background-size: cover;
       background-position: center;
-      transition: transform 0.6s ease, filter 0.35s ease;
+      transition: transform 1.2s var(--ease), filter 0.5s;
     }
 
-    .tile:hover .tile-background {
-      transform: scale(1.06);
-      filter: saturate(1.15);
-    }
+    .tile:hover .tile-bg { transform: scale(1.08); filter: saturate(1.18) brightness(1.06); }
 
-    .tile-overlay {
+    .tile::before {
+      content: "";
       position: absolute;
       inset: 0;
-      background:
-        linear-gradient(180deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.45) 48%, rgba(5, 6, 10, 0.92) 100%);
+      z-index: -2;
+      background: linear-gradient(180deg, rgba(5, 6, 10, 0.05) 0%, rgba(5, 6, 10, 0.25) 40%, rgba(5, 6, 10, 0.94) 100%);
+    }
+
+    .tile::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; top: 0;
+      height: 3px;
+      z-index: 2;
+      background: linear-gradient(90deg, transparent, var(--tile-color), transparent);
+      opacity: 0.85;
+    }
+
+    .tile-index {
+      position: absolute;
+      top: 22px;
+      right: 24px;
+      font-family: var(--serif);
+      font-size: 0.95rem;
+      letter-spacing: 0.12em;
+      color: rgba(255, 255, 255, 0.55);
     }
 
     .tile-content {
-      position: relative;
-      z-index: 2;
       width: 100%;
-      padding: 28px;
-      background: var(--card);
-      backdrop-filter: blur(18px);
-      border-top: 1px solid rgba(255, 255, 255, 0.10);
+      padding: 34px 30px 28px;
     }
 
     .game-tag {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 9px;
       padding: 7px 13px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.10);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      font-size: 12px;
+      font-size: 0.7rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: #fff;
+      color: var(--tile-color);
+      border: 1px solid color-mix(in srgb, var(--tile-color) 40%, transparent);
+      background: color-mix(in srgb, var(--tile-color) 15%, rgba(0, 0, 0, 0.35));
+      backdrop-filter: blur(10px);
+    }
+
+    .game-tag::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
     }
 
     .tile h2 {
-      margin: 16px 0 10px;
-      font-size: 1.65rem;
-      line-height: 1.15;
+      margin: 18px 0 12px;
+      font-family: var(--serif);
+      font-weight: 700;
+      font-size: clamp(1.8rem, 2.6vw, 2.25rem);
+      line-height: 1.08;
       letter-spacing: -0.02em;
     }
 
     .tile p {
       margin: 0;
-      color: var(--muted);
-      font-size: 0.96rem;
-      line-height: 1.55;
+      color: #c4cbd8;
+      font-size: 0.95rem;
+      line-height: 1.65;
     }
 
     .tile-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-top: 22px;
-      padding-top: 18px;
-      border-top: 1px solid rgba(255, 255, 255, 0.10);
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
     }
 
-    .build-meta {
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
+    .build-meta { color: var(--muted); font-size: 0.8rem; letter-spacing: 0.02em; }
 
     .open-build {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      color: #fff;
-      font-size: 0.9rem;
-      font-weight: 650;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
       white-space: nowrap;
+      color: #0b0d12;
+      background: var(--tile-color);
+      transition: gap 0.3s var(--ease), box-shadow 0.3s;
     }
 
-    .open-build svg {
-      transition: transform 0.25s ease;
+    .tile:hover .open-build {
+      gap: 14px;
+      box-shadow: 0 8px 26px color-mix(in srgb, var(--tile-color) 50%, transparent);
     }
 
-    .tile:hover .open-build svg {
-      transform: translateX(4px);
+    .gw    { --tile-color: #f0b94a; }
+    .brume { --tile-color: #4fe3d0; }
+    .d4    { --tile-color: #ff5a4f; }
+
+    /* ---------- Pied de page ---------- */
+    footer {
+      margin-top: 72px;
+      padding-top: 26px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.82rem;
     }
 
-    .gw { --tile-color: #d4a017; }
-    .brume { --tile-color: #4fd1c5; }
-    .d4 { --tile-color: #e53e3e; }
-
-    .game-tag {
-      color: var(--tile-color);
-      border-color: color-mix(in srgb, var(--tile-color) 35%, transparent);
-      background: color-mix(in srgb, var(--tile-color) 14%, transparent);
+    /* ---------- Responsive ---------- */
+    @media (max-width: 1020px) {
+      .tiles { grid-template-columns: 1fr; max-width: 640px; margin: 0 auto; }
+      .tile { min-height: 460px; }
     }
 
-    @media (max-width: 980px) {
-      .tiles {
-        grid-template-columns: 1fr;
-      }
-
-      .tile {
-        min-height: 360px;
-      }
+    @media (max-width: 560px) {
+      .page { width: calc(100% - 28px); }
+      .nav-links { display: none; }
+      .tile { min-height: 430px; }
+      .tile-content { padding: 26px 22px 22px; }
+      .tile-footer { flex-direction: column; align-items: flex-start; }
     }
 
-    @media (max-width: 520px) {
-      .page {
-        width: min(100%, calc(100% - 28px));
-        padding-top: 44px;
-      }
-
-      .tile-content {
-        padding: 22px;
-      }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .tile { opacity: 1; transform: none; }
     }
   </style>
 </head>
 <body>
+  <div class="backdrop"></div>
+  <div class="mist"></div>
+  <div class="grain"></div>
+
   <main class="page">
-    <header>
-      <div class="eyebrow">Guides &amp; builds</div>
-      <h1>Mes <span>projets</span> du moment</h1>
+    <nav>
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 4v9a6 6 0 0 0 12 0V4" />
+          </svg>
+        </span>
+        Umbratech
+      </a>
+      <div class="nav-links">
+        <a href="#projets">Projets</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="eyebrow"><i></i> Guides &amp; builds</div>
+      <h1>Mes <em>projets</em> du moment</h1>
       <p class="subtitle">
-        Retrouve mes configurations, conseils et guides pour Guild Wars 1 et Diablo IV en francais ainsi que mon jeu "La Brume".
+        Retrouve mes configurations, conseils et guides pour <strong>Guild Wars 1</strong> et <strong>Diablo IV</strong>
+        en français, ainsi que mon jeu <strong>« La Brume »</strong>.
       </p>
     </header>
 
-    <section class="tiles">
+    <section class="tiles" id="projets">
       <a class="tile gw" href="#build-guild-wars-1">
-        <div
-          class="tile-background"
-          style="background-image: url('https://wiki.guildwars.com/wiki/Guild_Wars_Prophecies');"
-          role="img"
-          aria-label="Univers de Guild Wars 1"
-        ></div>
-        <div class="tile-overlay"></div>
+        <div class="tile-bg" style="background-image: url('img/guild-wars-1.svg');" role="img" aria-label="Illustration d’un crépuscule doré sur des montagnes et une arche en ruine"></div>
+        <span class="tile-index">01</span>
 
         <div class="tile-content">
-          <span class="game-tag">Guild Wars 123</span>
-          <h2>Build Guild Wars 123</h2>
-          <p>
-            Builds PvP et PvE, compétences, attributs, équipement et synergies d’équipe pour optimiser ton personnage.
-          </p>
+          <span class="game-tag">Guild Wars 1</span>
+          <h2>Builds Guild Wars 1</h2>
+          <p>Builds PvP et PvE, compétences, attributs, équipement et synergies d’équipe pour optimiser ton personnage.</p>
 
           <div class="tile-footer">
             <span class="build-meta">PvE · PvP · Team builds</span>
             <span class="open-build">
-              Voir le build
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
+              Voir les builds
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
             </span>
           </div>
         </div>
       </a>
 
       <a class="tile brume" href="/themist">
-        <div
-          class="tile-background"
-          style="background-image: url('img/la-brume.jpg');"
-          role="img"
-          aria-label="Capture d’écran du jeu indépendant La Brume"
-        ></div>
-        <div class="tile-overlay"></div>
+        <div class="tile-bg" style="background-image: url('img/la-brume.jpg'); background-position: 92% center;" role="img" aria-label="Cover de La Brume : un voyageur encapuchonné avec une lanterne sous la pleine lune"></div>
+        <span class="tile-index">02</span>
 
         <div class="tile-content">
           <span class="game-tag">Jeu indé</span>
           <h2>La Brume</h2>
-          <p>
-            Guide de survie, progression, ressources et conseils pour avancer dans l’ambiance sombre de La Brume.
-          </p>
+          <p>Guide de survie, progression, ressources et conseils pour avancer dans l’ambiance sombre de La Brume.</p>
 
           <div class="tile-footer">
             <span class="build-meta">Survie · Progression · Conseils</span>
             <span class="open-build">
               Voir le guide
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
             </span>
           </div>
         </div>
       </a>
 
-      <a class="tile d4" href="#build-diablo-4">
-        <div
-          class="tile-background"
-          style="background-image: url('https://d2u1z1lopyfwlx.cloudfront.net/thumbnails/db6ebd6e-b9d5-5e36-abeb-5c828589c94e/f9c8c4d2-a405-593e-8e1b-ac7ed8d045fe.jpg');"
-          role="img"
-          aria-label="Univers sombre de Diablo IV"
-        ></div>
-        <div class="tile-overlay"></div>
+      <a class="tile d4" href="/d4/">
+        <div class="tile-bg" style="background-image: url('img/diablo-4.svg');" role="img" aria-label="Illustration de flèches gothiques sous un ciel écarlate, entourées de braises"></div>
+        <span class="tile-index">03</span>
 
         <div class="tile-content">
           <span class="game-tag">Diablo IV</span>
-          <h2>Build Diablo 4</h2>
-          <p>
-            Builds de saison, compétences, aspects, Paragon et optimisation de farm pour progresser efficacement.
-          </p>
+          <h2>Builds Diablo 4</h2>
+          <p>Builds de saison, compétences, aspects, Paragon et optimisation de farm pour progresser efficacement.</p>
 
           <div class="tile-footer">
             <span class="build-meta">Saison · Endgame · Farm</span>
             <span class="open-build">
-              Voir le build
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
+              Voir les builds
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
             </span>
           </div>
         </div>
       </a>
     </section>
+
+    <footer>
+      <span>© <span id="year">2026</span> Umbratech</span>
+      <span>Guides non officiels · Guild Wars et Diablo sont des marques de leurs propriétaires respectifs.</span>
+    </footer>
   </main>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
