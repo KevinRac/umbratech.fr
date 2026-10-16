@@ -1768,7 +1768,7 @@ function openTitle(){
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.4</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.5</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -5356,7 +5356,7 @@ openTitle=function(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
  const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.4</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.5</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
  <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
  <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
  <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
@@ -6612,6 +6612,84 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 #murmur b:not(.lab){margin-bottom:10px;font-size:14px}
 .mrows{gap:12px}
 .mrow2.concl{font-size:1.04em;color:#fff}
+`;document.head.appendChild(st);
+})();
+
+// ───────────────────────── v15.5 · fenêtres de principe (premier palier uniquement)
+(function(){
+ const O='#ffa24a',V='#b48cff',C='#4fe3ff',G='#8fe08a',Y='#f3b94d',R='#ff7b7b';
+ const BRIEF={
+  brumeux:{t:'Le Brumeux te regarde jouer',l:'Un esprit de la Brume observe ton style de combat et s’y adapte. Ce n’est pas un monstre à abattre : c’est lui qui écrit les règles de la descente.',c:[
+   ['Il observe',V,'Tu frappes de loin ou au contact ? Tu esquives beaucoup ? Tu te soignes souvent ? Il retient ce que tu fais le plus.'],
+   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Un texte violet l’annonce : lis-le, il te dit comment répondre.'],
+   ['Il relâche',G,'Si tu vacilles (peu de PV), il retient ses coups. Reprends ton souffle.'],
+   ['Il marchande',Y,'À chaque acte, il te propose un pacte : un avantage fort contre une contrainte choisie selon ton jeu.']]},
+  pacte:{t:'Un pacte, un prix',l:'Le Brumeux te tend trois offres. Chaque pacte a un gain et un coût, et dure tout l’acte.',c:[
+   ['+ Le gain',G,'Un avantage fort : plus de PV, de dégâts, de vitesse…'],
+   ['− Le coût',R,'Une contrainte choisie d’après ton style de jeu. Si tu es inconnu, elle est tirée au hasard.'],
+   ['Le prix caché',O,'Chaque pacte accepté rend les gardiens plus agressifs (jusqu’à trois fois).'],
+   ['Refuser',Y,'Tu peux toujours refuser : tu descends sans rien devoir à la Brume.']]},
+  contre:{t:'Contre-mesure : lis, puis réponds',l:'Le texte violet dit ce que le Brumeux a vu chez toi, et ce qu’il envoie. Chaque contre-mesure a sa parade.',c:[
+   ['Traque',V,'Tu frappes de loin : des traqueurs chargent. Reste dans la lumière et frappe-les au contact.'],
+   ['Pétards',O,'Tu frappes au contact : des Bouffis explosent près de toi. Abats-les à distance.'],
+   ['Tir de barrage',C,'Tu esquives tout ce qui charge : des Spectres tirent du fond de la salle. Avance et coupe leurs lignes.'],
+   ['Brume avide',G,'Tu te soignes beaucoup : −40 % de soins dans la salle. Joue sans compter dessus.']]},
+  regles:{t:'Salle à règle',l:'Certaines salles portent une règle, rappelée dans la pastille en haut de l’écran. Elle vaut pour tout le monde, toi compris : utilise-la.',c:[
+   ['Verre',R,'Tout est fragile : tes coups et les leurs font 40 % de dégâts en plus.'],
+   ['Sol qui se dérobe',O,'Des dalles cèdent et écrasent ce qu’elles couvrent. Attire-y les ennemis.'],
+   ['Brume plombée',V,'La moitié de la salle est voilée, mais tu frappes 25 % plus fort.'],
+   ['Braseros',Y,'Hors de la lumière des braseros, les ennemis ne subissent que 40 % des dégâts.']]},
+  bluff:{t:'La feinte du Brumeux',l:'Il dessine parfois un cercle au sol avant de frapper. Mais certains cercles mentent.',c:[
+   ['Cercle ocre',O,'Sincère : la frappe viendra. Sors du cercle ou esquive au dernier moment.'],
+   ['Cercle voilé de violet',V,'Mensonge : rien ne tombera. Ne gaspille pas ton esquive.'],
+   ['« Esquive lue »',R,'Si tu esquives un faux cercle, il te punit d’une seconde frappe, réelle cette fois.'],
+   ['Le bon réflexe',G,'Garde ton esquive pour les vraies menaces et regarde la couleur avant de bouger.']]},
+  boss:{t:'Les gardiens : trois temps',l:'Un gardien change de façon de se battre au fil du combat. Le premier temps sert à l’observer.',c:[
+   ['Premier temps',Y,'Observation. Retiens ses schémas : Orange = zone, Violet = tirs, Cyan = saisie.'],
+   ['Deuxième temps',V,'Adaptation. Il copie une partie de ton style de jeu : sa parade est rappelée à l’écran.'],
+   ['Troisième temps',R,'Désespoir. Son cœur est à nu (+25 % de dégâts pour toi), mais il frappe plus vite.'],
+   ['Sonné',C,'Quand il rate une attaque, il est étourdi et subit +50 % de dégâts : c’est ta fenêtre pour frapper fort.']]},
+  talents:{t:'L’arbre de talents',l:'À chaque niveau, la Brume te propose quelques talents. Les nœuds proposés pulsent dans l’arbre.',c:[
+   ['Choisir',Y,'Survole un nœud pour lire son effet, puis clique ou utilise les touches 1 à 4.'],
+   ['Nœuds clés',O,'Ils changent ta façon de jouer (lanterne vivante, cœur de soleil…) et verrouillent les talents incompatibles.'],
+   ['Incompatible',R,'Un talent grisé « Incompatible » contredit un choix déjà fait. Réfléchis à ton build avant une clé.'],
+   ['Ascension',V,'Après le premier gardien, une sous-classe s’offre à toi, avec ses propres talents.']]},
+  equip:{t:'Équipement : quatre emplacements',l:'Les élites et les gardiens laissent des objets. Chacun a un gain et un coût.',c:[
+   ['Quatre emplacements',Y,'Chaque objet va dans l’un des quatre emplacements. Un emplacement libre est signalé en vert.'],
+   ['Gain et coût',G,'Lis les deux : un objet puissant impose toujours une contrepartie.'],
+   ['Sets',O,'Certaines paires d’objets forment un set avec un bonus supplémentaire.'],
+   ['Remplacer',R,'Un objet remplacé est perdu. Tu peux aussi laisser la trouvaille.']]}};
+ const seen=k=>!!(SAVE.flags&&SAVE.flags['b_'+k]);
+ function brief(key,next){
+  const B=BRIEF[key];
+  if(!B||!RUN||RUN.hub||PAL()!==0||seen(key)||state!=='play'||!overlayEl.hidden)return false;
+  SAVE.flags['b_'+key]=1;persist();
+  openOverlay(`<div class="panel wide brief"><p class="eyebrow">Principe · Palier 0</p><h2>${esc(B.t)}</h2><p class="lede">${esc(B.l)}</p><div class="bgrid">${B.c.map((c,i)=>`<div class="bc" style="--c:${c[1]}"><span class="bn">${i+1}</span><h3>${esc(c[0])}</h3><p>${esc(c[2])}</p></div>`).join('')}</div><div class="row"><button type="button" class="btn primary" id="bok">Compris</button><span class="k">Entrée · Espace · clic</span></div></div>`);
+  const done=()=>{if(!armed())return;closeOverlay();if(next)next();};
+  $('#bok').addEventListener('click',done);
+  overlayKeys=c=>{if(c==='Enter'||c==='Space'||c==='Escape'||c==='NumpadEnter')done();};
+  return true;}
+ window.__brief={brief,BRIEF};
+ const wrap=(name,key,get,set)=>{const f=get();set(function(){const a=arguments,self=this;if(brief(key,()=>f.apply(self,a)))return;return f.apply(self,a);});};
+ wrap('openPacte','pacte',()=>openPacte,f=>{openPacte=f;});
+ wrap('announceCm','contre',()=>announceCm,f=>{announceCm=f;});
+ wrap('setRule','regles',()=>setRule,f=>{setRule=f;});
+ wrap('startBluff','bluff',()=>startBluff,f=>{startBluff=f;});
+ wrap('openEquip','equip',()=>openEquip,f=>{openEquip=f;});
+ wrap('openLevelUp','talents',()=>openLevelUp,f=>{openLevelUp=f;});
+ const _cb=createBoss;createBoss=function(){const e=_cb.apply(this,arguments);try{brief('boss');}catch(x){}return e;};
+ // dès le premier départ : qui est le Brumeux (avant le pacte)
+ const _sr=startRun;startRun=function(){_sr.apply(this,arguments);
+  if(RUN&&!RUN.hub&&PAL()===0&&!seen('brumeux'))queue.unshift(()=>brief('brumeux'));};
+ const st=document.createElement('style');st.textContent=`
+.panel.wide.brief{width:min(1000px,100%);padding-top:32px;padding-bottom:28px}
+.brief h2{font-size:clamp(30px,4vw,44px);margin:2px 0 8px}
+.brief .lede{font-size:19px;line-height:1.55;max-width:760px;color:#d9d3c5;margin:0}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:22px 0 20px}
+.bc{position:relative;padding:16px 16px 16px;background:rgba(255,255,255,.045);border:1px solid var(--line-hi);border-top:3px solid var(--c);border-radius:5px}
+.bc .bn{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:var(--c);border:1px solid var(--c);opacity:.85}
+.bc h3{margin:0 34px 8px 0;font-size:19px;color:var(--c);line-height:1.2}
+.bc p{margin:0;font-size:16.5px;line-height:1.55;color:var(--bone)}
 `;document.head.appendChild(st);
 })();
 
