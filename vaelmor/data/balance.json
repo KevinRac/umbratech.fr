@@ -1,5 +1,5 @@
 {
-  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). Toute valeur de réglage passe par ce fichier.",
+  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). Toute valeur de réglage passe par ce fichier. `visuals` : effets HD-2D du monde ouvert (décision n°47).",
   "exploration": {
     "tileSize": 16,
     "walkSpeed": 80,
@@ -46,5 +46,20 @@
   "injury": {
     "mobilityPenalty": 2,
     "statPenaltyRatio": 0.1
+  },
+  "visuals": {
+    "tiltShift": { "focus": 0.5, "fade": 0.24, "blur": 1.6 },
+    "bloom": { "threshold": 0.86, "blur": 2, "amount": 0.6 },
+    "vignette": { "radius": 0.95, "strength": 0.22 },
+    "rays": { "count": 4, "alpha": 0.16 },
+    "dust": { "periodMs": 140, "alpha": 0.75 },
+    "halos": {
+      "dayFactor": 0.55,
+      "lamp": { "radius": 22, "alpha": 0.42 },
+      "fire": { "radius": 30, "alpha": 0.5 },
+      "window": { "radius": 12, "alpha": 0.4 },
+      "rune": { "radius": 18, "alpha": 0.45 }
+    },
+    "evening": 0
   }
 }

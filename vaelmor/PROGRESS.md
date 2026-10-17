@@ -16,8 +16,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] Étape 1 : palette, étalonnage et sol — décision n°43 (validée le 17/10/2026)
 - [x] Étape 2 : bâtiments — décision n°44 (validée le 17/10/2026)
 - [x] Étape 3 : végétation — décision n°45 (validée le 17/10/2026)
-- [x] Étape 4 : petits décors et accessoires — décision n°46 (en attente de validation)
-- [ ] Étape 5 : post-effets HD-2D
+- [x] Étape 4 : petits décors et accessoires — décision n°46 (validée le 17/10/2026)
+- [x] Étape 5 : post-effets HD-2D — décision n°47 (en attente de validation)
 - [ ] Étape 6 : héros
 
 ## État
@@ -48,7 +48,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - **Zones et lieux** (`logic/world/zones.ts`) : bandeau d'entrée de zone et de lieu, « lieu découvert », teinte et particules d'ambiance par zone (pollen, feuilles, brume, braises, cendres), panneau de zone dans le HUD.
 - **Passages verrouillés** : bandes barrières le long de chaque frontière de zone (forêt dense, marais profond, falaise) percées là où une route la traverse ; la case de passage est bloquante tant que le drapeau du boss n'est pas levé (`boss_brakk`, `boss_roi_cerf`, `boss_merrow`, `boss_gardien_cendre`), brume visible et message de la zone au contact. Chaussée de pierre vers la Citadelle (îlot Z5).
 - **Héros** (`render/heroSprite.ts`) : placeholder 16×24, 3 poses (face, dos, profil retourné) × 4 images, ombre, marche 8 ips (12 en course). Profondeur : le héros passe derrière les cimes d'arbres (`canopy`).
-- **Debug** (F3 ou `?debug`) : F2 téléporte au lieu suivant, F4 affiche les collisions et la boîte du héros, F9 ouvre / referme tous les passages, `?debug&at=31,58` pose le héros sur une case ; case, zone, lieu et collision affichés en direct.
+- **Debug** (F3 ou `?debug`) : F2 téléporte au lieu suivant, F4 affiche les collisions et la boîte du héros, F6 bascule jour / soir, F9 ouvre / referme tous les passages, `?debug&at=31,58` pose le héros sur une case, `&quality=low|off` et `&fxoff=bloom,tiltShift` règlent les effets (n°47) ; case, zone, lieu et collision affichés en direct.
 - **Pause** (Échap) : reprendre / retour au titre. L'état du monde vit en mémoire (`core/session.ts`) en attendant la sauvegarde (M9).
 - **Tests** : 95 au vert (dont accessibilité de la carte passages fermés → seule la zone 1, passages ouverts → tous les lieux, et un joueur simulé qui rallie 6 lieux avec le vrai code de déplacement ; marche aléatoire de 10 min sans jamais entrer dans un mur).
 - **Vérifié dans Chromium** (WebGL logiciel, 960×540) : arrivée sur l'île, marche, course, collisions, passage verrouillé et son message, téléportation, pause, aucune erreur console, tas JS stable sur 40 s de marche aléatoire.
@@ -104,6 +104,16 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
   - **Habillage des lieux** (`generate.ts`) : flancs des bâtiments garnis selon le village (`dressBuildings` : ferme à Haut-Gué, bûcherons à Ronceval, pêche à Port-Brume, montagne à Pierre-Haute, ville à Valcendre), lampadaires aux coins des places et le long des rues de Valcendre, bancs, tableaux d'affichage, cordes à linge, charrette près du champ, feux de camp et tas de bois au camp des Écumeurs, barques à l'appontement de Port-Brume. Nature : souches, troncs couchés et champignons en forêt, cailloux sur les sols nus et le sable.
   - **Aucune porte ni passage fermé** : un accessoire bloquant n'est posé que s'il ne coupe pas un passage (`pinches` : test de l'anneau des 8 voisines) ni la case devant une porte (`keep`) ; un bâtiment exige une façade dégagée ; un toit ne recouvre plus un accessoire posé avant lui (étal de Valcendre). Nouveau test `world-map` : chaque case devant une porte est atteignable (le moulin de Haut-Gué avait sa façade sur la clôture du champ, corrigé). Nouveau test `tests/accessories.test.ts` (aucun sombre neutre ni noir, collision au pied, décors au sol non bloquants, animations à 4 images).
   - Coût : ~16 070 tuiles (atlas 2048×2016 px inchangé, ~730 Ko), 858 tuiles animées, génération ~10 s. Cases bloquées ~1 580 → ~1 675. Rendu logiciel ~12-13 ips en 960×540 (identique à l'étape 3, sans GPU : non représentatif).
+
+- **n°47 — Atmosphère HD-2D réglable** (refonte graphique, étape 5) :
+  - **Module** `render/worldAtmosphere.ts` (Phaser) + calculs purs testés `render/atmosphere.ts` ; l'étalonnage de zone (n°43) y est déplacé depuis `WorldScene`. Réglages chiffrés dans `data/balance.json` › `visuals`, intensité par zone dans `data/zones.json` › `light` (`rays`, `dust`, `bloom`, de 0 à 1 : la forêt a les rayons les plus forts, la Citadelle le bloom le plus fort, la côte embrumée peu de rayons).
+  - **Filtres de la caméra**, dans l'ordre : étalonnage (`ColorMatrix`) → **bloom doux** (`ParallelFilters` : seuil 0,86 + flou, ajouté ; recette de `Phaser.Actions.AddEffectBloom`, Phaser 4 n'ayant pas de filtre Bloom) → **flou de profondeur** (`ParallelFilters` : flou + masque en bandes haut/bas, posé sur l'image nette ; bande nette = moitié centrale de l'écran) → vignettage. Le filtre `TiltShift` intégré n'est pas utilisé : il prend 100 échantillons par pixel.
+  - **Rayons de lumière** obliques (4 bandes additives venant du haut à gauche, teintées par la lumière de la zone, légère parallaxe et dérive lente) et **poussière** qui flotte dans les rayons (particules additives).
+  - **Halos** additifs qui scintillent sur ~170 sources : lanternes et lampadaires, feux (camp, forge, chaudron), runes cyan (autels, menhirs), fenêtres (le soir seulement). Les peintres signalent leurs lumières là où ils les dessinent (`tools/world/lights.ts`, `emitLight`) ; le générateur les écrit dans la couche `ambient` (objets `light`).
+  - **Jour / soir préparé** : `eveningGrade` dérive un étalonnage du soir de celui du jour (ombres plus violettes, lumières orangées, image plus sombre) ; halos, fenêtres et bloom montent le soir, rayons et poussière baissent. Non activé (`visuals.evening` = 0) ; F6 en debug bascule jour/soir, `?debug&evening=1` démarre le soir.
+  - **Réglage « Qualité »** dans le menu Pause (Échap) : Haute (tout), Basse (étalonnage et vignettage), Désactivée (aucun filtre ; la teinte `ambient` du HUD reste). Enregistré dans `vaelmor:settings` (`core/settings.ts`), Haute par défaut. Debug : `?debug&quality=low`, `?debug&fxoff=bloom,tiltShift` coupe des effets un par un pour mesurer.
+  - Tests `tests/atmosphere.test.ts` : plans de qualité, défilement et lecture prudente du réglage, soir plus sombre et plus chaud pour chaque zone, scintillement borné et désynchronisé, fenêtres éteintes le jour, masque du flou symétrique et monotone.
+  - **Coût mesuré en rendu logiciel** (SwiftShader, 960×540, Haut-Gué) : Désactivée ~18 ips, Basse ~13 ips, **Haute ~5 ips**. Bloom et flou de profondeur coûtent chacun ~6 passes plein écran (rayons, poussière et halos : négligeables). Sans GPU ces chiffres ne disent rien du jeu réel, mais ils montrent que la qualité Haute est la plus chère : **à vérifier par l'auteur avec F3** ; si une machine modeste descend sous 60 ips, choisir Basse.
 
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).

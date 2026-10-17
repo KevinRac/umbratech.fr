@@ -19,6 +19,7 @@ import { hash2 } from './noise';
 import { RAMPS, SHADE, ramp, type Ramp, type Rnd } from './art';
 import { M, finish } from './buildings';
 import { SWAY } from './flora';
+import { emitLight } from './lights';
 import { mix, Px } from './px';
 import { PALETTE as P } from '../../src/render/palette';
 
@@ -434,6 +435,7 @@ export function paintLampPost(px: Px, _rnd: Rnd): void {
     for (let x = 5; x <= 10; x++) px.set(x, y, y === 3 ? P.lumiereDoree : y === 7 ? P.braise : x === 7 || x === 8 ? 0xfff4d6 : y < 6 ? P.lumiereDoree : mix(P.braise, P.lumiereDoree, 0.5));
   }
   rect(px, 7, 3, 1, 5, MAT.iron.dark);
+  emitLight(8, 5, 'lamp');
   finish(px, 3, 4);
 }
 
@@ -868,6 +870,7 @@ export function paintTower(px: Px, _rnd: Rnd): void {
   rect(px, 15, 20, 2, 6, P.nuitBleue);
   rect(px, 15, 22, 2, 2, P.braise);
   px.set(15, 22, P.lumiereDoree);
+  emitLight(16, 23, 'window');
   finish(px, 3, 0);
 }
 
@@ -989,6 +992,7 @@ export function paintMenhir(px: Px, _rnd: Rnd): void {
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) if (px.colorAt(x + dx, y + dy) !== P.cyanEclat) px.blend(x + dx, y + dy, P.cyanEclat, 90);
   }
   px.set(8, 12, 0xeaffff);
+  emitLight(8, 12, 'rune');
   finish(px, 3, 3);
 }
 
@@ -1012,6 +1016,7 @@ export function paintAltar(px: Px, _rnd: Rnd): void {
   const crystal: [number, number, number][] = [[7, 0, 0xeaffff], [8, 0, P.cyanEclat], [6, 1, 0xeaffff], [7, 1, 0xeaffff], [8, 1, P.cyanEclat], [9, 1, mix(P.cyanEclat, P.bleuGris, 0.4)], [6, 2, P.cyanEclat], [7, 2, 0xeaffff], [8, 2, mix(P.cyanEclat, P.bleuGris, 0.3)], [9, 2, mix(P.cyanEclat, P.bleuGris, 0.5)], [7, 3, P.cyanEclat], [8, 3, mix(P.cyanEclat, P.bleuGris, 0.5)]];
   for (const [x, y, c] of crystal) px.set(x, y, c);
   for (const [x, y] of [[5, 2], [10, 2], [7, 4], [8, 4]] as const) px.blend(x, y, P.cyanEclat, 80);
+  emitLight(8, 2, 'rune');
   finish(px, 2, 2);
 }
 
@@ -1162,6 +1167,7 @@ export function paintCampfire(px: Px, _rnd: Rnd, _variant: number, frame: number
   seg(px, 4, 13, 12, 10, MAT.bark.base);
   seg(px, 4, 10, 12, 13, MAT.bark.dark);
   disc(px, 8, 11.5, 2.5, 1, P.braise);
+  emitLight(8, 8, 'fire');
   // Flammes.
   const sway = [0, 1, 0, -1][frame % 4] as number;
   const tall = [7, 8, 6, 8][frame % 4] as number;
@@ -1191,6 +1197,7 @@ export function paintCauldron(px: Px, _rnd: Rnd): void {
   rect(px, 3, 6, 10, 1, MAT.iron.light);
   disc(px, 8, 14, 2.4, 0.8, P.braise);
   px.set(8, 14, P.orangeForge);
+  emitLight(8, 13, 'fire');
   finish(px, 2, 1);
 }
 

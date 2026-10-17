@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import type { ActionInput } from '../core/input';
 import { PALETTE } from '../render/palette';
-import { addText, type PixelText } from './text';
+import { addText, setText, type PixelText } from './text';
 
 export interface MenuItem {
   readonly label: string;
@@ -116,6 +116,15 @@ export class VerticalMenu {
     if (!item) return;
     this.items = this.items.map((it, j) => (j === i ? { ...it, enabled } : it));
     this.refresh();
+  }
+
+  /** Change le texte d'une entrée (réglage qui défile : « Qualité : Haute »…). */
+  setItemLabel(i: number, label: string): void {
+    const item = this.items[i];
+    const text = this.labels[i];
+    if (!item || !text) return;
+    this.items = this.items.map((it, j) => (j === i ? { ...it, label } : it));
+    setText(text, label);
   }
 
   /** Bloque les entrées (pendant une transition). */

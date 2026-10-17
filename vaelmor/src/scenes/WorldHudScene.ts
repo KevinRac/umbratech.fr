@@ -14,6 +14,7 @@ import { uiScaleFor, worldZoomFor } from '../core/viewport';
 import { ActionInput } from '../core/input';
 import type { AmbienceKind } from '../data/schemas';
 import { createAmbience } from '../render/ambience';
+import { QUALITY_LABEL, nextQuality, type Quality } from '../render/atmosphere';
 import { PALETTE } from '../render/palette';
 import { drawPanel } from '../ui/panel';
 import { Toasts } from '../ui/Toasts';
@@ -27,6 +28,9 @@ const HINT_DURATION_MS = 9000;
 export interface PauseHandlers {
   readonly onResume: () => void;
   readonly onTitle: () => void;
+  /** Qualité des effets HD-2D en cours, et changement demandé (décision n°47). */
+  readonly quality: () => Quality;
+  readonly onQuality: (quality: Quality) => void;
 }
 
 export class WorldHudScene extends Phaser.Scene {
@@ -229,8 +233,16 @@ export class WorldHudScene extends Phaser.Scene {
     if (!handlers) return;
     const S = this.S;
     const lineHeight = 34 * S;
+    const qualityLabel = (): string => `Qualité : ${QUALITY_LABEL[handlers.quality()]}`;
     const items = [
       { label: 'Reprendre', onSelect: handlers.onResume },
+      {
+        label: qualityLabel(),
+        onSelect: () => {
+          handlers.onQuality(nextQuality(handlers.quality()));
+          this.pauseMenu?.setItemLabel(1, qualityLabel());
+        },
+      },
       { label: 'Retour au titre', onSelect: handlers.onTitle },
     ];
     const { width: W, height: H } = this.scale;

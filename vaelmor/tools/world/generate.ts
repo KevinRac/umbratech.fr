@@ -191,6 +191,7 @@ interface Ctx {
   gateFlag: (string | undefined)[];
   wheat: Uint8Array; // cases de champ « intérieures » : le jeu y pose le blé animé
   chimneys: { x: number; y: number }[]; // sorties de cheminée (pixels) : fumée animée
+  lights: { x: number; y: number; kind: string }[]; // halos (pixels), décision n°47
   tiles: TilesetBuilder;
 }
 
@@ -282,6 +283,7 @@ function commit(c: Ctx, name: string, v: number, x: number, y: number): void {
   const s = getStamp(name, v);
   if (s.chimney) c.chimneys.push({ x: x * TILE + s.chimney.x, y: y * TILE + s.chimney.y });
   if (s.building) c.buildings.push({ name, v, x, y });
+  for (const l of s.lights) c.lights.push({ x: x * TILE + l.x, y: y * TILE + l.y, kind: l.kind });
   const fx = x + s.foot.x;
   const fy = y + s.foot.y;
   const phase = s.frames.length > 1 && !s.building ? (-(fx >> 1) & 3) % s.frames.length : 0;
@@ -1585,6 +1587,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     gateFlag: new Array<string | undefined>(N).fill(undefined),
     wheat: new Uint8Array(N),
     chimneys: [],
+    lights: [],
     tiles: new TilesetBuilder(),
   };
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) c.zone[idx(x, y)] = zoneValueAt(x, y);
@@ -1763,6 +1766,9 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
   wClosed.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
   for (const r of wClosed) {
     ambient.push({ id: nextId++, name: 'Champ de blé', type: 'wheat', x: r.x0 * TILE, y: r.y0 * TILE, width: (r.x1 - r.x0 + 1) * TILE, height: (r.y1 - r.y0 + 1) * TILE, rotation: 0, visible: true, properties: [] });
+  }
+  for (const light of c.lights) {
+    ambient.push({ id: nextId++, name: 'Lumière', type: 'light', x: light.x, y: light.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [prop('kind', light.kind)] });
   }
   for (const chimney of c.chimneys) {
     ambient.push({ id: nextId++, name: 'Cheminée', type: 'chimney', x: chimney.x, y: chimney.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [] });

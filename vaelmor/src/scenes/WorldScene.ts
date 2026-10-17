@@ -22,7 +22,9 @@ import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker } from '../logic/world/zones';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
 import { worldView, type WorldView } from '../render/viewport';
-import { gradeMatrix, lerpMatrix } from '../render/grade';
+import { parseQuality, type Quality } from '../render/atmosphere';
+import { WorldAtmosphere } from '../render/worldAtmosphere';
+import { loadQuality, saveQuality } from '../core/settings';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
@@ -83,10 +85,8 @@ export class WorldScene extends Phaser.Scene {
 
   private paused = false;
 
-  /** Étalonnage de la zone (décision n°43) : filtre de couleur de la caméra et fondu entre zones. */
-  private gradeFilter: Phaser.Filters.ColorMatrix | null = null;
-  private gradeMatrix_: number[] | null = null;
-  private gradeTween: Phaser.Tweens.Tween | null = null;
+  /** Étalonnage, bloom, flou de profondeur, rayons, poussière, halos (décisions n°43 et n°47). */
+  private atmosphere: WorldAtmosphere | null = null;
 
   private lastGateMessage = -Infinity;
   private waterFrame = 0;
@@ -142,9 +142,16 @@ export class WorldScene extends Phaser.Scene {
     this.buildGateFog();
     this.debugOverlay = this.add.graphics().setDepth(DEPTH.debug);
 
-    this.gradeMatrix_ = null;
-    this.gradeFilter = this.cameras.main.filters.internal.addColorMatrix();
-    this.cameras.main.filters.external.addVignette(0.5, 0.5, 0.95, 0.22);
+    this.atmosphere = new WorldAtmosphere(
+      this,
+      this.data_.balance.visuals,
+      this.map.ambient.filter((o) => o.kind === 'light'),
+    );
+    // Outils de debug : `?debug&quality=low` force une qualité, `?debug&evening=1` montre le soir.
+    const params = new URLSearchParams(window.location.search);
+    const debug = params.has('debug');
+    this.atmosphere.setQuality(debug && params.has('quality') ? parseQuality(params.get('quality')) : loadQuality(), debug ? (params.get('fxoff') ?? '').split(',') : []);
+    if (debug && params.has('evening')) this.atmosphere.setEvening(Math.max(0, Math.min(1, Number(params.get('evening')) || 0)));
 
     this.camera_ = centerOn({ x: this.body_.x, y: this.body_.y - 10 }, this.cameraConfig);
     this.applyCamera();
@@ -291,6 +298,7 @@ export class WorldScene extends Phaser.Scene {
     this.syncHero();
     this.updateZones();
     this.updateAtmosphere(dt);
+    this.atmosphere?.update(dt);
     this.updateDebug(delta);
   }
 
@@ -336,34 +344,9 @@ export class WorldScene extends Phaser.Scene {
     this.hud.setZone(`${zone.name}  Niv. ${zone.levelMin}-${zone.levelMax}`);
     this.hud.setTint(Phaser.Display.Color.HexStringToColor(zone.ambient.color).color, zone.ambient.alpha);
     this.hud.setAmbience(zone.ambience);
-    this.applyGrade(zone);
+    this.atmosphere?.setZone(zone);
 
     if (announce || isNew) this.hud.showBanner(zone.name, `Niveau recommandé ${zone.levelMin}-${zone.levelMax}`, 2200);
-  }
-
-  /** Fond l'étalonnage courant vers celui de la zone (instantané à l'arrivée sur l'île). */
-  private applyGrade(zone: ZoneDef): void {
-    const filter = this.gradeFilter;
-    if (!filter) return;
-    const target = gradeMatrix(zone.grade);
-    const from = this.gradeMatrix_;
-    this.gradeTween?.stop();
-    if (!from) {
-      this.gradeMatrix_ = target;
-      filter.colorMatrix.set(target);
-      return;
-    }
-    const state = { t: 0 };
-    this.gradeTween = this.tweens.add({
-      targets: state,
-      t: 1,
-      duration: 1400,
-      ease: 'Sine.easeInOut',
-      onUpdate: () => {
-        this.gradeMatrix_ = lerpMatrix(from, target, state.t);
-        filter.colorMatrix.set(this.gradeMatrix_);
-      },
-    });
   }
 
   /* ---------- Passages ---------- */
@@ -423,6 +406,11 @@ export class WorldScene extends Phaser.Scene {
       this.hud.toast(open ? 'Debug : tous les passages ouverts' : 'Debug : passages refermés');
     }
     if (this.actions.justPressed('debugTeleport')) this.teleportNext();
+    if (this.actions.justPressed('debugEvening') && this.atmosphere) {
+      const evening = this.atmosphere.getEvening() < 0.5 ? 1 : 0;
+      this.atmosphere.setEvening(evening, 2000);
+      this.hud.toast(evening ? 'Debug : soir' : 'Debug : jour');
+    }
     if (this.debugCollisionOn) this.drawCollisionOverlay();
 
     this.debugClock += delta;
@@ -439,7 +427,7 @@ export class WorldScene extends Phaser.Scene {
         [
           `CASE ${tx},${ty}  PX ${Math.round(this.body_.x)},${Math.round(this.body_.y)}`,
           `ZONE ${zone?.id ?? '-'}  LIEU ${location ? String(location.props['id']) : '-'}`,
-          `COLL ${value}  F2 TP  F4 COLL  F9 PASSAGES`,
+          `COLL ${value}  F2 TP  F4 COLL  F6 SOIR  F9 PASSAGES`,
         ].join('\n'),
       );
     }
@@ -492,7 +480,15 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     this.paused = true;
-    this.hud.showPause({ onResume: () => this.closePause(), onTitle: () => this.backToTitle() });
+    this.hud.showPause({
+      onResume: () => this.closePause(),
+      onTitle: () => this.backToTitle(),
+      quality: () => this.atmosphere?.getQuality() ?? 'high',
+      onQuality: (quality: Quality) => {
+        this.atmosphere?.setQuality(quality);
+        saveQuality(quality);
+      },
+    });
     this.tweens.pauseAll();
     this.time.paused = true;
   }
@@ -512,6 +508,8 @@ export class WorldScene extends Phaser.Scene {
 
   private onShutdown(): void {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    this.atmosphere?.destroy();
+    this.atmosphere = null;
     this.registry.remove('debug.info');
     this.fog.clear();
     this.wheatSprites = [];

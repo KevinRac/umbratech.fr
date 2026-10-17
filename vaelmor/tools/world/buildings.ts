@@ -18,6 +18,7 @@
  */
 import { hash2 } from './noise';
 import { RAMPS, SHADE, ramp, type Ramp, type Rnd } from './art';
+import { emitLight } from './lights';
 import { mix, type Px } from './px';
 import { PALETTE as P } from '../../src/render/palette';
 
@@ -416,6 +417,7 @@ function windowAt(px: Px, x: number, y: number, o: WindowOpts = {}): void {
   }
   const mx = x + Math.floor(w / 2);
   const my = y + Math.floor(hh / 2);
+  if (lit) emitLight(mx, my, 'window');
   rect(px, mx, y + 1, 1, hh - 2, frame.base);
   rect(px, x + 1, my, w - 2, 1, frame.base);
   px.set(x + 1, y + 1, lit ? 0xfff4d6 : P.metalClair);
@@ -551,6 +553,7 @@ function lantern(px: Px, x: number, y: number, dir: 1 | -1 = 1): void {
   px.set(x + dir, y, M.iron.base);
   px.set(x + dir * 2, y, M.iron.base);
   const lx = x + dir * 2 - 1;
+  emitLight(lx + 1, y + 3, 'lamp');
   rect(px, lx, y + 1, 3, 1, M.iron.base);
   rect(px, lx, y + 2, 3, 3, M.iron.dark);
   px.set(lx + 1, y + 2, 0xfff4d6);
@@ -914,6 +917,7 @@ export function paintForge(px: Px, _rnd: Rnd): void {
     px.set(40 + i, 33, i % 3 === 0 ? GLOW : mix(P.orangeForge, DEEP, 0.3));
   }
   px.set(42, 32, GLOW);
+  emitLight(44, 31, 'fire');
   px.set(43, 31, P.braise);
   for (const [sx, sy] of [[44, 27], [41, 25], [46, 23]] as const) px.set(sx, sy, P.braise);
   // Soufflet.

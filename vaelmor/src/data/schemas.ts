@@ -81,6 +81,9 @@ const clampedGain = z.strictObject({
   max: z.number(),
 });
 
+const unit01 = z.number().min(0).max(1);
+const haloKind = z.strictObject({ radius: z.number().positive(), alpha: unit01 });
+
 export const balanceFileSchema = z.strictObject({
   $comment: comment,
   exploration: z.strictObject({
@@ -133,6 +136,22 @@ export const balanceFileSchema = z.strictObject({
   }),
   defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1) }),
   injury: z.strictObject({ mobilityPenalty: z.number().int().min(0), statPenaltyRatio: z.number().min(0).max(1) }),
+  /** Effets HD-2D du monde ouvert (décision n°47) ; le réglage « Qualité » choisit lesquels s'appliquent. */
+  visuals: z.strictObject({
+    /** Flou de profondeur : bande nette centrée de hauteur `focus` (fraction d'écran), fondu `fade`, force `blur`. */
+    tiltShift: z.strictObject({ focus: unit01, fade: unit01, blur: z.number().min(0).max(8) }),
+    /** Bloom : seuil de luminance, rayon du flou, intensité de l'ajout. */
+    bloom: z.strictObject({ threshold: unit01, blur: z.number().min(0).max(8), amount: z.number().min(0).max(2) }),
+    vignette: z.strictObject({ radius: z.number().min(0).max(2), strength: unit01 }),
+    /** Rayons de lumière obliques : nombre de bandes et opacité maximale. */
+    rays: z.strictObject({ count: z.number().int().min(0).max(8), alpha: unit01 }),
+    /** Poussière dans la lumière : une particule toutes les `periodMs`, opacité maximale. */
+    dust: z.strictObject({ periodMs: z.number().int().min(16), alpha: unit01 }),
+    /** Halos des sources de lumière ; `dayFactor` = part de l'intensité gardée en plein jour. */
+    halos: z.strictObject({ dayFactor: unit01, lamp: haloKind, fire: haloKind, window: haloKind, rune: haloKind }),
+    /** Moment de la journée : 0 jour, 1 soir (préparé, non activé : 0 par défaut). */
+    evening: unit01,
+  }),
 });
 
 /* ---------- Zones de niveau (GDD §3.4, §8) ---------- */
@@ -169,6 +188,11 @@ export const zoneSchema = z.strictObject({
     contrast: z.number().min(-0.4).max(0.4),
     brightness: z.number().min(-0.3).max(0.3),
   }),
+  /**
+   * Lumière HD-2D de la zone (décision n°47), de 0 (aucun) à 1 (plein) :
+   * rayons obliques, poussière en suspension, intensité du bloom.
+   */
+  light: z.strictObject({ rays: unit01, dust: unit01, bloom: unit01 }),
 });
 
 export const zonesFileSchema = z.strictObject({
