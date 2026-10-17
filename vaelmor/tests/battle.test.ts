@@ -8,6 +8,7 @@ import { cellIndex, distance, mobility, pathTo, reachable, threatCells } from '.
 import type { BattleState } from '../src/logic/tactics/types';
 import { statsAtLevel } from '../src/logic/units/stats';
 import { makeBattle, plains, rules, unit } from './helpers/battle';
+import { testWorld } from './helpers/world';
 
 const R = rules();
 const cells = (list: readonly { x: number; y: number }[]): string[] => list.map((c) => `${c.x},${c.y}`).sort();
@@ -26,21 +27,25 @@ describe('construction d’un combat', () => {
   it('déploie la compagnie d’essai (héros en premier) et place les ennemis', () => {
     const data = loadGameData();
     const encounter = findEncounter(data, 'embuscade_du_gue');
-    const state = buildBattle(encounter, data.encounters.testParty, data, { seed: 1 });
+    const state = buildBattle(encounter, data.encounters.testParty, data, { seed: 1, world: testWorld().source });
     const players = state.units.filter((u) => u.team === 'player');
     expect(players).toHaveLength(5);
-    expect(players[0]).toMatchObject({ name: 'Voyageur', isHero: true, x: 1, y: 3 });
-    expect(players.map((p) => [p.x, p.y])).toEqual(encounter.deploy.slice(0, 5));
+    expect(players[0]).toMatchObject({ name: 'Voyageur', isHero: true });
     expect(state.units.filter((u) => u.team === 'enemy')).toHaveLength(7);
-    expect(state).toMatchObject({ phase: 'player', turn: 1, outcome: 'ongoing', objective: 'rout' });
+    expect(state).toMatchObject({ phase: 'player', turn: 1, outcome: 'ongoing', objective: 'rout', zone: 'z1' });
     expect(players.every((p) => p.hp === p.stats.pv && p.weapon.id === data.classes.find((c) => c.id === p.kindId)?.startingWeapon)).toBe(true);
   });
 
   it('respecte maxDeploy', () => {
     const data = loadGameData();
     const encounter = { ...findEncounter(data, 'embuscade_du_gue'), maxDeploy: 2 };
-    const state = buildBattle(encounter, data.encounters.testParty, data, { seed: 1 });
+    const state = buildBattle(encounter, data.encounters.testParty, data, { seed: 1, world: testWorld().source });
     expect(state.units.filter((u) => u.team === 'player').map((u) => u.name)).toEqual(['Voyageur', 'Odran']);
+  });
+
+  it('une carte tirée du monde exige la carte du monde', () => {
+    const data = loadGameData();
+    expect(() => buildBattle(findEncounter(data, 'embuscade_du_gue'), data.encounters.testParty, data, { seed: 1 })).toThrow(/carte du monde est nécessaire/);
   });
 });
 
@@ -325,7 +330,7 @@ describe('IA ennemie (GDD §9.15)', () => {
 });
 
 /** Les deux camps jouent avec l'IA : un combat doit toujours se terminer. */
-function autoPlay(state: BattleState, maxTurns = 40): void {
+function autoPlay(state: BattleState, maxTurns = 60): void {
   const r = battleRules(loadGameData());
   while (state.outcome === 'ongoing' && state.turn <= maxTurns) {
     for (const u of readyUnits(state)) {
@@ -341,11 +346,11 @@ function autoPlay(state: BattleState, maxTurns = 40): void {
 }
 
 describe('combats complets', () => {
-  for (const id of ['embuscade_du_gue', 'camp_des_ecumeurs']) {
+  for (const id of loadGameData().encounters.encounters.map((e) => e.id)) {
     it(`« ${id} » se termine (5 graines), sans commande invalide`, () => {
       const data = loadGameData();
       for (let seed = 0; seed < 5; seed++) {
-        const s = buildBattle(findEncounter(data, id), data.encounters.testParty, data, { seed });
+        const s = buildBattle(findEncounter(data, id), data.encounters.testParty, data, { seed, world: testWorld().source });
         autoPlay(s);
         expect(s.outcome).not.toBe('ongoing');
         // Les PV ne sortent jamais des bornes.

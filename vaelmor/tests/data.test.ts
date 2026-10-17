@@ -106,31 +106,64 @@ describe('détection des erreurs de données', () => {
     expect(issuesOf(raw).join('\n')).toMatch(/enemies\.json › « ecumeur_sabreur »\.weapon/);
   });
 
-  it('signale une carte de combat non rectangulaire ou une lettre inconnue', () => {
-    const raw = rawCopy();
-    raw.encounters.encounters[0].map[2] += '.';
+  /** Ajoute une rencontre à carte fixe (scénario) aux données copiées. */
+  const withFixed = (raw: Record<string, any>): Record<string, any> => {
+    raw.encounters.encounters.push({
+      id: 'scenario_test',
+      name: 'Scénario',
+      zone: 'z1',
+      objective: { type: 'rout' },
+      map: ['..~~....', '..~~....', '..##....', '..~~....', '..~~....', '..~~....'],
+      deploy: [[0, 0], [1, 1]],
+      maxDeploy: 2,
+      enemies: [{ enemy: 'ecumeur_sabreur', level: 1, x: 6, y: 2 }, { enemy: 'ecumeur_archer', level: 1, x: 7, y: 4 }],
+      victoryFlags: [],
+    });
+    return raw;
+  };
+
+  it('accepte une rencontre à carte fixe valide', () => {
+    expect(issuesOf(withFixed(rawCopy()))).toEqual([]);
+  });
+
+  it('signale une carte fixe non rectangulaire ou une lettre inconnue', () => {
+    const raw = withFixed(rawCopy());
+    raw.encounters.encounters.at(-1).map[2] += '.';
     expect(issuesOf(raw).join('\n')).toMatch(/même longueur/);
-    const raw2 = rawCopy();
-    raw2.encounters.encounters[0].map[0] = 'X' + raw2.encounters.encounters[0].map[0].slice(1);
+    const raw2 = withFixed(rawCopy());
+    raw2.encounters.encounters.at(-1).map[0] = 'X' + raw2.encounters.encounters.at(-1).map[0].slice(1);
     expect(issuesOf(raw2).join('\n')).toMatch(/lettre « X »/);
   });
 
   it('signale une unité posée sur une case infranchissable, hors carte ou déjà occupée', () => {
-    const raw = rawCopy();
-    raw.encounters.encounters[0].enemies[0].x = 6; // rivière
-    raw.encounters.encounters[0].enemies[0].y = 0;
-    raw.encounters.encounters[0].deploy[1] = [40, 2];
-    raw.encounters.encounters[0].enemies[2].x = 9;
-    raw.encounters.encounters[0].enemies[2].y = 3;
+    const raw = withFixed(rawCopy());
+    const enc = raw.encounters.encounters.at(-1);
+    enc.enemies[0].x = 2; // rivière
+    enc.enemies[0].y = 0;
+    enc.deploy[1] = [40, 2];
+    enc.enemies[1].x = 0;
+    enc.enemies[1].y = 0;
     const text = issuesOf(raw).join('\n');
-    expect(text).toMatch(/case 6,0 infranchissable/);
+    expect(text).toMatch(/case 2,0 infranchissable/);
     expect(text).toMatch(/case 40,2 hors de la carte/);
-    expect(text).toMatch(/case 9,3 déjà occupée/);
+    expect(text).toMatch(/case 0,0 déjà occupée/);
+  });
+
+  it('une rencontre a soit une carte fixe, soit une carte tirée du monde', () => {
+    const raw = withFixed(rawCopy());
+    raw.encounters.encounters.at(-1).sampled = { width: 20, height: 14, site: [10, 10], anchor: 'player' };
+    expect(issuesOf(raw).join('\n')).toMatch(/soit une carte fixe \(map\), soit une carte tirée du monde/);
+    const raw2 = rawCopy();
+    raw2.encounters.encounters[0].enemies[0].x = 3;
+    raw2.encounters.encounters[0].sampled.width = 40;
+    const text = issuesOf(raw2).join('\n');
+    expect(text).toMatch(/pas de position sur une carte tirée du monde/);
+    expect(text).toMatch(/40×20 cases/);
   });
 
   it('exige un boss unique pour l’objectif « boss » et un seul héros dans la compagnie d’essai', () => {
     const raw = rawCopy();
-    raw.encounters.encounters[1].enemies[0].boss = false;
+    raw.encounters.encounters[2].enemies[0].boss = false;
     raw.encounters.testParty[1].hero = true;
     const text = issuesOf(raw).join('\n');
     expect(text).toMatch(/exactement un ennemi marqué boss/);

@@ -1,17 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../src/data';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES, paintBattlefield } from '../src/render/battlefield';
-import { UNIT_LOOKS } from '../src/render/unitLooks';
+import { MAP_SPRITES, MS_H, MS_IDLE_FRAMES, MS_VIEWS, MS_W, MS_WALK_FRAMES, paintMapSprite } from '../src/render/mapSprites';
+import { buildBattle, findEncounter } from '../src/logic/tactics/encounter';
+import { terrainAt } from '../src/logic/tactics/grid';
+import { testWorld } from './helpers/world';
 
 /** Champ de bataille peint par code et apparences des unités (jalon M4). */
 const luminance = (c: number): number => 0.299 * ((c >> 16) & 255) + 0.587 * ((c >> 8) & 255) + 0.114 * (c & 255);
 
 const data = loadGameData();
-const rowsOf = (map: readonly string[]): string[][] => map.map((row) => [...row].map((ch) => data.encounters.legend[ch] as string));
+const rowsOf = (id: string): string[][] => {
+  const s = buildBattle(findEncounter(data, id), data.encounters.testParty, data, { seed: 1, world: testWorld().source });
+  return Array.from({ length: s.map.height }, (_, y) => Array.from({ length: s.map.width }, (_, x) => terrainAt(s.map, x, y).id));
+};
 
 describe('champ de bataille', () => {
   for (const encounter of data.encounters.encounters) {
-    const rows = rowsOf(encounter.map);
+    const rows = rowsOf(encounter.id);
     const field = paintBattlefield(rows, 0, 7);
 
     it(`« ${encounter.id} » : taille, cases pleines, marge du haut`, () => {
@@ -53,9 +59,43 @@ describe('champ de bataille', () => {
   });
 });
 
-describe('apparences des unités', () => {
-  it('chaque classe, chaque ennemi et le héros ont une apparence', () => {
+describe('sprites de carte (décision n°58)', () => {
+  it('chaque classe, chaque ennemi et le héros ont une fiche', () => {
     const sprites = ['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite)];
-    for (const sprite of sprites) expect(UNIT_LOOKS[sprite], sprite).toBeDefined();
+    for (const sprite of sprites) expect(MAP_SPRITES[sprite], sprite).toBeDefined();
   });
+
+  for (const [id, spec] of Object.entries(MAP_SPRITES)) {
+    it(`${id} : tient dans 16 × 20, pieds en bas, couleurs d'équipe distinctes, sombres teintés`, () => {
+      const paint = (team: 'player' | 'enemy', kind: 'idle' | (typeof MS_VIEWS)[number], frame: number): Map<number, number> => {
+        const px = new Map<number, number>();
+        paintMapSprite({ set: (x, y, c) => {
+          expect(x >= 0 && x < MS_W && y >= 0 && y < MS_H).toBe(true);
+          px.set(y * MS_W + x, c);
+        } }, 0, 0, spec, team, kind, frame);
+        return px;
+      };
+      for (let f = 0; f < MS_IDLE_FRAMES; f++) {
+        const blue = paint('player', 'idle', f);
+        const red = paint('enemy', 'idle', f);
+        // Les pieds touchent la dernière rangée.
+        expect([...blue.keys()].some((i) => Math.floor(i / MS_W) === MS_H - 1)).toBe(true);
+        // Même silhouette, couleurs différentes selon le camp.
+        expect([...blue.keys()].sort()).toEqual([...red.keys()].sort());
+        expect([...blue.entries()].filter(([i, c]) => red.get(i) !== c).length).toBeGreaterThan(10);
+        for (const c of blue.values()) {
+          if (luminance(c) >= 40) continue;
+          const r = (c >> 16) & 255;
+          const g = (c >> 8) & 255;
+          const b = c & 255;
+          expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeGreaterThan(8);
+        }
+      }
+      // Les images de marche diffèrent (les jambes bougent).
+      for (const view of MS_VIEWS) {
+        const frames = Array.from({ length: MS_WALK_FRAMES }, (_, f) => JSON.stringify([...paint('player', view, f)]));
+        expect(new Set(frames).size).toBeGreaterThan(1);
+      }
+    });
+  }
 });

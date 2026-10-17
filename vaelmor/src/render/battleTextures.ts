@@ -1,24 +1,23 @@
 /**
  * Textures du combat tactique (jalon M4), toutes générées par code :
  * champ de bataille (images d'eau animée), feuilles de sprites des unités
- * (gabarit commun des personnages), curseur, cases colorées, marqueurs.
+ * façon GBA (`mapSprites.ts`), curseur, cases colorées, marqueurs.
  */
 import type Phaser from 'phaser';
 import { BF_WATER_FRAMES, paintBattlefield } from './battlefield';
-import { CHAR_H, CHAR_POSES, CHAR_W, CHAR_WALK_FRAMES, paintCharacterFrame, type CharPose } from './characterSprite';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas } from './pixelCanvas';
-import { unitLook } from './unitLooks';
+import { MS_H, MS_IDLE_FRAMES, MS_VIEWS, MS_W, MS_WALK_FRAMES, mapSpriteSpec, paintMapSprite, type MsTeam, type MsView } from './mapSprites';
 
 export const BATTLE_TEX = {
   field: (key: string, frame: number): string => `battle:field:${key}:${frame}`,
-  unit: (sprite: string): string => `battle:unit:${sprite}`,
-  unitFrame: (pose: CharPose, frame: number): string => `${pose}_${frame}`,
-  walk: (sprite: string, pose: CharPose): string => `battle:${sprite}:walk:${pose}`,
-  idle: (sprite: string): string => `battle:${sprite}:idle`,
+  /** Sprites de carte façon GBA (décision n°58), aux couleurs du camp. */
+  ms: (sprite: string, team: MsTeam): string => `battle:ms:${sprite}:${team}`,
+  msFrame: (kind: 'idle' | MsView, frame: number): string => `${kind}_${frame}`,
+  msIdle: (sprite: string, team: MsTeam): string => `battle:ms:${sprite}:${team}:idle`,
+  msWalk: (sprite: string, team: MsTeam, view: MsView): string => `battle:ms:${sprite}:${team}:walk:${view}`,
   cursor: (frame: number): string => `battle:cursor:${frame}`,
   tile: 'battle:tile',
-  ring: 'battle:ring',
   crown: 'battle:crown',
   heroMark: 'battle:heroMark',
   spark: 'battle:spark',
@@ -39,49 +38,52 @@ export function ensureBattlefield(scene: Phaser.Scene, key: string, rows: readon
   }
 }
 
-/** Feuille 4 × 3 images d'une apparence d'unité, et ses animations (marche, attente). */
-export function ensureUnitSheet(scene: Phaser.Scene, sprite: string): void {
-  const key = BATTLE_TEX.unit(sprite);
+/**
+ * Feuille d'un sprite de carte (décision n°58) : 3 images d'attente puis
+ * 4 images de marche par vue (face, dos, profil), et leurs animations.
+ * L'attente « respire » comme sur GBA : 0 → 1 → 2, la deuxième plus brève.
+ */
+export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: MsTeam): void {
+  const key = BATTLE_TEX.ms(sprite, team);
   if (!scene.textures.exists(key)) {
-    const look = unitLook(sprite);
-    const sheet = new PixelCanvas(CHAR_W * CHAR_WALK_FRAMES, CHAR_H * CHAR_POSES.length);
-    CHAR_POSES.forEach((pose, row) => {
-      for (let frame = 0; frame < CHAR_WALK_FRAMES; frame++) {
-        paintCharacterFrame({ set: (x, y, color, alpha) => sheet.set(x, y, color, alpha ?? 255) }, frame * CHAR_W, row * CHAR_H, look, pose, frame);
-      }
+    const spec = mapSpriteSpec(sprite);
+    const rows: ['idle' | MsView, number][] = [['idle', MS_IDLE_FRAMES], ...MS_VIEWS.map((v) => [v, MS_WALK_FRAMES] as [MsView, number])];
+    const sheet = new PixelCanvas(MS_W * MS_WALK_FRAMES, MS_H * rows.length);
+    rows.forEach(([kind, count], row) => {
+      for (let f = 0; f < count; f++) paintMapSprite({ set: (x, y, color) => sheet.set(x, y, color) }, f * MS_W, row * MS_H, spec, team, kind, f);
     });
     sheet.toTexture(scene, key);
     const texture = scene.textures.get(key);
-    CHAR_POSES.forEach((pose, row) => {
-      for (let frame = 0; frame < CHAR_WALK_FRAMES; frame++) texture.add(BATTLE_TEX.unitFrame(pose, frame), 0, frame * CHAR_W, row * CHAR_H, CHAR_W, CHAR_H);
+    rows.forEach(([kind, count], row) => {
+      for (let f = 0; f < count; f++) texture.add(BATTLE_TEX.msFrame(kind, f), 0, f * MS_W, row * MS_H, MS_W, MS_H);
     });
   }
-  for (const pose of CHAR_POSES) {
-    const anim = BATTLE_TEX.walk(sprite, pose);
-    if (!scene.anims.exists(anim)) {
-      scene.anims.create({
-        key: anim,
-        frames: Array.from({ length: CHAR_WALK_FRAMES }, (_, frame) => ({ key, frame: BATTLE_TEX.unitFrame(pose, frame) })),
-        frameRate: 10,
-        repeat: -1,
-      });
-    }
-  }
-  // Attente : le haut du corps respire (images 0 et 1 du gabarit, face).
-  const idle = BATTLE_TEX.idle(sprite);
+  const idle = BATTLE_TEX.msIdle(sprite, team);
   if (!scene.anims.exists(idle)) {
     scene.anims.create({
       key: idle,
       frames: [
-        { key, frame: BATTLE_TEX.unitFrame('down', 0), duration: 520 },
-        { key, frame: BATTLE_TEX.unitFrame('down', 1), duration: 420 },
+        { key, frame: BATTLE_TEX.msFrame('idle', 0), duration: 420 },
+        { key, frame: BATTLE_TEX.msFrame('idle', 1), duration: 160 },
+        { key, frame: BATTLE_TEX.msFrame('idle', 2), duration: 420 },
+        { key, frame: BATTLE_TEX.msFrame('idle', 1), duration: 160 },
       ],
+      repeat: -1,
+    });
+  }
+  for (const view of MS_VIEWS) {
+    const walk = BATTLE_TEX.msWalk(sprite, team, view);
+    if (scene.anims.exists(walk)) continue;
+    scene.anims.create({
+      key: walk,
+      frames: Array.from({ length: MS_WALK_FRAMES }, (_, f) => ({ key, frame: BATTLE_TEX.msFrame(view, f) })),
+      frameRate: 10,
       repeat: -1,
     });
   }
 }
 
-/** Curseur, cases colorées, anneaux d'équipe, couronne du boss, étincelle. */
+/** Curseur, cases colorées, couronne du boss, étoile du héros, étincelle. */
 export function ensureBattleFxTextures(scene: Phaser.Scene): void {
   if (scene.textures.exists(BATTLE_TEX.tile)) return;
 
@@ -119,18 +121,6 @@ export function ensureBattleFxTextures(scene: Phaser.Scene): void {
     }
   }
   tile.toTexture(scene, BATTLE_TEX.tile);
-
-  // Anneau d'équipe sous les pieds (teinté bleu ou rouge).
-  const ring = new PixelCanvas(14, 6);
-  for (let y = 0; y < 6; y++) {
-    for (let x = 0; x < 14; x++) {
-      const dx = (x + 0.5 - 7) / 7;
-      const dy = (y + 0.5 - 3) / 3;
-      const d = dx * dx + dy * dy;
-      if (d <= 1) ring.set(x, y, 0xffffff, d > 0.5 ? 230 : 90);
-    }
-  }
-  ring.toTexture(scene, BATTLE_TEX.ring);
 
   // Couronne du boss (7 × 5).
   const crown = new PixelCanvas(7, 5);

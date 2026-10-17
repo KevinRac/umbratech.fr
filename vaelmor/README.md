@@ -16,7 +16,7 @@ RPG tactique en monde ouvert, jouable dans le navigateur. Conception : `docs/GDD
 
 `play/` est **commité** : le serveur publie le dépôt tel quel (`umbratech.fr/vaelmor/play/`). Toujours lancer `npm run build` avant de commiter une modification du jeu.
 
-Outil de debug : touche **F3**, ou `?debug` dans l'URL. Dans le monde : **F2** téléportation au lieu suivant, **F4** collisions, **F9** passages ouverts / fermés, **F7** combat d'essai (Embuscade au gué), **F8** Camp des Écumeurs (boss Brakk), `?debug&at=31,58` pose le héros sur une case. En combat : **F2** victoire immédiate.
+Outil de debug : touche **F3**, ou `?debug` dans l'URL. Dans le monde : **F2** téléportation au lieu suivant, **F4** collisions, **F9** passages ouverts / fermés, **F7** combat sur le terrain où se tient le héros, **F8** Camp des Écumeurs (boss Brakk), `?debug&at=31,58` pose le héros sur une case. En combat : **F2** victoire immédiate, `?debug&seed=abc` rejoue un combat à l'identique.
 
 Combat (jalon M4) : écran titre › « Combat d'essai ». Flèches ou souris pour le curseur, Entrée / clic pour choisir, Échap / clic droit pour annuler, **R** zones de menace, **F** unité suivante, **Tab** menu (fin du tour, vitesse des animations, retraite), **Maj** maintenue accélère les animations.
 
@@ -47,6 +47,6 @@ vaelmor/
 ## Ajouter du contenu
 
 - **Une entrée dans un fichier existant** (classe, terrain, arme, ennemi, rencontre…) : modifier le JSON de `data/`, puis `npm run validate-data`.
-- **Une nouvelle carte de combat** : une rencontre dans `data/encounters.json` ; la carte s'écrit en texte, une lettre par case (`legend` en tête du fichier), avec ses cases de déploiement, ses ennemis et son objectif. Le champ de bataille est peint automatiquement. Un nouvel ennemi demande aussi son apparence dans `src/render/unitLooks.ts` (le test le vérifie).
+- **Une nouvelle rencontre** : une entrée dans `data/encounters.json`. En général `sampled` : la carte est tirée du monde autour du point de contact (taille, point par défaut, qui tient le point) et les unités sont placées seules. Pour un scénario, `map` : carte écrite en texte, une lettre par case (`legend`), avec ses cases de déploiement et la position des ennemis. Le champ de bataille est peint automatiquement. Un nouvel ennemi demande aussi sa fiche de sprite dans `src/render/mapSprites.ts` (le test le vérifie).
 - **Un nouveau fichier de données** : son schéma dans `src/data/schemas.ts`, une entrée dans `DATA_SCHEMAS` (`src/data/validate.ts`), son import dans `src/data/index.ts`. Les tests vérifient que rien n'est oublié.
 - **Une nouvelle scène** : une clé dans `src/scenes/keys.ts`, la classe dans `src/scenes/`, l'enregistrer dans `src/main.ts`.

@@ -26,11 +26,16 @@ import { cellIndex, cellsInRange, getUnit, inBounds, inWeaponRange, reachable, t
 import type { BattleEvent, BattleRules, BattleState, BattleUnit, Cell, Strike } from '../logic/tactics/types';
 import { addUnique } from '../logic/world/worldState';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES } from '../render/battlefield';
-import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureUnitSheet } from '../render/battleTextures';
+import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureMapSprite } from '../render/battleTextures';
+import { gradeMatrix } from '../render/grade';
+import { WORLD_MAP_KEY } from '../render/worldTextures';
+import { loadQuality } from '../core/settings';
+import { loadWorldMap } from '../data/worldMap';
+import { worldTerrainSource, type TerrainSource } from '../logic/tactics/sampling';
 import { PALETTE, mixColor } from '../render/palette';
 import { addText } from '../ui/text';
 import type { MenuItem } from '../ui/VerticalMenu';
-import { SIDE, TOP_BAR, type BattleHudScene } from './BattleHudScene';
+import { BOTTOM_BAR, TOP_BAR, type BattleHudScene, type DodgeSide } from './BattleHudScene';
 import { SCENES } from './keys';
 
 export interface BattleSceneData {
@@ -41,14 +46,20 @@ export interface BattleSceneData {
   readonly seed?: string | number;
   /** Avantage de position (le joueur a surpris l'ennemi). */
   readonly initiative?: boolean;
+  /** Point de contact dans le monde, en cases (la carte de combat est tirée du terrain autour). */
+  readonly site?: Cell;
 }
+
+/** Zoom du combat : chaque case fait 32 pixels à l'écran, comme une carte GBA agrandie (décision n°58). */
+const BATTLE_ZOOM = 2;
+/** Le curseur garde cette marge (en cases) avec le bord de l'écran : la carte défile avant. */
+const SCROLL_MARGIN = 2;
 
 type Mode = 'busy' | 'browse' | 'move' | 'menu' | 'target' | 'enemy' | 'end';
 
 interface UnitView {
   readonly container: Phaser.GameObjects.Container;
   readonly sprite: Phaser.GameObjects.Sprite;
-  readonly ring: Phaser.GameObjects.Image;
   readonly hpBg: Phaser.GameObjects.Rectangle;
   readonly hpFill: Phaser.GameObjects.Rectangle;
 }
@@ -103,6 +114,11 @@ export class BattleScene extends Phaser.Scene {
   private speed: AnimSpeed = 'normal';
   private pendingClick: { cell: Cell; right: boolean } | null = null;
   private lastHover = '';
+  /** Défilement : coin haut-gauche visible (pixels d'art), cible du lissage, taille visible. */
+  private cam = { x: 0, y: 0 };
+  private camTarget = { x: 0, y: 0 };
+  private viewSize = { w: 480, h: 246 };
+  private dodge: DodgeSide = 'left';
 
   constructor() {
     super(SCENES.battle);
@@ -115,8 +131,15 @@ export class BattleScene extends Phaser.Scene {
       this.gameData = loadGameData();
       this.rules = battleRules(this.gameData);
       const encounter = findEncounter(this.gameData, params.encounterId);
-      const seed = params.seed ?? `${params.encounterId}:${Date.now()}`;
-      this.state = buildBattle(encounter, this.gameData.encounters.testParty, this.gameData, { seed, initiative: params.initiative === true });
+      // `?debug&seed=…` rejoue un combat à l'identique (placement et dés).
+      const url = new URLSearchParams(window.location.search);
+      const seed = params.seed ?? (url.has('debug') && url.get('seed') ? `${url.get('seed')}` : `${params.encounterId}:${Date.now()}`);
+      this.state = buildBattle(encounter, this.gameData.encounters.testParty, this.gameData, {
+        seed,
+        initiative: params.initiative === true,
+        world: this.worldSource(),
+        ...(params.site ? { site: params.site } : {}),
+      });
     } catch (error) {
       showFatalError('Le combat n’a pas pu être préparé.', [error instanceof Error ? error.message : String(error)]);
       return;
@@ -127,7 +150,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud = this.scene.get(SCENES.battleHud) as BattleHudScene;
 
     ensureBattleFxTextures(this);
-    for (const unit of this.state.units) ensureUnitSheet(this, unit.sprite);
+    for (const unit of this.state.units) ensureMapSprite(this, unit.sprite, unit.team);
     this.buildField();
     this.layoutCamera();
     this.buildUnits();
@@ -154,7 +177,10 @@ export class BattleScene extends Phaser.Scene {
     this.hud.setHeader(encounterName, this.state.objective === 'boss' && boss ? `Objectif : vaincre ${boss.name}` : 'Objectif : vaincre tous les ennemis');
     this.hud.setPhase('player', 1);
     const hero = this.state.units.find((u) => u.isHero) ?? this.state.units[0];
-    if (hero) this.setCursor(hero);
+    if (hero) {
+      this.setCursor(hero);
+      this.centerCameraOn(hero);
+    }
     this.cameras.main.fadeIn(450, 0, 0, 0);
     void this.openingSequence();
   }
@@ -191,34 +217,95 @@ export class BattleScene extends Phaser.Scene {
     this.field.setCrop(0, BF_TOP - 2, w, h + 2);
   }
 
-  /** Zoom entier qui fait tenir la carte entre les deux colonnes de l'interface. */
+  /** Carte du monde (cache du chargement) : le combat se joue sur son terrain. */
+  private worldSource(): TerrainSource | undefined {
+    const raw = this.cache.tilemap.get(WORLD_MAP_KEY)?.data as unknown;
+    if (!raw) return undefined;
+    return worldTerrainSource(loadWorldMap(raw, { zones: this.gameData.zones, terrains: this.gameData.terrains, tileSize: this.gameData.balance.exploration.tileSize }));
+  }
+
+  /**
+   * Caméra GBA (décision n°58) : zoom ×2, entre le bandeau du haut et la barre
+   * d'aide du bas ; la carte défile avec le curseur. L'étalonnage de la zone du
+   * monde où se joue le combat est appliqué (sauf qualité « Désactivée »).
+   */
   private layoutCamera(): void {
     const { width: W, height: H } = this.scale;
     const S = uiScaleFor(H);
+    const top = TOP_BAR * S;
+    const vpH = H - (TOP_BAR + BOTTOM_BAR) * S;
+    this.zoom = BATTLE_ZOOM;
+    this.viewSize = { w: W / this.zoom, h: vpH / this.zoom };
+    const camera = this.cameras.main;
+    camera.setViewport(0, top, W, vpH).setZoom(this.zoom).setBackgroundColor(mixColor(PALETTE.nuit, PALETTE.ombreProfonde, 0.4));
+    const zone = this.gameData.zones.find((z) => z.id === this.state.zone);
+    if (zone && loadQuality() !== 'off') camera.filters.internal.addColorMatrix().colorMatrix.set(gradeMatrix(zone.grade));
+  }
+
+  /** Bornes du défilement : la carte reste à l'écran ; plus petite que l'écran, elle est centrée. */
+  private clampCam(x: number, y: number): { x: number; y: number } {
     const mapW = this.state.map.width * T;
     const mapH = this.state.map.height * T;
-    const availW = W - 2 * SIDE * S;
-    const availH = H - TOP_BAR * S - 10 * S;
-    this.zoom = Math.max(1, Math.floor(Math.min(availW / mapW, availH / mapH)));
-    const z = this.zoom;
-    const ox = Math.round((W - mapW * z) / 2 / z) * z;
-    const oy = Math.round((TOP_BAR * S + 4 * S + (availH - mapH * z) / 2) / z) * z;
-    const origin = zoomOrigin(W, H, z);
-    this.cameras.main.setZoom(z).setScroll(-ox / z - origin.x, -oy / z - origin.y).setBackgroundColor(mixColor(PALETTE.nuit, PALETTE.ombreProfonde, 0.4));
+    const { w, h } = this.viewSize;
+    const cx = mapW <= w ? (mapW - w) / 2 : Math.max(-4, Math.min(mapW - w + 4, x));
+    const cy = mapH <= h ? (mapH - h) / 2 : Math.max(-4, Math.min(mapH - h + 4, y));
+    return { x: cx, y: cy };
+  }
+
+  private centerCameraOn(cell: Cell): void {
+    this.camTarget = this.clampCam(cell.x * T + T / 2 - this.viewSize.w / 2, cell.y * T + T / 2 - this.viewSize.h / 2);
+    this.cam = { ...this.camTarget };
+    this.applyCamera();
+  }
+
+  /** Fait défiler la carte si la case approche du bord (marge de `SCROLL_MARGIN` cases). */
+  private followCell(cell: Cell): void {
+    const m = SCROLL_MARGIN * T;
+    let { x, y } = this.camTarget;
+    const { w, h } = this.viewSize;
+    if (cell.x * T < x + m) x = cell.x * T - m;
+    if ((cell.x + 1) * T > x + w - m) x = (cell.x + 1) * T - w + m;
+    if (cell.y * T < y + m) y = cell.y * T - m;
+    if ((cell.y + 1) * T > y + h - m) y = (cell.y + 1) * T - h + m;
+    this.camTarget = this.clampCam(x, y);
+  }
+
+  private applyCamera(): void {
+    const camera = this.cameras.main;
+    const origin = zoomOrigin(camera.width, camera.height, this.zoom);
+    camera.setScroll(Math.round(this.cam.x) - origin.x, Math.round(this.cam.y) - origin.y);
+    // Les fenêtres passent du côté opposé au curseur.
+    const screenX = (this.cursorCell.x * T + T / 2 - this.cam.x) * this.zoom;
+    const side: DodgeSide = screenX < this.scale.width / 2 ? 'right' : 'left';
+    if (side !== this.dodge) {
+      this.dodge = side;
+      this.hud.setDodge(side);
+    }
+  }
+
+  private updateCamera(delta: number): void {
+    const k = 1 - Math.pow(0.0005, delta / 1000);
+    const dx = this.camTarget.x - this.cam.x;
+    const dy = this.camTarget.y - this.cam.y;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+      this.cam = { ...this.camTarget };
+    } else {
+      this.cam = { x: this.cam.x + dx * k, y: this.cam.y + dy * k };
+    }
+    this.applyCamera();
   }
 
   private buildUnits(): void {
     for (const unit of this.state.units) {
-      const sprite = this.add.sprite(0, 0, BATTLE_TEX.unit(unit.sprite), BATTLE_TEX.unitFrame('down', 0)).setOrigin(0.5, 1);
-      const ring = this.add.image(0, -3, BATTLE_TEX.ring).setTint(unit.team === 'player' ? COLORS.player : COLORS.enemy).setAlpha(0.85);
+      const sprite = this.add.sprite(0, 0, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1);
       const hpBg = this.add.rectangle(-6, -2, 12, 2, PALETTE.encre, 0.9).setOrigin(0, 0);
       const hpFill = this.add.rectangle(-6, -2, 12, 2, COLORS.heal, 1).setOrigin(0, 0);
-      const parts: Phaser.GameObjects.GameObject[] = [ring, sprite, hpBg, hpFill];
-      if (unit.isBoss) parts.push(this.add.image(0, -30, BATTLE_TEX.crown));
-      if (unit.isHero) parts.push(this.add.image(0, -30, BATTLE_TEX.heroMark));
+      const parts: Phaser.GameObjects.GameObject[] = [sprite, hpBg, hpFill];
+      if (unit.isBoss) parts.push(this.add.image(0, -23, BATTLE_TEX.crown));
+      if (unit.isHero) parts.push(this.add.image(5, -21, BATTLE_TEX.heroMark));
       const container = this.add.container(0, 0, parts);
-      this.views.set(unit.id, { container, sprite, ring, hpBg, hpFill });
-      sprite.anims.play({ key: BATTLE_TEX.idle(unit.sprite), startFrame: Math.floor(Math.random() * 2) });
+      this.views.set(unit.id, { container, sprite, hpBg, hpFill });
+      sprite.anims.play({ key: BATTLE_TEX.msIdle(unit.sprite, unit.team), startFrame: Math.floor(Math.random() * 3) });
       this.syncUnit(unit);
     }
   }
@@ -245,10 +332,10 @@ export class BattleScene extends Phaser.Scene {
     const done = unit.team === this.state.phase && unit.acted && this.state.outcome === 'ongoing';
     if (done) {
       view.sprite.anims.stop();
-      view.sprite.setFrame(BATTLE_TEX.unitFrame('down', 0)).setTint(COLORS.acted);
+      view.sprite.setFrame(BATTLE_TEX.msFrame('idle', 0)).setTint(COLORS.acted);
     } else {
       view.sprite.clearTint();
-      if (!view.sprite.anims.isPlaying) view.sprite.anims.play(BATTLE_TEX.idle(unit.sprite));
+      if (!view.sprite.anims.isPlaying) view.sprite.anims.play(BATTLE_TEX.msIdle(unit.sprite, unit.team));
     }
   }
 
@@ -263,6 +350,7 @@ export class BattleScene extends Phaser.Scene {
     const y = Math.max(0, Math.min(this.state.map.height - 1, cell.y));
     this.cursorCell = { x, y };
     this.cursor.setPosition(x * T - 2, y * T - 2);
+    this.followCell(this.cursorCell);
     this.refreshHover();
   }
 
@@ -278,8 +366,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private cellAtPointer(pointer: Phaser.Input.Pointer): Cell | null {
-    const x = Math.floor(pointer.worldX / T);
-    const y = Math.floor(pointer.worldY / T);
+    const camera = this.cameras.main;
+    if (pointer.y < camera.y || pointer.y >= camera.y + camera.height) return null;
+    const p = camera.getWorldPoint(pointer.x, pointer.y);
+    const x = Math.floor(p.x / T);
+    const y = Math.floor(p.y / T);
     return inBounds(this.state.map, x, y) ? { x, y } : null;
   }
 
@@ -338,8 +429,9 @@ export class BattleScene extends Phaser.Scene {
 
   /* ---------- Boucle ---------- */
 
-  override update(): void {
+  override update(_time: number, delta: number): void {
     if (!this.alive || !this.state) return;
+    this.updateCamera(delta);
     this.updateDebug();
     // Le mode vient de changer pendant cette image (menu validé dans l'interface) : on attend la suivante.
     if (this.modeFrame === this.game.loop.frame) return;
@@ -454,8 +546,9 @@ export class BattleScene extends Phaser.Scene {
     this.selected = unit;
     this.reach = reachable(this.state, unit);
     this.showMoveRange(unit, this.reach);
+    this.hud.showDetails(unit);
     const view = this.views.get(unit.id);
-    view?.sprite.anims.play(BATTLE_TEX.walk(unit.sprite, 'down'));
+    view?.sprite.anims.play(BATTLE_TEX.msWalk(unit.sprite, unit.team, 'down'));
     this.setMode('move');
   }
 
@@ -463,9 +556,10 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.selected;
     this.selected = null;
     this.reach = null;
+    this.hud.showDetails(null);
     this.clearTiles(this.highlights);
     if (unit) {
-      this.views.get(unit.id)?.sprite.anims.play(BATTLE_TEX.idle(unit.sprite));
+      this.views.get(unit.id)?.sprite.anims.play(BATTLE_TEX.msIdle(unit.sprite, unit.team));
       this.setCursor(unit);
     }
   }
@@ -522,7 +616,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.selected;
     if (!unit) return;
     this.clearTiles(this.highlights);
-    this.views.get(unit.id)?.sprite.anims.play(BATTLE_TEX.walk(unit.sprite, 'down'));
+    this.views.get(unit.id)?.sprite.anims.play(BATTLE_TEX.msWalk(unit.sprite, unit.team, 'down'));
     const targets = targetsFrom(this.state, unit, unit);
     // Portée d'attaque depuis la case choisie.
     this.paintTiles(this.highlights, cellsInRange(this.state.map, unit, unit.weapon.range), COLORS.attack, 0.38, DEPTH.highlight);
@@ -598,6 +692,7 @@ export class BattleScene extends Phaser.Scene {
   private async finishAction(command: () => BattleEvent[]): Promise<void> {
     const unit = this.selected;
     this.hud.closeMenu();
+    this.hud.showDetails(null);
     this.clearTiles(this.highlights);
     this.setMode('busy');
     const events = command();
@@ -605,6 +700,7 @@ export class BattleScene extends Phaser.Scene {
     if (!this.alive) return;
     this.selected = null;
     this.reach = null;
+    this.hud.showDetails(null);
     if (unit) this.syncUnit(unit);
     this.syncAll();
     this.refreshThreat();
@@ -730,6 +826,7 @@ export class BattleScene extends Phaser.Scene {
   private setCursorQuiet(cell: Cell): void {
     this.cursorCell = { x: cell.x, y: cell.y };
     this.cursor.setPosition(cell.x * T - 2, cell.y * T - 2);
+    this.followCell(this.cursorCell);
     this.hud.showTerrain(terrainAt(this.state.map, cell.x, cell.y));
   }
 
@@ -779,13 +876,13 @@ export class BattleScene extends Phaser.Scene {
       const to = path[i] as Cell;
       const pose = to.y < from.y ? 'up' : to.y > from.y ? 'down' : 'side';
       view.sprite.setFlipX(to.x < from.x);
-      const anim = BATTLE_TEX.walk(unit.sprite, pose);
+      const anim = BATTLE_TEX.msWalk(unit.sprite, unit.team, pose);
       if (view.sprite.anims.currentAnim?.key !== anim) view.sprite.anims.play(anim);
       await this.tween({ targets: view.container, x: to.x * T + T / 2, y: to.y * T + T, duration: step });
     }
     view.sprite.setFlipX(false);
-    view.sprite.anims.play(BATTLE_TEX.walk(unit.sprite, 'down'));
-    if (unit.team === 'enemy' || unit.acted) view.sprite.anims.play(BATTLE_TEX.idle(unit.sprite));
+    view.sprite.anims.play(BATTLE_TEX.msWalk(unit.sprite, unit.team, 'down'));
+    if (unit.team === 'enemy' || unit.acted) view.sprite.anims.play(BATTLE_TEX.msIdle(unit.sprite, unit.team));
     this.syncUnit(unit);
   }
 

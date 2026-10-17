@@ -5,8 +5,9 @@
  * l'échange, menus (actions, menu de carte), bandeau de phase, barres de PV de
  * l'échange en cours, notifications et écran de fin.
  *
- * La carte occupe le centre de l'écran ; les fiches vivent dans les deux
- * colonnes latérales (`SIDE` pixels), là où la carte ne passe jamais.
+ * La carte occupe tout l'écran entre le bandeau du haut et la barre d'aide du
+ * bas ; comme sur GBA, les fenêtres flottent au-dessus de la carte et passent
+ * du côté opposé au curseur (`setDodge`) pour ne jamais cacher la case visée.
  * `BattleScene` pilote tout ; les appels reçus avant la création sont mis en attente.
  */
 import Phaser from 'phaser';
@@ -24,10 +25,14 @@ import { Toasts } from '../ui/Toasts';
 import { VerticalMenu, type MenuItem } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
 
-/** Largeur des colonnes latérales réservées à l'interface (à S = 1). */
-export const SIDE = 140;
 /** Hauteur du bandeau du haut (à S = 1). */
 export const TOP_BAR = 28;
+/** Hauteur de la barre d'aide du bas (à S = 1). */
+export const BOTTOM_BAR = 20;
+/** Largeur des fenêtres d'unité, de prévision et de détail (à S = 1). */
+const WIN_W = 228;
+
+export type DodgeSide = 'left' | 'right';
 
 const DEPTH = { panel: 10, menu: 40, exchange: 50, banner: 80, result: 100, toasts: 200 } as const;
 const TEAM_COLOR: Readonly<Record<Team, number>> = { player: 0x6fa8dc, enemy: 0xd9654b };
@@ -63,6 +68,13 @@ export class BattleHudScene extends Phaser.Scene {
   private S = 1;
 
   private header: Phaser.GameObjects.GameObject[] = [];
+  /** Côté où flottent les fenêtres (opposé au curseur). */
+  private side: DodgeSide = 'left';
+  private lastUnit: BattleUnit | null = null;
+  private lastDetails: BattleUnit | null = null;
+  private lastTerrain: TerrainDef | null = null;
+  private lastForecast: [Forecast, BattleUnit, BattleUnit] | null = null;
+  private detailParts: Phaser.GameObjects.GameObject[] = [];
   private phaseLabel: PixelText | null = null;
   private unitParts: Phaser.GameObjects.GameObject[] = [];
   private terrainParts: Phaser.GameObjects.GameObject[] = [];
@@ -98,6 +110,12 @@ export class BattleHudScene extends Phaser.Scene {
       this.header = [];
       this.phaseLabel = null;
       this.unitParts = [];
+      this.detailParts = [];
+      this.lastUnit = null;
+      this.lastDetails = null;
+      this.lastTerrain = null;
+      this.lastForecast = null;
+      this.side = 'left';
       this.terrainParts = [];
       this.forecastParts = [];
       this.helpParts = [];
@@ -153,183 +171,245 @@ export class BattleHudScene extends Phaser.Scene {
     });
   }
 
-  /* ---------- Fiche d'unité (colonne de gauche) ---------- */
+  /* ---------- Placement des fenêtres ---------- */
+
+  /** Abscisse d'une fenêtre de largeur `w` du côté courant. */
+  private winX(w: number): number {
+    return this.side === 'left' ? 6 * this.S : this.scale.width - w - 6 * this.S;
+  }
+
+  /** Les fenêtres passent du côté opposé au curseur (comme sur GBA). */
+  setDodge(side: DodgeSide): void {
+    this.run(() => {
+      if (side === this.side) return;
+      this.side = side;
+      this.rebuildWindows();
+    });
+  }
+
+  private rebuildWindows(): void {
+    this.drawUnit();
+    this.drawDetails();
+    this.drawForecast();
+    this.drawTerrain();
+  }
+
+  /** Bas de la colonne de fenêtres du haut (unité, puis détails ou prévision). */
+  private stackTop(): number {
+    const S = this.S;
+    let y = (TOP_BAR + 6) * S;
+    if (this.lastUnit && !this.lastForecast) y += 72 * S;
+    if (this.lastDetails && !this.lastForecast) y += 96 * S;
+    if (this.lastForecast) y += 168 * S;
+    return y;
+  }
+
+  /* ---------- Fenêtre d'unité ---------- */
 
   showUnit(unit: BattleUnit | null): void {
     this.run(() => {
-      this.clear(this.unitParts);
-      if (!unit) return;
-      const S = this.S;
-      const x = 6 * S;
-      const y = (TOP_BAR + 6) * S;
-      const w = (SIDE - 10) * S;
-      const parts = this.unitParts;
-      // Portrait : le sprite de carte agrandi ×3, sur un médaillon à la couleur du camp.
-      const cx = x + w / 2;
-      parts.push(this.add.rectangle(cx, y + 50 * S, 56 * S, 76 * S, TEAM_COLOR[unit.team], 0.16).setDepth(DEPTH.panel + 1));
-      parts.push(this.add.rectangle(cx, y + 87 * S, 56 * S, 2 * S, TEAM_COLOR[unit.team], 0.8).setDepth(DEPTH.panel + 1));
-      parts.push(
-        this.add
-          .image(cx, y + 92 * S, BATTLE_TEX.unit(unit.sprite), BATTLE_TEX.unitFrame('down', 0))
-          .setOrigin(0.5, 1)
-          .setScale(3 * S)
-          .setDepth(DEPTH.panel + 2),
-      );
-      if (unit.isBoss) parts.push(this.add.image(cx + 22 * S, y + 18 * S, BATTLE_TEX.crown).setScale(3 * S).setDepth(DEPTH.panel + 3));
-      if (unit.isHero) parts.push(this.add.image(cx + 22 * S, y + 18 * S, BATTLE_TEX.heroMark).setScale(3 * S).setDepth(DEPTH.panel + 3));
-
-      let ty = y + 98 * S;
-      const line = (text: string, color: number, opts: { font?: 'body' | 'small' } = {}): PixelText => {
-        const small = opts.font === 'small';
-        const t = addText(this, cx, ty, text, { scale: small ? 2 * S : S, font: opts.font ?? 'body', color, align: 'center', maxWidth: w - 12 * S }).setDepth(DEPTH.panel + 2);
-        parts.push(t);
-        ty += Math.ceil(t.height) + (small ? 4 : 1) * S;
-        return t;
-      };
-      line(unit.name, PALETTE.parchemin);
-      if (unit.kindName !== unit.name) line(unit.kindName, unit.team === 'player' ? PALETTE.cyanEclat : PALETTE.braise, { font: 'small' });
-      else ty += 2 * S;
-      line(`Niv. ${unit.level}   PV ${unit.hp}/${unit.stats.pv}`, PALETTE.parchemin);
-      // Barre de PV.
-      const barW = w - 28 * S;
-      parts.push(this.add.rectangle(x + 14 * S, ty, barW, 5 * S, PALETTE.encre, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 2));
-      const ratio = unit.hp / unit.stats.pv;
-      parts.push(
-        this.add
-          .rectangle(x + 14 * S + S, ty + S, Math.max(0, Math.round((barW - 2 * S) * ratio)), 3 * S, ratio > 0.5 ? 0x7fcf6a : ratio > 0.25 ? PALETTE.jauneBle : PALETTE.rougeCendre, 1)
-          .setOrigin(0, 0)
-          .setDepth(DEPTH.panel + 3),
-      );
-      ty += 10 * S;
-      const range = unit.weapon.range[0] === unit.weapon.range[1] ? `${unit.weapon.range[0]}` : `${unit.weapon.range[0]}-${unit.weapon.range[1]}`;
-      line(`${unit.weapon.name}  (portée ${range})`, PALETTE.ocreClair, { font: 'small' });
-      // Statistiques : deux colonnes de 4.
-      const colW = (w - 20 * S) / 2;
-      STAT_LABELS.forEach(([key, label], i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const sx = x + 12 * S + col * colW;
-        const sy = ty + row * 14 * S;
-        parts.push(addText(this, sx, sy, label, { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false }).setDepth(DEPTH.panel + 2));
-        const value = key === 'mob' && unit.bogged ? `${unit.stats.mob - 1}` : `${unit.stats[key]}`;
-        parts.push(addText(this, sx + colW - 8 * S, sy, value, { font: 'small', scale: 2 * S, color: key === 'mob' && unit.bogged ? PALETTE.braise : PALETTE.parchemin, align: 'right', shadow: false }).setDepth(DEPTH.panel + 2));
-      });
-      ty += 4 * 14 * S + 4 * S;
-      // Jauge de Résonance (GDD §9.9).
-      parts.push(addText(this, x + 12 * S, ty, 'RÉSONANCE', { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false }).setDepth(DEPTH.panel + 2));
-      const gw = w - 24 * S;
-      parts.push(this.add.rectangle(x + 12 * S, ty + 17 * S, gw, 4 * S, PALETTE.encre, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 2));
-      parts.push(this.add.rectangle(x + 12 * S, ty + 17 * S, Math.round((gw * unit.resonance) / 100), 4 * S, PALETTE.cyanEclat, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 3));
-      ty += 26 * S;
-      if (unit.bogged) {
-        parts.push(addText(this, cx, ty, 'Enlisé (−1 Mob)', { font: 'small', scale: 2 * S, color: PALETTE.braise, align: 'center' }).setDepth(DEPTH.panel + 2));
-        ty += 14 * S;
-      }
-      parts.push(drawPanel(this, x, y, w, ty - y + 8 * S, { scale: 2 * S, depth: DEPTH.panel }));
+      this.lastUnit = unit;
+      this.drawUnit();
+      this.drawDetails();
     });
   }
 
-  /* ---------- Terrain (bas de la colonne de gauche) ---------- */
+  private drawUnit(): void {
+    this.clear(this.unitParts);
+    const unit = this.lastUnit;
+    if (!unit || this.lastForecast) return;
+    const S = this.S;
+    const w = WIN_W * S;
+    const h = 66 * S;
+    const x = this.winX(w);
+    const y = (TOP_BAR + 6) * S;
+    const parts = this.unitParts;
+    parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
+    // Portrait : le sprite de carte agrandi ×2 sur un fond aux couleurs du camp.
+    parts.push(this.add.rectangle(x + 8 * S, y + 8 * S, 40 * S, 50 * S, TEAM_COLOR[unit.team], 0.22).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
+    parts.push(
+      this.add
+        .image(x + 28 * S, y + 56 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0))
+        .setOrigin(0.5, 1)
+        .setScale(2 * S)
+        .setDepth(DEPTH.panel + 2),
+    );
+    if (unit.isBoss) parts.push(this.add.image(x + 44 * S, y + 12 * S, BATTLE_TEX.crown).setScale(2 * S).setDepth(DEPTH.panel + 3));
+    if (unit.isHero) parts.push(this.add.image(x + 44 * S, y + 12 * S, BATTLE_TEX.heroMark).setScale(2 * S).setDepth(DEPTH.panel + 3));
+    const tx = x + 56 * S;
+    parts.push(addText(this, tx, y + 6 * S, unit.name, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.panel + 2));
+    parts.push(addText(this, x + w - 10 * S, y + 6 * S, `Niv ${unit.level}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH.panel + 2));
+    const kind = unit.kindName !== unit.name ? unit.kindName : unit.weapon.name;
+    parts.push(addText(this, tx, y + 24 * S, kind, { font: 'small', scale: 2 * S, color: unit.team === 'player' ? PALETTE.cyanEclat : PALETTE.braise, maxWidth: w - 64 * S }).setDepth(DEPTH.panel + 2));
+    // Barre de PV.
+    const barW = w - 66 * S - 46 * S;
+    const by = y + 44 * S;
+    parts.push(this.add.rectangle(tx, by, barW, 6 * S, PALETTE.encre, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 2));
+    const ratio = unit.hp / unit.stats.pv;
+    parts.push(this.add.rectangle(tx + S, by + S, Math.max(0, Math.round((barW - 2 * S) * ratio)), 4 * S, hpColor(ratio), 1).setOrigin(0, 0).setDepth(DEPTH.panel + 3));
+    parts.push(addText(this, x + w - 10 * S, by - 6 * S, `${unit.hp}/${unit.stats.pv}`, { scale: S, color: PALETTE.parchemin, align: 'right' }).setDepth(DEPTH.panel + 2));
+  }
+
+  /* ---------- Fiche détaillée (unité choisie) ---------- */
+
+  showDetails(unit: BattleUnit | null): void {
+    this.run(() => {
+      this.lastDetails = unit;
+      this.drawDetails();
+    });
+  }
+
+  private drawDetails(): void {
+    this.clear(this.detailParts);
+    const unit = this.lastDetails;
+    if (!unit || this.lastForecast) return;
+    const S = this.S;
+    const w = WIN_W * S;
+    const h = 90 * S;
+    const x = this.winX(w);
+    const y = (TOP_BAR + 6 + (this.lastUnit ? 72 : 0)) * S;
+    const parts = this.detailParts;
+    parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
+    const range = unit.weapon.range[0] === unit.weapon.range[1] ? `${unit.weapon.range[0]}` : `${unit.weapon.range[0]}-${unit.weapon.range[1]}`;
+    parts.push(addText(this, x + 10 * S, y + 6 * S, `${unit.weapon.name} · portée ${range}`, { scale: S, color: PALETTE.ocreClair }).setDepth(DEPTH.panel + 1));
+    const colW = (w - 20 * S) / 4;
+    STAT_LABELS.forEach(([key, label], i) => {
+      const sx = x + 10 * S + (i % 4) * colW;
+      const sy = y + 26 * S + Math.floor(i / 4) * 16 * S;
+      parts.push(addText(this, sx, sy - 3 * S, label, { scale: S, color: PALETTE.metalClair }).setDepth(DEPTH.panel + 1));
+      const bogged = key === 'mob' && unit.bogged;
+      parts.push(addText(this, sx + colW - 10 * S, sy - 3 * S, `${bogged ? unit.stats.mob - 1 : unit.stats[key]}`, { scale: S, color: bogged ? PALETTE.braise : PALETTE.parchemin, align: 'right' }).setDepth(DEPTH.panel + 1));
+    });
+    const gy = y + 62 * S;
+    parts.push(addText(this, x + 10 * S, gy, 'RÉSONANCE', { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false }).setDepth(DEPTH.panel + 1));
+    const gx = x + 100 * S;
+    const gw = w - 110 * S;
+    parts.push(this.add.rectangle(gx, gy + 6 * S, gw, 5 * S, PALETTE.encre, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
+    parts.push(this.add.rectangle(gx, gy + 6 * S, Math.round((gw * unit.resonance) / 100), 5 * S, PALETTE.cyanEclat, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 2));
+    if (unit.bogged) parts.push(addText(this, x + w - 10 * S, y + 6 * S, 'Enlisé', { scale: S, color: PALETTE.braise, align: 'right' }).setDepth(DEPTH.panel + 1));
+  }
+
+  /* ---------- Terrain (bas de la colonne) ---------- */
 
   showTerrain(terrain: TerrainDef | null): void {
     this.run(() => {
-      this.clear(this.terrainParts);
-      if (!terrain) return;
-      const S = this.S;
-      const w = (SIDE - 10) * S;
-      const h = 74 * S;
-      const x = 6 * S;
-      const y = this.scale.height - h - 6 * S;
-      const parts = this.terrainParts;
-      parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
-      parts.push(addText(this, x + w / 2, y + 7 * S, terrain.name, { scale: S, color: PALETTE.jauneBle, align: 'center' }).setDepth(DEPTH.panel + 1));
-      const rows: [string, string][] = [
-        ['DÉF', signed(terrain.defense)],
-        ['ESQ', signed(terrain.avoid)],
-        ['DÉPL', terrain.moveCost === null ? '—' : `${terrain.moveCost}`],
-      ];
-      rows.forEach(([label, value], i) => {
-        const ry = y + 28 * S + i * 12 * S;
-        parts.push(addText(this, x + 14 * S, ry, label, { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false }).setDepth(DEPTH.panel + 1));
-        parts.push(addText(this, x + w - 14 * S, ry, value, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'right', shadow: false }).setDepth(DEPTH.panel + 1));
-      });
-      if (terrain.heal > 0) parts.push(addText(this, x + w / 2, y - 14 * S, `Soigne ${Math.round(terrain.heal * 100)} % des PV`, { font: 'small', scale: 2 * S, color: 0x7fcf6a, align: 'center' }).setDepth(DEPTH.panel + 1));
+      this.lastTerrain = terrain;
+      this.drawTerrain();
     });
   }
 
-  /* ---------- Prévision (colonne de droite) ---------- */
+  private drawTerrain(): void {
+    this.clear(this.terrainParts);
+    const terrain = this.lastTerrain;
+    if (!terrain) return;
+    const S = this.S;
+    const w = 132 * S;
+    const h = 58 * S;
+    const x = this.winX(w);
+    const y = this.scale.height - (BOTTOM_BAR + 6) * S - h;
+    const parts = this.terrainParts;
+    parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }).setAlpha(0.95));
+    parts.push(addText(this, x + w / 2, y + 6 * S, terrain.name, { scale: S, color: PALETTE.jauneBle, align: 'center' }).setDepth(DEPTH.panel + 1));
+    const cells: [string, string][] = [
+      ['DÉF', signed(terrain.defense)],
+      ['ESQ', signed(terrain.avoid)],
+      ['DÉPL', terrain.moveCost === null ? '—' : `${terrain.moveCost}`],
+    ];
+    cells.forEach(([label, value], i) => {
+      const cx = x + 10 * S + i * 40 * S;
+      parts.push(addText(this, cx, y + 26 * S, label, { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false }).setDepth(DEPTH.panel + 1));
+      parts.push(addText(this, cx, y + 38 * S, value, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, shadow: false }).setDepth(DEPTH.panel + 1));
+    });
+    if (terrain.heal > 0) parts.push(addText(this, x + w / 2, y - 14 * S, `Soigne ${Math.round(terrain.heal * 100)} % des PV`, { font: 'small', scale: 2 * S, color: 0x7fcf6a, align: 'center' }).setDepth(DEPTH.panel + 1));
+  }
+
+  /* ---------- Prévision de l'échange ---------- */
 
   showForecast(forecast: Forecast | null, attacker: BattleUnit | null, defender: BattleUnit | null): void {
     this.run(() => {
-      this.clear(this.forecastParts);
-      if (!forecast || !attacker || !defender) return;
-      const S = this.S;
-      const w = (SIDE - 10) * S;
-      const x = this.scale.width - w - 6 * S;
-      const y = (TOP_BAR + 6) * S;
-      const h = 214 * S;
-      const parts = this.forecastParts;
-      parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
-      parts.push(addText(this, x + w / 2, y + 7 * S, 'Prévision', { scale: S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.panel + 1));
-      const colA = x + 26 * S;
-      const colB = x + w - 26 * S;
-      const mid = x + w / 2;
-      let ty = y + 28 * S;
-      parts.push(addText(this, x + 10 * S, ty, attacker.name, { scale: S, color: TEAM_COLOR[attacker.team] }).setDepth(DEPTH.panel + 1));
-      ty += 16 * S;
-      parts.push(addText(this, x + w - 10 * S, ty, defender.name, { scale: S, color: TEAM_COLOR[defender.team], align: 'right' }).setDepth(DEPTH.panel + 1));
-      ty += 22 * S;
-      const a = forecast.attacker;
-      const d = forecast.defender;
-      const dmg = (side: SideForecast): string => (!side.canStrike ? '—' : `${side.odds.damage}${side.doubles ? ' ×2' : ''}`);
-      const pct = (side: SideForecast, v: number): string => (side.canStrike ? `${v}` : '—');
-      const afterA = Math.max(0, a.hp - (d.canStrike ? d.odds.damage * (d.doubles ? 2 : 1) : 0));
-      const afterD = Math.max(0, d.hp - a.odds.damage * (a.doubles ? 2 : 1));
-      const rows: [string, string, string][] = [
-        ['PV', `${a.hp}`, `${d.hp}`],
-        ['DÉG', dmg(a), dmg(d)],
-        ['PRÉC', pct(a, a.odds.hit), pct(d, d.odds.hit)],
-        ['CRIT', pct(a, a.odds.crit), pct(d, d.odds.crit)],
-        ['APRÈS', `${afterA}`, `${afterD}`],
-      ];
-      for (const [label, va, vb] of rows) {
-        parts.push(addText(this, mid, ty, label, { font: 'small', scale: 2 * S, color: PALETTE.metalClair, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
-        parts.push(addText(this, colA, ty, va, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
-        parts.push(addText(this, colB, ty, vb, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
-        ty += 15 * S;
-      }
-      // Avantages : triangle élémentaire, arme efficace.
-      const notes: [string, number][] = [];
-      if (a.odds.triangle === 1) notes.push(['Élément favorable', 0x7fcf6a]);
-      if (a.odds.triangle === -1) notes.push(['Élément défavorable', PALETTE.braise]);
-      if (a.odds.effective) notes.push(['Arme efficace !', PALETTE.jauneBle]);
-      if (!d.canStrike) notes.push(['Pas de riposte', PALETTE.cyanEclat]);
-      ty += 2 * S;
-      for (const [note, color] of notes.slice(0, 3)) {
-        parts.push(addText(this, mid, ty, note, { font: 'small', scale: 2 * S, color, align: 'center' }).setDepth(DEPTH.panel + 1));
-        ty += 12 * S;
-      }
+      this.lastForecast = forecast && attacker && defender ? [forecast, attacker, defender] : null;
+      this.drawUnit();
+      this.drawDetails();
+      this.drawForecast();
     });
   }
 
-  /* ---------- Aide (bas de la colonne de droite) ---------- */
+  private drawForecast(): void {
+    this.clear(this.forecastParts);
+    if (!this.lastForecast) return;
+    const [forecast, attacker, defender] = this.lastForecast;
+    const S = this.S;
+    const w = WIN_W * S;
+    const h = 160 * S;
+    const x = this.winX(w);
+    const y = (TOP_BAR + 6) * S;
+    const parts = this.forecastParts;
+    parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
+    const colA = x + 40 * S;
+    const colB = x + w - 40 * S;
+    const mid = x + w / 2;
+    // Têtes : le sprite de chaque camp, ses PV, son nom.
+    const head = (unit: BattleUnit, cx: number): void => {
+      parts.push(this.add.rectangle(cx, y + 30 * S, 34 * S, 44 * S, TEAM_COLOR[unit.team], 0.22).setDepth(DEPTH.panel + 1));
+      parts.push(this.add.image(cx, y + 50 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(DEPTH.panel + 2));
+      parts.push(addText(this, cx, y + 54 * S, unit.name, { font: 'small', scale: 2 * S, color: TEAM_COLOR[unit.team], align: 'center' }).setDepth(DEPTH.panel + 2));
+    };
+    head(attacker, colA);
+    head(defender, colB);
+    parts.push(addText(this, mid, y + 22 * S, 'contre', { font: 'small', scale: 2 * S, color: PALETTE.metalClair, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
+    const a = forecast.attacker;
+    const d = forecast.defender;
+    const dmg = (side: SideForecast): string => (!side.canStrike ? '—' : `${side.odds.damage}${side.doubles ? ' ×2' : ''}`);
+    const pct = (side: SideForecast, v: number): string => (side.canStrike ? `${v}` : '—');
+    const afterA = Math.max(0, a.hp - (d.canStrike ? d.odds.damage * (d.doubles ? 2 : 1) : 0));
+    const afterD = Math.max(0, d.hp - a.odds.damage * (a.doubles ? 2 : 1));
+    const rows: [string, string, string][] = [
+      ['PV', `${a.hp} » ${afterA}`, `${d.hp} » ${afterD}`],
+      ['DÉG', dmg(a), dmg(d)],
+      ['PRÉC', pct(a, a.odds.hit), pct(d, d.odds.hit)],
+      ['CRIT', pct(a, a.odds.crit), pct(d, d.odds.crit)],
+    ];
+    let ty = y + 72 * S;
+    for (const [label, va, vb] of rows) {
+      parts.push(addText(this, mid, ty, label, { font: 'small', scale: 2 * S, color: PALETTE.metalClair, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
+      parts.push(addText(this, colA, ty, va, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
+      parts.push(addText(this, colB, ty, vb, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
+      ty += 14 * S;
+    }
+    const notes: [string, number][] = [];
+    if (a.odds.triangle === 1) notes.push(['Élément favorable', 0x7fcf6a]);
+    if (a.odds.triangle === -1) notes.push(['Élément défavorable', PALETTE.braise]);
+    if (a.odds.effective) notes.push(['Arme efficace !', PALETTE.jauneBle]);
+    if (!d.canStrike) notes.push(['Pas de riposte', PALETTE.cyanEclat]);
+    parts.push(addText(this, mid, ty + 2 * S, notes.slice(0, 2).map(([n]) => n).join('  ·  '), { font: 'small', scale: 2 * S, color: notes[0]?.[1] ?? PALETTE.metalClair, align: 'center', maxWidth: w - 16 * S }).setDepth(DEPTH.panel + 1));
+  }
+
+  /* ---------- Aide (barre du bas) ---------- */
 
   showHelp(lines: readonly (readonly [string, string])[]): void {
     this.run(() => {
       this.clear(this.helpParts);
-      if (lines.length === 0) return;
       const S = this.S;
-      const w = (SIDE - 10) * S;
-      const lineH = 16 * S;
-      const h = lines.length * lineH + 12 * S;
-      const x = this.scale.width - w - 6 * S;
-      const y = this.scale.height - h - 6 * S;
-      this.helpParts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }).setAlpha(0.85));
-      lines.forEach(([key, action], i) => {
-        const ly = y + 5 * S + i * lineH;
-        this.helpParts.push(addText(this, x + 10 * S, ly, key, { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.panel + 1));
-        this.helpParts.push(addText(this, x + w - 10 * S, ly, action, { scale: S, color: PALETTE.metalClair, align: 'right' }).setDepth(DEPTH.panel + 1));
+      const { width, height } = this.scale;
+      const y = height - BOTTOM_BAR * S;
+      this.helpParts.push(this.add.rectangle(0, y, width, BOTTOM_BAR * S, PALETTE.nuit, 0.85).setOrigin(0, 0).setDepth(DEPTH.panel));
+      this.helpParts.push(this.add.rectangle(0, y, width, S, PALETTE.ambre, 0.6).setOrigin(0, 0).setDepth(DEPTH.panel));
+      // Touches en or, actions en gris, centrées.
+      const pieces: PixelText[] = [];
+      for (const [key, action] of lines) {
+        pieces.push(addText(this, 0, y + 2 * S, key, { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.panel + 1));
+        pieces.push(addText(this, 0, y + 2 * S, action, { scale: S, color: PALETTE.metalClair }).setDepth(DEPTH.panel + 1));
+      }
+      const gap = 6 * S;
+      const pairGap = 22 * S;
+      let total = 0;
+      pieces.forEach((p, i) => (total += Math.ceil(p.width) + (i % 2 === 0 ? gap : pairGap)));
+      let cx = Math.round((width - total + pairGap) / 2);
+      pieces.forEach((p, i) => {
+        p.x = cx;
+        cx += Math.ceil(p.width) + (i % 2 === 0 ? gap : pairGap);
       });
+      this.helpParts.push(...pieces);
     });
   }
 
@@ -345,10 +425,10 @@ export class BattleHudScene extends Phaser.Scene {
       const S = this.S;
       const lineHeight = 26 * S;
       const titleH = request.title ? 22 * S : 0;
-      const w = (SIDE - 10) * S;
+      const w = 172 * S;
       const h = request.items.length * lineHeight + titleH + 14 * S;
-      const x = this.scale.width - w - 6 * S;
-      const y = (TOP_BAR + 6) * S;
+      const x = this.winX(w);
+      const y = this.stackTop();
       this.menuParts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.menu }));
       if (request.title) this.menuParts.push(addText(this, x + w / 2, y + 7 * S, request.title, { scale: S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));
       this.menu = new VerticalMenu(this, x + 6 * S, y + 7 * S + titleH, request.items, this.actions, {
@@ -425,7 +505,7 @@ export class BattleHudScene extends Phaser.Scene {
       const w = 400 * S;
       const h = 66 * S;
       const x = Math.round((width - w) / 2);
-      const y = height - h - 8 * S;
+      const y = height - h - (BOTTOM_BAR + 6) * S;
       const container = this.add.container(0, 0).setDepth(DEPTH.exchange);
       container.add(drawPanel(this, x, y, w, h, { scale: 2 * S }));
       const half = w / 2;

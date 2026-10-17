@@ -345,7 +345,7 @@ export const enemiesFileSchema = z.strictObject({
 /* ---------- Rencontres tactiques (GDD §9.2, §9.10) ---------- */
 
 /** Limites des cartes de combat (GDD §9.2 : petite 10×8 … grande 18×14). */
-export const BATTLE_MAP_LIMITS = { minWidth: 6, maxWidth: 18, minHeight: 5, maxHeight: 14 } as const;
+export const BATTLE_MAP_LIMITS = { minWidth: 6, maxWidth: 32, minHeight: 5, maxHeight: 24 } as const;
 
 const cellSchema = z.tuple([z.number().int().min(0), z.number().int().min(0)]);
 const level = z.number().int().min(1).max(30);
@@ -364,17 +364,33 @@ export const encounterSchema = z.strictObject({
   /** Zone de niveau où la rencontre a lieu (zones.json). */
   zone: idSchema,
   objective: z.strictObject({ type: z.enum(['rout', 'boss']) }),
-  /** Carte en texte : une ligne par rangée, une lettre par case (voir `legend`). */
-  map: z.array(z.string().min(1)).min(1),
-  deploy: z.array(cellSchema).min(1),
+  /**
+   * Carte tirée du monde (décision n°57) : fenêtre de `width` × `height` cases
+   * autour du point de contact. `site` : point de contact par défaut (en cases
+   * du monde ; un contact dans le monde le remplace) ; `anchor` : qui s'y tient,
+   * la compagnie (« player ») ou l'ennemi (« enemy », un repaire).
+   */
+  sampled: z
+    .strictObject({
+      width: z.number().int(),
+      height: z.number().int(),
+      site: cellSchema,
+      anchor: z.enum(['player', 'enemy']),
+    })
+    .optional(),
+  /** Carte fixe en texte (scénario) : une ligne par rangée, une lettre par case (voir `legend`). */
+  map: z.array(z.string().min(1)).min(1).optional(),
+  /** Cases de déploiement d'une carte fixe. */
+  deploy: z.array(cellSchema).min(1).optional(),
   maxDeploy: z.number().int().min(1).max(8),
   enemies: z
     .array(
       z.strictObject({
         enemy: idSchema,
         level,
-        x: z.number().int().min(0),
-        y: z.number().int().min(0),
+        /** Case sur une carte fixe ; sur une carte tirée du monde, les ennemis sont placés automatiquement. */
+        x: z.number().int().min(0).optional(),
+        y: z.number().int().min(0).optional(),
         boss: z.boolean().optional(),
         /** Remplace le profil d'IA de l'ennemi pour cette rencontre. */
         ai: z.enum(AI_PROFILES).optional(),

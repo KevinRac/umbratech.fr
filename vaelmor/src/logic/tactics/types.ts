@@ -70,6 +70,10 @@ export type Outcome = 'ongoing' | 'victory' | 'defeat';
 export interface BattleState {
   readonly encounterId: string;
   readonly name: string;
+  /** Zone du monde où se joue le combat (zones.json). */
+  readonly zone: string;
+  /** Coin de la carte de combat dans le monde (carte tirée du monde), sinon null. */
+  readonly worldOrigin: Cell | null;
   readonly map: BattleMap;
   readonly units: BattleUnit[];
   readonly objective: Objective;

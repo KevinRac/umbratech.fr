@@ -438,7 +438,11 @@ export class WorldScene extends Phaser.Scene {
       this.hud.toast(open ? 'Debug : tous les passages ouverts' : 'Debug : passages refermés');
     }
     if (this.actions.justPressed('debugTeleport')) this.teleportNext();
-    if (this.actions.justPressed('debugBattle')) this.startBattle('embuscade_du_gue');
+    if (this.actions.justPressed('debugBattle')) {
+      // Combat engagé là où se tient le héros : la carte est tirée du terrain alentour.
+      const size = this.map.tileSize;
+      this.startBattle('embuscade_du_gue', { x: Math.floor(this.body_.x / size), y: Math.floor((this.body_.y - 1) / size) });
+    }
     if (this.actions.justPressed('debugBattleBoss')) this.startBattle('camp_des_ecumeurs');
     if (this.actions.justPressed('debugEvening') && this.atmosphere) {
       const evening = this.atmosphere.getEvening() < 0.5 ? 1 : 0;
@@ -462,7 +466,7 @@ export class WorldScene extends Phaser.Scene {
           `CASE ${tx},${ty}  PX ${Math.round(this.body_.x)},${Math.round(this.body_.y)}`,
           `ZONE ${zone?.id ?? '-'}  LIEU ${location ? String(location.props['id']) : '-'}`,
           `COLL ${value}  F2 TP  F4 COLL  F6 SOIR  F9 PASSAGES`,
-          `F7 COMBAT D'ESSAI  F8 CAMP DES ÉCUMEURS`,
+          `F7 COMBAT ICI  F8 CAMP DES ÉCUMEURS`,
         ].join('\n'),
       );
     }
@@ -515,14 +519,14 @@ export class WorldScene extends Phaser.Scene {
    * était (l'état vit dans la session). En attendant les ennemis du monde (M3),
    * seul le debug déclenche un combat (F7, F8).
    */
-  private startBattle(encounterId: string): void {
+  private startBattle(encounterId: string, site?: { x: number; y: number }): void {
     if (this.paused || this.leaving) return;
     this.leaving = true;
     const camera = this.cameras.main;
     camera.flash(150, 255, 255, 255);
     this.tweens.add({ targets: camera, zoom: camera.zoom * 1.5, duration: 400, ease: 'Cubic.easeIn' });
     camera.fadeOut(400, 255, 255, 255);
-    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, { encounterId, returnTo: 'world' }));
+    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, { encounterId, returnTo: 'world', ...(site ? { site } : {}) }));
   }
 
   /* ---------- Pause ---------- */

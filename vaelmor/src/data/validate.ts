@@ -229,9 +229,31 @@ function checkEncounters(data: GameData, issues: string[]): void {
   for (const enc of encounters) {
     const at = `${file} › « ${enc.id} »`;
     if (!zoneIds.has(enc.zone)) issues.push(`${at}.zone référence une zone inconnue : « ${enc.zone} »`);
-    const height = enc.map.length;
-    const width = enc.map[0]?.length ?? 0;
-    if (enc.map.some((row) => [...row].length !== width)) {
+    enc.enemies.forEach((e, i) => {
+      if (!enemyIds.has(e.enemy)) issues.push(`${at}.enemies[${i}] référence un ennemi inconnu : « ${e.enemy} »`);
+    });
+    const bosses = enc.enemies.filter((e) => e.boss).length;
+    if (enc.objective.type === 'boss' && bosses !== 1) issues.push(`${at} : l'objectif « boss » exige exactement un ennemi marqué boss (${bosses} trouvé(s))`);
+    if (bosses > 1) issues.push(`${at} : un seul ennemi peut être marqué boss`);
+
+    if ((enc.map === undefined) === (enc.sampled === undefined)) {
+      issues.push(`${at} : une rencontre a soit une carte fixe (map), soit une carte tirée du monde (sampled)`);
+      continue;
+    }
+    if (enc.sampled) {
+      const { width, height } = enc.sampled;
+      if (width < L.minWidth || width > L.maxWidth || height < L.minHeight || height > L.maxHeight) {
+        issues.push(`${at}.sampled : ${width}×${height} cases, attendu de ${L.minWidth}×${L.minHeight} à ${L.maxWidth}×${L.maxHeight}`);
+      }
+      if (enc.deploy) issues.push(`${at}.deploy : inutile sur une carte tirée du monde (déploiement automatique)`);
+      if (enc.enemies.some((e) => e.x !== undefined || e.y !== undefined)) issues.push(`${at}.enemies : pas de position sur une carte tirée du monde (placement automatique)`);
+      continue;
+    }
+
+    const map = enc.map ?? [];
+    const height = map.length;
+    const width = map[0]?.length ?? 0;
+    if (map.some((row) => [...row].length !== width)) {
       issues.push(`${at}.map : toutes les lignes doivent avoir la même longueur (${width})`);
       continue;
     }
@@ -240,10 +262,10 @@ function checkEncounters(data: GameData, issues: string[]): void {
       continue;
     }
     const terrainAt = (x: number, y: number) => {
-      const char = [...(enc.map[y] ?? '')][x];
+      const char = [...(map[y] ?? '')][x];
       return char === undefined ? undefined : terrains.get(legend[char] ?? '');
     };
-    enc.map.forEach((row, y) =>
+    map.forEach((row, y) =>
       [...row].forEach((char, x) => {
         if (legend[char] === undefined) issues.push(`${at}.map : lettre « ${char} » (case ${x},${y}) absente de legend`);
       }),
@@ -257,14 +279,14 @@ function checkEncounters(data: GameData, issues: string[]): void {
       if (occupied.has(key)) issues.push(`${at} › ${label} : case ${x},${y} déjà occupée`);
       occupied.add(key);
     };
-    enc.deploy.forEach(([x, y], i) => place(x, y, `deploy[${i}]`));
-    if (enc.maxDeploy > enc.deploy.length) issues.push(`${at}.maxDeploy (${enc.maxDeploy}) dépasse le nombre de cases de déploiement (${enc.deploy.length})`);
+    const deploy = enc.deploy ?? [];
+    if (deploy.length === 0) issues.push(`${at}.deploy : une carte fixe a besoin de cases de déploiement`);
+    deploy.forEach(([x, y], i) => place(x, y, `deploy[${i}]`));
+    if (enc.maxDeploy > deploy.length) issues.push(`${at}.maxDeploy (${enc.maxDeploy}) dépasse le nombre de cases de déploiement (${deploy.length})`);
     enc.enemies.forEach((e, i) => {
-      if (!enemyIds.has(e.enemy)) issues.push(`${at}.enemies[${i}] référence un ennemi inconnu : « ${e.enemy} »`);
-      place(e.x, e.y, `enemies[${i}]`);
+      if (e.x === undefined || e.y === undefined) issues.push(`${at}.enemies[${i}] : position (x, y) obligatoire sur une carte fixe`);
+      else place(e.x, e.y, `enemies[${i}]`);
     });
-    const bosses = enc.enemies.filter((e) => e.boss).length;
-    if (enc.objective.type === 'boss' && bosses !== 1) issues.push(`${at} : l'objectif « boss » exige exactement un ennemi marqué boss (${bosses} trouvé(s))`);
   }
 }
 

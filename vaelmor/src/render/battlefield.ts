@@ -76,11 +76,16 @@ const GROUND_OF: Readonly<Record<string, Ground>> = {
   plage: 'sand',
   marais: 'mud',
   eau_profonde: 'deep',
+  batiment: 'dirt',
 };
 
 const WATERY: ReadonlySet<Ground> = new Set<Ground>(['water', 'deep', 'ford']);
 /** Les cases qui prolongent une route (on trace le chemin jusqu'à elles). */
 const ROAD_LINKS: ReadonlySet<string> = new Set(['route', 'pont', 'village']);
+
+/** Teintes des bâtiments tirés du monde (décision n°57). */
+const ROOF = ramp(mixColor(P.terreCuite, P.brique, 0.35), mixColor(P.brique, SHADE, 0.4), P.ocreClair);
+const WALL_STONE = ramp(mixColor(P.pierre, P.grisRoux, 0.35));
 
 export interface Battlefield {
   readonly width: number;
@@ -242,29 +247,27 @@ function sphereShade(dx: number, dy: number, r: number, x: number, y: number, ra
   return ramp_.base;
 }
 
+/** Bosquet de forêt : deux ou trois petits arbres par case, comme une forêt de carte GBA. */
 function paintTree(p: Painter, ox: number, oy: number, rnd: number): void {
-  // Ombre portée vers le bas à droite.
-  for (let y = -3; y <= 3; y++) for (let x = -7; x <= 7; x++) if ((x * x) / 49 + (y * y) / 9 <= 1) p.blend(ox + 10 + x, oy + 14 + y, SHADE, 0.32);
-  // Tronc évasé en racines.
-  for (let y = 9; y <= 14; y++) {
-    const half = y >= 13 ? 2 : 1;
-    for (let x = 8 - half; x <= 8 + half - (y >= 13 ? 0 : 1); x++) p.set(ox + x, oy + y, x <= 7 ? R.trunk.light : R.trunk.dark);
-  }
-  p.set(ox + 6, oy + 14, R.trunk.deep);
-  p.set(ox + 10, oy + 14, R.trunk.deep);
-  // Masses de feuillage (silhouette retournée une fois sur deux).
-  const j = Math.floor(rnd * 3) - 1;
-  const f = rnd > 0.5 ? 1 : -1;
-  const masses: readonly (readonly [number, number, number])[] = [
-    [8 + j, 4, 5.6],
-    [8 - f * 3.6, 7.5, 3.8],
-    [8 + f * 3.8, 7, 3.4],
-    [8 - j + f, 0, 3.6],
+  const layouts: readonly (readonly (readonly [number, number, number])[])[] = [
+    [[5, 5, 4.2], [11.5, 9, 4.2]],
+    [[11, 5, 4.2], [4.5, 9.5, 4.2]],
+    [[8, 3.5, 4], [4, 10, 3.6], [12, 10.5, 3.6]],
+    [[4.5, 4.5, 3.6], [11.5, 5, 3.8], [8, 10.5, 4]],
   ];
-  const foliage = rnd > 0.72 ? R.foliageDeep : R.foliage;
-  const inside = paintMasses(p, ox, oy, masses, foliage);
-  // Ombre de contact entre les masses du bas et la grosse masse.
-  for (let x = 4; x <= 12; x++) if (inside(x, 8) >= 0 && inside(x, 9) < 0) p.set(ox + x, oy + 8, foliage.deep);
+  const trees = layouts[Math.floor(rnd * layouts.length) % layouts.length] as readonly (readonly [number, number, number])[];
+  // Du fond vers l'avant : les arbres les plus bas passent devant.
+  for (const [cx, cy, r] of [...trees].sort((a, b) => a[1] - b[1])) {
+    const foot = Math.round(cy + r * 0.9);
+    // Ombre portée, tronc, feuillage en deux masses.
+    for (let y = -1; y <= 1; y++) for (let x = -3; x <= 3; x++) p.blend(ox + Math.round(cx) + 1 + x, oy + foot + 1 + y, SHADE, 0.3);
+    for (let y = foot - 2; y <= foot + 1; y++) {
+      p.set(ox + Math.round(cx) - 1, oy + y, R.trunk.light);
+      p.set(ox + Math.round(cx), oy + y, R.trunk.dark);
+    }
+    const foliage = (rnd * 7 + cx) % 1 > 0.7 ? R.foliageDeep : R.foliage;
+    paintMasses(p, ox, oy, [[cx, cy - 0.5, r], [cx - r * 0.35, cy - r * 0.55, r * 0.62]], foliage);
+  }
 }
 
 /** Masses éclairées (arbres, rochers) : union de disques, contour coloré. */
@@ -439,6 +442,87 @@ function paintGrassDetail(p: Painter, ox: number, oy: number, cell: number, seed
   }
 }
 
+/** Maison tirée du monde : toit de tuiles sur les rangées hautes, mur et porte sur la rangée du bas. */
+function paintHouse(p: Painter, x0: number, y0: number, x1: number, y1: number, doors: readonly number[]): void {
+  const left = x0 * BF_TILE;
+  const right = (x1 + 1) * BF_TILE - 1;
+  const top = y0 * BF_TILE - 4;
+  const wallTop = y1 * BF_TILE + 3;
+  const bottom = (y1 + 1) * BF_TILE - 2;
+  // Ombre portée vers le bas à droite.
+  for (let y = bottom - 2; y <= bottom + 2; y++) for (let x = left + 4; x <= right + 3; x++) p.blend(x, y, SHADE, 0.3);
+  // Mur crépi à colombages, éclairé à gauche.
+  for (let y = wallTop; y <= bottom; y++) {
+    for (let x = left + 1; x <= right - 1; x++) {
+      let c = x < left + 4 ? R.wall.light : x > right - 4 ? R.wall.dark : R.wall.base;
+      if ((x - left) % 8 === 0 || y === wallTop || y === bottom) c = R.wood.dark;
+      p.set(x, y, c);
+    }
+  }
+  // Fenêtres chaudes entre les portes.
+  for (let cx = x0; cx <= x1; cx++) {
+    const mx = cx * BF_TILE + 8;
+    if (doors.includes(cx)) {
+      for (let y = wallTop + 3; y <= bottom; y++) for (let x = mx - 3; x <= mx + 2; x++) p.set(x, y, y === wallTop + 3 ? R.wood.deep : x === mx - 3 ? R.wood.base : R.wood.dark);
+      p.set(mx + 1, wallTop + 8, P.jauneBle); // poignée
+    } else {
+      for (let y = wallTop + 4; y <= wallTop + 7; y++) for (let x = mx - 2; x <= mx + 1; x++) p.set(x, y, y === wallTop + 4 ? P.lumiereDoree : P.lumiereChaude);
+      p.set(mx - 3, wallTop + 4, R.wood.dark);
+    }
+  }
+  // Toit à deux pans : rangées de tuiles, faîtage, bord sombre.
+  const ridge = Math.round((top + wallTop) / 2) - 2;
+  for (let y = top; y < wallTop + 1; y++) {
+    for (let x = left - 1; x <= right + 1; x++) {
+      const near = y <= ridge;
+      let c = near ? ROOF.light : ROOF.base;
+      if (x <= left + 2) c = mixColor(c, ROOF.hi, 0.35);
+      if (x >= right - 2) c = ROOF.dark;
+      if ((y - top) % 3 === 2) c = mixColor(c, ROOF.deep, 0.45);
+      if ((x + (Math.floor((y - top) / 3) % 2) * 2) % 4 === 0 && (y - top) % 3 !== 2) c = mixColor(c, ROOF.dark, 0.25);
+      if (y === ridge) c = ROOF.hi;
+      if (y === wallTop) c = ROOF.deep;
+      p.set(x, y, c);
+    }
+  }
+  for (let x = left - 1; x <= right + 1; x++) p.set(x, top - 1, inkOf(ROOF));
+  for (let y = top; y <= wallTop; y++) {
+    p.set(left - 2, y, inkOf(ROOF));
+    p.set(right + 2, y, inkOf(ROOF));
+  }
+  // Cheminée.
+  const chim = right - 6;
+  for (let y = top - 4; y < top + 2; y++) {
+    p.set(chim, y, mixColor(P.brique, P.terreCuite, 0.4));
+    p.set(chim + 1, y, P.brique);
+    p.set(chim + 2, y, mixColor(P.brique, SHADE, 0.3));
+  }
+}
+
+/** Mur, palissade ou rempart : une case de pierre reliée à ses voisines. */
+function paintWall(p: Painter, ox: number, oy: number, up: boolean, down: boolean, left: boolean, right: boolean): void {
+  const x0 = left ? 0 : 2;
+  const x1 = right ? 15 : 13;
+  const yTop = up ? 0 : 2;
+  for (let y = 12; y <= 16; y++) for (let x = x0 + 3; x <= x1 + 3; x++) p.blend(ox + x, oy + y, SHADE, 0.25);
+  for (let y = yTop; y <= 13; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const top = y < 6 && !down ? true : y < 6;
+      const course = Math.floor(y / 3);
+      const joint = (y % 3 === 2) || ((x + course * 3) % 6 === 0);
+      let c = top ? WALL_STONE.light : WALL_STONE.base;
+      if (x === x0 && !left) c = WALL_STONE.hi;
+      if (x === x1 && !right) c = WALL_STONE.dark;
+      if (joint && !top) c = WALL_STONE.dark;
+      if (y === 6) c = WALL_STONE.deep;
+      p.set(ox + x, oy + y, c);
+    }
+  }
+  // Créneaux sur le dessus quand rien n'est posé au-dessus.
+  if (!up) for (let x = x0; x <= x1; x += 4) for (let y = yTop - 2; y < yTop; y++) for (let k = 0; k < 2; k++) p.set(ox + x + k, oy + y, k === 0 ? WALL_STONE.hi : WALL_STONE.light);
+  for (let x = x0; x <= x1; x++) p.set(ox + x, oy + 14, inkOf(WALL_STONE));
+}
+
 /**
  * Peint le champ de bataille. `rows` : identifiant de terrain de chaque case,
  * rangée par rangée ; `frame` : image de l'eau ; `seed` : variantes des décors.
@@ -497,6 +581,11 @@ export function paintBattlefield(rows: readonly (readonly string[])[], frame: nu
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         if (ROAD_LINKS.has(terrain(nx, ny))) links.push([ax + dx * 8, ay + dy * 8]);
       }
+      // Route large (plusieurs cases) : on comble le coin commun à quatre cases de route.
+      for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) {
+        const road = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && ROAD_LINKS.has(terrain(x, y));
+        if (road(cx + dx, cy + dy) && road(cx + dx, cy) && road(cx, cy + dy)) links.push([ax + dx * 8, ay + dy * 8]);
+      }
       for (let py = cy * BF_TILE - 3; py < (cy + 1) * BF_TILE + 3; py++) {
         for (let px = cx * BF_TILE - 3; px < (cx + 1) * BF_TILE + 3; px++) {
           const g = groundOfPx(px, py);
@@ -519,7 +608,45 @@ export function paintBattlefield(rows: readonly (readonly string[])[], frame: nu
     }
   }
 
-  // 5. Décors, du nord au sud.
+  // 5. Bâtiments (cartes tirées du monde) : maisons pour les amas compacts, murs pour les amas allongés.
+  const houseAt = new Map<number, { x0: number; y0: number; x1: number; y1: number; doors: number[] }>();
+  const wallCells = new Set<number>();
+  const seenBlob = new Set<number>();
+  for (let cy = 0; cy < h; cy++) {
+    for (let cx = 0; cx < w; cx++) {
+      if (terrain(cx, cy) !== 'batiment' || seenBlob.has(cy * w + cx)) continue;
+      const blob: [number, number][] = [];
+      const stack: [number, number][] = [[cx, cy]];
+      seenBlob.add(cy * w + cx);
+      while (stack.length > 0) {
+        const [x, y] = stack.pop() as [number, number];
+        blob.push([x, y]);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h || seenBlob.has(ny * w + nx)) continue;
+          const t = terrain(nx, ny);
+          // La porte (case « village ») fait partie de la maison.
+          if (t !== 'batiment' && !(t === 'village' && ny >= y)) continue;
+          seenBlob.add(ny * w + nx);
+          stack.push([nx, ny]);
+        }
+      }
+      const xs = blob.map(([x]) => x);
+      const ys = blob.map(([, y]) => y);
+      const box = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+      const bw = box.x1 - box.x0 + 1;
+      const bh = box.y1 - box.y0 + 1;
+      if (bw <= 6 && bh <= 5 && blob.length >= 0.6 * bw * bh) {
+        houseAt.set(box.y0 * w + box.x0, { ...box, doors: blob.filter(([x, y]) => terrain(x, y) === 'village').map(([x]) => x) });
+      } else {
+        for (const [x, y] of blob) if (terrain(x, y) === 'batiment') wallCells.add(y * w + x);
+      }
+    }
+  }
+  const inHouse = (x: number, y: number): boolean => [...houseAt.values()].some((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1);
+
+  // 6. Décors, du nord au sud.
   for (let cy = 0; cy < h; cy++) {
     for (let cx = 0; cx < w; cx++) {
       const id = terrain(cx, cy);
@@ -527,6 +654,13 @@ export function paintBattlefield(rows: readonly (readonly string[])[], frame: nu
       const oy = cy * BF_TILE;
       const cell = cy * w + cx;
       const rnd = hash(cx, cy, seed);
+      const house = houseAt.get(cell);
+      if (house) paintHouse(p, house.x0, house.y0, house.x1, house.y1, house.doors);
+      if (wallCells.has(cell)) {
+        const isWall = (x: number, y: number): boolean => wallCells.has(y * w + x) && x >= 0 && y >= 0 && x < w && y < h;
+        paintWall(p, ox, oy, isWall(cx, cy - 1), isWall(cx, cy + 1), isWall(cx - 1, cy), isWall(cx + 1, cy));
+      }
+      if (inHouse(cx, cy)) continue;
       switch (id) {
         case 'plaine':
           paintGrassDetail(p, ox, oy, cell, seed);

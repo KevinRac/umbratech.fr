@@ -1,5 +1,5 @@
 {
-  "$comment": "Types de terrain (GDD §3.5). moveCost : coût de déplacement ; null = infranchissable. heal : fraction des PV max rendue par tour à une unité alliée. tags : règles spéciales lues par la logique.",
+  "$comment": "Types de terrain (GDD §3.5). moveCost : coût de déplacement ; null = infranchissable. heal : fraction des PV max rendue par tour à une unité alliée. tags : règles spéciales lues par la logique. « batiment » n'existe que sur les cartes de combat tirées du monde : les murs des maisons, tentes et remparts (décision n°57).",
   "terrains": [
     { "id": "plaine", "name": "Plaine", "moveCost": 1, "defense": 0, "avoid": 0, "heal": 0, "tags": [] },
     { "id": "route", "name": "Route", "moveCost": 1, "defense": 0, "avoid": 0, "heal": 0, "tags": ["route", "bonus_mobilite"] },
@@ -12,6 +12,7 @@
     { "id": "village", "name": "Village", "moveCost": 1, "defense": 1, "avoid": 10, "heal": 0.2, "tags": ["soin"] },
     { "id": "plage", "name": "Plage", "moveCost": 2, "defense": 0, "avoid": -5, "heal": 0, "tags": [] },
     { "id": "marais", "name": "Marais", "moveCost": 3, "defense": 0, "avoid": -10, "heal": 0, "tags": ["enlise"] },
+    { "id": "batiment", "name": "Bâtiment", "moveCost": null, "defense": 0, "avoid": 0, "heal": 0, "tags": ["batiment"] },
     { "id": "eau_profonde", "name": "Eau profonde", "moveCost": null, "defense": 0, "avoid": 0, "heal": 0, "tags": ["eau", "mobilite_speciale"] }
   ]
 }
