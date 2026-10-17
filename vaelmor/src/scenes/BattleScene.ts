@@ -144,6 +144,7 @@ export class BattleScene extends Phaser.Scene {
   create(params: BattleSceneData): void {
     this.params = params;
     this.alive = true;
+    this.hovered = null;
     try {
       this.gameData = loadGameData();
       this.rules = battleRules(this.gameData);
@@ -470,8 +471,26 @@ export class BattleScene extends Phaser.Scene {
     if (key === this.lastHover) return;
     this.lastHover = key;
     this.hud.showTerrain(terrainAt(this.state.map, x, y));
+    this.hoverReady(this.mode === 'browse' && unit?.team === 'player' && !unit.acted && unit.hp > 0 ? unit : null);
     if (this.mode === 'target') return;
     this.hud.showUnit(unit ?? this.selected);
+  }
+
+  /** Unité alliée survolée qui brandit son arme (comme sur la carte des Fire Emblem GBA). */
+  private hovered: BattleUnit | null = null;
+
+  private playReady(unit: BattleUnit): void {
+    const sprite = this.views.get(unit.id)?.sprite;
+    const key = BATTLE_TEX.msReady(unit.sprite, unit.team);
+    if (sprite && sprite.anims.currentAnim?.key !== key) sprite.anims.play(key);
+  }
+
+  private hoverReady(unit: BattleUnit | null): void {
+    if (unit === this.hovered) return;
+    const previous = this.hovered;
+    this.hovered = unit;
+    if (previous && previous !== this.selected && !previous.acted) this.views.get(previous.id)?.sprite.anims.play(BATTLE_TEX.msIdle(previous.sprite, previous.team));
+    if (unit) this.playReady(unit);
   }
 
   private cellAtPointer(pointer: Phaser.Input.Pointer): Cell | null {
@@ -670,8 +689,7 @@ export class BattleScene extends Phaser.Scene {
     this.reach = reachable(this.state, unit);
     this.showMoveRange(unit, this.reach);
     this.hud.showDetails(unit);
-    const view = this.views.get(unit.id);
-    view?.sprite.anims.play(BATTLE_TEX.msWalk(unit.sprite, unit.team, 'down'));
+    this.playReady(unit);
     this.setMode('move');
   }
 
@@ -739,7 +757,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.selected;
     if (!unit) return;
     this.clearTiles(this.highlights);
-    this.views.get(unit.id)?.sprite.anims.play(BATTLE_TEX.msWalk(unit.sprite, unit.team, 'down'));
+    this.playReady(unit);
     const targets = targetsFrom(this.state, unit, unit);
     // Portée d'attaque depuis la case choisie.
     this.paintTiles(this.highlights, cellsInRange(this.state.map, unit, unit.weapon.range), COLORS.attack, 0.38, DEPTH.highlight);

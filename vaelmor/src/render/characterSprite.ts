@@ -111,7 +111,8 @@ export interface CharacterGear {
 }
 
 /** Marge autour du cadre 16×28 quand le personnage porte un équipement. */
-export const GEAR_PAD = { x: 6, y: 7 } as const;
+/** Assez haute pour qu'une lance, une bannière ou un bâton brandis restent dans le cadre. */
+export const GEAR_PAD = { x: 7, y: 13 } as const;
 export const GEAR_W = CHAR_W + 2 * GEAR_PAD.x;
 export const GEAR_H = CHAR_H + GEAR_PAD.y;
 
@@ -119,6 +120,10 @@ export interface PaintOptions {
   readonly gear?: CharacterGear;
   /** Respiration de l'attente : le haut du corps descend d'un pixel, jambes immobiles. */
   readonly breathe?: boolean;
+  /** Pixels dont la main de l'arme se lève (animation « prêt au combat » : l'arme est brandie). */
+  readonly raise?: number;
+  /** Éclat de l'arme au sommet du geste (étincelles, lueur avivée). */
+  readonly flourish?: boolean;
 }
 
 /* ---------- Formes (une lettre par matière, « . » = vide) ---------- */
@@ -622,7 +627,7 @@ function put(cv: Canvas, x: number, y: number, m: string, dark = false): void {
 }
 
 /** Mains, bras qui balancent et accessoire, selon la pose et le pas. */
-function drawLimbs(cv: Canvas, look: CharacterLook, pose: CharPose, frame: number, bob: number, build: Build = 'normal'): void {
+function drawLimbs(cv: Canvas, look: CharacterLook, pose: CharPose, frame: number, bob: number, build: Build = 'normal', raise = 0): void {
   const swing = frame === 1 ? -1 : frame === 3 ? 1 : 0;
   const y = 20 - bob;
   const sleeve = SLEEVE[build];
@@ -636,9 +641,15 @@ function drawLimbs(cv: Canvas, look: CharacterLook, pose: CharPose, frame: numbe
   } else {
     // Face / dos : les mains montent et descendent en alternance.
     const [l, r] = HANDS[build];
-    put(cv, l, y + swing, hand);
+    if (raise > 0) {
+      // Bras de l'arme levé : la manche monte de l'épaule jusqu'au poing (dessiné avec l'arme).
+      for (let j = Math.min(y - raise + 1, 15); j <= 19 - bob; j++) put(cv, l, j, sleeve, j > 17 - bob);
+      if (y - raise < 14) put(cv, l + 1, 14 - bob, sleeve);
+    } else {
+      put(cv, l, y + swing, hand);
+      put(cv, l, y + swing - 1, sleeve);
+    }
     put(cv, r, y - swing, hand, true);
-    put(cv, l, y + swing - 1, sleeve);
     put(cv, r, y - swing - 1, sleeve, true);
   }
   drawAccessory(cv, look, pose, swing, bob);
@@ -762,9 +773,10 @@ export function paintCharacterFrame(sink: PixelSink, ox: number, oy: number, loo
   if (gear?.cape && pose === 'up') drawCape(cv, pose, bob, f, build);
   stamp(cv, HEAD[pose][gearHead(look, gear)], 2 - bob);
   if (gear) drawHeadgear(cv, gear.headgear, pose, bob);
-  drawLimbs(cv, look, pose, legFrame, bob, build);
+  const raise = gear && pose === 'down' ? (options.raise ?? 0) : 0;
+  drawLimbs(cv, look, pose, legFrame, bob, build, raise);
   if (gear?.scarf) drawScarf(cv, pose, bob, f);
-  if (gear) drawGear(cv, gear, pose, legFrame, bob, f);
+  if (gear) drawGear(cv, gear, pose, legFrame, bob, f, raise, options.flourish === true);
 
   const glow = gear?.glow ?? P.braise;
   const colors = new Map<number, number>();
@@ -1013,12 +1025,31 @@ function drawQuiver(cv: Canvas, pose: CharPose, bob: number, _layer: 'back'): vo
   }
 }
 
+/** Hauteur du sommet de chaque arme au-dessus du poing (éclat de l'animation « prêt »). */
+const TIP_HEIGHT: Partial<Record<HeldWeapon, number>> = {
+  sword: 11,
+  spear: 23,
+  harpoon: 24,
+  axe: 11,
+  greataxe: 17,
+  bow: 15,
+  crossbow: 3,
+  staff_lantern: 23,
+  staff_stone: 21,
+  staff_branch: 21,
+  banner: 26,
+  daggers: 5,
+  tome: 8,
+  flask: 7,
+  torch: 12,
+};
+
 /** Une hampe verticale de `y0` à `y1` en colonne `x`. */
 function shaft(cv: Canvas, x: number, y0: number, y1: number, m = 'o'): void {
   for (let y = y0; y <= y1; y++) put(cv, x, y, m, y > y1 - 2);
 }
 
-function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number, bob: number, tick: number): void {
+function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number, bob: number, tick: number, raise = 0, flourish = false): void {
   const swing = frame === 1 ? -1 : frame === 3 ? 1 : 0;
   const b = bob;
   const side = pose === 'side';
@@ -1026,7 +1057,7 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
   const build = gear.build ?? 'normal';
   const armored = build === 'armored';
   const [handL, handR] = HANDS[build];
-  const hand = side ? { x: 8 + swing * 2, y: 20 - b } : pose === 'down' ? { x: handL, y: 20 - b + swing } : { x: handR, y: 20 - b - swing };
+  const hand = side ? { x: 8 + swing * 2, y: 20 - b } : pose === 'down' ? { x: handL, y: 20 - b + swing - raise } : { x: handR, y: 20 - b - swing };
   // Avec un bouclier de profil, l'arme passe derrière le corps.
   const wx = side ? (gear.shield ? 5 : hand.x + 1) : pose === 'down' ? hand.x - 1 : hand.x + 1;
   const out = pose === 'down' ? -1 : 1; // côté extérieur de la main
@@ -1034,7 +1065,7 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
 
   switch (gear.weapon) {
     case 'sword':
-      if (pose === 'down') {
+      if (pose === 'down' && raise === 0) {
         // Garde basse : lame tenue en avant, pointe vers le sol (posture de bretteur).
         for (let y = hand.y - 1; y <= hand.y + 1; y++) put(cv, hand.x - 1, y, 'g', y > hand.y);
         put(cv, hand.x + 1, hand.y - 1, 'g');
@@ -1109,7 +1140,8 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
       put(cv, wx + 2 * out, hand.y - 2, 'n');
       break;
     case 'tome':
-      if (pose === 'down') {
+      // Au repos : grimoire ouvert à deux mains ; pendant le geste, levé d'une main à côté de la tête.
+      if (pose === 'down' && raise === 0) {
         // Grimoire ouvert tenu à deux mains devant la poitrine, flamme qui flotte au-dessus.
         const ty = 17 - b;
         for (let y = ty; y <= ty + 2; y++) for (let x = 5; x <= 10; x++) put(cv, x, y, x === 5 || x === 10 ? 'a' : 'n', x === 10 || x === 8 || y === ty + 2);
@@ -1171,7 +1203,7 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
         put(cv, x + 1, y - 1, 'g', true);
       };
       blade(wx, hand.y, 1);
-      if (!side) blade(pose === 'down' ? 14 : 1, 20 - b - swing * (pose === 'down' ? 1 : -1), -1);
+      if (!side) blade(pose === 'down' ? 14 : 1, 20 - b - raise - swing * (pose === 'down' ? 1 : -1), -1);
       break;
     }
     case 'flask':
@@ -1187,6 +1219,13 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
       break;
     case 'none':
       break;
+  }
+  if (flourish) {
+    // Éclat au sommet du geste : étoile de reflet sur le métal, ou étincelles de la lueur.
+    const tipY = TIP_HEIGHT[gear.weapon] === undefined ? hand.y - 6 : hand.y - (TIP_HEIGHT[gear.weapon] as number);
+    const tipX = wx;
+    const m = gear.glow !== undefined ? 'f' : 'w';
+    for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [-3, -2], [3, 1]] as const) put(cv, tipX + dx, tipY + dy, m);
   }
   // La main par-dessus le manche.
   if (gear.weapon !== 'none' && gear.weapon !== 'tome' && gear.weapon !== 'flask') put(cv, hand.x, hand.y, armored ? 'm' : 's');

@@ -8,14 +8,16 @@ import { BF_WATER_FRAMES, paintBattlefield } from './battlefield';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas } from './pixelCanvas';
 import { CHAR_POSES, type CharPose } from './characterSprite';
-import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitTeam } from './unitSprites';
+import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitFrameKind, type UnitTeam } from './unitSprites';
 
 export const BATTLE_TEX = {
   field: (key: string, frame: number): string => `battle:field:${key}:${frame}`,
   /** Unités : gabarit 16×28 équipé selon la classe, aux couleurs du camp (décision n°60). */
   ms: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}`,
-  msFrame: (kind: 'idle' | CharPose, frame: number): string => `${kind}_${frame}`,
+  msFrame: (kind: UnitFrameKind, frame: number): string => `${kind}_${frame}`,
   msIdle: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}:idle`,
+  /** Unité survolée ou choisie : elle brandit son arme. */
+  msReady: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}:ready`,
   msWalk: (sprite: string, team: UnitTeam, view: CharPose): string => `battle:unit:${sprite}:${team}:walk:${view}`,
   cursor: (frame: number): string => `battle:cursor:${frame}`,
   tile: 'battle:tile',
@@ -46,8 +48,8 @@ export function ensureBattlefield(scene: Phaser.Scene, key: string, rows: readon
 export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitTeam): void {
   const key = BATTLE_TEX.ms(sprite, team);
   if (!scene.textures.exists(key)) {
-    const rows: ['idle' | CharPose, number][] = [['idle', UNIT_IDLE_FRAMES], ...CHAR_POSES.map((v) => [v, UNIT_WALK_FRAMES] as [CharPose, number])];
-    const sheet = new PixelCanvas(UNIT_W * UNIT_WALK_FRAMES, UNIT_H * rows.length);
+    const rows: [UnitFrameKind, number][] = [['idle', UNIT_IDLE_FRAMES], ['ready', UNIT_READY_FRAMES], ...CHAR_POSES.map((v) => [v, UNIT_WALK_FRAMES] as [CharPose, number])];
+    const sheet = new PixelCanvas(UNIT_W * Math.max(UNIT_WALK_FRAMES, UNIT_READY_FRAMES), UNIT_H * rows.length);
     rows.forEach(([kind, count], row) => {
       for (let f = 0; f < count; f++) paintUnitSprite({ set: (x, y, color) => sheet.set(x, y, color) }, f * UNIT_W, row * UNIT_H, sprite, team, kind, f);
     });
@@ -65,6 +67,16 @@ export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitT
         { key, frame: BATTLE_TEX.msFrame('idle', 0), duration: 640 },
         { key, frame: BATTLE_TEX.msFrame('idle', 1), duration: 520 },
       ],
+      repeat: -1,
+    });
+  }
+  const ready = BATTLE_TEX.msReady(sprite, team);
+  if (!scene.anims.exists(ready)) {
+    // Ramassé, geste, éclat tenu, retour ; une pause debout avant de recommencer.
+    const durations = [260, 90, 300, 110];
+    scene.anims.create({
+      key: ready,
+      frames: durations.map((duration, f) => ({ key, frame: BATTLE_TEX.msFrame('ready', f), duration })),
       repeat: -1,
     });
   }

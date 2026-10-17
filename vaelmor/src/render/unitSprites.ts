@@ -22,6 +22,16 @@ export const UNIT_H = GEAR_H;
 export const UNIT_IDLE_FRAMES = 2;
 export const UNIT_WALK_FRAMES = CHAR_WALK_FRAMES;
 
+/**
+ * Animation « prêt au combat » (unité survolée ou choisie, comme les sprites de
+ * carte des Fire Emblem GBA) : l'unité se ramasse, brandit son arme au-dessus
+ * de la tête avec un éclat, puis la redescend.
+ */
+export const UNIT_READY_FRAMES = 4;
+const READY_RAISE = [0, 4, 7, 3] as const;
+
+export type UnitFrameKind = 'idle' | 'ready' | CharPose;
+
 /** Couleur du camp (cape, manches, coiffe, bouclier, drapeau), dans la palette « fin d'après-midi ». */
 export const TEAM_TOP: Readonly<Record<UnitTeam, Ramp3>> = {
   player: ramp3(mixColor(P.bleuGris, mixColor(P.ciel, P.bleuNuit, 0.55), 0.45), P.ombreProfonde, mixColor(P.ciel, P.lumiereChaude, 0.35)),
@@ -57,7 +67,8 @@ export interface UnitSpriteSpec {
 
 /** Fiches : classes jouables, héros, ennemis. */
 export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
-  heros: { look: HERO_LOOK, gear: { headgear: 'none', weapon: 'none' } },
+  // En combat, le héros tient l'épée qu'il porte au dos dans le monde.
+  heros: { look: { ...HERO_LOOK, accessory: 'none' }, gear: { headgear: 'none', weapon: 'sword' } },
   gardien_des_marees: {
     look: look({ hair: r(P.sable), tunic: r(mixColor(P.metalClair, P.pierre, 0.4)), accent: r(P.ciel), pants: r(P.ardoiseSombre), head: 'short', outfit: 'tunic' }),
     gear: { headgear: 'greathelm', weapon: 'spear', shield: true, build: 'armored' },
@@ -140,9 +151,13 @@ export function unitSpriteSpec(sprite: string): UnitSpriteSpec {
  * (respiration, 2 images) ou une pose de marche (4 images). Les pieds sont sur
  * la rangée UNIT_H − 2, le contour sur la dernière.
  */
-export function paintUnitSprite(sink: PixelSink, ox: number, oy: number, sprite: string, team: UnitTeam, kind: 'idle' | CharPose, frame: number): void {
+export function paintUnitSprite(sink: PixelSink, ox: number, oy: number, sprite: string, team: UnitTeam, kind: UnitFrameKind, frame: number): void {
   const spec = unitSpriteSpec(sprite);
   const lookForTeam: CharacterLook = { ...spec.look, top: TEAM_TOP[team] };
-  if (kind === 'idle') paintCharacterFrame(sink, ox, oy, lookForTeam, 'down', frame, { gear: spec.gear, breathe: frame % UNIT_IDLE_FRAMES === 1 });
+  if (kind === 'ready') {
+    const f = ((frame % UNIT_READY_FRAMES) + UNIT_READY_FRAMES) % UNIT_READY_FRAMES;
+    const raise = READY_RAISE[f] as number;
+    paintCharacterFrame(sink, ox, oy, lookForTeam, 'down', 0, { gear: spec.gear, breathe: f === 0, raise, flourish: f === 2 });
+  } else if (kind === 'idle') paintCharacterFrame(sink, ox, oy, lookForTeam, 'down', frame, { gear: spec.gear, breathe: frame % UNIT_IDLE_FRAMES === 1 });
   else paintCharacterFrame(sink, ox, oy, lookForTeam, kind, frame, { gear: spec.gear });
 }

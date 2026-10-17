@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../src/data';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES, paintBattlefield } from '../src/render/battlefield';
 import { CHARACTER_SHAPES, CHAR_POSES, GEAR_PAD } from '../src/render/characterSprite';
-import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_SPRITES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite } from '../src/render/unitSprites';
+import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_SPRITES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite } from '../src/render/unitSprites';
 import { buildBattle, findEncounter } from '../src/logic/tactics/encounter';
 import { terrainAt } from '../src/logic/tactics/grid';
 import { testWorld } from './helpers/world';
@@ -85,7 +85,7 @@ describe('unités au gabarit commun (décision n°60)', () => {
 
   for (const id of Object.keys(UNIT_SPRITES)) {
     it(`${id} : tient dans son cadre, pieds en bas, couleurs de camp distinctes, sombres teintés`, () => {
-      const paint = (team: 'player' | 'enemy', kind: 'idle' | (typeof CHAR_POSES)[number], frame: number): Map<number, number> => {
+      const paint = (team: 'player' | 'enemy', kind: 'idle' | 'ready' | (typeof CHAR_POSES)[number], frame: number): Map<number, number> => {
         const px = new Map<number, number>();
         paintUnitSprite(
           {
@@ -119,6 +119,14 @@ describe('unités au gabarit commun (décision n°60)', () => {
           expect(luminance(c)).toBeGreaterThan(14);
         }
       }
+      // « Prêt au combat » : 4 images différentes ; au sommet du geste, l'arme monte plus haut qu'au repos.
+      const ready = Array.from({ length: UNIT_READY_FRAMES }, (_, f) => paint('player', 'ready', f));
+      expect(new Set(ready.map((m) => JSON.stringify([...m]))).size).toBe(UNIT_READY_FRAMES);
+      // Grand geste : au sommet, une bonne partie de l'image a changé par rapport au repos.
+      const rest = paint('player', 'idle', 0);
+      const peak = ready[2] as Map<number, number>;
+      const changed = new Set([...rest.keys(), ...peak.keys()].filter((i) => rest.get(i) !== peak.get(i))).size;
+      expect(changed).toBeGreaterThan(40);
       // La respiration change l'image ; la marche aussi.
       expect(JSON.stringify([...paint('player', 'idle', 0)])).not.toBe(JSON.stringify([...paint('player', 'idle', 1)]));
       for (const view of CHAR_POSES) {
