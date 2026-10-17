@@ -5703,12 +5703,12 @@ function pactOffers(){
  const cons=Object.keys(PCONS).sort((a,b)=>sc(b)-sc(a)).slice(0,2),boons=shuffle(Object.keys(PBOON)).slice(0,2);
  return cons.map((c,i)=>({boon:boons[i],cons:c,known:p[PCONS[c].ax]!=null}));}
 // v16.6 · une pastille = une grosse icône, la valeur en gros, le détail en petit
-function pactChip(kind,o){return `<div class="pchip ${kind}"><i>${icon(o.ic||(kind==='good'?'u_up':'u_warn'))}</i><div><b>${esc(o.v||o.n)}</b><small>${esc(o.d)}</small></div></div>`;}
+function pactChip(kind,o){return `<div class="pactchip ${kind}"><i>${icon(o.ic||(kind==='good'?'u_up':'u_warn'))}</i><div><b>${esc(o.v||o.n)}</b><small>${esc(o.d)}</small></div></div>`;}
 function openPacte(){
  if(!RUN||RUN.hub||P.dead)return;
  pactEnd();const offers=pactOffers(),n=RUN.pactN||0;
  const card=(o,i)=>{const B=PBOON[o.boon],C=PCONS[o.cons];return `<button type="button" class="card pact" data-i="${i}" style="--c:#b48cff"><span class="meta"><span class="br">● Pacte</span><span>touche ${i+1}</span></span><h3>${B.n} · ${C.n}</h3>${pactChip('good',B)}${pactChip('bad',C)}<p class="why">${icon('u_eye')}${o.known?`Il a vu que ${esc(C.why)}.`:'Il ne te connaît pas encore : il choisit au hasard.'}</p></button>`;};
- openOverlay(`<div class="panel narrow"><p class="eyebrow">Acte ${ROM[RUN.act]} · Le Pacte de la Brume</p><h2>Le Brumeux te tend la main</h2><p class="sub">Un avantage fort, contre une contrainte qu’il choisit en te regardant jouer. Le pacte dure tout l’acte. Chaque pacte accepté rend les gardiens plus agressifs${n?` (déjà ${n} accepté${n>1?'s':''} : gardiens ${Math.round((1-pactAgg())*100)} % plus rapides)`:''}.</p><div class="three">${offers.map(card).join('')}<button type="button" class="card pact-no" data-i="r"><span class="meta"><span class="br">● Refus</span><span>touche 3</span></span><h3>Refuser</h3><div class="pchip none"><i>${icon('u_cross')}</i><div><b>Aucun pacte</b><small>Tu descends sans rien devoir à la Brume.</small></div></div></button></div></div>`);
+ openOverlay(`<div class="panel narrow"><p class="eyebrow">Acte ${ROM[RUN.act]} · Le Pacte de la Brume</p><h2>Le Brumeux te tend la main</h2><p class="sub">Un avantage fort, contre une contrainte qu’il choisit en te regardant jouer. Le pacte dure tout l’acte. Chaque pacte accepté rend les gardiens plus agressifs${n?` (déjà ${n} accepté${n>1?'s':''} : gardiens ${Math.round((1-pactAgg())*100)} % plus rapides)`:''}.</p><div class="three">${offers.map(card).join('')}<button type="button" class="card pact-no" data-i="r"><span class="meta"><span class="br">● Refus</span><span>touche 3</span></span><h3>Refuser</h3><div class="pactchip none"><i>${icon('u_cross')}</i><div><b>Aucun pacte</b><small>Tu descends sans rien devoir à la Brume.</small></div></div></button></div></div>`);
  const choose=i=>{if(!armed())return;if(i!=='r'){const o=offers[i];RUN.pact={boon:o.boon,cons:o.cons};RUN.pactN=(RUN.pactN||0)+1;const B=PBOON[o.boon],C=PCONS[o.cons];if(B.on)B.on(P.s);if(C.on)C.on(P.s);if(o.cons==='brume')RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.07);
    sfx('murmur');murmur(`Pacte scellé · ${B.n}`,`${B.d} En échange : ${C.d}`,4.2);if(eqIs('murmure'))murRank(1);}
   else toast('Tu refuses le pacte. La Brume t’observe en silence.',2.2);
@@ -7555,14 +7555,14 @@ function demoBoot(cls){
 #toast.rich .mrow2:not(:first-child) span{font-size:.88em;opacity:.92}
 #toast .tnum{color:var(--tc);font-weight:900;white-space:nowrap}
 /* carte de pacte : gros pictos, valeur en gros, détail en petit */
-.pchip{display:flex;gap:12px;align-items:center;margin:9px 0 0;padding:10px 12px;border:1px solid;border-radius:9px;text-align:left}
-.pchip i{flex:none;width:46px;height:46px;border-radius:11px;display:grid;place-items:center;font-style:normal}
-.pchip i .ic{width:30px;height:30px;stroke-width:1.7}
-.pchip b{display:block;font-size:21px;line-height:1.15;font-weight:800}
-.pchip small{display:block;margin-top:3px;font-size:14px;line-height:1.35;opacity:.8;font-weight:500}
-.pchip.good{background:rgba(120,210,110,.1);border-color:rgba(139,224,122,.5);color:#d3f5c8}.pchip.good i{background:rgba(139,224,122,.2);color:#8be07a}
-.pchip.bad{background:rgba(255,90,90,.1);border-color:rgba(255,107,107,.5);color:#ffd0d0}.pchip.bad i{background:rgba(255,107,107,.2);color:#ff6b6b}
-.pchip.none{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18);color:#d8d2c4}.pchip.none i{background:rgba(255,255,255,.08);color:#b9b2a2}
+.pactchip{display:flex;gap:12px;align-items:center;margin:9px 0 0;padding:10px 12px;border:1px solid;border-radius:9px;text-align:left}
+.pactchip i{flex:none;width:46px;height:46px;border-radius:11px;display:grid;place-items:center;font-style:normal}
+.pactchip i .ic{width:30px;height:30px;stroke-width:1.7}
+.pactchip b{display:block;font-size:21px;line-height:1.15;font-weight:800}
+.pactchip small{display:block;margin-top:3px;font-size:14px;line-height:1.35;opacity:.8;font-weight:500}
+.pactchip.good{background:rgba(120,210,110,.1);border-color:rgba(139,224,122,.5);color:#d3f5c8}.pactchip.good i{background:rgba(139,224,122,.2);color:#8be07a}
+.pactchip.bad{background:rgba(255,90,90,.1);border-color:rgba(255,107,107,.5);color:#ffd0d0}.pactchip.bad i{background:rgba(255,107,107,.2);color:#ff6b6b}
+.pactchip.none{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18);color:#d8d2c4}.pactchip.none i{background:rgba(255,255,255,.08);color:#b9b2a2}
 .card.pact .why{display:flex;gap:8px;align-items:center;margin-top:10px}.card.pact .why .ic{flex:none;width:18px;height:18px}
 /* aide adaptative */
 #assist b{display:flex;gap:8px;align-items:center}#assist b .ic{width:18px;height:18px}
