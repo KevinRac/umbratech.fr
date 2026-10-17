@@ -5641,7 +5641,7 @@ openEnd=function(win,abandon){
  if(RUN&&!RUN.final&&!RUN.hub){try{profCommit();}catch(err){console.error(err);}}
  _oe12(win,abandon);
  try{if(!RUN||RUN.hub||overlayEl.querySelector('.prof12'))return;const col=overlayEl.querySelector('.two>div:last-child');if(!col)return;
-  const L=profLines(profile()),cms=[...new Set((RUN.prof&&RUN.prof.cms)||[])].map(k=>CMS[k].n),cp=RUN.prof&&RUN.prof.copied;
+  const L=profLines(profile()),cmv=(RUN.prof&&RUN.prof.cmv)||{},cms=[...new Set((RUN.prof&&RUN.prof.cms)||[])].map(k=>CMS[k].n+(cmv[k]==='ok'?' (a porté)':cmv[k]==='ko'?' (déjouée)':'')),cp=RUN.prof&&RUN.prof.copied;
   if(!L.length&&!cms.length&&!cp)return;
   col.insertAdjacentHTML('beforeend',`<div class="prof12"><p class="h-sec">Ce que la Brume a retenu</p><div class="chips">${L.map(l=>`<span class="chip" style="--c:#b48cff">${esc(l)}</span>`).join('')}</div>${cms.length?`<p class="k" style="margin-top:6px">Contre-mesures du Brumeux : ${esc(cms.join(', '))}</p>`:''}${cp?`<p class="k">La Mère-Brume a copié ${esc(MERE_COPY[cp].what)}.</p>`:''}</div>`);}catch(err){console.error(err);}};
 (function(){const st=document.createElement('style');st.textContent=`
@@ -6038,7 +6038,7 @@ function refreshSets(){if(!P)return;if(!P.sets)P.sets={};
 function ensure14(){if(!RUN)return;if(!RUN.ch)RUN.ch={notes:[],hits:0,kills:0,flawless:0,bluffs:0,bluffBait:0,bluffPunish:0,bluffDodged:0,rules:0,assist:0,left:0,lastPact:null};
  if(!RUN.as)RUN.as={offers:0,hitsT:[],lastOffer:-99,busy:false};}
 const fmtT=t=>{const m=Math.floor(t/60),s=Math.floor(t%60);return m?`${m} min ${s} s`:`${s} s`;};
-const CW={boss:3,phenix:3,set:3,pact:2,eq:2,rule:2,rulemut:1,ruleclear:2,assist:2,eqleft:1,refus:1};
+const CW={boss:3,phenix:3,set:3,pact:2,eq:2,rule:2,rulemut:1,ruleclear:2,assist:2,eqleft:1,refus:1,cmok:1,cmko:2,cmban:2};
 function chron(k,d){if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch,a=ROM[RUN.act]||'I';let t='';d=d||{};
  switch(k){
   case 'pact':t=pick([`À l’acte ${a}, tu as scellé un pacte : ${PBOON[d.boon].n} contre ${PCONS[d.cons].n}.`,`Acte ${a} : la Brume t’a offert ${PBOON[d.boon].n}, au prix de ${PCONS[d.cons].n}. Tu as signé.`]);break;
@@ -6052,6 +6052,9 @@ function chron(k,d){if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch,a=ROM[RUN.
   case 'phenix':t='La plume noire t’a relevé une fois. Il n’y en aura pas deux.';break;
   case 'assist':t=`Tu as accepté de l’aide : ${d.n}.`;break;
   case 'refus':t='Tu as refusé la main de la Brume, par fierté ou par obstination.';break;
+  case 'cmok':t=`Le Brumeux a lancé ${CMS[d.k].n} : elle a porté.`;break;
+  case 'cmko':t=pick([`Tu as déjoué ${CMS[d.k].n}.`,`${CMS[d.k].n} n’a pas suffi contre toi.`]);break;
+  case 'cmban':t=`Le Brumeux a renoncé à ${CMS[d.k].n} : tu l’avais déjouée trop souvent.`;break;
   default:return;}
  if(c.notes.length&&c.notes[c.notes.length-1].t===t)return;c.notes.push({a:RUN.act,k,t});if(c.notes.length>70)c.notes.shift();}
 function chronBuild(win){const c=RUN.ch;if(!c)return null;const cl=CLS[P.cls].name;
@@ -6495,7 +6498,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
  const BRIEF={
   brumeux:{t:'Le Brumeux te regarde jouer',l:'Un esprit de la Brume observe ton style de combat et s’y adapte. Ce n’est pas un monstre à abattre : c’est lui qui écrit les règles de la descente.',c:[
    ['Il observe',V,'Tu frappes de loin ou au contact ? Tu esquives beaucoup ? Tu te soignes souvent ? Il retient ce que tu fais le plus.'],
-   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Un texte violet l’annonce : lis-le, il te dit comment répondre.'],
+   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Un texte violet l’annonce : lis-le, il te dit comment répondre. Si ta parade tient, il change d’arme.'],
    ['Il relâche',G,'Si tu vacilles (peu de PV), il retient ses coups. Reprends ton souffle.'],
    ['Il marchande',Y,'À chaque acte, il te propose un pacte : un avantage fort contre une contrainte choisie selon ton jeu.']]},
   pacte:{t:'Un pacte, un prix',l:'Le Brumeux te tend trois offres. Chaque pacte a un gain et un coût, et dure tout l’acte.',c:[
@@ -6507,7 +6510,9 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
    ['Traque',V,'Tu frappes de loin : des traqueurs chargent. Reste dans la lumière et frappe-les au contact.'],
    ['Pétards',O,'Tu frappes au contact : des Bouffis explosent près de toi. Abats-les à distance.'],
    ['Tir de barrage',C,'Tu esquives tout ce qui charge : des Spectres tirent du fond de la salle. Avance et coupe leurs lignes.'],
-   ['Brume avide',G,'Tu te soignes beaucoup : −40 % de soins dans la salle. Joue sans compter dessus.']]},
+   ['Brume avide',G,'Tu te soignes beaucoup : −40 % de soins dans la salle. Joue sans compter dessus.'],
+   ['Renforts',R,'Tu purges les salles vite : une vague de plus arrive à la fin. Garde de la vie et tes compétences pour elle.'],
+   ['Béliers',Y,'Tu esquives rarement : des Brutes chargent en ligne. Esquive de côté, elles s’assomment contre les murs.']]},
   regles:{t:'Salle à règle',l:'Certaines salles portent une règle, rappelée dans la pastille en haut de l’écran. Elle vaut pour tout le monde, toi compris : utilise-la.',c:[
    ['Verre',R,'Tout est fragile : tes coups et les leurs font 40 % de dégâts en plus.'],
    ['Sol qui se dérobe',O,'Des dalles cèdent et écrasent ce qu’elles couvrent. Attire-y les ennemis.'],
@@ -7155,6 +7160,59 @@ details.fold>.chips{margin-top:8px}
    c.restore();}}
  const _dr16=drawRings;drawRings=function(){_dr16();if(HZ.length&&RUN&&!RUN.hub)drawHZ();};
  window.__HZ=HZ;
+})();
+
+// ───────────────────────── v16.1 · Le Brumeux juge ses contre-mesures
+// Après chaque salle à contre-mesure, il compare tes PV perdus et ton temps à tes salles ordinaires (référence de la run,
+// sinon celle des descentes passées). Le verdict pèse sur ses choix suivants et se garde d'une descente à l'autre (SAVE.mem.prof.eff).
+// Réglages : data/bestiaire.js (efficacite, contreMesures).
+(function(){const EF=BE_D.efficacite;
+ // deux contre-mesures de plus : leur code (les textes sont dans les données)
+ Object.assign(CMS.renforts,{ok:()=>G()>=3,
+  apply(){const w=genWave(budget()*0.55,allowedTypes());for(const s of w)s.cm=true;room.waves.push(w);return null;}});
+ Object.assign(CMS.ruee,{ok:()=>G()>=3,
+  apply(){return G()>=6?[{type:'brute'},{type:'brute'}]:[{type:'brute'}];}});
+ const effS=k=>{const e=profStore().eff;return e&&e[k]?e[k].s:0;};
+ const banned=k=>((PR().ko||{})[k]||0)>=EF.abandonApres;
+ brumeuxPlan=function(){
+  const R=PR(),p=profile();if(p.known<2)return;
+  const bud=cmBudget(p);
+  if(P.hp<P.s.maxHp*0.4||(p.puissance!=null&&p.puissance<0.2)){if(!R.relaxSaid[RUN.act]){R.relaxSaid[RUN.act]=1;room.cmRelax=true;room.cmAnnT=2.2;}return;}
+  if(RUN.roomIdx-R.lastCm<2)return;
+  if(Math.random()>(room.type==='elite'?0.35:0.6))return;
+  let best=null,bs=0.58;
+  for(const k in CMS){const c=CMS[k],v=p[c.ax];if(v==null||!c.ok||!c.ok()||c.cost>bud||banned(k))continue;const used=R.cms.filter(x=>x===k).length,sc=(c.hi?v:1-v)+EF.poids*effS(k)-EF.repetition*used;if(sc>bs){bs=sc;best=k;}}
+  if(!best)return;
+  const c=CMS[best];R.bud[RUN.act]-=c.cost;R.lastCm=RUN.roomIdx;R.cms.push(best);room.cm=best;
+  const add=c.apply();
+  if(add&&add.length){for(const s of add)s.cm=true;const wi=Math.min(1,room.waves.length-1);room.waves[wi].push(...add);}
+  room.cmAnnT=room.wtheme?3.8:1.0;};
+ function baseline(){const R=PR(),S=profStore();
+  if(R.base&&R.base.n>=2)return R.base;if(S.base)return S.base;if(R.base&&R.base.n>=1)return R.base;return null;}
+ function score(dmg,t,b){const dr=dmg/Math.max(b.dmg,EF.degatsMin/100),tr=t/Math.max(b.t,8),w=EF.partDegats/100;
+  return w*clamp((dr-1)/1.5,-1,1)+(1-w)*clamp((tr-1)/0.8,-1,1);}
+ const _er161=enterRoom;
+ enterRoom=function(type){_er161(type);if(!RUN||RUN.hub||!room)return;room.dmg161=PR().dmgT;room.t161=RUN.time;};
+ const _orc161=onRoomCleared;
+ onRoomCleared=function(){
+  const rm=room,ok=RUN&&!RUN.hub&&rm&&(rm.type==='combat'||rm.type==='elite')&&rm.dmg161!=null&&!rm.v9skip;
+  const dmg=ok?(PR().dmgT-rm.dmg161)/Math.max(1,P.s.maxHp):0,t=ok?RUN.time-rm.t161:0;
+  _orc161();
+  if(!ok)return;
+  try{const R=PR(),S=profStore();
+   if(!rm.cm){if(rm.rule||rm.breche)return;
+    R.base=R.base||{n:0,dmg:0,t:0};R.base.n++;R.base.dmg+=(dmg-R.base.dmg)/R.base.n;R.base.t+=(t-R.base.t)/R.base.n;
+    S.base=S.base?{dmg:S.base.dmg*0.8+dmg*0.2,t:S.base.t*0.8+t*0.2}:{dmg,t};return;}
+   const b=baseline();if(!b)return;
+   const k=rm.cm,c=CMS[k],sc=score(dmg,t,b),v=sc>=EF.seuilEfficace/100?'ok':sc<=EF.seuilDejouee/100?'ko':'nul';
+   S.eff=S.eff||{};const e=S.eff[k]||{n:0,s:0};e.s=e.n?e.s*(1-EF.memoire)+sc*EF.memoire:sc;e.n++;S.eff[k]=e;
+   R.cmv=R.cmv||{};R.cmv[k]=v;R.cmLog=R.cmLog||[];R.cmLog.push({k,v,sc:Math.round(sc*100),dmg:Math.round(dmg*100),t:Math.round(t)});
+   if(v==='ok'){chron('cmok',{k});later(0.6,()=>murmur(`Le Brumeux · ${c.n}`,'Elle a porté. Il s’en souviendra.',3.2));}
+   else if(v==='ko'){R.ko=R.ko||{};R.ko[k]=(R.ko[k]||0)+1;
+    if(banned(k)){chron('cmban',{k});later(0.6,()=>murmur(`Le Brumeux renonce · ${c.n}`,`Tu l’as déjouée ${EF.abandonApres} fois. Il n’y reviendra pas de cette descente.`,4));}
+    else{chron('cmko',{k});later(0.6,()=>murmur(`Le Brumeux · ${c.n}`,'Tu l’as déjouée. Il cherchera autre chose.',3.4));}}
+   persist();}catch(err){console.error(err);}};
+ window.__cm161={baseline,score,effS};
 })();
 
 // ───────────────────────── Talents : textes, rangs et exclusions depuis data/talents.js

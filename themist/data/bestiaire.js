@@ -37,7 +37,15 @@
   traque:{n:'Traque',ax:'portee',hi:true,cost:2,why:'tu frappes de loin',what:'La Brume s’épaissit et lâche des traqueurs qui chargent.'},
   petards:{n:'Pétards',ax:'portee',hi:false,cost:2,why:'tu frappes au contact',what:'Des Bouffis rampent vers toi : ils explosent au corps à corps.'},
   barrage:{n:'Tir de barrage',ax:'esquive',hi:true,cost:2.5,why:'tu esquives tout ce qui charge',what:'Des Spectres se postent au fond et tirent de loin.'},
-  avide:{n:'Brume avide',ax:'soin',hi:true,cost:1.5,why:'tu te soignes beaucoup',what:'Dans cette salle, tes soins sont réduits de 40 %.'}},
+  avide:{n:'Brume avide',ax:'soin',hi:true,cost:1.5,why:'tu te soignes beaucoup',what:'Dans cette salle, tes soins sont réduits de 40 %.'},
+  renforts:{n:'Renforts',ax:'rythme',hi:true,cost:2.5,why:'tu purges les salles vite',what:'Une vague de plus arrive quand tu crois la salle finie.'},
+  ruee:{n:'Béliers',ax:'esquive',hi:false,cost:2,why:'tu esquives rarement',what:'Des Brutes chargent en ligne droite : il faudra esquiver.'}},
+ // Le Brumeux juge ses contre-mesures. Après chaque salle où il en a lancé une, il compare les PV que tu y as perdus
+ // et le temps passé à tes salles ordinaires (en %). Au-delà de seuilEfficace, elle a porté ; en deçà de seuilDejouee, tu l'as déjouée.
+ // poids : influence du verdict sur ses choix suivants. Il abandonne une contre-mesure déjouée abandonApres fois dans la run.
+ // repetition : attrait perdu chaque fois qu'il relance la même contre-mesure dans la descente (il varie ses coups).
+ // memoire : part du nouveau verdict dans sa mémoire d'une descente à l'autre. degatsMin : PV perdus de référence minimum (% des PV max).
+ efficacite:{seuilEfficace:15,seuilDejouee:-15,poids:0.25,repetition:0.12,abandonApres:2,memoire:0.4,degatsMin:4,partDegats:70},
  // Règles de salle
  regles:{
  verre:{n:'Verre',d:'Tout est fragile : tes coups et les leurs font 40 % de dégâts en plus.'},

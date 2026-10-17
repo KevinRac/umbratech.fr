@@ -124,7 +124,7 @@ function chance(p, court) {
   return court ? `${nb} sur ${mot(d)}` : `${nb} chance${n > 1 ? 's' : ''} sur ${mot(d)}`;
 }
 function bestiaire(B) {
-  const E = B.ennemis, C = B.champion, RS = B.reglesSalle, BR = B.breche;
+  const E = B.ennemis, C = B.champion, RS = B.reglesSalle, BR = B.breche, EF = B.efficacite;
   const nom = k => E[k].n;
   const ennemis = Object.values(E).filter(e => e.desc).map(e =>
     `<article class="ent enemy"><div class="eh"><h4>${esc(e.n)}</h4><span class="tag">${e.salle ? `Apparaît dès la salle ${e.salle}` : 'Dès le début'}</span></div><p>${esc(e.desc)}</p>\n`
@@ -146,6 +146,7 @@ function bestiaire(B) {
 <h3 class="sub">Contre-mesures de la Brume</h3>
 <p>La Brume lit ton style et déclenche une contre-mesure adaptée dans la salle. Chacune est liée à ce que tu fais trop.</p>
 <div class="grid g4">${cms}</div>
+<p><b>Il juge ses contre-mesures.</b> Après chaque salle où il en a lancé une, le Brumeux compare ce qu’elle t’a coûté à tes salles ordinaires : les PV perdus (pour ${EF.partDegats} %) et le temps passé (pour le reste). Plus de ${EF.seuilEfficace} % au-dessus de ta moyenne : elle a <b>porté</b>, il la relancera plus volontiers (mais il varie : chaque nouvel usage dans la même descente la rend un peu moins tentante). Plus de ${-EF.seuilDejouee} % en dessous : tu l’as <b>déjouée</b>, il s’en détourne. Déjouée ${EF.abandonApres} fois dans la même descente, il y <b>renonce</b> jusqu’à la fin de la descente. Son jugement se garde d’une descente à l’autre. Un texte violet donne le verdict à la fin de la salle, et l’écran de fin le rappelle.</p>
 <h3 class="sub">Règles de salle</h3>
 <div class="grid g4">${regles}</div>
 <p>À partir de la ${RS.desLaSalle}e salle, une salle de combat ou d’élite reçoit parfois une règle (${chance(RS.chanceActeI)} à l’acte I, ${chance(RS.chanceEnsuite, true)} ensuite). La règle est choisie selon tes PV : sous ${RS.seuilBrume} %, seulement la brume ; sous ${RS.seuilBrumeSol} %, la brume ou le sol ; au-dessus, les quatre. <b>La règle mute une fois</b> en plein combat, entre ${RS.mutationMinS} et ${RS.mutationMaxS} secondes après son apparition : elle est remplacée par une autre règle possible à ton niveau de PV. Purifier une salle à règle rapporte <b>une relance de talents</b> et de l’or (${RS.orBase} + ${RS.orParActe} par acte).</p>
