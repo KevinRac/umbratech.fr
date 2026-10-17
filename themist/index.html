@@ -1,5 +1,6 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>La Brume</title>
+<script>try{if(/[?&]demo=/.test(location.search)){var __m={};Object.defineProperty(window,'localStorage',{value:{getItem:function(k){return k in __m?__m[k]:null},setItem:function(k,v){__m[k]=String(v)},removeItem:function(k){delete __m[k]},clear:function(){},key:function(){return null},length:0}});}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
@@ -6260,7 +6261,7 @@ window.__v14={SETS,RULES,AIDS,refreshSets,setRule,chron,chronBuild,openChron,sta
 
 
 // ───────────────────────── Démarrage
-function start(){resize();initTitle();requestAnimationFrame(frame);}
+function start(){if(typeof DEMO_CLS!=='undefined'&&DEMO_CLS)return;resize();initTitle();requestAnimationFrame(frame);}
 // Accès de débogage pour les tests (console)
 window.__brume={showToast:(...a)=>showToast(...a),showMur:(...a)=>showMur(...a),hideMsg:()=>{toastEl.classList.remove('show');if(murEl)murEl.classList.remove('show');},PBOON:()=>PBOON,PCONS:()=>PCONS,equip:(id,n)=>equip(id,n),openEquip:(id,t)=>openEquip(id,t),openPause:()=>openPause(),get P(){return P;},get RUN(){return RUN;},get room(){return room;},get enemies(){return enemies;},get SAVE(){return SAVE;},xp:n=>gainXp(n),go:t=>{trans={phase:'out',t:0,type:t};},take:id=>takeNode(id),relic:id=>applyRelic(RELICS.find(r=>r.id===id)),killAll:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)hitEnemy(e,99999,{crit:false});},cls:c=>{chosenCls=c;},start:()=>startRun(),hub:()=>enterHub(),gold:n=>{RUN.goldF+=n;},shards:n=>{SAVE.shards+=n;},npc:id=>openNpc(id)};
 Object.assign(window.__brume,{step:(dt,n=1)=>{for(let i=0;i<n;i++)step(dt);},nodes:()=>NODES,excl:()=>EXCL,bridges:()=>BR,rings:()=>rings,fxp:o=>fx.push(o),murmur:(a,b,c)=>murmur(a,b,c),toastP:(t)=>toastPause(t),fz:()=>freezeT,hp:()=>hintPaused,res:n=>{RZS().earned+=n;persist();},node:(id,on=true)=>{if(on)RZS().nodes[id]=1;else delete RZS().nodes[id];persist();},RZN,has:id=>has9(id),fin:(w,a)=>openEnd(w,a),hit:(e,d,o)=>hitEnemy(e,d,o||{}),create:(t,x,y,el)=>createEnemy(t,x,y,el),hurt:(d)=>hurtPlayer(d),theme:()=>room&&room.wtheme,doors:()=>room&&room.doors.map(d=>d.type),clearRoom:()=>{for(const e of enemies)if(!e.dead&&!e.fixed)e.dead=true;room.waveI=room.waves.length;room.spawning=[];},frag:(s)=>giveFrag(s,W/2,H/2,0)});
@@ -7268,7 +7269,8 @@ details.fold>.chips{margin-top:8px}
 .pvhead .h-sec{margin:0 0 8px;color:var(--c)}
 .pvdiff{font-size:12.5px;letter-spacing:.08em;color:var(--ash)}
 .pvstage{position:relative;border:1px solid var(--line);border-top:2px solid var(--c);border-radius:4px;overflow:hidden;background:#080a11;aspect-ratio:16/9}
-.pvstage canvas{display:block;width:100%;height:100%}
+.pvstage iframe{display:block;width:100%;height:100%;border:0;pointer-events:none;background:#05060a}
+.pvsteps button.lock::after{content:'↻';margin-left:auto;color:var(--c)}
 .pvsteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0 0;padding:0;list-style:none}
 .pvsteps button{width:100%;font:inherit;font-size:13.5px;line-height:1.25;text-align:left;color:var(--ash);background:#10131c;border:1px solid var(--line);border-top:2px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer;display:flex;gap:7px;align-items:baseline}
 .pvsteps button i{font-style:normal;font-weight:700;color:var(--mute)}
@@ -7320,141 +7322,21 @@ details.fold>.chips{margin-top:8px}
   overlayKeys=c=>{if(c==='ArrowRight'||c==='ArrowLeft'){const n=tabs.length,i=((+panel.dataset.ep||0)+(c==='ArrowRight'?1:n-1))%n;sel(i);return;}if(ok)ok(c);};
  }
 
- // ── Aperçu de gameplay : une petite scène animée par forme, en trois gestes
+ // ── Aperçu de gameplay : le vrai moteur du jeu, rejoué par un bot dans un cadre isolé (?demo=classe)
  const PV=(()=>{
-  const TAU=Math.PI*2,CW=480,CH=270,PH=3.4;
-  const ease=x=>x<=0?0:x>=1?1:x*x*(3-2*x),lerp=(a,b,k)=>a+(b-a)*k;
-  const glow=(c,x,y,r,rgb,a)=>{const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${rgb},${a})`);g.addColorStop(1,`rgba(${rgb},0)`);c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,TAU);c.fill();};
-  const disc=(c,x,y,r,f,s,lw)=>{c.beginPath();c.arc(x,y,r,0,TAU);if(f){c.fillStyle=f;c.fill();}if(s){c.lineWidth=lw||1.5;c.strokeStyle=s;c.stroke();}};
-  const txt=(c,s,x,y,col,size,al)=>{c.fillStyle=col;c.font=`700 ${size||12}px "Alegreya Sans",system-ui,sans-serif`;c.textAlign=al||'center';c.fillText(s,x,y);};
-  const pop=(c,x,y,s,col,k)=>{if(k<=0||k>=1)return;c.globalAlpha=1-k*k;txt(c,s,x,y-k*24,col,14);c.globalAlpha=1;};
-  const bg=c=>{const g=c.createLinearGradient(0,0,0,CH);g.addColorStop(0,'#0e111b');g.addColorStop(1,'#080a11');c.fillStyle=g;c.fillRect(0,0,CW,CH);c.strokeStyle='rgba(255,255,255,.035)';c.lineWidth=1;for(let x=40;x<CW;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,CH);c.stroke();}for(let y=30;y<CH;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(CW,y);c.stroke();}c.strokeStyle='rgba(255,255,255,.05)';c.beginPath();c.ellipse(CW/2,CH/2+10,210,100,0,0,TAU);c.stroke();};
-  let curCls='lum';
-  const bar=(c,x,y,w,v,mx,rgb,label,marks)=>{c.fillStyle='rgba(255,255,255,.08)';c.fillRect(x,y,w,7);c.fillStyle=`rgb(${rgb})`;c.fillRect(x,y,w*Math.max(0,Math.min(1,v/mx)),7);if(marks)for(const m of marks){c.fillStyle='rgba(0,0,0,.6)';c.fillRect(x+w*m/mx,y,1.5,7);}txt(c,label,x,y-4,'rgba(236,228,206,.8)',11,'left');};
-  const cursor=(c,x,y)=>{c.strokeStyle='rgba(236,228,206,.7)';c.lineWidth=1.4;c.beginPath();c.arc(x,y,7,0,TAU);c.moveTo(x-12,y);c.lineTo(x-4,y);c.moveTo(x+4,y);c.lineTo(x+12,y);c.moveTo(x,y-12);c.lineTo(x,y-4);c.moveTo(x,y+4);c.lineTo(x,y+12);c.stroke();};
-  // ── Les vrais dessins du jeu, sur un état fictif : les fonctions lisent les variables globales (ctx, P, rings, nums…)
-  const Z=1.7,HX=330,HY=272,HERO=[HX,HY];
-  const W3=(c,fn)=>{c.save();c.setTransform(Z,0,0,Z,480-480*Z,270-270*Z);try{fn();}finally{c.restore();}};
-  const hud=(c,fn)=>{c.save();c.setTransform(2,0,0,2,0,0);try{fn();}finally{c.restore();}};
-  const withG=(c,st,fn)=>{const sv=[ctx,P,rings,nums,webs,pools];ctx=c;if(st.P)P=st.P;rings=st.rings||[];nums=st.nums||[];webs=[];pools=[];
-   try{fn();}catch(err){console.error(err);}finally{ctx=sv[0];P=sv[1];rings=sv[2];nums=sv[3];webs=sv[4];pools=sv[5];}};
-  const FP=(real,o)=>Object.assign(Object.create(real),o);
-  const mkE=(x,y,o)=>Object.assign({type:'rampant',x,y,r:(ED.rampant&&ED.rampant.r)||13,wob:T*8+x*.07,ang:Math.PI,flash:0,hasteT:0,puppet:0,exposed:false,hp:50,maxHp:50,t:1,state:'chase',dead:false,elite:false,enraged:false,vx:0,vy:0},o||{});
-  const foes=(c,list)=>withG(c,{},()=>{for(const e of list){drawEnemyBody(e);drawEnemyPost(e);}});
-  const numAt=(arr,x,y,v,k,age,life)=>{if(age<0||age>=life)return;arr.push({x,y:y-18*age/life,t:(1-age/life)*0.9,max:0.9,k,v});};
-  const showNums=(c,arr)=>withG(c,{nums:arr},drawNums);
-  const hero=(c,x,y,o)=>{o=o||{};const sp=o.sp||0,face=o.face||0;
-   const main=ctx;ctx=c;
-   try{c.save();c.translate(x,y);
-    const b={alpha:1,walk:T*9,vx:sp?sp*.8:0,sp};
-    if(curCls==='lum'){drawLumHero(0,0,face,Object.assign(b,{obs:!!o.dark}));lumEyes(0,0,face,!!o.dark,0);if(!o.noLan)lanternShape(c,10,-3+Math.sin(T*6),Math.sin(T*6)*.15,1);}
-    else if(curCls==='gou'){drawGouHero(0,0,face,Object.assign(b,{sc:[1,1.12,1.25][o.tier||0],tier:o.tier||0,open:o.open==null?.3+.1*Math.sin(T*3):o.open,meta:false,muts:0}));}
-    else if(curCls==='her'){const ma=o.ma==null?-1.15:o.ma;drawMallet(0,0,ma,1,o.mg||0);drawHerHero(0,0,face,b);}
-    else{drawTisHero(0,0,face,b);}
-    c.restore();}catch(err){c.restore();console.error(err);}finally{ctx=main;}};
-  const foeAt=(i,k)=>{};
-  const sweep=(c,list)=>{};
-
-  const scenes={
-   lum(c,u,ph,t){
-    const k=u/PH,F=[[520,215],[575,300],[490,345],[640,255]],dark=ph===2?ease((u-0.7)/0.4)*(1-ease((u-2.9)/0.4)):0;
-    const H=[HX,HY],sn=[];
-    if(ph===0){
-     const R=135+4*Math.sin(t*3),E=F.map((f,i)=>{const x=lerp(f[0]+250,f[0],ease(k*1.25-i*.07)),y=f[1]+Math.sin(t*2+i)*3;return mkE(x,y,{exposed:Math.hypot(x-H[0],y-H[1])<R});});
-     W3(c,()=>{glow(c,H[0],H[1],R*1.3,'255,200,120',.28);c.strokeStyle='rgba(255,215,140,.35)';c.lineWidth=1.5;c.setLineDash([5,7]);c.lineDashOffset=-t*20;ell(c,H[0],H[1],R,R*.8);c.stroke();c.setLineDash([]);foes(c,E);hero(c,H[0],H[1]);});
-     hud(c,()=>{E.forEach(e=>{if(e.exposed){const x=(e.x-480)*Z+480,y=(e.y-270)*Z+270;txt(c,'exposé',x/2,y/2-22,'#ffe9a8',11);}});});
-    }else if(ph===1){
-     const ang=-0.42+0.84*(0.5-0.5*Math.cos(k*TAU*0.9)),E=F.map((f,i)=>{const a=Math.atan2(f[1]-(H[1]-8),f[0]-(H[0]+10)),hit=Math.abs(a-ang)<0.1;if(hit)numAt(sn,f[0],f[1]-20,String(18+i*3),'n',(t*2.2+i*.3)%1,.6);return mkE(f[0],f[1],{exposed:true,flash:hit?0.12:0});});
-     W3(c,()=>{foes(c,E);withG(c,{P:FP(P,{beam:{x:H[0]+10,y:H[1]-8,a:ang,len:380,rays:[0],kind:'lum'}})},drawBeam);hero(c,H[0],H[1]);showNums(c,sn);});
-     hud(c,()=>{bar(c,14,248,110,lerp(72,36,k),100,'243,185,77','Lueur');});
-    }else{
-     const LP=[600,232],fl=ease(u/0.7),landed=u>0.7,ret=u>2.9,f2=ease((u-2.9)/0.45);
-     let px=H[0],py=H[1];
-     if(u>=1.0&&u<1.55){const d=ease((u-1.0)/0.35);px=lerp(H[0],470,d);py=lerp(H[1],232,d);}else if(u>=1.55&&u<1.95){const d=ease((u-1.55)/0.3);px=lerp(470,H[0]+20,d);py=lerp(232,H[1]-6,d);}else if(u>=1.95&&u<2.5){const d=ease((u-1.95)/0.35);px=lerp(H[0]+20,520,d);py=lerp(H[1]-6,310,d);}else if(u>=2.5){const d=ease((u-2.5)/0.3);px=lerp(520,H[0],d);py=lerp(310,H[1],d);}
-     const E=[mkE(480,232,{exposed:true,flash:u>1.3&&u<1.45?.12:0}),mkE(520,312,{exposed:true,flash:u>2.25&&u<2.4?.12:0}),mkE(640,272,{exposed:true})];
-     if(u>1.4)E[0].dead=true;if(u>2.35)E[1].dead=true;
-     const lan=u<0.7?{state:'fly',x:lerp(H[0],LP[0],fl),y:lerp(H[1],LP[1],fl)-Math.sin(fl*Math.PI)*70}:ret?{state:'return',x:lerp(LP[0],H[0],f2),y:lerp(LP[1],H[1],f2)}:{state:'ground',x:LP[0],y:LP[1]};
-     numAt(sn,480,232,'54','crit',u-1.3,.9);numAt(sn,520,312,'54','crit',u-2.25,.9);
-     W3(c,()=>{
-      foes(c,E.filter(e=>!e.dead));
-      if(dark>0){c.fillStyle=`rgba(3,4,10,${.55*dark})`;c.fillRect(0,0,960,540);}
-      withG(c,{P:FP(P,{lan,blindT:0,zenithT:0})},drawLanternPost);
-      if(dark>0){c.save();c.globalCompositeOperation='lighter';c.fillStyle=`rgba(80,70,200,${.07*dark})`;c.fillRect(0,0,960,540);c.restore();}
-      hero(c,px,py,{dark:dark>.3,noLan:true,sp:(u>1.0&&u<1.35)||(u>1.55&&u<1.85)||(u>1.95&&u<2.3)||(u>2.5&&u<2.8)?220:0});
-      showNums(c,sn);});
-     if(dark>.3)hud(c,()=>txt(c,'OBSCUR',CW-14,22,'#9db2ff',13,'right'));
-    }
-   },
-   gou(c,u,ph,t){
-    const k=u/PH,H=[HX,HY],blast=ph===2&&u>0.9,v=ph===0?lerp(0,58,k):ph===1?lerp(58,94,k):(u<0.9?94:lerp(94,0,ease((u-0.9)/0.3)));
-    const tier=v<34?0:v<67?1:2,shake=ph===1?Math.sin(t*55)*(0.8+(v-58)/14):0,sn=[],rg=[];
-    const F=[[540,225],[600,285],[660,245],[520,330]];
-    const E=F.map((f,i)=>{let x=f[0],y=f[1];if(ph===0){const d=ease(k*1.1)*40;x-=d;}if(blast){const bf=ease((u-0.9)/0.6);x+=bf*80;y+=(i-1.5)*bf*20;}return mkE(x,y,{flash:blast&&u<1.4?.12:0});});
-    const fp=FP(P,{x:H[0]+shake,y:H[1],r:14,face:0,cor:v,metaT:0,roomMut:0,devour:ph===0?{R:190,a:0,arc:1.2}:null,swingT:0,dead:false});
-    W3(c,()=>{
-     if(ph===0)withG(c,{P:fp},drawDevour);
-     if(ph===0){for(let i=0;i<30;i++){const f=((t*.55+i/30)%1),a=(((i*2.399)%1)-.5)*1.1,d=lerp(190,18,f);c.fillStyle=`rgba(190,205,185,${.8*(1-f*.4)})`;c.fillRect(H[0]+Math.cos(a)*d,H[1]+Math.sin(a)*d,3,3);}}
-     foes(c,E);
-     if(blast){const bf=ease((u-0.9)/0.5);withG(c,{P:FP(P,{beam:{x:H[0]+14,y:H[1]-6,a:0,len:lerp(60,430,bf),rays:[-.3,0,.3],kind:'cor'}})},()=>{c.globalAlpha=1-ease((u-1.3)/0.6);drawBeam();c.globalAlpha=1;});
-      rg.push({x:H[0]+30,y:H[1],r:lerp(10,300,bf),max:300,col:'160,235,105'});withG(c,{rings:rg},drawRings);}
-     hero(c,H[0]+shake,H[1],{tier,open:ph===0||blast?.9:.3});
-     withG(c,{P:fp},drawGouPost);
-     if(ph===2)numAt(sn,560,262,'340','crit',u-1.0,.9);showNums(c,sn);});
-    hud(c,()=>{bar(c,14,248,150,v,100,tier===2?'196,110,210':'143,212,110',`Corruption ${Math.round(v)}`,[33,67]);if(ph===1)txt(c,'Rupture à 100',CW-14,22,'#d9a0e6',13,'right');});
-   },
-   her(c,u,ph,t){
-    const H=[HX,HY],S=P.s,bpm=S.bpm||80,bt=t*bpm/60,beatN=Math.floor(bt),beatPh=bt-beatN,sn=[],rg=[];
-    const act=ph>=1,s=Math.min(1,(beatPh*60/bpm)/0.4),n=(beatN%6)+1;
-    const hit=act&&beatPh*60/bpm<0.35,kb=hit?ease(s)*30:0;
-    const F=[[520,215],[580,285],[640,235],[540,340]];
-    const E=F.map((f,i)=>mkE(f[0]+kb*(1-i*.1)+Math.sin(t*2+i)*2,f[1],{flash:act&&beatPh*60/bpm<.1?.12:0}));
-    const fp=FP(P,{x:H[0],y:H[1],beatPh,beatN,beatFlash:hit&&s<.15?.12:0,orgueN:0,cad:ph===2?n:0,cadMax:S.cadMax||6});
-    if(hit){rg.push({x:H[0],y:H[1]+10,r:lerp(20,105,ease(s)),max:105,col:'142,197,255'});numAt(sn,H[0]+110,H[1]-30,ph===2?'+'+(n*3)+' %':'EN MESURE','n',s,1);numAt(sn,520,200,String(13+n*3),'crit',s,1);}
-    W3(c,()=>{foes(c,E);if(hit)withG(c,{rings:rg},drawRings);
-     hero(c,H[0],H[1],{ma:act&&hit?-1.8+ease(s)*3.4:-1.15,mg:act&&hit?1-s:0});
-     withG(c,{P:fp},()=>drawMetronome(c));showNums(c,sn);});
-    if(ph===0)hud(c,()=>txt(c,'attends que le cercle se referme',CW/2,246,'rgba(236,228,206,.75)',13));
-    if(ph===2)hud(c,()=>txt(c,`Cadence ×${n}`,14,244,'rgba(236,228,206,.85)',11,'left'));
-   },
-   tis(c,u,ph,t){
-    const H=[HX,HY],sn=[],rg=[],k=u/PH;
-    const A0=[520,205],B0=[560,340],C0=[640,272];
-    if(ph===0){
-     const E=[A0,C0,B0].map(f=>mkE(f[0],f[1]));
-     W3(c,()=>{foes(c,E);
-      for(let j=0;j<6;j++){const tg=[A0,C0,B0][j%3],f=((t*3.4+j*.17)%1),x=lerp(H[0]+16,tg[0]-12,f),y=lerp(H[1]-4,tg[1],f),a=Math.atan2(tg[1]-H[1],tg[0]-H[0]);c.strokeStyle='#ffe3ea';c.lineWidth=2;c.beginPath();c.moveTo(x-Math.cos(a)*14,y-Math.sin(a)*14);c.lineTo(x,y);c.stroke();if(f>.92)numAt(sn,tg[0],tg[1]-16,'9','n',(f-.92)*5,.5);}
-      hero(c,H[0],H[1]);cursor(c,A0[0],A0[1]);showNums(c,sn);});
-    }else{
-     let A=A0,B=B0,C=C0,thr=1,shock=0;
-     if(ph===2){const f=ease((u-0.5)/0.55),X=[600,272];A=[lerp(A0[0],X[0]-14,f),lerp(A0[1],X[1]-10,f)];B=[lerp(B0[0],X[0]-14,f),lerp(B0[1],X[1]+10,f)];shock=u>1.05?(u-1.05)/0.7:0;if(u>1.05){const kb=ease((u-1.05)/0.5);C=[C0[0]+60*kb,C0[1]-14*kb];}thr=u<1.05?1:0;}
-     const eA=mkE(A[0],A[1],{puppet:1,exposed:true}),eB=mkE(B[0],B[1],{puppet:1,exposed:true}),eC=mkE(C[0],C[1],{flash:ph===2&&u>1.05&&u<1.3?.12:0});
-     const fp=FP(P,{cls:'tis',x:H[0],y:H[1],face:0,gtoileT:0,threads:thr?[{e:eA,t:1},{e:eB,t:1}]:[]});
-     if(shock>0&&shock<1){rg.push({x:620,y:272,r:lerp(8,90,shock),max:90,col:'255,120,150'});numAt(sn,610,240,'86','crit',shock,1);numAt(sn,600,300,'86','crit',Math.max(0,shock-.1),1);}
-     W3(c,()=>{foes(c,[eC,eA,eB]);withG(c,{P:fp},drawV6World);hero(c,H[0],H[1]);cursor(c,ph===2?600:A0[0],ph===2?272:A0[1]);if(shock>0)withG(c,{rings:rg},drawRings);showNums(c,sn);});
-     hud(c,()=>{if(ph===1)txt(c,'exposé · ralenti',(A[0]-480)*Z/2+240,(A[1]-270)*Z/2+135-26,'#ffd0da',11);bar(c,14,248,110,ph===1?lerp(100,70,k):70,100,'255,107,138','Bobine');});
-    }
-   }
-  };
-
   function mount(host,cls){
    const steps=FO_D.apercus&&FO_D.apercus[cls];if(!steps)return;
    const col=CLS[cls].color,F=FO_D.fiches[cls];
-   host.innerHTML=`<div class="pv" style="--c:${col}"><div class="pvhead"><p class="h-sec">Aperçu · ${esc(CLS[cls].short)}</p><span class="pvdiff">${esc(F.mech)} · ${esc(F.difficulte)}</span></div><div class="pvstage"><canvas width="960" height="540" role="img" aria-label="Aperçu animé du gameplay : ${esc(CLS[cls].short)}"></canvas></div><ol class="pvsteps">${steps.map((s,i)=>`<li><button type="button" data-ph="${i}"><i>${i+1}</i><span>${esc(keyTok(s[0]))}</span></button></li>`).join('')}</ol><p class="pvdesc" aria-live="off"></p></div>`;
-   const cv=host.querySelector('canvas'),c=cv.getContext('2d'),desc=host.querySelector('.pvdesc'),btns=[...host.querySelectorAll('.pvsteps button')];
-      let t0=performance.now(),off=0,last=-1,raf=0,lock=-1;
-   const draw=now=>{
-    if(!cv.isConnected)return;
-    const el=(now-t0)/1000+off,t=lock>=0?lock*PH+el%PH:el%(PH*3),ph=Math.floor(t/PH),u=t-ph*PH;
-    c.setTransform(2,0,0,2,0,0);bg(c);c.save();
-    curCls=cls;try{scenes[cls](c,u,ph,t);}catch(err){console.error(err);}
-    c.restore();
-    if(ph!==last){last=ph;btns.forEach((b,i)=>b.classList.toggle('on',i===ph));desc.textContent=keyTok(steps[ph][1]);}
-    raf=requestAnimationFrame(draw);
-   };
-   btns.forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.ph;if(lock===i){lock=-1;off=i*PH;}else{lock=i;off=0;}t0=performance.now();last=-1;cancelAnimationFrame(raf);raf=requestAnimationFrame(draw);}));
-   raf=requestAnimationFrame(draw);
+   host.innerHTML=`<div class="pv" style="--c:${col}"><div class="pvhead"><p class="h-sec">Aperçu · ${esc(CLS[cls].short)}</p><span class="pvdiff">${esc(F.mech)} · ${esc(F.difficulte)}</span></div><div class="pvstage"><iframe title="Aperçu du gameplay : ${esc(CLS[cls].short)}" src="${location.pathname}?demo=${cls}" tabindex="-1" scrolling="no" loading="eager"></iframe></div><ol class="pvsteps">${steps.map((s,i)=>`<li><button type="button" data-ph="${i}"><i>${i+1}</i><span>${esc(keyTok(s[0]))}</span></button></li>`).join('')}</ol><p class="pvdesc" aria-live="off"></p></div>`;
+   const fr=host.querySelector('iframe'),desc=host.querySelector('.pvdesc'),btns=[...host.querySelectorAll('.pvsteps button')];
+   let lock=-1,cur=-1;
+   const show=i=>{if(i===cur)return;cur=i;btns.forEach((b,j)=>b.classList.toggle('on',j===i));desc.textContent=keyTok(steps[i][1]);};
+   show(0);
+   const onMsg=e=>{if(!fr.isConnected){removeEventListener('message',onMsg);return;}if(e.source!==fr.contentWindow||!e.data||e.data.pvPh==null)return;show(e.data.pvPh);};
+   addEventListener('message',onMsg);
+   btns.forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.ph;lock=lock===i?-1:i;btns.forEach((x,j)=>x.classList.toggle('lock',j===lock));try{fr.contentWindow.postMessage({pvLock:lock},'*');}catch(err){}if(lock>=0)show(lock);}));
   }
-  return{mount,scenes};
+  return{mount};
  })();
 
  const _rpP=renderPortail;
@@ -7504,6 +7386,59 @@ details.fold>.chips{margin-top:8px}
  for(const k in EXCL)delete EXCL[k];
  for(const k in T_D.exclusions)EXCL[k]=T_D.exclusions[k].slice();})();
 
+// ── Mode démonstration (?demo=classe) : le vrai moteur, rejoué par un bot, dans un cadre isolé (aucune sauvegarde, aucun son)
+function demoBoot(cls){
+ document.documentElement.classList.add('demo');
+ const st=document.createElement('style');st.textContent='.demo #hud,.demo #toast,.demo #banner,.demo #overlay,.demo #assist,.demo .hint,.demo [id^=mur]{display:none!important}.demo,.demo body{background:#05060a;overflow:hidden}.demo #game{transform:scale(1.5);transform-origin:40% 58%}';document.head.appendChild(st);
+ initAudio=function(){};musicKick=function(){};updateMusic=function(){};muted=true;
+ resize();chosenCls=cls;startRun();
+ const PHD=4.6;let ph=-1,t0=0,lock=-1,cyc=0,lastMsg=-1,tick=0,pressAt={};
+ const press=code=>{dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true}));};
+ const clickL=()=>{mouse.l=true;if(P){P.clickQ=1;P.clickT=0.16;}};
+ const clickR=()=>{mouse.r=true;if(P){P.rclickQ=1;P.rclickT=0.16;}};
+ const once=(k,tt,at,fn)=>{if(tt>=at&&!pressAt[k]){pressAt[k]=1;fn();}};
+ addEventListener('message',e=>{if(e.data&&e.data.pvLock!==undefined){lock=e.data.pvLock;if(lock>=0){ph=lock;t0=performance.now()/1000;pressAt={};mouse.l=mouse.r=false;}}});
+ function bot(){
+  if(!P||state!=='play')return;
+  if(!overlayEl.hidden)closeOverlay();queue.length=0;P.pendingLv=0;MSGQ.length=0;hintPaused=false;msgCur=null;paused=false;freezeT=0;
+  P.hp=P.s.maxHp;P.dead=false;P.hurtFlash=0;
+  const live=enemies.filter(e=>!e.dead&&!e.fixed);
+  for(const e of live){e.dmg=0;e.maxHp=3000;e.hp=3000;const dx=P.x+150-e.x,dy=P.y-10-e.y,d=hyp(dx,dy);if(d>230){e.x+=dx/d*4;e.y+=dy/d*4;}}
+  if(RUN)RUN.fogBoost=-0.42;if(room)room.doors=[];
+  const now=performance.now()/1000;
+  if(ph<0){ph=0;t0=now;}
+  let tt=now-t0;
+  if(lock<0&&tt>=PHD){ph=(ph+1)%3;t0=now;tt=0;pressAt={};mouse.l=mouse.r=false;}
+  if(ph!==lastMsg){lastMsg=ph;try{parent.postMessage({pvPh:ph},'*');}catch(e){}}
+  if(!live.length&&!(room.spawning&&room.spawning.length)&&!(room.waves&&room.waves.length)&&!trans)enterRoom('combat');
+  let tg=null,bd=1e9;for(const e of live){const d=hyp(e.x-P.x,e.y-P.y);if(d<bd){bd=d;tg=e;}}
+  const far=live.length?live.slice().sort((a,b)=>hyp(b.x-P.x,b.y-P.y)-hyp(a.x-P.x,a.y-P.y))[0]:null;
+  if(tg){mouse.x=tg.x;mouse.y=tg.y;}else{mouse.x=P.x+200;mouse.y=P.y-60;}
+  // déplacement : reste vers le centre-bas, avec un va-et-vient
+  const ax=W*0.4+(cls==='lum'&&ph===0?130*Math.sin(now*0.9):0),ay=H*0.58;
+  for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);
+  if(cls==='lum'&&ph===0){if(P.x<ax-14)keys.add('KeyD');else if(P.x>ax+14)keys.add('KeyA');}else{if(P.x<ax-30)keys.add('KeyD');else if(P.x>ax+30)keys.add('KeyA');if(P.y<ay-30)keys.add('KeyS');else if(P.y>ay+30)keys.add('KeyW');}
+  const beat=P.beatPh!=null&&(P.beatPh<0.05||P.beatPh>0.95);
+  if(cls==='lum'){
+   if(ph===1)mouse.r=true;
+   if(ph===2){once('r1',tt,0.3,()=>press('KeyR'));if(tt>0.9)mouse.l=true;once('r2',tt,3.4,()=>{mouse.l=false;press('KeyR');});}
+  }else if(cls==='gou'){
+   if(ph===0)mouse.r=true;
+   if(ph===1){P.cor=Math.max(P.cor,82);mouse.l=true;}
+   if(ph===2){once('c',tt,0,()=>{P.cor=100;});mouse.r=tt<1.0;once('r',tt,1.3,()=>press('KeyR'));}
+  }else if(cls==='her'){
+   if(ph>=1&&beat&&!pressAt['b'+Math.floor(P.beatN||0)]){pressAt['b'+Math.floor(P.beatN||0)]=1;clickL();setTimeout(()=>{mouse.l=false;},90);}
+  }else if(cls==='tis'){
+   if(ph===0)mouse.l=true;
+   if(ph===1){const k=Math.floor(tt/0.8);once('f'+k,tt,k*0.8,()=>{clickR();setTimeout(()=>{mouse.r=false;},90);});}
+   if(ph===2){const k=Math.floor(tt/0.8);if(tt<1.8)once('f'+k,tt,k*0.8,()=>{clickR();setTimeout(()=>{mouse.r=false;},90);});once('r',tt,2.3,()=>press('KeyR'));}
+  }
+ }
+ setInterval(bot,33);
+ requestAnimationFrame(frame);
+}
+const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];
+if(DEMO_CLS&&CLS[DEMO_CLS])demoBoot(DEMO_CLS);
 if(window.claude&&window.claude.hot&&window.claude.hot.ready)window.claude.hot.ready(()=>start());else start();
 })();
 </script>
