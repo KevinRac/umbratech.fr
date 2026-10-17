@@ -7157,31 +7157,58 @@ details.fold>.chips{margin-top:8px}
     c.strokeStyle=`rgba(255,230,190,${0.5+0.4*k})`;c.lineWidth=2;c.beginPath();c.arc(h.x,h.y,h.r*k,0,TAU);c.stroke();
     // ombre de la cloche qui descend
     const s=0.35+0.65*k;c.fillStyle=`rgba(10,8,14,${0.25+0.45*k})`;c.beginPath();c.ellipse(h.x,h.y+4,h.r*0.42*s,h.r*0.16*s,0,0,TAU);c.fill();}
-   else if(h.k==='maree'){const X=h.axis==='x',a0=X?AR.y0:AR.x0,a1=X?AR.y1:AR.x1,g0=h.gc-h.gw/2,g1=h.gc+h.gw/2;
-    // v16.3 · Marée noire redessinée : un mur d'eau noire à crête d'écume, sans tirets. La brèche est simplement l'espace laissé libre.
-    const segs=[[a0,g0],[g1,a1]].filter(s=>s[1]>s[0]);
-    const rect=(p,w,u,v)=>X?c.fillRect(p-w,u,w*2,v-u):c.fillRect(u,p-w,v-u,w*2);
-    if(h.warn>0){const k=1-h.warn/h.tw,pl=0.5+0.5*Math.sin(T*14);
-     // trajectoire : le couloir que la vague va balayer, de bout en bout, sauf la brèche
-     for(const [u,v] of segs){c.fillStyle=`rgba(${TELE.zone},${0.07+0.14*k+0.04*pl})`;rect(h.pos+h.dir*h.w*0.5,h.w*0.5+Math.max(AR.x1-AR.x0,AR.y1-AR.y0)*0.5,u,v);}
-     // la vague se forme au bord de départ
-     for(const [u,v] of segs){c.fillStyle=`rgba(${TELE.zone},${0.2+0.35*k})`;rect(h.pos+h.dir*h.w*0.5,h.w*0.5*(0.3+0.7*k),u,v);}
-     // brèche : un halo clair, sans trait
-     const gl=c.createLinearGradient(X?0:g0,X?g0:0,X?0:g1,X?g1:0);gl.addColorStop(0,'rgba(255,255,255,0)');gl.addColorStop(0.5,`rgba(235,255,250,${0.10+0.10*pl})`);gl.addColorStop(1,'rgba(255,255,255,0)');
+   else if(h.k==='maree'){const X=h.axis==='x',d=h.dir,a0=X?AR.y0:AR.x0,a1=X?AR.y1:AR.x1,g0=h.gc-h.gw/2,g1=h.gc+h.gw/2,W=h.w;
+    // v16.4 · Marée noire : mur d'eau profonde à crête d'écume ondulante, remous derrière, gerbes aux bords de la brèche. Aucun tiret.
+    const segs=[];if(g0>a0)segs.push({u0:a0,u1:g0,ge:g0,sg:1});if(a1>g1)segs.push({u0:g1,u1:a1,ge:g1,sg:-1});
+    const P2=(s,u)=>X?[h.pos+d*s,u]:[u,h.pos+d*s];
+    const crest=u=>W*0.95+6*Math.sin(u*0.05+T*5)+3.5*Math.sin(u*0.13-T*9)+2*Math.sin(u*0.31+T*13);
+    const rnd=n=>{const v=Math.sin(n*12.9898)*43758.5453;return v-Math.floor(v);};
+    const body=(sc,am)=>{c.save();c.globalAlpha=am;
+     for(const sg of segs){const mid=(sg.u0+sg.u1)/2,A=P2(-W*1.3*sc,mid),B=P2(crest(mid)*sc,mid);
+      const gr=c.createLinearGradient(A[0],A[1],B[0],B[1]);gr.addColorStop(0,'rgba(4,16,24,0)');gr.addColorStop(0.35,'rgba(6,26,36,.88)');gr.addColorStop(0.8,'rgba(16,76,88,.92)');gr.addColorStop(1,'rgba(96,205,200,.95)');
+      c.fillStyle=gr;c.beginPath();let first=true;
+      for(let u=sg.u0;u<=sg.u1+0.1;u+=10){const q=P2(crest(u)*sc,Math.min(u,sg.u1));if(first){c.moveTo(q[0],q[1]);first=false;}else c.lineTo(q[0],q[1]);}
+      for(let u=sg.u1;u>=sg.u0-0.1;u-=10){const q=P2(-W*1.3*sc,Math.max(u,sg.u0));c.lineTo(q[0],q[1]);}
+      c.closePath();c.fill();
+      // courants sombres dans la masse d'eau
+      c.strokeStyle='rgba(110,215,210,.13)';c.lineWidth=1.6;c.beginPath();
+      for(let u=sg.u0+14,i=0;u<sg.u1;u+=36,i++){const uu=u+4*Math.sin(T*3+i),a=P2(-W*1.05*sc,uu),b=P2(crest(uu)*0.78*sc,uu);c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);}
+      c.stroke();
+      // crête d'écume : trait plein ondulé, doublé d'un reflet plus large
+      for(const [lw,col,off] of[[9,'rgba(120,235,225,.22)',-3],[4,'rgba(232,255,251,.92)',0],[2,'rgba(255,255,255,.55)',-7]]){
+       c.strokeStyle=col;c.lineWidth=lw;c.lineJoin='round';c.beginPath();first=true;
+       for(let u=sg.u0;u<=sg.u1+0.1;u+=8){const q=P2((crest(u)+off)*sc,Math.min(u,sg.u1));if(first){c.moveTo(q[0],q[1]);first=false;}else c.lineTo(q[0],q[1]);}
+       c.stroke();}
+      // écume et bulles sur le front
+      c.fillStyle='rgba(240,255,252,.85)';
+      for(let u=sg.u0+5,i=0;u<sg.u1;u+=11,i++){const f=rnd(i+sg.u0),q=P2(crest(u)*sc-f*16+3*Math.sin(T*6+u),u+f*6-3),r=1.4+f*3.6;c.globalAlpha=am*(0.4+0.45*Math.sin(T*8+u*0.3+f*6)**2);c.beginPath();c.arc(q[0],q[1],r,0,TAU);c.fill();}
+      c.globalAlpha=am;
+      // bord de la brèche : l'eau se creuse et projette des gerbes vers le vide
+      const ec=P2(crest(sg.ge)*sc*0.9,sg.ge);glow(c,ec[0],ec[1],30*sc+6,'200,255,248',0.38);
+      c.fillStyle='rgba(225,255,250,.8)';for(let i=0;i<7;i++){const f=rnd(i*3+sg.ge),life=(T*1.6+f)%1,q=P2(crest(sg.ge)*sc*(0.9-0.5*life)-6*life,sg.ge+sg.sg*(4+22*life*(0.4+f)));c.globalAlpha=am*(1-life)*0.9;c.beginPath();c.arc(q[0],q[1],1.2+2.2*(1-life),0,TAU);c.fill();}
+      c.globalAlpha=am;}
+     c.restore();};
+    c.save();c.beginPath();c.rect(AR.x0,AR.y0,AR.x1-AR.x0,AR.y1-AR.y0);c.clip();
+    if(h.warn>0){const k=1-h.warn/h.tw,pl=0.5+0.5*Math.sin(T*14),len=Math.abs(h.end-h.pos);
+     // couloir balayé : teinte douce et chevrons qui défilent dans le sens de la vague
+     for(const sg of segs){c.fillStyle=`rgba(${TELE.zone},${0.05+0.11*k+0.03*pl})`;
+      if(X)c.fillRect(Math.min(h.pos,h.end),sg.u0,len,sg.u1-sg.u0);else c.fillRect(sg.u0,Math.min(h.pos,h.end),sg.u1-sg.u0,len);
+      c.fillStyle=`rgba(${TELE.zone},${0.10+0.22*k})`;c.beginPath();
+      for(let s=(T*170)%100;s<len;s+=100){for(let u=sg.u0+26;u<sg.u1-10;u+=74){const a=P2(s+9,u),b=P2(s-9,u-10),e=P2(s-9,u+10);c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.lineTo(e[0],e[1]);c.closePath();}}
+      c.fill();}
+     // la vague se lève au bord de départ
+     body(0.2+0.8*k,0.35+0.55*k);
+     // brèche : halo clair, sans trait
+     const gl=c.createLinearGradient(X?0:g0,X?g0:0,X?0:g1,X?g1:0);gl.addColorStop(0,'rgba(255,255,255,0)');gl.addColorStop(0.5,`rgba(235,255,250,${0.12+0.10*pl})`);gl.addColorStop(1,'rgba(255,255,255,0)');
      c.fillStyle=gl;if(X)c.fillRect(AR.x0,g0,AR.x1-AR.x0,g1-g0);else c.fillRect(g0,AR.y0,g1-g0,AR.y1-AR.y0);}
-    else{const sw=Math.max(AR.x1-AR.x0,AR.y1-AR.y0);
-     for(const [u,v] of segs){
-      // corps sombre dégradé en travers de la vague
-      const gr=c.createLinearGradient(X?h.pos-h.w:0,X?0:h.pos-h.w,X?h.pos+h.w:0,X?0:h.pos+h.w);
-      const lead=h.dir>0?1:0;gr.addColorStop(lead?0:1,'rgba(8,28,36,.2)');gr.addColorStop(0.55,'rgba(14,52,62,.82)');gr.addColorStop(lead?1:0,'rgba(120,225,215,.9)');
-      c.fillStyle=gr;rect(h.pos,h.w,u,v);
-      // crête d'écume : trait plein, sur le front de la vague
-      c.fillStyle='rgba(225,255,250,.9)';rect(h.pos+h.dir*h.w,2.5,u,v);
-      c.fillStyle='rgba(150,240,230,.35)';rect(h.pos+h.dir*(h.w-6),7,u,v);}
-     // gerbes d'écume le long de la vague, hors brèche
-     for(let i=0;i<9;i++){const u=a0+((T*70+i*113)%(a1-a0));if(u>g0&&u<g1)continue;glow(c,X?h.pos+h.dir*h.w*0.8:u,X?u:h.pos+h.dir*h.w*0.8,18,'190,250,240',0.3);}
-     // brèche : léger reflet là où l'eau passe de chaque côté
-     for(const g of[g0,g1]){glow(c,X?h.pos:g,X?g:h.pos,22,'210,255,250',0.22);}}}
+    else{
+     // remous laissé derrière la vague
+     for(const sg of segs){const mid=(sg.u0+sg.u1)/2,A=P2(-W*1.3,mid),B=P2(-W*1.3-190,mid),gr=c.createLinearGradient(A[0],A[1],B[0],B[1]);gr.addColorStop(0,'rgba(70,170,170,.16)');gr.addColorStop(1,'rgba(70,170,170,0)');c.fillStyle=gr;
+      const p0=P2(-W*1.3,sg.u0),p1=P2(-W*1.3-190,sg.u1);c.fillRect(Math.min(p0[0],p1[0]),Math.min(p0[1],p1[1]),Math.abs(p1[0]-p0[0]),Math.abs(p1[1]-p0[1]));}
+     body(1,1);
+     // reflet de la brèche : l'eau frôle les deux bords
+     for(const g of[g0,g1]){const q=P2(0,g);glow(c,q[0],q[1],20,'210,255,250',0.2);}}
+    c.restore();}
    else if(h.k==='impl'){const k=h.warn>0?1-h.warn/h.tw:1,R=Math.max(1,h.r);
     c.strokeStyle=`rgba(${TELE.zone},${0.35*k+0.15})`;c.lineWidth=14;c.beginPath();c.arc(h.x,h.y,R,0,TAU);c.stroke();
     c.strokeStyle=`rgba(255,200,130,${0.7*k+0.2})`;c.lineWidth=3;if(h.warn>0){c.setLineDash([12,9]);c.lineDashOffset=T*40;}c.beginPath();c.arc(h.x,h.y,R,0,TAU);c.stroke();c.setLineDash([]);

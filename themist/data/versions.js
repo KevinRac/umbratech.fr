@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.4',
+ actuelle:'v16.5',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-17',h:'v16.5',t:'Marée noire du Héraut Noyé, nouveau rendu : masse d’eau profonde en dégradé, crête d’écume ondulante avec bulles, courants sombres, remous derrière la vague, gerbes aux bords de la brèche ; avant l’impact, la vague se lève au bord de départ et des chevrons clairs défilent dans le couloir balayé.'},
   {d:'2026-10-17',h:'v16.4',t:'Le rectangle jaune d’information (niveau atteint, salle nettoyée) est collé en haut de l’écran. La Marée noire du Héraut Noyé est redessinée : mur d’eau noire à crête d’écume, brèche signalée par un halo clair, plus aucun tiret.'},
   {d:'2026-10-17',h:'v16.3',t:'Palier 0 : plus aucune bulle jaune ni texte violet, c’est au joueur de découvrir les capacités et les ennemis. Quand le Brumeux agit (contre-mesure, pacte, règle de salle, feinte), il pousse seulement un cri démoniaque. Les fenêtres de principe ne parlent plus de « texte violet ».'},
   {d:'2026-10-17',h:'v16.2',t:'Interface refaite : l’arbre de talents (jeu et wiki, même rendu) se déplie branche par branche avec zoom, fiche épinglable et onglets ; le récap de fin de run tient en un écran à trois onglets ; le Portail et l’écran titre montrent un aperçu animé du gameplay de chaque forme en trois gestes.'},
