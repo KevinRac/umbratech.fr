@@ -6,7 +6,7 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M2 : villages, PNJ, réputation** (GDD §5, §6, §17) — `locations.json` (décision n°35), PNJ au gabarit commun 16×28 (n°48), dialogues, boutique, jauge de réputation et prix. Puis **M3** (ennemis visibles du monde) : le contact lance le combat sur le terrain du contact avec `this.scene.start(SCENES.battle, { encounterId, returnTo: 'world', site: { x, y }, initiative })` (voir `WorldScene.startBattle`, branché pour l'instant sur F7 au point du héros) ; les ennemis de la rencontre viendront des tables de la zone.
+**M2 : villages, PNJ, réputation** (GDD §5, §6, §17) — `locations.json` (décision n°35), PNJ au gabarit commun 16×28 (n°48 : `CharacterLook` du monde, sans corpulence ni équipement de combat ; les corpulences n°61 sont propres aux unités de combat), dialogues, boutique, jauge de réputation et prix. Puis **M3** (ennemis visibles du monde) : le contact lance le combat sur le terrain du contact avec `this.scene.start(SCENES.battle, { encounterId, returnTo: 'world', site: { x, y }, initiative })` (voir `WorldScene.startBattle`, branché pour l'instant sur F7 au point du héros) ; les ennemis de la rencontre viendront des tables de la zone.
 Ensuite, dans l'ordre du GDD §17 : M5 (préparation, objets, compétences, boss à 2 phases, renforts), M6, M9, M7, M8, M10.
 
 ## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)
@@ -25,7 +25,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] Dossier du jeu créé dans le dépôt (page d'attente, music/, assets/, src/, data/, docs/)
 - [x] **M0 : squelette technique** (16/10/2026) — voir « Livré en M0 »
 - [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
-- [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°56 validées
+- [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
 - [ ] M2, M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
@@ -192,7 +192,7 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **Animation « prêt au combat »** (retour de l'auteur : animations sur place trop timides, comparées aux Fire Emblem GBA) : une unité alliée **survolée** par le curseur, **choisie** ou dont le **menu d'action** est ouvert se ramasse, **brandit son arme au-dessus de la tête** avec un éclat (reflet blanc sur le métal, étincelles de sa lueur pour la magie), puis la redescend ; 4 images (260, 90, 300, 110 ms) en boucle (`UNIT_READY_FRAMES`, `BATTLE_TEX.msReady`). Le bras de l'arme se lève avec elle ; l'Héritier lève son grimoire d'une main. Cadre des unités agrandi (`GEAR_PAD` 7×13) pour que lances, bannières et bâtons brandis restent entiers. Le héros tient en combat l'épée qu'il porte au dos dans le monde. Les animations de combat en plein écran (approche, dash, coup, impact) restent celles du jalon M8.
 - Debug : avec `?debug`, le jeu est exposé dans la console (`window.vaelmor`) pour inspecter les scènes et automatiser les essais.
 
-### Décisions n°57 à n°60 — à valider par l'auteur
+### Décisions n°57 à n°61 — validées par l'auteur le 18/10/2026
 - **n°57 — Le combat se joue sur le terrain du monde** autour du point de contact (fenêtre de 30×20 cases), placement automatique. Remplace les cartes écrites à la main de la n°53 pour les rencontres ordinaires ; la n°53 reste pour les scénarios.
 - **n°58 — Présentation du combat** : zoom ×2 comme le monde, carte qui défile avec le curseur, fenêtres flottantes qui évitent le curseur, couleurs de camp sur les unités.
 - **n°59 — Le champ de bataille est l'art du monde**, avec son atmosphère HD-2D (sans flou de profondeur) ; le terrain suit ce qui est dessiné (portes réelles, bâtiments, obstacles).
