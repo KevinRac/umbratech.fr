@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.11',
+ actuelle:'v16.12',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-17',h:'v16.12',t:'Guide « Comment jouer » : titres de rubrique bien visibles (grands, avec barre dorée), mise en page plus large que haute (cartes en ligne, 4 par rangée) et, dans « Le Sanctuaire », les portraits d’Ismène, de Corbin et de l’Archiviste remplacent les icônes.'},
   {d:'2026-10-17',h:'v16.11',t:'Guide « Comment jouer » aéré : cartes plus grandes (icône en haut, titre, une courte phrase), plus d’espace entre les blocs, textes plus gros et moins d’informations par carte (le guide défile si l’écran est petit).'},
   {d:'2026-10-17',h:'v16.10',t:'Guide « Comment jouer » remanié : la boucle en cinq étapes numérotées (Prends le portail, Choisis ta classe, Monte de niveau, Quand tu meurs, Reviens plus fort), le bloc « Lire le combat » est retiré, les portes et le Sanctuaire passent en grandes cartes bien visibles, et « Plus tard » devient « Missions et récompenses » avec des mots simples.'},
   {d:'2026-10-17',h:'v16.9',t:'Le guide « Comment jouer » se lit d’un coup d’œil : une icône et quelques mots par bloc (la boucle en quatre étapes, les signaux de combat rouge, lumière et orange, les portes, le Sanctuaire, ce qui vient plus tard, tes commandes en pastilles). La partie « Les quatre formes » est supprimée (le choix de forme et son aperçu sont sur l’écran d’accueil et au Portail).'},
