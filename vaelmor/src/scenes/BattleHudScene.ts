@@ -51,6 +51,8 @@ export interface MenuRequest {
   readonly title?: string;
   readonly items: MenuItem[];
   readonly onCancel: (() => void) | null;
+  /** Grand menu (menu d'action après un déplacement) : texte doublé, lignes hautes. */
+  readonly large?: boolean;
 }
 
 export interface ExchangeView {
@@ -103,6 +105,7 @@ export class BattleHudScene extends Phaser.Scene {
       this.ready = false;
       this.pending = [];
       this.menu = null;
+      this.menuRect = null;
       this.resultMenu = null;
       this.menuCancel = null;
       this.exchange = null;
@@ -419,24 +422,34 @@ export class BattleHudScene extends Phaser.Scene {
     return this.menu !== null;
   }
 
+  /** Rectangle du menu ouvert (pixels de l'écran), pour ne pas prendre un clic dessus pour un clic sur la carte. */
+  private menuRect: { x: number; y: number; w: number; h: number } | null = null;
+
+  isOverMenu(x: number, y: number): boolean {
+    const r = this.menuRect;
+    return r !== null && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+  }
+
   openMenu(request: MenuRequest): void {
     this.run(() => {
       this.closeMenuNow();
       const S = this.S;
-      const lineHeight = 26 * S;
-      const titleH = request.title ? 22 * S : 0;
-      const w = 172 * S;
-      const h = request.items.length * lineHeight + titleH + 14 * S;
+      const big = request.large === true;
+      const lineHeight = (big ? 44 : 26) * S;
+      const titleH = request.title ? (big ? 28 : 22) * S : 0;
+      const w = (big ? 228 : 172) * S;
+      const h = request.items.length * lineHeight + titleH + (big ? 18 : 14) * S;
       const x = this.winX(w);
       const y = this.stackTop();
       this.menuParts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.menu }));
-      if (request.title) this.menuParts.push(addText(this, x + w / 2, y + 7 * S, request.title, { scale: S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));
-      this.menu = new VerticalMenu(this, x + 6 * S, y + 7 * S + titleH, request.items, this.actions, {
+      this.menuRect = { x, y, w, h };
+      if (request.title) this.menuParts.push(addText(this, x + w / 2, y + (big ? 9 : 7) * S, request.title, { scale: S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));
+      this.menu = new VerticalMenu(this, x + 6 * S, y + (big ? 9 : 7) * S + titleH, request.items, this.actions, {
         width: w - 12 * S,
         lineHeight,
         depth: DEPTH.menu + 1,
-        scale: 2 * S,
-        textScale: S,
+        scale: (big ? 3 : 2) * S,
+        textScale: (big ? 2 : 1) * S,
       });
       this.menuCancel = request.onCancel;
       // L'appui qui a ouvert le menu ne doit pas aussi le valider.
@@ -453,6 +466,7 @@ export class BattleHudScene extends Phaser.Scene {
     this.menu?.destroy();
     this.menu = null;
     this.menuCancel = null;
+    this.menuRect = null;
     this.clear(this.menuParts);
   }
 

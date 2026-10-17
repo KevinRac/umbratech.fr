@@ -38,6 +38,8 @@ function start(): void {
     scene: [BootScene, TitleScene, WorldScene, WorldHudScene, BattleScene, BattleHudScene, DebugScene],
   });
   bindDisplaySize(game);
+  // Outil de debug : `?debug` expose le jeu à la console (`window.vaelmor`) pour inspecter les scènes.
+  if (new URLSearchParams(window.location.search).has('debug')) (window as unknown as { vaelmor: Phaser.Game }).vaelmor = game;
 }
 
 try {

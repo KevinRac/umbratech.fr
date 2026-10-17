@@ -183,6 +183,11 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **Piège Phaser 4.2.1** : une couche de tuiles GPU ignore sa position (`createLayer(…, x, y, true)`) ; le monde reste donc à sa place et le combat se pose dessus (`BattleScene.px` / `py`, décalage `base`).
 - Tests : 308 au vert (portes et obstacles dans la conversion, fiches d'unités : cadre, pieds, couleurs de camp, respiration, marche).
 
+### Ergonomie du combat (18/10/2026, demandes de l'auteur)
+- **Attaque au clic après un déplacement** : quand le menu d'action est ouvert, survoler un ennemi à portée affiche la prévision de l'échange, **cliquer dessus lance l'attaque**. (Avant le déplacement, cliquer sur un ennemi fait toujours approcher l'unité et affiche la prévision ; un second clic attaque.) Un clic sur un menu de l'interface n'est jamais pris pour un clic sur la carte (`BattleHudScene.isOverMenu`).
+- **Menu d'action agrandi** : texte doublé, lignes de 44 px, curseur plus grand (`MenuRequest.large`) ; le menu de carte (Tab) garde sa taille.
+- Debug : avec `?debug`, le jeu est exposé dans la console (`window.vaelmor`) pour inspecter les scènes et automatiser les essais.
+
 ### Décisions n°57 à n°60 — à valider par l'auteur
 - **n°57 — Le combat se joue sur le terrain du monde** autour du point de contact (fenêtre de 30×20 cases), placement automatique. Remplace les cartes écrites à la main de la n°53 pour les rencontres ordinaires ; la n°53 reste pour les scénarios.
 - **n°58 — Présentation du combat** : zoom ×2 comme le monde, carte qui défile avec le curseur, fenêtres flottantes qui évitent le curseur, couleurs de camp sur les unités.

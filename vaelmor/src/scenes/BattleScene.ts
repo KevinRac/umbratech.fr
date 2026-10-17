@@ -126,6 +126,10 @@ export class BattleScene extends Phaser.Scene {
   private marked = new Set<string>();
   private speed: AnimSpeed = 'normal';
   private pendingClick: { cell: Cell; right: boolean } | null = null;
+  /** Menu d'action ouvert après le déplacement : un clic sur un ennemi à portée lance l'attaque. */
+  private actionMenuOpen = false;
+  /** Ennemi survolé pendant le menu d'action (sa prévision est affichée). */
+  private hoverTarget: BattleUnit | null = null;
   private lastHover = '';
   /** Défilement : coin haut-gauche visible (pixels d'art), cible du lissage, taille visible. */
   private cam = { x: 0, y: 0 };
@@ -180,6 +184,8 @@ export class BattleScene extends Phaser.Scene {
 
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer));
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+      // Un clic sur un menu de l'interface n'est pas un clic sur la carte.
+      if (this.hud.isOverMenu(pointer.x, pointer.y)) return;
       const cell = this.cellAtPointer(pointer);
       if (cell) this.pendingClick = { cell, right: pointer.rightButtonDown() };
       else if (pointer.rightButtonDown()) this.pendingClick = { cell: this.cursorCell, right: true };
@@ -478,7 +484,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onPointerMove(pointer: Phaser.Input.Pointer): void {
-    if (!this.alive || this.mode === 'busy' || this.mode === 'enemy' || this.mode === 'end' || this.mode === 'menu') return;
+    if (!this.alive) return;
+    if (this.mode === 'menu') {
+      if (this.actionMenuOpen) this.hoverActionTarget(this.cellAtPointer(pointer));
+      return;
+    }
+    if (this.mode === 'busy' || this.mode === 'enemy' || this.mode === 'end') return;
     const cell = this.cellAtPointer(pointer);
     if (!cell || (cell.x === this.cursorCell.x && cell.y === this.cursorCell.y)) return;
     if (this.mode === 'target') {
@@ -553,6 +564,9 @@ export class BattleScene extends Phaser.Scene {
       case 'target':
         this.updateTarget(clickOk ? click : null);
         break;
+      case 'menu':
+        if (this.actionMenuOpen && clickOk && click && !click.right) this.clickDuringActionMenu(click.cell);
+        break;
       default:
         break;
     }
@@ -593,7 +607,12 @@ export class BattleScene extends Phaser.Scene {
       busy: [['Maj', 'accélérer']],
       end: [],
     };
-    this.hud.showHelp(lines[this.mode]);
+    const actionMenu: readonly (readonly [string, string])[] = [
+      ['Entrée', 'valider'],
+      ['Clic sur un ennemi', 'attaquer'],
+      ['Échap', 'annuler le déplacement'],
+    ];
+    this.hud.showHelp(this.mode === 'menu' && this.actionMenuOpen ? actionMenu : lines[this.mode]);
   }
 
   private cursorStep(): Cell | null {
@@ -728,12 +747,15 @@ export class BattleScene extends Phaser.Scene {
       { label: 'Attaquer', enabled: targets.length > 0, onSelect: () => this.startTargeting(null) },
       { label: 'Attendre', onSelect: () => void this.finishAction(() => waitUnit(this.state, unit.id)) },
     ];
+    this.actionMenuOpen = true;
+    this.hoverTarget = null;
     this.setMode('menu');
     this.hud.openMenu({
       title: unit.name,
       items,
+      large: true,
       onCancel: () => {
-        this.hud.closeMenu();
+        this.closeActionMenu();
         undoMove(this.state, unit.id);
         this.syncUnit(unit);
         this.select(unit);
@@ -742,10 +764,42 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /** Ferme le menu d'action (et la prévision affichée au survol). */
+  private closeActionMenu(): void {
+    this.actionMenuOpen = false;
+    if (this.hoverTarget) this.hud.showForecast(null, null, null);
+    this.hoverTarget = null;
+    this.hud.closeMenu();
+  }
+
+  /** Menu d'action ouvert : survoler un ennemi à portée montre la prévision de l'échange. */
+  private hoverActionTarget(cell: Cell | null): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const target = cell ? unitAt(this.state, cell.x, cell.y) : null;
+    const valid = target && target.team !== unit.team && inWeaponRange(unit, unit, target) ? target : null;
+    if (valid === this.hoverTarget) return;
+    this.hoverTarget = valid;
+    // Le curseur ne bouge pas (les fenêtres changeraient de côté sous le menu) : seule la prévision s'affiche.
+    if (valid) this.hud.showForecast(forecast(this.state, unit, valid, this.rules), unit, valid);
+    else this.hud.showForecast(null, null, null);
+  }
+
+  /** Menu d'action ouvert : un clic sur un ennemi à portée lance l'attaque. */
+  private clickDuringActionMenu(cell: Cell): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const target = unitAt(this.state, cell.x, cell.y);
+    if (!target || target.team === unit.team || !inWeaponRange(unit, unit, target)) return;
+    this.closeActionMenu();
+    this.hud.showForecast(null, null, null);
+    void this.finishAction(() => attackUnit(this.state, unit.id, target.id, this.rules));
+  }
+
   private startTargeting(preferred: BattleUnit | null): void {
     const unit = this.selected;
     if (!unit) return;
-    this.hud.closeMenu();
+    this.closeActionMenu();
     this.targets = targetsFrom(this.state, unit, unit).sort((a, b) => a.y - b.y || a.x - b.x);
     if (this.targets.length === 0) {
       this.openActionMenu();
@@ -795,7 +849,7 @@ export class BattleScene extends Phaser.Scene {
   /** Joue l'action choisie (attaque ou attente), puis passe à la suite. */
   private async finishAction(command: () => BattleEvent[]): Promise<void> {
     const unit = this.selected;
-    this.hud.closeMenu();
+    this.closeActionMenu();
     this.hud.showDetails(null);
     this.clearTiles(this.highlights);
     this.setMode('busy');
