@@ -7452,6 +7452,27 @@ details.fold>.chips{margin-top:8px}
  window.__pv=PV;
 })();
 
+// ── Écran titre : aperçu animé de la forme choisie (les cartes servent de sélecteur)
+(function(){
+ const st=document.createElement('style');st.textContent=`
+.tshow{margin:0 0 12px}
+.tshow .pitch{display:none}
+.tshow .pvstage{aspect-ratio:2.1/1}
+.tshow .pv .pvhead .h-sec{margin-top:0}
+.title-wrap .classes{margin-top:0}
+`;document.head.appendChild(st);
+ const _ot=openTitle;
+ openTitle=function(){
+  _ot.apply(this,arguments);
+  const wrap=overlayEl.querySelector('.title-wrap');if(!wrap||!window.__pv||wrap.querySelector('.tshow'))return;
+  const cls=wrap.querySelector('.classes');if(!cls)return;
+  const box=document.createElement('div');box.className='tshow';
+  box.innerHTML=`<p class="pitch">${esc(FO_D.fiches[chosenCls].pitch)}</p><div class="tbody"></div>`;
+  cls.parentNode.insertBefore(box,cls.previousElementSibling);
+  window.__pv.mount(box.querySelector('.tbody'),chosenCls);
+ };
+})();
+
 // Appliqué en dernier, après toutes les reconstructions de l'arbre (v10, v15.2…).
 (function(){const T=T_D.noeuds;
  for(const id in T){const n=NODES[id],d=T[id];if(!n){console.warn('Talent inconnu dans les données :',id);continue;}
