@@ -15,7 +15,7 @@ Objectif : qualité visuelle proche d'Eastward (pixel art dense et chaud) et d'O
 Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taille et de forme (mêmes emplacements de village, mêmes routes, collision au pied) ; héros en 16×28 (même pied, même boîte 10×8) ; seul le héros est refait, les PNJ reprendront son gabarit en M2.
 - [x] Étape 1 : palette, étalonnage et sol — décision n°43 (validée le 17/10/2026)
 - [x] Étape 2 : bâtiments — décision n°44 (validée le 17/10/2026)
-- [ ] Étape 3 : végétation
+- [x] Étape 3 : végétation — décision n°45 (en attente de validation)
 - [ ] Étape 4 : petits décors et accessoires
 - [ ] Étape 5 : post-effets HD-2D
 - [ ] Étape 6 : héros
@@ -87,6 +87,15 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
   - Les bâtiments ne reçoivent plus le biseau automatique `propRelief` (ils ont leur propre lumière) ; les autres décors le gardent jusqu'aux étapes 3 et 4. Les remparts et tours d'angle de Valcendre et des ruines (`wall_h`, `wall_v`, `tower`) ne sont pas encore refaits.
   - Test `tests/buildings.test.ts` : les six silhouettes existent ; pour chaque bâtiment, toit non bloquant, rangée d'ombre libre, mur bloquant au contact de l'ombre ; aucun sombre neutre ni noir ; ombre portée translucide présente.
 
+- **n°45 — Végétation volumineuse, vent animé par le GPU** (refonte graphique, étape 3) :
+  - **Arbres** (`tools/world/flora.ts`) : feuillus 3×3 (3 silhouettes, 3-4 masses principales + touffes, chaque masse éclairée comme une sphère, ombre de contact entre masses, bord feuillu ; variantes vert, à fruits, en fleurs, roux, doré), conifères 3×4 en cinq étages festonnés avec ombre sous chaque étage (pin vert, élancé, roussi ; sapin bleuté de la brume ; sapin enneigé en altitude), arbres morts noueux 3×3. Troncs à écorce striée, évasés en racines, mousse au pied ; ombre portée douce vers le bas à droite.
+  - **Collision au tronc seulement** : la cime passe sur `canopy` (le héros passe dessous), le tronc bloque une case. Les cimes peuvent **se chevaucher** : chaque case des couches `decor`/`canopy` est désormais **composée** pixel par pixel à la fin de la génération (`composeLayers`), le pied le plus au sud passant devant ; les tuiles sont dédoublonnées par contenu. Forêts nettement plus denses (Forêt-Racine, lisières de zones : un arbre sur deux environ). Pose des arbres par leur pied (`placeFoot`). Cases bloquées de l'île : ~1 690 → ~1 580.
+  - **Petites plantes** : buissons en 2-3 masses (vert, baies, automne, fleuri), herbes hautes, massifs de fleurs sauvages (coquelicots, marguerites, campanules, boutons d'or) en prairies groupées (champ de bruit), roseaux ; **jardins** autour des villages (`gardens`, sur l'herbe seulement) : tournesols et lavande à Haut-Gué, fleurs et herbes à Ronceval, lavande à Port-Brume et Pierre-Haute, fleurs à Valcendre.
+  - **Vent** : chaque plante est peinte en 4 images (cisaillement d'un pixel en haut, cycle ~1,9 s) ; le générateur écrit des **animations de tuiles Tiled** (`TilesetBuilder.animated`), jouées par le shader des couches GPU, donc sans coût CPU. Décalage de phase par colonne (vague d'ouest en est). Les **ailes du moulin tournent** (4 images de 22,5°). 866 tuiles animées.
+  - **Blé** (`render/wheatTile.ts`) refait en masse dorée dense : trois rangs de gros épis serrés, plus de terre visible, contour brun doré, bande de lumière qui traverse le champ en diagonale en plus du balancement.
+  - **Contournement Phaser 4.2.1** (`render/tileAnimations.ts` + `render/tileAnimPack.ts`, testé) : voir « Pièges connus ».
+  - Coût : tileset ~16 000 tuiles (atlas 2048×2016 px, ~720 Ko), génération ~13 s. Rendu logiciel ~12-13 ips en 960×540 (contre ~14 à l'étape 2, sans GPU : non représentatif).
+
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).
 
@@ -114,6 +123,7 @@ Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élev�
 - Vite 8 : l'option de build s'appelle `build.rolldownOptions` (et non `rollupOptions`). Le plugin `vaelmor-entry-as-index` renomme `play/game.html` en `play/index.html`.
 - **Couches GPU Phaser 4 (`createLayer(..., true)`)** : les cases vides sont dessinées avec la tuile d'indice 0 du tileset ! La tuile n°1 du tileset est donc volontairement **transparente** (le générateur la réserve) ; sans cela tout l'écran passe en rouge (le repère de collision « bloqué »). Une seule texture par couche, tuiles nettes. Les couches `collision` et `zones` (valeurs brutes) ne sont jamais créées côté Phaser.
 - Les composants d'interface créés dans une scène qui défile (`Toasts`, `VerticalMenu` avec `fixed: true`, HUD) doivent être en `setScrollFactor(0)` : sinon ils restent à leur position du monde et sortent de l'écran.
+- **Tuiles animées des couches GPU (Phaser 4.2.1)** : deux défauts dans `Tileset.createAnimationDataTexture` — la table tuile → animation donne le numéro d'animation au lieu du texel (×2), et la texture est envoyée retournée (`flipY`) alors que le shader la lit à l'endroit (visible dès qu'elle dépasse une ligne de 4096 texels). Symptôme : des cases affichent des tuiles quelconques de l'atlas. `fixGpuTileAnimations` (à appeler AVANT `createLayer`) remplace cette construction ; il ne s'applique qu'à la 4.2.1 et avertit dans la console sur une autre version (à revérifier à chaque mise à jour de Phaser). Test : `tests/tileAnimPack.test.ts` émule la lecture du shader.
 - Tileset du monde : 128 colonnes (`TILESET_COLUMNS`), ~13 500 tuiles depuis la n°43 (une tuile par combinaison de voisinage). Garder la hauteur de l'atlas sous 4096 px (limite de texture de certains GPU) : élargir l'atlas plutôt que l'allonger.
 - Pour modifier la carte : soit éditer `tools/world/layout.ts` / le générateur puis `npm run generate-world` (le test d'identité échoue tant qu'on n'a pas régénéré), soit éditer `assets/maps/world.json` dans Tiled (alors supprimer ou adapter le test « identique à la sortie du générateur » : le générateur écraserait les retouches).
 - Vérification visuelle dans une session Claude : `npx playwright install chromium` fonctionne (dans le dossier temporaire, pas dans `vaelmor/`) ; lancer Chromium avec `--use-angle=swiftshader --enable-unsafe-swiftshader` pour avoir WebGL, servir la racine du dépôt (`python3 -m http.server`) et ouvrir `/vaelmor/play/`.

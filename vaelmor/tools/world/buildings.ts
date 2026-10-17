@@ -1014,7 +1014,10 @@ export function paintTemple(px: Px, _rnd: Rnd): void {
 }
 
 /** Moulin : tour ronde de pierre, toit conique de chaume, quatre ailes entoilées, sacs de farine. */
-export function paintMill(px: Px, _rnd: Rnd): void {
+/** Ailes du moulin : 4 images de 22,5° (symétrie d'ordre 4 → rotation continue). */
+export const MILL_MS = [170, 170, 170, 170] as const;
+
+export function paintMill(px: Px, _rnd: Rnd, _variant = 0, frame = 0): void {
   const seed = 1001;
   const gy = 61;
   const cx = 29;
@@ -1071,13 +1074,14 @@ export function paintMill(px: Px, _rnd: Rnd): void {
   px.set(cx, 2, M.wood.light);
   // Ailes en croix (X), entoilées sur un côté.
   const hub = { x: cx + 0.5, y: 27.5 };
-  const arms = [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75];
-  arms.forEach((a, k) => {
+  const turn = (frame * Math.PI) / 8;
+  const arms = [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75].map((a) => a + turn);
+  arms.forEach((a) => {
     const dx = Math.cos(a);
     const dy = Math.sin(a);
     const nx = -dy;
     const ny = dx;
-    const furled = k === 2;
+    const furled = false;
     for (let s = 5; s <= 26; s += 0.5) {
       for (let w = 0; w <= 5; w += 0.5) {
         const x = Math.round(hub.x + dx * s + nx * w);

@@ -8,9 +8,10 @@
  */
 import { propRelief } from './relief';
 import { hashString, mulberry32 } from './noise';
-import { ACCENT, INK, RAMPS, SHADE, ellipse, inkOf, line, outline, shadedBlob, speckle, type Ramp, type Rnd } from './art';
+import { ACCENT, INK, RAMPS, SHADE, ellipse, line, outline, shadedBlob, speckle, type Ramp, type Rnd } from './art';
 import { mix, Px } from './px';
-import { paintCottage, paintForge, paintGuardTower, paintHut, paintInn, paintLogHouse, paintMill, paintSlateHouse, paintStoneHouse, paintTemple, paintTownHouse } from './buildings';
+import { MILL_MS, paintCottage, paintForge, paintGuardTower, paintHut, paintInn, paintLogHouse, paintMill, paintSlateHouse, paintStoneHouse, paintTemple, paintTownHouse } from './buildings';
+import { DEAD_FOOT, OAK_FOOT, PINE_FOOT, WIND_MS, paintBush, paintDarkPine, paintDeadTree, paintFlowers, paintLavender, paintOak, paintPine, paintReeds, paintSunflowers, paintTallGrass } from './flora';
 import { PALETTE as P } from '../../src/render/palette';
 
 const T = 16;
@@ -29,9 +30,17 @@ export interface Stamp {
   readonly chimney: { readonly x: number; readonly y: number } | null;
   /** Bâtiment : ses rangées de toit (canopy) ne doivent pas surplomber une route ni une place. */
   readonly building: boolean;
+  /** Images d'animation (vent, ailes du moulin) ; `px` est la première. */
+  readonly frames: readonly Px[];
+  /** Durée de chaque image (ms), vide si le tampon est fixe. */
+  readonly frameMs: readonly number[];
+  /** Case du pied (tronc) : point d'ancrage pour `placeFoot`. */
+  readonly foot: { readonly x: number; readonly y: number };
+  /** Végétation : peut chevaucher une autre végétation (composée pixel par pixel). */
+  readonly overlap: boolean;
 }
 
-type Painter = (px: Px, rnd: Rnd, variant: number) => void;
+type Painter = (px: Px, rnd: Rnd, variant: number, frame: number) => void;
 
 interface Def {
   readonly w: number;
@@ -46,6 +55,25 @@ interface Def {
   /** Biseau automatique (`propRelief`) ; les bâtiments gèrent leur propre lumière. */
   readonly relief?: boolean;
   readonly building?: boolean;
+  readonly frameMs?: readonly number[];
+  readonly foot?: { readonly x: number; readonly y: number };
+  readonly overlap?: boolean;
+}
+
+/** Végétation (tools/world/flora.ts, décision n°45) : collision au tronc, feuillage sur `canopy`, vent. */
+function plant(w: number, h: number, canopy: number, paint: Painter, variants: number, foot: { x: number; y: number } | null, wind = true): Def {
+  return {
+    w,
+    h,
+    variants,
+    canopyRows: canopy,
+    block: foot ? [`${foot.x},${foot.y}`] : 'none',
+    paint,
+    relief: false,
+    overlap: true,
+    ...(foot ? { foot } : {}),
+    ...(wind ? { frameMs: WIND_MS } : {}),
+  };
 }
 
 /** Cases bloquées « au pied » : toutes les colonnes (ou `cols`) des rangées `rows`. */
@@ -91,89 +119,6 @@ function slab(px: Px, x: number, y: number, w: number, h: number, ramp: Ramp, rn
 
 /* ---------- Arbres ---------- */
 
-function conifer(px: Px, rnd: Rnd, ramp: Ramp, tiers: number): void {
-  // 16×32 : cime sur la case du haut, base et tronc sur la case du bas.
-  px.rect(7, 25, 2, 6, RAMPS.trunk.base);
-  px.rect(7, 25, 1, 6, RAMPS.trunk.light);
-  px.rect(8, 25, 1, 6, RAMPS.trunk.dark);
-  const top = 1;
-  const span = 26 - top;
-  for (let t = 0; t < tiers; t++) {
-    const y0 = top + Math.floor((t * span) / (tiers + 0.8));
-    const y1 = y0 + Math.floor(span / tiers) + 4;
-    const maxHalf = 3 + Math.round(((t + 1) / tiers) * 4);
-    for (let y = y0; y <= y1 && y < 28; y++) {
-      const f = (y - y0) / (y1 - y0);
-      const half = Math.max(1, Math.round(1 + f * (maxHalf - 1)));
-      for (let x = 8 - half; x < 8 + half; x++) {
-        const side = (x - (8 - half)) / (2 * half);
-        const lit = side < 0.35 ? 1 : side > 0.7 ? -1 : 0;
-        let color = lit > 0 ? ramp.light : lit < 0 ? ramp.dark : ramp.base;
-        if (y === y1 || (y === y1 - 1 && rnd() < 0.5)) color = ramp.dark;
-        if (y === y0 + 1 && lit >= 0) color = ramp.hi;
-        px.set(x, y, color);
-      }
-    }
-  }
-  speckle(px, rnd, 3, 4, 10, 22, ramp.deep, 4);
-  outline(px, inkOf(ramp));
-  shadow(px, 8, 30, 7, 1.8);
-}
-
-function paintPine(px: Px, rnd: Rnd, variant: number): void {
-  const ramp: Ramp = variant === 3 ? { ...RAMPS.foliage, base: RAMPS.foliageAutumn.dark } : RAMPS.foliage;
-  conifer(px, rnd, ramp, 3 + (variant % 2));
-}
-
-function paintDarkPine(px: Px, rnd: Rnd, variant: number): void {
-  conifer(px, rnd, RAMPS.forest, 3 + (variant % 2));
-  // Pointes plus claires : sapins de la brume.
-  for (let i = 0; i < 6; i++) px.set(4 + Math.floor(rnd() * 8), 5 + Math.floor(rnd() * 18), RAMPS.forest.light);
-}
-
-function paintOak(px: Px, rnd: Rnd, variant: number): void {
-  const leaf: Ramp = variant === 3 ? RAMPS.foliageAutumn : RAMPS.foliage;
-  px.rect(14, 22, 4, 9, RAMPS.trunk.base);
-  px.rect(14, 22, 1, 9, RAMPS.trunk.light);
-  px.rect(17, 22, 1, 9, RAMPS.trunk.dark);
-  px.rect(13, 29, 6, 2, RAMPS.trunk.dark);
-  shadedBlob(px, 9, 14, 8, 8, leaf, rnd);
-  shadedBlob(px, 23, 14, 8, 8, leaf, rnd);
-  shadedBlob(px, 16, 8, 10, 8, leaf, rnd);
-  shadedBlob(px, 16, 17, 10, 7, leaf, rnd);
-  if (variant === 2) {
-    for (let i = 0; i < 4; i++) px.set(6 + Math.floor(rnd() * 20), 6 + Math.floor(rnd() * 16), ACCENT.flowerRed);
-  }
-  outline(px, inkOf(leaf));
-  shadow(px, 16, 30, 12, 2.4);
-}
-
-function paintDeadTree(px: Px, rnd: Rnd, variant: number): void {
-  const t = RAMPS.trunk;
-  px.rect(7, 12, 2, 19, t.base);
-  px.rect(7, 12, 1, 19, t.light);
-  px.rect(8, 12, 1, 19, t.dark);
-  px.rect(6, 29, 4, 2, t.dark);
-  line(px, 7, 18, 3, 11 - (variant % 2), t.dark);
-  line(px, 8, 15, 12, 8, t.dark);
-  line(px, 8, 21, 12, 17, t.dark);
-  line(px, 3, 11, 2, 7, t.dark);
-  line(px, 12, 8, 13, 4, t.dark);
-  line(px, 12, 8, 10, 3, t.dark);
-  speckle(px, rnd, 6, 12, 4, 18, t.deep, 3);
-  outline(px, inkOf(t));
-  shadow(px, 8, 30, 5, 1.5);
-}
-
-function paintBush(px: Px, rnd: Rnd, variant: number): void {
-  const berry = variant === 2;
-  shadedBlob(px, 8, 10, 6.5, 5, variant === 1 ? RAMPS.foliageAutumn : RAMPS.foliage, rnd);
-  shadedBlob(px, 5, 11, 4, 3.5, RAMPS.foliage, rnd);
-  if (berry) for (let i = 0; i < 4; i++) px.set(4 + Math.floor(rnd() * 9), 8 + Math.floor(rnd() * 5), ACCENT.flowerRed);
-  outline(px, inkOf(RAMPS.foliage));
-  shadow(px, 8, 14, 7, 1.5);
-}
-
 function paintRock(px: Px, rnd: Rnd, variant: number): void {
   const r = variant === 2 ? RAMPS.stone : RAMPS.rock;
   shadedBlob(px, 8, 10, 6.5, 5.5, r, rnd, 0.1);
@@ -182,18 +127,6 @@ function paintRock(px: Px, rnd: Rnd, variant: number): void {
   outline(px, INK);
   shadow(px, 8, 14, 6, 1.5);
 }
-
-function paintReeds(px: Px, rnd: Rnd): void {
-  for (let i = 0; i < 6; i++) {
-    const x = 2 + Math.floor(rnd() * 12);
-    const h = 5 + Math.floor(rnd() * 6);
-    line(px, x, 14, x + (rnd() < 0.5 ? -1 : 1), 14 - h, RAMPS.marsh.light);
-    px.set(x, 14 - h, RAMPS.wood.base);
-  }
-  outline(px, RAMPS.marsh.deep);
-}
-
-/* ---------- Bâtiments ---------- */
 
 function paintTent(px: Px, rnd: Rnd, variant: number): void {
   const cloth = variant === 0 ? mix(P.rougeCendre, P.grisRoux, 0.3) : mix(P.grisRoux, P.sable, 0.3);
@@ -468,13 +401,17 @@ function paintBanner(px: Px, rnd: Rnd): void {
 /* ---------- Catalogue ---------- */
 
 export const STAMP_DEFS: Readonly<Record<string, Def>> = {
-  pine: { w: 1, h: 2, variants: 4, canopyRows: 1, block: 'bottom', paint: paintPine },
-  dark_pine: { w: 1, h: 2, variants: 3, canopyRows: 1, block: 'bottom', paint: paintDarkPine },
-  oak: { w: 2, h: 2, variants: 4, canopyRows: 1, block: 'bottom', paint: paintOak },
-  dead_tree: { w: 1, h: 2, variants: 3, canopyRows: 0, block: 'bottom', paint: paintDeadTree },
-  bush: { w: 1, h: 1, variants: 3, canopyRows: 0, block: 'none', paint: paintBush },
+  pine: plant(3, 4, 3, paintPine, 4, PINE_FOOT),
+  dark_pine: plant(3, 4, 3, paintDarkPine, 4, PINE_FOOT),
+  oak: plant(3, 3, 2, paintOak, 5, OAK_FOOT),
+  dead_tree: plant(3, 3, 2, paintDeadTree, 2, DEAD_FOOT, false),
+  bush: plant(1, 1, 0, paintBush, 5, null, false),
+  tall_grass: plant(1, 1, 0, paintTallGrass, 3, null),
+  flowers: plant(1, 1, 0, paintFlowers, 4, null),
+  lavender: plant(1, 1, 0, paintLavender, 2, null),
+  sunflowers: plant(1, 2, 1, paintSunflowers, 2, null),
   rock: { w: 1, h: 1, variants: 3, canopyRows: 0, block: 'all', paint: paintRock },
-  reeds: { w: 1, h: 1, variants: 2, canopyRows: 0, block: 'none', paint: (px, rnd) => paintReeds(px, rnd) },
+  reeds: plant(1, 1, 0, paintReeds, 2, null),
   // Bâtiments (tools/world/buildings.ts, décision n°44).
   house_thatch: building(3, 4, 1, paintCottage, { variants: 2, chimney: { x: 32, y: 0 } }),
   house_tile: building(3, 5, 2, paintTownHouse, { chimney: { x: 33, y: 3 } }),
@@ -485,7 +422,7 @@ export const STAMP_DEFS: Readonly<Record<string, Def>> = {
   inn: building(5, 5, 2, paintInn, { chimney: { x: 68, y: 0 } }),
   forge: building(4, 4, 1, paintForge, { chimney: { x: 10, y: 0 } }),
   temple: building(4, 5, 2, paintTemple),
-  mill: building(4, 5, 3, paintMill, { cols: [1, 2], blockRows: [2, 3] }),
+  mill: { ...building(4, 5, 3, paintMill, { cols: [1, 2], blockRows: [2, 3] }), frameMs: MILL_MS },
   guard_tower: building(2, 5, 3, paintGuardTower, { variants: 2 }),
   tent: { w: 2, h: 2, variants: 2, canopyRows: 0, block: 'bottom', paint: paintTent },
   campfire: { w: 1, h: 1, variants: 1, canopyRows: 0, block: 'all', paint: (px, rnd) => paintCampfire(px, rnd) },
@@ -523,9 +460,14 @@ export function getStamp(name: string, variant = 0): Stamp {
   const key = `${name}:${v}`;
   const cached = cache.get(key);
   if (cached) return cached;
-  const px = new Px(def.w * T, def.h * T);
-  def.paint(px, mulberry32(hashString(`stamp:${key}`)), v);
-  if (def.relief !== false) propRelief(px);
+  const frames: Px[] = [];
+  for (let f = 0; f < Math.max(1, def.frameMs?.length ?? 0); f++) {
+    const fpx = new Px(def.w * T, def.h * T);
+    def.paint(fpx, mulberry32(hashString(`stamp:${key}`)), v, f);
+    if (def.relief !== false) propRelief(fpx);
+    frames.push(fpx);
+  }
+  const px = frames[0] as Px;
   const blocked: boolean[] = [];
   for (let y = 0; y < def.h; y++) {
     for (let x = 0; x < def.w; x++) {
@@ -536,7 +478,7 @@ export function getStamp(name: string, variant = 0): Stamp {
       blocked.push(b);
     }
   }
-  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows, shadowRows: def.shadowRows ?? 0, chimney: def.chimney ?? null, building: def.building ?? false };
+  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows, shadowRows: def.shadowRows ?? 0, chimney: def.chimney ?? null, building: def.building ?? false, frames, frameMs: frames.length > 1 ? (def.frameMs ?? []) : [], foot: def.foot ?? { x: 0, y: def.h - 1 }, overlap: def.overlap ?? false };
   cache.set(key, stamp);
   return stamp;
 }

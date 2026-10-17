@@ -49,7 +49,7 @@ import {
   type Rut,
 } from './ground';
 import { Px } from './px';
-import { getStamp, variantCount } from './props';
+import { getStamp, variantCount, type Stamp } from './props';
 import { TILE, TILESET_COLUMNS, TILESET_NAME, TilesetBuilder } from './tileset';
 
 const W = MAP_W;
@@ -169,7 +169,11 @@ interface Ctx {
   canopy: Uint16Array;
   blockedOcc: Uint8Array; // case occupée par un décor bloquant
   decorOcc: Uint8Array;
+  /** Occupation des couches : 0 libre, 1 exclusive, 2 végétation (superposable). */
   canopyOcc: Uint8Array;
+  decorParts: (Part[] | undefined)[];
+  canopyParts: (Part[] | undefined)[];
+  seq: number;
   /** Case couverte par un bâtiment (toit ou mur) : sert à espacer les bâtiments entre eux. */
   buildOcc: Uint8Array;
   road: Uint8Array;
@@ -207,7 +211,8 @@ function canPlace(c: Ctx, name: string, v: number, x: number, y: number, o: Plac
       if (!o.allowWater && (code === WATER || code === BRIDGE || code === FORD)) return false;
       if (code === BRIDGE || code === FORD) return false;
       const rowIsCanopy = j < s.canopyRows;
-      if (rowIsCanopy ? c.canopyOcc[k] : c.decorOcc[k]) return false;
+      const occ = rowIsCanopy ? c.canopyOcc[k] : c.decorOcc[k];
+      if (occ && !(occ === 2 && s.overlap)) return false;
       if (!o.allowReserved && c.reserved[k]) return false;
       // Aucun décor sur l'emprise d'un bâtiment (toit, murs, ombre et cour devant la porte).
       if (!s.building && c.buildOcc[k]) return false;
@@ -234,28 +239,44 @@ function canPlace(c: Ctx, name: string, v: number, x: number, y: number, o: Plac
   return true;
 }
 
+/** Morceau de tampon posé sur une case ; les cases sont composées à la fin (`composeLayers`). */
+interface Part {
+  readonly s: Stamp;
+  readonly i: number;
+  readonly j: number;
+  /** Décalage d'image (vent) : vague d'ouest en est. */
+  readonly phase: number;
+  /** Ordre de dessin : le pied le plus au sud passe devant. */
+  readonly order: number;
+  readonly seq: number;
+}
+
+function tileVisible(s: Stamp, i: number, j: number): boolean {
+  for (const f of s.frames) {
+    for (let y = j * TILE; y < (j + 1) * TILE; y++) for (let x = i * TILE; x < (i + 1) * TILE; x++) if (f.alphaAt(x, y) > 0) return true;
+  }
+  return false;
+}
+
 function commit(c: Ctx, name: string, v: number, x: number, y: number): void {
   const s = getStamp(name, v);
   if (s.chimney) c.chimneys.push({ x: x * TILE + s.chimney.x, y: y * TILE + s.chimney.y });
+  const fx = x + s.foot.x;
+  const fy = y + s.foot.y;
+  const phase = s.frames.length > 1 && !s.building ? (-(fx >> 1) & 3) % s.frames.length : 0;
   for (let j = 0; j < s.h; j++) {
     for (let i = 0; i < s.w; i++) {
       const cx = x + i;
       const cy = y + j;
       if (!inb(cx, cy)) continue;
       const k = idx(cx, cy);
-      const tilePx = new Px(TILE, TILE);
-      tilePx.copy(s.px, i * TILE, j * TILE, TILE, TILE, 0, 0);
-      let visible = false;
-      for (let a = 3; a < tilePx.data.length; a += 4) if ((tilePx.data[a] as number) > 0) visible = true;
-      if (visible) {
-        const gid = c.tiles.fromPx(`p:${s.name}:${s.variant}:${i}:${j}`, tilePx);
-        if (j < s.canopyRows) {
-          c.canopy[k] = gid;
-          c.canopyOcc[k] = 1;
-        } else {
-          c.decor[k] = gid;
-          c.decorOcc[k] = 1;
-        }
+      if (tileVisible(s, i, j)) {
+        const part: Part = { s, i, j, phase, order: fy * W + fx, seq: c.seq++ };
+        const canopy = j < s.canopyRows;
+        const parts = canopy ? c.canopyParts : c.decorParts;
+        (parts[k] ??= []).push(part);
+        const occ = canopy ? c.canopyOcc : c.decorOcc;
+        occ[k] = s.overlap && occ[k] !== 1 ? 2 : 1;
       }
       if (s.building) c.buildOcc[k] = 1; // ombre comprise : la cour devant la porte reste dégagée
       if (s.blocked[j * s.w + i]) {
@@ -265,6 +286,46 @@ function commit(c: Ctx, name: string, v: number, x: number, y: number): void {
       }
     }
   }
+}
+
+/**
+ * Compose chaque case des couches `decor` et `canopy` : les morceaux de tampons
+ * sont superposés du nord au sud ; une case dont un morceau est animé (vent,
+ * moulin) devient une tuile animée Tiled (une image par pas de vent).
+ */
+function composeLayers(c: Ctx): void {
+  const compose = (parts: readonly Part[], f: number): Px => {
+    const px = new Px(TILE, TILE);
+    for (const p of parts) {
+      const frames = p.s.frames;
+      const img = frames.length > 1 ? (frames[(f + p.phase) % frames.length] as Px) : (frames[0] as Px);
+      px.blit(img, p.i * TILE, p.j * TILE, TILE, TILE, 0, 0);
+    }
+    return px;
+  };
+  const build = (all: (Part[] | undefined)[], out: Uint16Array): void => {
+    for (let k = 0; k < N; k++) {
+      const parts = all[k];
+      if (!parts || parts.length === 0) continue;
+      parts.sort((a, b) => a.order - b.order || a.seq - b.seq);
+      const anim = parts.find((p) => p.s.frames.length > 1);
+      if (!anim) {
+        out[k] = c.tiles.fromContent(compose(parts, 0));
+        continue;
+      }
+      const frames = Array.from({ length: anim.s.frames.length }, (_, f) => compose(parts, f));
+      const gids = frames.map((px) => c.tiles.fromContent(px));
+      out[k] = gids.every((g) => g === gids[0]) ? (gids[0] as number) : c.tiles.animated(gids, anim.s.frameMs, frames[0] as Px);
+    }
+  };
+  build(c.decorParts, c.decor);
+  build(c.canopyParts, c.canopy);
+}
+
+/** Pose un tampon par son pied (tronc) en (`x`, `y`). */
+function placeFoot(c: Ctx, name: string, v: number, x: number, y: number, o: PlaceOptions = {}): boolean {
+  const s = getStamp(name, v);
+  return place(c, name, v, x - s.foot.x, y - s.foot.y, o);
 }
 
 function place(c: Ctx, name: string, v: number, x: number, y: number, o: PlaceOptions = {}): boolean {
@@ -657,6 +718,31 @@ function lattice(c: Ctx, loc: LocationPlan, names: readonly string[], count: num
   return placed;
 }
 
+/**
+ * Jardins autour d'un village (décision n°45) : rangs de 2 à 4 plantes
+ * (tournesols, lavande, fleurs…) sur l'herbe, jamais sur une route, une place,
+ * une cour ou l'emprise d'un bâtiment.
+ */
+function gardens(c: Ctx, loc: LocationPlan, names: readonly string[], count: number): void {
+  const rnd = mulberry32(hashString(`${loc.id}:gardens`));
+  let placed = 0;
+  for (let tries = 0; placed < count && tries < count * 40; tries++) {
+    const x = Math.round(loc.cx + (rnd() * 2 - 1) * (loc.w / 2 + 3));
+    const y = Math.round(loc.cy + (rnd() * 2 - 1) * (loc.h / 2 + 3));
+    const name = names[Math.floor(rnd() * names.length)] as string;
+    const len = 2 + Math.floor(rnd() * 3);
+    let ok = 0;
+    for (let i = 0; i < len; i++) {
+      if (!inb(x + i, y)) continue;
+      const k = idx(x + i, y);
+      const kind = isLandCode(at(c.code, k)) ? kindOf(at(c.code, k)) : '';
+      if (c.road[k] || c.noBuild[k] || (kind !== 'grass' && kind !== 'forest')) continue;
+      if (place(c, name, (x + i + y) % variantCount(name), x + i, y, { margin: -1, allowReserved: true })) ok++;
+    }
+    if (ok > 0) placed++;
+  }
+}
+
 function scatterAround(c: Ctx, loc: LocationPlan, names: readonly string[], count: number, seed: string, radius?: number): void {
   const rnd = mulberry32(hashString(`${loc.id}:${seed}`));
   const rx = (radius ?? loc.w / 2 - 1);
@@ -709,6 +795,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       placeNear(c, 'forge', 0, loc.cx + 5, loc.cy + 1);
       placeNear(c, 'guard_tower', 0, loc.cx - 7, loc.cy + 2);
       lattice(c, loc, ['house_thatch', 'house_tile', 'house_thatch', 'hut'], 8, 'houses');
+      gardens(c, loc, ['sunflowers', 'sunflowers', 'flowers', 'lavender'], 8);
       scatterAround(c, loc, ['hay', 'barrel', 'crate', 'bush'], 10, 'misc');
       place(c, 'sign', 0, loc.cx - 4, loc.cy + 6, { margin: 0, allowReserved: true });
       break;
@@ -717,6 +804,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       plaza(c, loc, 5, 4);
       place(c, 'well', 0, loc.cx + 2, loc.cy - 2, { margin: 0, allowReserved: true });
       lattice(c, loc, ['house_wood', 'hut', 'house_wood', 'house_thatch'], 8, 'houses');
+      gardens(c, loc, ['flowers', 'tall_grass', 'flowers'], 7);
       scatterAround(c, loc, ['barrel', 'crate', 'bush', 'hay'], 10, 'misc');
       break;
     }
@@ -729,6 +817,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       placeNear(c, 'temple', 0, loc.cx + 6, loc.cy - 9);
       placeNear(c, 'guard_tower', 1, loc.cx - 10, loc.cy - 6);
       lattice(c, loc, ['house_slate', 'house_tile', 'house_slate', 'hut'], 8, 'houses');
+      gardens(c, loc, ['lavender', 'lavender', 'flowers'], 7);
       scatterAround(c, loc, ['barrel', 'crate', 'barrel'], 12, 'misc');
       pier(c, loc);
       break;
@@ -743,6 +832,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       placeNear(c, 'temple', 0, loc.cx + 4, loc.cy - 9);
       placeNear(c, 'guard_tower', 0, loc.cx + 8, loc.cy + 1);
       lattice(c, loc, ['house_stone', 'house_slate', 'house_stone', 'hut'], 8, 'houses');
+      gardens(c, loc, ['lavender', 'tall_grass'], 4);
       scatterAround(c, loc, ['rock', 'barrel', 'crate', 'cairn'], 12, 'misc');
       break;
     }
@@ -769,6 +859,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       placeNear(c, 'inn', 0, loc.cx + 3, loc.cy - 10);
       placeNear(c, 'forge', 0, loc.cx + 8, loc.cy + 4);
       lattice(c, loc, ['house_tile', 'house_slate', 'house_tile', 'house_stone', 'hut'], 14, 'houses');
+      gardens(c, loc, ['flowers', 'lavender', 'sunflowers'], 6);
       scatterAround(c, loc, ['barrel', 'crate'], 8, 'misc');
       break;
     }
@@ -901,29 +992,35 @@ function scatter(c: Ctx): void {
     const z = at(c.zone, k);
     const r = rnd();
     const dense = fbm(x / 7, y / 7, SEED + 21);
-    const v = Math.floor(rnd() * 4);
+    // Prairies fleuries : massifs groupés (fleurs, herbes hautes) là où le champ de bruit est haut.
+    const meadow = fbm(x / 6, y / 6, SEED + 31);
+    const v = Math.floor(rnd() * 5);
+    const oakV = v === 4 ? (dense > 0.55 ? 3 : 4) : v % 3; // feuillus : surtout verts, quelques roux/dorés en lisière
     if (z === 1) {
-      if (r < 0.006 + dense * 0.02) place(c, 'oak', v, x, y - 1, { margin: 1 });
+      if (r < 0.006 + dense * 0.02) placeFoot(c, 'oak', oakV === 3 && dense < 0.5 ? 0 : oakV, x, y, { margin: 1 });
       else if (r < 0.03) place(c, 'bush', v, x, y, { margin: 0 });
       else if (r < 0.04) place(c, 'rock', v, x, y, { margin: 1 });
+      else if (meadow > 0.58 && r < 0.2) place(c, r < 0.12 ? 'flowers' : 'tall_grass', (x * 7 + y * 3) % (r < 0.12 ? 4 : 2), x, y, { margin: -1 });
     } else if (z === 2) {
       const treeP = kind === 'forest' ? 0.16 + dense * 0.2 : 0.035;
       if (r < treeP) {
-        if (rnd() < 0.6) place(c, 'pine', v, x, y - 1, { margin: 1 });
-        else place(c, 'oak', v, x, y - 1, { margin: 1 });
+        if (rnd() < 0.6) placeFoot(c, 'pine', v % 4, x, y, { margin: 1 });
+        else placeFoot(c, 'oak', oakV, x, y, { margin: 1 });
       } else if (r < treeP + 0.03) place(c, 'bush', v, x, y, { margin: 0 });
       else if (r < treeP + 0.036) place(c, 'rock', v, x, y, { margin: 1 });
+      else if (r < treeP + 0.16 && (kind === 'forest' || meadow > 0.55)) place(c, kind === 'forest' && r < treeP + 0.1 ? 'tall_grass' : 'flowers', kind === 'forest' ? 0 : 2, x, y, { margin: -1 });
     } else if (z === 3) {
       if (kind === 'marsh') {
-        if (r < 0.06) place(c, 'dead_tree', v, x, y - 1, { margin: 1 });
+        if (r < 0.06) placeFoot(c, 'dead_tree', v % 2, x, y, { margin: 1 });
         else if (r < 0.2) place(c, 'reeds', v, x, y, { margin: 0 });
-      } else if (r < 0.01) place(c, 'dead_tree', v, x, y - 1, { margin: 1 });
+      } else if (r < 0.01) placeFoot(c, 'dead_tree', v % 2, x, y, { margin: 1 });
       else if (r < 0.035) place(c, 'bush', v, x, y, { margin: 0 });
       else if (r < 0.045) place(c, 'rock', v, x, y, { margin: 1 });
+      else if (meadow > 0.6 && r < 0.12) place(c, 'tall_grass', 2, x, y, { margin: -1 });
     } else if (z === 4) {
       if (r < 0.03) place(c, 'rock', v, x, y, { margin: 1 });
-      else if (r < 0.05 && kind !== 'snow') place(c, 'dark_pine', v, x, y - 1, { margin: 1 });
-      else if (r < 0.058) place(c, 'dead_tree', v, x, y - 1, { margin: 1 });
+      else if (r < 0.05 && kind !== 'snow') placeFoot(c, 'dark_pine', kind === 'rock' && y < 30 ? 3 : v % 3, x, y, { margin: 1 });
+      else if (r < 0.058) placeFoot(c, 'dead_tree', v % 2, x, y, { margin: 1 });
     } else if (z === 5) {
       if (r < 0.03) place(c, 'ruin_wall', v, x, y, { margin: 1 });
       else if (r < 0.04) place(c, 'pillar', v, x, y - 1, { margin: 1 });
@@ -942,9 +1039,10 @@ function fillBands(c: Ctx): void {
       if (band === 1) {
         c.code[k] = KIND_CODE.forest;
         c.collision[k] = COLLISION.blocked;
-        if (!c.blockedOcc[k]) {
-          const ok = place(c, rnd() < 0.8 ? 'dark_pine' : 'pine', Math.floor(rnd() * 4), x, y - 1, { margin: -1, allowReserved: true, onRoad: true });
-          if (!ok) place(c, 'bush', Math.floor(rnd() * 3), x, y, { margin: -1, allowReserved: true });
+        // Lisière dense : un arbre sur deux environ, les cimes se chevauchent.
+        if (!c.blockedOcc[k] && rnd() < 0.5) {
+          const ok = placeFoot(c, rnd() < 0.8 ? 'dark_pine' : 'pine', Math.floor(rnd() * 3), x, y, { margin: -1, allowReserved: true, onRoad: true });
+          if (!ok) place(c, 'bush', Math.floor(rnd() * 5), x, y, { margin: -1, allowReserved: true });
         }
       } else if (band === 2) {
         c.code[k] = POND;
@@ -1296,6 +1394,9 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     decorOcc: new Uint8Array(N),
     canopyOcc: new Uint8Array(N),
     buildOcc: new Uint8Array(N),
+    decorParts: new Array<Part[] | undefined>(N),
+    canopyParts: new Array<Part[] | undefined>(N),
+    seq: 0,
     road: new Uint8Array(N),
     rut: new Uint8Array(N),
     noBuild: new Uint8Array(N),
@@ -1447,8 +1548,8 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
         const k = idx(sx + dx, sy + dy);
         if (c.collision[k] === COLLISION.blocked && !c.band[k]) {
           c.collision[k] = COLLISION.free;
-          c.decor[k] = 0;
-          c.canopy[k] = 0;
+          c.decorParts[k] = undefined;
+          c.canopyParts[k] = undefined;
         }
       }
     }
@@ -1487,6 +1588,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     ambient.push({ id: nextId++, name: 'Cheminée', type: 'chimney', x: chimney.x, y: chimney.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [] });
   }
 
+  composeLayers(c);
   const tileset = c.tiles.build();
   const tileLayer = (id: number, name: string, data: ArrayLike<number>, visible = true): Record<string, unknown> => ({
     id,
@@ -1540,7 +1642,10 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
         spacing: 0,
         columns: TILESET_COLUMNS,
         tilecount: tileset.tileCount,
-        tiles: tileset.terrains.map((t) => ({ id: t.id, properties: [{ name: 'terrain', type: 'string', value: t.terrain }] })),
+        tiles: [
+          ...tileset.terrains.map((t) => ({ id: t.id, properties: [{ name: 'terrain', type: 'string', value: t.terrain }] })),
+          ...tileset.animations.map((a) => ({ id: a.id, animation: a.frames.map((tileid, i) => ({ tileid, duration: a.durations[i] ?? 400 })) })),
+        ].sort((a, b) => a.id - b.id),
       },
     ],
   };

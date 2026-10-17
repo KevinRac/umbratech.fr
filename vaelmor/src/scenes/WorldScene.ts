@@ -27,6 +27,7 @@ import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
 import { WHEAT_FRAMES } from '../render/wheatTile';
+import { fixGpuTileAnimations } from '../render/tileAnimations';
 import { SCENES } from './keys';
 import type { WorldHudScene } from './WorldHudScene';
 
@@ -178,6 +179,8 @@ export class WorldScene extends Phaser.Scene {
     const tilemap = this.make.tilemap({ key: WORLD_MAP_KEY });
     const tileset = tilemap.addTilesetImage(TILESET_NAME, WORLD_TILESET_KEY);
     if (!tileset) throw new Error(`Tileset « ${TILESET_NAME} » introuvable dans la carte.`);
+    // Vent dans les feuillages, ailes du moulin : tuiles animées jouées par le GPU (décision n°45).
+    fixGpuTileAnimations(tileset, this.renderer);
     const layers: [string, number][] = [
       ['ground', DEPTH.ground],
       ['decor', DEPTH.decor],
