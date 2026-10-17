@@ -7397,7 +7397,9 @@ function demoBoot(cls){
  const clickL=()=>{mouse.l=true;if(P){P.clickQ=1;P.clickT=0.16;}};
  const clickR=()=>{mouse.r=true;if(P){P.rclickQ=1;P.rclickT=0.16;}};
  const once=(k,tt,at,fn)=>{if(tt>=at&&!pressAt[k]){pressAt[k]=1;fn();}};
- addEventListener('message',e=>{if(e.data&&e.data.pvLock!==undefined){lock=e.data.pvLock;if(lock>=0){ph=lock;t0=performance.now()/1000;pressAt={};mouse.l=mouse.r=false;}}});
+ // remet la scène à zéro : nouvelle salle, nouveaux ennemis qui réapparaissent, état de la classe réinitialisé
+ function reset(){mouse.l=mouse.r=false;pressAt={};enterRoom('combat');if(cls==='gou')P.cor=0;P.hp=P.s.maxHp;}
+ addEventListener('message',e=>{if(e.data&&e.data.pvLock!==undefined){lock=e.data.pvLock;if(lock>=0)ph=lock;t0=performance.now()/1000;lastMsg=-1;reset();}});
  function bot(){
   if(!P||state!=='play')return;
   if(!overlayEl.hidden)closeOverlay();queue.length=0;P.pendingLv=0;MSGQ.length=0;hintPaused=false;msgCur=null;paused=false;freezeT=0;
@@ -7408,7 +7410,7 @@ function demoBoot(cls){
   const now=performance.now()/1000;
   if(ph<0){ph=0;t0=now;}
   let tt=now-t0;
-  if(lock<0&&tt>=PHD){ph=(ph+1)%3;t0=now;tt=0;pressAt={};mouse.l=mouse.r=false;}
+  if(lock<0&&tt>=PHD){ph=(ph+1)%3;t0=now;tt=0;reset();return;}
   if(ph!==lastMsg){lastMsg=ph;try{parent.postMessage({pvPh:ph},'*');}catch(e){}}
   if(!live.length&&!(room.spawning&&room.spawning.length)&&!(room.waves&&room.waves.length)&&!trans)enterRoom('combat');
   let tg=null,bd=1e9;for(const e of live){const d=hyp(e.x-P.x,e.y-P.y);if(d<bd){bd=d;tg=e;}}
