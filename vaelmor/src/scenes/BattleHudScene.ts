@@ -477,6 +477,7 @@ export class BattleHudScene extends Phaser.Scene {
         textScale: (big ? 2 : 1) * S,
         // Grand texte : ombre d'un seul pixel, sinon les lettres paraissent doublées.
         shadowOffset: S,
+        centerLabels: big,
       });
       this.menuCancel = request.onCancel;
       // L'appui qui a ouvert le menu ne doit pas aussi le valider.

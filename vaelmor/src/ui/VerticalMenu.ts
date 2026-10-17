@@ -26,6 +26,8 @@ export interface VerticalMenuOptions {
   readonly textScale?: number;
   /** Décalage de l'ombre du texte (par défaut : l'échelle du texte). */
   readonly shadowOffset?: number;
+  /** Centre chaque libellé dans la hauteur de sa ligne. */
+  readonly centerLabels?: boolean;
 }
 
 const CURSOR_KEY = 'ui:cursor';
@@ -86,7 +88,10 @@ export class VerticalMenu {
 
     items.forEach((item, i) => {
       const rowY = y + i * this.lineHeight;
-      this.labels.push(addText(scene, x + 14 * k, rowY + k, item.label, { scale: options.textScale ?? 1, ...(options.shadowOffset ? { shadowOffset: options.shadowOffset } : {}) }).setDepth(depth + 1) as PixelText);
+      const label = addText(scene, x + 14 * k, rowY + k, item.label, { scale: options.textScale ?? 1, ...(options.shadowOffset ? { shadowOffset: options.shadowOffset } : {}) }).setDepth(depth + 1) as PixelText;
+      // Grand texte : centré dans la hauteur de la ligne (sinon il colle au bas de la barre de sélection).
+      if (options.centerLabels) label.y = Math.round(rowY + (this.lineHeight - label.height) / 2);
+      this.labels.push(label);
       const zone = scene.add.zone(x, rowY, options.width, this.lineHeight).setOrigin(0, 0).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => this.isEnabled(i) && this.select(i));
       zone.on('pointerdown', () => this.isEnabled(i) && (this.select(i), this.activate()));
