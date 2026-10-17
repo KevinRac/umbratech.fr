@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.10',
+ actuelle:'v16.11',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-17',h:'v16.11',t:'Guide « Comment jouer » aéré : cartes plus grandes (icône en haut, titre, une courte phrase), plus d’espace entre les blocs, textes plus gros et moins d’informations par carte (le guide défile si l’écran est petit).'},
   {d:'2026-10-17',h:'v16.10',t:'Guide « Comment jouer » remanié : la boucle en cinq étapes numérotées (Prends le portail, Choisis ta classe, Monte de niveau, Quand tu meurs, Reviens plus fort), le bloc « Lire le combat » est retiré, les portes et le Sanctuaire passent en grandes cartes bien visibles, et « Plus tard » devient « Missions et récompenses » avec des mots simples.'},
   {d:'2026-10-17',h:'v16.9',t:'Le guide « Comment jouer » se lit d’un coup d’œil : une icône et quelques mots par bloc (la boucle en quatre étapes, les signaux de combat rouge, lumière et orange, les portes, le Sanctuaire, ce qui vient plus tard, tes commandes en pastilles). La partie « Les quatre formes » est supprimée (le choix de forme et son aperçu sont sur l’écran d’accueil et au Portail).'},
   {d:'2026-10-17',h:'v16.8',t:'Petits écrans : un panneau plus haut que l’écran défile au lieu d’être rogné en haut, et la fiche d’un talent reste collée en bas de l’écran (elle défile au besoin) ; dans le wiki, la fiche de talent n’est plus collée quand l’écran est bas. Clic droit désactivé dans les menus, bulles et fiches (plus de menu du navigateur, et il ne ferme plus les bulles de lecture) ; la souris du jeu garde son clic droit en partie.'},
