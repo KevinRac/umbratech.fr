@@ -7074,6 +7074,89 @@ details.fold>.chips{margin-top:8px}
   enqueue(()=>openRelics('La Brèche se referme','Elle laisse une relique derrière elle. Choisis-en une.'));};
 })();
 
+// ───────────────────────── v16 · Gardiens II et III : attaques propres (Marée noire, Cloches noyées, Battement inverse)
+// Réglages et ordre des attaques : data/gardiens.js (attaques). Les dangers vivent dans HZ, hors de l'état du gardien.
+(function(){const GA=GA_D.attaques,HZ=[];
+ const boss=()=>room&&room.type==='boss'?enemies.find(x=>x.type==='boss'&&!x.dead):null;
+ const L2=k=>GA[2].liste[k],L3=k=>GA[3].liste[k];
+ function nextKey(e,act){const F=GA[act].file[e.phase]||GA[act].file[1];if(e.q16ph!==e.phase){e.q16ph=e.phase;e.q16=null;}if(!e.q16||!e.q16.length)e.q16=shuffle(F.slice());return e.q16.shift();}
+ // ── Marée : une bande traverse la salle, une brèche reste ouverte
+ function maree(e,axis){const M=L2('maree'),dir=Math.random()<0.5?1:-1;
+  const lo=axis==='x'?AR.y0:AR.x0,hi=axis==='x'?AR.y1:AR.x1,pp=axis==='x'?P.y:P.x;
+  let gc=rand(lo+M.breche*0.6,hi-M.breche*0.6);if(Math.abs(gc-pp)<120)gc=clamp(pp+(Math.random()<0.5?-1:1)*rand(160,260),lo+M.breche*0.6,hi-M.breche*0.6);
+  const start=axis==='x'?(dir>0?AR.x0:AR.x1):(dir>0?AR.y0:AR.y1),end=axis==='x'?(dir>0?AR.x1:AR.x0):(dir>0?AR.y1:AR.y0);
+  HZ.push({k:'maree',axis,dir,pos:start,end,gc,gw:M.breche,w:M.largeur,v:M.vitesse,warn:M.preavisS,tw:M.preavisS,dmg:e.dmg*M.degats,hit:false});sfx('boss');}
+ // ── Cloches : cercles qui tombent là où tu vas
+ function cloches(e){const C=L2('cloches'),n=C.nombre[e.phase]||3;
+  for(let i=0;i<n;i++)later(i*C.intervalleS,()=>{if(e.dead||!boss())return;const q=mereSafePoint(P.x+P.vx*0.45,P.y+P.vy*0.45);HZ.push({k:'cloche',x:q.x,y:q.y,r:C.rayon,t:C.preavisS,tt:C.preavisS,dmg:e.dmg*C.degats});sfx('bell');});
+  return n*C.intervalleS;}
+ // ── Battement inverse : anneaux qui se resserrent vers le Cœur
+ function implosion(e){const I=L3('implosion'),n=I.nombre[e.phase]||1;
+  for(let i=0;i<n;i++)later(i*I.ecartS,()=>{if(e.dead||!boss())return;HZ.push({k:'impl',x:e.x,y:e.y,r:I.rayon,v:I.vitesse,min:e.r+6,dmg:e.dmg*I.degats,hit:false,warn:0.5,tw:0.5});sfx('heart');});
+  return n*I.ecartS+I.rayon/I.vitesse;}
+ const _bp16=bossPattern;
+ bossPattern=function(e){
+  if(!RUN||RUN.hub||RUN.act!==2||!e.c13){_bp16(e);return;}
+  const k=nextKey(e,2),gap=bossGap(e);
+  if(k==='maree'){maree(e,Math.random()<0.5?'x':'y');e.state='idle';e.patT=gap+L2('maree').preavisS+1.2;}
+  else if(k==='maree2'){const ax=Math.random()<0.5?'x':'y';maree(e,ax);later(L2('maree2').ecartS,()=>{if(!e.dead&&boss())maree(e,ax==='x'?'y':'x');});e.state='idle';e.patT=gap+L2('maree').preavisS+L2('maree2').ecartS+1.4;}
+  else if(k==='cloches'){const d=cloches(e);e.state='idle';e.patT=gap+d+L2('cloches').preavisS*0.6;}
+  else{e.queue=[k==='glas'?'chant':k];_bp16(e);}};
+ const _hp16=heartPattern;
+ heartPattern=function(e){
+  if(!RUN||RUN.hub||RUN.act!==3||!e.c13){_hp16(e);return;}
+  const k=nextKey(e,3);
+  if(k==='implosion'){const d=implosion(e);e.state='idle';e.patT=bossGap(e)+d*0.55;}
+  else{e.queue=[k];_hp16(e);}};
+ function hzTick(dt){if(!HZ.length)return;if(!boss()){HZ.length=0;return;}
+  for(const h of HZ){
+   if(h.k==='cloche'){h.t-=dt;if(h.t<=0&&!h.done){h.done=true;
+     if(!P.dead&&hyp(P.x-h.x,P.y-h.y)<h.r+P.r*0.4)hurtPlayer(h.dmg,null);
+     for(const o of enemies)if(!o.dead&&o.type!=='boss'&&hyp(o.x-h.x,o.y-h.y)<h.r+o.r*0.5)friendlyHit(o,h.dmg*1.6,Math.atan2(o.y-h.y,o.x-h.x),200,0.5);
+     fx.push({k:'ring',x:h.x,y:h.y,r0:h.r*0.3,r1:h.r*1.15,w:10,t:0.35,max:0.35,col:`rgba(${TELE.zone},`,fill:true});sparks(h.x,h.y,12,'#ffb36b');shake(4,0.14);sfx('bigbell');}}
+   else if(h.k==='maree'){if(h.warn>0){h.warn-=dt;continue;}
+    h.pos+=h.dir*h.v*dt;
+    const pc=h.axis==='x'?P.x:P.y,pp=h.axis==='x'?P.y:P.x;
+    if(!h.hit&&!P.dead&&Math.abs(pc-h.pos)<h.w+P.r*0.6&&Math.abs(pp-h.gc)>h.gw/2-P.r*0.3){h.hit=true;hurtPlayer(h.dmg,null);}
+    if((h.end-h.pos)*h.dir<=0)h.done=true;}
+   else if(h.k==='impl'){if(h.warn>0){h.warn-=dt;continue;}
+    h.r-=h.v*dt;const d=hyp(P.x-h.x,P.y-h.y);
+    if(!h.hit&&!P.dead&&Math.abs(d-h.r)<10+P.r*0.6){h.hit=true;hurtPlayer(h.dmg,null);}
+    if(h.r<=h.min)h.done=true;}}
+  for(let i=HZ.length-1;i>=0;i--)if(HZ[i].done&&!(HZ[i].k==='cloche'&&HZ[i].t>-0.01))HZ.splice(i,1);}
+ const _ue16=updateEnemies;
+ updateEnemies=function(dt){_ue16(dt);if(RUN&&!RUN.hub)try{hzTick(dt);}catch(err){console.error(err);}};
+ const _cw16=clearWorld;clearWorld=function(){_cw16();HZ.length=0;};
+ const _bd16=bossDefeated;bossDefeated=function(e){HZ.length=0;_bd16(e);};
+ function drawHZ(){const c=ctx;
+  for(const h of HZ){c.save();
+   if(h.k==='cloche'){const k=clamp(1-h.t/h.tt,0,1);
+    c.fillStyle=`rgba(${TELE.zone},${0.10+0.16*k})`;c.beginPath();c.arc(h.x,h.y,h.r,0,TAU);c.fill();
+    c.strokeStyle=`rgba(${TELE.zone},${0.55+0.4*Math.sin(T*22)*k})`;c.lineWidth=2.5;c.setLineDash([8,6]);c.lineDashOffset=-T*40;c.beginPath();c.arc(h.x,h.y,h.r,0,TAU);c.stroke();c.setLineDash([]);
+    c.strokeStyle=`rgba(255,230,190,${0.5+0.4*k})`;c.lineWidth=2;c.beginPath();c.arc(h.x,h.y,h.r*k,0,TAU);c.stroke();
+    // ombre de la cloche qui descend
+    const s=0.35+0.65*k;c.fillStyle=`rgba(10,8,14,${0.25+0.45*k})`;c.beginPath();c.ellipse(h.x,h.y+4,h.r*0.42*s,h.r*0.16*s,0,0,TAU);c.fill();}
+   else if(h.k==='maree'){const X=h.axis==='x',a0=X?AR.y0:AR.x0,a1=X?AR.y1:AR.x1,g0=h.gc-h.gw/2,g1=h.gc+h.gw/2;
+    const band=(p,w,fill)=>{for(const [u,v] of[[a0,g0],[g1,a1]]){if(v<=u)continue;c.fillStyle=fill;if(X)c.fillRect(p-w,u,w*2,v-u);else c.fillRect(u,p-w,v-u,w*2);}};
+    // couloir sûr : la brèche, bordée de blanc, visible de bout en bout
+    c.strokeStyle=`rgba(255,255,255,${h.warn>0?0.55+0.35*Math.sin(T*18):0.5})`;c.lineWidth=2;c.setLineDash([10,8]);c.lineDashOffset=-T*30;
+    for(const g of[g0,g1]){c.beginPath();if(X){c.moveTo(AR.x0,g);c.lineTo(AR.x1,g);}else{c.moveTo(g,AR.y0);c.lineTo(g,AR.y1);}c.stroke();}c.setLineDash([]);
+    if(h.warn>0){const k=1-h.warn/h.tw;band(h.pos+h.dir*h.w*0.5,h.w*0.5*(0.4+0.6*k),`rgba(${TELE.zone},${0.18+0.3*k})`);
+     c.fillStyle=`rgba(${TELE.zone},${0.6+0.4*Math.sin(T*20)})`;for(const m of[(a0+g0)/2,(g1+a1)/2]){if(Math.abs(m-h.gc)<h.gw/2)continue;const px=X?h.pos+h.dir*22:m,py=X?m:h.pos+h.dir*22,ang=X?(h.dir>0?0:Math.PI):(h.dir>0?Math.PI/2:-Math.PI/2);c.save();c.translate(px,py);c.rotate(ang);c.beginPath();c.moveTo(12,0);c.lineTo(-8,-9);c.lineTo(-8,9);c.closePath();c.fill();c.restore();}}
+    else{band(h.pos,h.w,'rgba(40,120,120,.55)');band(h.pos,h.w*0.55,'rgba(90,220,210,.35)');
+     c.fillStyle=`rgba(${TELE.zone},.9)`;band(h.pos+h.dir*h.w,3,`rgba(${TELE.zone},.95)`);
+     for(let i=0;i<6;i++){const u=a0+((T*90+i*137)%(a1-a0));if(u>g0&&u<g1)continue;glow(c,X?h.pos:u,X?u:h.pos,16,'150,240,230',0.35);}}}
+   else if(h.k==='impl'){const k=h.warn>0?1-h.warn/h.tw:1,R=Math.max(1,h.r);
+    c.strokeStyle=`rgba(${TELE.zone},${0.35*k+0.15})`;c.lineWidth=14;c.beginPath();c.arc(h.x,h.y,R,0,TAU);c.stroke();
+    c.strokeStyle=`rgba(255,200,130,${0.7*k+0.2})`;c.lineWidth=3;if(h.warn>0){c.setLineDash([12,9]);c.lineDashOffset=T*40;}c.beginPath();c.arc(h.x,h.y,R,0,TAU);c.stroke();c.setLineDash([]);
+    // chevrons tournés vers le Cœur : l'anneau se resserre
+    c.fillStyle=`rgba(${TELE.zone},${0.6*k+0.3})`;const n=Math.max(8,Math.round(R/40));
+    for(let i=0;i<n;i++){const a=i/n*TAU+T*0.2,x=h.x+Math.cos(a)*(R+16),y=h.y+Math.sin(a)*(R+16);c.save();c.translate(x,y);c.rotate(a+Math.PI);c.beginPath();c.moveTo(9,0);c.lineTo(-5,-7);c.lineTo(-5,7);c.closePath();c.fill();c.restore();}}
+   c.restore();}}
+ const _dr16=drawRings;drawRings=function(){_dr16();if(HZ.length&&RUN&&!RUN.hub)drawHZ();};
+ window.__HZ=HZ;
+})();
+
 // ───────────────────────── Talents : textes, rangs et exclusions depuis data/talents.js
 // Appliqué en dernier, après toutes les reconstructions de l'arbre (v10, v15.2…).
 (function(){const T=T_D.noeuds;

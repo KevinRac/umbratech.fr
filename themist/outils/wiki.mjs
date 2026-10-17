@@ -158,6 +158,16 @@ function bestiaire(B) {
 }
 
 // ── Section « Les gardiens »
+function attaquesGardien(G, a) {
+  const X = G.attaques[a], TEMPS = ['', 'premier', 'deuxième', 'troisième'];
+  const quand = k => { const t = [1, 2, 3].filter(i => X.file[i].includes(k));
+    if (!t.length) return 'Tout le combat'; if (t.length === 3) return 'Les trois temps';
+    const s = t.map(i => TEMPS[i]).join(' et ') + (t.length > 1 ? ' temps' : ' temps'); return s[0].toUpperCase() + s.slice(1); };
+  const cartes = Object.entries(X.liste).map(([k, x]) => `<article class="ent"><h4>${esc(x.n)}</h4><p class="k">${esc(quand(k))}</p><p>${esc(x.d)}</p></article>`).join('');
+  return `<h3 class="sub">Attaques · ${esc(G.actes[a - 1].boss)}</h3>
+<div class="grid g3">${cartes}</div>`;
+}
+
 function gardiens(G, F) {
   const A = G.actes;
   const cartes = A.map((a, i) => `<article class="ent boss"><span class="num">${ROM[i + 1]}</span><h3>${esc(a.boss)}</h3><p class="k">${esc(a.name)} · ${a.rooms} salles</p><p>${esc(a.done)}.</p></article>`).join('');
@@ -175,6 +185,8 @@ function gardiens(G, F) {
 <h3 class="sub">${titre2}</h3>
 <p>Ces deux gardiens passent par trois temps. Lors de la troisième phase, une <b>faille</b> s’ouvre :</p>
 <div class="grid g2">${failles}</div>
+
+${[2, 3].map(a => attaquesGardien(G, a)).join('\n')}
 
 <h3 class="sub">Fenêtres de vulnérabilité</h3>
 <p>Selon ta forme, le gardien expose périodiquement une faiblesse. Un message te prévient ; tu as <b>${num(G.aNu.dureeS)} secondes</b> pour frapper avec <b>+${Math.round((G.aNu.mult - 1) * 100)} %</b> de dégâts. L’intervalle diminue avec le niveau d’Accoutumance.</p>
