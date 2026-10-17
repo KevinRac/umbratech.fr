@@ -116,6 +116,48 @@ function pactes(D) {
 </section>`;
 }
 
+// ── Section « Bestiaire »
+const num = x => String(+x.toFixed(3)).replace('.', ',');           // 1.3 → « 1,3 »
+const pct = x => `${num(x * 100)} %`;                                // 0.085 → « 8,5 % »
+const pgcd = (a, b) => b ? pgcd(b, a % b) : a;
+function fraction(p) { const k = pgcd(p, 100); return [p / k, 100 / k]; }  // 20 → [1, 5]
+function chance(p, court) {
+  const [n, d] = fraction(p);
+  const nb = n === 1 ? 'une' : mot(n);
+  return court ? `${nb} sur ${mot(d)}` : `${nb} chance${n > 1 ? 's' : ''} sur ${mot(d)}`;
+}
+function bestiaire(B) {
+  const E = B.ennemis, C = B.champion, RS = B.reglesSalle;
+  const nom = k => E[k].n;
+  const ennemis = Object.values(E).filter(e => e.desc).map(e =>
+    `<article class="ent enemy"><div class="eh"><h4>${esc(e.n)}</h4><span class="tag">${e.salle ? `Apparaît dès la salle ${e.salle}` : 'Dès le début'}</span></div><p>${esc(e.desc)}</p>\n`
+    + `  <div class="stats"><span><b>${e.stats.hp}</b> PV</span><span><b>${e.stats.dmg}</b> dégâts</span><span><b>${e.stats.spd}</b> vitesse</span><span><b>${e.stats.xp}</b> XP</span></div></article>`).join('');
+  const roles = Object.values(B.roles).map(r => `<article class="ent"><h4 style="color:rgb(${r.col})">${esc(r.n)}</h4><p>Il ${esc(r.d)}</p></article>`).join('');
+  const themes = Object.values(B.themes).map(t => `<article class="ent"><h4>${esc(t.n)}</h4><p>${esc(t.h)}</p><p class="k">Ennemis : ${t.need.map(nom).map(esc).join(', ')}</p></article>`).join('');
+  const cms = Object.values(B.contreMesures).map(c => `<article class="ent"><h4>${esc(c.n)}</h4><p>${esc(c.what)}</p><p class="k">Déclenchée quand ${esc(c.why)}.</p></article>`).join('');
+  const regles = Object.values(B.regles).map(r => `<article class="ent"><h4>${esc(r.n)}</h4><p>${esc(r.d)}</p></article>`).join('');
+  const muts = B.mutationsInstables.map(m => `<article class="ent"><h4>${esc(m.n)}</h4><p>${esc(m.d)}</p></article>`).join('');
+  return `<section class="sec" id="bestiaire" data-sec>${MARK('data/bestiaire.js')}<header class="sh"><p class="eyebrow">Ennemis</p><h2>Bestiaire</h2><div class="lede"><p>Les statistiques indiquées sont les valeurs de base (salle 1, palier 0). Elles augmentent à chaque salle de <b>${pct(B.montee.pvParSalle)} de PV</b> et de <b>${pct(B.montee.degatsParSalle)} de dégâts</b>, et avec les paliers de Brume. Un <b>champion</b> a ${num(C.pv)}× les PV, ${num(C.degats)}× les dégâts et ${num(C.taille)}× la taille.</p></div></header>
+<h3 class="sub">Les ennemis communs</h3>
+<div class="grid g3">${ennemis}</div>
+<h3 class="sub">Les rôles</h3>
+<p>Plus tard dans la descente, certains ennemis reçoivent un <b>rôle</b>, signalé par une couleur. Il faut le repérer.</p>
+<div class="grid g4">${roles}</div>
+<h3 class="sub">Les thèmes de vague</h3>
+<p>Chaque salle de combat suit un thème qui définit les ennemis présents et la meilleure façon de les affronter.</p>
+<div class="grid g3">${themes}</div>
+<h3 class="sub">Contre-mesures de la Brume</h3>
+<p>La Brume lit ton style et déclenche une contre-mesure adaptée dans la salle. Chacune est liée à ce que tu fais trop.</p>
+<div class="grid g4">${cms}</div>
+<h3 class="sub">Règles de salle</h3>
+<div class="grid g4">${regles}</div>
+<p>À partir de la ${RS.desLaSalle}e salle, une salle de combat ou d’élite reçoit parfois une règle (${chance(RS.chanceActeI)} à l’acte I, ${chance(RS.chanceEnsuite, true)} ensuite). La règle est choisie selon tes PV : sous ${RS.seuilBrume} %, seulement la brume ; sous ${RS.seuilBrumeSol} %, la brume ou le sol ; au-dessus, les quatre. <b>La règle mute une fois</b> en plein combat, entre ${RS.mutationMinS} et ${RS.mutationMaxS} secondes après son apparition : elle est remplacée par une autre règle possible à ton niveau de PV. Purifier une salle à règle rapporte <b>une relance de talents</b> et de l’or (${RS.orBase} + ${RS.orParActe} par acte).</p>
+<h3 class="sub">Mutation Instable (talent du Gouffre)</h3>
+<p>Ces mutations ne touchent pas les ennemis : c’est toi qui mutes. Le talent <b>Mutation Instable</b> du Gouffre te donne l’une d’elles au hasard toutes les 20 secondes, pendant 8 secondes.</p>
+<div class="grid g4">${muts}</div>
+</section>`;
+}
+
 // ── Assemblage
 function replaceSection(html, id, content) {
   const re = new RegExp(`<section class="sec" id="${id}"[^>]*>[\\s\\S]*?</section>`);
@@ -141,6 +183,7 @@ export function build(html) {
   let out = replaceSection(html, 'equipements', equipements(D.equipements, formes()));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes()));
   out = replaceSection(out, 'pactes', pactes(D.pactes));
+  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire));
   return syncVersion(out, gameVersion());
 }
 

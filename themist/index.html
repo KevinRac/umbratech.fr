@@ -420,6 +420,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/equipements.js"></script>
 <script src="data/reliques.js"></script>
 <script src="data/pactes.js"></script>
+<script src="data/bestiaire.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -753,7 +754,7 @@ relFx({
  epine:s=>{s.dmg+=0.2;s.maxHp-=15;},
  clef:s=>{s.clef=1;},
  bourse:s=>{s.bourse=1;}});
-const MUTS=[{id:'griffes',n:'Griffes',d:'+40 % de dégâts'},{id:'membres',n:'Membres allongés',d:'+35 % de portée'},{id:'pierre',n:'Peau de pierre',d:'−40 % de dégâts subis'},{id:'fievre',n:'Fièvre',d:'+30 % de vitesse'}];
+const MUTS=window.BRUME_DATA.bestiaire.mutationsInstables;
 const ROOMMUTS=['Bras surnuméraire','Carapace d’os','Mâchoire double','Épines dorsales','Cœur second','Yeux sans nombre'];
 
 // ───────────────────────── Sauvegarde (dans ce navigateur)
@@ -817,25 +818,12 @@ const LORE=[
  {id:'pal',t:'La Brume apprend',c:S=>S.palierMax>=2,h:'Faire taire le Glas Originel au palier 1.',x:'Après chaque victoire, la Brume s’épaissit. Elle apprend de ceux qui la traversent, et chaque retour la rend plus dense, plus affamée.'},
 ];
 
-const ED={
- rampant:{r:14,hp:24,spd:92,dmg:8,xp:3,cost:1},
- spectre:{r:14,hp:20,spd:78,dmg:10,xp:4,cost:2},
- bouffi:{r:16,hp:30,spd:108,dmg:20,xp:3,cost:1.5},
- brute:{r:22,hp:85,spd:62,dmg:12,xp:7,cost:3.5},
- hurleur:{r:15,hp:42,spd:70,dmg:12,xp:6,cost:2.5},
- boss:{r:48,hp:1000,spd:58,dmg:16,xp:70,cost:99},
- mannequin:{r:18,hp:600,spd:0,dmg:0,xp:0,cost:99},
- voile:{r:14,hp:46,spd:96,dmg:14,xp:8,cost:3},
- nourrice:{r:24,hp:150,spd:38,dmg:12,xp:13,cost:4.5},
-};
-const UNLOCK={spectre:2,bouffi:3,brute:4,hurleur:8,voile:14,nourrice:15};
-const ENEMY_INFO={
- spectre:'Nouvel ennemi · Spectre : il tire à distance. Approche-toi, ou renvoie ses tirs d’un coup.',
- bouffi:'Nouvel ennemi · Bouffi : il gonfle puis explose. Recule dès qu’il pulse.',
- brute:'Nouvel ennemi · Brute : elle charge en ligne droite. Esquive-la, elle s’assomme contre les murs.',
- voile:'Nouvel ennemi · Voilé : presque invisible et quasi invulnérable dans l’ombre. Garde-le dans ta lumière pour le blesser.',
- nourrice:'Nouvel ennemi · Nourrice : elle pond des Rampants sans fin. Abats-la en priorité.',
- hurleur:'Nouvel ennemi · Hurleur : ses cris forment des ondes et accélèrent ses alliés. Esquive à travers l’onde.'};
+// Ennemis, rôles, thèmes, contre-mesures, règles de salle : data/bestiaire.js. Ici, seulement le comportement.
+const BE_D=window.BRUME_DATA.bestiaire;
+const ED=Object.fromEntries(Object.entries(BE_D.ennemis).map(([k,e])=>[k,e.stats]));
+const CHAMP=BE_D.champion;
+const UNLOCK=Object.fromEntries(Object.entries(BE_D.ennemis).filter(([,e])=>e.salle).map(([k,e])=>[k,e.salle]));
+const ENEMY_INFO=Object.fromEntries(Object.entries(BE_D.ennemis).filter(([,e])=>e.salle).map(([k,e])=>[k,`Nouvel ennemi · ${e.n} : ${e.desc}`]));
 const ACTS=[null,
  {name:'Les Faubourgs Engloutis',rooms:7,boss:'La Mère-Brume',done:'La Mère-Brume est vaincue'},
  {name:'Les Cryptes Chantantes',rooms:6,boss:'Le Héraut Noyé',done:'Le Héraut Noyé est vaincu'},
@@ -888,20 +876,19 @@ function allowedTypes(){const g=G();const t=['rampant','rampant'];for(const k in
 function genWave(b,allowed){const list=[];let guard=0;while(b>0.9&&guard++<80){const t=pick(allowed);const c=ED[t].cost;if(c>b+0.5){if(allowed.every(a=>ED[a].cost>b+0.5))break;continue;}list.push({type:t});b-=c;}if(!list.length)list.push({type:'rampant'});return list;}
 // ───────────────────────── v8 · Vagues à thème : chaque salle de combat pose une petite question tactique
 const row=(type,n,at,o)=>Array.from({length:Math.max(0,n)},(_,i)=>Object.assign({type,at,gi:i,gn:n},o||{}));
-const WTHEMES={
- meute:{n:'La Meute',h:'Une meute simple. Garde de l’espace et ne te laisse pas acculer.',need:['rampant'],w:g=>g<=3?6:g<=7?2:1,
+const WTHEMES=dataMerge(BE_D.themes,{
+ meute:{w:g=>g<=3?6:g<=7?2:1,
   build:b=>row('rampant',clamp(Math.round(b*0.95),3,12),'rand')},
- tir:{n:'Tir croisé',h:'Les Rampants font écran : les tirs des Spectres s’y perdent. Force le corps à corps ou coupe leur ligne de tir.',need:['spectre','rampant'],w:()=>3,
+ tir:{w:()=>3,
   build:b=>{const ns=b<8?2:3;return [...row('spectre',ns,'back'),...row('rampant',clamp(Math.round(b-ns*2),3,10),'screen')];}},
- petards:{n:'Pétards',h:'Les explosions des Bouffis blessent aussi les Brutes. Place-les, et reste hors de portée.',need:['bouffi','brute'],w:()=>3,
+ petards:{w:()=>3,
   build:b=>{const big=b>=10;return [...row('brute',big?2:1,'rand'),...row('bouffi',big?(b>=15?4:3):2,'rand'),...(b>=15?row('rampant',2,'rand'):[])];}},
- choeur:{n:'Chœur',h:'Tant que le Hurleur vit, les Rampants sont enragés. Abats-le en premier : toute la salle retombe.',need:['hurleur','rampant'],w:()=>3,
+ choeur:{w:()=>3,
   build:b=>{const nh=b>=18?2:1;return [...row('hurleur',nh,'back',{key:true}),...row('rampant',clamp(Math.round((b-2.5*nh)*0.9),3,9),'screen',{tag:'choir'})];}},
- faux:{n:'Faux-semblants',h:'Un Voilé se cache dans la meute. Garde les ennemis dans ta lumière pour le blesser.',need:['voile','rampant'],w:()=>3,
+ faux:{w:()=>3,
   build:b=>[{type:'voile',at:'pack',key:true},...row('rampant',clamp(Math.round((b-3)*0.95),4,10),'pack')]},
- siege:{n:'Siège',h:'Les Brutes protègent la Nourrice. Attire-les contre un mur : sonnées, elles la laissent à découvert.',need:['nourrice','brute'],w:()=>3.5,
-  build:b=>{const nb=b>=22?3:2,xs=nb===3?[-170,0,170]:[-130,130];return [{type:'nourrice',x:W/2,y:AR.y0+70,key:true,siege:true},...xs.map(dx=>({type:'brute',x:W/2+dx,y:AR.y0+160,tag:'guard'})),...row('rampant',clamp(Math.round((b-4.5-3.5*nb)*0.5),0,4),'rand')];}}
-};
+ siege:{w:()=>3.5,
+  build:b=>{const nb=b>=22?3:2,xs=nb===3?[-170,0,170]:[-130,130];return [{type:'nourrice',x:W/2,y:AR.y0+70,key:true,siege:true},...xs.map(dx=>({type:'brute',x:W/2+dx,y:AR.y0+160,tag:'guard'})),...row('rampant',clamp(Math.round((b-4.5-3.5*nb)*0.5),0,4),'rand')];}}});
 function chooseTheme(al){
  const set=new Set(al),g=G();
  const elig=Object.keys(WTHEMES).filter(k=>WTHEMES[k].need.every(t=>set.has(t)));
@@ -937,7 +924,7 @@ function themePos(sp,pc){
  return{x,y};
 }
 function spawnWave(w,last){const pc=w.some(s=>s.at==='pack')?findSpawn(300):null;for(const sp of w){const p=themePos(sp,pc);room.spawning.push({x:p.x,y:p.y,type:sp.type,elite:!!sp.elite,key:sp.key,tag:sp.tag,siege:sp.siege,t:0.85+Math.random()*0.45});}room.lastSize=w.length;room.sinceWave=0;if(last&&room.waves.length>1){toast('Dernière vague',1.6);sfx('lastwave');}}
-function createEnemy(type,x,y,elite=false){const d=ED[type];const e={type,x,y,r:d.r*(elite?1.4:1),maxHp:d.hp*hpMul()*(elite?4:1),spd:d.spd*spdMul()*(elite?0.92:1),dmg:d.dmg*dmgMul()*(elite?1.3:1),xp:d.xp*(elite?4:1)*(1+0.05*(G()-1)),elite,state:'walk',t:rand(1.2,2.2),windTot:0.75,cd:rand(1,2.5),kbx:0,kby:0,flash:0,stun:0,marked:0,burnT:0,burnDps:0,exposed:false,dotAcc:0,dotT:0.45,orbT:0,crownT:0,devT:0,wob:Math.random()*TAU,ang:0,dead:false,chained:false,vuln:0,wT:0,dir:Math.random()<0.5?1:-1,aim:false,tok:null,hasteT:0,singT:0,thornT:0};e.hp=e.maxHp;enemies.push(e);
+function createEnemy(type,x,y,elite=false){const d=ED[type];const e={type,x,y,r:d.r*(elite?CHAMP.taille:1),maxHp:d.hp*hpMul()*(elite?CHAMP.pv:1),spd:d.spd*spdMul()*(elite?CHAMP.vitesse:1),dmg:d.dmg*dmgMul()*(elite?CHAMP.degats:1),xp:d.xp*(elite?CHAMP.xp:1)*(1+0.05*(G()-1)),elite,state:'walk',t:rand(1.2,2.2),windTot:0.75,cd:rand(1,2.5),kbx:0,kby:0,flash:0,stun:0,marked:0,burnT:0,burnDps:0,exposed:false,dotAcc:0,dotT:0.45,orbT:0,crownT:0,devT:0,wob:Math.random()*TAU,ang:0,dead:false,chained:false,vuln:0,wT:0,dir:Math.random()<0.5?1:-1,aim:false,tok:null,hasteT:0,singT:0,thornT:0};e.hp=e.maxHp;enemies.push(e);
  if(type==='voile'&&!SAVE.flags.voile){SAVE.flags.voile=1;persist();}if(ENEMY_INFO[type]&&!RUN.announced.has(type)){RUN.announced.add(type);if(PAL()===0)toastPause(ENEMY_INFO[type],3.2,()=>e.dead?null:{x:e.x,y:e.y,r:e.r});}
  return e;}
 function createBoss(){const e=createEnemy('boss',W/2,AR.y0+(RUN.act===3?180:170));e.maxHp=[0,1000,2300,3600][RUN.act]*(PAL()>=1?1.2:1)*(PAL()>=5?1.3:1);e.hp=e.maxHp;e.dmg=[0,16,22,26][RUN.act];e.spd=58;e.xp=[0,70,90,0][RUN.act];e.name=ACTS[RUN.act].boss;e.patT=1.4;e.phase=1;e.queue=[];e.state='idle';e.spinA=0;e.spinDir=1;e.shotT=0;e.ringT=0;e.chantN=0;if(RUN.act===3){e.r=62;e.hx=W/2;e.hy=AR.y0+180;e.beatT=1.6;}room.boss=e;return e;}
@@ -3014,7 +3001,7 @@ const CCOL=c=>(CLS[c]&&CLS[c].color)||'#c9b4ff';
 const CRGB={lum:'243,185,77',gou:'143,212,110',her:'159,208,255',tis:'255,120,160'};
 function M(){if(!SAVE.mem||SAVE.mem.v!==1)SAVE.mem={v:1,style:{perfect:0,abandons:0,close:0,early:0,deep:0,deaths:0},killers:{},clsRuns:{},adapt:{lum:0,gou:0,her:0,tis:0},graves:[],frags:[],fragNew:[],truths:[],truthNew:[],pity:0,bossFirst:{},react:null,reactSeen:{},journal:[],traitTier:{}};return SAVE.mem;}
 const V7FOE={rampant:'les Rampants',spectre:'les Spectres',bouffi:'les Bouffis',brute:'les Brutes',hurleur:'les Hurleurs',voile:'les Voilés',nourrice:'les Nourrices',boss:'les gardiens',brume:'la Brume elle-même'};
-const V7FOE1={rampant:'un Rampant',spectre:'un Spectre',bouffi:'un Bouffi',brute:'une Brute',hurleur:'un Hurleur',voile:'un Voilé',nourrice:'une Nourrice',brume:'la Brume'};
+const V7FOE1=Object.assign(Object.fromEntries(Object.entries(BE_D.ennemis).filter(([,e])=>e.un).map(([k,e])=>[k,e.un])),{brume:'la Brume'});
 const foeName=(k,act)=>k==='boss'?(ACTS[act]?ACTS[act].boss:'un gardien'):(V7FOE1[k]||'la Brume');
 const cap1=s=>s.charAt(0).toUpperCase()+s.slice(1);
 
@@ -5210,8 +5197,8 @@ window.__v10={F:()=>P.s.v10,pv,NODES,nodeAvailable,rollOffers,takeNode,majCount1
 
 // ───────────────────────── Réglages d’équilibrage (un seul endroit pour ajuster)
 const BAL={
- hpPerRoom:0.085,   // PV ennemis : +8,5 % par salle franchie dans la run
- dmgPerRoom:0.03,   // dégâts ennemis : +3 % par salle
+ hpPerRoom:BE_D.montee.pvParSalle,   // PV ennemis : +8,5 % par salle franchie dans la run
+ dmgPerRoom:BE_D.montee.degatsParSalle,   // dégâts ennemis : +3 % par salle
  palHp:0.04,        // chaque palier : +4 % de PV ennemis (en plus de son effet propre)
  palDmg:0.03,       // chaque palier : +3 % de dégâts ennemis
  palBudget:0.04,    // chaque palier : +4 % d’ennemis par vague
@@ -5530,15 +5517,15 @@ const _mi12=moveInput;
 moveInput=function(){if(P&&P.grabT>0)return[0,0];return _mi12();};
 
 // ───────────────────────── Le Brumeux : contre-mesures
-const CMS={
- traque:{n:'Traque',ax:'portee',hi:true,cost:2,why:'tu frappes de loin',what:'La Brume s’épaissit et lâche des traqueurs qui chargent.',ok:()=>true,
+const CMS=dataMerge(BE_D.contreMesures,{
+ traque:{ok:()=>true,
   apply(){RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.09);return G()>=4?[{type:'brute'}]:[{type:'rampant'},{type:'rampant'},{type:'rampant'}];}},
- petards:{n:'Pétards',ax:'portee',hi:false,cost:2,why:'tu frappes au contact',what:'Des Bouffis rampent vers toi : ils explosent au corps à corps.',ok:()=>G()>=3,
+ petards:{ok:()=>G()>=3,
   apply(){return row('bouffi',G()>=8?3:2,'rand');}},
- barrage:{n:'Tir de barrage',ax:'esquive',hi:true,cost:2.5,why:'tu esquives tout ce qui charge',what:'Des Spectres se postent au fond et tirent de loin.',ok:()=>G()>=2,
+ barrage:{ok:()=>G()>=2,
   apply(){return row('spectre',2,'back');}},
- avide:{n:'Brume avide',ax:'soin',hi:true,cost:1.5,why:'tu te soignes beaucoup',what:'Dans cette salle, tes soins sont réduits de 40 %.',ok:()=>true,
-  apply(){room.sape=true;return null;}}};
+ avide:{ok:()=>true,
+  apply(){room.sape=true;return null;}}});
 function cmBudget(p){const R=PR();if(R.bud[RUN.act]==null){const t=p.puissance==null?1:0.6+0.9*p.puissance;R.bud[RUN.act]=[0,3,4.5,6][RUN.act]*t*(1+0.1*PAL());}return R.bud[RUN.act];}
 function brumeuxPlan(){
  const R=PR(),p=profile();if(p.known<2)return;
@@ -5864,11 +5851,7 @@ const _de13=doEnter;
 doEnter=function(type){const a0=RUN&&RUN.act;_de13(type);if(RUN&&!RUN.hub&&RUN.act!==a0){RUN.fiole=false;RUN.larme=false;enqueue(openPacte);}};
 
 // ───────────────────────── Ennemis à rôles
-const ROLES={
- rempart:{n:'Rempart',col:'140,190,255',d:'protège ses voisins : −30 % de dégâts pour les ennemis près de lui. Éloigne-les ou abats-le.'},
- harceleur:{n:'Harceleur',col:'255,200,90',d:'vise l’endroit où tu vas, pas celui où tu es.'},
- soutien:{n:'Soutien',col:'130,240,160',d:'soigne et accélère ses alliés. Abats-le en premier.'},
- chasseur:{n:'Chasseur',col:'255,96,96',d:'guette ton point faible et bondit dessus.'}};
+const ROLES=BE_D.roles;
 function hunterWeak(){const p=profile();if(p.soin!=null&&p.soin>0.55)return'soin';if(p.esquive!=null&&p.esquive>0.5)return'esquive';return'pv';}
 const HUNT_TXT={soin:'il bondit quand tu viens de te soigner',esquive:'il bondit quand ton esquive est vide',pv:'il bondit quand tu passes sous la moitié de tes PV'};
 function roleSet(){const p=profile(),out=[];
@@ -6247,12 +6230,8 @@ function openChron(back){
  const done=()=>{closeOverlay();if(back)back();};$('#chb').addEventListener('click',done);overlayKeys=c=>{if(c==='Escape'||c==='Enter'||c==='KeyP')done();};}
 
 // ───────────────────────── Salles à règles mutantes
-const RULES={
- verre:{n:'Verre',d:'Tout est fragile : tes coups et les leurs font 40 % de dégâts en plus.'},
- sol:{n:'Sol qui se dérobe',d:'Des dalles cèdent après un instant et écrasent tout ce qu’elles couvrent. Attire-y les ennemis.'},
- brume:{n:'Brume plombée',d:'La moitié de la salle est voilée, mais tu frappes 25 % plus fort.'},
- braseros:{n:'Braseros',d:'Hors de la lumière des braseros, les ennemis ne subissent que 40 % des dégâts.'}};
-function rulePool(){const f=P.hp/P.s.maxHp;return f<0.45?['brume']:f<0.75?['brume','sol']:['brume','sol','verre','braseros'];}
+const RULES=BE_D.regles,RS=BE_D.reglesSalle;
+function rulePool(){const f=P.hp/P.s.maxHp;return f<RS.seuilBrume/100?['brume']:f<RS.seuilBrumeSol/100?['brume','sol']:['brume','sol','verre','braseros'];}
 function setRule(k,mut){room.rule=k;room.ruleT=mut?room.ruleT:0;
  if(k==='brume')room.veil=Math.random()<0.5?-1:1;
  if(k==='sol'){room.holes=[];room.holeT=1.4;}
@@ -6387,12 +6366,12 @@ enterRoom=function(type){_er14(type);if(!RUN||RUN.hub||!room)return;ensure14();
  if(eqIs('couronne'))RUN.fogBoost=(RUN.fogBoost||0)+0.07;
  if(RUN.act>=2&&!RUN.s2say){RUN.s2say=true;toast('Un second emplacement d’équipement s’ouvre.',3.2);}
  if(RUN.pact&&RUN.ch.lastPact!==RUN.pact){RUN.ch.lastPact=RUN.pact;chron('pact',RUN.pact);}
- if((type==='combat'||type==='elite')&&RUN.roomIdx>=3&&Math.random()<(RUN.act===1?0.2:0.3)){
-  const r=room;later(2.2,()=>{if(room!==r||r.cleared)return;r.mutAt=rand(14,18);setRule(pick(rulePool()),false);});}};
+ if((type==='combat'||type==='elite')&&RUN.roomIdx>=RS.desLaSalle&&Math.random()<(RUN.act===1?RS.chanceActeI:RS.chanceEnsuite)/100){
+  const r=room;later(2.2,()=>{if(room!==r||r.cleared)return;r.mutAt=rand(RS.mutationMinS,RS.mutationMaxS);setRule(pick(rulePool()),false);});}};
 const _orc14=onRoomCleared;
 onRoomCleared=function(){const r=room.rule,hit=room.hitsTaken||0,t=room.type;_orc14();if(!RUN||RUN.hub)return;ensure14();
  if((t==='combat'||t==='elite'||t==='boss')&&!hit)RUN.ch.flawless++;
- if(r){RUN.rerolls++;addGold(20+10*RUN.act,true);toast(`Salle « ${RULES[r].n} » purifiée : +1 relance de talents.`,2.8);chron('ruleclear',{k:r,flawless:!hit});RUN.ch.rules++;}};
+ if(r){RUN.rerolls++;addGold(RS.orBase+RS.orParActe*RUN.act,true);toast(`Salle « ${RULES[r].n} » purifiée : +1 relance de talents.`,2.8);chron('ruleclear',{k:r,flawless:!hit});RUN.ch.rules++;}};
 const _sr14=startRun;
 startRun=function(){_sr14();if(RUN&&!RUN.hub){RUN.ch=null;RUN.as=null;ensure14();P.sets={};EQK.forEach(q=>P[q]=null);}};
 const _ue14=updateEnemies;
