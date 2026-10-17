@@ -7398,14 +7398,14 @@ function demoBoot(cls){
  const clickR=()=>{mouse.r=true;if(P){P.rclickQ=1;P.rclickT=0.16;}};
  const once=(k,tt,at,fn)=>{if(tt>=at&&!pressAt[k]){pressAt[k]=1;fn();}};
  // remet la scène à zéro : nouvelle salle, nouveaux ennemis qui réapparaissent, état de la classe réinitialisé
- const POS={lum:[[200,-60],[270,40],[330,-30],[210,100]],gou:[[120,-40],[150,45],[205,0],[250,-70]],her:[[105,-45],[130,50],[95,5],[160,-75]],tis:[[220,-70],[270,60],[340,-5]]};
+ const POS={lum:[[200,-60],[270,40],[330,-30],[210,100]],gou:[[120,-40],[150,45],[205,0],[250,-70]],gou3:[[[115,-38],[145,8],[175,-16],[125,48],[180,42],[150,-60]],[[58,-8],[78,38],[74,-42]],[[130,-34],[180,18],[235,-8],[150,62],[260,42]]],her:[[105,-45],[130,50],[95,5],[160,-75]],tis:[[220,-70],[270,60],[340,-5]]};
  function reset(){
   mouse.l=mouse.r=false;pressAt={};
   enemies=[];eproj=[];pproj=[];spectrals=[];parts=[];fx=[];nums=[];tlights=[];deferred=[];timers=[];rings=[];pools=[];coins=[];decals=[];queue.length=0;
   room=makeRoom('combat');room.waves=[];room.spawning=[];room.sinceWave=0;room.rule=null;room.bl=null;room.cleared=false;
-  P.x=W*0.4;P.y=H*0.58;P.vx=P.vy=0;P.dashT=0;P.delayed=[];P.roomMut=0;P.feast=0;P.hp=P.s.maxHp;if(cls==='gou')P.cor=0;
+  P.x=W*0.4;P.y=H*0.58;P.vx=P.vy=0;P.dashT=0;P.delayed=[];P.roomMut=0;P.feast=0;P.hp=P.s.maxHp;if(cls==='gou')P.cor=[0,45,70][ph]||0;
   resetLantern();v6Reset();
-  for(const [dx,dy] of POS[cls]){const e=createEnemy('rampant',P.x+dx,P.y+dy);e.dmg=0;e.spd=0;e.maxHp=e.hp=3000;e.state='walk';e.t=e.cd=999;e.ang=Math.PI;}
+  for(const [dx,dy] of (cls==='gou'?POS.gou3[ph]:POS[cls])){const e=createEnemy('rampant',P.x+dx,P.y+dy);e.dmg=0;e.spd=0;e.maxHp=e.hp=3000;e.state='walk';e.t=e.cd=999;e.ang=Math.PI;}
  }
  addEventListener('message',e=>{if(e.data&&e.data.pvLock!==undefined){lock=e.data.pvLock;if(lock>=0)ph=lock;t0=performance.now()/1000;lastMsg=-1;reset();}});
  function bot(){
@@ -7434,8 +7434,8 @@ function demoBoot(cls){
    if(ph===2){once('r1',tt,0.3,()=>press('KeyR'));if(tt>0.9)mouse.l=true;once('r2',tt,3.4,()=>{mouse.l=false;press('KeyR');});}
   }else if(cls==='gou'){
    if(ph===0)mouse.r=true;
-   if(ph===1){P.cor=Math.max(P.cor,82);mouse.l=true;}
-   if(ph===2){once('c',tt,0,()=>{P.cor=100;});mouse.r=tt<1.0;once('r',tt,1.3,()=>press('KeyR'));}
+   if(ph===1){P.cor=Math.max(P.cor,45);mouse.l=true;}
+   if(ph===2){if(tt<0.9)P.cor=Math.max(P.cor,70);once('r',tt,0.9,()=>press('KeyR'));}
   }else if(cls==='her'){
    if(ph>=1&&beat&&!pressAt['b'+Math.floor(P.beatN||0)]){pressAt['b'+Math.floor(P.beatN||0)]=1;clickL();setTimeout(()=>{mouse.l=false;},90);}
   }else if(cls==='tis'){
