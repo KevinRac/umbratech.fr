@@ -939,7 +939,7 @@ function onRoomCleared(){
 function next1(){return room.doors.length===1&&room.doors[0].type==='halte';}
 function updateRoom(dt){
  if(room.annT>0){room.annT-=dt;if(room.annT<=0)announceTheme();}
- for(const sp of room.spawning){sp.t-=dt;if(sp.t<=0){const ne=createEnemy(sp.type,sp.x,sp.y,sp.elite);if(sp.key)ne.key=true;if(sp.tag)ne.tag=sp.tag;if(sp.siege)ne.siege=true;if(sp.cm)ne.cm=true;if(sp.role)ne.role=sp.role;sp.done=true;sparks(sp.x,sp.y,6,'#b9a6ff');}}
+ for(const sp of room.spawning){sp.t-=dt;if(sp.t<=0){const ne=createEnemy(sp.type,sp.x,sp.y,sp.elite);if(sp.key)ne.key=true;if(sp.tag)ne.tag=sp.tag;if(sp.siege)ne.siege=true;if(sp.cm)ne.cm=true;if(sp.esc)ne.esc17=true;if(sp.role)ne.role=sp.role;sp.done=true;sparks(sp.x,sp.y,6,'#b9a6ff');}}
  room.spawning=room.spawning.filter(s=>!s.done);
  for(const d of room.doors)d.open=Math.min(1,d.open+dt*1.6);
  if(room.npcs)updateNpcs();
@@ -5408,7 +5408,7 @@ loseHp=function(n){if(RUN&&!RUN.hub&&P&&!P.dead&&n>0)PR().dmgT+=Math.min(n,P.hp)
 const _he12=heal;
 heal=function(n,src){
  const counted=RUN&&!RUN.hub&&P&&!['boss','level','halte','room'].includes(src);
- if(room&&room.sape&&!room.cleared&&counted)n*=0.6;
+ if(room&&room.sape&&!room.cleared&&counted)n*=room.sapeF!=null?room.sapeF:0.6;
  const b=P?P.hp:0;_he12(n,src);
  if(counted)PR().healT+=Math.max(0,P.hp-b);};
 const _mi12=moveInput;
@@ -5692,7 +5692,7 @@ openEnd=function(win,abandon){
  if(RUN&&!RUN.final&&!RUN.hub){try{profCommit();}catch(err){console.error(err);}}
  _oe12(win,abandon);
  try{if(!RUN||RUN.hub||overlayEl.querySelector('.prof12'))return;const col=overlayEl.querySelector('.two>div:last-child');if(!col)return;
-  const L=profLines(profile()),cmv=(RUN.prof&&RUN.prof.cmv)||{},cms=[...new Set((RUN.prof&&RUN.prof.cms)||[])].map(k=>CMS[k].n+(cmv[k]==='ok'?' (a porté)':cmv[k]==='ko'?' (déjouée)':'')),cp=RUN.prof&&RUN.prof.copied;
+  const L=profLines(profile()),cmv=(RUN.prof&&RUN.prof.cmv)||{},cms=[...new Set((RUN.prof&&RUN.prof.cms)||[])].map(k=>{const e17=(RUN.prof&&RUN.prof.esc17)||{};return CMS[k].n+(cmv[k]==='ok'?' (a porté)':cmv[k]==='ko'?' (déjouée)':'')+(e17[k]?` ▲${e17[k]}`:'');}),cp=RUN.prof&&RUN.prof.copied;
   if(!L.length&&!cms.length&&!cp)return;
   col.insertAdjacentHTML('beforeend',`<div class="prof12"><p class="h-sec">Ce que la Brume a retenu</p><div class="chips">${L.map(l=>`<span class="chip" style="--c:#b48cff">${esc(l)}</span>`).join('')}</div>${cms.length?`<p class="k" style="margin-top:6px">Contre-mesures du Brumeux : ${esc(cms.join(', '))}</p>`:''}${cp?`<p class="k">La Mère-Brume a copié ${esc(MERE_COPY[cp].what)}.</p>`:''}</div>`);}catch(err){console.error(err);}};
 (function(){const st=document.createElement('style');st.textContent=`
@@ -6108,6 +6108,8 @@ function chron(k,d){if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch,a=ROM[RUN.
   case 'cmok':t=`Le Brumeux a lancé ${CMS[d.k].n} : elle a porté.`;break;
   case 'cmko':t=pick([`Tu as déjoué ${CMS[d.k].n}.`,`${CMS[d.k].n} n’a pas suffi contre toi.`]);break;
   case 'cmban':t=`Le Brumeux a renoncé à ${CMS[d.k].n} : tu l’avais déjouée trop souvent.`;break;
+  case 'cmesc':t=pick([`${CMS[d.k].n} ne mordait pas : le Brumeux a insisté en pleine salle.`,`Tu tenais bon contre ${CMS[d.k].n}, alors il en a rajouté.`]);break;
+  case 'cmrel':t=`${CMS[d.k].n} te mordait trop : le Brumeux a relâché en pleine salle.`;break;
   default:return;}
  if(c.notes.length&&c.notes[c.notes.length-1].t===t)return;c.notes.push({a:RUN.act,k,t});if(c.notes.length>70)c.notes.shift();}
 function chronBuild(win){const c=RUN.ch;if(!c)return null;const cl=CLS[P.cls].name;
@@ -6553,8 +6555,8 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
  const BRIEF={
   brumeux:{t:'Le Brumeux te regarde jouer',l:'Un esprit de la Brume observe ton style de combat et s’y adapte. Ce n’est pas un monstre à abattre : c’est lui qui écrit les règles de la descente.',c:[
    ['Il observe',V,'Tu frappes de loin ou au contact ? Tu esquives beaucoup ? Tu te soignes souvent ? Il retient ce que tu fais le plus.'],
-   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Il pousse alors un cri : à toi de comprendre ce qu’il envoie et de trouver comment répondre. Si ta parade tient, il change d’arme.'],
-   ['Il relâche',G,'Si tu vacilles (peu de PV), il retient ses coups. Reprends ton souffle.'],
+   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Il pousse alors un cri : à toi de comprendre ce qu’il envoie et de trouver comment répondre. Si ta parade tient, il insiste en pleine salle (▲), puis change d’arme.'],
+   ['Il relâche',G,'Si tu vacilles (peu de PV), il retient ses coups, même en pleine salle (▼). Reprends ton souffle.'],
    ['Il marchande',Y,'À chaque acte, il te propose un pacte : un avantage fort contre une contrainte choisie selon ton jeu.']]},
   pacte:{t:'Un pacte, un prix',l:'Le Brumeux te tend trois offres. Chaque pacte a un gain et un coût, et dure tout l’acte.',c:[
    ['+ Le gain',G,'Un avantage fort : plus de PV, de dégâts, de vitesse…'],
@@ -7301,15 +7303,121 @@ details.fold>.chips{margin-top:8px}
     R.base=R.base||{n:0,dmg:0,t:0};R.base.n++;R.base.dmg+=(dmg-R.base.dmg)/R.base.n;R.base.t+=(t-R.base.t)/R.base.n;
     S.base=S.base?{dmg:S.base.dmg*0.8+dmg*0.2,t:S.base.t*0.8+t*0.2}:{dmg,t};return;}
    const b=baseline();if(!b)return;
-   const k=rm.cm,c=CMS[k],sc=score(dmg,t,b),v=sc>=EF.seuilEfficace/100?'ok':sc<=EF.seuilDejouee/100?'ko':'nul';
+   const k=rm.cm,c=CMS[k],x17=rm.br17||{},sc=x17.rel?Math.max(score(dmg,t,b),EF.seuilEfficace/100):score(dmg,t,b),v=sc>=EF.seuilEfficace/100?'ok':sc<=EF.seuilDejouee/100?'ko':'nul';
    S.eff=S.eff||{};const e=S.eff[k]||{n:0,s:0};e.s=e.n?e.s*(1-EF.memoire)+sc*EF.memoire:sc;e.n++;S.eff[k]=e;
-   R.cmv=R.cmv||{};R.cmv[k]=v;R.cmLog=R.cmLog||[];R.cmLog.push({k,v,sc:Math.round(sc*100),dmg:Math.round(dmg*100),t:Math.round(t)});
+   R.cmv=R.cmv||{};R.cmv[k]=v;R.cmLog=R.cmLog||[];R.cmLog.push({k,v,sc:Math.round(sc*100),dmg:Math.round(dmg*100),t:Math.round(t),esc:x17.n||0,rel:!!x17.rel});
    if(v==='ok'){chron('cmok',{k});later(0.6,()=>murmur(`Le Brumeux · ${c.n}`,'Elle a porté. Il s’en souviendra.',3.2));}
    else if(v==='ko'){R.ko=R.ko||{};R.ko[k]=(R.ko[k]||0)+1;
     if(banned(k)){chron('cmban',{k});later(0.6,()=>murmur(`Le Brumeux renonce · ${c.n}`,`Tu l’as déjouée ${EF.abandonApres} fois. Il n’y reviendra pas de cette descente.`,4));}
     else{chron('cmko',{k});later(0.6,()=>murmur(`Le Brumeux · ${c.n}`,'Tu l’as déjouée. Il cherchera autre chose.',3.4));}}
    persist();}catch(err){console.error(err);}};
  window.__cm161={baseline,score,effS};
+})();
+
+// ───────────────────────── v16.16 · Le Brumeux décide en pleine salle
+// Dès que sa contre-mesure est sur le terrain, il observe par fenêtres (temps de jeu). Si elle ne mord pas, il escalade ;
+// si elle mord trop, il relâche. Chaque escalade est annoncée (bulle violette à icône, son, ▲ sur l'étiquette de salle)
+// et n'agit qu'après un préavis. Tout l'état vit sur la salle (room.br17) : il repart de zéro à chaque salle et à chaque run.
+// Réglages : data/bestiaire.js (enSalle, contreMesures.*.esc).
+(function(){const C17=BE_D.enSalle,DEMO17=/[?&]demo=/.test(location.search);
+ // ── Logique de décision, pure (vérifiée hors navigateur par un script Node qui extrait ce bloc)
+ /*br17:decide*/
+ // Peut-il décider dans cette salle ? r : {type, breche, roomIdx, actRooms, demo, cm, hasEsc}
+ function br17Eligible(r,C){
+  if(r.demo||!r.cm||!r.hasEsc)return false;
+  if(r.type!=='combat'&&r.type!=='elite')return false;
+  if(r.breche&&!C.dansBreche)return false;
+  return r.roomIdx<r.actRooms-C.gardeAvantGardien;}              // salle de gardien = actRooms : ni elle, ni les deux d'avant
+ // st : état de la salle {actT, wT, wD, n, lastT, rel, pend}. x : {t, dmg (PV perdus cumulés), maxHp, hp, busy, escVivants, calme, ennemis}
+ // Retourne 'esc' (escalader), 'rel' (relâcher), 'slide' (fenêtre neutre, on la fait glisser) ou null (attendre).
+ function br17Decide(st,x,C){
+  if(st.rel||st.actT==null)return null;
+  const perte=(x.dmg-st.wD)/Math.max(1,x.maxHp)*100,duree=x.t-st.wT;
+  if(x.hp/Math.max(1,x.maxHp)*100<C.relacheSousPV||perte>=C.mordTrop)return 'rel';
+  if(st.pend)return null;                                          // une escalade à la fois : préavis en cours
+  if(duree<C.fenetreS)return null;
+  if(perte>=C.mordMin||st.n>=C.plafond)return 'slide';             // elle mord (ou plafond atteint) : rien à faire, fenêtre suivante
+  if(x.t-st.lastT<C.delaiS||x.busy||x.escVivants||x.calme||x.ennemis<=0)return null; // elle ne mord pas, mais pas maintenant
+  return 'esc';}
+ /*/br17:decide*/
+ window.__br17={br17Decide,br17Eligible};
+
+ const S17=()=>room&&room.br17;
+ function setup(){
+  if(!RUN||RUN.hub||!room)return;
+  const A=ACTS[RUN.act],c=room.cm&&CMS[room.cm];
+  const ok=br17Eligible({type:room.type,breche:!!room.breche,roomIdx:RUN.roomIdx,actRooms:A.rooms,demo:DEMO17,cm:room.cm,hasEsc:!!(c&&c.esc)},C17);
+  room.br17=ok?{actT:null,wT:0,wD:0,n:0,lastT:-1e9,rel:false,pend:null,hideAt:0}:null;}
+ const _er=enterRoom;
+ enterRoom=function(type){bubbleHide();_er.apply(this,arguments);try{setup();}catch(err){console.error(err);}};
+ function spawnEsc(c){
+  const add=(c.esc.ajout||[]).filter(a=>(a.des==null||G()>=a.des)&&(a.jusqua==null||G()<=a.jusqua));
+  for(const a of add)for(let i=0;i<a.n;i++){const p=a.place==='fond'?themePos({at:'back',gi:i,gn:a.n}):findSpawn(260);
+   room.spawning.push({x:p.x,y:p.y,type:a.e,elite:false,cm:true,esc:true,t:0.85+Math.random()*0.45});}
+  if(c.esc.soins!=null&&room.sape)room.sapeF=Math.min(room.sapeF!=null?room.sapeF:0.6,c.esc.soins);}
+ function relax(){
+  for(let i=room.waveI;i<room.waves.length;i++)room.waves[i]=room.waves[i].filter(s=>!s.cm);
+  for(let i=room.waves.length-1;i>=room.waveI;i--)if(!room.waves[i].length)room.waves.splice(i,1);
+  room.spawning=room.spawning.filter(s=>!s.cm);
+  room.sape=false;room.sapeF=null;}
+ function tick(){
+  const st=S17();if(!st)return;
+  if(room.cleared){if(st.pend||st.hideAt){st.pend=null;st.hideAt=0;bubbleHide();}return;}
+  const c=CMS[room.cm],R=PR(),now=RUN.time;
+  if(st.hideAt&&now>=st.hideAt){st.hideAt=0;bubbleHide();}
+  if(st.actT==null){
+   if(!room.cmShown)return;
+   if(room.cm==='avide'||enemies.some(e=>e.cm&&!e.dead)){st.actT=st.wT=now;st.wD=R.dmgT;}
+   return;}
+  if(st.pend){bubbleBar(1-(st.pend.t-now)/C17.preavisS);}
+  const alive=enemies.reduce((n,e)=>n+(e.dead||e.puppet>0?0:1),0);
+  const x={t:now,dmg:R.dmgT,maxHp:P.s.maxHp,hp:P.hp,busy:!!msgCur||!overlayEl.hidden,
+   escVivants:room.spawning.some(s=>s.esc)||enemies.some(e=>e.esc17&&!e.dead),
+   calme:!!(room.rule&&room.mutAt!=null&&Math.abs(room.ruleT-room.mutAt)<C17.calmeS),ennemis:alive};
+  const d=br17Decide(st,x,C17);
+  if(d==='rel'){st.rel=true;st.pend=null;relax();bubble(c,false,C17.relache.t);sfx('rel17');chron('cmrel',{k:room.cm});updateRoomHud();st.hideAt=now+C17.bulleS;return;}
+  if(d==='slide'){st.wT=now;st.wD=R.dmgT;return;}
+  if(d==='esc'){st.n++;st.lastT=now;st.pend={t:now+C17.preavisS};
+   bubble(c,true,c.esc.t);sfx('esc17');updateRoomHud();st.hideAt=0;return;}
+  if(st.pend&&now>=st.pend.t){st.pend=null;spawnEsc(c);st.wT=now;st.wD=R.dmgT;st.hideAt=now+C17.bulleS;bubbleBar(1);
+   R.esc17=R.esc17||{};R.esc17[room.cm]=(R.esc17[room.cm]||0)+1;if(st.n===1)chron('cmesc',{k:room.cm});}}
+ const _st=step;
+ step=function(dt){_st(dt);try{if(state==='play'&&RUN&&!RUN.hub&&P&&!P.dead&&room&&!trans)tick();else if(P&&P.dead)bubbleHide();}catch(err){console.error(err);}};
+ const _oe=openEnd;openEnd=function(){bubbleHide();return _oe.apply(this,arguments);};
+
+ // ── Bulle d'escalade : non bloquante, icône de la contre-mesure, ▲ rouge (il insiste) ou ▼ vert (il relâche)
+ let el=null;
+ function bubble(c,up,text){
+  if(!el){el=document.createElement('div');el.id='brEsc';el.setAttribute('role','status');el.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(el);}
+  el.className=up?'up':'down';
+  el.innerHTML=`<span class="bic" aria-hidden="true">${icon(c.ic||'u_eye')}<i>${icon(up?'u_up':'u_down')}</i></span><div><b>${up?'Le Brumeux insiste':'Le Brumeux relâche'} · ${esc(c.n)}</b><span>${esc(text)}</span>${up?'<s><u></u></s>':''}</div>`;
+  try{stackBelow(el,murEl&&murEl.classList.contains('show')?murEl:toastEl);}catch(e){}
+  void el.offsetWidth;el.classList.add('show');}
+ function bubbleBar(k){if(!el)return;const u=el.querySelector('s u');if(u)u.style.width=(clamp(k,0,1)*100).toFixed(1)+'%';}
+ function bubbleHide(){if(el)el.classList.remove('show');}
+ const _urh=updateRoomHud;
+ updateRoomHud=function(){_urh();const st=S17();if(!st||!room.cmShown||!(st.n||st.rel))return;const h=$('#hRoom');if(h)h.textContent+=st.rel?' ▼':` ▲${st.n}`;};
+ const _sfx=sfx;
+ sfx=function(k){
+  if(k==='esc17'){if(!AC||muted)return;tone(220,0.22,'sawtooth',0.05,330);tone(330,0.3,'sawtooth',0.05,495,0.18);noise(0.5,0.05,500,'lowpass');return;}
+  if(k==='rel17'){if(!AC||muted)return;tone(392,0.5,'sine',0.06,262);tone(294,0.6,'sine',0.04,196,0.15);return;}
+  _sfx(k);};
+ const st=document.createElement('style');st.textContent=`
+#brEsc{position:absolute;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translate(-50%,-6px);max-width:min(560px,calc(100% - 32px));display:flex;gap:12px;align-items:center;padding:8px 18px 8px 8px;background:linear-gradient(90deg,rgba(42,24,74,.96),rgba(14,10,24,.95));border:1px solid #5d4594;border-left:4px solid #c9a8ff;border-radius:6px;color:#ece2ff;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:32;box-shadow:0 0 0 1px rgba(0,0,0,.7),0 8px 26px rgba(0,0,0,.6),0 0 24px rgba(201,168,255,.25)}
+#brEsc.show{opacity:1;transform:translate(-50%,0)}
+#brEsc .bic{position:relative;flex:none;width:52px;height:52px;border-radius:12px;display:grid;place-items:center;color:#c9a8ff;background:rgba(201,168,255,.16);border:1.5px solid rgba(201,168,255,.55)}
+#brEsc .bic>.ic{width:32px;height:32px;stroke-width:1.7}
+#brEsc .bic i{position:absolute;right:-7px;top:-7px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;color:#10131c}
+#brEsc .bic i .ic{width:16px;height:16px;stroke-width:3}
+#brEsc.up .bic i{background:#ff6b6b}#brEsc.down .bic i{background:#8be07a}
+#brEsc.down{border-left-color:#8be07a}
+#brEsc b{display:block;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:#c9a8ff;margin-bottom:1px}
+#brEsc span{display:block;font-size:16px;line-height:1.35;font-weight:700}
+#brEsc s{display:block;height:4px;margin-top:6px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;text-decoration:none}
+#brEsc s u{display:block;height:100%;width:0;background:#ff6b6b;text-decoration:none}
+@media (prefers-reduced-motion:no-preference){#brEsc.show .bic{animation:tbpop .35s cubic-bezier(.2,1.6,.4,1)}}
+@media (prefers-reduced-motion:reduce){#brEsc{transition:none}}
+.demo #brEsc{display:none!important}`;document.head.appendChild(st);
 })();
 
 // ───────────────────────── Talents : textes, rangs et exclusions depuis data/talents.js

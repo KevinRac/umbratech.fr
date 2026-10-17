@@ -32,19 +32,39 @@
   choeur:{n:'Chœur',h:'Tant que le Hurleur vit, les Rampants sont enragés. Abats-le en premier : toute la salle retombe.',need:['hurleur','rampant']},
   faux:{n:'Faux-semblants',h:'Un Voilé se cache dans la meute. Garde les ennemis dans ta lumière pour le blesser.',need:['voile','rampant']},
   siege:{n:'Siège',h:'Les Brutes protègent la Nourrice. Attire-les contre un mur : sonnées, elles la laissent à découvert.',need:['nourrice','brute']}},
- // Contre-mesures du Brumeux. ax/hi : axe du profil visé ; cost : coût dans le budget de l'acte
+ // Contre-mesures du Brumeux. ax/hi : axe du profil visé ; cost : coût dans le budget de l'acte ; ic : icône (data/icones.js)
+ // esc : son escalade en pleine salle (t : la phrase de la bulle ; ajout : ennemis ajoutés, des/jusqua : à partir de / jusqu'à telle salle,
+ //   place 'fond' : au fond de la salle ; soins : part des soins que tu gardes, pour la Brume avide)
  contreMesures:{
-  traque:{n:'Traque',ax:'portee',hi:true,cost:2,why:'tu frappes de loin',what:'La Brume s’épaissit et lâche des traqueurs qui chargent.'},
-  petards:{n:'Pétards',ax:'portee',hi:false,cost:2,why:'tu frappes au contact',what:'Des Bouffis rampent vers toi : ils explosent au corps à corps.'},
-  barrage:{n:'Tir de barrage',ax:'esquive',hi:true,cost:2.5,why:'tu esquives tout ce qui charge',what:'Des Spectres se postent au fond et tirent de loin.'},
-  avide:{n:'Brume avide',ax:'soin',hi:true,cost:1.5,why:'tu te soignes beaucoup',what:'Dans cette salle, tes soins sont réduits de 40 %.'},
-  renforts:{n:'Renforts',ax:'rythme',hi:true,cost:2.5,why:'tu purges les salles vite',what:'Une vague de plus arrive quand tu crois la salle finie.'},
-  ruee:{n:'Béliers',ax:'esquive',hi:false,cost:2,why:'tu esquives rarement',what:'Des Brutes chargent en ligne droite : il faudra esquiver.'}},
+  traque:{n:'Traque',ax:'portee',hi:true,cost:2,why:'tu frappes de loin',what:'La Brume s’épaissit et lâche des traqueurs qui chargent.',ic:'u_target',
+   esc:{t:'D’autres traqueurs sortent de la Brume.',ajout:[{e:'rampant',n:2,jusqua:5},{e:'brute',n:1,des:6}]}},
+  petards:{n:'Pétards',ax:'portee',hi:false,cost:2,why:'tu frappes au contact',what:'Des Bouffis rampent vers toi : ils explosent au corps à corps.',ic:'u_bolt',
+   esc:{t:'Deux Bouffis de plus rampent vers toi.',ajout:[{e:'bouffi',n:2}]}},
+  barrage:{n:'Tir de barrage',ax:'esquive',hi:true,cost:2.5,why:'tu esquives tout ce qui charge',what:'Des Spectres se postent au fond et tirent de loin.',ic:'u_arrow',
+   esc:{t:'Un Spectre de plus se poste au fond.',ajout:[{e:'spectre',n:1,place:'fond'}]}},
+  avide:{n:'Brume avide',ax:'soin',hi:true,cost:1.5,why:'tu te soignes beaucoup',what:'Dans cette salle, tes soins sont réduits de 40 %.',ic:'u_heart_x',
+   esc:{t:'Tes soins tombent à 35 %, et deux Rampants viennent te chercher.',ajout:[{e:'rampant',n:2}],soins:0.35}},
+  renforts:{n:'Renforts',ax:'rythme',hi:true,cost:2.5,why:'tu purges les salles vite',what:'Une vague de plus arrive quand tu crois la salle finie.',ic:'u_swarm',
+   esc:{t:'Encore des renforts : trois Rampants.',ajout:[{e:'rampant',n:3}]}},
+  ruee:{n:'Béliers',ax:'esquive',hi:false,cost:2,why:'tu esquives rarement',what:'Des Brutes chargent en ligne droite : il faudra esquiver.',ic:'u_fist',
+   esc:{t:'Une Brute de plus charge.',ajout:[{e:'brute',n:1}]}}},
  // Le Brumeux juge ses contre-mesures. Après chaque salle où il en a lancé une, il compare les PV que tu y as perdus
  // et le temps passé à tes salles ordinaires (en %). Au-delà de seuilEfficace, elle a porté ; en deçà de seuilDejouee, tu l'as déjouée.
  // poids : influence du verdict sur ses choix suivants. Il abandonne une contre-mesure déjouée abandonApres fois dans la run.
  // repetition : attrait perdu chaque fois qu'il relance la même contre-mesure dans la descente (il varie ses coups).
  // memoire : part du nouveau verdict dans sa mémoire d'une descente à l'autre. degatsMin : PV perdus de référence minimum (% des PV max).
+ // v16.16 · Le Brumeux décide en pleine salle. Dès que sa contre-mesure est sur le terrain, il observe par fenêtres de fenetreS secondes
+ // (temps de jeu : rien ne compte pendant une pause, une lecture ou un arrêt sur image).
+ // Escalade : moins de mordMin % de tes PV max perdus sur la fenêtre (elle ne mord pas). Il l'annonce, puis agit preavisS secondes après.
+ //   Une seule à la fois (les ennemis de l'escalade précédente doivent être tombés), delaiS secondes au moins entre deux, plafond par salle,
+ //   jamais à moins de calmeS secondes d'une mutation de règle.
+ // Relâche : mordTrop % de PV max perdus sur la fenêtre, ou PV sous relacheSousPV % : il annule les ennemis de contre-mesure pas encore arrivés
+ //   (ceux qui sont sur le terrain restent) et lève le malus de soin.
+ //   Une fois par salle, et il n'escalade plus ensuite. Une salle relâchée compte comme une contre-mesure qui a porté.
+ // Jamais : salles de gardien et les gardeAvantGardien salles qui les précèdent, Brèche (si dansBreche est faux), aperçu ?demo=.
+ // bulleS : durée d'affichage de la bulle (après le préavis). L'escalade de chaque contre-mesure est dans contreMesures (esc).
+ enSalle:{fenetreS:8,mordMin:3,mordTrop:25,relacheSousPV:35,preavisS:1.5,delaiS:12,plafond:2,calmeS:3,gardeAvantGardien:2,dansBreche:false,bulleS:2.6,
+  relache:{t:'Il n’insistera plus ici : ce qui n’est pas encore arrivé est annulé, ses malus sont levés.'}},
  efficacite:{seuilEfficace:15,seuilDejouee:-15,poids:0.25,repetition:0.12,abandonApres:2,memoire:0.4,degatsMin:4,partDegats:70},
  // Règles de salle
  regles:{

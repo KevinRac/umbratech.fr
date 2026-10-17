@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.15',
+ actuelle:'v16.16',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.16',t:'Le Brumeux décide en pleine salle : si sa contre-mesure ne te coûte presque rien, il insiste (bulle violette à icône et ▲ rouge, son montant, renforts annoncés qui arrivent 1,5 s plus tard) ; si elle te submerge, il relâche (▼ vert : ennemis de contre-mesure pas encore arrivés annulés, malus de soin levé). Une escalade à la fois, 12 s au moins entre deux, deux au plus par salle, jamais en Brèche, en salle de gardien ni dans les deux salles d’avant. Réglages dans data/bestiaire.js (enSalle et esc de chaque contre-mesure).'},
   {d:'2026-10-18',h:'v16.15',t:'Lisibilité : le cercle runique et la gerbe d’étoiles qui s’affichaient à chaque compétence lancée (A, E, R, F) sont supprimés, ils se confondaient avec des zones de jeu.'},
   {d:'2026-10-18',h:'v16.14',t:'Aperçus des formes au Portail : Lumenarque (Clic G côté lumière puis côté Obscur, {R} renommé « Envoi de lanterne » avec plusieurs allers-retours), Gouffre (Dévorer puis des coups de Mâchoire isolés au lieu d’un spam), Héraut (le rythme réussi plusieurs fois avec une jauge de Cadence visible, Clic D Volée, Grand Glas sur un tas d’ennemis). Au Héraut, « en mesure » devient « correct » partout (talents, bulles, aides).'},
   {d:'2026-10-17',h:'v16.13',t:'Le guide « Comment jouer » est découpé en cinq pages, une par rubrique : la boucle d’abord, puis les portes, le Sanctuaire, les missions et récompenses, les commandes. Boutons Précédent/Suivant, onglets cliquables et flèches du clavier ; une seule rubrique s’affiche à la fois, avec de grandes cartes.'},

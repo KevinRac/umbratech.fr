@@ -126,7 +126,7 @@ function chance(p, court) {
   const nb = n === 1 ? 'une' : mot(n);
   return court ? `${nb} sur ${mot(d)}` : `${nb} chance${n > 1 ? 's' : ''} sur ${mot(d)}`;
 }
-function bestiaire(B) {
+function bestiaire(B, I) {
   const E = B.ennemis, C = B.champion, RS = B.reglesSalle, BR = B.breche, EF = B.efficacite;
   const nom = k => E[k].n;
   const ennemis = Object.values(E).filter(e => e.desc).map(e =>
@@ -134,7 +134,11 @@ function bestiaire(B) {
     + `  <div class="stats"><span><b>${e.stats.hp}</b> PV</span><span><b>${e.stats.dmg}</b> dégâts</span><span><b>${e.stats.spd}</b> vitesse</span><span><b>${e.stats.xp}</b> XP</span></div></article>`).join('');
   const roles = Object.values(B.roles).map(r => `<article class="ent"><h4 style="color:rgb(${r.col})">${esc(r.n)}</h4><p>Il ${esc(r.d)}</p></article>`).join('');
   const themes = Object.values(B.themes).map(t => `<article class="ent"><h4>${esc(t.n)}</h4><p>${esc(t.h)}</p><p class="k">Ennemis : ${t.need.map(nom).map(esc).join(', ')}</p></article>`).join('');
-  const cms = Object.values(B.contreMesures).map(c => `<article class="ent"><h4>${esc(c.n)}</h4><p>${esc(c.what)}</p><p class="k">Déclenchée quand ${esc(c.why)}.</p></article>`).join('');
+  // v16.16 : icône de la contre-mesure (data/icones.js) et son escalade en pleine salle
+  const ico = id => (I && I[id]) ? `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
+  const cms = Object.values(B.contreMesures).map(c => `<article class="ent"><h4>${ico(c.ic)}${esc(c.n)}</h4><p>${esc(c.what)}</p><p class="k">Déclenchée quand ${esc(c.why)}.</p>${c.esc ? `<p class="k"><b>▲ Escalade</b> : ${esc(c.esc.t)}</p>` : ''}</article>`).join('');
+  const ES = B.enSalle;
+  const plaf = ES.plafond === 1 ? 'une fois' : `${mot(ES.plafond)} fois`;
   const regles = Object.values(B.regles).map(r => `<article class="ent"><h4>${esc(r.n)}</h4><p>${esc(r.d)}</p></article>`).join('');
   const muts = B.mutationsInstables.map(m => `<article class="ent"><h4>${esc(m.n)}</h4><p>${esc(m.d)}</p></article>`).join('');
   return `<section class="sec" id="bestiaire" data-sec>${MARK('data/bestiaire.js')}<header class="sh"><p class="eyebrow">Ennemis</p><h2>Bestiaire</h2><div class="lede"><p>Les statistiques indiquées sont les valeurs de base (salle 1, palier 0). Elles augmentent à chaque salle de <b>${pct(B.montee.pvParSalle)} de PV</b> et de <b>${pct(B.montee.degatsParSalle)} de dégâts</b>, et avec les paliers de Brume. Un <b>champion</b> a ${num(C.pv)}× les PV, ${num(C.degats)}× les dégâts et ${num(C.taille)}× la taille.</p></div></header>
@@ -151,6 +155,7 @@ function bestiaire(B) {
 <p>La Brume lit ton style et déclenche une contre-mesure adaptée dans la salle. Chacune est liée à ce que tu fais trop.</p>
 <div class="grid g4">${cms}</div>
 <p><b>Il juge ses contre-mesures.</b> Après chaque salle où il en a lancé une, le Brumeux compare ce qu’elle t’a coûté à tes salles ordinaires : les PV perdus (pour ${EF.partDegats} %) et le temps passé (pour le reste). Plus de ${EF.seuilEfficace} % au-dessus de ta moyenne : elle a <b>porté</b>, il la relancera plus volontiers (mais il varie : chaque nouvel usage dans la même descente la rend un peu moins tentante). Plus de ${-EF.seuilDejouee} % en dessous : tu l’as <b>déjouée</b>, il s’en détourne. Déjouée ${EF.abandonApres} fois dans la même descente, il y <b>renonce</b> jusqu’à la fin de la descente. Son jugement se garde d’une descente à l’autre. Un texte violet donne le verdict à la fin de la salle, et l’écran de fin le rappelle.</p>
+<p><b>Il décide en pleine salle.</b> Dès que sa contre-mesure est sur le terrain, le Brumeux regarde ce qu’elle te coûte par tranches de ${num(ES.fenetreS)} secondes de jeu (les pauses, lectures et arrêts sur image ne comptent pas). Si tu perds moins de ${ES.mordMin} % de tes PV max sur une tranche, elle ne mord pas : il <b>insiste</b>. Une bulle violette s’affiche avec l’icône de la contre-mesure et un <b style="color:#ff6b6b">▲</b> rouge, un son montant retentit, et l’étiquette de salle affiche ▲ ; l’escalade n’agit que ${num(ES.preavisS)} s plus tard, et ses ennemis apparaissent comme les autres, marqués de l’œil violet. Une seule escalade à la fois (les ennemis de la précédente doivent être tombés), ${ES.delaiS} secondes au moins entre deux, ${plaf} au plus par salle, et jamais juste avant ou après une mutation de règle. Si tu perds ${ES.mordTrop} % de tes PV max sur une tranche, ou si tes PV passent sous ${ES.relacheSousPV} %, elle mord trop : il <b>relâche</b> (bulle au <b style="color:#8be07a">▼</b> vert, son descendant). Les ennemis de contre-mesure pas encore arrivés sont annulés, le malus de soin est levé, et il n’insiste plus de la salle ; ce qui est déjà sur le terrain reste. Une salle où il a relâché compte comme une contre-mesure qui a porté. Il ne décide jamais en pleine salle dans une salle de gardien ni dans les ${mot(ES.gardeAvantGardien)} salles qui la précèdent${ES.dansBreche ? '' : ', ni dans une Brèche'}.</p>
 <h3 class="sub">Règles de salle</h3>
 <div class="grid g4">${regles}</div>
 <p>À partir de la ${RS.desLaSalle}e salle, une salle de combat ou d’élite reçoit parfois une règle (${chance(RS.chanceActeI)} à l’acte I, ${chance(RS.chanceEnsuite, true)} ensuite). La règle est choisie selon tes PV : sous ${RS.seuilBrume} %, seulement la brume ; sous ${RS.seuilBrumeSol} %, la brume ou le sol ; au-dessus, les quatre. <b>La règle mute une fois</b> en plein combat, entre ${RS.mutationMinS} et ${RS.mutationMaxS} secondes après son apparition : elle est remplacée par une autre règle possible à ton niveau de PV. Purifier une salle à règle rapporte <b>une relance de talents</b> et de l’or (${RS.orBase} + ${RS.orParActe} par acte).</p>
@@ -341,7 +346,7 @@ export function build(html) {
   let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D)));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D)));
   out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
-  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire));
+  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones));
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
   out = replaceSection(out, 'talents', talents(D.talents, D.arbre));
