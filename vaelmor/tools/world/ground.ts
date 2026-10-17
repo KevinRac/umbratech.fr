@@ -18,7 +18,7 @@ import { ACCENT, RAMPS, SHADE, SUN, speckle, type Ramp, type Rnd } from './art';
 import { hashString, mulberry32 } from './noise';
 import { mix, Px } from './px';
 import { PALETTE as P } from '../../src/render/palette';
-import { paintWheatFrame } from '../../src/render/wheatTile';
+import { paintFieldSoil } from './wheat';
 
 export const GROUND_KINDS = ['grass', 'forest', 'dirt', 'road', 'sand', 'rock', 'snow', 'marsh', 'field', 'cobble', 'planks', 'ruins', 'pond'] as const;
 export type GroundKind = (typeof GROUND_KINDS)[number];
@@ -521,7 +521,7 @@ function paintTexture(px: Px, rnd: Rnd, kind: GroundKind, tone: number, spec: Gr
     case 'pond':
       return texPond(px, rnd, spec.deco);
     case 'field':
-      paintWheatFrame({ set: (x, y, color, alpha) => px.set(x, y, color, alpha ?? 255) }, 0, 0, 0, spec.deco);
+      paintFieldSoil(px, spec.deco);
       return;
   }
 }

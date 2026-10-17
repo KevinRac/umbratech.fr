@@ -51,6 +51,7 @@ import {
 import { Px } from './px';
 import { getStamp, variantCount, type Stamp } from './props';
 import { TILE, TILESET_COLUMNS, TILESET_NAME, TilesetBuilder } from './tileset';
+import { WHEAT_EDGE, WHEAT_WILD } from './wheat';
 
 const W = MAP_W;
 const H = MAP_H;
@@ -189,7 +190,6 @@ interface Ctx {
   reserved: Uint8Array; // emprises des lieux : pas de décor aléatoire
   band: Uint8Array; // 0 aucune, 1 forêt, 2 marais, 3 falaise
   gateFlag: (string | undefined)[];
-  wheat: Uint8Array; // cases de champ « intérieures » : le jeu y pose le blé animé
   chimneys: { x: number; y: number }[]; // sorties de cheminée (pixels) : fumée animée
   lights: { x: number; y: number; kind: string }[]; // halos (pixels), décision n°47
   tiles: TilesetBuilder;
@@ -1138,6 +1138,58 @@ function pier(c: Ctx, loc: LocationPlan): void {
   void px;
 }
 
+/* ---------- Champs de blé (décision n°49) ---------- */
+
+/**
+ * Plante le blé : un tampon 1×2 par case de champ (les épis montent dans la
+ * case du dessus). La silhouette n'est plus un rectangle : les coins sont
+ * retirés, la bordure redevient de l'herbe où le blé se fait clairsemé, et des
+ * touffes sauvages débordent sur l'herbe voisine.
+ */
+function plantWheat(c: Ctx): void {
+  const isField = (x: number, y: number): boolean => inb(x, y) && isLandCode(at(c.code, idx(x, y))) && kindOf(at(c.code, idx(x, y))) === 'field';
+  const field: number[] = [];
+  for (let k = 0; k < N; k++) if (isField(k % W, Math.floor(k / W))) field.push(k);
+  const original = new Set(field);
+  const was = (x: number, y: number): boolean => inb(x, y) && original.has(idx(x, y));
+  // Coins arrondis : une case de champ qui n'a qu'un voisin de champ par axe est retirée
+  // (calculé sur le champ d'origine, pour ne pas ronger le champ de proche en proche).
+  const inField = new Set(field.filter((k) => {
+    const x = k % W;
+    const y = Math.floor(k / W);
+    return !((!was(x - 1, y) || !was(x + 1, y)) && (!was(x, y - 1) || !was(x, y + 1)));
+  }));
+  const has = (x: number, y: number): boolean => inb(x, y) && inField.has(idx(x, y));
+  const edge = (x: number, y: number): boolean => !has(x - 1, y) || !has(x + 1, y) || !has(x, y - 1) || !has(x, y + 1);
+  const rnd = mulberry32(hashString('ble'));
+  for (const k of field) {
+    const x = k % W;
+    const y = Math.floor(k / W);
+    if (!inField.has(k)) {
+      c.code[k] = KIND_CODE.grass;
+      continue;
+    }
+    const border = edge(x, y);
+    if (border) c.code[k] = KIND_CODE.grass; // la terre labourée ne se voit qu'au cœur du champ
+    const v = border ? WHEAT_EDGE : hash2(x, y, SEED + 91) < 0.18 ? 6 : Math.floor(hash2(x, y, SEED + 92) * 4);
+    // Posé sans contrôle d'occupation : les épis du premier rang passent devant la clôture.
+    commit(c, 'wheat', v, x, y - 1);
+  }
+  // Touffes sauvages autour du champ.
+  for (const k of field) {
+    const x = k % W;
+    const y = Math.floor(k / W);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, 1], [0, -1]] as const) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!inb(nx, ny) || inField.has(idx(nx, ny)) || rnd() > 0.35) continue;
+      const kind = isLandCode(at(c.code, idx(nx, ny))) ? kindOf(at(c.code, idx(nx, ny))) : '';
+      if (kind !== 'grass' || c.road[idx(nx, ny)]) continue;
+      place(c, 'wheat', WHEAT_WILD, nx, ny - 1, { margin: -1, allowReserved: true });
+    }
+  }
+}
+
 /* ---------- Scatter ---------- */
 
 function scatter(c: Ctx): void {
@@ -1471,7 +1523,6 @@ function resolveGround(c: Ctx, waterDepth: Uint8Array): Uint16Array {
       const terrain = code === WATER ? (at(waterDepth, k) === 0 ? 'riviere' : 'eau_profonde') : code === POND ? 'eau_profonde' : GROUND_TERRAIN[kindOf(code)];
       if (isLandCode(code) && !isWater && HARD_KINDS.has(kindOf(code))) {
         const kind = kindOf(code);
-        if (kind === 'field' && waterNeighbors(x, y) === 0) c.wheat[k] = 1;
         const deco = decoFor(kind, x, y);
         ground[k] = c.tiles.tile(`hard:${kind}:${deco}`, (px, rnd) => paintHardGround(px, rnd, kind, deco), terrain);
         continue;
@@ -1585,7 +1636,6 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     reserved: new Uint8Array(N),
     band: new Uint8Array(N),
     gateFlag: new Array<string | undefined>(N).fill(undefined),
-    wheat: new Uint8Array(N),
     chimneys: [],
     lights: [],
     tiles: new TilesetBuilder(),
@@ -1626,6 +1676,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
   for (const loc of LOCATIONS) dressLocation(c, loc);
   fillBands(c);
   scatter(c);
+  plantWheat(c);
 
   // Collision de base à partir des sols.
   for (let k = 0; k < N; k++) {
@@ -1738,35 +1789,8 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     }
   }
 
-  // Décors animés : blé (rectangles de cases) et cheminées (points).
+  // Décors animés : lumières et cheminées (points).
   const ambient: TiledObject[] = [];
-  const wOpen: { x0: number; x1: number; y0: number; y1: number }[] = [];
-  const wClosed: { x0: number; x1: number; y0: number; y1: number }[] = [];
-  for (let y = 0; y <= H; y++) {
-    const runs: { x0: number; x1: number }[] = [];
-    for (let x = 0; y < H && x < W; x++) {
-      if (!c.wheat[idx(x, y)]) continue;
-      const x0 = x;
-      while (x + 1 < W && c.wheat[idx(x + 1, y)]) x++;
-      runs.push({ x0, x1: x });
-    }
-    for (let i = wOpen.length - 1; i >= 0; i--) {
-      const o = wOpen[i] as { x0: number; x1: number; y0: number; y1: number };
-      const j = runs.findIndex((r) => r.x0 === o.x0 && r.x1 === o.x1);
-      if (j >= 0) {
-        o.y1 = y;
-        runs.splice(j, 1);
-      } else {
-        wClosed.push(o);
-        wOpen.splice(i, 1);
-      }
-    }
-    for (const r of runs) wOpen.push({ x0: r.x0, x1: r.x1, y0: y, y1: y });
-  }
-  wClosed.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
-  for (const r of wClosed) {
-    ambient.push({ id: nextId++, name: 'Champ de blé', type: 'wheat', x: r.x0 * TILE, y: r.y0 * TILE, width: (r.x1 - r.x0 + 1) * TILE, height: (r.y1 - r.y0 + 1) * TILE, rotation: 0, visible: true, properties: [] });
-  }
   for (const light of c.lights) {
     ambient.push({ id: nextId++, name: 'Lumière', type: 'light', x: light.x, y: light.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [prop('kind', light.kind)] });
   }

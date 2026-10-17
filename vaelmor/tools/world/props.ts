@@ -11,6 +11,7 @@ import { type Rnd } from './art';
 import { Px } from './px';
 import * as A from './accessories';
 import { captureLights, type StampLight } from './lights';
+import { WHEAT_VARIANTS, paintWheat } from './wheat';
 import { MILL_MS, paintCottage, paintForge, paintGuardTower, paintHut, paintInn, paintLogHouse, paintMill, paintSlateHouse, paintStoneHouse, paintTemple, paintTownHouse } from './buildings';
 import { DEAD_FOOT, OAK_FOOT, PINE_FOOT, WIND_MS, paintBush, paintDarkPine, paintDeadTree, paintFlowers, paintLavender, paintOak, paintPine, paintReeds, paintSunflowers, paintTallGrass } from './flora';
 const T = 16;
@@ -109,6 +110,8 @@ export const STAMP_DEFS: Readonly<Record<string, Def>> = {
   sunflowers: plant(1, 2, 1, paintSunflowers, 2, null),
   rock: prop(1, 1, A.paintRock, { variants: 3 }),
   reeds: plant(1, 1, 0, paintReeds, 2, null),
+  // Blé (décision n°49) : 1×2, les épis montent dans la case du dessus ; ondule au vent.
+  wheat: plant(1, 2, 0, paintWheat, WHEAT_VARIANTS, null),
   // Bâtiments (tools/world/buildings.ts, décision n°44).
   house_thatch: building(3, 4, 1, paintCottage, { variants: 2, chimney: { x: 32, y: 0 } }),
   house_tile: building(3, 5, 2, paintTownHouse, { chimney: { x: 33, y: 3 } }),

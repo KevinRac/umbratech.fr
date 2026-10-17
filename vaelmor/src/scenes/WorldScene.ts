@@ -28,7 +28,6 @@ import { loadQuality, saveQuality } from '../core/settings';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
-import { WHEAT_FRAMES } from '../render/wheatTile';
 import { fixGpuTileAnimations } from '../render/tileAnimations';
 import { SCENES } from './keys';
 import type { WorldHudScene } from './WorldHudScene';
@@ -36,7 +35,6 @@ import type { WorldHudScene } from './WorldHudScene';
 const DEPTH = {
   water: -10,
   ground: 0,
-  wheat: 0.5,
   decor: 1,
   shadow: 2,
   entities: 2.1,
@@ -50,7 +48,6 @@ const DEPTH = {
 
 const TILESET_NAME = 'world_tiles';
 const WATER_FRAME_MS = 420;
-const WHEAT_FRAME_MS = 230;
 const SMOKE_PERIOD_MS = 520;
 const GATE_MESSAGE_COOLDOWN_MS = 4000;
 
@@ -90,8 +87,6 @@ export class WorldScene extends Phaser.Scene {
 
   private lastGateMessage = -Infinity;
   private waterFrame = 0;
-  private wheatFrame = 0;
-  private wheatSprites: Phaser.GameObjects.TileSprite[] = [];
   private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
   private chimneys: { x: number; y: number }[] = [];
   private debugCollisionOn = false;
@@ -200,20 +195,11 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Blé qui ondule et fumée de cheminée : décors animés posés sur la carte (couche `ambient`). */
+  /**
+   * Fumée de cheminée (couche `ambient`). Le blé n'est plus un décor à part :
+   * ce sont des tuiles animées de la carte (décision n°49).
+   */
   private buildAmbientDecor(): void {
-    this.wheatSprites = this.map.ambient
-      .filter((o) => o.kind === 'wheat')
-      .map((o) => this.add.tileSprite(o.x, o.y, o.width, o.height, WORLD_TEX.wheat(0)).setOrigin(0, 0).setDepth(DEPTH.wheat));
-    this.time.addEvent({
-      delay: WHEAT_FRAME_MS,
-      loop: true,
-      callback: () => {
-        this.wheatFrame = (this.wheatFrame + 1) % WHEAT_FRAMES;
-        for (const sprite of this.wheatSprites) sprite.setTexture(WORLD_TEX.wheat(this.wheatFrame));
-      },
-    });
-
     this.chimneys = this.map.ambient.filter((o) => o.kind === 'chimney').map((o) => ({ x: o.x, y: o.y }));
     this.smoke = this.add.particles(0, 0, WORLD_TEX.smoke, {
       emitting: false,
@@ -512,7 +498,6 @@ export class WorldScene extends Phaser.Scene {
     this.atmosphere = null;
     this.registry.remove('debug.info');
     this.fog.clear();
-    this.wheatSprites = [];
     this.chimneys = [];
     this.scene.stop(SCENES.worldHud);
     this.time.paused = false;

@@ -1161,7 +1161,7 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 |---|---|---|---|
 | **Étalonnage par zone** | `ColorMatrix` interne sur la caméra, fondu 1,4 s | — | ✅ |
 | **Vignettage** | Filtre `Vignette` externe | léger | ✅ (déjà en place) |
-| **Flou de profondeur (tilt-shift)** | `ParallelFilters` : flou + masque en bandes haut/bas sur l'image nette (moitié centrale nette) ; le filtre `TiltShift` intégré est trop coûteux | Qualité Haute | 🔧 livré |
+| **Flou de profondeur (tilt-shift)** | `ParallelFilters` : flou léger + masque en bandes haut/bas sur l'image nette (70 % centraux nets) ; le filtre `TiltShift` intégré est trop coûteux | Qualité Haute | 🔧 livré |
 | **Bloom doux** | `ParallelFilters` + seuil (0,86) + flou, ajouté (pas de filtre Bloom dédié en Phaser 4) : fenêtres, feux, lanternes, cristaux ; intensité par zone, plus forte le soir | Qualité Haute | 🔧 livré |
 | **Rayons de lumière et poussière** | 4 bandes obliques additives teintées par la zone, poussière qui flotte dans les rayons ; intensité par zone (forêt forte, côte faible) | Qualité Haute | 🔧 livré |
 | **Halos ponctuels** | Sprites additifs sur lanternes, feux, runes et fenêtres (le soir), scintillement propre à chaque type ; positions écrites par le générateur | Qualité Haute | 🔧 livré |
@@ -1169,7 +1169,7 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 | **Ombres douces et ombres portées** | Dessinées dans les sprites (bas-droite) | — | ✅ décors · 🔧 héros (étape 6) |
 | **Particules** | Poussière, feuilles, braises, bulles, lucioles ; fumée de cheminée animée | — | ✅ (cheminées) · ⏳ reste |
 | **Eau** | Vagues animées (TileSprite) | — | ✅ |
-| **Blé** | Épis dorés animés, masse dense, bande de lumière | — | ✅ |
+| **Blé** | Tiges et épis par case (tampons 1×2 composés en rangs), silhouette organique (coins arrondis, bordure clairsemée, touffes sauvages), ondulation au vent | — | ✅ |
 
 **Réglage « Qualité »** (menu Pause en attendant les options de M10, enregistré dans `vaelmor:settings`) : *Haute* (tous les effets), *Basse* (étalonnage et vignettage seulement), *Désactivée* (aucun filtre, sauf la teinte `ambient`). Haute coûte ~12 passes plein écran de plus que Basse : à vérifier sur GPU réel avec F3 (60 FPS visé, voir PROGRESS.md n°47).
 

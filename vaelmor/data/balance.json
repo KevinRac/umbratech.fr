@@ -48,7 +48,7 @@
     "statPenaltyRatio": 0.1
   },
   "visuals": {
-    "tiltShift": { "focus": 0.5, "fade": 0.24, "blur": 1.6 },
+    "tiltShift": { "focus": 0.7, "fade": 0.14, "blur": 1 },
     "bloom": { "threshold": 0.86, "blur": 2, "amount": 0.6 },
     "vignette": { "radius": 0.95, "strength": 0.22 },
     "rays": { "count": 4, "alpha": 0.16 },

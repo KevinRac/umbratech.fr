@@ -122,6 +122,11 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
   - Ombre au sol, silhouette derrière les toits (n°44) et animations inchangées (mêmes noms d'images).
   - Test `tests/characterSprite.test.ts` : 16×28, tailles des formes, pieds et contour en bas, marge du rebond en haut, les 48 combinaisons tête × tenue × accessoire peintes dans le cadre avec des images de marche distinctes, 3 tons sur la cape, aucun sombre neutre ni noir.
 
+- **n°49 — Champ de blé en tiges et épis, flou de bord réduit** (retours de l'auteur sur la refonte, 17/10/2026) :
+  - Le blé n'est plus une texture répétée sur un rectangle (n°41 à n°45, `render/wheatTile.ts` supprimé) : chaque case de champ reçoit un tampon 1×2 (`tools/world/wheat.ts`) dont les épis montent dans la case du dessus. Trois rangs de tiges par case, épis 2×5 (grains alternés, ombre à droite, barbe), tiges qui verdissent vers le bas, feuilles, coquelicots et bleuets épars ; les rangs du fond un peu plus sombres. Les tampons sont composés du nord au sud : les épis d'un rang passent devant les tiges du précédent, sans quadrillage. Le vent les fait onduler (animation GPU, n°45).
+  - **Silhouette organique** (`plantWheat`) : coins du champ retirés, bordure remise en herbe avec un blé clairsemé et plus court, touffes sauvages qui débordent sur l'herbe voisine ; la terre labourée (sillons, chaume) ne se voit qu'au cœur du champ. Les épis du premier rang passent devant la clôture.
+  - **Flou de profondeur réduit** : bande nette portée à 70 % de la hauteur de l'écran (au lieu de 50 %), fondu plus court, flou plus faible (`balance.json` › `visuals.tiltShift` : `focus` 0,7, `fade` 0,14, `blur` 1).
+
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).
 

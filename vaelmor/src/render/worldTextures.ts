@@ -8,14 +8,12 @@ import { HERO_H, HERO_POSES, HERO_W, HERO_WALK_FRAMES, paintHeroFrame, type Hero
 import { PALETTE } from './palette';
 import { PixelCanvas } from './pixelCanvas';
 import { WATER_FRAMES, WATER_TILE, paintWaterFrame } from './waterTile';
-import { WHEAT_FRAMES, WHEAT_TILE, paintWheatFrame } from './wheatTile';
 
 export const WORLD_TEX = {
   hero: 'world:hero',
   heroFrame: (pose: HeroPose, frame: number): string => `${pose}_${frame}`,
   shadow: 'world:shadow',
   water: (frame: number): string => `world:water:${frame}`,
-  wheat: (frame: number): string => `world:wheat:${frame}`,
   smoke: 'world:smoke',
   fog: 'world:fog',
   grain: 'world:grain',
@@ -57,15 +55,6 @@ export function ensureWorldTextures(scene: Phaser.Scene): void {
     const water = new PixelCanvas(WATER_TILE, WATER_TILE);
     paintWaterFrame({ set: (x, y, color, alpha) => water.set(x, y, color, alpha ?? 255) }, frame);
     water.toTexture(scene, WORLD_TEX.water(frame));
-  }
-
-  // Blé : 4 images de 32 × 16 (deux variantes côte à côte), répétées sur les champs.
-  for (let frame = 0; frame < WHEAT_FRAMES; frame++) {
-    const wheat = new PixelCanvas(WHEAT_TILE * 2, WHEAT_TILE);
-    const sink = { set: (x: number, y: number, color: number, alpha?: number): void => wheat.set(x, y, color, alpha ?? 255) };
-    paintWheatFrame(sink, 0, 0, frame, 0);
-    paintWheatFrame(sink, WHEAT_TILE, 0, frame, 1);
-    wheat.toTexture(scene, WORLD_TEX.wheat(frame));
   }
 
   // Fumée : petite volute ronde en blanc translucide (teintée par l'émetteur).
