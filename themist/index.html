@@ -5241,15 +5241,16 @@ function openGuide(back){
  if(!SAVE.flags.guide){SAVE.flags.guide=1;persist();}
  // v16.10 · guide d'un coup d'œil : la boucle en cinq étapes, les portes et le Sanctuaire bien en évidence, missions et récompenses
  const st=(ic,t,x,c,n)=>`<div class="gd2-step${ic.startsWith('npc:')?' gd2-npc':''}"${c?` style="--c:${c}"`:''}><span class="gd2-ic">${ic.startsWith('npc:')?`<canvas width="192" height="208" data-npc="${ic.slice(4)}"></canvas>`:icon(ic)}</span><div><b>${n?`<em>${n}</em>`:''}${t}</b><small>${x}</small></div></div>`;
- const html=`<div class="panel guide gd2"><p class="eyebrow">Guide · 30 secondes</p><h2>Comment jouer</h2>
- <p class="h-sec">La boucle</p><div class="gd2-flow">
+ const pg=(t,sub,body)=>`<section class="gd2-page" hidden><p class="h-sec">${t}${sub?` <small>${sub}</small>`:''}</p>${body}</section>`;
+ const pages=[
+  ['La boucle',pg('La boucle','cinq étapes, toujours les mêmes',`<div class="gd2-flow">
  ${st('u_door','Prends le portail','Au nord du Sanctuaire','#78dcaa',1)}
  ${st('s_lan','Choisis ta classe','4 classes, 4 façons de jouer','#f3b94d',2)}
  ${st('u_up','Monte de niveau','1 niveau = 1 talent · Tab','#8be07a',3)}
  ${st('u_skull','Quand tu meurs','Tu gardes éclats et déblocages','#ff6b6b',4)}
  ${st('sanctuaire','Reviens plus fort','Retour au Sanctuaire','#8ec5ff',5)}
- </div>
- <p class="h-sec">Les portes <small>tu en choisis une après chaque salle</small></p><div class="gd2-grid">
+ </div>`)],
+  ['Les portes',pg('Les portes','tu en choisis une après chaque salle',`<div class="gd2-grid">
  ${st('combat','Combat','Des vagues d’ennemis','#d6d2c4')}
  ${st('elite','Champion','Ennemi fort, relique à gagner','#f3b94d')}
  ${st('autel','Autel','Un choix risqué, un bonus','#8fb2ff')}
@@ -5257,28 +5258,39 @@ function openGuide(back){
  ${st('marchand','Colporteur','Achète avec ton or','#78dcaa')}
  ${st('u_door','Brèche','Combat dur, relique à la clé','#b48cff')}
  ${st('boss','Gardien','Le boss de fin d’acte','#ff4d4d')}
- </div>
- <p class="h-sec">Le Sanctuaire <small>ta base entre deux descentes</small></p><div class="gd2-grid">
+ </div>`)],
+  ['Le Sanctuaire',pg('Le Sanctuaire','ta base entre deux descentes',`<div class="gd2-grid">
  ${st('npc:veilleuse','Ismène','Bonus permanents','#f3b94d')}
  ${st('npc:fondeur','Corbin','Reliques','#6fb4ff')}
  ${st('npc:archiviste','L’Archiviste','Le récit de tes descentes','#c9a8ff')}
  ${st('u_door','Portail nord','Départ vers la Brume','#78dcaa')}
- </div>
- <p class="h-sec">Missions et récompenses</p><div class="gd2-grid g3">
+ </div>`)],
+  ['Missions et récompenses',pg('Missions et récompenses','',`<div class="gd2-grid g3">
  ${st('u_gem','Éclats de Mémoire','Tu les gardes même si tu meurs','#78dcaa')}
  ${st('u_star','Résonances','Bonus permanents, à acheter chez Ismène','#f3b94d')}
  ${st('bag','Reliques','Gagnées sur champions et autels','#6fb4ff')}
  ${st('u_up','Paliers de Brume','Après ta victoire : plus dur, plus de gains','#f3b94d')}
  ${st('u_book','Carte du Glas','Fragments sur boss, champions, autels','#ff9a52')}
  ${st('u_ghost','Tombe d’Écho','Reprends-la là où tu es mort','#8ec5ff')}
- </div>
- <p class="h-sec">Commandes · ${CLS[chosenCls].short}</p><div class="gd2-keys">${[...keysFor(chosenCls),['Tab','Talent en attente'],['H','Ce guide']].map(([k,v])=>`<span class="gd2-k"><kbd>${esc(k)}</kbd>${v}</span>`).join('')}</div>
- <div class="row" style="margin-top:34px"><button type="button" class="btn primary" id="gclose">${back?'Retour':'Compris'}</button><span class="k">Entrée ou Échap pour fermer</span></div></div>`;
+ </div>`)],
+  ['Commandes',pg('Commandes',CLS[chosenCls].short,`<div class="gd2-keys">${[...keysFor(chosenCls),['Tab','Talent en attente'],['H','Ce guide']].map(([k,v])=>`<span class="gd2-k"><kbd>${esc(k)}</kbd>${v}</span>`).join('')}</div>`)]
+ ];
+ const N=pages.length;let cur=0;
+ const html=`<div class="panel guide gd2"><p class="eyebrow" id="gstep"></p><h2>Comment jouer</h2>
+ <div class="gd2-tabs">${pages.map((p,i)=>`<button type="button" class="gd2-tab" data-i="${i}"><b>${i+1}</b>${p[0]}</button>`).join('')}</div>
+ ${pages.map(p=>p[1]).join('')}
+ <div class="gd2-nav"><button type="button" class="btn" id="gprev">‹ Précédent</button><span class="k">← → pour naviguer · Échap pour fermer</span><button type="button" class="btn primary" id="gnext">Suivant ›</button></div></div>`;
  openOverlay(html);
  try{overlayEl.querySelectorAll('canvas[data-npc]').forEach(cv=>{const f=NPC_DRAW[cv.dataset.npc],g=cv.getContext('2d');if(!f)return;g.save();g.scale(2.8,2.8);f(g,34,50);g.restore();});}catch(e){}
  const done=()=>{if(back)back();else closeOverlay();};
- $('#gclose').addEventListener('click',done);
- overlayKeys=c=>{if(c==='Escape'||c==='Enter')done();};
+ const secs=overlayEl.querySelectorAll('.gd2-page'),tabs=overlayEl.querySelectorAll('.gd2-tab');
+ const show=i=>{cur=Math.max(0,Math.min(N-1,i));secs.forEach((e,j)=>{e.hidden=j!==cur;});tabs.forEach((e,j)=>{e.classList.toggle('on',j===cur);});
+  $('#gstep').textContent=`Guide · étape ${cur+1} sur ${N}`;$('#gprev').style.visibility=cur?'visible':'hidden';$('#gnext').textContent=cur===N-1?(back?'Retour':'Compris'):'Suivant ›';};
+ const next=()=>{if(cur===N-1)done();else show(cur+1);};
+ $('#gnext').addEventListener('click',next);$('#gprev').addEventListener('click',()=>show(cur-1));
+ tabs.forEach(t=>t.addEventListener('click',()=>show(+t.dataset.i)));
+ show(0);
+ overlayKeys=c=>{if(c==='Escape')done();else if(c==='Enter'||c==='ArrowRight'||c==='Space')next();else if(c==='ArrowLeft')show(cur-1);};
 }
 const _eh11=enterHub;
 enterHub=function(){_eh11();if(!SAVE.flags.guide)later(1.3,()=>{if(overlayEl.hidden&&state==='play'&&RUN&&RUN.hub)openGuide();});};
@@ -7608,12 +7620,28 @@ function demoBoot(cls){
 .gd2-ic{flex:none;width:60px;height:60px;border-radius:15px;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
 .gd2-ic .ic{width:36px;height:36px;stroke-width:1.5}
 .gd2-npc .gd2-ic,.gd2-ic.npc{width:96px;height:104px;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--c) 22%,#10131c),#0b0d14 78%)}
-.gd2-ic canvas{width:96px;height:104px;display:block}
+.gd2-ic canvas{width:100%;height:100%;display:block}
 .gd2-step b{display:block;font-size:21px;font-weight:800;line-height:1.2;color:#fff}
 .gd2-step b em{display:grid;place-items:center;width:30px;height:30px;margin:0 auto 8px;border-radius:50%;font-style:normal;font-size:17px;font-weight:900;color:#10131c;background:var(--c)}
 .gd2-step small{display:block;margin-top:4px;font-size:16px;line-height:1.35;color:#c9c2af}
 .gd2-keys{display:flex;flex-wrap:wrap;gap:10px 14px}
 .gd2-k{display:inline-flex;align-items:center;gap:10px;font-size:16px;color:#d2cab6;padding:6px 14px 6px 8px;border-radius:8px;background:rgba(255,255,255,.04)}
+.gd2-page{min-height:min(400px,48vh);animation:gd2in .25s ease both}
+.gd2-page[hidden]{display:none}
+@keyframes gd2in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.gd2-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 8px}
+.gd2-tab{display:inline-flex;align-items:center;gap:9px;padding:8px 16px 8px 8px;border:1px solid var(--line);border-radius:999px;background:transparent;color:#bdb6a3;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.gd2-tab b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);font-size:14px;color:#fff}
+.gd2-tab.on{color:#10131c;background:var(--flame);border-color:var(--flame)}.gd2-tab.on b{background:#10131c;color:var(--flame)}
+.gd2-nav{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
+.gd2-nav .btn{min-width:150px}.gd2-nav .k{font-size:14px;text-align:center}
+.gd2 .gd2-page .gd2-step{padding:22px 22px}
+.gd2 .gd2-page .gd2-ic{width:72px;height:72px}.gd2 .gd2-page .gd2-ic .ic{width:44px;height:44px}
+.gd2 .gd2-page .gd2-npc .gd2-ic{width:112px;height:122px}.gd2 .gd2-page .gd2-npc .gd2-ic canvas{width:112px;height:122px}
+.gd2 .gd2-page .gd2-flow .gd2-step{padding:26px 14px 22px}
+.gd2 .gd2-page .gd2-step b{font-size:23px}.gd2 .gd2-page .gd2-step small{font-size:17px}
+.gd2 .gd2-page .gd2-k{font-size:18px;padding:10px 18px 10px 10px}
+.gd2 .gd2-page .gd2-keys{gap:14px 16px}
 @media (max-width:1100px){.gd2-flow{grid-template-columns:repeat(3,minmax(0,1fr))}.gd2-flow .gd2-step::after{display:none}.gd2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gd2-grid.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.gd2-flow,.gd2-grid,.gd2-grid.g3{grid-template-columns:1fr}.gd2-flow{gap:12px}.gd2-flow .gd2-step{flex-direction:row;text-align:left}.gd2-flow .gd2-step b em{margin:0 8px 0 0;display:inline-grid}}
 /* v16.7 · petits écrans : centrage sûr (un panneau plus haut que l'écran défile au lieu d'être rogné) et fiche de talent collée en bas */
