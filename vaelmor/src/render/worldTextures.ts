@@ -8,6 +8,7 @@ import { HERO_H, HERO_POSES, HERO_W, HERO_WALK_FRAMES, paintHeroFrame, type Hero
 import { PALETTE } from './palette';
 import { PixelCanvas } from './pixelCanvas';
 import { WATER_FRAMES, WATER_TILE, paintWaterFrame } from './waterTile';
+import { WHEAT_FRONT_FRAMES, WHEAT_FRONT_H, WHEAT_FRONT_W, paintWheatFront } from './wheatFront';
 
 export const WORLD_TEX = {
   hero: 'world:hero',
@@ -15,6 +16,7 @@ export const WORLD_TEX = {
   shadow: 'world:shadow',
   water: (frame: number): string => `world:water:${frame}`,
   smoke: 'world:smoke',
+  wheatFront: (frame: number): string => `world:wheatFront:${frame}`,
   fog: 'world:fog',
   grain: 'world:grain',
   mist: 'world:mist',
@@ -55,6 +57,13 @@ export function ensureWorldTextures(scene: Phaser.Scene): void {
     const water = new PixelCanvas(WATER_TILE, WATER_TILE);
     paintWaterFrame({ set: (x, y, color, alpha) => water.set(x, y, color, alpha ?? 255) }, frame);
     water.toTexture(scene, WORLD_TEX.water(frame));
+  }
+
+  // Épis au premier plan quand le héros traverse un champ (décision n°50).
+  for (let frame = 0; frame < WHEAT_FRONT_FRAMES; frame++) {
+    const front = new PixelCanvas(WHEAT_FRONT_W, WHEAT_FRONT_H);
+    paintWheatFront({ set: (x, y, color, alpha) => front.set(x, y, color, alpha ?? 255) }, 0, 0, frame);
+    front.toTexture(scene, WORLD_TEX.wheatFront(frame));
   }
 
   // Fumée : petite volute ronde en blanc translucide (teintée par l'émetteur).

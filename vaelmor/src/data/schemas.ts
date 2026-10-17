@@ -153,6 +153,8 @@ export const balanceFileSchema = z.strictObject({
     evening: unit01,
     /** Part de la lumière retirée au soir complet (l'image s'assombrit, les halos restent vifs). */
     eveningDarkness: unit01,
+    /** Pixels du bas du héros cachés par les épis quand il traverse un champ (décision n°50). */
+    wheatHide: z.strictObject({ dense: z.number().int().min(0).max(20), edge: z.number().int().min(0).max(20) }),
   }),
 });
 

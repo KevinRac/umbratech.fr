@@ -61,6 +61,7 @@
       "rune": { "radius": 18, "alpha": 0.45 }
     },
     "evening": 0,
-    "eveningDarkness": 0.45
+    "eveningDarkness": 0.45,
+    "wheatHide": { "dense": 10, "edge": 6 }
   }
 }

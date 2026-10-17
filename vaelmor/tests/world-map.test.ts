@@ -27,6 +27,10 @@ const byId = (list: readonly MapObject[], id: string): MapObject => {
   if (!found) throw new Error(`objet « ${id} » absent`);
   return found;
 };
+/** Le générateur prend plusieurs secondes : une seule génération, partagée par les tests. */
+let generatedOnce: ReturnType<typeof generateWorld> | null = null;
+const generated = (): ReturnType<typeof generateWorld> => (generatedOnce ??= generateWorld(data.zones));
+const GENERATION_TIMEOUT = 30_000;
 const zoneOf = (o: MapObject): number => map.zones[cellOf(o).y * map.width + cellOf(o).x] as number;
 
 describe('carte du monde (assets/maps/world.json)', () => {
@@ -37,9 +41,8 @@ describe('carte du monde (assets/maps/world.json)', () => {
   });
 
   it('est identique à la sortie du générateur (aucune dérive entre les données et le code)', () => {
-    const generated = generateWorld(data.zones);
-    expect(`${JSON.stringify(generated.tiled)}\n`).toBe(readFileSync(resolve(root, 'assets/maps/world.json'), 'utf8'));
-  });
+    expect(`${JSON.stringify(generated().tiled)}\n`).toBe(readFileSync(resolve(root, 'assets/maps/world.json'), 'utf8'));
+  }, GENERATION_TIMEOUT);
 
   it('place les 5 zones et leurs passages', () => {
     const values = new Set(map.zones);
@@ -111,11 +114,11 @@ describe('carte du monde (assets/maps/world.json)', () => {
     const grid = CollisionGrid.fromMap(map, ALL_FLAGS);
     const start = findSpawn(map, 'start');
     const seen = reachableCells(grid, { x: Math.floor((start?.x ?? 0) / map.tileSize), y: Math.floor((start?.y ?? 0) / map.tileSize) });
-    const fronts = generateWorld(data.zones).doorFronts;
+    const fronts = generated().doorFronts;
     expect(fronts.length).toBeGreaterThan(60);
     const blocked = fronts.filter((d) => seen[d.y * map.width + d.x] !== 1).map((d) => `${d.x},${d.y}`);
     expect(blocked).toEqual([]);
-  });
+  }, GENERATION_TIMEOUT);
 
   it('chaque passage ouvre sur la zone qu’il protège (drapeau = zone la plus haute voisine)', () => {
     const flagByValue = new Map(data.zones.map((z) => [z.value, z.unlockFlag]));

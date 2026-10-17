@@ -127,6 +127,9 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
   - **Silhouette organique** (`plantWheat`) : coins du champ retirés, bordure remise en herbe avec un blé clairsemé et plus court, touffes sauvages qui débordent sur l'herbe voisine ; la terre labourée (sillons, chaume) ne se voit qu'au cœur du champ. Les épis du premier rang passent devant la clôture.
   - **Flou de profondeur réduit** : bande nette portée à 70 % de la hauteur de l'écran (au lieu de 50 %), fondu plus court, flou plus faible (`balance.json` › `visuals.tiltShift` : `focus` 0,7, `fade` 0,14, `blur` 1).
 
+- **n°50 — Le héros s'enfonce dans le blé** (demande de l'auteur, 17/10/2026) : le générateur écrit les cases de blé dans la couche `ambient` (objets `wheat`, `depth` = `dense` au cœur du champ, `edge` en bordure ; les touffes sauvages ne comptent pas). Quand les pieds du héros sont sur une de ces cases, `WorldScene` rogne le bas de son image (10 px au cœur, 6 px en bordure : `balance.json` › `visuals.wheatHide`) — les épis du champ, dessinés dessous, réapparaissent à la place des jambes — et pose devant lui une frange d'épis (`render/wheatFront.ts`, 4 images au rythme du vent) pour que la ligne de coupe soit irrégulière. Son ombre au sol disparaît dans le blé ; sa silhouette derrière les toits est rognée de même. Le même mécanisme servira aux hautes herbes et aux PNJ.
+  - Tests `world-map` : la génération (plusieurs secondes) est faite une fois et partagée, avec un délai de 30 s.
+
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).
 

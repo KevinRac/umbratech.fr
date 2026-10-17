@@ -1169,7 +1169,7 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 | **Ombres douces et ombres portées** | Dessinées dans les sprites (bas-droite) | — | ✅ décors · 🔧 héros (étape 6) |
 | **Particules** | Poussière, feuilles, braises, bulles, lucioles ; fumée de cheminée animée | — | ✅ (cheminées) · ⏳ reste |
 | **Eau** | Vagues animées (TileSprite) | — | ✅ |
-| **Blé** | Tiges et épis par case (tampons 1×2 composés en rangs), silhouette organique (coins arrondis, bordure clairsemée, touffes sauvages), ondulation au vent | — | ✅ |
+| **Blé** | Tiges et épis par case (tampons 1×2 composés en rangs), silhouette organique (coins arrondis, bordure clairsemée, touffes sauvages), ondulation au vent ; le héros s'y enfonce (bas de l'image rogné, frange d'épis devant lui) | — | ✅ |
 
 **Réglage « Qualité »** (menu Pause en attendant les options de M10, enregistré dans `vaelmor:settings`) : *Haute* (tous les effets), *Basse* (étalonnage et vignettage seulement), *Désactivée* (aucun filtre, sauf la teinte `ambient`). Haute coûte ~12 passes plein écran de plus que Basse : à vérifier sur GPU réel avec F3 (60 FPS visé, voir PROGRESS.md n°47).
 

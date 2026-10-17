@@ -192,6 +192,8 @@ interface Ctx {
   gateFlag: (string | undefined)[];
   chimneys: { x: number; y: number }[]; // sorties de cheminée (pixels) : fumée animée
   lights: { x: number; y: number; kind: string }[]; // halos (pixels), décision n°47
+  /** Cases de blé où le héros s'enfonce (décision n°50) : `dense` au cœur, `edge` en bordure. */
+  wheat: Map<number, 'dense' | 'edge'>;
   tiles: TilesetBuilder;
 }
 
@@ -1174,6 +1176,7 @@ function plantWheat(c: Ctx): void {
     const v = border ? WHEAT_EDGE : hash2(x, y, SEED + 91) < 0.18 ? 6 : Math.floor(hash2(x, y, SEED + 92) * 4);
     // Posé sans contrôle d'occupation : les épis du premier rang passent devant la clôture.
     commit(c, 'wheat', v, x, y - 1);
+    c.wheat.set(k, border ? 'edge' : 'dense');
   }
   // Touffes sauvages autour du champ.
   for (const k of field) {
@@ -1638,6 +1641,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     gateFlag: new Array<string | undefined>(N).fill(undefined),
     chimneys: [],
     lights: [],
+    wheat: new Map(),
     tiles: new TilesetBuilder(),
   };
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) c.zone[idx(x, y)] = zoneValueAt(x, y);
@@ -1791,6 +1795,16 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
 
   // Décors animés : lumières et cheminées (points).
   const ambient: TiledObject[] = [];
+  // Blé où le héros s'enfonce : une bande d'une case de haut par suite de cases (décision n°50).
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const depth = c.wheat.get(idx(x, y));
+      if (!depth) continue;
+      const x0 = x;
+      while (x + 1 < W && c.wheat.get(idx(x + 1, y)) === depth) x++;
+      ambient.push({ id: nextId++, name: 'Blé', type: 'wheat', x: x0 * TILE, y: y * TILE, width: (x - x0 + 1) * TILE, height: TILE, rotation: 0, visible: true, properties: [prop('depth', depth)] });
+    }
+  }
   for (const light of c.lights) {
     ambient.push({ id: nextId++, name: 'Lumière', type: 'light', x: light.x, y: light.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [prop('kind', light.kind)] });
   }

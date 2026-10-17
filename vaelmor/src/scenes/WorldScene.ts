@@ -28,6 +28,7 @@ import { loadQuality, saveQuality } from '../core/settings';
 import { PALETTE } from '../render/palette';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
+import { WHEAT_FRONT_BELOW, WHEAT_FRONT_FRAMES, WHEAT_FRONT_H, WHEAT_FRONT_MS } from '../render/wheatFront';
 import { fixGpuTileAnimations } from '../render/tileAnimations';
 import { SCENES } from './keys';
 import type { WorldHudScene } from './WorldHudScene';
@@ -77,6 +78,10 @@ export class WorldScene extends Phaser.Scene {
    */
   private heroGhost!: Phaser.GameObjects.Sprite;
   private shadow!: Phaser.GameObjects.Image;
+  /** Blé où le héros s'enfonce : case → pixels du bas cachés (décision n°50). */
+  private wheatHide = new Map<number, number>();
+  private wheatFront!: Phaser.GameObjects.Image;
+  private wheatFrame = 0;
   private water!: Phaser.GameObjects.TileSprite;
   private fog = new Map<string, Phaser.GameObjects.TileSprite[]>();
 
@@ -237,7 +242,28 @@ export class WorldScene extends Phaser.Scene {
     this.shadow = this.add.image(0, 0, WORLD_TEX.shadow).setOrigin(0.5, 0.5).setDepth(DEPTH.shadow);
     this.hero = this.add.sprite(0, 0, WORLD_TEX.hero, WORLD_TEX.heroFrame('down', 0)).setOrigin(0.5, 1);
     this.heroGhost = this.add.sprite(0, 0, WORLD_TEX.hero, WORLD_TEX.heroFrame('down', 0)).setOrigin(0.5, 1).setAlpha(0.5).setDepth(DEPTH.heroGhost);
+    this.buildWheat();
     this.syncHero();
+  }
+
+  /** Champs de blé : cases où le héros s'enfonce, frange d'épis devant lui, au rythme du vent. */
+  private buildWheat(): void {
+    const hide = this.data_.balance.visuals.wheatHide;
+    const size = this.map.tileSize;
+    for (const o of this.map.ambient) {
+      if (o.kind !== 'wheat') continue;
+      const px = o.props['depth'] === 'edge' ? hide.edge : hide.dense;
+      for (let y = o.y; y < o.y + o.height; y += size) {
+        for (let x = o.x; x < o.x + o.width; x += size) this.wheatHide.set(Math.floor(y / size) * this.map.width + Math.floor(x / size), px);
+      }
+    }
+    this.wheatFront = this.add.image(0, 0, WORLD_TEX.wheatFront(0)).setOrigin(0.5, 0).setVisible(false);
+    const next = (): void => {
+      this.wheatFrame = (this.wheatFrame + 1) % WHEAT_FRONT_FRAMES;
+      this.wheatFront.setTexture(WORLD_TEX.wheatFront(this.wheatFrame));
+      this.time.delayedCall(WHEAT_FRONT_MS[this.wheatFrame] ?? 500, next);
+    };
+    this.time.delayedCall(WHEAT_FRONT_MS[0], next);
   }
 
   private snapToFree(body: BodyState): void {
@@ -307,6 +333,23 @@ export class WorldScene extends Phaser.Scene {
       this.hero.setFrame(WORLD_TEX.heroFrame(pose, 0));
     }
     this.heroGhost.setPosition(x, y).setFlipX(flipX).setFrame(this.hero.frame.name);
+    // Dans le blé, les épis cachent le bas du héros (décision n°50).
+    const size = this.map.tileSize;
+    const hide = this.wheatHide.get(Math.floor((body.y - 1) / size) * this.map.width + Math.floor(body.x / size)) ?? 0;
+    if (hide > 0) {
+      const h = this.hero.frame.height;
+      this.hero.setCrop(0, 0, this.hero.frame.width, h - hide);
+      this.heroGhost.setCrop(0, 0, this.hero.frame.width, h - hide);
+      this.wheatFront
+        .setVisible(true)
+        .setPosition(x, y - hide + WHEAT_FRONT_BELOW - WHEAT_FRONT_H)
+        .setDepth(this.hero.depth + 0.00001);
+    } else if (this.hero.isCropped) {
+      this.hero.setCrop();
+      this.heroGhost.setCrop();
+      this.wheatFront.setVisible(false);
+    }
+    this.shadow.setVisible(hide === 0);
     // L'état partagé suit le héros (la sauvegarde y lira sa position, jalon M9).
     this.state.player.x = body.x;
     this.state.player.y = body.y;
