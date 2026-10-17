@@ -6117,7 +6117,6 @@ function chronBuild(win){const c=RUN.ch;if(!c)return null;const cl=CLS[P.cls].na
  const L=[`${cl}, ${fmtT(RUN.time)} dans la Brume.`,...sel];
  if(c.flawless>=3)L.push(`Tu as traversé ${c.flawless} salles sans une égratignure.`);
  if(c.hits>0)L.push(`La Brume t’a touché ${c.hits} fois ; tu as continué ${c.hits>20?'avec un entêtement admirable':'sans trop de bruit'}.`);
- if(c.bluffs)L.push(`Le Brumeux a feint ${c.bluffs} fois : ${c.bluffBait?`tu as mordu ${c.bluffBait} fois`:'tu n’as pas mordu'}${c.bluffPunish?`, et il t’a puni ${c.bluffPunish} fois`:''}.`);
  L.push(win?'Le Cœur a cessé de battre. Pour un temps.':`Tu es tombé à l’acte ${ROM[RUN.act]||'I'}, salle ${RUN.roomIdx}. La Brume s’en souviendra.`);
  return{title:win?'La Descente achevée':`La chute · acte ${ROM[RUN.act]||'I'}, salle ${RUN.roomIdx}`,lines:L};}
 function chronText(ch){return `${ch.title}\n\n${ch.lines.join('\n')}\n\n— La Brume`;}
@@ -6179,13 +6178,13 @@ function bluffTick(dt){
  if(B.follow&&B.t>B.lock){const k=Math.min(1,dt*6);B.x+=(P.x-B.x)*k;B.y+=(P.y-B.y)*k;}
  if(B.t<=0)endBluff(B);}
 function startBluff(){const tot=1.15;room.bl={x:P.x,y:P.y,r:86,t:tot,tot,lock:0.35,follow:true,real:Math.random()<0.5};RUN.ch.bluffs++;
- if(!SAVE.flags.bluff){SAVE.flags.bluff=1;persist();murmur('Le Brumeux feint','Un cercle ocre est sincère. Un cercle voilé de violet ment : ne gaspille pas ton esquive.',6.5);sfx('murmur');}}
+}
 function endBluff(B){room.bl=null;room.blT=rand(8,13)*(RUN.act>=3?0.8:1);
  if(B.real||B.second){fx.push({k:'ring',x:B.x,y:B.y,r0:B.r*0.3,r1:B.r*1.1,w:10,t:0.35,max:0.35,col:`rgba(${TELE.zone},`,fill:true});sparks(B.x,B.y,14,'#ffb36b');shake(4,0.15);sfx('explode');
   if(hyp(P.x-B.x,P.y-B.y)<B.r+P.r*0.5)hurtPlayer(bluffDmg(),null);else if(!B.second)RUN.ch.bluffDodged++;}
  else{mist(B.x,B.y,22,'#2a2440');sparks(B.x,B.y,10,'#b9a6ff');
   if(B.wasted)RUN.ch.bluffBait++;
-  if(B.wasted&&(P.dashCh<=0||P.dashT>0)){room.bl={x:P.x,y:P.y,r:72,t:0.6,tot:0.6,lock:9,follow:false,real:true,second:true};RUN.ch.bluffPunish++;addNum(P.x,P.y-40,'esquive lue','echo');}}}
+  if(B.wasted&&(P.dashCh<=0||P.dashT>0)){room.bl={x:P.x,y:P.y,r:72,t:0.6,tot:0.6,lock:9,follow:false,real:true,second:true};RUN.ch.bluffPunish++;}}}
 function drawBluff(){const B=room&&room.bl;if(!B)return;const c=ctx,k=1-B.t/B.tot,col=TELE.zone;c.save();
  c.fillStyle=`rgba(${col},${0.07+0.2*k})`;c.beginPath();c.arc(B.x,B.y,B.r,0,TAU);c.fill();
  if(!B.real&&!B.second){c.fillStyle=`rgba(170,120,255,${0.1+0.1*k})`;c.beginPath();c.arc(B.x,B.y,B.r*0.72,0,TAU);c.fill();}
@@ -6553,11 +6552,6 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 (function(){
  const O='#ffa24a',V='#b48cff',C='#4fe3ff',G='#8fe08a',Y='#f3b94d',R='#ff7b7b';
  const BRIEF={
-  brumeux:{t:'Le Brumeux te regarde jouer',l:'Un esprit de la Brume observe ton style de combat et s’y adapte. Ce n’est pas un monstre à abattre : c’est lui qui écrit les règles de la descente.',c:[
-   ['Il observe',V,'Tu frappes de loin ou au contact ? Tu esquives beaucoup ? Tu te soignes souvent ? Il retient ce que tu fais le plus.'],
-   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Il pousse alors un cri : à toi de comprendre ce qu’il envoie et de trouver comment répondre. Si ta parade tient, il insiste en pleine salle (▲), puis change d’arme.'],
-   ['Il relâche',G,'Si tu vacilles (peu de PV), il retient ses coups, même en pleine salle (▼). Reprends ton souffle.'],
-   ['Il marchande',Y,'À chaque acte, il te propose un pacte : un avantage fort contre une contrainte choisie selon ton jeu.']]},
   pacte:{t:'Un pacte, un prix',l:'Le Brumeux te tend trois offres. Chaque pacte a un gain et un coût, et dure tout l’acte.',c:[
    ['+ Le gain',G,'Un avantage fort : plus de PV, de dégâts, de vitesse…'],
    ['− Le coût',R,'Une contrainte choisie d’après ton style de jeu. Si tu es inconnu, elle est tirée au hasard.'],
@@ -6575,11 +6569,6 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
    ['Sol qui se dérobe',O,'Des dalles cèdent et écrasent ce qu’elles couvrent. Attire-y les ennemis.'],
    ['Brume plombée',V,'La moitié de la salle est voilée, mais tu frappes 25 % plus fort.'],
    ['Braseros',Y,'Hors de la lumière des braseros, les ennemis ne subissent que 40 % des dégâts.']]},
-  bluff:{t:'La feinte du Brumeux',l:'Il dessine parfois un cercle au sol avant de frapper. Mais certains cercles mentent.',c:[
-   ['Cercle ocre',O,'Sincère : la frappe viendra. Sors du cercle ou esquive au dernier moment.'],
-   ['Cercle voilé de violet',V,'Mensonge : rien ne tombera. Ne gaspille pas ton esquive.'],
-   ['« Esquive lue »',R,'Si tu esquives un faux cercle, il te punit d’une seconde frappe, réelle cette fois.'],
-   ['Le bon réflexe',G,'Garde ton esquive pour les vraies menaces et regarde la couleur avant de bouger.']]},
   boss:{t:'Les gardiens : trois temps',l:'Un gardien change de façon de se battre au fil du combat. Le premier temps sert à l’observer.',c:[
    ['Premier temps',Y,'Observation. Retiens ses schémas : Orange = zone, Violet = tirs, Cyan = saisie.'],
    ['Deuxième temps',V,'Adaptation. Il copie une partie de ton style de jeu : sa parade est rappelée à l’écran.'],
@@ -6610,14 +6599,61 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
  wrap('openPacte','pacte',()=>openPacte,f=>{openPacte=f;});
  wrap('announceCm','contre',()=>announceCm,f=>{announceCm=f;});
  wrap('setRule','regles',()=>setRule,f=>{setRule=f;});
- wrap('startBluff','bluff',()=>startBluff,f=>{startBluff=f;});
  wrap('openEquip','equip',()=>openEquip,f=>{openEquip=f;});
  wrap('openLevelUp','talents',()=>openLevelUp,f=>{openLevelUp=f;});
  const _cb=createBoss;createBoss=function(){const e=_cb.apply(this,arguments);try{brief('boss');}catch(x){}return e;};
- // dès le premier départ : qui est le Brumeux (avant le pacte)
- const _sr=startRun;startRun=function(){_sr.apply(this,arguments);
-  if(RUN&&!RUN.hub&&PAL()===0&&!seen('brumeux'))queue.unshift(()=>brief('brumeux'));};
+ // v16.17 · avant le tout premier pacte (quel que soit le palier) : qui est le Brumeux, en image. Une seule fois.
+ const BRX_SVG=`<svg viewBox="0 0 400 460" role="img" aria-label="Une silhouette encapuchonnée sans visage, deux yeux pâles, une main tendue qui porte une lueur violette" preserveAspectRatio="xMidYMid slice">
+<defs>
+<radialGradient id="bxBg" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#2a1d4a"/><stop offset=".55" stop-color="#120d22"/><stop offset="1" stop-color="#05040a"/></radialGradient>
+<linearGradient id="bxCloak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d1535"/><stop offset=".6" stop-color="#0c0818"/><stop offset="1" stop-color="#0c0818" stop-opacity="0"/></linearGradient>
+<linearGradient id="bxRim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b48cff" stop-opacity="0"/><stop offset=".75" stop-color="#b48cff" stop-opacity=".0"/><stop offset="1" stop-color="#c9a8ff" stop-opacity=".9"/></linearGradient>
+<radialGradient id="bxOrb" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".3" stop-color="#d9c2ff"/><stop offset="1" stop-color="#7b4bd6" stop-opacity="0"/></radialGradient>
+<filter id="bxGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="bxFog" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter>
+</defs>
+<rect width="400" height="460" fill="url(#bxBg)"/>
+<g filter="url(#bxFog)" fill="#6e55b3"><ellipse cx="90" cy="400" rx="130" ry="34" opacity=".28"/><ellipse cx="320" cy="360" rx="120" ry="28" opacity=".22"/><ellipse cx="200" cy="440" rx="220" ry="40" opacity=".4"/></g>
+<g fill="#cdb8ff" opacity=".55"><circle cx="60" cy="120" r="1.6"/><circle cx="338" cy="96" r="1.3"/><circle cx="310" cy="190" r="1.8"/><circle cx="82" cy="230" r="1.2"/><circle cx="120" cy="64" r="1"/><circle cx="372" cy="260" r="1.4"/></g>
+<path d="M200 36C150 66 124 128 128 190C94 262 62 350 38 460H362C338 350 306 262 272 190C276 128 250 66 200 36Z" fill="url(#bxCloak)"/>
+<path d="M272 190C306 262 338 350 362 460" fill="none" stroke="url(#bxRim)" stroke-width="2.2"/>
+<path d="M200 36C250 66 276 128 272 190" fill="none" stroke="#c9a8ff" stroke-opacity=".45" stroke-width="1.6"/>
+<path d="M200 92C166 98 152 140 157 182C161 212 182 228 200 228C218 228 239 212 243 182C248 140 234 98 200 92Z" fill="#020106"/>
+<g class="bxEyes" filter="url(#bxGlow)" fill="#efe2ff"><path d="M171 160q11-8 23 0q-11 6-23 0Z"/><path d="M206 160q12-8 23 0q-12 6-23 0Z"/></g>
+<path d="M232 252C272 252 300 268 326 288L338 300C318 304 294 300 270 292C246 286 230 276 224 262Z" fill="#0a0716" stroke="#8a66d8" stroke-opacity=".35" stroke-width="1.2"/>
+<g fill="none" stroke="#b9a6e0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M332 294q14-6 30-2"/><path d="M334 298q16-1 32 6"/><path d="M332 302q14 5 26 14"/><path d="M330 306q8 9 14 20"/><path d="M330 292q6-12 14-22"/></g>
+<g class="bxOrb"><circle cx="352" cy="272" r="30" fill="url(#bxOrb)" opacity=".85"/><circle cx="352" cy="272" r="8" fill="#fff" opacity=".9" filter="url(#bxGlow)"/><circle cx="352" cy="272" r="17" fill="none" stroke="#e1d0ff" stroke-opacity=".7" stroke-width="1.2" stroke-dasharray="3 5"/></g>
+<rect y="380" width="400" height="80" fill="url(#bxBg)" opacity=".5"/>
+</svg>`;
+ let brxDone=false;
+ function brumeuxIntro(next){
+  if(brxDone||!RUN||RUN.hub||(RUN.pactN||0)>0||seen('brumeuxIntro')||state!=='play'||!overlayEl.hidden)return false;
+  brxDone=true;SAVE.flags['b_brumeuxIntro']=1;persist();
+  openOverlay(`<div class="panel wide brx"><div class="brxart">${BRX_SVG}</div><div class="brxtxt"><p class="eyebrow">Avant ton premier pacte</p><h2>Le Brumeux</h2><p class="lede">Il n’a pas de visage. Il écoute la Brume.<br>Ce n’est pas un monstre à abattre : c’est lui qui écrit les règles de la descente.</p>
+<ul class="brxl"><li><i>${icon('u_eye')}</i><b>Il te regarde jouer</b></li><li><i>${icon('u_sword')}</i><b>Il riposte à ton style</b></li><li><i>${icon('u_pact')}</i><b>Il te tend des pactes</b></li></ul>
+<div class="row"><button type="button" class="btn primary" id="bok">Voir son offre</button><span class="k">Entrée · Espace · clic</span></div></div></div>`);
+  sfx('scream_brumeux');
+  const done=()=>{if(!armed())return;closeOverlay();brxDone=false;if(next)next();};
+  $('#bok').addEventListener('click',done);
+  overlayKeys=c=>{if(c==='Enter'||c==='Space'||c==='Escape'||c==='NumpadEnter')done();};
+  return true;}
+ { const f=openPacte;openPacte=function(){const a=arguments,self=this;if(brumeuxIntro(()=>f.apply(self,a)))return;return f.apply(self,a);}; }
+ window.__brumeuxIntro=brumeuxIntro;
  const st=document.createElement('style');st.textContent=`
+.brx{display:grid!important;grid-template-columns:minmax(260px,.9fr) minmax(0,1.1fr);gap:clamp(18px,3vw,38px);align-items:center;width:min(980px,100%)}
+.brxart{border:1px solid #4a3a7a;border-radius:6px;overflow:hidden;aspect-ratio:400/460;box-shadow:0 0 40px rgba(150,110,255,.25);background:#05040a}
+.brxart svg{display:block;width:100%;height:100%}
+.brx h2{font-size:clamp(36px,5vw,56px);margin:2px 0 10px;color:#e1d0ff;letter-spacing:.06em}
+.brx .lede{font-size:19px;line-height:1.55;color:#d9d3c5;margin:0 0 18px}
+.brxl{list-style:none;margin:0 0 22px;padding:0;display:grid;gap:10px}
+.brxl li{display:flex;align-items:center;gap:14px;padding:10px 14px;border:1px solid #4a3a7a;border-left:4px solid #b48cff;border-radius:6px;background:rgba(180,140,255,.08)}
+.brxl i{flex:none;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;color:#c9a8ff;background:rgba(201,168,255,.14);border:1px solid rgba(201,168,255,.45)}
+.brxl i .ic{width:28px;height:28px;stroke-width:1.7}
+.brxl b{font-size:19px;color:#fff}
+@media (prefers-reduced-motion:no-preference){.brx .bxEyes{animation:bxeye 3.6s ease-in-out infinite}.brx .bxOrb{animation:bxorb 2.8s ease-in-out infinite;transform-origin:352px 272px}}
+@keyframes bxeye{0%,88%,100%{opacity:1}92%{opacity:.15}}
+@keyframes bxorb{0%,100%{opacity:.8;transform:scale(.94)}50%{opacity:1;transform:scale(1.08)}}
+@media (max-width:760px){.brx{grid-template-columns:1fr}.brxart{max-height:34vh;aspect-ratio:auto}}
 .panel.wide.brief{width:min(1000px,100%);padding-top:32px;padding-bottom:28px}
 .brief h2{font-size:clamp(30px,4vw,44px);margin:2px 0 8px}
 .brief .lede{font-size:19px;line-height:1.55;max-width:760px;color:#d9d3c5;margin:0}
@@ -6722,10 +6758,17 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   fl.type='lowpass';fl.Q.value=o.q||5;fl.frequency.setValueAtTime(o.lp0,t);fl.frequency.exponentialRampToValueAtTime(Math.max(40,o.lp1),t+o.dur);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(o.vol,t+(o.att||0.06));g.gain.setValueAtTime(o.vol,t+o.dur*0.5);g.gain.exponentialRampToValueAtTime(0.0001,t+o.dur);
   osc.connect(fl);let out=fl;if(o.dist){if(!dc)dc=curve(1);const ws=AC.createWaveShaper();ws.curve=curve(o.dist);fl.connect(ws);out=ws;}out.connect(g);g.connect(AC.master);osc.start(t);osc.stop(t+o.dur+0.05);}
+ // v16.17 · petit rire démoniaque, court (trois « ha » qui descendent), posé après le grondement du Brumeux
+ function rire(delay){if(!AC||muted)return;delay=delay||0;
+  for(let i=0;i<3;i++){const d=delay+i*0.15,f=330-i*50;
+   voice({type:'sawtooth',f0:f*1.2,f1:f*0.68,dur:0.12,vol:0.12,vib:28,vibD:14,lp0:1900,lp1:600,dist:4,att:0.012,q:4,delay:d});
+   voice({type:'square',f0:f*0.5,f1:f*0.32,dur:0.12,vol:0.05,lp0:900,lp1:300,dist:3,att:0.012,delay:d});
+   noise(0.08,0.05,2400,'bandpass',d);}}
+ window.__rire=rire;
  function demon(who){if(!AC||muted)return;if(!throttle('demon',900))return;
   if(who==='mere'){voice({type:'sawtooth',f0:760,f1:240,dur:1.3,vol:0.13,vib:9,vibD:46,lp0:3400,lp1:900,dist:5,att:0.04});voice({type:'sawtooth',f0:140,f1:58,dur:1.5,vol:0.16,vib:6,vibD:8,lp0:900,lp1:160,dist:6});noise(1.1,0.12,1900,'bandpass',0.05);tone(52,1.4,'sine',0.14,34);}
   else if(who==='chroniqueur'){noise(1.4,0.09,2600,'bandpass');tone(440,1.2,'sine',0.05,310);tone(466,1.2,'sine',0.04,330,0.08);}
-  else{voice({type:'sawtooth',f0:96,f1:36,dur:1.6,vol:0.27,vib:7,vibD:10,lp0:950,lp1:170,dist:7,att:0.05});voice({type:'square',f0:200,f1:68,dur:1.3,vol:0.08,vib:11,vibD:16,lp0:1500,lp1:280,dist:4,delay:0.03});voice({type:'sawtooth',f0:560,f1:200,dur:0.8,vol:0.05,vib:13,vibD:34,lp0:2600,lp1:700,dist:3,delay:0.14});noise(1,0.15,300,'lowpass');tone(64,1.3,'sawtooth',0.07,34,0.1);}}
+  else{voice({type:'sawtooth',f0:96,f1:40,dur:0.8,vol:0.25,vib:7,vibD:10,lp0:950,lp1:200,dist:7,att:0.05});voice({type:'square',f0:200,f1:80,dur:0.6,vol:0.07,vib:11,vibD:16,lp0:1500,lp1:320,dist:4,delay:0.03});noise(0.5,0.13,300,'lowpass');tone(64,0.7,'sawtooth',0.06,38,0.1);rire(0.42);}}
  const _sfx15=sfx;sfx=function(k){if(typeof k==='string'&&k.startsWith('scream_')){demon(k.slice(7));return;}_sfx15(k);};
 
  // --- cercles de boss : bande lumineuse, runes, étincelles
@@ -7399,7 +7442,7 @@ details.fold>.chips{margin-top:8px}
  updateRoomHud=function(){_urh();const st=S17();if(!st||!room.cmShown||!(st.n||st.rel))return;const h=$('#hRoom');if(h)h.textContent+=st.rel?' ▼':` ▲${st.n}`;};
  const _sfx=sfx;
  sfx=function(k){
-  if(k==='esc17'){if(!AC||muted)return;tone(220,0.22,'sawtooth',0.05,330);tone(330,0.3,'sawtooth',0.05,495,0.18);noise(0.5,0.05,500,'lowpass');return;}
+  if(k==='esc17'){if(!AC||muted)return;tone(220,0.22,'sawtooth',0.05,330);tone(330,0.3,'sawtooth',0.05,495,0.18);noise(0.5,0.05,500,'lowpass');if(window.__rire)window.__rire(0.4);return;}
   if(k==='rel17'){if(!AC||muted)return;tone(392,0.5,'sine',0.06,262);tone(294,0.6,'sine',0.04,196,0.15);return;}
   _sfx(k);};
  const st=document.createElement('style');st.textContent=`

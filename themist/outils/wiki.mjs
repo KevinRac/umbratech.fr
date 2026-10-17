@@ -102,17 +102,14 @@ function pactes(D, I) {
 <h3 class="sub">Bénéfices du pacte</h3>
 <div class="grid g3">${Object.values(D.benefices).map(o => ent(o, 'good')).join('')}</div>
 <h3 class="sub">Contraintes</h3>
-<p>Le jeu propose une contrainte qui gêne ton style, ou qui épargne ton style. Le Brumeux peut bluffer : une contrainte peut se révéler différente de son annonce.</p>
+<p>Le jeu propose une contrainte qui gêne ton style, ou qui épargne ton style.</p>
 <div class="grid g3">${Object.values(D.contraintes).map(c => `<article class="ent"><h4>${esc(c.n)}</h4>${val(c, 'bad')}<p>${esc(c.d)}</p><p class="k">Pénalise surtout si ${esc(c.why)}.</p></article>`).join('')}</div>
 <h3 class="sub">Aides adaptatives</h3>
 <p>Si tu échoues plusieurs fois au même endroit, la Brume t’offre un coup de pouce discret. Les raisons possibles : ${Object.values(D.raisons).map(w => `<i>${esc(w)}</i>`).join(', ')}</p>
 <div class="grid g4">${Object.values(D.aides).map(o => ent(o, 'aid')).join('')}</div>
 <p class="k">Au plus ${offres} par run, séparées d’au moins ${A.ecartS} secondes, et jamais avant le début d’un combat de gardien. Tu acceptes avec <kbd>G</kbd> ou tu refuses avec <kbd>B</kbd>. L’offre disparaît seule après ${A.dureeOffreS} secondes. Après ${refus} (ou « Ne plus proposer »), la Brume ne propose plus d’aide : tu la réactives à tout moment dans le menu de pause (bouton « Aide adaptative »).</p>
-<h3 class="sub">La feinte du Brumeux</h3>
-<p>Dès l’acte II (ou à partir de la 6e salle de la descente), le Brumeux dessine un cercle sous tes pieds dans les salles de combat et d’élite. Il revient toutes les 8 à 13 secondes (un peu plus vite à l’acte III). Le cercle te suit puis se fige juste avant de frapper. Tout se lit à sa couleur.</p>
-<div class="grid g2"><article class="ent"><h4>Cercle ocre : sincère</h4><p>Le cercle détone. Sors de la zone ou esquive : si tu restes dedans, tu prends des dégâts qui grandissent avec les salles et les actes.</p></article><article class="ent"><h4>Cercle au noyau violet : feinte</h4><p>Il n’explose pas. Si tu esquives quand même et que tu n’as plus de charge d’esquive, le Brumeux te punit : une frappe réelle suit 0,6 s plus tard. Mieux vaut ne pas bouger.</p></article></div>
 <h3 class="sub">Le Chroniqueur</h3>
-<p>Pendant la run, la Brume note ce qui compte : pactes, équipements gagnés ou laissés, sets, salles à règle, aides acceptées ou refusées, gardiens vaincus, feintes subies. En fin de run, elle en tire une <b>chronique</b> : les neuf notes les plus marquantes, plus quelques bilans (salles sans une égratignure, coups reçus, feintes). La chronique se copie d’un clic. Les six dernières sont conservées et se relisent dans l’onglet Journal de la pause.</p>
+<p>Pendant la run, la Brume note ce qui compte : pactes, équipements gagnés ou laissés, sets, salles à règle, aides acceptées ou refusées, gardiens vaincus. En fin de run, elle en tire une <b>chronique</b> : les neuf notes les plus marquantes, plus quelques bilans (salles sans une égratignure, coups reçus). La chronique se copie d’un clic. Les six dernières sont conservées et se relisent dans l’onglet Journal de la pause.</p>
 </section>`;
 }
 
