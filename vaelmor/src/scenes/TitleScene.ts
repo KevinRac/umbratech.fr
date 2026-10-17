@@ -7,6 +7,7 @@
 import Phaser from 'phaser';
 import { GAME_SUBTITLE, GAME_VERSION, MILESTONE, TITLE_HEIGHT as GAME_HEIGHT, TITLE_WIDTH as GAME_WIDTH } from '../core/config';
 import { ActionInput } from '../core/input';
+import { loadGameData } from '../data';
 import { hasKey } from '../core/storage';
 import { GAME_SAVE_KEYS } from '../logic/save/keys';
 import {
@@ -42,11 +43,12 @@ const DEPTH = {
   ui: 20,
 } as const;
 
-const MENU = { x: 322, y: 186, width: 136 } as const;
+const MENU = { x: 322, y: 172, width: 136 } as const;
 
 export class TitleScene extends Phaser.Scene {
   private actions!: ActionInput;
-  private menu!: VerticalMenu;
+  private menu: VerticalMenu | null = null;
+  private menuParts: Phaser.GameObjects.GameObject[] = [];
   private toasts!: Toasts;
   private sea!: Phaser.GameObjects.Image;
   private seaFrame = 0;
@@ -60,6 +62,10 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    // La scène est réutilisée à chaque retour au titre : on repart d'un état propre.
+    this.starting = false;
+    this.menu = null;
+    this.menuParts = [];
     fitDesignArea(this, GAME_WIDTH, GAME_HEIGHT);
     const refit = (): void => void fitDesignArea(this, GAME_WIDTH, GAME_HEIGHT);
     this.scale.on(Phaser.Scale.Events.RESIZE, refit);
@@ -78,7 +84,7 @@ export class TitleScene extends Phaser.Scene {
     this.clouds.tilePositionX += 2.2 * dt;
     this.mistFar.tilePositionX += 4 * dt;
     this.mistNear.tilePositionX += 9 * dt;
-    this.menu.update();
+    this.menu?.update();
   }
 
   /* ---------- Décor ---------- */
@@ -202,7 +208,7 @@ export class TitleScene extends Phaser.Scene {
   private startNewGame(): void {
     if (this.starting) return;
     this.starting = true;
-    this.menu.setLocked(true);
+    this.menu?.setLocked(true);
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.world, { newGame: true }));
   }
@@ -219,20 +225,50 @@ export class TitleScene extends Phaser.Scene {
 
   private buildMenu(): void {
     const hasSave = GAME_SAVE_KEYS.some((key) => hasKey(key));
-    const lineHeight = 17;
-    const items = [
+    this.showMenu([
       { label: 'Nouvelle partie', onSelect: () => this.startNewGame() },
       { label: 'Continuer', enabled: hasSave, onSelect: () => this.toasts.push('Le chargement arrive au jalon M9.') },
+      { label: 'Combat d’essai', onSelect: () => this.showBattleMenu() },
       { label: 'Options', onSelect: () => this.toasts.push('Les options arrivent au jalon M10.') },
-    ];
+    ]);
+  }
+
+  /**
+   * Combats d'essai du jalon M4 : en attendant les ennemis du monde ouvert
+   * (M3), on lance une rencontre directement depuis le titre.
+   */
+  private showBattleMenu(): void {
+    const encounters = loadGameData().encounters.encounters;
+    this.showMenu([
+      ...encounters.map((encounter) => ({ label: encounter.name, onSelect: () => this.startBattle(encounter.id) })),
+      { label: 'Retour', onSelect: () => this.buildMenu() },
+    ]);
+  }
+
+  private startBattle(encounterId: string): void {
+    if (this.starting) return;
+    this.starting = true;
+    this.menu?.setLocked(true);
+    this.cameras.main.flash(150, 255, 255, 255);
+    this.cameras.main.fadeOut(450, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, { encounterId, returnTo: 'title' }));
+  }
+
+  /** (Re)construit le cadre et le menu du titre, ancrés en bas du cadre. */
+  private showMenu(items: { label: string; enabled?: boolean; onSelect: () => void }[]): void {
+    this.menu?.destroy();
+    for (const part of this.menuParts) part.destroy();
+    const lineHeight = 17;
     const panelHeight = items.length * lineHeight + 22;
-    drawPanel(this, MENU.x, MENU.y, MENU.width, panelHeight, { depth: DEPTH.ui });
-    this.menu = new VerticalMenu(this, MENU.x + 5, MENU.y + 6, items, this.actions, { width: MENU.width - 10, lineHeight, depth: DEPTH.ui });
-    addText(this, MENU.x + MENU.width / 2, MENU.y + panelHeight - 12, 'Flèches : choisir  ·  Entrée : valider', {
+    const y = MENU.y + (4 - items.length) * lineHeight;
+    const panel = drawPanel(this, MENU.x, y, MENU.width, panelHeight, { depth: DEPTH.ui });
+    this.menu = new VerticalMenu(this, MENU.x + 5, y + 6, items, this.actions, { width: MENU.width - 10, lineHeight, depth: DEPTH.ui });
+    const hint = addText(this, MENU.x + MENU.width / 2, y + panelHeight - 12, 'Flèches : choisir  ·  Entrée : valider', {
       font: 'small',
       color: PALETTE.metalClair,
       shadow: false,
       align: 'center',
     }).setDepth(DEPTH.ui);
+    this.menuParts = [panel, hint];
   }
 }

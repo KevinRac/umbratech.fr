@@ -261,6 +261,8 @@ export const classSchema = z.strictObject({
   }),
   element: idSchema.nullable(),
   armor: z.enum(['legere', 'lourde']),
+  /** Arme de départ (data/items.json) : même type, même portée et même nature de dégâts que `weapon`. */
+  startingWeapon: idSchema,
   resource: z
     .strictObject({
       id: idSchema,
@@ -286,6 +288,109 @@ export const classesFileSchema = z.strictObject({
   classes: z.array(classSchema).min(1),
 });
 
+/* ---------- Objets : armes (GDD §9.8) ---------- */
+
+export const DAMAGE_KINDS = ['physique', 'magique'] as const;
+/** Cibles des armes « efficaces » : type d'armure (`lourde`, `monstre`) ou boss. */
+export const EFFECTIVE_TAGS = ['lourde', 'monstre', 'boss'] as const;
+
+const range = z.tuple([z.number().int().min(1).max(6), z.number().int().min(1).max(6)]);
+
+export const weaponSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  type: idSchema,
+  range,
+  damage: z.enum(DAMAGE_KINDS),
+  power: z.number().int().min(0),
+  hit: z.number().int().min(0).max(150),
+  crit: z.number().int().min(0).max(100),
+  /** Élément offensif (armes magiques) : entre dans le triangle élémentaire (décision n°51). */
+  element: idSchema.nullable(),
+  effective: z.array(z.enum(EFFECTIVE_TAGS)),
+});
+
+export const itemsFileSchema = z.strictObject({
+  $comment: comment,
+  weapons: z.array(weaponSchema).min(1),
+});
+
+/* ---------- Ennemis (GDD §7, §9.15) ---------- */
+
+/** Profils d'IA des ennemis (GDD §9.15) ; « soutien » arrivera avec les soins (M5). */
+export const AI_PROFILES = ['agressif', 'opportuniste', 'defensif', 'chasseur_heros', 'boss'] as const;
+export const ARMOR_KINDS = ['legere', 'lourde', 'monstre'] as const;
+
+export const enemySchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  /** Titre affiché sous le nom (« Chef des Écumeurs ») ; par défaut, le nom. */
+  title: z.string().min(1).optional(),
+  family: idSchema,
+  /** Apparence dessinée par `render/unitLooks.ts`. */
+  sprite: idSchema,
+  weapon: idSchema,
+  element: idSchema.nullable(),
+  armor: z.enum(ARMOR_KINDS),
+  ai: z.enum(AI_PROFILES),
+  baseStats: statBlock,
+  growths: growthBlock,
+});
+
+export const enemiesFileSchema = z.strictObject({
+  $comment: comment,
+  enemies: z.array(enemySchema).min(1),
+});
+
+/* ---------- Rencontres tactiques (GDD §9.2, §9.10) ---------- */
+
+/** Limites des cartes de combat (GDD §9.2 : petite 10×8 … grande 18×14). */
+export const BATTLE_MAP_LIMITS = { minWidth: 6, maxWidth: 18, minHeight: 5, maxHeight: 14 } as const;
+
+const cellSchema = z.tuple([z.number().int().min(0), z.number().int().min(0)]);
+const level = z.number().int().min(1).max(30);
+
+export const partyMemberSchema = z.strictObject({
+  name: z.string().min(1),
+  class: idSchema,
+  level,
+  /** Le héros : sa chute est une défaite (GDD §9.10). */
+  hero: z.boolean(),
+});
+
+export const encounterSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  /** Zone de niveau où la rencontre a lieu (zones.json). */
+  zone: idSchema,
+  objective: z.strictObject({ type: z.enum(['rout', 'boss']) }),
+  /** Carte en texte : une ligne par rangée, une lettre par case (voir `legend`). */
+  map: z.array(z.string().min(1)).min(1),
+  deploy: z.array(cellSchema).min(1),
+  maxDeploy: z.number().int().min(1).max(8),
+  enemies: z
+    .array(
+      z.strictObject({
+        enemy: idSchema,
+        level,
+        x: z.number().int().min(0),
+        y: z.number().int().min(0),
+        boss: z.boolean().optional(),
+        /** Remplace le profil d'IA de l'ennemi pour cette rencontre. */
+        ai: z.enum(AI_PROFILES).optional(),
+      }),
+    )
+    .min(1),
+  victoryFlags: z.array(idSchema),
+});
+
+export const encountersFileSchema = z.strictObject({
+  $comment: comment,
+  legend: z.record(z.string().length(1), idSchema),
+  testParty: z.array(partyMemberSchema).min(1).max(12),
+  encounters: z.array(encounterSchema).min(1),
+});
+
 /* ---------- Types dérivés ---------- */
 
 export type ElementDef = z.infer<typeof elementSchema>;
@@ -300,3 +405,12 @@ export type ClassRole = (typeof CLASS_ROLES)[number];
 export type StatKey = (typeof STAT_KEYS)[number];
 export type StatBlock = z.infer<typeof statBlock>;
 export type GrowthBlock = z.infer<typeof growthBlock>;
+export type WeaponDef = z.infer<typeof weaponSchema>;
+export type DamageKind = (typeof DAMAGE_KINDS)[number];
+export type EffectiveTag = (typeof EFFECTIVE_TAGS)[number];
+export type EnemyDef = z.infer<typeof enemySchema>;
+export type AiProfile = (typeof AI_PROFILES)[number];
+export type ArmorKind = (typeof ARMOR_KINDS)[number];
+export type EncounterDef = z.infer<typeof encounterSchema>;
+export type PartyMemberDef = z.infer<typeof partyMemberSchema>;
+export type EncountersFile = z.infer<typeof encountersFileSchema>;

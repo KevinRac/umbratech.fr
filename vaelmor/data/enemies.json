@@ -1,0 +1,66 @@
+{
+  "$comment": "Ennemis des combats tactiques (GDD §7, §9.15, §16.3). baseStats = niveau 1 ; à un niveau supérieur, chaque stat reçoit sa croissance moyenne (croissance × (niveau − 1) / 100, arrondie) : un ennemi d'un niveau donné a toujours les mêmes stats (décision n°52). weapon : arme de data/items.json. armor : legere, lourde ou monstre (cibles des armes « effective »). ai : profil d'IA (§9.15) — agressif, opportuniste, defensif (ne bouge que s'il peut frapper ce tour-ci, puis devient agressif), chasseur_heros, boss (ne quitte jamais sa case). sprite : apparence dessinée par render/unitLooks.ts.",
+  "enemies": [
+    {
+      "id": "ecumeur_sabreur",
+      "name": "Écumeur",
+      "family": "ecumeurs",
+      "sprite": "ecumeur_sabreur",
+      "weapon": "hachette",
+      "element": null,
+      "armor": "legere",
+      "ai": "agressif",
+      "baseStats": { "pv": 18, "fo": 5, "mag": 0, "dex": 4, "vit": 5, "def": 3, "res": 0, "chc": 2, "mob": 5 },
+      "growths": { "pv": 75, "fo": 45, "mag": 0, "dex": 35, "vit": 35, "def": 25, "res": 10, "chc": 20 }
+    },
+    {
+      "id": "ecumeur_archer",
+      "name": "Écumeur archer",
+      "family": "ecumeurs",
+      "sprite": "ecumeur_archer",
+      "weapon": "arc_court",
+      "element": null,
+      "armor": "legere",
+      "ai": "opportuniste",
+      "baseStats": { "pv": 15, "fo": 4, "mag": 0, "dex": 6, "vit": 5, "def": 2, "res": 1, "chc": 2, "mob": 5 },
+      "growths": { "pv": 60, "fo": 40, "mag": 0, "dex": 50, "vit": 40, "def": 15, "res": 15, "chc": 25 }
+    },
+    {
+      "id": "ecumeur_lancier",
+      "name": "Écumeur lancier",
+      "family": "ecumeurs",
+      "sprite": "ecumeur_lancier",
+      "weapon": "javeline",
+      "element": null,
+      "armor": "lourde",
+      "ai": "defensif",
+      "baseStats": { "pv": 20, "fo": 5, "mag": 0, "dex": 4, "vit": 3, "def": 5, "res": 1, "chc": 1, "mob": 4 },
+      "growths": { "pv": 80, "fo": 40, "mag": 0, "dex": 35, "vit": 20, "def": 45, "res": 10, "chc": 15 }
+    },
+    {
+      "id": "ecumeur_incendiaire",
+      "name": "Incendiaire",
+      "family": "ecumeurs",
+      "sprite": "ecumeur_incendiaire",
+      "weapon": "brandon_de_poix",
+      "element": "cendre",
+      "armor": "legere",
+      "ai": "chasseur_heros",
+      "baseStats": { "pv": 14, "fo": 0, "mag": 5, "dex": 4, "vit": 4, "def": 1, "res": 4, "chc": 2, "mob": 5 },
+      "growths": { "pv": 55, "fo": 0, "mag": 50, "dex": 35, "vit": 35, "def": 10, "res": 35, "chc": 20 }
+    },
+    {
+      "id": "brakk",
+      "name": "Brakk",
+      "title": "Chef des Écumeurs",
+      "family": "ecumeurs",
+      "sprite": "brakk",
+      "weapon": "hache_de_brakk",
+      "element": null,
+      "armor": "lourde",
+      "ai": "boss",
+      "baseStats": { "pv": 30, "fo": 8, "mag": 0, "dex": 6, "vit": 5, "def": 6, "res": 2, "chc": 4, "mob": 4 },
+      "growths": { "pv": 90, "fo": 55, "mag": 0, "dex": 40, "vit": 30, "def": 40, "res": 15, "chc": 25 }
+    }
+  ]
+}

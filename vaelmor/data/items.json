@@ -1,0 +1,23 @@
+{
+  "$comment": "Objets (GDD §9.8). Pour l'instant : les armes (jalon M4) ; consommables, objets de classe et accessoires arrivent au jalon M5. Pas de durabilité (décision n°12). power : puissance ; hit : précision de l'arme ; crit : critique de l'arme ; range : portée [min, max] en cases (distance de Manhattan) ; damage : physique (Fo contre Déf) ou magique (Mag contre Rés) ; element : élément offensif des armes magiques, qui entre dans le triangle Marée > Cendre > Racine (décision n°51) ; effective : cibles contre lesquelles les dégâts sont multipliés par balance.combat.effectiveMultiplier (« lourde », « monstre » : type d'armure ; « boss »).",
+  "weapons": [
+    { "id": "lance_d_estoc", "name": "Lance d'estoc", "type": "lance_courte", "range": [1, 2], "damage": "physique", "power": 6, "hit": 80, "crit": 0, "element": null, "effective": [] },
+    { "id": "epee_de_fer", "name": "Épée de fer", "type": "epee", "range": [1, 1], "damage": "physique", "power": 5, "hit": 90, "crit": 0, "element": null, "effective": [] },
+    { "id": "arc_long", "name": "Arc long", "type": "arc", "range": [2, 2], "damage": "physique", "power": 5, "hit": 85, "crit": 0, "element": null, "effective": [] },
+    { "id": "tome_des_cendres", "name": "Tome des Cendres", "type": "tome", "range": [1, 2], "damage": "magique", "power": 6, "hit": 80, "crit": 0, "element": "cendre", "effective": [] },
+    { "id": "baton_lanterne", "name": "Bâton-lanterne", "type": "baton", "range": [1, 2], "damage": "magique", "power": 3, "hit": 85, "crit": 0, "element": "lanterne", "effective": [] },
+    { "id": "banniere_lance", "name": "Bannière-lance", "type": "banniere", "range": [1, 1], "damage": "physique", "power": 5, "hit": 85, "crit": 0, "element": null, "effective": [] },
+    { "id": "fioles_d_automne", "name": "Fioles d'automne", "type": "fioles", "range": [1, 2], "damage": "magique", "power": 4, "hit": 85, "crit": 0, "element": null, "effective": [] },
+    { "id": "dagues_jumelles", "name": "Dagues jumelles", "type": "dagues", "range": [1, 1], "damage": "physique", "power": 3, "hit": 95, "crit": 10, "element": null, "effective": [] },
+    { "id": "baton_menhir", "name": "Bâton-menhir", "type": "baton", "range": [1, 2], "damage": "magique", "power": 4, "hit": 80, "crit": 0, "element": "pierre", "effective": [] },
+    { "id": "baton_branche", "name": "Bâton-branche", "type": "baton", "range": [1, 2], "damage": "magique", "power": 4, "hit": 85, "crit": 0, "element": "racine", "effective": [] },
+    { "id": "arbalete_a_verin", "name": "Arbalète à vérin", "type": "arbalete", "range": [2, 2], "damage": "physique", "power": 7, "hit": 80, "crit": 5, "element": null, "effective": ["lourde"] },
+    { "id": "harpon_lourd", "name": "Harpon lourd", "type": "harpon", "range": [1, 2], "damage": "physique", "power": 7, "hit": 70, "crit": 0, "element": null, "effective": ["boss", "monstre"] },
+
+    { "id": "hachette", "name": "Hachette", "type": "hache", "range": [1, 1], "damage": "physique", "power": 6, "hit": 75, "crit": 0, "element": null, "effective": [] },
+    { "id": "arc_court", "name": "Arc court", "type": "arc", "range": [2, 2], "damage": "physique", "power": 4, "hit": 85, "crit": 0, "element": null, "effective": [] },
+    { "id": "javeline", "name": "Javeline", "type": "lance_courte", "range": [1, 2], "damage": "physique", "power": 5, "hit": 75, "crit": 0, "element": null, "effective": [] },
+    { "id": "brandon_de_poix", "name": "Brandon de poix", "type": "tome", "range": [1, 2], "damage": "magique", "power": 4, "hit": 80, "crit": 0, "element": "cendre", "effective": [] },
+    { "id": "hache_de_brakk", "name": "Fendeuse de Brakk", "type": "hache", "range": [1, 1], "damage": "physique", "power": 8, "hit": 75, "crit": 5, "element": null, "effective": [] }
+  ]
+}

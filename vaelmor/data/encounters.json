@@ -1,0 +1,86 @@
+{
+  "$comment": "Rencontres tactiques (GDD §9.2, §16.3). Les cartes de combat sont écrites en texte, une lettre par case (décision n°53) ; `legend` associe chaque lettre à un terrain de terrains.json. deploy : cases de déploiement de la compagnie (dans l'ordre de placement automatique, en attendant l'écran de préparation du jalon M5) ; maxDeploy : unités déployées au plus. objective : « rout » (vaincre tous les ennemis) ou « boss » (vaincre l'ennemi marqué boss). victoryFlags : drapeaux de progression levés en cas de victoire (ouvrent les passages du monde). testParty : compagnie d'essai utilisée tant que le joueur n'a pas encore de compagnie (jalons M5-M6).",
+  "legend": {
+    ".": "plaine",
+    "=": "route",
+    "f": "foret",
+    "m": "montagne",
+    "~": "riviere",
+    "g": "gue",
+    "#": "pont",
+    "r": "ruines",
+    "v": "village",
+    "s": "plage",
+    ",": "marais",
+    "w": "eau_profonde"
+  },
+  "testParty": [
+    { "name": "Voyageur", "class": "lame_du_serment", "level": 3, "hero": true },
+    { "name": "Odran", "class": "gardien_des_marees", "level": 3, "hero": false },
+    { "name": "Ysolde", "class": "veilleur_des_falaises", "level": 3, "hero": false },
+    { "name": "Aurèle", "class": "heritier_des_cendres", "level": 3, "hero": false },
+    { "name": "Corbin", "class": "chasseur_de_serpents_de_mer", "level": 3, "hero": false }
+  ],
+  "encounters": [
+    {
+      "id": "embuscade_du_gue",
+      "name": "Embuscade au gué",
+      "zone": "z1",
+      "objective": { "type": "rout" },
+      "map": [
+        "ff....~~...fmm",
+        "f.=...~~..ffmm",
+        "..=...~~.....m",
+        "..====##=====.",
+        ".v=..r~~..f...",
+        "...f..~~.f....",
+        ".f....gg..r...",
+        "ff..f.~~....ff",
+        "f...r.~~..f.ff",
+        "ff....~~...fff"
+      ],
+      "deploy": [[1, 3], [1, 2], [0, 5], [1, 5], [2, 6]],
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "ecumeur_lancier", "level": 3, "x": 8, "y": 4 },
+        { "enemy": "ecumeur_sabreur", "level": 3, "x": 9, "y": 3 },
+        { "enemy": "ecumeur_sabreur", "level": 2, "x": 8, "y": 7 },
+        { "enemy": "ecumeur_sabreur", "level": 3, "x": 10, "y": 6 },
+        { "enemy": "ecumeur_archer", "level": 3, "x": 11, "y": 2 },
+        { "enemy": "ecumeur_archer", "level": 2, "x": 11, "y": 8 },
+        { "enemy": "ecumeur_incendiaire", "level": 3, "x": 12, "y": 5 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "camp_des_ecumeurs",
+      "name": "Camp des Écumeurs",
+      "zone": "z1",
+      "objective": { "type": "boss" },
+      "map": [
+        "mmff.....ffm",
+        "mf.rr...rr.m",
+        "f..r.....r.f",
+        "f..r.....r..",
+        "...rr...rr..",
+        "......=.....",
+        ".f....=...f.",
+        "ff....=...ff",
+        "f..====...f.",
+        "..==.....,,,"
+      ],
+      "deploy": [[2, 9], [1, 9], [3, 9], [0, 9], [4, 9]],
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "brakk", "level": 4, "x": 6, "y": 2, "boss": true },
+        { "enemy": "ecumeur_archer", "level": 3, "x": 3, "y": 2 },
+        { "enemy": "ecumeur_archer", "level": 2, "x": 9, "y": 2 },
+        { "enemy": "ecumeur_lancier", "level": 3, "x": 6, "y": 4 },
+        { "enemy": "ecumeur_sabreur", "level": 3, "x": 8, "y": 6 },
+        { "enemy": "ecumeur_sabreur", "level": 2, "x": 4, "y": 6 },
+        { "enemy": "ecumeur_incendiaire", "level": 3, "x": 10, "y": 3 }
+      ],
+      "victoryFlags": ["boss_brakk"]
+    }
+  ]
+}

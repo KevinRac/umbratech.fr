@@ -91,4 +91,49 @@ describe('détection des erreurs de données', () => {
     raw.classes.classes[0].weapon.range = [3, 1];
     expect(issuesOf(raw).join('\n')).toMatch(/portée min > portée max/);
   });
+
+  it('signale une arme de départ inconnue ou d’un autre type que la classe', () => {
+    const raw = rawCopy();
+    raw.classes.classes[0].startingWeapon = 'epee_de_fer';
+    expect(issuesOf(raw).join('\n')).toMatch(/de type « epee », la classe manie « lance_courte »/);
+    raw.classes.classes[0].startingWeapon = 'baton_magique';
+    expect(issuesOf(raw).join('\n')).toMatch(/arme inconnue : « baton_magique »/);
+  });
+
+  it('signale un ennemi armé d’une arme inconnue', () => {
+    const raw = rawCopy();
+    raw.enemies.enemies[0].weapon = 'massue';
+    expect(issuesOf(raw).join('\n')).toMatch(/enemies\.json › « ecumeur_sabreur »\.weapon/);
+  });
+
+  it('signale une carte de combat non rectangulaire ou une lettre inconnue', () => {
+    const raw = rawCopy();
+    raw.encounters.encounters[0].map[2] += '.';
+    expect(issuesOf(raw).join('\n')).toMatch(/même longueur/);
+    const raw2 = rawCopy();
+    raw2.encounters.encounters[0].map[0] = 'X' + raw2.encounters.encounters[0].map[0].slice(1);
+    expect(issuesOf(raw2).join('\n')).toMatch(/lettre « X »/);
+  });
+
+  it('signale une unité posée sur une case infranchissable, hors carte ou déjà occupée', () => {
+    const raw = rawCopy();
+    raw.encounters.encounters[0].enemies[0].x = 6; // rivière
+    raw.encounters.encounters[0].enemies[0].y = 0;
+    raw.encounters.encounters[0].deploy[1] = [40, 2];
+    raw.encounters.encounters[0].enemies[2].x = 9;
+    raw.encounters.encounters[0].enemies[2].y = 3;
+    const text = issuesOf(raw).join('\n');
+    expect(text).toMatch(/case 6,0 infranchissable/);
+    expect(text).toMatch(/case 40,2 hors de la carte/);
+    expect(text).toMatch(/case 9,3 déjà occupée/);
+  });
+
+  it('exige un boss unique pour l’objectif « boss » et un seul héros dans la compagnie d’essai', () => {
+    const raw = rawCopy();
+    raw.encounters.encounters[1].enemies[0].boss = false;
+    raw.encounters.testParty[1].hero = true;
+    const text = issuesOf(raw).join('\n');
+    expect(text).toMatch(/exactement un ennemi marqué boss/);
+    expect(text).toMatch(/exactement un héros/);
+  });
 });

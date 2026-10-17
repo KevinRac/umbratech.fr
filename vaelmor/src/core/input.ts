@@ -30,6 +30,12 @@ export const ACTION_BINDINGS = {
   debugCollision: ['F4'],
   debugGates: ['F9'],
   debugEvening: ['F6'],
+  /** Combat : afficher toutes les zones de menace ennemies (GDD §9.5). */
+  threat: ['R'],
+  /** Combat : passer à l'unité prête suivante. */
+  nextUnit: ['F'],
+  debugBattle: ['F7'],
+  debugBattleBoss: ['F8'],
 } as const satisfies Record<string, readonly KeyName[]>;
 
 export type Action = keyof typeof ACTION_BINDINGS;

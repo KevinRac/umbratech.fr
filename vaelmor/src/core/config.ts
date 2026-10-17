@@ -27,7 +27,7 @@ export const GAME_SUBTITLE = 'Les Marées de Cendre';
 export const GAME_VERSION: string = __GAME_VERSION__;
 
 /** Jalon de développement affiché sur l'écran titre et dans l'outil de debug. */
-export const MILESTONE = 'M1';
+export const MILESTONE = 'M4';
 
 /**
  * URL d'un asset rangé sous `vaelmor/` (ex. `assets/fonts/tiny5.woff2`,

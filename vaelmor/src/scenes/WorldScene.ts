@@ -86,6 +86,8 @@ export class WorldScene extends Phaser.Scene {
   private fog = new Map<string, Phaser.GameObjects.TileSprite[]>();
 
   private paused = false;
+  /** Vrai pendant la transition vers une autre scène (combat). */
+  private leaving = false;
 
   /** Étalonnage, bloom, flou de profondeur, rayons, poussière, halos (décisions n°43 et n°47). */
   private atmosphere: WorldAtmosphere | null = null;
@@ -104,6 +106,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(data: WorldSceneData = {}): void {
+    this.leaving = false;
     this.view = worldView(this, worldZoomFor(this.scale.height));
     try {
       this.data_ = loadGameData();
@@ -290,7 +293,7 @@ export class WorldScene extends Phaser.Scene {
   /* ---------- Boucle ---------- */
 
   override update(time: number, delta: number): void {
-    if (!this.map) return;
+    if (!this.map || this.leaving) return;
     if (this.actions.justPressed('cancel')) {
       this.togglePause();
     }
@@ -435,6 +438,8 @@ export class WorldScene extends Phaser.Scene {
       this.hud.toast(open ? 'Debug : tous les passages ouverts' : 'Debug : passages refermés');
     }
     if (this.actions.justPressed('debugTeleport')) this.teleportNext();
+    if (this.actions.justPressed('debugBattle')) this.startBattle('embuscade_du_gue');
+    if (this.actions.justPressed('debugBattleBoss')) this.startBattle('camp_des_ecumeurs');
     if (this.actions.justPressed('debugEvening') && this.atmosphere) {
       const evening = this.atmosphere.getEvening() < 0.5 ? 1 : 0;
       this.atmosphere.setEvening(evening, 2000);
@@ -457,6 +462,7 @@ export class WorldScene extends Phaser.Scene {
           `CASE ${tx},${ty}  PX ${Math.round(this.body_.x)},${Math.round(this.body_.y)}`,
           `ZONE ${zone?.id ?? '-'}  LIEU ${location ? String(location.props['id']) : '-'}`,
           `COLL ${value}  F2 TP  F4 COLL  F6 SOIR  F9 PASSAGES`,
+          `F7 COMBAT D'ESSAI  F8 CAMP DES ÉCUMEURS`,
         ].join('\n'),
       );
     }
@@ -499,6 +505,24 @@ export class WorldScene extends Phaser.Scene {
     // Boîte de collision du héros.
     const { hitboxWidth, hitboxHeight } = this.data_.balance.exploration;
     g.lineStyle(1, 0x30ff80, 1).strokeRect(Math.round(this.body_.x - hitboxWidth / 2), Math.round(this.body_.y - hitboxHeight), hitboxWidth, hitboxHeight);
+  }
+
+  /* ---------- Combat ---------- */
+
+  /**
+   * Passage au combat tactique (GDD §9.1) : flash blanc puis zoom radial, et la
+   * scène de combat prend le relais. Au retour, le monde reprend là où le héros
+   * était (l'état vit dans la session). En attendant les ennemis du monde (M3),
+   * seul le debug déclenche un combat (F7, F8).
+   */
+  private startBattle(encounterId: string): void {
+    if (this.paused || this.leaving) return;
+    this.leaving = true;
+    const camera = this.cameras.main;
+    camera.flash(150, 255, 255, 255);
+    this.tweens.add({ targets: camera, zoom: camera.zoom * 1.5, duration: 400, ease: 'Cubic.easeIn' });
+    camera.fadeOut(400, 255, 255, 255);
+    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, { encounterId, returnTo: 'world' }));
   }
 
   /* ---------- Pause ---------- */

@@ -47,7 +47,8 @@ async function main(): Promise<number> {
         console.log(
           `✓ Données valides : ${d.classes.length} classes, ` +
             `${d.classes.reduce((n, c) => n + c.evolutions.length, 0)} évolutions, ` +
-            `${d.terrains.length} terrains, ${d.elements.length} éléments, ${d.reputation.tiers.length} paliers de réputation.${mapSummary}`,
+            `${d.terrains.length} terrains, ${d.elements.length} éléments, ${d.reputation.tiers.length} paliers de réputation, ` +
+            `${d.weapons.length} armes, ${d.enemies.length} ennemis, ${d.encounters.encounters.length} rencontres.${mapSummary}`,
         );
         return 0;
       }

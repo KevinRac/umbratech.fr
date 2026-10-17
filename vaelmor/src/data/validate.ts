@@ -7,8 +7,12 @@
  */
 import { z } from 'zod';
 import {
+  BATTLE_MAP_LIMITS,
   CLASS_ROLES,
   balanceFileSchema,
+  enemiesFileSchema,
+  encountersFileSchema,
+  itemsFileSchema,
   classesFileSchema,
   elementsFileSchema,
   reputationFileSchema,
@@ -17,7 +21,10 @@ import {
   type BalanceConfig,
   type ClassDef,
   type ElementDef,
+  type EncountersFile,
+  type EnemyDef,
   type ReputationConfig,
+  type WeaponDef,
   type TerrainDef,
   type ZoneDef,
 } from './schemas';
@@ -32,6 +39,9 @@ export const DATA_SCHEMAS = {
   balance: balanceFileSchema,
   classes: classesFileSchema,
   zones: zonesFileSchema,
+  items: itemsFileSchema,
+  enemies: enemiesFileSchema,
+  encounters: encountersFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -49,6 +59,10 @@ export interface GameData {
   readonly balance: BalanceConfig;
   readonly classes: readonly ClassDef[];
   readonly zones: readonly ZoneDef[];
+  readonly weapons: readonly WeaponDef[];
+  readonly enemies: readonly EnemyDef[];
+  /** Rencontres tactiques, légende des cartes et compagnie d'essai. */
+  readonly encounters: EncountersFile;
 }
 
 export type ValidationResult =
@@ -153,12 +167,105 @@ function crossCheck(data: GameData): string[] {
     const [minRange, maxRange] = cls.weapon.range;
     if (minRange > maxRange) issues.push(`classes.json › « ${cls.id} ».weapon.range : portée min > portée max`);
   }
+  // Armes
+  checkUniqueIds('items.json', 'arme', data.weapons, issues);
+  const weapons = new Map(data.weapons.map((w) => [w.id, w]));
+  for (const weapon of data.weapons) {
+    if (weapon.range[0] > weapon.range[1]) issues.push(`items.json › « ${weapon.id} ».range : portée min > portée max`);
+    if (weapon.element !== null && !elementIds.has(weapon.element)) {
+      issues.push(`items.json › « ${weapon.id} ».element référence un élément inconnu : « ${weapon.element} »`);
+    }
+  }
+  for (const cls of data.classes) {
+    const weapon = weapons.get(cls.startingWeapon);
+    if (!weapon) {
+      issues.push(`classes.json › « ${cls.id} ».startingWeapon référence une arme inconnue : « ${cls.startingWeapon} »`);
+      continue;
+    }
+    if (weapon.type !== cls.weapon.type) issues.push(`classes.json › « ${cls.id} » : l'arme de départ « ${weapon.id} » est de type « ${weapon.type} », la classe manie « ${cls.weapon.type} »`);
+    if (weapon.damage !== cls.weapon.damage) issues.push(`classes.json › « ${cls.id} » : l'arme de départ « ${weapon.id} » n'inflige pas des dégâts « ${cls.weapon.damage} »`);
+    if (weapon.range[0] !== cls.weapon.range[0] || weapon.range[1] !== cls.weapon.range[1]) {
+      issues.push(`classes.json › « ${cls.id} » : la portée de l'arme de départ « ${weapon.id} » diffère de celle de la classe`);
+    }
+  }
+
+  // Ennemis
+  checkUniqueIds('enemies.json', 'ennemi', data.enemies, issues);
+  for (const enemy of data.enemies) {
+    if (!weapons.has(enemy.weapon)) issues.push(`enemies.json › « ${enemy.id} ».weapon référence une arme inconnue : « ${enemy.weapon} »`);
+    if (enemy.element !== null && !elementIds.has(enemy.element)) {
+      issues.push(`enemies.json › « ${enemy.id} ».element référence un élément inconnu : « ${enemy.element} »`);
+    }
+  }
+
+  checkEncounters(data, issues);
+
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
     if (!roles.has(role)) issues.push(`classes.json › aucun rôle « ${role} » : les 12 rôles du GDD doivent être couverts`);
   }
 
   return issues;
+}
+
+/** Rencontres : cartes rectangulaires et jouables, références, déploiement, objectif. */
+function checkEncounters(data: GameData, issues: string[]): void {
+  const file = 'encounters.json';
+  const { legend, testParty, encounters } = data.encounters;
+  const terrains = new Map(data.terrains.map((t) => [t.id, t]));
+  for (const [char, terrain] of Object.entries(legend)) {
+    if (!terrains.has(terrain)) issues.push(`${file} › legend « ${char} » référence un terrain inconnu : « ${terrain} »`);
+  }
+  const classIds = new Set(data.classes.map((c) => c.id));
+  testParty.forEach((member, i) => {
+    if (!classIds.has(member.class)) issues.push(`${file} › testParty[${i}].class référence une classe inconnue : « ${member.class} »`);
+  });
+  if (testParty.filter((m) => m.hero).length !== 1) issues.push(`${file} › testParty doit compter exactement un héros`);
+
+  checkUniqueIds(file, 'rencontre', encounters, issues);
+  const zoneIds = new Set(data.zones.map((z) => z.id));
+  const enemyIds = new Set(data.enemies.map((e) => e.id));
+  const L = BATTLE_MAP_LIMITS;
+  for (const enc of encounters) {
+    const at = `${file} › « ${enc.id} »`;
+    if (!zoneIds.has(enc.zone)) issues.push(`${at}.zone référence une zone inconnue : « ${enc.zone} »`);
+    const height = enc.map.length;
+    const width = enc.map[0]?.length ?? 0;
+    if (enc.map.some((row) => [...row].length !== width)) {
+      issues.push(`${at}.map : toutes les lignes doivent avoir la même longueur (${width})`);
+      continue;
+    }
+    if (width < L.minWidth || width > L.maxWidth || height < L.minHeight || height > L.maxHeight) {
+      issues.push(`${at}.map : ${width}×${height} cases, attendu de ${L.minWidth}×${L.minHeight} à ${L.maxWidth}×${L.maxHeight}`);
+      continue;
+    }
+    const terrainAt = (x: number, y: number) => {
+      const char = [...(enc.map[y] ?? '')][x];
+      return char === undefined ? undefined : terrains.get(legend[char] ?? '');
+    };
+    enc.map.forEach((row, y) =>
+      [...row].forEach((char, x) => {
+        if (legend[char] === undefined) issues.push(`${at}.map : lettre « ${char} » (case ${x},${y}) absente de legend`);
+      }),
+    );
+    const occupied = new Set<string>();
+    const place = (x: number, y: number, label: string): void => {
+      const terrain = terrainAt(x, y);
+      if (x >= width || y >= height) issues.push(`${at} › ${label} : case ${x},${y} hors de la carte`);
+      else if (terrain && terrain.moveCost === null) issues.push(`${at} › ${label} : case ${x},${y} infranchissable (${terrain.name})`);
+      const key = `${x},${y}`;
+      if (occupied.has(key)) issues.push(`${at} › ${label} : case ${x},${y} déjà occupée`);
+      occupied.add(key);
+    };
+    enc.deploy.forEach(([x, y], i) => place(x, y, `deploy[${i}]`));
+    if (enc.maxDeploy > enc.deploy.length) issues.push(`${at}.maxDeploy (${enc.maxDeploy}) dépasse le nombre de cases de déploiement (${enc.deploy.length})`);
+    enc.enemies.forEach((e, i) => {
+      if (!enemyIds.has(e.enemy)) issues.push(`${at}.enemies[${i}] référence un ennemi inconnu : « ${e.enemy} »`);
+      place(e.x, e.y, `enemies[${i}]`);
+    });
+    const bosses = enc.enemies.filter((e) => e.boss).length;
+    if (enc.objective.type === 'boss' && bosses !== 1) issues.push(`${at} : l'objectif « boss » exige exactement un ennemi marqué boss (${bosses} trouvé(s))`);
+  }
 }
 
 /** Valide l'ensemble des fichiers. Ne lève jamais : renvoie la liste des problèmes. */
@@ -185,6 +292,9 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     balance: z.infer<typeof balanceFileSchema>;
     classes: z.infer<typeof classesFileSchema>;
     zones: z.infer<typeof zonesFileSchema>;
+    items: z.infer<typeof itemsFileSchema>;
+    enemies: z.infer<typeof enemiesFileSchema>;
+    encounters: z.infer<typeof encountersFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -193,6 +303,9 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     balance: files.balance,
     classes: files.classes.classes,
     zones: files.zones.zones,
+    weapons: files.items.weapons,
+    enemies: files.enemies.enemies,
+    encounters: files.encounters,
   };
 
   const crossIssues = crossCheck(data);

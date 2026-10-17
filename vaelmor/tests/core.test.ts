@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { assetUrl } from '../src/core/config';
 import { titleZoomFor, uiScaleFor, worldZoomFor, zoomOrigin } from '../src/core/viewport';
 import { EventBus } from '../src/core/events';
+import { ANIM_SPEED_FACTOR, nextAnimSpeed, parseAnimSpeed } from '../src/core/settings';
 
 describe('tailles d’affichage (canevas non étiré)', () => {
   it('zoom du monde entier, croissant avec la hauteur, borné', () => {
@@ -75,5 +76,17 @@ describe('assetUrl', () => {
   it('construit un chemin relatif sans double barre', () => {
     expect(assetUrl('assets/fonts/tiny5.woff2')).toBe('./assets/fonts/tiny5.woff2');
     expect(assetUrl('/music/mus_title.mp3')).toBe('./music/mus_title.mp3');
+  });
+});
+
+describe('vitesse des animations de combat (GDD §11.1)', () => {
+  it('lecture prudente, cycle Normales → Rapides → Désactivées, facteurs', () => {
+    expect(parseAnimSpeed('fast')).toBe('fast');
+    expect(parseAnimSpeed('turbo')).toBe('normal');
+    expect(parseAnimSpeed(undefined)).toBe('normal');
+    expect(nextAnimSpeed('normal')).toBe('fast');
+    expect(nextAnimSpeed('fast')).toBe('off');
+    expect(nextAnimSpeed('off')).toBe('normal');
+    expect(ANIM_SPEED_FACTOR).toEqual({ normal: 1, fast: 0.5, off: 0 });
   });
 });

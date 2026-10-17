@@ -581,6 +581,8 @@ Au-dessus de l'ennemi (visible à l'approche, ~10 tuiles) : icône de crâne + c
 
 ## 9. Combat tactique
 
+> **Mise à jour du 17/10/2026 (jalon M4, décisions n°51 à n°56 — détail dans PROGRESS.md).** Réalisé : grille, déplacement (coûts du terrain, alliés traversables, ennemis bloquants), attaques, ripostes, doubles, critiques, triangle élémentaire, armes efficaces, Résonance (jauge seulement), phases joueur / ennemie, avantage de position, soin des villages, enlisement, victoire « rout » / « boss », défaite (héros ou compagnie), IA à score (agressif, opportuniste, défensif, chasseur de héros, boss), prévision de combat, zones de menace, animations de coups sur la carte. Précisions de règles : le triangle ne joue que pour une arme porteuse d'un élément (armes magiques), contre l'élément de la classe ou de l'ennemi visé (n°51) ; la défense du terrain ne réduit que les dégâts physiques (formule §9.7) ; les cartes de combat sont écrites en texte dans `data/encounters.json` (n°53). Restent pour M5 et après : écran de préparation, objets, compétences, boss à 2 phases, renforts, XP (M6), cinématiques de combat (M8), sauvegarde (M9).
+
 ### 9.1 Transition monde → combat
 
 1. Contact : l'ennemi pointe un « ! », musique coupée.

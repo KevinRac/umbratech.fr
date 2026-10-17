@@ -7,6 +7,8 @@ import { CANVAS_HEIGHT, CANVAS_WIDTH, GAME_TITLE, GAME_VERSION } from './core/co
 import { showFatalError } from './core/fatal';
 import { bindDisplaySize, measureDisplay } from './render/displayScaler';
 import { PALETTE, toCss } from './render/palette';
+import { BattleHudScene } from './scenes/BattleHudScene';
+import { BattleScene } from './scenes/BattleScene';
 import { BootScene } from './scenes/BootScene';
 import { DebugScene } from './scenes/DebugScene';
 import { TitleScene } from './scenes/TitleScene';
@@ -33,7 +35,7 @@ function start(): void {
       zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, TitleScene, WorldScene, WorldHudScene, DebugScene],
+    scene: [BootScene, TitleScene, WorldScene, WorldHudScene, BattleScene, BattleHudScene, DebugScene],
   });
   bindDisplaySize(game);
 }

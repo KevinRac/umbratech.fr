@@ -4,6 +4,8 @@ export const SCENES = {
   title: 'Title',
   world: 'World',
   worldHud: 'WorldHud',
+  battle: 'Battle',
+  battleHud: 'BattleHud',
   debug: 'Debug',
 } as const;
 
