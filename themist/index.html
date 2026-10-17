@@ -6741,7 +6741,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
  // --- incantations : cercle runique + gerbe à chaque compétence lancée
  const CASTRGB={lum:'255,206,120',gou:'170,232,120',her:'150,196,255',tis:'255,140,176'};
  window.runeFx=(x,y,r,rgb,n,t,rot,spin)=>fx.push({k:'rune',x,y,r,rgb,n:n||8,t:t||0.7,max:t||0.7,rot:rot||0,spin:spin||1.4});
- function castFlourish(big){const rgb=CASTRGB[P.cls]||'255,214,130';const hex=P.cls==='gou'?'#b8e86a':P.cls==='her'?'#b4d4ff':P.cls==='tis'?'#ff9ab8':'#ffd27a';
+ function castFlourish(big){return;/* v16.15 : cercle runique et gerbe supprimés (trop d'effet, confondus avec des zones de jeu) */const rgb=CASTRGB[P.cls]||'255,214,130';const hex=P.cls==='gou'?'#b8e86a':P.cls==='her'?'#b4d4ff':P.cls==='tis'?'#ff9ab8':'#ffd27a';
   runeFx(P.x,P.y+8,big?150:96,rgb,big?12:8,big?1.0:0.7,rand(0,TAU),big?-1.1:1.5);if(big)runeFx(P.x,P.y+8,big?96:60,rgb,6,0.8,rand(0,TAU),1.8);
   fx.push({k:'star',x:P.x,y:P.y-4,s:big?42:26,t:0.24,max:0.24,col:rgb,rot:rand(0,TAU)});sparks(P.x,P.y,big?22:12,hex);
   for(let i=0;i<(big?18:10);i++){const a=rand(0,TAU),v=rand(30,110);parts.push({shape:'star',x:P.x+Math.cos(a)*18,y:P.y+Math.sin(a)*8,vx:Math.cos(a)*v*0.4,vy:-v,life:rand(0.6,1.1),max:1.1,size:rand(1.6,3.2),col:hex,layer:'post',drag:1.2});}
