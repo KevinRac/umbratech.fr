@@ -7118,6 +7118,115 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   if(Math.random()<0.3)parts.push({x:x+rand(-30,30),y:yb+rand(-6,20),vx:rand(-10,10),vy:rand(10,40),life:1,max:1,size:2,col:'#c9b4ff',layer:'post',drag:0.5});};
 })();
 
+// ───────────────────────── v16 · menus allégés : Portail, Sanctuaire, Colporteur
+// Principe : une information principale par bloc, le détail à la demande (survol, dépliant, palier sélectionné).
+(function(){
+ // 1. Textes courts
+ const PD={0:['Sans palier','La Brume habituelle.'],1:['Brume épaisse','Ennemis : +20 % de PV.'],2:['Meute','Vagues plus fournies : +20 %.'],3:['Crocs','Ennemis : +20 % de dégâts.'],4:['Disette','Soins divisés par deux, prix +25 %.'],5:['Gardiens enragés','Gardiens : +30 % de PV, plus rapides.'],6:['Hâte','Ennemis 12 % plus rapides.'],7:['Vagues sans fin','Une vague de plus par salle.'],8:['Le Glas éternel','PV max −15 %, champions +40 % de PV.']};
+ PALIERS.forEach(p=>{if(PD[p.n]){p.name=PD[p.n][0];p.desc=PD[p.n][1];}});
+ const MD={vig:'+8 PV max par rang',ard:'+5 % de dégâts par rang',ref:'Esquive rechargée 8 % plus vite par rang',for:'+15 % d’or par rang',mar:'Prix du Colporteur −10 % par rang',rel:'+1 relance par acte, par rang',sav:'+1 niveau de départ par rang',bag:'Une relique de départ au choix',cho:'4 talents proposés au lieu de 3',sec:'Une fois par run, relève-toi à 40 % de PV'};
+ META.forEach(m=>{if(MD[m.id])m.desc=MD[m.id];});
+ const SHORT={lum:'Une lanterne qui expose, l’Obscur qui tue.',gou:'Dévore la Brume, puis la recrache.',her:'Des coups en rythme qui résonnent.',tis:'Des fils pour retourner les ennemis.'};
+ const TIP={lum:'Les ennemis éclairés sont exposés : ils subissent plus de dégâts.',gou:'Plus ta Corruption monte, plus tu frappes fort. À 100, c’est la Rupture.',her:'Agis quand le cercle se referme : en mesure, tes coups frappent plus fort.',tis:'Attache des fils aux ennemis, puis arrache-les d’un coup.'};
+ const cut=s=>String(s).replace('Compétences de l’arbre','Compétences').split(/ : |, /)[0];
+
+ // 2. Le Portail
+ const _rp=renderPortail;
+ renderPortail=function(){
+  _rp.apply(this,arguments);
+  const panel=overlayEl.querySelector('.panel');if(!panel||!panel.querySelector('#descend'))return;
+  const cl=chosenCls,two=panel.querySelector('.two');if(!two)return;
+  panel.querySelectorAll('button.cls,.cls.off').forEach(b=>{const p=b.querySelector('p');const id=b.dataset.cls;if(p&&id&&SHORT[id])p.textContent=SHORT[id];});
+  const kids=[...two.children];
+  const palCol=kids.find(e=>e.firstElementChild&&/Palier/.test(e.firstElementChild.textContent)&&!e.querySelector('.classes'));
+  const cmdCol=kids.find(e=>e.querySelector('.keys'));
+  const max=SAVE.palierMax||0,cur=clamp(SAVE.palier||0,0,max);
+  if(palCol){
+   const pp=PALIERS[cur];
+   palCol.innerHTML=`<p class="h-sec" style="margin-top:0">Palier de Brume</p>`+(max>0
+    ?`<div class="pchips" role="group" aria-label="Palier de Brume">${PALIERS.map(p=>`<button type="button" class="pchip ${p.n===cur?'sel':''}" data-p="${p.n}" ${p.n>max?'disabled':''} aria-pressed="${p.n===cur}" title="${esc(p.name)} · ${esc(p.desc)}">${p.n}</button>`).join('')}</div><div class="pdesc"><b>${esc(pp.name)}</b><span>${esc(pp.desc)}</span></div><p class="k pnote">Chaque palier cumule les précédents et rapporte plus d’éclats.</p>`
+    :`<p class="pdesc locked"><span>Se débloque après ta première victoire sur le Glas Originel.</span></p>`);
+   palCol.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{SAVE.palier=+b.dataset.p;persist();renderPortail();}));
+  }
+  if(cmdCol){
+   const boons=cmdCol.querySelector('.notice');
+   const keys=keysFor(cl).filter(([k])=>k!=='Souris'&&k!=='Échap').map(([k,v])=>[k,cut(v)]);
+   cmdCol.innerHTML=`<p class="h-sec" style="margin-top:0">Commandes · ${CLS[cl].short}</p>${keysHTML(keys)}<p class="tip">${TIP[cl]}</p>`;
+   if(boons){boons.textContent=boons.textContent.replace(' pour cette descente','');cmdCol.appendChild(boons);}
+  }
+  const rz=panel.querySelector('#rzportal');
+  if(rz){
+   const n=rz.parentElement,t=n.textContent,m=t.match(/acte ([IVX]+)/),lv=t.match(/(\d+) niveaux/);
+   const s=document.createElement('span');s.innerHTML=`Raccourci · départ à l’acte ${m?m[1]:''}<small>−10 % de PV max · ${lv?lv[1]:''} niveaux d’avance · sans provision</small>`;
+   n.className='shortcut';n.textContent='';n.append(s,rz);
+  }
+  const hint=panel.querySelector('.portalbar .k');
+  if(hint)hint.textContent=max>0?'Entrée : descendre · Échap : rester · ←  → : palier':'Entrée : descendre · Échap : rester';
+  const ok=overlayKeys;
+  overlayKeys=c=>{
+   if(max>0&&(c==='ArrowLeft'||c==='ArrowRight')){const n=clamp(cur+(c==='ArrowRight'?1:-1),0,max);if(n!==cur){SAVE.palier=n;persist();renderPortail();}return;}
+   if(ok)ok(c);};
+ };
+
+ // 3. Sanctuaire : bandeaux d'éclats sans commentaire, reliques et chroniques repliées
+ const _sp=shardPurse;
+ shardPurse=function(note){return _sp(/relique forgée/.test(note||'')?'Les reliques forgées rejoignent la Brume.':'');};
+ const fold=(host,head,body)=>{if(!head||!body||host.tagName==='DETAILS')return;const d=document.createElement('details');d.className='fold';const s=document.createElement('summary');s.textContent=head.textContent;body.parentElement.insertBefore(d,head);d.append(s,body);head.remove();};
+ const _rf=renderFondeur;
+ renderFondeur=function(){_rf.apply(this,arguments);const ch=overlayEl.querySelector('.chips');if(ch)fold(ch.parentElement,ch.previousElementSibling,ch);};
+ const _ra=renderArchiviste;
+ renderArchiviste=function(){
+  _ra.apply(this,arguments);
+  overlayEl.querySelectorAll('ul.lore li:not(.locked)').forEach(li=>{
+   const h=li.querySelector('h3');if(!h)return;
+   li.classList.add('fold');if(h.querySelector('.new'))li.classList.add('open');
+   h.tabIndex=0;h.setAttribute('role','button');h.setAttribute('aria-expanded',li.classList.contains('open'));
+   const tg=()=>{li.classList.toggle('open');h.setAttribute('aria-expanded',li.classList.contains('open'));};
+   h.addEventListener('click',tg);
+   h.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();tg();}});
+  });
+  const ul=overlayEl.querySelector('ul.lore'),sealed=ul?[...ul.querySelectorAll('li.locked')]:[];
+  if(sealed.length>1){const d=document.createElement('details'),s=document.createElement('summary'),u2=document.createElement('ul');d.className='fold';u2.className='lore';s.textContent=`${sealed.length} chroniques scellées`;sealed.forEach(l=>u2.appendChild(l));d.append(s,u2);ul.after(d);}
+ };
+
+ // 4. Colporteur : pied de page plus court
+ const _rs=renderShop;
+ renderShop=function(){_rs.apply(this,arguments);overlayEl.querySelectorAll('.k').forEach(k=>{const t=k.textContent;if(/ne remonte pas/.test(t))k.textContent='L’or ne suit pas au Sanctuaire.';else if(/Échap pour partir/.test(t))k.textContent='Échap pour partir';});};
+
+ const st=document.createElement('style');st.textContent=`
+.portal .cls{padding:14px 16px;gap:6px}
+.portal .classes{gap:10px}
+.portal .cls p{font-size:14px;line-height:1.4}
+.portal .cls .mech,.portal .cls:not(.sel) .tag{display:none}
+.portal .keys{gap:7px 14px;font-size:14.5px}
+.portal .tip{max-width:none}
+.pchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px}
+.pchip{appearance:none;font:500 20px var(--f-display);color:var(--ash);background:var(--card);border:1px solid var(--line);border-radius:4px;height:42px;cursor:pointer}
+.pchip:hover:not(:disabled){border-color:var(--line-hi);color:var(--bone)}
+.pchip.sel{border-color:#b9c7ff;color:#b9c7ff;box-shadow:inset 0 0 0 1px #b9c7ff}
+.pchip:disabled{opacity:.3;cursor:not-allowed}
+.pchip:focus-visible{outline:2px solid var(--flame);outline-offset:3px}
+.pdesc{display:grid;gap:2px;margin:12px 0 0;padding:10px 14px;border-left:3px solid #b9c7ff;background:rgba(185,199,255,.06);border-radius:0 4px 4px 0}
+.pdesc b{color:var(--bone);font-size:16px}
+.pdesc span{color:#cfc7b3;font-size:14.5px}
+.pdesc.locked{border-left-color:var(--line-hi);background:none;margin-top:0}
+.pnote{margin:10px 0 0}
+.shortcut{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin:18px 0 0;padding:10px 14px;border:1px solid var(--line);border-radius:4px;background:rgba(60,74,122,.12);color:var(--bone);font-size:15px}
+.shortcut small{display:block;margin-top:2px;color:var(--ash);font-size:13px}
+details.fold{margin-top:18px}
+details.fold>summary{cursor:pointer;list-style:none;font-size:13.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ash);padding:6px 0}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:'▸ ';color:var(--mute)}
+details.fold[open]>summary::before{content:'▾ '}
+details.fold>.chips{margin-top:8px}
+.lore li.fold h3{cursor:pointer}
+.lore li.fold h3::before{content:'▸ ';color:var(--mute);font-size:.7em}
+.lore li.fold.open h3::before{content:'▾ '}
+.lore li.fold:not(.open) p{display:none}
+.lore li.fold h3:focus-visible{outline:2px solid var(--flame);outline-offset:3px}
+`;document.head.appendChild(st);
+})();
+
 if(window.claude&&window.claude.hot&&window.claude.hot.ready)window.claude.hot.ready(()=>start());else start();
 })();
 </script>
