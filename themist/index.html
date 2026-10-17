@@ -5239,26 +5239,32 @@ const DIFF=Object.fromEntries(FO_D.ordre.map(c=>[c,FO_D.fiches[c].difficulte]));
 const CLSHELP=Object.fromEntries(FO_D.ordre.map(c=>[c,FO_D.fiches[c].aide]));
 function openGuide(back){
  if(!SAVE.flags.guide){SAVE.flags.guide=1;persist();}
- const card=(n,t,x)=>`<div class="gd-card"><b>${n}</b><h3>${t}</h3><p>${x}</p></div>`;
- const html=`<div class="panel guide"><p class="eyebrow">Guide</p><h2>Comment jouer</h2>
- <p class="sub">Roguelite d’action : tu descends salle après salle, tu tombes, tu reviens plus fort.</p>
- <p class="h-sec">L’essentiel</p><div class="gd-grid">
- ${card(1,'Descendre','3 actes : des salles, puis un gardien. Salle purifiée → choisis une porte au nord (combat, champion, autel, halte, Colporteur, parfois une Brèche : combat plus dur, relique à la clé).')}
- ${card(2,'Mourir, c’est normal','Tu perds niveau, talents, reliques et or. Tu gardes des Éclats de Mémoire et tes déblocages.')}
- ${card(3,'Se renforcer','Chaque niveau = un talent (bouton Talents ou Tab). Autels et champions donnent des reliques ; le Colporteur vend contre de l’or.')}
- ${card(4,'Lumière et Brume','Un ennemi dans ta lumière est exposé : ralenti et +25 % de dégâts. Garde les Voilés dans la lumière.')}
- ${card(5,'Lire le combat','Cercle ou bande rouge au sol = attaque imminente. Esquive : Espace (intouchable un instant).')}
- ${card(6,'Le Sanctuaire','Entre deux descentes : Ismène (flamme, Résonances), Corbin (reliques), l’Archiviste (chroniques). Portail au nord = départ.')}
+ // v16.8 · guide d'un coup d'œil : icônes d'abord, quelques mots par bloc, tout sur un écran
+ const st=(ic,t,x,c)=>`<div class="gd2-step"${c?` style="--c:${c}"`:''}><span class="gd2-ic">${icon(ic)}</span><div><b>${t}</b><small>${x}</small></div></div>`;
+ const chip=(ic,t,x,c)=>`<span class="gd2-chip" style="--c:${c||'#f3b94d'}">${icon(ic)}<b>${t}</b>${x?`<small>${x}</small>`:''}</span>`;
+ const html=`<div class="panel guide gd2"><p class="eyebrow">Guide · 30 secondes</p><h2>Comment jouer</h2>
+ <p class="h-sec">La boucle</p><div class="gd2-flow">
+ ${st('combat','Descends','3 actes · salles puis gardien','#f3b94d')}
+ ${st('u_skull','Tombe','Tu gardes éclats et déblocages','#ff6b6b')}
+ ${st('u_up','Monte','1 niveau = 1 talent · Tab','#8be07a')}
+ ${st('sanctuaire','Reviens','Plus fort, au Sanctuaire','#8ec5ff')}
  </div>
- <p class="h-sec">Les quatre formes</p><div class="gd-grid">${CLASSLIST.map(c=>`<div class="gd-card" style="--c:${CLS[c.id].color}"><b style="color:var(--c)">${DIFF[c.id]}</b><h3>${c.name}</h3><p>${CLSHELP[c.id]}</p></div>`).join('')}</div>
- <p class="h-sec">Pour aller plus loin</p><dl class="keys">
- <dt><b>Paliers de Brume</b></dt><dd>Après ta 1re victoire : redescendre plus dur, pour plus d’éclats.</dd>
- <dt><b>Accoutumance</b></dt><dd>Abuser du même mécanisme : la Brume s’y habitue. Varie ton style.</dd>
- <dt><b>Échos et tombes</b></dt><dd>Là où tu tombes, une tombe d’Écho t’attend : recueille-la pour un bonus.</dd>
- <dt><b>Carte du Glas</b></dt><dd>Fragments de carte gagnés sur gardiens, champions, autels. Un chapitre complet révèle une Vérité.</dd>
- <dt><b>Résonances</b></dt><dd>Arbre permanent chez Ismène : chaque nœud donne un avantage et coûte quelque chose.</dd></dl>
- <p class="h-sec">Commandes · ${CLS[chosenCls].short}</p>${keysHTML([...keysFor(chosenCls),['Tab','Choisir un talent en attente'],['H','Ouvrir ce guide']])}
- <div class="row" style="margin-top:20px"><button type="button" class="btn primary" id="gclose">${back?'Retour':'Compris'}</button><span class="k">Échap pour fermer</span></div></div>`;
+ <p class="h-sec">Lire le combat</p><div class="gd2-sig">
+ ${st('u_warn','Zone rouge','Attaque imminente : Espace pour esquiver','#ff6b6b')}
+ ${st('u_bolt','Dans ta lumière','Ennemi exposé : ralenti, +25 % de dégâts','#f3b94d')}
+ ${st('boss','Zone orange','Gardien ou Brumeux : coup lourd','#ff9a52')}
+ </div>
+ <p class="h-sec">Les portes</p><div class="gd2-chips">
+ ${chip('combat','Combat','vagues','#d6d2c4')}${chip('elite','Champion','relique','#f3b94d')}${chip('autel','Autel','choix risqué','#8fb2ff')}${chip('halte','Halte','soin','#ff9a52')}${chip('marchand','Colporteur','achats','#78dcaa')}${chip('u_door','Brèche','dur · relique','#b48cff')}${chip('boss','Gardien','fin d’acte','#ff4d4d')}
+ </div>
+ <p class="h-sec">Le Sanctuaire</p><div class="gd2-chips">
+ ${chip('halte','Ismène','flamme · Résonances','#f3b94d')}${chip('bag','Corbin','reliques','#6fb4ff')}${chip('u_book','Archiviste','chroniques','#c9a8ff')}${chip('u_door','Portail nord','départ','#8be07a')}
+ </div>
+ <p class="h-sec">Plus tard</p><div class="gd2-chips">
+ ${chip('u_up','Paliers de Brume','dès la 1re victoire : plus dur, plus d’éclats','#f3b94d')}${chip('u_eye','Accoutumance','varie ton style','#c9a8ff')}${chip('u_ghost','Tombe d’Écho','là où tu tombes : bonus','#8ec5ff')}${chip('u_star','Carte du Glas','fragments → Vérité','#ff9a52')}${chip('u_gem','Résonances','arbre permanent','#78dcaa')}
+ </div>
+ <p class="h-sec">Commandes · ${CLS[chosenCls].short}</p><div class="gd2-keys">${[...keysFor(chosenCls),['Tab','Talent en attente'],['H','Ce guide']].map(([k,v])=>`<span class="gd2-k"><kbd>${esc(k)}</kbd>${v}</span>`).join('')}</div>
+ <div class="row" style="margin-top:16px"><button type="button" class="btn primary" id="gclose">${back?'Retour':'Compris'}</button><span class="k">Entrée ou Échap pour fermer</span></div></div>`;
  openOverlay(html);
  const done=()=>{if(back)back();else closeOverlay();};
  $('#gclose').addEventListener('click',done);
@@ -7575,6 +7581,27 @@ function demoBoot(cls){
 #assist .aid small{display:block;opacity:.75;font-size:13px;line-height:1.3}
 @media (prefers-reduced-motion:no-preference){#toast.rich.show .tbadge{animation:tbpop .35s cubic-bezier(.2,1.6,.4,1)}}
 @keyframes tbpop{from{transform:scale(.6)}to{transform:scale(1)}}
+
+/* v16.8 · guide « Comment jouer » : un coup d'œil suffit */
+.panel.gd2{width:min(1120px,100%);padding:20px clamp(14px,2.4vw,30px) 16px}
+.gd2 h2{margin:0 0 2px}
+.gd2 .h-sec{margin:13px 0 7px}
+.gd2-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.gd2-sig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gd2-step{--c:#f3b94d;position:relative;display:flex;gap:11px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-left:3px solid var(--c);border-radius:8px;background:var(--card)}
+.gd2-flow .gd2-step:not(:last-child)::after{content:'›';position:absolute;right:-10px;top:50%;transform:translateY(-54%);z-index:2;color:var(--flame);font-size:24px;line-height:1}
+.gd2-ic{flex:none;width:42px;height:42px;border-radius:10px;display:grid;place-items:center;color:var(--c);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.gd2-ic .ic{width:27px;height:27px;stroke-width:1.6}
+.gd2-step b{display:block;font-size:18px;font-weight:800;line-height:1.15;color:#fff}
+.gd2-step small{display:block;margin-top:2px;font-size:14px;line-height:1.3;color:#c9c2af}
+.gd2-chips,.gd2-keys{display:flex;flex-wrap:wrap;gap:6px 8px}
+.gd2-chip{--c:#f3b94d;display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 9px;border:1px solid color-mix(in srgb,var(--c) 55%,transparent);border-radius:999px;background:color-mix(in srgb,var(--c) 8%,transparent)}
+.gd2-chip .ic{width:20px;height:20px;color:var(--c);stroke-width:1.7}
+.gd2-chip b{font-size:15.5px;font-weight:800;color:#fff}
+.gd2-chip small{font-size:13.5px;color:#c9c2af}
+.gd2-k{display:inline-flex;align-items:center;gap:7px;font-size:14.5px;color:#d2cab6;padding:3px 10px 3px 4px;border-radius:6px;background:rgba(255,255,255,.04)}
+@media (max-width:860px){.gd2-flow{grid-template-columns:repeat(2,minmax(0,1fr))}.gd2-flow .gd2-step::after{display:none}.gd2-sig{grid-template-columns:1fr}}
+@media (max-height:820px){.gd2 .h-sec{margin:9px 0 5px}.gd2-step{padding:6px 10px}.gd2-ic{width:36px;height:36px}.gd2-ic .ic{width:23px;height:23px}}
 /* v16.7 · petits écrans : centrage sûr (un panneau plus haut que l'écran défile au lieu d'être rogné) et fiche de talent collée en bas */
 #overlay{display:flex;flex-direction:column;place-items:unset}
 #overlay>*{margin:auto}
