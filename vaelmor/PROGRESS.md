@@ -25,7 +25,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] Dossier du jeu créé dans le dépôt (page d'attente, music/, assets/, src/, data/, docs/)
 - [x] **M0 : squelette technique** (16/10/2026) — voir « Livré en M0 »
 - [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
-- [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 »
+- [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°56 validées
 - [ ] M2, M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
@@ -154,7 +154,7 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
 - **Vérifié dans Chromium** (SwiftShader, 960×540, ~27 ips sans GPU) : titre → combat d'essai, sélection, déplacement, menu d'action, ciblage et prévision, échange animé, phase ennemie, défaite, victoire (F2), retour au titre et au monde (drapeau `boss_brakk` levé), aucune erreur console.
 - Équilibrage indicatif (IA contre IA, 100 graines) : Embuscade au gué ~46 % de victoires en ~3,5 tours, Camp des Écumeurs ~44 % ; un joueur qui garde ses unités groupées et use du terrain gagne nettement plus souvent. À ajuster sur retours de jeu (niveaux des ennemis dans `encounters.json`).
 
-### Décisions n°51 à n°56 (jalon M4, 17/10/2026) — à valider par l'auteur
+### Décisions n°51 à n°56 (jalon M4) — validées par l'auteur le 17/10/2026
 - **n°51 — Le triangle élémentaire est porté par l'arme** : il ne joue que si l'arme a un élément (les armes magiques : Tome des Cendres, Bâton-lanterne, Bâton-menhir, Bâton-branche, Brandon de poix), contre l'élément de l'unité visée (celui de sa classe ou de l'ennemi). Le GDD §9.7 le réservait « aux sorts et armes magiques » sans dire contre quoi il se mesure. Ex. : l'Héritier des Cendres a l'avantage sur le Façonneur de Racines, le désavantage sur le Gardien des Marées.
 - **n°52 — Stats selon le niveau = croissance moyenne arrondie** : base + arrondi(croissance × (niveau − 1) / 100). Règle définitive pour les ennemis (un ennemi d'un niveau donné a toujours les mêmes stats) ; provisoire pour les alliés de la compagnie d'essai, jusqu'aux montées de niveau tirées au sort (M6).
 - **n°53 — Cartes de combat en texte** dans `data/encounters.json` (une lettre par case, légende commune) plutôt que des fichiers Tiled : lisibles, éditables à la main, validées ; le champ de bataille est peint par code. Taille de 6×5 à 18×14 (GDD §9.2). Les gabarits par biome et le terrain échantillonné dans le monde (§9.2) viendront avec M3.
