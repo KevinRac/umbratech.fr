@@ -186,6 +186,7 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 ### Ergonomie du combat (18/10/2026, demandes de l'auteur)
 - **Attaque au clic après un déplacement** : quand le menu d'action est ouvert, survoler un ennemi à portée affiche la prévision de l'échange, **cliquer dessus lance l'attaque**. (Avant le déplacement, cliquer sur un ennemi fait toujours approcher l'unité et affiche la prévision ; un second clic attaque.) Un clic sur un menu de l'interface n'est jamais pris pour un clic sur la carte (`BattleHudScene.isOverMenu`).
 - **Menu d'action agrandi** : texte doublé, lignes de 44 px, curseur plus grand (`MenuRequest.large`) ; le menu de carte (Tab) garde sa taille.
+- **Lisibilité des fenêtres** (retour de l'auteur : petite police illisible) : la petite police Tiny5 agrandie ×2 n'est plus utilisée en combat ; tout le texte des fenêtres (unité, prévision, terrain, Résonance, bandeau de phase) est en Jersey 10 à sa taille native. Prévision refaite : portraits ×2, lignes PV / Dégâts / Précision / Critique en toutes lettres avec les pourcentages, ligne « Après » (vert, rouge si l'unité tombe), notes en clair. Grand texte du menu d'action avec une ombre d'un seul pixel (`shadowOffset`). Le menu d'action réserve la place de la prévision affichée au survol.
 - Debug : avec `?debug`, le jeu est exposé dans la console (`window.vaelmor`) pour inspecter les scènes et automatiser les essais.
 
 ### Décisions n°57 à n°60 — à valider par l'auteur

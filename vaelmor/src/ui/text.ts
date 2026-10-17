@@ -17,6 +17,8 @@ export interface TextOptions {
   readonly align?: TextAlign;
   /** Couleur de l'ombre portée (1 px en bas à droite, ×échelle), ou false. */
   readonly shadow?: number | false;
+  /** Décalage de l'ombre en pixels (par défaut : l'échelle ; 1 px suffit pour un grand texte net). */
+  readonly shadowOffset?: number;
   /** Largeur maximale avant retour à la ligne, en pixels de jeu. */
   readonly maxWidth?: number;
 }
@@ -34,7 +36,8 @@ export function addText(scene: Phaser.Scene, x: number, y: number, text: string,
   obj.setTint(options.color ?? PALETTE.parchemin);
   if (options.maxWidth) obj.setMaxWidth(options.maxWidth);
   const shadow = options.shadow ?? PALETTE.encre;
-  if (shadow !== false) obj.setDropShadow(scale, scale, shadow, 1);
+  const offset = options.shadowOffset ?? scale;
+  if (shadow !== false) obj.setDropShadow(offset, offset, shadow, 1);
   const pixelText = Object.assign(obj, { anchorX: x, anchorAlign: options.align ?? 'left' }) as PixelText;
   realign(pixelText);
   return pixelText;

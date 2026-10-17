@@ -29,6 +29,8 @@ import { SCENES } from './keys';
 export const TOP_BAR = 28;
 /** Hauteur de la barre d'aide du bas (à S = 1). */
 export const BOTTOM_BAR = 20;
+/** Hauteur maximale de la prévision (deux notes), à S = 1. */
+const FORECAST_MAX_H = 228;
 /** Largeur des fenêtres d'unité, de prévision et de détail (à S = 1). */
 const WIN_W = 228;
 
@@ -203,7 +205,7 @@ export class BattleHudScene extends Phaser.Scene {
     let y = (TOP_BAR + 6) * S;
     if (this.lastUnit && !this.lastForecast) y += 72 * S;
     if (this.lastDetails && !this.lastForecast) y += 96 * S;
-    if (this.lastForecast) y += 168 * S;
+    if (this.lastForecast) y += Math.max(this.forecastHeight, 214 * S) + 8 * S;
     return y;
   }
 
@@ -243,7 +245,7 @@ export class BattleHudScene extends Phaser.Scene {
     parts.push(addText(this, tx, y + 6 * S, unit.name, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.panel + 2));
     parts.push(addText(this, x + w - 10 * S, y + 6 * S, `Niv ${unit.level}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH.panel + 2));
     const kind = unit.kindName !== unit.name ? unit.kindName : unit.weapon.name;
-    parts.push(addText(this, tx, y + 24 * S, kind, { font: 'small', scale: 2 * S, color: unit.team === 'player' ? PALETTE.cyanEclat : PALETTE.braise, maxWidth: w - 64 * S }).setDepth(DEPTH.panel + 2));
+    parts.push(addText(this, tx, y + 21 * S, kind, { scale: S, color: unit.team === 'player' ? PALETTE.cyanEclat : PALETTE.braise, maxWidth: w - 64 * S }).setDepth(DEPTH.panel + 2));
     // Barre de PV.
     const barW = w - 66 * S - 46 * S;
     const by = y + 44 * S;
@@ -284,7 +286,7 @@ export class BattleHudScene extends Phaser.Scene {
       parts.push(addText(this, sx + colW - 10 * S, sy - 3 * S, `${bogged ? unit.stats.mob - 1 : unit.stats[key]}`, { scale: S, color: bogged ? PALETTE.braise : PALETTE.parchemin, align: 'right' }).setDepth(DEPTH.panel + 1));
     });
     const gy = y + 62 * S;
-    parts.push(addText(this, x + 10 * S, gy, 'RÉSONANCE', { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false }).setDepth(DEPTH.panel + 1));
+    parts.push(addText(this, x + 10 * S, gy - 3 * S, 'Résonance', { scale: S, color: PALETTE.metalClair }).setDepth(DEPTH.panel + 1));
     const gx = x + 100 * S;
     const gw = w - 110 * S;
     parts.push(this.add.rectangle(gx, gy + 6 * S, gw, 5 * S, PALETTE.encre, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
@@ -306,24 +308,25 @@ export class BattleHudScene extends Phaser.Scene {
     const terrain = this.lastTerrain;
     if (!terrain) return;
     const S = this.S;
-    const w = 132 * S;
-    const h = 58 * S;
+    const w = 150 * S;
+    const h = 62 * S;
     const x = this.winX(w);
     const y = this.scale.height - (BOTTOM_BAR + 6) * S - h;
     const parts = this.terrainParts;
     parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }).setAlpha(0.95));
     parts.push(addText(this, x + w / 2, y + 6 * S, terrain.name, { scale: S, color: PALETTE.jauneBle, align: 'center' }).setDepth(DEPTH.panel + 1));
     const cells: [string, string][] = [
-      ['DÉF', signed(terrain.defense)],
-      ['ESQ', signed(terrain.avoid)],
-      ['DÉPL', terrain.moveCost === null ? '—' : `${terrain.moveCost}`],
+      ['Déf', signed(terrain.defense)],
+      ['Esq', signed(terrain.avoid)],
+      ['Dépl', terrain.moveCost === null ? '—' : `${terrain.moveCost}`],
     ];
+    const colW = (w - 16 * S) / 3;
     cells.forEach(([label, value], i) => {
-      const cx = x + 10 * S + i * 40 * S;
-      parts.push(addText(this, cx, y + 26 * S, label, { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false }).setDepth(DEPTH.panel + 1));
-      parts.push(addText(this, cx, y + 38 * S, value, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, shadow: false }).setDepth(DEPTH.panel + 1));
+      const cx = x + 8 * S + colW * (i + 0.5);
+      parts.push(addText(this, cx, y + 24 * S, label, { scale: S, color: PALETTE.metalClair, align: 'center' }).setDepth(DEPTH.panel + 1));
+      parts.push(addText(this, cx, y + 40 * S, value, { scale: S, color: PALETTE.parchemin, align: 'center' }).setDepth(DEPTH.panel + 1));
     });
-    if (terrain.heal > 0) parts.push(addText(this, x + w / 2, y - 14 * S, `Soigne ${Math.round(terrain.heal * 100)} % des PV`, { font: 'small', scale: 2 * S, color: 0x7fcf6a, align: 'center' }).setDepth(DEPTH.panel + 1));
+    if (terrain.heal > 0) parts.push(addText(this, x + w / 2, y - 18 * S, `Soigne ${Math.round(terrain.heal * 100)} % des PV`, { scale: S, color: 0x7fcf6a, align: 'center' }).setDepth(DEPTH.panel + 1));
   }
 
   /* ---------- Prévision de l'échange ---------- */
@@ -343,49 +346,70 @@ export class BattleHudScene extends Phaser.Scene {
     const [forecast, attacker, defender] = this.lastForecast;
     const S = this.S;
     const w = WIN_W * S;
-    const h = 160 * S;
     const x = this.winX(w);
     const y = (TOP_BAR + 6) * S;
     const parts = this.forecastParts;
-    parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
-    const colA = x + 40 * S;
-    const colB = x + w - 40 * S;
+    const colA = x + 44 * S;
+    const colB = x + w - 44 * S;
     const mid = x + w / 2;
-    // Têtes : le sprite de chaque camp, ses PV, son nom.
+    const text = (tx: number, ty: number, value: string, color: number, align: 'left' | 'center' | 'right' = 'center'): void => {
+      parts.push(addText(this, tx, ty, value, { scale: S, color, align }).setDepth(DEPTH.panel + 2));
+    };
+    // En-tête : chaque combattant, son sprite sur la couleur de son camp, son nom.
     const head = (unit: BattleUnit, cx: number): void => {
-      parts.push(this.add.rectangle(cx, y + 30 * S, 34 * S, 44 * S, TEAM_COLOR[unit.team], 0.22).setDepth(DEPTH.panel + 1));
-      parts.push(this.add.image(cx, y + 50 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(DEPTH.panel + 2));
-      parts.push(addText(this, cx, y + 54 * S, unit.name, { font: 'small', scale: 2 * S, color: TEAM_COLOR[unit.team], align: 'center' }).setDepth(DEPTH.panel + 2));
+      // Portrait : le sprite ×2 (son cadre a 7 rangées vides au-dessus de la tête).
+      parts.push(this.add.rectangle(cx, y + 40 * S, 52 * S, 58 * S, TEAM_COLOR[unit.team], 0.22).setDepth(DEPTH.panel + 1));
+      parts.push(this.add.image(cx, y + 70 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(DEPTH.panel + 2));
+      text(cx, y + 72 * S, unit.name, TEAM_COLOR[unit.team]);
     };
     head(attacker, colA);
     head(defender, colB);
-    parts.push(addText(this, mid, y + 22 * S, 'contre', { font: 'small', scale: 2 * S, color: PALETTE.metalClair, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
+    text(mid, y + 34 * S, 'contre', PALETTE.metalClair);
+
     const a = forecast.attacker;
     const d = forecast.defender;
-    const dmg = (side: SideForecast): string => (!side.canStrike ? '—' : `${side.odds.damage}${side.doubles ? ' ×2' : ''}`);
-    const pct = (side: SideForecast, v: number): string => (side.canStrike ? `${v}` : '—');
+    const dmg = (side: SideForecast): string => (!side.canStrike ? '—' : side.doubles ? `${side.odds.damage} ×2` : `${side.odds.damage}`);
+    const pct = (side: SideForecast, v: number): string => (side.canStrike ? `${v} %` : '—');
     const afterA = Math.max(0, a.hp - (d.canStrike ? d.odds.damage * (d.doubles ? 2 : 1) : 0));
     const afterD = Math.max(0, d.hp - a.odds.damage * (a.doubles ? 2 : 1));
     const rows: [string, string, string][] = [
-      ['PV', `${a.hp} » ${afterA}`, `${d.hp} » ${afterD}`],
-      ['DÉG', dmg(a), dmg(d)],
-      ['PRÉC', pct(a, a.odds.hit), pct(d, d.odds.hit)],
-      ['CRIT', pct(a, a.odds.crit), pct(d, d.odds.crit)],
+      ['PV', `${a.hp}`, `${d.hp}`],
+      ['Dégâts', dmg(a), dmg(d)],
+      ['Précision', pct(a, a.odds.hit), pct(d, d.odds.hit)],
+      ['Critique', pct(a, a.odds.crit), pct(d, d.odds.crit)],
     ];
-    let ty = y + 72 * S;
+    let ty = y + 96 * S;
+    const line = 17 * S;
     for (const [label, va, vb] of rows) {
-      parts.push(addText(this, mid, ty, label, { font: 'small', scale: 2 * S, color: PALETTE.metalClair, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
-      parts.push(addText(this, colA, ty, va, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
-      parts.push(addText(this, colB, ty, vb, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'center', shadow: false }).setDepth(DEPTH.panel + 1));
-      ty += 14 * S;
+      text(mid, ty, label, PALETTE.metalClair);
+      text(colA, ty, va, PALETTE.parchemin);
+      text(colB, ty, vb, PALETTE.parchemin);
+      ty += line;
     }
+    // PV après l'échange (si tous les coups touchent), en rouge quand l'unité tombe.
+    parts.push(this.add.rectangle(x + 10 * S, ty + 1 * S, w - 20 * S, S, PALETTE.metal, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
+    ty += 4 * S;
+    text(mid, ty, 'Après', PALETTE.metalClair);
+    text(colA, ty, `${afterA}`, afterA === 0 ? PALETTE.braise : 0x7fcf6a);
+    text(colB, ty, `${afterD}`, afterD === 0 ? PALETTE.braise : 0x7fcf6a);
+    ty += line + 2 * S;
+
     const notes: [string, number][] = [];
     if (a.odds.triangle === 1) notes.push(['Élément favorable', 0x7fcf6a]);
     if (a.odds.triangle === -1) notes.push(['Élément défavorable', PALETTE.braise]);
     if (a.odds.effective) notes.push(['Arme efficace !', PALETTE.jauneBle]);
     if (!d.canStrike) notes.push(['Pas de riposte', PALETTE.cyanEclat]);
-    parts.push(addText(this, mid, ty + 2 * S, notes.slice(0, 2).map(([n]) => n).join('  ·  '), { font: 'small', scale: 2 * S, color: notes[0]?.[1] ?? PALETTE.metalClair, align: 'center', maxWidth: w - 16 * S }).setDepth(DEPTH.panel + 1));
+    for (const [note, color] of notes.slice(0, 2)) {
+      text(mid, ty, note, color);
+      ty += line;
+    }
+    const h = ty - y + 6 * S;
+    parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
+    this.forecastHeight = h;
   }
+
+  /** Hauteur de la prévision affichée (le menu se place dessous). */
+  private forecastHeight = 0;
 
   /* ---------- Aide (barre du bas) ---------- */
 
@@ -440,7 +464,8 @@ export class BattleHudScene extends Phaser.Scene {
       const w = (big ? 228 : 172) * S;
       const h = request.items.length * lineHeight + titleH + (big ? 18 : 14) * S;
       const x = this.winX(w);
-      const y = this.stackTop();
+      // Le menu d'action laisse la place de la prévision, qui s'affiche au survol d'un ennemi.
+      const y = big ? Math.max(this.stackTop(), (TOP_BAR + 6 + FORECAST_MAX_H + 8) * S) : this.stackTop();
       this.menuParts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.menu }));
       this.menuRect = { x, y, w, h };
       if (request.title) this.menuParts.push(addText(this, x + w / 2, y + (big ? 9 : 7) * S, request.title, { scale: S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));
@@ -450,6 +475,8 @@ export class BattleHudScene extends Phaser.Scene {
         depth: DEPTH.menu + 1,
         scale: (big ? 3 : 2) * S,
         textScale: (big ? 2 : 1) * S,
+        // Grand texte : ombre d'un seul pixel, sinon les lettres paraissent doublées.
+        shadowOffset: S,
       });
       this.menuCancel = request.onCancel;
       // L'appui qui a ouvert le menu ne doit pas aussi le valider.
@@ -489,7 +516,7 @@ export class BattleHudScene extends Phaser.Scene {
         container.add(this.add.rectangle(0, top, width, 2 * S, color, 0.9).setOrigin(0, 0));
         container.add(this.add.rectangle(0, top + bandH - 2 * S, width, 2 * S, color, 0.9).setOrigin(0, 0));
         const title = addText(this, width / 2, top + 10 * S, team === 'player' ? 'Phase du joueur' : 'Phase ennemie', { font: 'title', scale: 3 * S, color, align: 'center' });
-        const sub = addText(this, width / 2, top + 44 * S, `Tour ${turn}`, { font: 'small', scale: 2 * S, color: PALETTE.parchemin, align: 'center' });
+        const sub = addText(this, width / 2, top + 42 * S, `Tour ${turn}`, { scale: S, color: PALETTE.parchemin, align: 'center' });
         container.add([title, sub]);
         container.x = width;
         this.tweens.chain({

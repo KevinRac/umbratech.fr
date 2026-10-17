@@ -24,6 +24,8 @@ export interface VerticalMenuOptions {
   readonly scale?: number;
   /** Agrandissement entier du texte des entrées (par défaut 1). */
   readonly textScale?: number;
+  /** Décalage de l'ombre du texte (par défaut : l'échelle du texte). */
+  readonly shadowOffset?: number;
 }
 
 const CURSOR_KEY = 'ui:cursor';
@@ -84,7 +86,7 @@ export class VerticalMenu {
 
     items.forEach((item, i) => {
       const rowY = y + i * this.lineHeight;
-      this.labels.push(addText(scene, x + 14 * k, rowY + k, item.label, { scale: options.textScale ?? 1 }).setDepth(depth + 1) as PixelText);
+      this.labels.push(addText(scene, x + 14 * k, rowY + k, item.label, { scale: options.textScale ?? 1, ...(options.shadowOffset ? { shadowOffset: options.shadowOffset } : {}) }).setDepth(depth + 1) as PixelText);
       const zone = scene.add.zone(x, rowY, options.width, this.lineHeight).setOrigin(0, 0).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => this.isEnabled(i) && this.select(i));
       zone.on('pointerdown', () => this.isEnabled(i) && (this.select(i), this.activate()));
