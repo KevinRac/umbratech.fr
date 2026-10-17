@@ -624,14 +624,14 @@ N('car','k2','k','Tocsin',1,'Ta Résonance monte jusqu’à 200. Au-delà de 100
 // ── Héraut : Cadence
 N('cad','n1','m','Oreille absolue',3,'Ta fenêtre de mesure s’élargit de 12 ms.',s=>{s.beatWin+=0.012;});
 N('cad','n2','m','Souffle long',3,'+1 point de Cadence maximum.',s=>{s.cadMax+=1;});
-N('cad','n3','s','Pas de Valse',2,'Un Pas de danse en mesure laisse une cloche d’écho à ton point de départ. Elle sonne au temps suivant (24 dégâts).',(s,r)=>{s.valse=r;},'L’écho sonne deux fois.');
+N('cad','n3','s','Pas de Valse',2,'Un Pas de danse correct laisse une cloche d’écho à ton point de départ. Elle sonne au temps suivant (24 dégâts).',(s,r)=>{s.valse=r;},'L’écho sonne deux fois.');
 N('cad','n4','s','Point d’orgue',2,'Débloque Point d’orgue [E] : pendant 4 temps, toutes tes actions sont parfaites et ta Cadence ne retombe pas. Recharge 14 s.',(s,r)=>{s.orgue=r;},'6 temps, recharge 10 s.');
 N('cad','n5','m','Crescendo',3,'+1 % de dégâts par point de Cadence.',s=>{s.cadPer+=0.01;});
-N('cad','n6','s','Syncope',2,'Une action hors mesure ne te fait perdre que 2 points de Cadence au lieu de tout.',(s,r)=>{s.syncope=r;},'Tu ne perds qu’un seul point.');
-N('cad','n7','m','Justesse',3,'+8 % de chances de critique sur les coups en mesure.',s=>{s.beatCrit+=0.08;});
-N('cad','n8','m','Allegro',3,'Le tempo accélère de 6 BPM : plus de temps, donc plus de coups en mesure.',s=>{s.bpm+=6;});
-N('cad','k1','k','Furioso',1,'À Cadence maximale, chaque coup en mesure frappe deux fois (le second à 50 %). Mais une action hors mesure te coûte 5 % de tes PV.',s=>{s.furioso=1;});
-N('cad','k2','k','Danse Macabre',1,'Un Pas de danse en mesure ne consomme pas de charge et blesse les ennemis traversés (14, +3 par point de Cadence).',s=>{s.macabre=1;});
+N('cad','n6','s','Syncope',2,'Une action incorrecte ne te fait perdre que 2 points de Cadence au lieu de tout.',(s,r)=>{s.syncope=r;},'Tu ne perds qu’un seul point.');
+N('cad','n7','m','Justesse',3,'+8 % de chances de critique sur les coups corrects.',s=>{s.beatCrit+=0.08;});
+N('cad','n8','m','Allegro',3,'Le tempo accélère de 6 BPM : plus de temps, donc plus de coups corrects.',s=>{s.bpm+=6;});
+N('cad','k1','k','Furioso',1,'À Cadence maximale, chaque coup correct frappe deux fois (le second à 50 %). Mais une action incorrecte te coûte 5 % de tes PV.',s=>{s.furioso=1;});
+N('cad','k2','k','Danse Macabre',1,'Un Pas de danse correct ne consomme pas de charge et blesse les ennemis traversés (14, +3 par point de Cadence).',s=>{s.macabre=1;});
 // ── Héraut : Requiem
 N('req','n1','m','Robe de deuil',3,'+12 PV max.',s=>{s.maxHp+=12;});
 N('req','n2','m','Glas lent',3,'Le Grand Glas étourdit 0,15 s de plus.',s=>{s.glasStun+=0.15;});
@@ -642,9 +642,9 @@ N('req','n6','s','Cortège',2,'Le Grand Glas laisse un sol funèbre pendant 4 s 
 N('req','n7','m','Écho du tombeau',3,'Chaque ennemi vaincu te rend 3 Résonance.',s=>{s.resKill+=3;});
 N('req','n8','m','Veillée',3,'Chaque action parfaite te soigne de 1 PV.',s=>{s.veillee+=1;});
 N('req','k1','k','Glas des Âmes',1,'Chaque ennemi vaincu te confie une âme (10 max). Le Grand Glas les libère toutes : +15 % de dégâts et +6 % de rayon par âme.',s=>{s.ames=1;});
-N('req','k2','k','Pacte du Sonneur',1,'−20 % de PV max. En échange, tes coups en mesure infligent +20 % de dégâts et chaque action en mesure te soigne de 2 PV.',s=>{s.pacte=1;s.maxHp*=0.8;});
+N('req','k2','k','Pacte du Sonneur',1,'−20 % de PV max. En échange, tes coups corrects infligent +20 % de dégâts et chaque action correcte te soigne de 2 PV.',s=>{s.pacte=1;s.maxHp*=0.8;});
 // ── Héraut : sous-classes
-N('dgl','s1','c','Dernier Glas',1,'Un Coup de cloche en mesure exécute les ennemis sous 12 % de PV (sauf le gardien). +10 % de dégâts du Grand Glas.',s=>{s.sub='dgl';s.exec=1;s.glasDmg*=1.1;});
+N('dgl','s1','c','Dernier Glas',1,'Un Coup de cloche correct exécute les ennemis sous 12 % de PV (sauf le gardien). +10 % de dégâts du Grand Glas.',s=>{s.sub='dgl';s.exec=1;s.glasDmg*=1.1;});
 N('dgl','s2','m','Glas sourd',3,'+15 % de dégâts du Grand Glas.',s=>{s.glasDmg*=1.15;});
 N('dgl','s3','m','Main lourde',3,'+10 % de dégâts du Coup de cloche.',s=>{s.atkDmg*=1.1;});
 N('dgl','s4','s','Coup de Grâce',2,'Seuil d’exécution porté à 18 %. Chaque exécution te rend 15 Résonance.',(s,r)=>{s.coupGrace=r;},'Seuil porté à 24 %.');
@@ -2665,10 +2665,10 @@ function onBeat(idx){const s=P.s,strong=idx%4===0;
  if(P.funN>0){P.funN--;skyStrike();}}
 function registerBeat(j,kind){const s=P.s;
  if(j.on){if(j.idx!==P.lastOnIdx)P.cad=Math.min(s.cadMax,P.cad+1);P.lastOnIdx=Math.max(P.lastOnIdx,j.idx);
-  if(P.lastLabelIdx!==j.idx){P.lastLabelIdx=j.idx;addNum(P.x,P.y-40,j.perfect?'Parfait':'En mesure','beat');}
+  if(P.lastLabelIdx!==j.idx){P.lastLabelIdx=j.idx;addNum(P.x,P.y-40,j.perfect?'Parfait':'Correct','beat');}
   if(s.pacte)heal(2,'pacte');if(j.perfect&&s.veillee)heal(s.veillee,'veillee');
   if(j.perfect&&s.sub==='chd'&&kind!=='dash')addChorister(P.x,P.y);}
- else if(kind!=='dash'){P.missLock=P.beatN+1;P.cad=s.syncope?Math.max(0,P.cad-(s.syncope>=2?1:2)):0;if(P.missT<=0){P.missT=0.3;addNum(P.x,P.y-40,'Hors mesure','miss');}if(s.furioso){loseHp(s.maxHp*0.05);P.hurtFlash=0.2;}}}
+ else if(kind!=='dash'){P.missLock=P.beatN+1;P.cad=s.syncope?Math.max(0,P.cad-(s.syncope>=2?1:2)):0;if(P.missT<=0){P.missT=0.3;addNum(P.x,P.y-40,'Raté','miss');}if(s.furioso){loseHp(s.maxHp*0.05);P.hurtFlash=0.2;}}}
 function herInput(){if(P.dashT>0)return;
  if(P.clickQ&&P.atkT<=0){P.clickQ=0;herStrike();}
  if(P.rclickQ&&P.vCd<=0){P.rclickQ=0;herVolee();}}
@@ -2813,10 +2813,10 @@ function v6Lights(){const s=P.s;
 function v6HudRes(){if(P.cls==='her'){const cap=resCap();sW(HUD.hRes,P.res/cap*100);sT(HUD.hResV,`${Math.floor(P.res)} / ${cap}`);}else{sW(HUD.hRes,P.bob);sT(HUD.hResV,String(Math.floor(P.bob)));}}
 function v6State(){if(P.cls==='her'){if(P.orgueN>0)return[`Point d’orgue · ${P.orgueN}`,'h2'];if(P.funN>0)return['Glas Funèbre','h2'];const c=P.cad,mx=P.s.cadMax;return[`Cadence ${c} / ${mx}${P.s.ames&&P.souls?' · '+P.souls+' âme'+(P.souls>1?'s':''):''}`,c>=mx?'h2':c>=Math.ceil(mx/2)?'h1':'h0'];}
  const n=P.threads.length,pp=enemies.filter(e=>!e.dead&&e.puppet>0).length;if(P.gtoileT>0)return['Grande Toile','t0'];let st=`Fils ${n} / ${P.s.filRouge?1:P.s.filMax}`;if(pp)st+=` · ${pp} pantin${pp>1?'s':''}`;return[st,'t0'];}
-const V6HINT={her:()=>`<kbd>${MOVE()}</kbd> se déplacer · <kbd>Clic G</kbd> Coup de cloche · <kbd>Clic D</kbd> Volée · <kbd>Espace</kbd> Pas de danse · <kbd>${KL.KeyR}</kbd> Grand Glas. Agis quand le cercle se referme sous tes pieds : les coups en mesure résonnent.`,
+const V6HINT={her:()=>`<kbd>${MOVE()}</kbd> se déplacer · <kbd>Clic G</kbd> Coup de cloche · <kbd>Clic D</kbd> Volée · <kbd>Espace</kbd> Pas de danse · <kbd>${KL.KeyR}</kbd> Grand Glas. Agis quand le cercle se referme sous tes pieds : les coups corrects résonnent.`,
  tis:()=>`<kbd>${MOVE()}</kbd> se déplacer · <kbd>Clic G</kbd> Aiguilles (maintenir) · <kbd>Clic D</kbd> nouer un Fil · <kbd>Espace</kbd> esquiver · <kbd>${KL.KeyR}</kbd> Arracher les ennemis attachés vers le curseur.`};
 function v6Stats(){const s=P.s,x=v=>v.toFixed(1).replace('.',',');
- if(P.cls==='her')return[['PV',`${Math.ceil(P.hp)} / ${Math.round(s.maxHp)}`],['Coup de cloche',`${fmt(s.atkDmg*s.dmg)} · ×${x(1.4*(1+s.beatDmg))} en mesure`],['Tempo',`${s.bpm} BPM · fenêtre ±${Math.round(s.beatWin*1000)} ms`],['Cadence',`${s.cadMax} max · +${x(s.cadPer*100)} % par point`],['Critique',pct(s.crit)+(s.beatCrit?` · +${pct(s.beatCrit)} en mesure`:'')],['Volée',`${fmt(26*s.voleeDmg*s.dmg)} · rayon ${fmt(s.voleeR)}`],['Grand Glas à 100',`${fmt(180*s.glasDmg*s.dmg)} · rayon ${fmt(s.glasR)}`],['Ondes',`${fmt(8*s.waveDmg*s.dmg)} · portée ${fmt(s.waveRange)}`],['Dégâts subis',pct(s.dmgTaken)],['Vitesse',fmt(s.speed)]];
+ if(P.cls==='her')return[['PV',`${Math.ceil(P.hp)} / ${Math.round(s.maxHp)}`],['Coup de cloche',`${fmt(s.atkDmg*s.dmg)} · ×${x(1.4*(1+s.beatDmg))} si correct`],['Tempo',`${s.bpm} BPM · fenêtre ±${Math.round(s.beatWin*1000)} ms`],['Cadence',`${s.cadMax} max · +${x(s.cadPer*100)} % par point`],['Critique',pct(s.crit)+(s.beatCrit?` · +${pct(s.beatCrit)} si correct`:'')],['Volée',`${fmt(26*s.voleeDmg*s.dmg)} · rayon ${fmt(s.voleeR)}`],['Grand Glas à 100',`${fmt(180*s.glasDmg*s.dmg)} · rayon ${fmt(s.glasR)}`],['Ondes',`${fmt(8*s.waveDmg*s.dmg)} · portée ${fmt(s.waveRange)}`],['Dégâts subis',pct(s.dmgTaken)],['Vitesse',fmt(s.speed)]];
  return[['PV',`${Math.ceil(P.hp)} / ${Math.round(s.maxHp)}`],['Aiguilles',`${fmt(s.atkDmg*s.dmg)} · +${Math.round(s.tension*100)} % sur les attachés`],['Vitesse d’attaque',`×${s.atkSpeed.toFixed(2).replace('.',',')}`],['Critique',pct(s.crit)],['Dégâts critiques',`×${s.critMult.toFixed(2).replace('.',',')}`],['Fils',`${s.filRouge?1:s.filMax} max · ${s.filRouge?'permanent':Math.round(s.filDur)+' s'} · ${Math.round(s.filCost)} Bobine`],['Arracher',`${fmt(25*s.yankDmg*s.dmg)} à l’impact · choc ${fmt(18*s.collideDmg*s.dmg)}`],['Bobine',`+${x(s.bobRegen)} par seconde`],['Dégâts subis',pct(s.dmgTaken)],['Vitesse',fmt(s.speed)]];}
 function keysFor(cls){if(cls==='her'||cls==='tis')return keysOf(cls);
  return keysFor0(cls);}
@@ -4146,36 +4146,36 @@ mk10('reg',[
 
 // ═════════════ HÉRAUT DU GLAS
 mk10('car',[
- {n:'Résonance prolongée',m:3,fl:'prolong',d:'Une Volée en mesure ralentit les ennemis touchés de 15 % par rang pendant 2 s.'},
+ {n:'Résonance prolongée',m:3,fl:'prolong',d:'Une Volée correcte ralentit les ennemis touchés de 15 % par rang pendant 2 s.'},
  {n:'Cloche vive',m:3,fl:'vive',d:'Sur un temps fort, tes cloches sonnent une seconde fois (40 % / 70 % / 100 % des dégâts).'},
  {keep:'n3'},{keep:'n4'},
  {n:'Timbre clair',m:2,fl:'timbre',d:'+1 cloche maximum par rang.'},
  {keep:'n6'}
 ],[
  {tg:'Volée',
-  A:{n:'Cascade',mod:'La Volée en mesure se répète sur les 2 temps suivants (anneaux de plus en plus larges).',syn:'Chaque anneau fait sonner tes cloches et rend 4 Résonance s’il touche un ennemi.'},
+  A:{n:'Cascade',mod:'La Volée correcte se répète sur les 2 temps suivants (anneaux de plus en plus larges).',syn:'Chaque anneau fait sonner tes cloches et rend 4 Résonance s’il touche un ennemi.'},
   B:{n:'Volée sourde',mod:'Rayon de la Volée ×1,6 : elle repousse fort et étourdit 0,8 s.',syn:'Une cloche à portée l’amplifie de +40 % et sonne.'}},
  {tg:'Carillon',req:'carillon',
   A:{n:'Cloches orbitales',mod:'Tes cloches ne s’éteignent plus : elles tournent autour de toi et sonnent à chaque temps.',syn:'Elles interceptent les projectiles ennemis qui les frôlent.'},
   B:{n:'Cloche majeure',mod:'Une seule cloche, 18 s : rayon ×1,6 et ×3 de dégâts sur les temps forts.',syn:'Elle te protège : −25 % de dégâts subis à moins de 140 d’elle.'}},
  {tg:'Ondes',req:'carillon',
   A:{n:'Écho de bronze',mod:'Une onde qui frôle une cloche la fait sonner et se divise en 2 ondes.',syn:'Les ondes divisées ralentissent les ennemis.'},
-  B:{n:'Résonance de garde',mod:'Quand une cloche sonne à moins de 150 de toi, tu gagnes 5 Résonance et 1 PV.',syn:'Ton Coup de cloche en mesure fait sonner la cloche la plus proche.'}}
+  B:{n:'Résonance de garde',mod:'Quand une cloche sonne à moins de 150 de toi, tu gagnes 5 Résonance et 1 PV.',syn:'Ton Coup de cloche correct fait sonner la cloche la plus proche.'}}
 ]);
 
 mk10('cad',[
- {n:'Attaque nette',m:3,fl:'nette',d:'Un coup en mesure réduit la recharge du suivant de 12 % par rang.'},
- {n:'Pas léger',m:3,fl:'leger',d:'Un Pas de danse en mesure te rend 1 Cadence de plus et 4 Résonance par rang.'},
+ {n:'Attaque nette',m:3,fl:'nette',d:'Un coup correct réduit la recharge du suivant de 12 % par rang.'},
+ {n:'Pas léger',m:3,fl:'leger',d:'Un Pas de danse correct te rend 1 Cadence de plus et 4 Résonance par rang.'},
  {keep:'n3'},{keep:'n4'},
  {n:'Oreille fine',m:3,fl:'oreille',d:'Une action parfaite rend 3 Résonance par rang.'},
  {keep:'n6'}
 ],[
  {tg:'Coup de cloche',
-  A:{n:'Frappe jumelée',mod:'Le coup en mesure frappe deux fois (second coup à 60 %).',syn:'Sur un temps fort, il pose un écho au temps suivant (28 dégâts).'},
-  B:{n:'Onde longue',mod:'Le coup en mesure envoie une onde perçante (16 dégâts, portée +30 %).',syn:'Une onde qui traverse une de tes cloches la fait sonner fort.'}},
+  A:{n:'Frappe jumelée',mod:'Le coup correct frappe deux fois (second coup à 60 %).',syn:'Sur un temps fort, il pose un écho au temps suivant (28 dégâts).'},
+  B:{n:'Onde longue',mod:'Le coup correct envoie une onde perçante (16 dégâts, portée +30 %).',syn:'Une onde qui traverse une de tes cloches la fait sonner fort.'}},
  {tg:'Pas de danse',
-  A:{n:'Pas glissé',mod:'Ton Pas de danse en mesure laisse une traînée d’ondes (3 anneaux, 12 dégâts) qui ralentit.',syn:'La traînée donne 3 Résonance par ennemi touché.'},
-  B:{n:'Pas-écho',mod:'Ton Pas de danse en mesure laisse un écho qui sonne deux fois (28 dégâts).',syn:'Il remet la Volée à zéro.'}},
+  A:{n:'Pas glissé',mod:'Ton Pas de danse correct laisse une traînée d’ondes (3 anneaux, 12 dégâts) qui ralentit.',syn:'La traînée donne 3 Résonance par ennemi touché.'},
+  B:{n:'Pas-écho',mod:'Ton Pas de danse correct laisse un écho qui sonne deux fois (28 dégâts).',syn:'Il remet la Volée à zéro.'}},
  {tg:'Point d’orgue',req:'orgue',
   A:{n:'Orgue étendu',mod:'Point d’orgue dure 2 temps de plus, et chacun de tes coups lance 3 ondes en éventail.',syn:'Les ondes de l’orgue portent la Cadence : +0,5 % de dégâts par point.'},
   B:{n:'Orgue de combat',mod:'Pendant Point d’orgue : −50 % de dégâts subis, et chaque action déclenche un anneau (22 dégâts).',syn:'Chaque anneau qui touche un ennemi rend 1 Résonance.'}}
@@ -7478,6 +7478,7 @@ function demoBoot(cls){
  document.documentElement.classList.add('demo');
  const st=document.createElement('style');st.textContent='.demo #hud,.demo #toast,.demo #banner,.demo #overlay,.demo #assist,.demo .hint,.demo [id^=mur]{display:none!important}.demo,.demo body{background:#05060a;overflow:hidden}.demo #game{transform:scale(1.5);transform-origin:40% 58%}';document.head.appendChild(st);
  initAudio=function(){};musicKick=function(){};updateMusic=function(){};muted=true;
+ if(cls==='her'){const gs=document.createElement('style');gs.textContent='#pvgauge{position:fixed;left:16px;top:14px;display:none;align-items:center;gap:10px;padding:8px 14px;border-radius:10px;background:rgba(8,10,16,.82);border:1px solid rgba(142,197,255,.5);font:800 15px/1 system-ui,sans-serif;color:#cfe2ff;letter-spacing:.06em;z-index:9;transition:transform .15s,box-shadow .15s}#pvgauge .pips{display:flex;gap:4px}#pvgauge i{width:14px;height:22px;border-radius:3px;background:rgba(255,255,255,.12);transition:background .15s}#pvgauge i.on{background:#8ec5ff;box-shadow:0 0 8px #8ec5ff}#pvgauge.up{transform:scale(1.12);box-shadow:0 0 18px rgba(142,197,255,.7)}';document.head.appendChild(gs);const g=document.createElement('div');g.id='pvgauge';g.dataset.c='-1';g.innerHTML='<span>CADENCE</span><span class="pips"></span><b></b>';document.body.appendChild(g);}
  resize();chosenCls=cls;startRun();arrowShow=function(){};
  const PHD=4.4;let ph=-1,t0=0,lock=-1,cyc=0,lastMsg=-1,tick=0,pressAt={};
  const press=code=>{dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true}));};
@@ -7485,14 +7486,14 @@ function demoBoot(cls){
  const clickR=()=>{mouse.r=true;if(P){P.rclickQ=1;P.rclickT=0.16;}};
  const once=(k,tt,at,fn)=>{if(tt>=at&&!pressAt[k]){pressAt[k]=1;fn();}};
  // remet la scène à zéro : nouvelle salle, nouveaux ennemis qui réapparaissent, état de la classe réinitialisé
- const POS={lum:[[200,-60],[270,40],[330,-30],[210,100]],gou:[[120,-40],[150,45],[205,0],[250,-70]],gou3:[[[115,-38],[145,8],[175,-16],[125,48],[180,42],[150,-60]],[[58,-8],[78,38],[74,-42]],[[130,-34],[180,18],[235,-8],[150,62],[260,42]]],her:[[105,-45],[130,50],[95,5],[160,-75]],tis:[[220,-70],[270,60],[340,-5]]};
+ const POS={herPile:[[140,0],[185,-30],[185,30],[120,-45],[120,45],[160,-62],[160,62],[215,0],[225,-45],[225,45],[95,0],[200,-70],[200,70]],lum:[[200,-60],[270,40],[330,-30],[210,100]],gou:[[120,-40],[150,45],[205,0],[250,-70]],gou3:[[[115,-38],[145,8],[175,-16],[125,48],[180,42],[150,-60]],[[58,-8],[78,38],[74,-42]],[[130,-34],[180,18],[235,-8],[150,62],[260,42]]],her:[[105,-45],[130,50],[95,5],[160,-75]],tis:[[220,-70],[270,60],[340,-5]]};
  function reset(){
   mouse.l=mouse.r=false;pressAt={};
   enemies=[];eproj=[];pproj=[];spectrals=[];parts=[];fx=[];nums=[];tlights=[];deferred=[];timers=[];rings=[];pools=[];coins=[];decals=[];queue.length=0;
   room=makeRoom('combat');room.waves=[];room.spawning=[];room.sinceWave=0;room.rule=null;room.bl=null;room.cleared=false;
-  P.x=W*0.4;P.y=H*0.58;P.vx=P.vy=0;P.dashT=0;P.delayed=[];P.roomMut=0;P.feast=0;P.hp=P.s.maxHp;if(cls==='gou')P.cor=[0,45,70][ph]||0;
+  P.x=W*0.4;P.y=H*0.58;P.vx=P.vy=0;P.dashT=0;P.delayed=[];P.roomMut=0;P.feast=0;P.hp=P.s.maxHp;if(cls==='gou')P.cor=[0,45,70][ph]||0;if(cls==='her'){P.cad=0;P.lastOnIdx=-9;P.res=ph===2?100:P.res;}
   resetLantern();v6Reset();
-  for(const [dx,dy] of (cls==='gou'?POS.gou3[ph]:POS[cls])){const e=createEnemy('rampant',P.x+dx,P.y+dy);e.dmg=0;e.spd=0;e.maxHp=e.hp=3000;e.state='walk';e.t=e.cd=999;e.ang=Math.PI;}
+  for(const [dx,dy] of (cls==='gou'?POS.gou3[ph]:cls==='her'&&ph===2?POS.herPile:POS[cls])){const e=createEnemy('rampant',P.x+dx,P.y+dy);e.dmg=0;e.spd=0;e.maxHp=e.hp=3000;e.state='walk';e.t=e.cd=999;e.ang=Math.PI;}
  }
  addEventListener('message',e=>{if(e.data&&e.data.pvLock!==undefined){lock=e.data.pvLock;if(lock>=0)ph=lock;t0=performance.now()/1000;lastMsg=-1;reset();}});
  function bot(){
@@ -7517,14 +7518,17 @@ function demoBoot(cls){
   if(cls==='lum'&&ph===0){if(P.x<ax-14)keys.add('KeyD');else if(P.x>ax+14)keys.add('KeyA');}else{if(P.x<ax-30)keys.add('KeyD');else if(P.x>ax+30)keys.add('KeyA');if(P.y<ay-30)keys.add('KeyS');else if(P.y>ay+30)keys.add('KeyW');}
   const beat=P.beatPh!=null&&(P.beatPh<0.05||P.beatPh>0.95);
   if(cls==='lum'){
+   if(ph===0){if(tt<2.1)mouse.l=true;else if(tt<2.3)mouse.l=false;once('rT',tt,2.2,()=>press('KeyR'));if(tt>2.9)mouse.l=true;}
    if(ph===1)mouse.r=true;
-   if(ph===2){once('r1',tt,0.3,()=>press('KeyR'));if(tt>0.9)mouse.l=true;once('r2',tt,3.4,()=>{mouse.l=false;press('KeyR');});}
+   if(ph===2){const ls=P.lan.state;if((ls==='held'||ls==='ground')&&now-(pressAt.rLast||0)>(ls==='held'?0.55:0.75)){pressAt.rLast=now;press('KeyR');}}
   }else if(cls==='gou'){
    if(ph===0)mouse.r=true;
-   if(ph===1){P.cor=Math.max(P.cor,45);mouse.l=true;}
+   if(ph===1){P.cor=Math.max(P.cor,45);mouse.r=tt<1.2;for(const at of [1.5,2.3,3.1])once('m'+at,tt,at,()=>{clickL();setTimeout(()=>{mouse.l=false;},120);});}
    if(ph===2){if(tt<0.9)P.cor=Math.max(P.cor,70);once('r',tt,0.9,()=>press('KeyR'));}
   }else if(cls==='her'){
-   if(ph>=1&&beat&&!pressAt['b'+Math.floor(P.beatN||0)]){pressAt['b'+Math.floor(P.beatN||0)]=1;clickL();setTimeout(()=>{mouse.l=false;},90);}
+   if(ph===2){P.res=Math.max(P.res,100);once('glas',tt,0.7,()=>press('KeyR'));}
+   else if(beat&&!pressAt['b'+Math.floor(P.beatN||0)]){pressAt['b'+Math.floor(P.beatN||0)]=1;if(ph===0){clickL();setTimeout(()=>{mouse.l=false;},90);}else{clickR();setTimeout(()=>{mouse.r=false;},90);}}
+   const gg=document.getElementById('pvgauge');if(gg){gg.style.display=ph===0?'flex':'none';const mx=P.s.cadMax,c=P.cad;if(gg.dataset.c!==String(c)){if(+gg.dataset.c<c)gg.classList.add('up');setTimeout(()=>gg.classList.remove('up'),380);gg.dataset.c=c;gg.querySelector('.pips').innerHTML=Array.from({length:mx},(_,i)=>`<i${i<c?' class="on"':''}></i>`).join('');gg.querySelector('b').textContent=c+' / '+mx;}}
   }else if(cls==='tis'){
    if(ph===0)mouse.l=true;
    if(ph===1){const k=Math.floor(tt/0.8);once('f'+k,tt,k*0.8,()=>{clickR();setTimeout(()=>{mouse.r=false;},90);});}

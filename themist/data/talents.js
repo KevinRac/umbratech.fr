@@ -7,7 +7,7 @@
  formes:{
   lum:{name:'Le Lumenarque',short:'Lumenarque',color:'#f3b94d',root:'Éveil du Lumenarque',rootDesc:'Ton kit de base : Coup de lanterne, Faisceau, Esquive et Lancer de lanterne.',subs:['sol','omb']},
   gou:{name:'Le Gouffre',short:'Gouffre',color:'#8fd46e',root:'Éveil du Gouffre',rootDesc:'Ton kit de base : Mâchoire, Dévorer, Ruée et Recracher.',subs:['sai','abe']},
-  her:{name:'Le Héraut du Glas',short:'Héraut',color:'#8ec5ff',root:'Éveil du Héraut',rootDesc:'Ton kit de base : Coup de cloche, Volée, Pas de danse et Grand Glas. Agis en mesure pour faire résonner chaque geste.',subs:['dgl','chd']},
+  her:{name:'Le Héraut du Glas',short:'Héraut',color:'#8ec5ff',root:'Éveil du Héraut',rootDesc:'Ton kit de base : Coup de cloche, Volée, Pas de danse et Grand Glas. Agis au bon moment pour faire résonner chaque geste.',subs:['dgl','chd']},
   tis:{name:'Le Tisse-Destin',short:'Tisse-Destin',color:'#ff6b8a',root:'Éveil du Tisse-Destin',rootDesc:'Ton kit de base : Aiguilles, Fil, Esquive et Arracher. Noue, puis tire.',subs:['gts','mdp']}},
  // Branches : forme, nom, couleur, angle dans l'arbre, sous-classe (voie)
  branches:{
@@ -65,7 +65,7 @@
   abe_s5:{k:'s',name:'Yeux multiples',max:2,desc:'+8 % de critique par mutation de salle.',up:'+12 % par mutation.'},
   abe_sk:{k:'k',name:'Métamorphose',max:1,desc:'Débloque Métamorphose [F] : 8 s en forme monstrueuse. Taille ×1,5, dégâts ×1,5, Mâchoire à 360°, dégâts subis −30 %. Recharge 26 s.'},
   // Dernier Glas (Héraut)
-  dgl_s1:{k:'c',name:'Dernier Glas',max:1,desc:'Un Coup de cloche en mesure exécute les ennemis sous 12 % de PV (sauf le gardien). +10 % de dégâts du Grand Glas.'},
+  dgl_s1:{k:'c',name:'Dernier Glas',max:1,desc:'Un Coup de cloche correct exécute les ennemis sous 12 % de PV (sauf le gardien). +10 % de dégâts du Grand Glas.'},
   dgl_s2:{k:'m',name:'Glas sourd',max:3,desc:'+15 % de dégâts du Grand Glas.'},
   dgl_s3:{k:'m',name:'Main lourde',max:3,desc:'+10 % de dégâts du Coup de cloche.'},
   dgl_s4:{k:'s',name:'Coup de Grâce',max:2,desc:'Seuil d’exécution porté à 18 %. Chaque exécution te rend 15 Résonance.',up:'Seuil porté à 24 %.'},
@@ -171,29 +171,29 @@
   reg_x3a:{k:'x',name:'Salive acide',max:1,mod:'Chaque morsure projette un glob de Corruption vers l’avant (14 dégâts, perce 2 ennemis).',syn:'Avec Bile Acide, le glob laisse une petite flaque où il frappe.'},
   reg_x3b:{k:'x',name:'Crachat balistique',max:1,mod:'Recracher est lancé en cloche jusqu’à 520 de distance et explose au curseur (rayon 100, 80 % des dégâts).',syn:'Il laisse une flaque d’acide à l’impact.'},
   // Carillon (Héraut)
-  car_n1:{k:'m',name:'Résonance prolongée',max:3,desc:'Une Volée en mesure ralentit les ennemis touchés de 15 % par rang pendant 2 s.'},
+  car_n1:{k:'m',name:'Résonance prolongée',max:3,desc:'Une Volée correcte ralentit les ennemis touchés de 15 % par rang pendant 2 s.'},
   car_n2:{k:'m',name:'Cloche vive',max:3,desc:'Sur un temps fort, tes cloches sonnent une seconde fois (40 % / 70 % / 100 % des dégâts).'},
   car_n3:{k:'s',name:'Ondes Rebondissantes',max:2,desc:'Tes ondes rebondissent une fois sur les murs et les piliers.',up:'Deux rebonds, +25 % de dégâts des ondes.'},
   car_n4:{k:'s',name:'Carillon',max:2,desc:'Débloque Carillon [A] : pose une cloche au curseur. Elle sonne à chaque temps (10 dégâts autour d’elle) pendant 12 s. 2 cloches max, recharge 6 s.',up:'3 cloches, +50 % de dégâts.'},
   car_n5:{k:'m',name:'Timbre clair',max:2,desc:'+1 cloche maximum par rang.'},
   car_n6:{k:'s',name:'Accord Parfait',max:2,desc:'Un Coup de cloche parfait libère une onde tout autour de toi (20 dégâts).',up:'Onde de l’accord : +60 % de dégâts.'},
-  car_x1a:{k:'x',name:'Cascade',max:1,mod:'La Volée en mesure se répète sur les 2 temps suivants (anneaux de plus en plus larges).',syn:'Chaque anneau fait sonner tes cloches et rend 4 Résonance s’il touche un ennemi.'},
+  car_x1a:{k:'x',name:'Cascade',max:1,mod:'La Volée correcte se répète sur les 2 temps suivants (anneaux de plus en plus larges).',syn:'Chaque anneau fait sonner tes cloches et rend 4 Résonance s’il touche un ennemi.'},
   car_x1b:{k:'x',name:'Volée sourde',max:1,mod:'Rayon de la Volée ×1,6 : elle repousse fort et étourdit 0,8 s.',syn:'Une cloche à portée l’amplifie de +40 % et sonne.'},
   car_x2a:{k:'x',name:'Cloches orbitales',max:1,mod:'Tes cloches ne s’éteignent plus : elles tournent autour de toi et sonnent à chaque temps.',syn:'Elles interceptent les projectiles ennemis qui les frôlent.'},
   car_x2b:{k:'x',name:'Cloche majeure',max:1,mod:'Une seule cloche, 18 s : rayon ×1,6 et ×3 de dégâts sur les temps forts.',syn:'Elle te protège : −25 % de dégâts subis à moins de 140 d’elle.'},
   car_x3a:{k:'x',name:'Écho de bronze',max:1,mod:'Une onde qui frôle une cloche la fait sonner et se divise en 2 ondes.',syn:'Les ondes divisées ralentissent les ennemis.'},
-  car_x3b:{k:'x',name:'Résonance de garde',max:1,mod:'Quand une cloche sonne à moins de 150 de toi, tu gagnes 5 Résonance et 1 PV.',syn:'Ton Coup de cloche en mesure fait sonner la cloche la plus proche.'},
+  car_x3b:{k:'x',name:'Résonance de garde',max:1,mod:'Quand une cloche sonne à moins de 150 de toi, tu gagnes 5 Résonance et 1 PV.',syn:'Ton Coup de cloche correct fait sonner la cloche la plus proche.'},
   // Cadence (Héraut)
-  cad_n1:{k:'m',name:'Attaque nette',max:3,desc:'Un coup en mesure réduit la recharge du suivant de 12 % par rang.'},
-  cad_n2:{k:'m',name:'Pas léger',max:3,desc:'Un Pas de danse en mesure te rend 1 Cadence de plus et 4 Résonance par rang.'},
-  cad_n3:{k:'s',name:'Pas de Valse',max:2,desc:'Un Pas de danse en mesure laisse une cloche d’écho à ton point de départ. Elle sonne au temps suivant (24 dégâts).',up:'L’écho sonne deux fois.'},
+  cad_n1:{k:'m',name:'Attaque nette',max:3,desc:'Un coup correct réduit la recharge du suivant de 12 % par rang.'},
+  cad_n2:{k:'m',name:'Pas léger',max:3,desc:'Un Pas de danse correct te rend 1 Cadence de plus et 4 Résonance par rang.'},
+  cad_n3:{k:'s',name:'Pas de Valse',max:2,desc:'Un Pas de danse correct laisse une cloche d’écho à ton point de départ. Elle sonne au temps suivant (24 dégâts).',up:'L’écho sonne deux fois.'},
   cad_n4:{k:'s',name:'Point d’orgue',max:2,desc:'Débloque Point d’orgue [E] : pendant 4 temps, toutes tes actions sont parfaites et ta Cadence ne retombe pas. Recharge 14 s.',up:'6 temps, recharge 10 s.'},
   cad_n5:{k:'m',name:'Oreille fine',max:3,desc:'Une action parfaite rend 3 Résonance par rang.'},
-  cad_n6:{k:'s',name:'Syncope',max:2,desc:'Une action hors mesure ne te fait perdre que 2 points de Cadence au lieu de tout.',up:'Tu ne perds qu’un seul point.'},
-  cad_x1a:{k:'x',name:'Frappe jumelée',max:1,mod:'Le coup en mesure frappe deux fois (second coup à 60 %).',syn:'Sur un temps fort, il pose un écho au temps suivant (28 dégâts).'},
-  cad_x1b:{k:'x',name:'Onde longue',max:1,mod:'Le coup en mesure envoie une onde perçante (16 dégâts, portée +30 %).',syn:'Une onde qui traverse une de tes cloches la fait sonner fort.'},
-  cad_x2a:{k:'x',name:'Pas glissé',max:1,mod:'Ton Pas de danse en mesure laisse une traînée d’ondes (3 anneaux, 12 dégâts) qui ralentit.',syn:'La traînée donne 3 Résonance par ennemi touché.'},
-  cad_x2b:{k:'x',name:'Pas-écho',max:1,mod:'Ton Pas de danse en mesure laisse un écho qui sonne deux fois (28 dégâts).',syn:'Il remet la Volée à zéro.'},
+  cad_n6:{k:'s',name:'Syncope',max:2,desc:'Une action incorrecte ne te fait perdre que 2 points de Cadence au lieu de tout.',up:'Tu ne perds qu’un seul point.'},
+  cad_x1a:{k:'x',name:'Frappe jumelée',max:1,mod:'Le coup correct frappe deux fois (second coup à 60 %).',syn:'Sur un temps fort, il pose un écho au temps suivant (28 dégâts).'},
+  cad_x1b:{k:'x',name:'Onde longue',max:1,mod:'Le coup correct envoie une onde perçante (16 dégâts, portée +30 %).',syn:'Une onde qui traverse une de tes cloches la fait sonner fort.'},
+  cad_x2a:{k:'x',name:'Pas glissé',max:1,mod:'Ton Pas de danse correct laisse une traînée d’ondes (3 anneaux, 12 dégâts) qui ralentit.',syn:'La traînée donne 3 Résonance par ennemi touché.'},
+  cad_x2b:{k:'x',name:'Pas-écho',max:1,mod:'Ton Pas de danse correct laisse un écho qui sonne deux fois (28 dégâts).',syn:'Il remet la Volée à zéro.'},
   cad_x3a:{k:'x',name:'Orgue étendu',max:1,mod:'Point d’orgue dure 2 temps de plus, et chacun de tes coups lance 3 ondes en éventail.',syn:'Les ondes de l’orgue portent la Cadence : +0,5 % de dégâts par point.'},
   cad_x3b:{k:'x',name:'Orgue de combat',max:1,mod:'Pendant Point d’orgue : −50 % de dégâts subis, et chaque action déclenche un anneau (22 dégâts).',syn:'Chaque anneau qui touche un ennemi rend 1 Résonance.'},
   // Requiem (Héraut)
@@ -270,11 +270,11 @@
   car_k1:{k:'k',name:'Bourdon',max:1,desc:'À chaque temps fort (1 temps sur 4), une onde part de toi : 160 de rayon, 30 dégâts. Incompatible avec Accord Parfait.'},
   car_k2:{k:'k',name:'Tocsin',max:1,desc:'Ta Résonance monte jusqu’à 200. Au-delà de 100, le Grand Glas sonne deux fois.'},
   // Cadence (Héraut)
-  cad_k1:{k:'k',name:'Furioso',max:1,desc:'À Cadence maximale, chaque coup en mesure frappe deux fois (le second à 50 %). Mais une action hors mesure te coûte 5 % de tes PV.'},
-  cad_k2:{k:'k',name:'Danse Macabre',max:1,desc:'Un Pas de danse en mesure ne consomme pas de charge et blesse les ennemis traversés (14, +3 par point de Cadence).'},
+  cad_k1:{k:'k',name:'Furioso',max:1,desc:'À Cadence maximale, chaque coup correct frappe deux fois (le second à 50 %). Mais une action incorrecte te coûte 5 % de tes PV.'},
+  cad_k2:{k:'k',name:'Danse Macabre',max:1,desc:'Un Pas de danse correct ne consomme pas de charge et blesse les ennemis traversés (14, +3 par point de Cadence).'},
   // Requiem (Héraut)
   req_k1:{k:'k',name:'Glas des Âmes',max:1,desc:'Chaque ennemi vaincu te confie une âme (10 max). Le Grand Glas les libère toutes : +15 % de dégâts et +6 % de rayon par âme.'},
-  req_k2:{k:'k',name:'Pacte du Sonneur',max:1,desc:'−20 % de PV max. En échange, tes coups en mesure infligent +20 % de dégâts et chaque action en mesure te soigne de 2 PV.'},
+  req_k2:{k:'k',name:'Pacte du Sonneur',max:1,desc:'−20 % de PV max. En échange, tes coups corrects infligent +20 % de dégâts et chaque action correcte te soigne de 2 PV.'},
   // Trame (Tisse-Destin)
   trm_k1:{k:'k',name:'Destin Lié',max:1,desc:'Les ennemis attachés partagent leur sort : 40 % des dégâts subis par l’un frappent tous les autres.'},
   trm_k2:{k:'k',name:'Fil Rouge',max:1,desc:'Un seul fil à la fois, mais il ne s’use plus et l’ennemi attaché subit +40 % de dégâts. Incompatible avec les talents qui attachent plusieurs fils.'},

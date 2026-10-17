@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.13',
+ actuelle:'v16.14',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.14',t:'Aperçus des formes au Portail : Lumenarque (Clic G côté lumière puis côté Obscur, {R} renommé « Envoi de lanterne » avec plusieurs allers-retours), Gouffre (Dévorer puis des coups de Mâchoire isolés au lieu d’un spam), Héraut (le rythme réussi plusieurs fois avec une jauge de Cadence visible, Clic D Volée, Grand Glas sur un tas d’ennemis). Au Héraut, « en mesure » devient « correct » partout (talents, bulles, aides).'},
   {d:'2026-10-17',h:'v16.13',t:'Le guide « Comment jouer » est découpé en cinq pages, une par rubrique : la boucle d’abord, puis les portes, le Sanctuaire, les missions et récompenses, les commandes. Boutons Précédent/Suivant, onglets cliquables et flèches du clavier ; une seule rubrique s’affiche à la fois, avec de grandes cartes.'},
   {d:'2026-10-17',h:'v16.12',t:'Guide « Comment jouer » : titres de rubrique bien visibles (grands, avec barre dorée), mise en page plus large que haute (cartes en ligne, 4 par rangée) et, dans « Le Sanctuaire », les portraits d’Ismène, de Corbin et de l’Archiviste remplacent les icônes.'},
   {d:'2026-10-17',h:'v16.11',t:'Guide « Comment jouer » aéré : cartes plus grandes (icône en haut, titre, une courte phrase), plus d’espace entre les blocs, textes plus gros et moins d’informations par carte (le guide défile si l’écran est petit).'},
