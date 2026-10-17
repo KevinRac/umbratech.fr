@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.1',
+ actuelle:'v16.2',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-17',h:'v16.2',t:'Interface refaite : l’arbre de talents (jeu et wiki, même rendu) se déplie branche par branche avec zoom, fiche épinglable et onglets ; le récap de fin de run tient en un écran à trois onglets ; le Portail montre un aperçu animé du gameplay de chaque forme en trois gestes.'},
   {d:'2026-10-17',h:'v16.1',t:'Le Brumeux juge ses contre-mesures : il compare ce qu’elles te coûtent (PV perdus, temps) à tes salles ordinaires, relance celles qui portent, se détourne de celles que tu déjoues et y renonce après deux échecs. Deux nouvelles contre-mesures : Renforts et Béliers.'},
   {d:'2026-10-17',h:'v16.0',t:'Gardiens refaits : le Héraut Noyé a ses propres attaques (Marée noire avec sa brèche, Cloches noyées qui écrasent aussi les ennemis, Double marée au troisième temps) et le Glas Originel gagne le Battement inverse. Toutes leurs attaques sont décrites dans le wiki.'},
   {d:'2026-10-17',h:'v15.9',t:'La Brèche : une porte facultative (à partir de la 3e salle) mène à un combat plus dur avec un champion et une règle de salle imposée ; elle donne une relique au choix, de l’or et une relance de talents.'},

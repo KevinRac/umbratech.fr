@@ -215,33 +215,45 @@ ${ponts}
 }
 
 // ── Section « Arbres de talents »
-function talents(T) {
+// L'arbre est dessiné par data/arbre.js, le même module que le jeu : le wiki montre l'arbre tel qu'on le voit en jeu.
+function talents(T, A) {
   const N = T.noeuds, K = T.genres, X = T.exclusions;
-  const brOf = id => id.split('_')[0];
   // incompatibilités symétriques : la liste du talent, puis ceux qui le listent
   const excl = id => { const out = [...(X[id] || [])]; for (const k in X) if (X[k].includes(id) && !out.includes(k)) out.push(k); return out.filter(k => N[k]); };
-  const carte = (id, cls) => {
-    const n = N[id], ex = excl(id);
-    const tag = n.k === 'x' ? `${K.x} ${id.endsWith('a') ? 'A' : 'B'}` : K[n.k];
-    return `<article class="ent node k-${n.k}" data-cls="${cls}"><div class="eh"><h4>${esc(n.name)}${n.max > 1 ? ` <span class="rank">×${n.max}</span>` : ''}</h4><span class="tag">${esc(tag)}</span></div>`
-      + `<p>${esc(n.k === 'x' ? n.mod : n.desc)}</p>${n.up ? `<p class="up"><b>Rang supérieur</b> ${esc(n.up)}</p>` : ''}${n.k === 'x' ? `<p class="syn"><b>Synergie</b> ${esc(n.syn)}</p>` : ''}`
-      + `${ex.length ? `<p class="ex"><b>Incompatible avec</b> ${ex.map(k => esc(N[k].name)).join(', ')}</p>` : ''}</article>`;
-  };
-  const GROUPES = [['c', 'Racine'], ['m', 'Mineurs'], ['s', 'Compétences'], ['x', 'Majeurs (choix A ou B)'], ['k', 'Nœuds clés']];
-  const branche = br => {
-    const B = T.branches[br], ids = Object.keys(N).filter(id => brOf(id) === br);
-    const groupes = GROUPES.map(([k, titre]) => { const l = ids.filter(id => N[id].k === k); return l.length ? `<h5 class="grp">${titre}</h5><div class="grid g3">${l.map(id => carte(id, B.cls)).join('')}</div>` : ''; }).join('');
-    return `<div class="branch" id="talents-${br}" style="--c:${B.color}"><h3 class="bh"><span class="dot"></span>${esc(B.name)} ${B.sub ? `<span class="tag" style="--t:${B.color}">${esc(B.voie)}</span> ` : ''}<small>${ids.length} talents</small></h3>${groupes}</div>`;
+  // fiches lues par le script du wiki (panneau de détail et recherche)
+  const fiches = {};
+  for (const id of Object.keys(N)) {
+    const n = N[id];
+    const f = { n: n.name, k: n.k, b: id.split('_')[0], m: n.max, d: n.k === 'x' ? n.mod : n.desc };
+    if (n.up) f.u = n.up;
+    if (n.k === 'x') { f.x = id.endsWith('a') ? 'A' : 'B'; if (n.syn) f.y = n.syn; }
+    const ex = excl(id); if (ex.length) f.e = ex.map(k => N[k].name);
+    fiches[id] = f;
+  }
+  const cadres = {}; for (const c of Object.keys(T.formes)) Object.assign(cadres, Object.fromEntries(Object.entries(A.vues(c)).filter(([k]) => k !== 'tout').map(([k, v]) => [k, v])));
+  const vuesTout = { tout: A.vues(Object.keys(T.formes)[0]).tout };
+  const racines = Object.fromEntries(Object.entries(T.formes).map(([c, F]) => [c, { n: F.root, d: F.rootDesc, c: F.color }]));
+  const json = JSON.stringify({ genres: K, cadres: Object.assign({}, vuesTout, cadres), racines, branches: Object.fromEntries(Object.entries(T.branches).map(([b, B]) => [b, { n: B.name, c: B.color, v: B.voie || '' }])), fiches }).replace(/</g, '\\u003c');
+  const bloc = (c, F) => {
+    const brs = A.branches(c);
+    const puces = [`<button type="button" class="chip on" data-z="tout">Vue d’ensemble</button>`]
+      .concat(brs.map(b => { const B = T.branches[b]; return `<button type="button" class="chip" data-z="${b}" style="--cc:${B.color}"><b>●</b> ${esc(B.name)}${B.sub ? ` <small>${esc(B.voie)}</small>` : ''}</button>`; })).join('');
+    const ancres = brs.map(b => `<span class="anc" id="talents-${b}"></span>`).join('');
+    return `<div class="clsblock" id="talents-${c}" data-cls="${c}" style="--c:${F.color}"><h3 class="cb" style="color:${F.color}">${esc(F.name)}</h3><p class="k">${esc(F.rootDesc)}</p>${ancres}
+<div class="treebox" data-tree="${c}"><div class="tbar" role="group" aria-label="Zoomer sur une branche">${puces}</div>
+<div class="tstage"><div class="tsvg">${A.dessiner({ cls: c, statique: true })}</div><aside class="tdet" aria-live="polite"><p class="hint">Survole ou clique un nœud pour lire son effet. Clique sur une branche pour zoomer dessus et lire tous les noms.</p></aside></div>
+${A.legende()}</div></div>`;
   };
   const formes = Object.entries(T.formes);
-  const blocs = formes.map(([c, F]) => `<div class="clsblock" id="talents-${c}" data-cls="${c}" style="--c:${F.color}"><h3 class="cb" style="color:${F.color}">${esc(F.name)}</h3><p class="k">${esc(F.rootDesc)}</p>${Object.keys(T.branches).filter(b => T.branches[b].cls === c).map(branche).join('')}</div>`).join('');
-  return `<section class="sec" id="talents" data-sec>${MARK('data/talents.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>Arbres de talents</h2><div class="lede"><p>Chaque niveau te propose <b>3 talents</b> à choisir (4 avec <i>Vision élargie</i>). Chaque forme possède trois branches mineures et deux sous-classes (voies). Les <b>Majeurs</b> arrivent par paires : tu prends A <i>ou</i> B. Les <b>nœuds clés</b> changent le style de jeu, et certains s’excluent mutuellement.</p></div></header>
+  return `<section class="sec" id="talents" data-sec>${MARK('data/talents.js et data/arbre.js')}<style>${A.css}</style><header class="sh"><p class="eyebrow">Progression</p><h2>Arbres de talents</h2><div class="lede"><p>Chaque niveau te propose <b>3 talents</b> à choisir (4 avec <i>Vision élargie</i>). Chaque forme possède trois branches mineures et deux voies de sous-classe. Les <b>Majeurs</b> (losanges A et B) arrivent par paires : tu prends A <i>ou</i> B. Les <b>nœuds clés</b> (carrés) changent le style de jeu, et certains s’excluent mutuellement.</p><p>Les arbres ci-dessous sont ceux du jeu, tels que tu les vois à chaque montée de niveau : tu démarres au centre et chaque talent ouvre ses voisins.</p></div></header>
 <div class="filters" id="clsfilter"><span>Afficher :</span>
 <button type="button" class="chip on" data-f="all">Toutes les formes</button>
 ${formes.map(([c, F]) => `<button type="button" class="chip" data-f="${c}" style="--cc:${F.color}">${esc(F.short)}</button>`).join('')}
 </div>
-<aside class="note ">La disponibilité de certains talents dépend de ce que tu as déjà pris. Les incompatibilités sont listées sous chaque carte ; elles sont symétriques (si A bloque B, B bloque A).</aside>
-${blocs}
+<aside class="note ">La disponibilité de certains talents dépend de ce que tu as déjà pris : un nœud incompatible apparaît barré d’un pointillé rouge en jeu, et le détail de chaque talent indique ses incompatibilités (elles sont symétriques : si A bloque B, B bloque A).</aside>
+${formes.map(([c, F]) => bloc(c, F)).join('\n')}
+<script type="application/json" id="tdata">${json}</script>
+<script>var arbreVue=${A.vue.toString().replace(/<\/script/g, '<\\/script')};</script>
 </section>`;
 }
 
@@ -273,6 +285,7 @@ function fragments(D) {
   <p class="pitch">${esc(f.pitch)}</p>
   <p>${esc(f.aide)}</p>
   <dl class="kv"><dt>Mécanique</dt><dd>${esc(f.mech)}</dd><dt>Éveil</dt><dd>${esc(C.rootDesc)}</dd><dt>Branches</dt><dd>${main.map(b => `<a href="#talents-${b}">${esc(T.branches[b].name)}</a>`).join(', ')}</dd><dt>Sous-classes</dt><dd>${subs.map(b => `<a href="#talents-${b}">${esc(T.branches[b].name)}</a> <small>(${esc(T.branches[b].voie)})</small>`).join(', ')}</dd></dl>
+  ${(FO.apercus && FO.apercus[c]) ? `<h4 class="sub">Aperçu en trois gestes</h4><ol class="apercu">${FO.apercus[c].map(([t, d]) => `<li><b>${esc(t.replace('{R}', 'R'))}</b> — ${esc(d.replace('{R}', 'R'))}</li>`).join('')}</ol>` : ''}
   <p class="links"><a href="#talents-${main[0]}">Voir les talents →</a></p></article>`; };
   out.formes = `<div class="grid g2">${ordre.map(carte).join('')}</div>
 <h3 class="sub">Statistiques de départ</h3>
@@ -327,7 +340,7 @@ export function build(html) {
   out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire));
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
-  out = replaceSection(out, 'talents', talents(D.talents));
+  out = replaceSection(out, 'talents', talents(D.talents, D.arbre));
   for (const [name, content] of Object.entries(fragments(D))) out = replaceFragment(out, name, content);
   return syncVersion(out, gameVersion(D));
 }
