@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.17',
+ actuelle:'v16.18',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.18',t:'Arbre de talents : la fiche sous l’arbre garde toujours la même hauteur (celle de la plus longue description), donc plus rien ne bouge ni ne saute quand on survole deux nœuds dont les descriptions n’ont pas le même nombre de lignes.'},
   {d:'2026-10-18',h:'v16.17',t:'Le Brumeux garde ses secrets : plus aucun message, fenêtre, ligne de chronique ni page du wiki n’explique sa feinte (le cercle ocre ou violet reste à découvrir). Avant le tout premier pacte, une fenêtre le présente en image (silhouette sans visage, deux yeux pâles, main tendue). Son cri gagne un petit rire démoniaque court (trois « ha » qui descendent), aussi joué quand il insiste en pleine salle.'},
   {d:'2026-10-18',h:'v16.16',t:'Le Brumeux décide en pleine salle : si sa contre-mesure ne te coûte presque rien, il insiste (bulle violette à icône et ▲ rouge, son montant, renforts annoncés qui arrivent 1,5 s plus tard) ; si elle te submerge, il relâche (▼ vert : ennemis de contre-mesure pas encore arrivés annulés, malus de soin levé). Une escalade à la fois, 12 s au moins entre deux, deux au plus par salle, jamais en Brèche, en salle de gardien ni dans les deux salles d’avant. Réglages dans data/bestiaire.js (enSalle et esc de chaque contre-mesure).'},
   {d:'2026-10-18',h:'v16.15',t:'Lisibilité : le cercle runique et la gerbe d’étoiles qui s’affichaient à chaque compétence lancée (A, E, R, F) sont supprimés, ils se confondaient avec des zones de jeu.'},

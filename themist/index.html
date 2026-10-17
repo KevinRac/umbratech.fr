@@ -1668,6 +1668,19 @@ function capCard(id){
 function bindTree(root,cap){
  const svg=root.querySelector('svg.ar');if(!svg)return null;
  const home=cap.innerHTML,V=A_D.vues(P.cls);let pin=null;
+ // v16.18 · la fiche garde TOUJOURS la même hauteur (celle de la plus longue description de l'arbre) : rien ne bouge sous la souris,
+ // quel que soit le nombre de lignes. Mesure sur un double invisible, refaite si la fenêtre change de taille.
+ const lockCap=()=>{try{
+  const ghost=cap.cloneNode(false);ghost.removeAttribute('id');ghost.style.cssText='position:absolute;visibility:hidden;pointer-events:none;height:auto;min-height:0;max-height:none;left:0;right:0;overflow:visible';
+  cap.parentNode.insertBefore(ghost,cap);ghost.style.width=cap.getBoundingClientRect().width+'px';
+  const ids=['root',...[...svg.querySelectorAll('.ar-n')].map(g=>g.dataset.id)];let mx=0;
+  for(const id of ids){ghost.innerHTML=id==='root'?home:capCard(id);if(id!=='root')mx=Math.max(mx,ghost.getBoundingClientRect().height);}
+  ghost.innerHTML=home;mx=Math.max(mx,ghost.getBoundingClientRect().height);ghost.remove();
+  cap.style.height=Math.ceil(mx)+'px';cap.style.minHeight='0';cap.style.overflowY='auto';
+ }catch(e){}};
+ lockCap();
+ let rzT=0;const onRz=()=>{if(!cap.isConnected){removeEventListener('resize',onRz);return;}clearTimeout(rzT);rzT=setTimeout(()=>{cap.style.height='';lockCap();},150);};
+ addEventListener('resize',onRz);
  const view=A_D.vue(svg,V,f=>root.querySelectorAll('.tbar .tb').forEach(b=>b.classList.toggle('on',b.dataset.z===f)));
  const show=id=>{cap.innerHTML=id?capCard(id):home;};
  const setPin=id=>{svg.querySelectorAll('.ar-n.sel').forEach(g=>g.classList.remove('sel'));pin=id;const g=id&&svg.querySelector('.ar-n[data-id="'+id+'"]');if(g)g.classList.add('sel');show(pin);};
