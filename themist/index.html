@@ -7391,28 +7391,36 @@ function demoBoot(cls){
  document.documentElement.classList.add('demo');
  const st=document.createElement('style');st.textContent='.demo #hud,.demo #toast,.demo #banner,.demo #overlay,.demo #assist,.demo .hint,.demo [id^=mur]{display:none!important}.demo,.demo body{background:#05060a;overflow:hidden}.demo #game{transform:scale(1.5);transform-origin:40% 58%}';document.head.appendChild(st);
  initAudio=function(){};musicKick=function(){};updateMusic=function(){};muted=true;
- resize();chosenCls=cls;startRun();
- const PHD=4.6;let ph=-1,t0=0,lock=-1,cyc=0,lastMsg=-1,tick=0,pressAt={};
+ resize();chosenCls=cls;startRun();arrowShow=function(){};
+ const PHD=4.4;let ph=-1,t0=0,lock=-1,cyc=0,lastMsg=-1,tick=0,pressAt={};
  const press=code=>{dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true}));};
  const clickL=()=>{mouse.l=true;if(P){P.clickQ=1;P.clickT=0.16;}};
  const clickR=()=>{mouse.r=true;if(P){P.rclickQ=1;P.rclickT=0.16;}};
  const once=(k,tt,at,fn)=>{if(tt>=at&&!pressAt[k]){pressAt[k]=1;fn();}};
  // remet la scène à zéro : nouvelle salle, nouveaux ennemis qui réapparaissent, état de la classe réinitialisé
- function reset(){mouse.l=mouse.r=false;pressAt={};enterRoom('combat');if(cls==='gou')P.cor=0;P.hp=P.s.maxHp;}
+ const POS={lum:[[200,-60],[270,40],[330,-30],[210,100]],gou:[[120,-40],[150,45],[205,0],[250,-70]],her:[[105,-45],[130,50],[95,5],[160,-75]],tis:[[220,-70],[270,60],[340,-5]]};
+ function reset(){
+  mouse.l=mouse.r=false;pressAt={};
+  enemies=[];eproj=[];pproj=[];spectrals=[];parts=[];fx=[];nums=[];tlights=[];deferred=[];timers=[];rings=[];pools=[];coins=[];decals=[];queue.length=0;
+  room=makeRoom('combat');room.waves=[];room.spawning=[];room.sinceWave=0;room.rule=null;room.bl=null;room.cleared=false;
+  P.x=W*0.4;P.y=H*0.58;P.vx=P.vy=0;P.dashT=0;P.delayed=[];P.roomMut=0;P.feast=0;P.hp=P.s.maxHp;if(cls==='gou')P.cor=0;
+  resetLantern();v6Reset();
+  for(const [dx,dy] of POS[cls]){const e=createEnemy('rampant',P.x+dx,P.y+dy);e.dmg=0;e.spd=0;e.maxHp=e.hp=3000;e.state='walk';e.t=e.cd=999;e.ang=Math.PI;}
+ }
  addEventListener('message',e=>{if(e.data&&e.data.pvLock!==undefined){lock=e.data.pvLock;if(lock>=0)ph=lock;t0=performance.now()/1000;lastMsg=-1;reset();}});
  function bot(){
   if(!P||state!=='play')return;
   if(!overlayEl.hidden)closeOverlay();queue.length=0;P.pendingLv=0;MSGQ.length=0;hintPaused=false;msgCur=null;paused=false;freezeT=0;
   P.hp=P.s.maxHp;P.dead=false;P.hurtFlash=0;
   const live=enemies.filter(e=>!e.dead&&!e.fixed);
-  for(const e of live){e.dmg=0;e.maxHp=3000;e.hp=3000;const dx=P.x+150-e.x,dy=P.y-10-e.y,d=hyp(dx,dy);if(d>230){e.x+=dx/d*4;e.y+=dy/d*4;}}
-  if(RUN)RUN.fogBoost=-0.42;if(room)room.doors=[];
+  for(const e of live){e.dmg=0;e.maxHp=3000;e.hp=3000;e.spd=0;e.state='walk';e.t=e.cd=999;}
+  if(RUN){RUN.fogBoost=-0.42;if(RUN.as)RUN.as.busy=true;}if(room){room.doors=[];room.rule=null;room.bl=null;room.waves=[];room.spawning=[];}
   const now=performance.now()/1000;
-  if(ph<0){ph=0;t0=now;}
+  if(ph<0){ph=0;t0=now;trans=null;fade=0;reset();}
   let tt=now-t0;
-  if(lock<0&&tt>=PHD){ph=(ph+1)%3;t0=now;tt=0;reset();return;}
+  if(tt>=PHD){if(lock<0)ph=(ph+1)%3;t0=now;tt=0;reset();return;}
   if(ph!==lastMsg){lastMsg=ph;try{parent.postMessage({pvPh:ph},'*');}catch(e){}}
-  if(!live.length&&!(room.spawning&&room.spawning.length)&&!(room.waves&&room.waves.length)&&!trans)enterRoom('combat');
+  if(!live.length&&!trans)reset();
   let tg=null,bd=1e9;for(const e of live){const d=hyp(e.x-P.x,e.y-P.y);if(d<bd){bd=d;tg=e;}}
   const far=live.length?live.slice().sort((a,b)=>hyp(b.x-P.x,b.y-P.y)-hyp(a.x-P.x,a.y-P.y))[0]:null;
   if(tg){mouse.x=tg.x;mouse.y=tg.y;}else{mouse.x=P.x+200;mouse.y=P.y-60;}
