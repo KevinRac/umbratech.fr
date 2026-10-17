@@ -418,9 +418,13 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 @media (max-width:860px){.rz-wrap{grid-template-columns:1fr}.rz-d{position:static}}
 </style>
 <script src="data/equipements.js"></script>
+<script src="data/reliques.js"></script>
+<script src="data/pactes.js"></script>
 <script>
 (()=>{
 'use strict';
+// Fusionne des données (data/*.js) avec les effets codés, clé par clé, en gardant l'ordre des données
+const dataMerge=(D,F)=>{const o={};for(const k in D)o[k]=Object.assign({},D[k],F[k]||{});return o;};
 // ───────────────────────── Constantes & utilitaires
 const W=1280,H=720,TAU=Math.PI*2;
 const AR={x0:56,y0:92,x1:W-56,y1:H-44};
@@ -726,27 +730,29 @@ for(const br in BR){const list=BR[br].sub?SUB_EDGES:MAIN_EDGES;for(const [a,b] o
 const EXCL={ray_k1:['fan_k1','fan_k2','pen_k1'],fan_k1:['ray_k1','pen_k1'],fan_k2:['ray_k1'],pen_k1:['ray_k1','fan_k1'],vor_k2:['reg_k1'],reg_k1:['vor_k2']};
 function depBlocked(id){const s=P.s;if(s.coeur&&['fan_n3','fan_n4','fan_n6','fan_n8','fan_k1','fan_k2','pen_k1'].includes(id))return true;if(s.canon&&id==='reg_n4')return true;if(s.colosse&&id==='dif_n8')return true;if(s.filRouge&&id==='trm_n7')return true;return false;}
 
-const RELICS=[
- {id:'phoenix',lock:50,g:'✶',name:'Mèche de Phénix',desc:'Une fois par run, tu renais avec 50 % de tes PV.',apply:s=>{s.phoenix=1;}},
- {id:'bell',g:'◬',name:'Cloche fêlée',desc:'Tous les 5 coups de base, une onde de choc (30 dégâts) autour de toi.',apply:s=>{s.bell=1;}},
- {id:'eye',g:'◉',name:'Œil de verre',desc:'+10 % de critique et +25 % de dégâts critiques.',apply:s=>{s.crit+=0.1;s.critMult+=0.25;}},
- {id:'wax',g:'❦',name:'Cœur de cire',desc:'+25 PV max.',apply:s=>{s.maxHp+=25;}},
- {id:'sand',g:'⧗',name:'Sablier d’ombre',desc:'Ton esquive gagne une charge supplémentaire.',apply:s=>{s.dashCharges+=1;}},
- {id:'feather',g:'⟡',name:'Plume de corbeau',desc:'+12 % de vitesse de déplacement.',apply:s=>{s.speed*=1.12;}},
- {id:'prismg',g:'◇',name:'Prisme de garde',desc:'Les projectiles ennemis ralentissent de 45 % dans ta lumière.',apply:s=>{s.prismGuard=1;}},
- {id:'calice',lock:40,g:'♁',name:'Calice de Brume',desc:'3 % des dégâts infligés te soignent.',apply:s=>{s.lifesteal+=0.03;}},
- {id:'ember',lock:35,g:'✺',name:'Braise éternelle',desc:'Toutes les brûlures infligent +50 % de dégâts.',apply:s=>{s.burnMult*=1.5;}},
- {id:'oil',cls:'lum',g:'◆',name:'Huile sainte',desc:'Le Faisceau embrase les ennemis : 12 dégâts par seconde pendant 3 s.',apply:s=>{s.oil=1;}},
- {id:'ash',cls:'lum',g:'✧',name:'Cendre d’étoile',desc:'Chaque ennemi vaincu rend 6 Lueur.',apply:s=>{s.ash=1;}},
- {id:'chain',cls:'lum',g:'⌘',name:'Chaîne du geôlier',desc:'La lanterne lancée ou rappelée étourdit 0,7 s.',apply:s=>{s.chain=1;}},
- {id:'dent',cls:'gou',g:'⩚',name:'Dent de Léviathan',desc:'+25 % de dégâts de Recracher.',apply:s=>{s.spitDmg*=1.25;}},
- {id:'cercle',cls:'gou',g:'◎',name:'Cerclage de fer',desc:'La Rupture ne t’inflige plus que la moitié de ses dégâts.',apply:s=>{s.ruptureSelf*=0.5;}},
- {id:'moelle',cls:'gou',g:'⚘',name:'Moelle noire',desc:'Chaque ennemi vaincu te rend 3 PV.',apply:s=>{s.regenKill+=3;}},
- {id:'crane',lock:30,g:'☠',name:'Crâne de rat',desc:'Chaque ennemi vaincu laisse 2 pièces d’or de plus.',apply:s=>{s.extraGold+=2;}},
- {id:'epine',lock:40,g:'✠',name:'Couronne d’épines',desc:'+20 % de dégâts, mais −15 PV max.',apply:s=>{s.dmg+=0.2;s.maxHp-=15;}},
- {id:'clef',lock:35,g:'⚷',name:'Clé du Colporteur',desc:'Le Colporteur propose une relique de plus, et ta première relance chez lui est gratuite.',apply:s=>{s.clef=1;}},
- {id:'bourse',lock:45,g:'◈',name:'Bourse du Pendu',desc:'+1 % de dégâts par tranche de 15 or en poche (+30 % max).',apply:s=>{s.bourse=1;}},
-];
+// Données des reliques (nom, glyphe, texte, forme, prix à la forge) : data/reliques.js. Ici, seulement les effets.
+const RELICS=window.BRUME_DATA.reliques.map(r=>Object.assign({},r,{apply:()=>{}}));
+function relFx(F){for(const k in F){const r=RELICS.find(x=>x.id===k);if(r)r.apply=F[k];else console.warn('Relique inconnue dans les données :',k);}}
+relFx({
+ phoenix:s=>{s.phoenix=1;},
+ bell:s=>{s.bell=1;},
+ eye:s=>{s.crit+=0.1;s.critMult+=0.25;},
+ wax:s=>{s.maxHp+=25;},
+ sand:s=>{s.dashCharges+=1;},
+ feather:s=>{s.speed*=1.12;},
+ prismg:s=>{s.prismGuard=1;},
+ calice:s=>{s.lifesteal+=0.03;},
+ ember:s=>{s.burnMult*=1.5;},
+ oil:s=>{s.oil=1;},
+ ash:s=>{s.ash=1;},
+ chain:s=>{s.chain=1;},
+ dent:s=>{s.spitDmg*=1.25;},
+ cercle:s=>{s.ruptureSelf*=0.5;},
+ moelle:s=>{s.regenKill+=3;},
+ crane:s=>{s.extraGold+=2;},
+ epine:s=>{s.dmg+=0.2;s.maxHp-=15;},
+ clef:s=>{s.clef=1;},
+ bourse:s=>{s.bourse=1;}});
 const MUTS=[{id:'griffes',n:'Griffes',d:'+40 % de dégâts'},{id:'membres',n:'Membres allongés',d:'+35 % de portée'},{id:'pierre',n:'Peau de pierre',d:'−40 % de dégâts subis'},{id:'fievre',n:'Fièvre',d:'+30 % de vitesse'}];
 const ROOMMUTS=['Bras surnuméraire','Carapace d’os','Mâchoire double','Épines dorsales','Cœur second','Yeux sans nombre'];
 
@@ -2880,13 +2886,13 @@ Object.assign(ICONS,{
  fuseau:'M12 2v20M8 8c2-2 6-2 8 0M7 12c2.5-2 7.5-2 10 0M8 16c2-2 6-2 8 0'});
 SLOT_IC.her={atk:()=>'s_mallet',vol:()=>'s_volee',dash:()=>'s_valse',a:()=>'s_carillon',e:()=>'s_orgue',r:()=>'s_glas',f:()=>P.s.glasFun?'s_glasfun':P.s.requiem?'s_requiem':'s_ult'};
 SLOT_IC.tis={atk:()=>'s_needle',fil:()=>'s_fil',dash:()=>'s_dash',a:()=>'s_toile',e:()=>'s_pluie',r:()=>'s_arr',f:()=>P.s.gtoile?'s_gtoile':P.s.guignol?'s_guignol':'s_ult'};
-RELICS.push(
- {id:'diapason',cls:'her',g:'♆',name:'Diapason d’argent',desc:'Ta fenêtre de mesure s’élargit de 30 ms.',apply:s=>{s.beatWin+=0.03;}},
- {id:'battantr',cls:'her',g:'♁',name:'Battant de fer',desc:'+25 % de dégâts des ondes, des cloches et des choristes.',apply:s=>{s.waveDmg*=1.25;}},
- {id:'metro',cls:'her',g:'⧖',name:'Métronome du sonneur',desc:'+2 Cadence max. Tu entres dans chaque salle avec au moins 3 de Cadence.',apply:s=>{s.cadMax+=2;s.cadStart=3;}},
- {id:'ciseaux',cls:'tis',g:'✂',name:'Ciseaux de la Parque',desc:'+40 % de dégâts d’Arracher et des chocs.',apply:s=>{s.yankDmg*=1.4;s.collideDmg*=1.4;}},
- {id:'dea',cls:'tis',g:'◒',name:'Dé à coudre',desc:'−20 % de dégâts subis tant qu’au moins un fil est noué.',apply:s=>{s.dea=1;}},
- {id:'fuseau',cls:'tis',g:'⌇',name:'Fuseau d’os',desc:'+40 % de régénération de Bobine.',apply:s=>{s.bobRegen*=1.4;}});
+relFx({
+ diapason:s=>{s.beatWin+=0.03;},
+ battantr:s=>{s.waveDmg*=1.25;},
+ metro:s=>{s.cadMax+=2;s.cadStart=3;},
+ ciseaux:s=>{s.yankDmg*=1.4;s.collideDmg*=1.4;},
+ dea:s=>{s.dea=1;},
+ fuseau:s=>{s.bobRegen*=1.4;}});
 Object.assign(EXCL,{car_k1:['car_k2','car_n6'],car_k2:['car_k1'],trm_k1:['trm_k2'],trm_k2:['trm_k1']});
 Object.assign(NUMSTYLE,{beat:[14,'#9fd0ff'],miss:[13,'#8a8796'],pup:[14,'#ff9ec0']});
 LORE.splice(4,0,
@@ -5273,16 +5279,16 @@ Object.assign(ICONS,{
  chaineg:'M9 15l6-6M7 11l-2 2a3.5 3.5 0 0 0 5 5l2-2M17 13l2-2a3.5 3.5 0 0 0-5-5l-2 2',
  boussole:ci(12,12,9)+'M15 9l-2 4-4 2 2-4z',
  lacry:'M12 3c3 5 5 7.5 5 10.5a5 5 0 0 1-10 0C7 10.5 9 8 12 3zM10 14a2 2 0 0 0 2 2'});
-RELICS.push(
- {id:'gant',g:'✋',name:'Gantelet du sonneur',desc:'+15 % de vitesse d’attaque.',apply:s=>{s.atkSpeed+=0.15;}},
- {id:'fiole',g:'⚱',name:'Fiole de sang tiède',desc:'Chaque ennemi vaincu te rend 2 PV.',apply:s=>{s.regenKill+=2;}},
- {id:'ancre',g:'⚓',name:'Ancre de brume',desc:'−12 % de dégâts subis.',apply:s=>{s.dmgTaken*=0.88;}},
- {id:'pendule',g:'⏚',name:'Pendule du beffroi',desc:'Ton esquive se recharge 25 % plus vite.',apply:s=>{s.dashCd*=0.75;}},
- {id:'os',g:'⚚',name:'Os creux',desc:'+10 PV max et +8 % de vitesse de déplacement.',apply:s=>{s.maxHp+=10;s.speed*=1.08;}},
- {id:'lacry',g:'◌',name:'Lacrymatoire',desc:'+25 % de soins reçus.',apply:s=>{s.healMul=(s.healMul||1)*1.25;}},
- {id:'boussole',g:'⌖',name:'Boussole brisée',desc:'+2 relances de talents, tout de suite.',apply:s=>{if(RUN)RUN.rerolls+=2;}},
- {id:'cierge',lock:40,g:'♰',name:'Cierge votif',desc:'+15 % de dégâts contre les gardiens.',apply:s=>{s.bossDmg=(s.bossDmg||0)+0.15;}},
- {id:'chaineg',lock:35,g:'⛓',name:'Chaîne de glas',desc:'Les ennemis étourdis subissent +25 % de dégâts.',apply:s=>{s.stunDmg=(s.stunDmg||0)+0.25;}});
+relFx({
+ gant:s=>{s.atkSpeed+=0.15;},
+ fiole:s=>{s.regenKill+=2;},
+ ancre:s=>{s.dmgTaken*=0.88;},
+ pendule:s=>{s.dashCd*=0.75;},
+ os:s=>{s.maxHp+=10;s.speed*=1.08;},
+ lacry:s=>{s.healMul=(s.healMul||1)*1.25;},
+ boussole:s=>{if(RUN)RUN.rerolls+=2;},
+ cierge:s=>{s.bossDmg=(s.bossDmg||0)+0.15;},
+ chaineg:s=>{s.stunDmg=(s.stunDmg||0)+0.25;}});
 const _heal11=heal;
 heal=function(n,src){if(P&&P.s&&P.s.healMul)n*=P.s.healMul;_heal11(n,src);};
 
@@ -5825,19 +5831,15 @@ window.__v12={profile,runAxes,CMS,PR,mereChooseCopy};
 //         brume comme matériau du corps, copie d’une capacité, point faible net.
 
 // ───────────────────────── Pacte de la Brume
-const PBOON={
- fureur:{n:'Fureur',d:'+30 % de dégâts.'},
- vigueur:{n:'Vigueur',d:'+30 % de PV max (et soin d’autant).',on(s){s.maxHp*=1.3;P.hp+=s.maxHp*0.3/1.3;},off(s){s.maxHp/=1.3;P.hp=Math.min(P.hp,s.maxHp);}},
- vif:{n:'Vivacité',d:'+20 % de vitesse, esquive 20 % plus rapide à recharger.',on(s){s.speed*=1.2;s.dashCd*=0.8;},off(s){s.speed/=1.2;s.dashCd/=0.8;}},
- avidite:{n:'Avidité',d:'+60 % d’or et une relance de talents.',on(){RUN.goldMul*=1.6;RUN.rerolls++;},off(){RUN.goldMul/=1.6;}},
- sangsue:{n:'Sangsue',d:'Tes coups te soignent de 3 % des dégâts infligés.'}};
-const PCONS={
- brume:{n:'Brume dense',d:'La Brume s’épaissit dans chaque salle : tu vois moins loin.',ax:'portee',hi:true,why:'tu frappes de loin'},
- lourd:{n:'Pas lourds',d:'Ton esquive met 35 % plus de temps à se recharger.',ax:'esquive',hi:true,why:'tu esquives sans cesse',on(s){s.dashCd*=1.35;},off(s){s.dashCd/=1.35;}},
- avare:{n:'Brume avare',d:'Les soins que tu reçois sont réduits de moitié.',ax:'soin',hi:true,why:'tu te soignes beaucoup'},
- meute:{n:'Meute',d:'Chaque salle de combat compte deux Rampants de plus.',ax:'rythme',hi:true,why:'tu purges les salles vite'},
- heurts:{n:'Heurts',d:'Les coups au corps à corps te font 25 % de dégâts en plus.',ax:'portee',hi:false,why:'tu frappes au contact'},
- fragile:{n:'Fragilité',d:'Tu subis 20 % de dégâts en plus.',ax:'risque',hi:false,why:'tu restes prudent',on(s){s.dmgTaken*=1.2;},off(s){s.dmgTaken/=1.2;}}};
+// Données des pactes (bénéfices, contraintes, aides) : data/pactes.js. Ici, seulement les effets.
+const PA_D=window.BRUME_DATA.pactes;
+const PBOON=dataMerge(PA_D.benefices,{
+ vigueur:{on(s){s.maxHp*=1.3;P.hp+=s.maxHp*0.3/1.3;},off(s){s.maxHp/=1.3;P.hp=Math.min(P.hp,s.maxHp);}},
+ vif:{on(s){s.speed*=1.2;s.dashCd*=0.8;},off(s){s.speed/=1.2;s.dashCd/=0.8;}},
+ avidite:{on(){RUN.goldMul*=1.6;RUN.rerolls++;},off(){RUN.goldMul/=1.6;}}});
+const PCONS=dataMerge(PA_D.contraintes,{
+ lourd:{on(s){s.dashCd*=1.35;},off(s){s.dashCd/=1.35;}},
+ fragile:{on(s){s.dmgTaken*=1.2;},off(s){s.dmgTaken/=1.2;}}});
 const pactOn=k=>!!(RUN&&!RUN.hub&&RUN.pact&&(RUN.pact.boon===k||RUN.pact.cons===k));
 function pactAgg(){return RUN&&!RUN.hub?1-0.07*Math.min(3,RUN.pactN||0):1;}
 function pactEnd(){const p=RUN&&RUN.pact;if(!p)return;const B=PBOON[p.boon],C=PCONS[p.cons];if(B&&B.off)B.off(P.s);if(C&&C.off)C.off(P.s);RUN.pact=null;}
@@ -5921,10 +5923,9 @@ function drawRolePost(e){const R=ROLES[e.role];if(!R)return;const c=ctx,x=e.x,y=
 // ───────────────────────── Équipements
 // Données des équipements (noms, raretés, textes, taux) : data/equipements.js. Ici, seulement les effets codés.
 const EQ_D=window.BRUME_DATA.equipements,RAR=EQ_D.raretes;
-const eqMerge=(D,F)=>{const o={};for(const k in D)o[k]=Object.assign({},D[k],F[k]||{});return o;};
 const eqFx=(O,F)=>{for(const k in F)Object.assign(O[k],F[k]);};
 const EQ_IC={arme:'M5 19l9-9m0 0l4-6 2 2-6 4m-5 4l2 2m-6 0l3 3',armure:'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z',relique:'M9 4h6l1 3H8zM8 7h8v9a4 4 0 01-8 0zM12 11v4',talisman:'M7 4c2 3 8 3 10 0M12 7v3M12 10a4 4 0 104 4 4 4 0 00-4-4z'};
-const EQS=eqMerge(EQ_D.objets,{
+const EQS=dataMerge(EQ_D.objets,{
  lame:{on(s){s.atkSpeed*=0.9;},off(s){s.atkSpeed/=0.9;}},
  gilet:{on(s){s.dmgTaken*=0.9;s.dashCd*=1.08;},off(s){s.dmgTaken/=0.9;s.dashCd/=1.08;}},
  lanterne:{on(s){s.aura*=1.2;s.groundLight*=1.2;},off(s){s.aura/=1.2;s.groundLight/=1.2;}},
@@ -6194,7 +6195,7 @@ eqFx(EQS,{
  phenix:{on(s){s.maxHp*=0.8;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.8;}}});
 
 // ───────────────────────── Sets : deux pièces qui se répondent
-const SETS=eqMerge(EQ_D.sets,{
+const SETS=dataMerge(EQ_D.sets,{
  guet:{on(s){s.crit+=0.1;},off(s){s.crit-=0.1;}},
  cendre:{on(s){s.dmgTaken*=0.9;},off(s){s.dmgTaken/=0.9;}},
  serment:{on(){},off(){}},
@@ -6314,17 +6315,17 @@ drawTelegraphs=function(){_dt14();
  if(room){drawBluff();drawRuleWorld();}};
 
 // ───────────────────────── Aide adaptative : une main tendue, jamais imposée
-const AIDS={
- tele:{n:'Télégraphes renforcés',d:'Les zones d’attaque ressortent davantage jusqu’à la fin de la run.',ok:()=>!RUN.as.tele,go(){RUN.as.tele=true;}},
- clem:{n:'Brume clémente',d:'−20 % de dégâts subis jusqu’à la fin de cette salle.',ok:()=>RUN.as.clem!==room,go(){RUN.as.clem=room;}},
- lent:{n:'Phase ralentie',d:'Les ennemis présents sont 15 % plus lents et le gardien attaque plus lentement dans cette salle.',ok:()=>RUN.as.slow!==room,go(){RUN.as.slow=room;for(const e of enemies)if(!e.dead&&e.spd)e.spd*=0.85;}},
- souffle:{n:'Un souffle de lumière',d:'Tu récupères 40 % de tes PV, une seule fois.',ok:()=>!RUN.as.souf&&P.hp/P.s.maxHp<0.6,go(){RUN.as.souf=true;heal(P.s.maxHp*0.4,'halte');}}};
-const WHY={coups:'Tu encaisses beaucoup de coups d’affilée.',pv:'Tes forces sont presque épuisées.',spot:'Ce passage t’a déjà arrêté plusieurs fois.',hesite:'Tu sembles chercher ton souffle.'};
+const AIDS=dataMerge(PA_D.aides,{
+ tele:{ok:()=>!RUN.as.tele,go(){RUN.as.tele=true;}},
+ clem:{ok:()=>RUN.as.clem!==room,go(){RUN.as.clem=room;}},
+ lent:{ok:()=>RUN.as.slow!==room,go(){RUN.as.slow=room;for(const e of enemies)if(!e.dead&&e.spd)e.spd*=0.85;}},
+ souffle:{ok:()=>!RUN.as.souf&&P.hp/P.s.maxHp<0.6,go(){RUN.as.souf=true;heal(P.s.maxHp*0.4,'halte');}}});
+const WHY=PA_D.raisons,AIDE_P=PA_D.aide;
 const _pa14=pactAgg;
 pactAgg=function(){return _pa14()*(RUN&&RUN.as&&RUN.as.slow&&RUN.as.slow===room?1.25:1);};
 function assistTick(){
- const A=RUN.as;if(!A||SAVE.flags.noAssist||A.offers>=2||A.busy||!room||room.cleared||state!=='play'||P.dead)return;
- if(RUN.time-A.lastOffer<50)return;if(!(room.type==='combat'||room.type==='elite'||room.type==='boss')||(room.type==='boss'&&!room.started))return;
+ const A=RUN.as;if(!A||SAVE.flags.noAssist||A.offers>=AIDE_P.offresParRun||A.busy||!room||room.cleared||state!=='play'||P.dead)return;
+ if(RUN.time-A.lastOffer<AIDE_P.ecartS)return;if(!(room.type==='combat'||room.type==='elite'||room.type==='boss')||(room.type==='boss'&&!room.started))return;
  const now=RUN.time;A.hitsT=A.hitsT.filter(t=>now-t<20);
  const h14=A.hitsT.filter(t=>now-t<14).length,low=P.hp/P.s.maxHp,spot=(M().spots||{})[room.spot]||0,inRoom=now-(room.t0||now),hr=room.hitsTaken||0;
  let why=null;
@@ -6338,12 +6339,12 @@ function showAssist(id,why){const A=RUN.as,a=AIDS[id];A.busy=true;A.offers++;A.l
  if(!assistEl){assistEl=document.createElement('div');assistEl.id='assist';assistEl.setAttribute('role','dialog');assistEl.setAttribute('aria-label','Aide adaptative');toastEl.parentNode.appendChild(assistEl);
   assistEl.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)answerAssist(b.dataset.a);});}
  assistEl.innerHTML=`<b>La Brume te tend la main</b><span>${esc(WHY[why])}</span><span class="aid"><strong>${esc(a.n)}</strong> : ${esc(a.d)}</span><div class="ab"><button type="button" class="btn primary" data-a="y">Accepter · G</button><button type="button" class="btn" data-a="n">Refuser · B</button><button type="button" class="btn lnk" data-a="x">Ne plus proposer</button></div>`;
- assistEl.classList.add('show');clearTimeout(assistTimer);assistTimer=setTimeout(()=>answerAssist('t'),14000);}
+ assistEl.classList.add('show');clearTimeout(assistTimer);assistTimer=setTimeout(()=>answerAssist('t'),AIDE_P.dureeOffreS*1000);}
 function answerAssist(r){if(!assistEl||!assistEl.classList.contains('show'))return;clearTimeout(assistTimer);assistEl.classList.remove('show');
  const A=RUN&&RUN.as;if(A)A.busy=false;if(!A||!assistCur)return;const a=AIDS[assistCur];assistCur=null;
  if(r==='y'){a.go();RUN.ch.assist++;chron('assist',{n:a.n});toast(`${a.n} : accordé.`,2);sfx('pick');}
  else if(r==='n'||r==='x'){chron('refus');const m=M();m.assistRef=(m.assistRef||0)+1;
-  if(r==='x'||m.assistRef>=3){SAVE.flags.noAssist=1;toast('Compris : la Brume ne proposera plus d’aide. Réglable dans la pause.',3.2);}persist();}}
+  if(r==='x'||m.assistRef>=AIDE_P.refusAvantArret){SAVE.flags.noAssist=1;toast('Compris : la Brume ne proposera plus d’aide. Réglable dans la pause.',3.2);}persist();}}
 addEventListener('keydown',e=>{if(!assistEl||!assistEl.classList.contains('show')||e.repeat)return;if(e.code==='KeyG')answerAssist('y');else if(e.code==='KeyB')answerAssist('n');});
 
 // ───────────────────────── Effets en combat (v14)
