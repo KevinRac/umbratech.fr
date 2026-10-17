@@ -38,6 +38,8 @@ const DEPTH = {
   shadow: 2,
   entities: 2.1,
   canopy: 10,
+  /** Silhouette du héros au-dessus des toits : visible seulement là où un toit le cache. */
+  heroGhost: 10.2,
   smoke: 10.5,
   fog: 11,
   debug: 90,
@@ -68,6 +70,12 @@ export class WorldScene extends Phaser.Scene {
   private cameraConfig!: CameraConfig;
 
   private hero!: Phaser.GameObjects.Sprite;
+  /**
+   * Copie translucide du héros dessinée au-dessus de la couche `canopy`
+   * (décision n°44) : posée sur le héros visible, elle ne change rien (même
+   * couleur) ; quand un toit le recouvre, elle laisse deviner sa silhouette.
+   */
+  private heroGhost!: Phaser.GameObjects.Sprite;
   private shadow!: Phaser.GameObjects.Image;
   private water!: Phaser.GameObjects.TileSprite;
   private fog = new Map<string, Phaser.GameObjects.TileSprite[]>();
@@ -232,6 +240,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.shadow = this.add.image(0, 0, WORLD_TEX.shadow).setOrigin(0.5, 0.5).setDepth(DEPTH.shadow);
     this.hero = this.add.sprite(0, 0, WORLD_TEX.hero, WORLD_TEX.heroFrame('down', 0)).setOrigin(0.5, 1);
+    this.heroGhost = this.add.sprite(0, 0, WORLD_TEX.hero, WORLD_TEX.heroFrame('down', 0)).setOrigin(0.5, 1).setAlpha(0.5).setDepth(DEPTH.heroGhost);
     this.syncHero();
   }
 
@@ -300,6 +309,7 @@ export class WorldScene extends Phaser.Scene {
       this.hero.anims.stop();
       this.hero.setFrame(WORLD_TEX.heroFrame(pose, 0));
     }
+    this.heroGhost.setPosition(x, y).setFlipX(flipX).setFrame(this.hero.frame.name);
     // L'état partagé suit le héros (la sauvegarde y lira sa position, jalon M9).
     this.state.player.x = body.x;
     this.state.player.y = body.y;

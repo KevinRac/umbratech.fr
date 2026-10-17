@@ -21,7 +21,7 @@ export interface Ramp {
  * virent vers le bleu-violet, les lumières vers le jaune chaud. C'est ce qui
  * donne un rendu moderne, loin des dégradés ternes du pixel art d'époque.
  */
-function ramp(base: number, shadow: number, highlight: number): Ramp {
+export function ramp(base: number, shadow: number, highlight: number): Ramp {
   return {
     deep: mix(base, shadow, 0.78),
     dark: mix(base, shadow, 0.42),

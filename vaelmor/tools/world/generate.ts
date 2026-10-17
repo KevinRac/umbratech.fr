@@ -49,7 +49,7 @@ import {
   type Rut,
 } from './ground';
 import { Px } from './px';
-import { getStamp } from './props';
+import { getStamp, variantCount } from './props';
 import { TILE, TILESET_COLUMNS, TILESET_NAME, TilesetBuilder } from './tileset';
 
 const W = MAP_W;
@@ -170,6 +170,8 @@ interface Ctx {
   blockedOcc: Uint8Array; // case occupée par un décor bloquant
   decorOcc: Uint8Array;
   canopyOcc: Uint8Array;
+  /** Case couverte par un bâtiment (toit ou mur) : sert à espacer les bâtiments entre eux. */
+  buildOcc: Uint8Array;
   road: Uint8Array;
   /** Ornières : 0 aucune, sinon 1 + axe (0 h, 1 v) × 2 + voie ; 255 = croisement (pas d'ornière). */
   rut: Uint8Array;
@@ -207,18 +209,23 @@ function canPlace(c: Ctx, name: string, v: number, x: number, y: number, o: Plac
       const rowIsCanopy = j < s.canopyRows;
       if (rowIsCanopy ? c.canopyOcc[k] : c.decorOcc[k]) return false;
       if (!o.allowReserved && c.reserved[k]) return false;
-      if (!o.onRoad && isBlocked && c.road[k]) return false;
-      if (o.noBuild && isBlocked && c.noBuild[k]) return false;
+      // Aucun décor sur l'emprise d'un bâtiment (toit, murs, ombre et cour devant la porte).
+      if (!s.building && c.buildOcc[k]) return false;
+      // Un toit de bâtiment ne surplombe ni route ni place (on y passerait « derrière » la maison).
+      const solid = isBlocked || (s.building && rowIsCanopy);
+      if (!o.onRoad && solid && c.road[k]) return false;
+      if (o.noBuild && solid && c.noBuild[k]) return false;
       if (at(c.collision, k) === COLLISION.gate) return false;
-      if (isBlocked && margin >= 0) {
+      if ((solid || s.building) && margin >= 0) {
         for (let dy = -margin; dy <= margin; dy++) {
           for (let dx = -margin; dx <= margin; dx++) {
             const nx = cx + dx;
             const ny = cy + dy;
             if (!inb(nx, ny)) continue;
             const inside = nx >= x && nx < x + s.w && ny >= y && ny < y + s.h;
-            if (inside && s.blocked[(ny - y) * s.w + (nx - x)]) continue;
-            if (c.blockedOcc[idx(nx, ny)]) return false;
+            const kk = idx(nx, ny);
+            if (isBlocked && !(inside && s.blocked[(ny - y) * s.w + (nx - x)]) && c.blockedOcc[kk]) return false;
+            if (s.building && !inside && c.buildOcc[kk]) return false;
           }
         }
       }
@@ -250,6 +257,7 @@ function commit(c: Ctx, name: string, v: number, x: number, y: number): void {
           c.decorOcc[k] = 1;
         }
       }
+      if (s.building) c.buildOcc[k] = 1; // ombre comprise : la cour devant la porte reste dégagée
       if (s.blocked[j * s.w + i]) {
         c.blockedOcc[k] = 1;
         const cur = at(c.collision, k);
@@ -263,6 +271,34 @@ function place(c: Ctx, name: string, v: number, x: number, y: number, o: PlaceOp
   if (!canPlace(c, name, v, x, y, o)) return false;
   commit(c, name, v, x, y);
   return true;
+}
+
+/**
+ * Bâtiment remarquable (auberge, forge, temple, moulin, tour) : posé au plus
+ * près de la case visée (`x`, `y` = coin haut-gauche), dans un rayon de 6 cases,
+ * avec sa cour de terre devant la porte. Avertit si aucune place ne convient.
+ */
+function placeNear(c: Ctx, name: string, v: number, x: number, y: number, o: PlaceOptions = {}): boolean {
+  const opts: PlaceOptions = { margin: 1, allowReserved: true, noBuild: true, ...o };
+  const cands: [number, number][] = [];
+  for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) cands.push([dx, dy]);
+  cands.sort((a, b) => Math.hypot(a[0], a[1] * 1.2) - Math.hypot(b[0], b[1] * 1.2));
+  for (const [dx, dy] of cands) {
+    if (!place(c, name, v, x + dx, y + dy, opts)) continue;
+    yard(c, name, v, x + dx, y + dy);
+    return true;
+  }
+  console.warn(`  ⚠ ${name} : aucune place libre près de (${x}, ${y})`);
+  return false;
+}
+
+/** Cour de terre battue sur la rangée devant un bâtiment. */
+function yard(c: Ctx, name: string, v: number, x: number, y: number): void {
+  const s = getStamp(name, v);
+  for (let i = -1; i <= s.w; i++) {
+    const k = idx(x + i, y + s.h);
+    if (inb(x + i, y + s.h) && isLandCode(at(c.code, k)) && !c.road[k] && ['grass', 'forest', 'sand', 'marsh'].includes(kindOf(at(c.code, k)))) c.code[k] = KIND_CODE.dirt;
+  }
 }
 
 /* ---------- 1. Terre ---------- */
@@ -611,15 +647,11 @@ function lattice(c: Ctx, loc: LocationPlan, names: readonly string[], count: num
   for (const cand of cands) {
     if (placed >= count) break;
     const name = names[placed % names.length] as string;
-    const s = getStamp(name, 0);
+    const v = hashString(`${loc.id}:${seed}:${placed}`) % variantCount(name);
     // marge d'une case autour (collision de décor) + bande sud réservée devant la porte
-    if (!canPlace(c, name, 0, cand.x, cand.y, { margin: Math.max(spacingX, spacingY), allowReserved: true, noBuild: true })) continue;
-    place(c, name, 0, cand.x, cand.y, { margin: Math.max(spacingX, spacingY), allowReserved: true, noBuild: true });
-    // Cour de terre devant la porte.
-    for (let i = -1; i <= s.w; i++) {
-      const k = idx(cand.x + i, cand.y + s.h);
-      if (inb(cand.x + i, cand.y + s.h) && isLandCode(at(c.code, k)) && !c.road[k] && ['grass', 'forest', 'sand', 'marsh'].includes(kindOf(at(c.code, k)))) c.code[k] = KIND_CODE.dirt;
-    }
+    if (!canPlace(c, name, v, cand.x, cand.y, { margin: Math.max(spacingX, spacingY), allowReserved: true, noBuild: true })) continue;
+    place(c, name, v, cand.x, cand.y, { margin: Math.max(spacingX, spacingY), allowReserved: true, noBuild: true });
+    yard(c, name, v, cand.x, cand.y);
     placed++;
   }
   return placed;
@@ -671,7 +703,11 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       setKindRect(c, x0 + 1, y0 + 9, 6, 5, 'field');
       for (let i = 0; i < 6; i++) place(c, 'fence', 0, x0 + 1 + i, y0 + 8, { margin: -1, allowReserved: true });
       place(c, 'well', 0, loc.cx + 3, loc.cy - 2, { margin: 0, allowReserved: true });
-      place(c, 'inn', 0, loc.cx + 2, loc.cy - 7, { margin: 1, allowReserved: true, noBuild: true });
+      // Auberge de Maëlys, moulin de Thom (près du champ), forge de Bran, tour du capitaine Ilar.
+      placeNear(c, 'inn', 0, loc.cx + 2, loc.cy - 8);
+      placeNear(c, 'mill', 0, x0, y0 + 3);
+      placeNear(c, 'forge', 0, loc.cx + 5, loc.cy + 1);
+      placeNear(c, 'guard_tower', 0, loc.cx - 7, loc.cy + 2);
       lattice(c, loc, ['house_thatch', 'house_tile', 'house_thatch', 'hut'], 8, 'houses');
       scatterAround(c, loc, ['hay', 'barrel', 'crate', 'bush'], 10, 'misc');
       place(c, 'sign', 0, loc.cx - 4, loc.cy + 6, { margin: 0, allowReserved: true });
@@ -689,6 +725,9 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       place(c, 'well', 0, loc.cx - 3, loc.cy - 2, { margin: 0, allowReserved: true });
       place(c, 'stall', 0, loc.cx - 2, loc.cy - 4, { margin: 0, allowReserved: true, noBuild: false });
       place(c, 'stall', 1, loc.cx + 1, loc.cy - 4, { margin: 0, allowReserved: true });
+      // Chapelle de Frère Odo, tour de guet au-dessus du port.
+      placeNear(c, 'temple', 0, loc.cx + 6, loc.cy - 9);
+      placeNear(c, 'guard_tower', 1, loc.cx - 10, loc.cy - 6);
       lattice(c, loc, ['house_slate', 'house_tile', 'house_slate', 'hut'], 8, 'houses');
       scatterAround(c, loc, ['barrel', 'crate', 'barrel'], 12, 'misc');
       pier(c, loc);
@@ -699,6 +738,10 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       setKindRect(c, x0, y0, loc.w, loc.h, 'rock', false);
       place(c, 'well', 0, loc.cx - 3, loc.cy - 2, { margin: 0, allowReserved: true });
       place(c, 'banner', 0, loc.cx + 3, loc.cy - 3, { margin: 0, allowReserved: true });
+      // Forge de maître Halvar, sanctuaire des Lanternes, tour du village fortifié.
+      placeNear(c, 'forge', 0, loc.cx - 9, loc.cy - 7);
+      placeNear(c, 'temple', 0, loc.cx + 4, loc.cy - 9);
+      placeNear(c, 'guard_tower', 0, loc.cx + 8, loc.cy + 1);
       lattice(c, loc, ['house_stone', 'house_slate', 'house_stone', 'hut'], 8, 'houses');
       scatterAround(c, loc, ['rock', 'barrel', 'crate', 'cairn'], 12, 'misc');
       break;
@@ -721,7 +764,10 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       place(c, 'banner', 0, loc.cx - 4, loc.cy - 3, { margin: 0, allowReserved: true });
       place(c, 'banner', 0, loc.cx + 5, loc.cy + 2, { margin: 0, allowReserved: true });
       for (let i = 0; i < 3; i++) place(c, 'stall', i, loc.cx - 8 + i * 3, loc.cy + 2, { margin: 0, allowReserved: true });
-      place(c, 'inn', 0, loc.cx + 3, loc.cy - 9, { margin: 1, allowReserved: true, noBuild: true });
+      // Cathédrale, Auberge du Corbeau, quartier des forges.
+      placeNear(c, 'temple', 0, loc.cx - 10, loc.cy - 10);
+      placeNear(c, 'inn', 0, loc.cx + 3, loc.cy - 10);
+      placeNear(c, 'forge', 0, loc.cx + 8, loc.cy + 4);
       lattice(c, loc, ['house_tile', 'house_slate', 'house_tile', 'house_stone', 'hut'], 14, 'houses');
       scatterAround(c, loc, ['barrel', 'crate'], 8, 'misc');
       break;
@@ -1249,6 +1295,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     blockedOcc: new Uint8Array(N),
     decorOcc: new Uint8Array(N),
     canopyOcc: new Uint8Array(N),
+    buildOcc: new Uint8Array(N),
     road: new Uint8Array(N),
     rut: new Uint8Array(N),
     noBuild: new Uint8Array(N),

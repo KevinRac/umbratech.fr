@@ -10,6 +10,7 @@ import { propRelief } from './relief';
 import { hashString, mulberry32 } from './noise';
 import { ACCENT, INK, RAMPS, SHADE, ellipse, inkOf, line, outline, shadedBlob, speckle, type Ramp, type Rnd } from './art';
 import { mix, Px } from './px';
+import { paintCottage, paintForge, paintGuardTower, paintHut, paintInn, paintLogHouse, paintMill, paintSlateHouse, paintStoneHouse, paintTemple, paintTownHouse } from './buildings';
 import { PALETTE as P } from '../../src/render/palette';
 
 const T = 16;
@@ -26,6 +27,8 @@ export interface Stamp {
   readonly shadowRows: number;
   /** Sortie de cheminée (pixels du tampon) d'où monte la fumée animée, s'il y en a une. */
   readonly chimney: { readonly x: number; readonly y: number } | null;
+  /** Bâtiment : ses rangées de toit (canopy) ne doivent pas surplomber une route ni une place. */
+  readonly building: boolean;
 }
 
 type Painter = (px: Px, rnd: Rnd, variant: number) => void;
@@ -40,6 +43,25 @@ interface Def {
   /** Cases bloquées : `all`, `bottom` (rangée du bas) ou une liste « x,y ». */
   readonly block: 'all' | 'bottom' | 'none' | readonly string[];
   readonly paint: Painter;
+  /** Biseau automatique (`propRelief`) ; les bâtiments gèrent leur propre lumière. */
+  readonly relief?: boolean;
+  readonly building?: boolean;
+}
+
+/** Cases bloquées « au pied » : toutes les colonnes (ou `cols`) des rangées `rows`. */
+function foot(w: number, rows: readonly number[], cols?: readonly number[]): string[] {
+  const out: string[] = [];
+  for (const y of rows) for (let x = 0; x < w; x++) if (!cols || cols.includes(x)) out.push(`${x},${y}`);
+  return out;
+}
+
+/**
+ * Bâtiment (décision n°44) : `canopy` rangées de toit sur la couche haute, les
+ * rangées de murs suivantes bloquent, la dernière ne porte que l'ombre.
+ */
+function building(w: number, h: number, canopy: number, paint: Painter, extra: { variants?: number; chimney?: { x: number; y: number }; cols?: readonly number[]; blockRows?: readonly number[] } = {}): Def {
+  const rows = extra.blockRows ?? Array.from({ length: h - 1 - canopy }, (_, i) => canopy + i);
+  return { w, h, variants: extra.variants ?? 1, canopyRows: canopy, shadowRows: 1, block: foot(w, rows, extra.cols), paint, relief: false, building: true, ...(extra.chimney ? { chimney: extra.chimney } : {}) };
 }
 
 /* ---------- Outils ---------- */
@@ -172,156 +194,6 @@ function paintReeds(px: Px, rnd: Rnd): void {
 }
 
 /* ---------- Bâtiments ---------- */
-
-interface HouseStyle {
-  readonly wall: Ramp;
-  readonly roof: Ramp;
-  readonly timber: boolean;
-}
-
-const roofRamp = (base: number): Ramp => ({
-  deep: mix(base, SHADE, 0.7),
-  dark: mix(base, SHADE, 0.38),
-  base,
-  light: mix(base, P.jauneBle, 0.22),
-  hi: mix(base, P.parchemin, 0.5),
-});
-
-const HOUSE_STYLES: readonly HouseStyle[] = [
-  { wall: { ...RAMPS.sand, base: mix(P.parchemin, P.sable, 0.35) }, roof: roofRamp(mix(P.ambre, P.grisRoux, 0.3)), timber: true }, // chaume d'Aubemer
-  { wall: { ...RAMPS.stone, base: mix(P.parchemin, P.pierre, 0.45) }, roof: roofRamp(mix(P.rougeCendre, P.orangeForge, 0.2)), timber: true }, // tuiles rouges
-  { wall: RAMPS.stone, roof: roofRamp(mix(P.bleuGris, P.nuitBleue, 0.25)), timber: false }, // ardoise (port, montagne)
-  { wall: RAMPS.wood, roof: roofRamp(mix(P.vertProfond, P.grisRoux, 0.3)), timber: true }, // bois (forêt)
-  { wall: RAMPS.ruin, roof: roofRamp(mix(P.grisRoux, P.violetPale, 0.35)), timber: false }, // pierre froide
-];
-
-/**
- * Maison vue de trois quarts : grand toit à bardeaux, façade crépie à pans de
- * bois, volets, porte cintrée, soubassement de pierre et ombre portée sur la
- * dernière rangée du tampon. `H` = hauteur du bâtiment (sans la rangée d'ombre).
- */
-function paintHouse(px: Px, rnd: Rnd, style: HouseStyle, wTiles: number, hTiles: number): void {
-  const W = wTiles * T;
-  const H = hTiles * T;
-  const wallTop = H - 27; // façade de 24 px au-dessus du soubassement : une porte de 18 px de haut va avec un héros de 22 px
-  const roofTop = 3;
-  const roofBottom = wallTop + 2;
-  const { wall, roof } = style;
-  // Murs : fond, face éclairée à gauche, ombre propre à droite.
-  px.rect(4, wallTop, W - 8, H - wallTop - 3, wall.base);
-  px.rect(4, wallTop, 2, H - wallTop - 3, wall.light);
-  px.rect(W - 7, wallTop, 3, H - wallTop - 3, wall.dark);
-  // Pans de bois ou joints de pierre.
-  if (style.timber) {
-    const beam = RAMPS.trunk.dark;
-    px.rect(4, wallTop, 2, H - wallTop - 3, beam);
-    px.rect(W - 6, wallTop, 2, H - wallTop - 3, beam);
-    px.rect(Math.floor(W / 2) - 1, wallTop, 2, H - wallTop - 3, beam);
-    px.rect(4, wallTop + 6, W - 8, 1, beam);
-    for (let i = 0; i < 3; i++) {
-      line(px, 6, wallTop + 6 + i * 0, 6, wallTop + 6, beam);
-    }
-  } else {
-    for (let y = wallTop + 3; y < H - 5; y += 4) {
-      px.rect(5, y, W - 10, 1, wall.dark);
-      for (let x = 6 + (((y / 4) | 0) % 2) * 5; x < W - 6; x += 10) px.rect(x, y - 3, 1, 3, wall.dark);
-    }
-  }
-  // Soubassement de pierre.
-  px.rect(4, H - 6, W - 8, 3, RAMPS.rock.base);
-  px.rect(4, H - 6, W - 8, 1, RAMPS.rock.light);
-  px.rect(4, H - 4, W - 8, 1, RAMPS.rock.dark);
-  speckle(px, rnd, 5, H - 6, W - 10, 3, RAMPS.rock.deep, 3);
-  // Porte cintrée de 10 × 18 px (le héros fait 22 px de haut).
-  const doorX = Math.floor(W / 2) - 5;
-  const doorTop = H - 21;
-  px.rect(doorX - 1, doorTop - 1, 12, 19, RAMPS.wood.deep);
-  px.rect(doorX, doorTop, 10, 18, RAMPS.wood.base);
-  px.rect(doorX, doorTop, 10, 1, RAMPS.wood.dark);
-  px.rect(doorX, doorTop, 1, 18, RAMPS.wood.light);
-  px.rect(doorX + 9, doorTop, 1, 18, RAMPS.wood.dark);
-  px.rect(doorX + 4, doorTop, 1, 18, RAMPS.wood.deep); // jour entre les deux vantaux
-  for (let y = doorTop + 3; y < H - 5; y += 5) px.rect(doorX + 1, y, 8, 1, RAMPS.wood.dark); // planches
-  px.rect(doorX + 1, doorTop + 4, 8, 1, RAMPS.wood.deep); // ferrure
-  px.set(doorX + 6, H - 12, P.jauneBle); // poignée
-  px.set(doorX + 6, H - 11, P.ambre);
-  px.rect(doorX - 2, H - 4, 14, 1, RAMPS.rock.light); // seuil
-  px.rect(doorX - 1, doorTop - 2, 12, 1, wall.dark); // linteau
-  // Fenêtres à volets, vitres éclairées de l'intérieur.
-  const windows = wTiles >= 4 ? [7, W - 15] : wTiles === 2 ? [] : [5, W - 13];
-  for (const wx of windows) {
-    px.rect(wx, wallTop + 5, 8, 9, RAMPS.wood.deep);
-    px.rect(wx + 2, wallTop + 6, 4, 7, ACCENT.window);
-    px.rect(wx + 2, wallTop + 6, 4, 1, P.jauneBle);
-    px.rect(wx + 4, wallTop + 6, 1, 7, RAMPS.wood.deep);
-    px.rect(wx + 2, wallTop + 9, 4, 1, RAMPS.wood.deep);
-    px.rect(wx, wallTop + 5, 2, 9, RAMPS.wood.base);
-    px.rect(wx + 6, wallTop + 5, 2, 9, RAMPS.wood.dark);
-    px.rect(wx - 1, wallTop + 14, 10, 1, RAMPS.wood.dark);
-    px.rect(wx - 1, wallTop + 15, 10, 1, SHADE);
-  }
-  // Toit : grand plan incliné à bardeaux, pente gauche éclairée, rive et faîtage.
-  for (let y = roofTop; y <= roofBottom; y++) {
-    const f = (y - roofTop) / (roofBottom - roofTop);
-    const inset = Math.round((1 - f) * (W / 2 - 9));
-    const row = Math.floor((y - roofTop) / 3);
-    for (let x = 1 + inset; x < W - 1 - inset; x++) {
-      const edge = (x + (row % 2) * 3) % 6 === 0;
-      const rel = (x - (1 + inset)) / (W - 2 - 2 * inset);
-      let color = rel < 0.3 ? roof.light : rel > 0.72 ? roof.dark : roof.base;
-      if ((y - roofTop) % 3 === 2) color = rel < 0.3 ? roof.base : roof.dark;
-      else if (edge && (y - roofTop) % 3 === 1) color = rel < 0.5 ? roof.base : roof.dark;
-      px.set(x, y, color);
-    }
-    px.set(1 + inset, y, roof.hi);
-    px.set(W - 2 - inset, y, roof.deep);
-  }
-  px.rect(1, roofBottom, W - 2, 1, roof.deep);
-  px.rect(1, roofBottom - 1, W - 2, 1, roof.dark);
-  // Faîtage clair.
-  const ridge = 1 + Math.round(W / 2 - 9);
-  px.rect(ridge, roofTop, W - 2 * ridge, 1, roof.hi);
-  // Ombre de l'avant-toit sur la façade.
-  px.rect(4, roofBottom + 1, W - 8, 2, SHADE, );
-  for (let x = 4; x < W - 4; x++) px.set(x, roofBottom + 3, wall.dark);
-  // Cheminée de briques : corps, joints décalés, face éclairée à gauche, couronnement et suie.
-  const chimX = W - 19;
-  const chimW = 7;
-  px.rect(chimX, 2, chimW, 9, RAMPS.rust.base);
-  for (let y = 3; y < 11; y += 3) {
-    px.rect(chimX, y, chimW, 1, RAMPS.rust.dark);
-    for (let x = chimX + ((y / 3) % 2 === 0 ? 2 : 4); x < chimX + chimW; x += 4) px.rect(x, y - 2, 1, 2, RAMPS.rust.dark);
-  }
-  px.rect(chimX, 2, 1, 9, RAMPS.rust.light);
-  px.rect(chimX + chimW - 2, 2, 2, 9, RAMPS.rust.dark);
-  px.rect(chimX - 1, 1, chimW + 2, 2, RAMPS.stone.light); // couronnement de pierre
-  px.rect(chimX - 1, 2, chimW + 2, 1, RAMPS.stone.dark);
-  px.rect(chimX - 1, 1, chimW + 2, 1, RAMPS.stone.hi);
-  px.rect(chimX + 1, 0, chimW - 2, 1, RAMPS.stone.deep); // conduit noirci
-  px.rect(chimX + 2, 0, chimW - 4, 1, INK);
-  outline(px, INK);
-  // Ombre portée sur la rangée suivante.
-  for (let y = H - 1; y < H + 8; y++) {
-    const k = y - (H - 1);
-    for (let x = 5 + k; x < W - 1 + Math.min(k, 5); x++) {
-      if (x < W && px.alphaAt(x, y) === 0) px.set(x, y, SHADE, k < 4 ? 105 : 70);
-    }
-  }
-}
-
-function paintInn(px: Px, rnd: Rnd): void {
-  paintHouse(px, rnd, HOUSE_STYLES[1] as HouseStyle, 4, 3);
-  // Enseigne suspendue.
-  px.rect(5, 30, 1, 5, INK);
-  px.rect(1, 35, 9, 6, RAMPS.wood.deep);
-  px.rect(2, 36, 7, 4, ACCENT.fire);
-  px.rect(5, 37, 1, 2, INK);
-  outline(px, INK, 0, 28, 12, 16);
-}
-
-function paintHut(px: Px, rnd: Rnd, variant: number): void {
-  paintHouse(px, rnd, HOUSE_STYLES[variant % 2 === 0 ? 3 : 0] as HouseStyle, 2, 3);
-}
 
 function paintTent(px: Px, rnd: Rnd, variant: number): void {
   const cloth = variant === 0 ? mix(P.rougeCendre, P.grisRoux, 0.3) : mix(P.grisRoux, P.sable, 0.3);
@@ -595,8 +467,6 @@ function paintBanner(px: Px, rnd: Rnd): void {
 
 /* ---------- Catalogue ---------- */
 
-const house = (style: number, w: number, h: number): Painter => (px, rnd) => paintHouse(px, rnd, HOUSE_STYLES[style] as HouseStyle, w, h);
-
 export const STAMP_DEFS: Readonly<Record<string, Def>> = {
   pine: { w: 1, h: 2, variants: 4, canopyRows: 1, block: 'bottom', paint: paintPine },
   dark_pine: { w: 1, h: 2, variants: 3, canopyRows: 1, block: 'bottom', paint: paintDarkPine },
@@ -605,13 +475,18 @@ export const STAMP_DEFS: Readonly<Record<string, Def>> = {
   bush: { w: 1, h: 1, variants: 3, canopyRows: 0, block: 'none', paint: paintBush },
   rock: { w: 1, h: 1, variants: 3, canopyRows: 0, block: 'all', paint: paintRock },
   reeds: { w: 1, h: 1, variants: 2, canopyRows: 0, block: 'none', paint: (px, rnd) => paintReeds(px, rnd) },
-  house_thatch: { chimney: { x: 32, y: 0 }, w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(0, 3, 3) },
-  house_tile: { chimney: { x: 32, y: 0 }, w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(1, 3, 3) },
-  house_slate: { chimney: { x: 32, y: 0 }, w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(2, 3, 3) },
-  house_wood: { chimney: { x: 32, y: 0 }, w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(3, 3, 3) },
-  house_stone: { chimney: { x: 32, y: 0 }, w: 3, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: house(4, 3, 3) },
-  inn: { chimney: { x: 48, y: 0 }, w: 4, h: 4, variants: 1, canopyRows: 0, shadowRows: 1, block: 'all', paint: (px, rnd) => paintInn(px, rnd) },
-  hut: { chimney: { x: 16, y: 0 }, w: 2, h: 4, variants: 2, canopyRows: 0, shadowRows: 1, block: 'all', paint: paintHut },
+  // Bâtiments (tools/world/buildings.ts, décision n°44).
+  house_thatch: building(3, 4, 1, paintCottage, { variants: 2, chimney: { x: 32, y: 0 } }),
+  house_tile: building(3, 5, 2, paintTownHouse, { chimney: { x: 33, y: 3 } }),
+  house_slate: building(3, 4, 1, paintSlateHouse, { chimney: { x: 9, y: 0 } }),
+  house_wood: building(3, 4, 1, paintLogHouse, { chimney: { x: 33, y: 0 } }),
+  house_stone: building(3, 4, 1, paintStoneHouse, { chimney: { x: 10, y: 0 } }),
+  hut: building(2, 4, 1, paintHut, { variants: 2, chimney: { x: 19, y: 1 } }),
+  inn: building(5, 5, 2, paintInn, { chimney: { x: 68, y: 0 } }),
+  forge: building(4, 4, 1, paintForge, { chimney: { x: 10, y: 0 } }),
+  temple: building(4, 5, 2, paintTemple),
+  mill: building(4, 5, 3, paintMill, { cols: [1, 2], blockRows: [2, 3] }),
+  guard_tower: building(2, 5, 3, paintGuardTower, { variants: 2 }),
   tent: { w: 2, h: 2, variants: 2, canopyRows: 0, block: 'bottom', paint: paintTent },
   campfire: { w: 1, h: 1, variants: 1, canopyRows: 0, block: 'all', paint: (px, rnd) => paintCampfire(px, rnd) },
   wall_h: { w: 1, h: 1, variants: 2, canopyRows: 0, block: 'all', paint: paintWallH },
@@ -650,7 +525,7 @@ export function getStamp(name: string, variant = 0): Stamp {
   if (cached) return cached;
   const px = new Px(def.w * T, def.h * T);
   def.paint(px, mulberry32(hashString(`stamp:${key}`)), v);
-  propRelief(px);
+  if (def.relief !== false) propRelief(px);
   const blocked: boolean[] = [];
   for (let y = 0; y < def.h; y++) {
     for (let x = 0; x < def.w; x++) {
@@ -661,7 +536,7 @@ export function getStamp(name: string, variant = 0): Stamp {
       blocked.push(b);
     }
   }
-  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows, shadowRows: def.shadowRows ?? 0, chimney: def.chimney ?? null };
+  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows, shadowRows: def.shadowRows ?? 0, chimney: def.chimney ?? null, building: def.building ?? false };
   cache.set(key, stamp);
   return stamp;
 }
