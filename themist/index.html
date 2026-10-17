@@ -978,6 +978,7 @@ function updatePlayer(dt){
  const s=P.s;
  P.atkT-=dt;P.iT-=dt;P.aCd-=dt;P.eCd-=dt;P.ultCd-=dt;P.rCd-=dt;P.swingT-=dt;P.hurtFlash-=dt;P.ambushT-=dt;P.dashInvisT-=dt;P.blindT-=dt;P.nightT-=dt;P.lan.pickCd-=dt;P.carapT-=dt;P.carapFx-=dt;P.metaT-=dt;P.stompCd-=dt;
  P.elanT-=dt;if(P.elanT<=0)P.elan=Math.max(0,P.elan-22*dt);
+ if(P.dashBuf>0){P.dashBuf-=dt;if(P.dashCh>0&&P.dashT<=0){P.dashBuf=0;tryDash();}}
  if(P.surT>0){P.surT-=dt;if(P.surT<=0){P.blindT=2;P.lueur=30;toast('Ta lumière s’éteint…');}}
  if(P.dashCh<s.dashCharges){P.dashRecT-=dt;if(P.dashRecT<=0){P.dashCh++;P.dashRecT=s.dashCd;}}else P.dashRecT=s.dashCd;
  if(P.cls==='gou')gouPre(dt);else if(P.cls==='her')herPre(dt);else if(P.cls==='tis')tisPre(dt);
@@ -1413,7 +1414,7 @@ function hurtPlayer(dmg,src){
   if(s.thorns&&src&&src.thornT<=0){src.thornT=0.5;hitEnemy(src,s.thorns,{crit:false,kb:120,sx:P.x,sy:P.y,color:'#e2b0ff'});}}
  if(P.cls==='tis')dmg=tisAbsorb(dmg);
  if(P.shield>0){const ab=Math.min(P.shield,dmg);P.shield-=ab;dmg-=ab;if(dmg<=0){P.iT=0.35;sparks(P.x,P.y,6,'#f6ecc8');return;}}
- P.iT=0.65;P.hurtFlash=0.35;shake(7,0.2);sfx('hurt');addNum(P.x,P.y-24,Math.round(dmg),'hurt');
+ P.iT=0.65;P.hurtFlash=0.35;shake(7,0.2);if(!RM)freezeT=Math.max(freezeT,0.05);sfx('hurt');addNum(P.x,P.y-24,Math.round(dmg),'hurt');
  loseHp(dmg);
 }
 function updateRings(dt){for(const g of rings){g.r+=g.v*dt;if(!g.hit&&!P.dead){const d=hyp(P.x-g.x,P.y-g.y);if(Math.abs(d-g.r)<10+P.r*0.6&&P.dashT<=0&&P.iT<=0){g.hit=true;hurtPlayer(g.dmg);}}}rings=rings.filter(g=>g.r<g.max);}
@@ -1899,7 +1900,7 @@ addEventListener('keydown',e=>{
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c))e.preventDefault();
  keys.add(c);if(e.repeat||P.dead||trans)return;
  const K=CLASSKEYS[P.cls];
- switch(c){case 'Space':tryDash();break;case 'KeyQ':K.q();break;case 'KeyE':K.e();break;case 'KeyR':K.r();break;case 'KeyF':ult();break;case 'Escape':case 'KeyP':openPause();break;case 'KeyM':muted=!muted;toast(muted?'Son coupé':'Son activé');break;}
+ switch(c){case 'Space':{const ch0=P.dashCh;tryDash();if(P.dashT>0||P.dashCh<ch0||(P.cls==='gou'&&P.s.colosse))P.dashBuf=0;else P.dashBuf=0.18;}break;case 'KeyQ':K.q();break;case 'KeyE':K.e();break;case 'KeyR':K.r();break;case 'KeyF':ult();break;case 'Escape':case 'KeyP':openPause();break;case 'KeyM':muted=!muted;toast(muted?'Son coupé':'Son activé');break;}
 });
 addEventListener('keyup',e=>keys.delete(e.code));
 addEventListener('pointerdown',musicKick);

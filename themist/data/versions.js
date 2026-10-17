@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v15.7',
+ actuelle:'v15.8',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-17',h:'v15.8',t:'Jouabilité : l’esquive est mise en mémoire 0,18 s (une pression un peu trop tôt n’est plus perdue) et un très bref arrêt sur image souligne chaque coup reçu.'},
   {d:'2026-10-17',h:'v15.7',t:'Base technique : les textes et réglages du jeu (équipements, reliques, pactes, bestiaire, gardiens, Résonances, talents, formes, Sanctuaire, chroniques) sont rassemblés dans des fichiers de données, et le wiki est généré automatiquement à partir d’eux.'},
   {d:'2026-10-17',h:'5da259d',t:'Menus allégés : Portail (paliers en pastilles, commandes réduites), Sanctuaire, Colporteur'},
   {d:'2026-10-17',h:'8ec452a',t:'La Brume — portails texturés : arches en pierre taillée, brume animée, herse, sigils en relief, icônes redessinées'},
