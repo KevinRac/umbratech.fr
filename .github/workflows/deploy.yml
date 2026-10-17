@@ -12,8 +12,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # La Brume : régénère themist/wiki.html depuis themist/data/*.js avant chaque déploiement
+  wiki:
     if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Régénérer le wiki de La Brume
+        run: node themist/outils/wiki.mjs
+
+      - name: Committer le wiki s'il a changé
+        run: |
+          if git diff --quiet; then echo "Wiki déjà à jour."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Wiki : synchronisation automatique avec les données du jeu"
+          git push
+
+  deploy:
+    needs: wiki
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 

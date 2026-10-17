@@ -417,6 +417,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 #v9hud kbd{font-size:12.5px;padding:0 5px;margin-right:3px}
 @media (max-width:860px){.rz-wrap{grid-template-columns:1fr}.rz-d{position:static}}
 </style>
+<script src="data/equipements.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -5918,27 +5919,23 @@ function drawRolePost(e){const R=ROLES[e.role];if(!R)return;const c=ctx,x=e.x,y=
  c.restore();}
 
 // ───────────────────────── Équipements
-const RAR={commun:{n:'Commun',col:'207,198,176'},rare:{n:'Rare',col:'111,178,255'},epique:{n:'Épique',col:'196,128,255'},legendaire:{n:'Légendaire',col:'255,140,64'},unique:{n:'Unique',col:'255,198,92'}};
+// Données des équipements (noms, raretés, textes, taux) : data/equipements.js. Ici, seulement les effets codés.
+const EQ_D=window.BRUME_DATA.equipements,RAR=EQ_D.raretes;
+const eqMerge=(D,F)=>{const o={};for(const k in D)o[k]=Object.assign({},D[k],F[k]||{});return o;};
+const eqFx=(O,F)=>{for(const k in F)Object.assign(O[k],F[k]);};
 const EQ_IC={arme:'M5 19l9-9m0 0l4-6 2 2-6 4m-5 4l2 2m-6 0l3 3',armure:'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z',relique:'M9 4h6l1 3H8zM8 7h8v9a4 4 0 01-8 0zM12 11v4',talisman:'M7 4c2 3 8 3 10 0M12 7v3M12 10a4 4 0 104 4 4 4 0 00-4-4z'};
-const EQS={
- lame:{n:'Lame émoussée',r:'commun',slot:'arme',up:'+15 % de dégâts.',down:'−10 % de vitesse d’attaque.',on(s){s.atkSpeed*=0.9;},off(s){s.atkSpeed/=0.9;}},
- gilet:{n:'Gilet de lin brumeux',r:'commun',slot:'armure',up:'−10 % de dégâts subis.',down:'Ton esquive met 8 % plus de temps à se recharger.',on(s){s.dmgTaken*=0.9;s.dashCd*=1.08;},off(s){s.dmgTaken/=0.9;s.dashCd/=1.08;}},
- lanterne:{n:'Lanterne fêlée',r:'commun',slot:'relique',cls:'lum',up:'+20 % de rayon de lumière.',down:'Ta lumière s’éteint 2 s après chaque coup reçu.',on(s){s.aura*=1.2;s.groundLight*=1.2;},off(s){s.aura/=1.2;s.groundLight/=1.2;}},
- piece:{n:'Pièce trouée',r:'commun',slot:'talisman',up:'+20 % d’or.',down:'Les portes d’élite apparaissent plus souvent.',on(){RUN.goldMul*=1.2;},off(){RUN.goldMul/=1.2;}},
- bottes:{n:'Bottes de cendre',r:'commun',slot:'armure',up:'+10 % de vitesse de déplacement.',down:'−10 % de PV max.',on(s){s.speed*=1.1;s.maxHp*=0.9;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.speed/=1.1;s.maxHp/=0.9;}},
- dague:{n:'Dague du guetteur',r:'commun',slot:'arme',up:'+25 % de dégâts dans le dos.',down:'−15 % de dégâts de face.'},
- amulette:{n:'Amulette de ficelle',r:'commun',slot:'talisman',up:'Te soigne de 4 PV par salle purifiée.',down:'−5 % de PV max.',on(s){s.maxHp*=0.95;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.95;}},
- fiole:{n:'Fiole de brume',r:'commun',slot:'relique',up:'Annule le premier coup reçu de chaque acte.',down:'En se brisant, elle enrage tous les ennemis de la salle pendant 4 s.'},
- coeur:{n:'Cœur de lanterne',r:'rare',slot:'relique',up:'+1 % de dégâts par ennemi vaincu, jusqu’à +25 %.',down:'Tout le bonus est perdu dès que tu es touché.'},
- anneau:{n:'Anneau du pari',r:'rare',slot:'talisman',up:'À chaque salle : une chance sur deux d’avoir +20 % de dégâts…',down:'…et une chance sur deux d’avoir −20 %. Tirage non annulable.'},
- brassard:{n:'Brassard d’épines',r:'rare',slot:'armure',up:'Renvoie 50 % des dégâts de contact à l’attaquant.',down:'Soins reçus −30 %.'},
- murmure:{n:'Le Premier Murmure',r:'unique',slot:'relique',src:'La Mère-Brume',up:'Une salle sur deux, le Brumeux te propose un pacte de salle. Chaque pacte accepté renforce l’objet : +4 % de dégâts par rang (5 rangs).',down:'Chaque pacte de salle impose sa contrainte pour la salle.'},
- larme:{n:'Larme du Gardien',r:'unique',slot:'talisman',src:'Le Héraut Noyé',up:'Protège ton dernier PV une fois par acte.',down:'Le gardien suivant t’identifie : il copie ta façon de jouer dès son premier temps.'}};
+const EQS=eqMerge(EQ_D.objets,{
+ lame:{on(s){s.atkSpeed*=0.9;},off(s){s.atkSpeed/=0.9;}},
+ gilet:{on(s){s.dmgTaken*=0.9;s.dashCd*=1.08;},off(s){s.dmgTaken/=0.9;s.dashCd/=1.08;}},
+ lanterne:{on(s){s.aura*=1.2;s.groundLight*=1.2;},off(s){s.aura/=1.2;s.groundLight/=1.2;}},
+ piece:{on(){RUN.goldMul*=1.2;},off(){RUN.goldMul/=1.2;}},
+ bottes:{on(s){s.speed*=1.1;s.maxHp*=0.9;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.speed/=1.1;s.maxHp/=0.9;}},
+ amulette:{on(s){s.maxHp*=0.95;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.95;}}});
 function eqDiscover(id){const m=M();if(!m.codex)m.codex={};if(!m.codex[id]){m.codex[id]=1;persist();return true;}return false;}
 const EQK=['eq','eq2','eq3','eq4'];
 function equip(id,slot){const s=P.s,key=EQK[(slot||1)-1]||'eq',old=P[key];if(old&&EQS[old].off)EQS[old].off(s);if(old==='murmure')delete P.eqS.rank;if(old==='coeur')delete P.eqS.st;P[key]=id;if(!P.eqS)P.eqS={};if(id&&EQS[id].on)EQS[id].on(s);renderRelics();if(typeof refreshSets==='function')refreshSets();}
 function rollEquip(){const a=(RUN&&RUN.act)||1,x=Math.random();let r='commun';
- if(a>=3)r=x<0.06?'legendaire':x<0.2?'epique':x<0.5?'rare':'commun';else if(a===2)r=x<0.03?'legendaire':x<0.15?'epique':x<0.45?'rare':'commun';else r=x<0.3?'rare':'commun';
+ const tb=EQ_D.tirage[Math.min(3,Math.max(1,a))];let acc=0;for(const k of ['legendaire','epique','rare']){acc+=(tb[k]||0)/100;if(x<acc){r=k;break;}}
  const ok=k=>!EQK.some(q=>P[q]===k)&&(!EQS[k].cls||EQS[k].cls===P.cls);let pool=Object.keys(EQS).filter(k=>EQS[k].r===r&&ok(k));
  if(!pool.length)pool=Object.keys(EQS).filter(k=>EQS[k].r!=='unique'&&EQS[k].r!=='legendaire'&&ok(k));return pick(pool);}
 function eqCard(id,tag){if(!id)return `<div class="card eqc empty"><span class="meta"><span class="br">● ${tag}</span></span><h3>Rien</h3><p>Aucun équipement porté.</p></div>`;
@@ -6053,7 +6050,7 @@ onRoomCleared=function(){
  _orc13();
  if(!RUN||RUN.hub)return;
  if(eqIs('amulette'))heal(4,'equip');
- if(t==='elite'&&Math.random()<0.6)enqueue(()=>openEquip(rollEquip(),'Le champion portait quelque chose'));
+ if(t==='elite'&&Math.random()<EQ_D.chanceChampion/100)enqueue(()=>openEquip(rollEquip(),'Le champion portait quelque chose'));
  if(t==='boss'&&act===1)enqueue(()=>openEquip('murmure','La Mère-Brume laisse un murmure'));
  if(t==='boss'&&act===2)enqueue(()=>openEquip('larme','Une larme sous la cloche'));};
 const _ue13=updateEnemies;
@@ -6189,21 +6186,20 @@ window.__v13={EQS,PBOON,PCONS,ROLES,equip,openEquip,openPacte,pactOffers,rollEqu
 // ═════════════════════════════════════════════════════════════════════════════
 
 // ───────────────────────── Équipements épiques et légendaires
-Object.assign(EQS,{
- sablier:{n:'Sablier fendu',r:'epique',slot:'talisman',up:'+1 charge d’esquive.',down:'−15 % de PV max.',on(s){s.dashCharges+=1;P.dashCh=Math.min(s.dashCharges,P.dashCh+1);s.maxHp*=0.85;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.dashCharges-=1;P.dashCh=Math.min(P.dashCh,s.dashCharges);s.maxHp/=0.85;}},
- faux:{n:'Faux de la Brume',r:'epique',slot:'arme',up:'+30 % de dégâts sur les ennemis sous la moitié de leurs PV.',down:'−20 % de dégâts sur ceux qui sont au-dessus.'},
- egide:{n:'Égide de givre',r:'epique',slot:'armure',up:'−25 % de dégâts subis.',down:'−15 % de vitesse de déplacement.',on(s){s.dmgTaken*=0.75;s.speed*=0.85;},off(s){s.dmgTaken/=0.75;s.speed/=0.85;}},
- chaine:{n:'Chaîne d’âmes',r:'epique',slot:'relique',up:'Chaque ennemi vaincu te rend 1 PV.',down:'+12 % de dégâts subis.',on(s){s.dmgTaken*=1.12;},off(s){s.dmgTaken/=1.12;}},
- couronne:{n:'Couronne de la Brume',r:'legendaire',slot:'talisman',up:'+45 % de dégâts.',down:'La Brume s’épaissit durablement : tu vois moins loin.',on(){RUN.fogBoost=(RUN.fogBoost||0)+0.07;},off(){RUN.fogBoost=Math.max(0,(RUN.fogBoost||0)-0.07);}},
- phenix:{n:'Plume du Phénix noir',r:'legendaire',slot:'relique',up:'Une fois par run, la mort te relève avec 60 % de PV et une onde de feu frappe la salle.',down:'−20 % de PV max.',on(s){s.maxHp*=0.8;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.8;}}});
+eqFx(EQS,{
+ sablier:{on(s){s.dashCharges+=1;P.dashCh=Math.min(s.dashCharges,P.dashCh+1);s.maxHp*=0.85;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.dashCharges-=1;P.dashCh=Math.min(P.dashCh,s.dashCharges);s.maxHp/=0.85;}},
+ egide:{on(s){s.dmgTaken*=0.75;s.speed*=0.85;},off(s){s.dmgTaken/=0.75;s.speed/=0.85;}},
+ chaine:{on(s){s.dmgTaken*=1.12;},off(s){s.dmgTaken/=1.12;}},
+ couronne:{on(){RUN.fogBoost=(RUN.fogBoost||0)+0.07;},off(){RUN.fogBoost=Math.max(0,(RUN.fogBoost||0)-0.07);}},
+ phenix:{on(s){s.maxHp*=0.8;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.8;}}});
 
 // ───────────────────────── Sets : deux pièces qui se répondent
-const SETS={
- guet:{n:'Duo du guetteur',items:['dague','lame'],d:'+10 % de chances de coup critique.',on(s){s.crit+=0.1;},off(s){s.crit-=0.1;}},
- cendre:{n:'Marche de cendre',items:['bottes','egide'],d:'−10 % de dégâts subis.',on(s){s.dmgTaken*=0.9;},off(s){s.dmgTaken/=0.9;}},
- serment:{n:'Serment brisé',items:['murmure','larme'],d:'+20 % de dégâts.',on(){},off(){}},
- joueur:{n:'Mains de joueur',items:['piece','anneau'],d:'+30 % d’or.',on(){RUN.goldMul*=1.3;},off(){RUN.goldMul/=1.3;}},
- roi:{n:'Cendres du roi',items:['couronne','phenix'],d:'Le Phénix noir te relève avec 85 % de PV au lieu de 60 %.',on(){},off(){}}};
+const SETS=eqMerge(EQ_D.sets,{
+ guet:{on(s){s.crit+=0.1;},off(s){s.crit-=0.1;}},
+ cendre:{on(s){s.dmgTaken*=0.9;},off(s){s.dmgTaken/=0.9;}},
+ serment:{on(){},off(){}},
+ joueur:{on(){RUN.goldMul*=1.3;},off(){RUN.goldMul/=1.3;}},
+ roi:{on(){},off(){}}});
 function refreshSets(){if(!P)return;if(!P.sets)P.sets={};
  for(const k in SETS){const S=SETS[k],on=!!(RUN&&!RUN.hub)&&S.items.every(i=>eqIs(i));
   if(on&&!P.sets[k]){P.sets[k]=1;S.on(P.s);toast(`Set · ${S.n} : ${S.d}`,3.2);sfx('level');chron('set',{k});}
