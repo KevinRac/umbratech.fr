@@ -15,8 +15,8 @@ Objectif : qualité visuelle proche d'Eastward (pixel art dense et chaud) et d'O
 Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taille et de forme (mêmes emplacements de village, mêmes routes, collision au pied) ; héros en 16×28 (même pied, même boîte 10×8) ; seul le héros est refait, les PNJ reprendront son gabarit en M2.
 - [x] Étape 1 : palette, étalonnage et sol — décision n°43 (validée le 17/10/2026)
 - [x] Étape 2 : bâtiments — décision n°44 (validée le 17/10/2026)
-- [x] Étape 3 : végétation — décision n°45 (en attente de validation)
-- [ ] Étape 4 : petits décors et accessoires
+- [x] Étape 3 : végétation — décision n°45 (validée le 17/10/2026)
+- [x] Étape 4 : petits décors et accessoires — décision n°46 (en attente de validation)
 - [ ] Étape 5 : post-effets HD-2D
 - [ ] Étape 6 : héros
 
@@ -95,6 +95,15 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
   - **Blé** (`render/wheatTile.ts`) refait en masse dorée dense : trois rangs de gros épis serrés, plus de terre visible, contour brun doré, bande de lumière qui traverse le champ en diagonale en plus du balancement.
   - **Contournement Phaser 4.2.1** (`render/tileAnimations.ts` + `render/tileAnimPack.ts`, testé) : voir « Pièges connus ».
   - Coût : tileset ~16 000 tuiles (atlas 2048×2016 px, ~720 Ko), génération ~13 s. Rendu logiciel ~12-13 ips en 960×540 (contre ~14 à l'étape 2, sans GPU : non représentatif).
+
+- **n°46 — Petits décors et accessoires, vie des lieux** (refonte graphique, étape 4) :
+  - **Tous les anciens décors sont refaits** dans le style des bâtiments (`tools/world/accessories.ts`) : lumière en haut à gauche, 3 tons par matière au moins, contour coloré, ombre portée douce (`finish`, exporté de `buildings.ts`). Le biseau automatique `propRelief` et `tools/world/relief.ts` sont supprimés. Refaits : rochers (facetté, moussu, galet), falaises (lèvre d'herbe, de neige ou de pierre, pans verticaux, corniches, éboulis), remparts et tours d'angle de Valcendre (merlons, chemin de ronde, appareil de pierre, meurtrière éclairée), palissade, clôture, colonnes cannelées et brisées, murets, menhir à rune luisante, cairn, autel au cristal, barque, épave (coque couchée, membrures, mât brisé), tente, chaudron, panneau indicateur.
+  - **Nouveaux accessoires** : jardinière fleurie (3 coloris), tonneau (cerclé ou de pluie), caisses (seule ou empilées), sacs de jute, botte de foin, outils (râteau, pelle, seau), tas de bois et billot, banc, charrette à foin (2×2), lampadaire (1×2), corde à linge (3×2, le héros passe dessous), étals rayés (fruits, poissons, poteries), puits couvert (1×2), tableau d'affichage, poteries, filets de pêche, cailloux, souches, troncs couchés, champignons, **tour en ruine du Noyé** (2×4, remplace la tour d'angle carrée).
+  - **Animations GPU** (mêmes animations de tuiles que le vent, n°45) : flammes du feu de camp (4 images), bannières et linge au vent.
+  - **Objets hauts** (puits, étals, lampadaires, charrette, tableau, tentes, menhirs, colonnes, bannières, corde à linge, tour du Noyé) : rangée du haut sur `canopy`, collision au pied seulement. Cailloux, champignons et panneau ne bloquent pas.
+  - **Habillage des lieux** (`generate.ts`) : flancs des bâtiments garnis selon le village (`dressBuildings` : ferme à Haut-Gué, bûcherons à Ronceval, pêche à Port-Brume, montagne à Pierre-Haute, ville à Valcendre), lampadaires aux coins des places et le long des rues de Valcendre, bancs, tableaux d'affichage, cordes à linge, charrette près du champ, feux de camp et tas de bois au camp des Écumeurs, barques à l'appontement de Port-Brume. Nature : souches, troncs couchés et champignons en forêt, cailloux sur les sols nus et le sable.
+  - **Aucune porte ni passage fermé** : un accessoire bloquant n'est posé que s'il ne coupe pas un passage (`pinches` : test de l'anneau des 8 voisines) ni la case devant une porte (`keep`) ; un bâtiment exige une façade dégagée ; un toit ne recouvre plus un accessoire posé avant lui (étal de Valcendre). Nouveau test `world-map` : chaque case devant une porte est atteignable (le moulin de Haut-Gué avait sa façade sur la clôture du champ, corrigé). Nouveau test `tests/accessories.test.ts` (aucun sombre neutre ni noir, collision au pied, décors au sol non bloquants, animations à 4 images).
+  - Coût : ~16 070 tuiles (atlas 2048×2016 px inchangé, ~730 Ko), 858 tuiles animées, génération ~10 s. Cases bloquées ~1 580 → ~1 675. Rendu logiciel ~12-13 ips en 960×540 (identique à l'étape 3, sans GPU : non représentatif).
 
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).

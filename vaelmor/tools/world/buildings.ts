@@ -28,7 +28,7 @@ const DEEP = P.ombreProfonde;
 /** Teinte des faces de murs : un cran sous la lumière des toits (lumière zénithale en haut à gauche). */
 const wall = (c: number): number => mix(c, SHADE, 0.12);
 
-const M = {
+export const M = {
   plaster: ramp(wall(mix(P.sable, P.terreSeche, 0.22)), mix(P.terreSeche, SHADE, 0.55), P.lumiereDoree),
   whitewash: ramp(wall(mix(P.ecume, P.pierre, 0.6)), mix(P.ardoise, SHADE, 0.45), 0xfff6e2),
   timber: ramp(mix(P.terreSombre, P.brique, 0.3), DEEP, P.terreSeche),
@@ -636,7 +636,7 @@ function tufts(px: Px, x0: number, x1: number, gy: number, seed: number, avoid: 
  * Finition : contour coloré (couleur du pixel voisin assombrie), occlusion au
  * pied et ombre portée douce décalée vers le bas à droite.
  */
-function finish(px: Px, dx = 4, dy = 5): void {
+export function finish(px: Px, dx = 4, dy = 5): void {
   const W = px.width;
   const H = px.height;
   const solid = (x: number, y: number): boolean => px.alphaAt(x, y) === 255;

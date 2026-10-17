@@ -74,6 +74,8 @@ export interface GeneratedWorld {
   readonly atlas: Px;
   readonly layers: { readonly ground: Uint16Array; readonly decor: Uint16Array; readonly canopy: Uint16Array; readonly collision: Uint8Array; readonly zones: Uint8Array };
   readonly stats: Record<string, number>;
+  /** Cases devant les portes des bâtiments (doivent rester atteignables). */
+  readonly doorFronts: readonly { readonly x: number; readonly y: number }[];
 }
 
 /* ---------- Géométrie ---------- */
@@ -176,6 +178,10 @@ interface Ctx {
   seq: number;
   /** Case couverte par un bâtiment (toit ou mur) : sert à espacer les bâtiments entre eux. */
   buildOcc: Uint8Array;
+  /** Cases à garder libres de tout accessoire bloquant (cour devant une porte). */
+  keep: Uint8Array;
+  /** Bâtiments posés (coin haut-gauche) : on habille leurs flancs (décision n°46). */
+  buildings: { name: string; v: number; x: number; y: number }[];
   road: Uint8Array;
   /** Ornières : 0 aucune, sinon 1 + axe (0 h, 1 v) × 2 + voie ; 255 = croisement (pas d'ornière). */
   rut: Uint8Array;
@@ -200,6 +206,17 @@ interface PlaceOptions {
 function canPlace(c: Ctx, name: string, v: number, x: number, y: number, o: PlaceOptions): boolean {
   const s = getStamp(name, v);
   const margin = o.margin ?? 1;
+  // Bâtiment : la rangée devant sa façade (sa porte) doit rester praticable.
+  if (s.building) {
+    for (let i = 0; i < s.w; i++) {
+      const fx = x + i;
+      const fy = y + s.h;
+      if (!inb(fx, fy)) return false;
+      const k = idx(fx, fy);
+      const code = at(c.code, k);
+      if (c.blockedOcc[k] || c.band[k] || code === WATER || code === POND) return false;
+    }
+  }
   for (let j = 0; j < s.h; j++) {
     for (let i = 0; i < s.w; i++) {
       const cx = x + i;
@@ -207,12 +224,15 @@ function canPlace(c: Ctx, name: string, v: number, x: number, y: number, o: Plac
       if (!inb(cx, cy)) return false;
       const k = idx(cx, cy);
       const isBlocked = s.blocked[j * s.w + i] as boolean;
+      if (isBlocked && c.keep[k]) return false; // devant une porte
       const code = at(c.code, k);
       if (!o.allowWater && (code === WATER || code === BRIDGE || code === FORD)) return false;
       if (code === BRIDGE || code === FORD) return false;
       const rowIsCanopy = j < s.canopyRows;
       const occ = rowIsCanopy ? c.canopyOcc[k] : c.decorOcc[k];
       if (occ && !(occ === 2 && s.overlap)) return false;
+      // Un toit ne recouvre pas un accessoire posé plus tôt (étal, puits…) : il le masquerait.
+      if (s.building && rowIsCanopy && c.decorOcc[k] === 1) return false;
       if (!o.allowReserved && c.reserved[k]) return false;
       // Aucun décor sur l'emprise d'un bâtiment (toit, murs, ombre et cour devant la porte).
       if (!s.building && c.buildOcc[k]) return false;
@@ -261,6 +281,7 @@ function tileVisible(s: Stamp, i: number, j: number): boolean {
 function commit(c: Ctx, name: string, v: number, x: number, y: number): void {
   const s = getStamp(name, v);
   if (s.chimney) c.chimneys.push({ x: x * TILE + s.chimney.x, y: y * TILE + s.chimney.y });
+  if (s.building) c.buildings.push({ name, v, x, y });
   const fx = x + s.foot.x;
   const fy = y + s.foot.y;
   const phase = s.frames.length > 1 && !s.building ? (-(fx >> 1) & 3) % s.frames.length : 0;
@@ -356,9 +377,117 @@ function placeNear(c: Ctx, name: string, v: number, x: number, y: number, o: Pla
 /** Cour de terre battue sur la rangée devant un bâtiment. */
 function yard(c: Ctx, name: string, v: number, x: number, y: number): void {
   const s = getStamp(name, v);
+  for (let i = 0; i < s.w; i++) if (inb(x + i, y + s.h)) c.keep[idx(x + i, y + s.h)] = 1;
   for (let i = -1; i <= s.w; i++) {
     const k = idx(x + i, y + s.h);
     if (inb(x + i, y + s.h) && isLandCode(at(c.code, k)) && !c.road[k] && ['grass', 'forest', 'sand', 'marsh'].includes(kindOf(at(c.code, k)))) c.code[k] = KIND_CODE.dirt;
+  }
+}
+
+/* ---------- Accessoires (décision n°46) ---------- */
+
+const RING = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]] as const;
+
+/** Case praticable pendant l'habillage (l'eau et les bandes ne sont figées qu'ensuite). */
+function passable(c: Ctx, x: number, y: number): boolean {
+  if (!inb(x, y)) return false;
+  const k = idx(x, y);
+  const code = at(c.code, k);
+  if (code === WATER || code === POND) return false;
+  return !c.band[k] && !c.blockedOcc[k] && c.collision[k] !== COLLISION.blocked;
+}
+
+/**
+ * Bloquer (`x`, `y`) couperait-il un passage ? On regarde l'anneau des 8 voisines :
+ * si les voisines praticables y forment plusieurs morceaux qui touchent la case
+ * par un côté, elles ne communiquent peut-être que par elle (test prudent).
+ */
+function pinches(c: Ctx, x: number, y: number): boolean {
+  const free = RING.map(([dx, dy]) => passable(c, x + dx, y + dy));
+  if (free.every(Boolean)) return false;
+  let runs = 0;
+  for (let i = 0; i < 8; i++) {
+    if (!free[i] || free[(i + 7) % 8]) continue;
+    let edge = false;
+    for (let j = i; j < i + 8 && free[j % 8]; j++) if (j % 2 === 0) edge = true;
+    if (edge) runs++;
+  }
+  return runs > 1;
+}
+
+/** Pose un accessoire sans fermer de passage ni encombrer la cour d'une porte. */
+function placeProp(c: Ctx, name: string, v: number, x: number, y: number, o: PlaceOptions = {}): boolean {
+  const opts: PlaceOptions = { margin: 0, allowReserved: true, ...o };
+  if (!canPlace(c, name, v, x, y, opts)) return false;
+  const s = getStamp(name, v);
+  const marked: number[] = [];
+  let ok = true;
+  for (let j = 0; j < s.h && ok; j++) {
+    for (let i = 0; i < s.w && ok; i++) {
+      if (!s.blocked[j * s.w + i]) continue;
+      const k = idx(x + i, y + j);
+      if (c.keep[k] || pinches(c, x + i, y + j)) ok = false;
+      else {
+        c.blockedOcc[k] = 1;
+        marked.push(k);
+      }
+    }
+  }
+  for (const k of marked) c.blockedOcc[k] = 0;
+  if (!ok) return false;
+  commit(c, name, v, x, y);
+  return true;
+}
+
+/** Pose un accessoire par son pied au plus près de (`x`, `y`), dans un rayon `r`. */
+function propNear(c: Ctx, name: string, v: number, x: number, y: number, r = 2, o: PlaceOptions = {}): boolean {
+  const s = getStamp(name, v);
+  const cands: [number, number][] = [];
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) cands.push([dx, dy]);
+  cands.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]));
+  for (const [dx, dy] of cands) if (placeProp(c, name, v, x + dx - s.foot.x, y + dy - s.foot.y, o)) return true;
+  return false;
+}
+
+/**
+ * Flancs des bâtiments d'un lieu : un ou deux accessoires du village contre les
+ * murs (tonneaux, sacs, outils, bois…), jamais devant une porte.
+ */
+function dressBuildings(c: Ctx, loc: LocationPlan, from: number, set: readonly string[]): void {
+  const rnd = mulberry32(hashString(`${loc.id}:flancs`));
+  for (const b of c.buildings.slice(from)) {
+    const s = getStamp(b.name, b.v);
+    for (const side of [-1, 1] as const) {
+      if (rnd() > 0.72) continue;
+      const name = set[Math.floor(rnd() * set.length)] as string;
+      const p = getStamp(name, 0);
+      const v = Math.floor(rnd() * 3);
+      const x = side < 0 ? b.x - p.w : b.x + s.w;
+      const wallRow = b.y + s.h - 2;
+      if (!placeProp(c, name, v, x, wallRow - (p.h - 1))) placeProp(c, name, v, x, wallRow - p.h);
+    }
+  }
+}
+
+/** Corde à linge dans les jardins d'un village (la case du milieu reste un passage). */
+function laundryLines(c: Ctx, loc: LocationPlan, count: number): void {
+  const rnd = mulberry32(hashString(`${loc.id}:linge`));
+  let placed = 0;
+  for (let tries = 0; placed < count && tries < 300; tries++) {
+    const x = Math.round(loc.cx + (rnd() * 2 - 1) * (loc.w / 2 + 2));
+    const y = Math.round(loc.cy + (rnd() * 2 - 1) * (loc.h / 2 + 2));
+    if (placeProp(c, 'laundry', placed % 2, x, y, { noBuild: true })) placed++;
+  }
+}
+
+/** Lampadaires aux coins d'une place. */
+function plazaLamps(c: Ctx, loc: LocationPlan, w: number, hh: number, corners: readonly number[] = [0, 1, 2, 3]): void {
+  const x0 = Math.floor(loc.cx - w / 2);
+  const y0 = Math.floor(loc.cy - hh / 2);
+  const spots: [number, number][] = [[x0 - 1, y0 - 1], [x0 + w, y0 - 1], [x0 - 1, y0 + hh], [x0 + w, y0 + hh]];
+  for (const i of corners) {
+    const [x, y] = spots[i] as [number, number];
+    propNear(c, 'lamp_post', 0, x, y, 2);
   }
 }
 
@@ -754,7 +883,7 @@ function scatterAround(c: Ctx, loc: LocationPlan, names: readonly string[], coun
     const x = Math.round(loc.cx + (rnd() * 2 - 1) * rx);
     const y = Math.round(loc.cy + (rnd() * 2 - 1) * ry);
     const name = names[Math.floor(rnd() * names.length)] as string;
-    if (place(c, name, Math.floor(rnd() * 4), x, y, { margin: 0, allowReserved: true, noBuild: true })) done++;
+    if (placeProp(c, name, Math.floor(rnd() * 4), x, y, { noBuild: true })) done++;
   }
 }
 
@@ -783,57 +912,78 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
   const x0 = Math.floor(loc.cx - loc.w / 2);
   const y0 = Math.floor(loc.cy - loc.h / 2);
   const rnd = mulberry32(hashString(`dress:${loc.id}`));
+  const built = c.buildings.length;
   switch (loc.style) {
     case 'haut_gue': {
       plaza(c, loc, 6, 4);
       setKindRect(c, x0 + 1, y0 + 9, 6, 5, 'field');
       for (let i = 0; i < 6; i++) place(c, 'fence', 0, x0 + 1 + i, y0 + 8, { margin: -1, allowReserved: true });
-      place(c, 'well', 0, loc.cx + 3, loc.cy - 2, { margin: 0, allowReserved: true });
+      placeFoot(c, 'well', 0, loc.cx + 3, loc.cy - 2, { margin: 0, allowReserved: true });
       // Auberge de Maëlys, moulin de Thom (près du champ), forge de Bran, tour du capitaine Ilar.
       placeNear(c, 'inn', 0, loc.cx + 2, loc.cy - 8);
       placeNear(c, 'mill', 0, x0, y0 + 3);
       placeNear(c, 'forge', 0, loc.cx + 5, loc.cy + 1);
       placeNear(c, 'guard_tower', 0, loc.cx - 7, loc.cy + 2);
       lattice(c, loc, ['house_thatch', 'house_tile', 'house_thatch', 'hut'], 8, 'houses');
+      // Vie du village (n°46) : place éclairée, charrette au champ, linge, flancs des maisons.
+      plazaLamps(c, loc, 6, 4, [0, 3]);
+      propNear(c, 'board', 0, loc.cx - 2, loc.cy - 3, 2);
+      propNear(c, 'bench', 0, loc.cx - 1, loc.cy + 3, 2);
+      propNear(c, 'cart', 0, x0 + 9, y0 + 14, 2);
+      dressBuildings(c, loc, built, ['hay', 'sacks', 'tools', 'barrel', 'planter', 'woodpile', 'crate', 'planter']);
+      laundryLines(c, loc, 1);
       gardens(c, loc, ['sunflowers', 'sunflowers', 'flowers', 'lavender'], 8);
-      scatterAround(c, loc, ['hay', 'barrel', 'crate', 'bush'], 10, 'misc');
+      scatterAround(c, loc, ['hay', 'barrel', 'sacks', 'bush'], 6, 'misc');
       place(c, 'sign', 0, loc.cx - 4, loc.cy + 6, { margin: 0, allowReserved: true });
       break;
     }
     case 'ronceval': {
       plaza(c, loc, 5, 4);
-      place(c, 'well', 0, loc.cx + 2, loc.cy - 2, { margin: 0, allowReserved: true });
+      placeFoot(c, 'well', 0, loc.cx + 2, loc.cy - 2, { margin: 0, allowReserved: true });
       lattice(c, loc, ['house_wood', 'hut', 'house_wood', 'house_thatch'], 8, 'houses');
+      // Village de bûcherons : bois coupé partout, souches, une lanterne sur la place.
+      plazaLamps(c, loc, 5, 4, [1]);
+      dressBuildings(c, loc, built, ['woodpile', 'tools', 'barrel', 'sacks', 'woodpile', 'planter']);
+      laundryLines(c, loc, 1);
       gardens(c, loc, ['flowers', 'tall_grass', 'flowers'], 7);
-      scatterAround(c, loc, ['barrel', 'crate', 'bush', 'hay'], 10, 'misc');
+      scatterAround(c, loc, ['stump', 'woodpile', 'bush', 'stump'], 7, 'misc');
       break;
     }
     case 'port_brume': {
       plaza(c, loc, 6, 4);
-      place(c, 'well', 0, loc.cx - 3, loc.cy - 2, { margin: 0, allowReserved: true });
-      place(c, 'stall', 0, loc.cx - 2, loc.cy - 4, { margin: 0, allowReserved: true, noBuild: false });
-      place(c, 'stall', 1, loc.cx + 1, loc.cy - 4, { margin: 0, allowReserved: true });
+      placeFoot(c, 'well', 0, loc.cx - 3, loc.cy - 2, { margin: 0, allowReserved: true });
+      placeFoot(c, 'stall', 0, loc.cx - 2, loc.cy - 4, { margin: 0, allowReserved: true, noBuild: false });
+      placeFoot(c, 'stall', 1, loc.cx + 1, loc.cy - 4, { margin: 0, allowReserved: true });
       // Chapelle de Frère Odo, tour de guet au-dessus du port.
       placeNear(c, 'temple', 0, loc.cx + 6, loc.cy - 9);
       placeNear(c, 'guard_tower', 1, loc.cx - 10, loc.cy - 6);
       lattice(c, loc, ['house_slate', 'house_tile', 'house_slate', 'hut'], 8, 'houses');
+      // Port de pêche : filets, poteries, caisses du port, lanternes, barques.
+      plazaLamps(c, loc, 6, 4, [0, 3]);
+      propNear(c, 'bench', 0, loc.cx + 1, loc.cy + 3, 2);
+      dressBuildings(c, loc, built, ['nets', 'pots', 'barrel', 'crate', 'sacks', 'planter']);
+      laundryLines(c, loc, 1);
       gardens(c, loc, ['lavender', 'lavender', 'flowers'], 7);
-      scatterAround(c, loc, ['barrel', 'crate', 'barrel'], 12, 'misc');
+      scatterAround(c, loc, ['barrel', 'crate', 'nets', 'pots'], 8, 'misc');
       pier(c, loc);
       break;
     }
     case 'pierre_haute': {
       plaza(c, loc, 5, 4);
       setKindRect(c, x0, y0, loc.w, loc.h, 'rock', false);
-      place(c, 'well', 0, loc.cx - 3, loc.cy - 2, { margin: 0, allowReserved: true });
+      placeFoot(c, 'well', 0, loc.cx - 3, loc.cy - 2, { margin: 0, allowReserved: true });
       place(c, 'banner', 0, loc.cx + 3, loc.cy - 3, { margin: 0, allowReserved: true });
       // Forge de maître Halvar, sanctuaire des Lanternes, tour du village fortifié.
       placeNear(c, 'forge', 0, loc.cx - 9, loc.cy - 7);
       placeNear(c, 'temple', 0, loc.cx + 4, loc.cy - 9);
       placeNear(c, 'guard_tower', 0, loc.cx + 8, loc.cy + 1);
       lattice(c, loc, ['house_stone', 'house_slate', 'house_stone', 'hut'], 8, 'houses');
+      // Village fortifié de montagne : bois de chauffage, caisses, lanternes.
+      plazaLamps(c, loc, 5, 4, [1, 2]);
+      propNear(c, 'board', 0, loc.cx + 1, loc.cy + 4, 2);
+      dressBuildings(c, loc, built, ['woodpile', 'crate', 'sacks', 'barrel', 'tools', 'woodpile']);
       gardens(c, loc, ['lavender', 'tall_grass'], 4);
-      scatterAround(c, loc, ['rock', 'barrel', 'crate', 'cairn'], 12, 'misc');
+      scatterAround(c, loc, ['rock', 'barrel', 'crate', 'cairn', 'pebbles'], 9, 'misc');
       break;
     }
     case 'valcendre': {
@@ -850,29 +1000,38 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
         }
       }
       ringWalls(c, wx, wy, loc.w, loc.h, { h: 'wall_h', v: 'wall_v', tower: 'tower' });
-      place(c, 'well', 0, loc.cx + 3, loc.cy - 3, { margin: 0, allowReserved: true });
+      placeFoot(c, 'well', 0, loc.cx + 3, loc.cy - 3, { margin: 0, allowReserved: true });
       place(c, 'banner', 0, loc.cx - 4, loc.cy - 3, { margin: 0, allowReserved: true });
       place(c, 'banner', 0, loc.cx + 5, loc.cy + 2, { margin: 0, allowReserved: true });
-      for (let i = 0; i < 3; i++) place(c, 'stall', i, loc.cx - 8 + i * 3, loc.cy + 2, { margin: 0, allowReserved: true });
+      for (let i = 0; i < 3; i++) placeFoot(c, 'stall', i, loc.cx - 8 + i * 3, loc.cy + 3, { margin: 0, allowReserved: true });
       // Cathédrale, Auberge du Corbeau, quartier des forges.
       placeNear(c, 'temple', 0, loc.cx - 10, loc.cy - 10);
       placeNear(c, 'inn', 0, loc.cx + 3, loc.cy - 10);
       placeNear(c, 'forge', 0, loc.cx + 8, loc.cy + 4);
       lattice(c, loc, ['house_tile', 'house_slate', 'house_tile', 'house_stone', 'hut'], 14, 'houses');
+      // Grande ville : rues éclairées, bancs, tableau d'affichage, jardinières.
+      for (const [dx, dy] of [[-2, -2], [2, -2], [-2, 2], [2, 2], [-9, -2], [9, 2], [-2, -9], [2, 9]] as const) propNear(c, 'lamp_post', 0, loc.cx + dx, loc.cy + dy, 1);
+      propNear(c, 'board', 0, loc.cx + 3, loc.cy - 4, 2);
+      propNear(c, 'bench', 0, loc.cx - 6, loc.cy - 3, 2);
+      propNear(c, 'bench', 0, loc.cx + 6, loc.cy + 3, 2);
+      dressBuildings(c, loc, built, ['planter', 'barrel', 'crate', 'sacks', 'pots', 'planter']);
       gardens(c, loc, ['flowers', 'lavender', 'sunflowers'], 6);
-      scatterAround(c, loc, ['barrel', 'crate'], 8, 'misc');
+      scatterAround(c, loc, ['barrel', 'crate', 'sacks'], 6, 'misc');
       break;
     }
     case 'camp': {
       setKindRect(c, x0, y0, loc.w, loc.h, 'dirt', false);
       ringWalls(c, x0, y0, loc.w, loc.h, { h: 'palisade', v: 'palisade', tower: null });
-      place(c, 'campfire', 0, loc.cx, loc.cy, { margin: 0, allowReserved: true });
+      // Le centre du camp est sur la route : le feu de camp se pose à côté.
+      propNear(c, 'campfire', 0, loc.cx - 3, loc.cy, 2);
+      propNear(c, 'campfire', 0, loc.cx + 3, loc.cy + 1, 2);
       place(c, 'tent', 0, loc.cx - 5, loc.cy - 3, { margin: 0, allowReserved: true });
       place(c, 'tent', 1, loc.cx + 3, loc.cy - 3, { margin: 0, allowReserved: true });
       place(c, 'tent', 0, loc.cx - 5, loc.cy + 2, { margin: 0, allowReserved: true });
       place(c, 'tent', 1, loc.cx + 3, loc.cy + 2, { margin: 0, allowReserved: true });
       place(c, 'banner', 0, loc.cx, loc.cy - 4, { margin: 0, allowReserved: true });
-      scatterAround(c, loc, ['barrel', 'crate', 'hay', 'cauldron'], 6, 'misc');
+      place(c, 'banner', 0, loc.cx - 3, loc.cy - 4, { margin: 0, allowReserved: true });
+      scatterAround(c, loc, ['barrel', 'crate', 'sacks', 'woodpile', 'cauldron', 'crate'], 8, 'misc');
       break;
     }
     case 'bosquet': {
@@ -888,7 +1047,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
     case 'tour_noye': {
       setKindRect(c, x0, y0, loc.w, loc.h, 'ruins', false);
       for (const [dx, dy] of [[-3, 2], [3, 3], [-1, 4], [4, -2]] as const) setKindRect(c, loc.cx + dx, loc.cy + dy, 2, 1, 'pond', false);
-      place(c, 'tower', 0, loc.cx - 1, loc.cy - 3, { margin: 0, allowReserved: true });
+      place(c, 'ruined_tower', 0, loc.cx - 1, loc.cy - 5, { margin: 0, allowReserved: true });
       for (const dx of [-5, 4]) place(c, 'pillar', Math.abs(dx) % 2, loc.cx + dx, loc.cy - 1, { margin: 0, allowReserved: true });
       for (let i = 0; i < 5; i++) place(c, 'ruin_wall', i, loc.cx - 5 + i * 2, loc.cy + 2 + (i % 2), { margin: 0, allowReserved: true });
       scatterAround(c, loc, ['reeds', 'rock'], 8, 'misc');
@@ -929,7 +1088,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
       setKindRect(c, x0, y0, loc.w, loc.h, 'sand', false);
       place(c, 'wreck', 0, loc.cx - 3, loc.cy - 1, { margin: 0, allowReserved: true });
       place(c, 'wreck', 0, loc.cx + 2, loc.cy, { margin: 0, allowReserved: true });
-      scatterAround(c, loc, ['barrel', 'crate', 'rock'], 4, 'misc');
+      scatterAround(c, loc, ['barrel', 'crate', 'rock', 'pebbles', 'sacks', 'pebbles'], 9, 'misc');
       break;
     }
     case 'menhir': {
@@ -954,6 +1113,7 @@ function dressLocation(c: Ctx, loc: LocationPlan): void {
 /** Appontement de Port-Brume : planches sur l'eau, barques de chaque côté. */
 function pier(c: Ctx, loc: LocationPlan): void {
   const px = loc.cx - 12;
+  let shore = loc.cy + 2;
   // Trouve la côte au sud du village (colonne `loc.cx + 6`).
   for (const col of [loc.cx + 6, loc.cx + 7]) {
     let y = loc.cy + 2;
@@ -966,7 +1126,13 @@ function pier(c: Ctx, loc: LocationPlan): void {
       c.land[i] = 1;
       c.noBuild[i] = 1;
     }
+    if (col === loc.cx + 6) shore = y;
   }
+  // Barques amarrées de part et d'autre, tonneaux au pied de l'appontement (n°46).
+  place(c, 'boat', 0, loc.cx + 3, shore + 1, { margin: -1, allowWater: true, allowReserved: true });
+  place(c, 'boat', 0, loc.cx + 8, shore + 2, { margin: -1, allowWater: true, allowReserved: true });
+  propNear(c, 'barrel', 1, loc.cx + 5, shore - 3, 1);
+  propNear(c, 'crate', 1, loc.cx + 8, shore - 3, 1);
   void px;
 }
 
@@ -986,7 +1152,11 @@ function scatter(c: Ctx): void {
     const y = Math.floor(k / W);
     const kind = kindOf(code);
     if (kind === 'sand' || kind === 'cobble' || kind === 'planks' || kind === 'pond') {
-      if (kind === 'sand' && rnd() < 0.012) place(c, 'rock', 2, x, y, { margin: 1 });
+      if (kind === 'sand') {
+        const rs = rnd();
+        if (rs < 0.012) place(c, 'rock', 2, x, y, { margin: 1 });
+        else if (rs < 0.03) place(c, 'pebbles', 1, x, y, { margin: -1 });
+      }
       continue;
     }
     const z = at(c.zone, k);
@@ -1001,6 +1171,8 @@ function scatter(c: Ctx): void {
       else if (r < 0.03) place(c, 'bush', v, x, y, { margin: 0 });
       else if (r < 0.04) place(c, 'rock', v, x, y, { margin: 1 });
       else if (meadow > 0.58 && r < 0.2) place(c, r < 0.12 ? 'flowers' : 'tall_grass', (x * 7 + y * 3) % (r < 0.12 ? 4 : 2), x, y, { margin: -1 });
+      else if (r > 0.993) place(c, 'stump', (x + y) % 2, x, y, { margin: 1 });
+      else if (r > 0.975) place(c, 'pebbles', (x + y) % 3 === 1 ? 0 : (x + y) % 3, x, y, { margin: -1 });
     } else if (z === 2) {
       const treeP = kind === 'forest' ? 0.16 + dense * 0.2 : 0.035;
       if (r < treeP) {
@@ -1009,6 +1181,9 @@ function scatter(c: Ctx): void {
       } else if (r < treeP + 0.03) place(c, 'bush', v, x, y, { margin: 0 });
       else if (r < treeP + 0.036) place(c, 'rock', v, x, y, { margin: 1 });
       else if (r < treeP + 0.16 && (kind === 'forest' || meadow > 0.55)) place(c, kind === 'forest' && r < treeP + 0.1 ? 'tall_grass' : 'flowers', kind === 'forest' ? 0 : 2, x, y, { margin: -1 });
+      // Sous-bois : souches, troncs couchés, champignons.
+      else if (kind === 'forest' && r > 0.985) place(c, r > 0.993 ? 'log' : 'stump', x % 2, x, y, { margin: 1 });
+      else if (kind === 'forest' && r > 0.95) place(c, 'mushrooms', (x + y) % 2, x, y, { margin: -1 });
     } else if (z === 3) {
       if (kind === 'marsh') {
         if (r < 0.06) placeFoot(c, 'dead_tree', v % 2, x, y, { margin: 1 });
@@ -1017,14 +1192,17 @@ function scatter(c: Ctx): void {
       else if (r < 0.035) place(c, 'bush', v, x, y, { margin: 0 });
       else if (r < 0.045) place(c, 'rock', v, x, y, { margin: 1 });
       else if (meadow > 0.6 && r < 0.12) place(c, 'tall_grass', 2, x, y, { margin: -1 });
+      else if (r > 0.975) place(c, 'pebbles', 1 - ((x + y) % 2), x, y, { margin: -1 });
     } else if (z === 4) {
       if (r < 0.03) place(c, 'rock', v, x, y, { margin: 1 });
       else if (r < 0.05 && kind !== 'snow') placeFoot(c, 'dark_pine', kind === 'rock' && y < 30 ? 3 : v % 3, x, y, { margin: 1 });
       else if (r < 0.058) placeFoot(c, 'dead_tree', v % 2, x, y, { margin: 1 });
+      else if (r > 0.95 && kind !== 'snow') place(c, 'pebbles', (x + y) % 2 === 0 ? 0 : 2, x, y, { margin: -1 });
     } else if (z === 5) {
       if (r < 0.03) place(c, 'ruin_wall', v, x, y, { margin: 1 });
       else if (r < 0.04) place(c, 'pillar', v, x, y - 1, { margin: 1 });
       else if (r < 0.05) place(c, 'rock', v, x, y, { margin: 1 });
+      else if (r > 0.96) place(c, 'pebbles', 0, x, y, { margin: -1 });
     }
   }
 }
@@ -1394,6 +1572,8 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     decorOcc: new Uint8Array(N),
     canopyOcc: new Uint8Array(N),
     buildOcc: new Uint8Array(N),
+    keep: new Uint8Array(N),
+    buildings: [],
     decorParts: new Array<Part[] | undefined>(N),
     canopyParts: new Array<Part[] | undefined>(N),
     seq: 0,
@@ -1659,6 +1839,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     tiled,
     atlas: tileset.atlas,
     layers: { ground, decor: c.decor, canopy: c.canopy, collision: c.collision, zones: c.zone },
+    doorFronts: Array.from({ length: N }, (_, k) => k).filter((k) => c.keep[k]).map((k) => ({ x: k % W, y: Math.floor(k / W) })),
     stats: {
       tuiles: tileset.tileCount,
       terre: count((k) => c.land[k] === 1),

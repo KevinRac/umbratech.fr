@@ -107,6 +107,16 @@ describe('carte du monde (assets/maps/world.json)', () => {
     }
   });
 
+  it('les accessoires ne ferment aucune porte : chaque case devant une porte est atteignable (n°46)', () => {
+    const grid = CollisionGrid.fromMap(map, ALL_FLAGS);
+    const start = findSpawn(map, 'start');
+    const seen = reachableCells(grid, { x: Math.floor((start?.x ?? 0) / map.tileSize), y: Math.floor((start?.y ?? 0) / map.tileSize) });
+    const fronts = generateWorld(data.zones).doorFronts;
+    expect(fronts.length).toBeGreaterThan(60);
+    const blocked = fronts.filter((d) => seen[d.y * map.width + d.x] !== 1).map((d) => `${d.x},${d.y}`);
+    expect(blocked).toEqual([]);
+  });
+
   it('chaque passage ouvre sur la zone qu’il protège (drapeau = zone la plus haute voisine)', () => {
     const flagByValue = new Map(data.zones.map((z) => [z.value, z.unlockFlag]));
     for (const [cell, flag] of map.gateFlagByCell) {

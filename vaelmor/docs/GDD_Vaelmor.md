@@ -1062,10 +1062,10 @@ Les sept principes de la refonte :
 | # | Principe | Règle concrète | État |
 |---|---|---|---|
 | 1 | **Palette et étalonnage** | Tons chauds légèrement désaturés (ocres, terre cuite, olive, bleu ardoise). Ombres **violet-bleu**, jamais grises ni noires. Lumières jaune-orangé. Un étalonnage « fin d'après-midi » **par zone**. | ✅ |
-| 2 | **Densité de détail** | Décors racontés : toits en rangées d'ardoises/bardeaux avec ombre sous chaque rang, colombages, volets, enseignes en fer forgé, jardinières, tonneaux, sacs, outils, lanternes, linge, herbes folles au pied des murs, mousse et fissures. Chaque bâtiment a **sa silhouette** : chaumière, forge, auberge, temple, moulin, tour de garde. | 🔧 étapes 2 et 4 |
+| 2 | **Densité de détail** | Décors racontés : toits en rangées d'ardoises/bardeaux avec ombre sous chaque rang, colombages, volets, enseignes en fer forgé, jardinières, tonneaux, sacs, outils, lanternes, linge, herbes folles au pied des murs, mousse et fissures. Chaque bâtiment a **sa silhouette** : chaumière, forge, auberge, temple, moulin, tour de garde. | ✅ étapes 2 et 3 · 🔧 étape 4 |
 | 3 | **Volume et relief** | Lumière **fixe en haut à gauche** sur tout le jeu. Faces de murs plus sombres que les toits. Ombres portées douces vers le bas à droite. Occlusion ambiante au contact sol/mur. Contours sombres **colorés** (teinte du matériau assombrie), plus épais sur les personnages (2 px) que sur les décors (1 px). | ✅ sol · 🔧 reste |
 | 4 | **Sol** | Peu de bruit, **larges plaques de 3 tons**, transitions organiques sans bords droits ni escaliers (voir 12.2b). | ✅ |
-| 5 | **Végétation** | Arbres volumineux en 3-4 masses de feuillage éclairées, troncs avec racines, buissons, fleurs sauvages, tournesols et lavande près des villages, légère animation au vent (le blé est déjà animé). | 🔧 étape 3 |
+| 5 | **Végétation** | Arbres volumineux en 3-4 masses de feuillage éclairées, troncs avec racines, buissons, fleurs sauvages, tournesols et lavande près des villages, légère animation au vent (le blé est déjà animé). | ✅ |
 | 6 | **Atmosphère HD-2D** | Via les filtres de Phaser 4, réglables et désactivables : flou de profondeur (tilt-shift) en haut et en bas, bloom doux, vignettage, rayons de lumière obliques et poussière, halos animés (scintillement des feux), éclairage jour/soir préparé. | ✅ étalonnage · 🔧 étape 5 |
 | 7 | **Personnages** | Proportions *Eastward* (tête un peu grosse), contour sombre, **3 tons par matériau**, petite ombre au sol. | 🔧 étape 6 |
 
@@ -1150,9 +1150,9 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 
 - **Personnages** 🔧 (étape 6) : sprite **16×28 px**, tête un peu grosse (proportions *Eastward*), contour sombre de 2 px teinté, 3 tons par matériau, petite ombre au sol, accessoires emblématiques (lanterne, bannière, harpon). Le héros sert de **modèle** que les PNJ réutilisent en M2 (changement de couleurs, coiffure, accessoire).
 - **Ennemis** ⏳ : formes distinctes par famille (Écumeurs : bandanas rouges ; Brume : silhouettes fluides violacées ; Golems : blocs de pierre).
-- **Bâtiments** 🔧 (étape 2) : six silhouettes de base — **chaumière, forge, auberge, temple, moulin, tour de garde** — plus grandes qu'avant si besoin (mêmes positions de village, mêmes routes, collision au pied). Toits en rangées avec ombre sous chaque rang, façades à colombages plus sombres que les toits, volets, enseignes en fer forgé, mousse et fissures ; toit coloré par village (chaume jaune, bois vert, ardoise bleue, pierre rouge).
-- **Petits décors** 🔧 (étape 4) : jardinières, tonneaux, sacs, outils, lanternes, linge, caisses, herbes folles au pied des murs.
-- **Végétation** 🔧 (étape 3) : arbres en 3-4 masses de feuillage éclairées (jusqu'à 3×3 cases), racines, buissons, fleurs sauvages, tournesols et lavande près des villages, vent léger.
+- **Bâtiments** ✅ (étape 2) : six silhouettes de base — **chaumière, forge, auberge, temple, moulin, tour de garde** — plus grandes qu'avant si besoin (mêmes positions de village, mêmes routes, collision au pied). Toits en rangées avec ombre sous chaque rang, façades à colombages plus sombres que les toits, volets, enseignes en fer forgé, mousse et fissures ; toit coloré par village (chaume jaune, bois vert, ardoise bleue, pierre rouge).
+- **Petits décors** 🔧 (étape 4, livrée) : jardinières, tonneaux, sacs, outils, lampadaires, cordes à linge, caisses, bois coupé, charrette, bancs, étals, puits couvert, tableau d'affichage, poteries et filets au port, herbes folles au pied des murs ; rochers, falaises, remparts, ruines, épaves et camp refaits dans le même style. Chaque village a son jeu d'accessoires (ferme, bûcherons, pêche, montagne, ville). Feux de camp, bannières et linge animés.
+- **Végétation** ✅ (étape 3) : arbres en 3-4 masses de feuillage éclairées (jusqu'à 3×3 cases), racines, buissons, fleurs sauvages, tournesols et lavande près des villages, vent léger.
 - **Interface** : cadres en parchemin et métal patiné, bordures ornées, police pixel (Jersey 10 pour le bandeau de zone), couleurs de statut (vert/jaune/rouge). Texte et interface restent natifs 960×540.
 
 ### 12.5 Effets et atmosphère HD-2D
@@ -1166,10 +1166,10 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 | **Rayons de lumière et poussière** | Bandes obliques additives et particules en suspension, zones ensoleillées | intensité en options | 🔧 étape 5 |
 | **Halos ponctuels** | Sprites additifs, scintillement des feux | — | 🔧 étape 5 |
 | **Jour / soir** | Un second jeu de `grade` par zone, interpolé (préparé, non activé) | — | 🔧 étape 5 |
-| **Ombres douces et ombres portées** | Dessinées dans les sprites (bas-droite) | — | 🔧 étapes 2 et 3 |
+| **Ombres douces et ombres portées** | Dessinées dans les sprites (bas-droite) | — | ✅ décors · 🔧 héros (étape 6) |
 | **Particules** | Poussière, feuilles, braises, bulles, lucioles ; fumée de cheminée animée | — | ✅ (cheminées) · ⏳ reste |
 | **Eau** | Vagues animées (TileSprite) | — | ✅ |
-| **Blé** | Épis dorés animés | — | ✅ (à reprendre à l'étape 3) |
+| **Blé** | Épis dorés animés, masse dense, bande de lumière | — | ✅ |
 
 **Réglage « Qualité »** (options) : *Haute* (tous les effets), *Basse* (étalonnage et vignettage seulement), *Désactivée* (aucun filtre, sauf la teinte `ambient`). Les effets doivent rester légers : à vérifier sur GPU réel avec F3 (60 FPS visé, voir PROGRESS.md).
 
@@ -1177,10 +1177,10 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 
 | Catégorie | Contenu | Quantité | État |
 |---|---|---|---|
-| **Tileset du monde** | Une seule texture générée par code (≈13 500 tuiles, atlas 2048×1696 px, 128 colonnes) : sols, berges, ponts, décors | 1 atlas | ✅ sols · 🔧 reste |
-| **Bâtiments** | 6 silhouettes × variantes de toit par village | ~6 + variantes | 🔧 |
-| **Végétation** | Arbres (3-4 variantes), buissons, fleurs, tournesols, lavande | ~15 | 🔧 |
-| **Petits décors** | Tonneaux, sacs, jardinières, lanternes, linge, outils, enseignes | ~30 | 🔧 |
+| **Tileset du monde** | Une seule texture générée par code (≈16 000 tuiles dont ~860 animées, atlas 2048×2016 px, 128 colonnes) : sols, berges, ponts, décors | 1 atlas | ✅ |
+| **Bâtiments** | 6 silhouettes × variantes de toit par village | ~6 + variantes | ✅ |
+| **Végétation** | Arbres (3-4 variantes), buissons, fleurs, tournesols, lavande | ~15 | ✅ |
+| **Petits décors** | Tonneaux, sacs, jardinières, lanternes, linge, outils, enseignes, rochers, falaises, remparts, ruines | ~40 | 🔧 livrés, à valider |
 | **Personnages carte** | Héros 16×28 puis 12 classes × 4 directions × 4 frames (24 évolutions = recolorations) | 12 + 24 variantes | 🔧 héros · ⏳ reste |
 | **Personnages combat** | 12 classes × 5 animations | 12 feuilles | ⏳ |
 | **Portraits** | 30 PNJ + 12 recrues | ~40 | ⏳ |
@@ -1210,7 +1210,7 @@ L'art du monde n'est plus un « placeholder » : il est généré par code selon
 
 ### 12.8 Méthode de la refonte (rappel)
 
-Ordre imposé, une validation de l'auteur après chaque étape (capture 960×540 + détail ×3) : **1)** palette, étalonnage, sol ✅ validé le 17/10/2026 · **2)** bâtiments ✅ validé le 17/10/2026 · **3)** végétation · **4)** petits décors · **5)** post-effets HD-2D · **6)** héros. Chaque étape : `generate-world`, tests, build, commit sur `main` avec `play/`, décision numérotée dans PROGRESS.md (n°43 à ce jour).
+Ordre imposé, une validation de l'auteur après chaque étape (capture 960×540 + détail ×3) : **1)** palette, étalonnage, sol ✅ validé le 17/10/2026 · **2)** bâtiments ✅ validé le 17/10/2026 · **3)** végétation ✅ validé le 17/10/2026 · **4)** petits décors 🔧 livré · **5)** post-effets HD-2D · **6)** héros. Chaque étape : `generate-world`, tests, build, commit sur `main` avec `play/`, décision numérotée dans PROGRESS.md (n°46 à ce jour).
 
 ---
 
