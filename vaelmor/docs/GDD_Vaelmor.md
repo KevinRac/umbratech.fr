@@ -1051,7 +1051,7 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 
 ## 12. Direction artistique
 
-> **Mise à jour du 17/10/2026 (décisions n°43 et suivantes).** Cette section décrit l'art *tel qu'il est généré* depuis la refonte graphique du monde ouvert. Légende : ✅ réalisé et validé · 🔧 prévu, étape de la refonte indiquée · ⏳ différé (M2 et après). Références : *Eastward* (pixel art dense et chaleureux) et *Octopath Traveler* (HD-2D : lumière, profondeur, atmosphère), en restant médiéval-fantastique (chaume, colombages, pierre, bois, forges, autels, ruines, forêts anciennes ; rien de moderne).
+> **Mise à jour du 17/10/2026 (décisions n°43 et suivantes).** Cette section décrit l'art *tel qu'il est généré* depuis la refonte graphique du monde ouvert, menée comme **mise à jour du jalon M1** (exploration). Légende : ✅ réalisé et validé · 🔧 prévu, étape de la refonte indiquée · ⏳ différé (M2 et après). Références : *Eastward* (pixel art dense et chaleureux) et *Octopath Traveler* (HD-2D : lumière, profondeur, atmosphère), en restant médiéval-fantastique (chaume, colombages, pierre, bois, forges, autels, ruines, forêts anciennes ; rien de moderne).
 
 ### 12.1 Style visuel (choix et justification)
 
@@ -1210,7 +1210,7 @@ L'art du monde n'est plus un « placeholder » : il est généré par code selon
 
 ### 12.8 Méthode de la refonte (rappel)
 
-Ordre imposé, une validation de l'auteur après chaque étape (capture 960×540 + détail ×3) : **1)** palette, étalonnage, sol ✅ validé le 17/10/2026 · **2)** bâtiments · **3)** végétation · **4)** petits décors · **5)** post-effets HD-2D · **6)** héros. Chaque étape : `generate-world`, tests, build, commit sur `main` avec `play/`, décision numérotée dans PROGRESS.md (n°43 à ce jour).
+Ordre imposé, une validation de l'auteur après chaque étape (capture 960×540 + détail ×3) : **1)** palette, étalonnage, sol ✅ validé le 17/10/2026 · **2)** bâtiments ✅ validé le 17/10/2026 · **3)** végétation · **4)** petits décors · **5)** post-effets HD-2D · **6)** héros. Chaque étape : `generate-world`, tests, build, commit sur `main` avec `play/`, décision numérotée dans PROGRESS.md (n°43 à ce jour).
 
 ---
 

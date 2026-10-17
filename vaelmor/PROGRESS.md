@@ -9,11 +9,12 @@ Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). 
 **M4 : combat de base** (GDD §5, §17) — carte tactique sur grille, tour par tour, déplacement, attaques et ripostes, triangle des éléments, victoire / défaite. Le monde ouvert (M1) est prêt à déclencher un combat : il manque les ennemis visibles (M3) pour y entrer, on peut donc lancer M4 depuis une scène de test, puis M3 branchera le contact.
 Ensuite, dans l'ordre du GDD §17 : M2 (villages, PNJ, dialogues, `locations.json`), M3 (ennemis du monde), M5…
 
-## Refonte graphique du monde ouvert (en cours, 17/10/2026)
+## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)
+Ce chantier est une **mise à jour du jalon M1** (exploration), pas un nouveau jalon : il ne touche ni aux PNJ ni aux villages jouables (M2).
 Objectif : qualité visuelle proche d'Eastward (pixel art dense et chaud) et d'Octopath Traveler (lumière, profondeur, atmosphère « HD-2D »), univers médiéval-fantastique. Six étapes, chacune validée par l'auteur sur captures avant la suivante : 1) palette, étalonnage et sol ; 2) bâtiments ; 3) végétation ; 4) petits décors ; 5) post-effets HD-2D (réglage qualité haute/basse/désactivé) ; 6) héros (16×28, gabarit réutilisé par les PNJ en M2).
 Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taille et de forme (mêmes emplacements de village, mêmes routes, collision au pied) ; héros en 16×28 (même pied, même boîte 10×8) ; seul le héros est refait, les PNJ reprendront son gabarit en M2.
 - [x] Étape 1 : palette, étalonnage et sol — décision n°43 (validée le 17/10/2026)
-- [x] Étape 2 : bâtiments — décision n°44 (en attente de validation)
+- [x] Étape 2 : bâtiments — décision n°44 (validée le 17/10/2026)
 - [ ] Étape 3 : végétation
 - [ ] Étape 4 : petits décors et accessoires
 - [ ] Étape 5 : post-effets HD-2D
@@ -23,7 +24,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] M0a : GDD v0.1 rédigé, validé le 16/10/2026 (v0.2, 28 décisions)
 - [x] Dossier du jeu créé dans le dépôt (page d'attente, music/, assets/, src/, data/, docs/)
 - [x] **M0 : squelette technique** (16/10/2026) — voir « Livré en M0 »
-- [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 »
+- [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
 - [ ] M4 : combat de base
 - [ ] M2, M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
 
