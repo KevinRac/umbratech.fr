@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../src/data';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES, paintBattlefield } from '../src/render/battlefield';
-import { CHAR_POSES, GEAR_PAD } from '../src/render/characterSprite';
+import { CHARACTER_SHAPES, CHAR_POSES, GEAR_PAD } from '../src/render/characterSprite';
 import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_SPRITES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite } from '../src/render/unitSprites';
 import { buildBattle, findEncounter } from '../src/logic/tactics/encounter';
 import { terrainAt } from '../src/logic/tactics/grid';
@@ -64,6 +64,23 @@ describe('unités au gabarit commun (décision n°60)', () => {
   it('chaque classe, chaque ennemi et le héros ont une fiche', () => {
     const sprites = ['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite)];
     for (const sprite of sprites) expect(UNIT_SPRITES[sprite], sprite).toBeDefined();
+  });
+
+  it('les corpulences de classe sont dessinées sur 16 colonnes', () => {
+    for (const shapes of Object.values(CHARACTER_SHAPES.BUILDS)) {
+      const rows = [...Object.values(shapes.body).flat(), ...shapes.legsFront.flat(), ...shapes.legsSide.flat()];
+      for (const row of rows) expect(row.length, row).toBe(16);
+    }
+  });
+
+  it('chaque classe a sa propre silhouette (contour différent de toutes les autres)', () => {
+    const mask = (id: string): string => {
+      const px = new Set<number>();
+      paintUnitSprite({ set: (x: number, y: number) => px.add(y * UNIT_W + x) }, 0, 0, id, 'player', 'idle', 0);
+      return [...px].sort((a, b) => a - b).join(',');
+    };
+    const ids = data.classes.map((c) => c.id);
+    expect(new Set(ids.map(mask)).size).toBe(ids.length);
   });
 
   for (const id of Object.keys(UNIT_SPRITES)) {

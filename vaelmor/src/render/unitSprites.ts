@@ -60,11 +60,11 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
   heros: { look: HERO_LOOK, gear: { headgear: 'none', weapon: 'none' } },
   gardien_des_marees: {
     look: look({ hair: r(P.sable), tunic: r(mixColor(P.metalClair, P.pierre, 0.4)), accent: r(P.ciel), pants: r(P.ardoiseSombre), head: 'short', outfit: 'tunic' }),
-    gear: { headgear: 'helmet', weapon: 'spear', shield: true },
+    gear: { headgear: 'greathelm', weapon: 'spear', shield: true, build: 'armored' },
   },
   lame_du_serment: {
     look: look({ skin: SKIN_PALE, hair: r(mixColor(P.braise, P.ocre, 0.5)), tunic: r(mixColor(P.parchemin, P.pierre, 0.45)), accent: r(P.jauneBle), head: 'long', outfit: 'cloak' }),
-    gear: { headgear: 'circlet', weapon: 'sword' },
+    gear: { headgear: 'circlet', weapon: 'sword', cape: true },
   },
   veilleur_des_falaises: {
     look: look({ tunic: r(mixColor(P.olive, P.sable, 0.35)), accent: r(P.vertDore), head: 'hood', outfit: 'cloak' }),
@@ -72,11 +72,11 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
   },
   heritier_des_cendres: {
     look: look({ skin: SKIN_PALE, hair: r(P.parchemin), tunic: r(mixColor(P.ombreViolette, P.violetBrume, 0.4)), accent: r(P.orangeForge), head: 'hood', outfit: 'dress' }),
-    gear: { headgear: 'none', weapon: 'tome', glow: P.braise },
+    gear: { headgear: 'cowl', weapon: 'tome', glow: P.braise, build: 'robed' },
   },
   porte_lanterne: {
     look: look({ hair: r(mixColor(P.jauneBle, P.ocreClair, 0.5)), tunic: r(mixColor(P.parchemin, P.jauneBle, 0.25)), accent: r(P.ambre), head: 'bun', outfit: 'dress' }),
-    gear: { headgear: 'circlet', weapon: 'staff_lantern', glow: P.lumiereDoree },
+    gear: { headgear: 'circlet', weapon: 'staff_lantern', glow: P.lumiereDoree, build: 'robed' },
   },
   heraut_des_bannieres: {
     look: look({ skin: SKIN_DARK, hair: r(mixColor(P.terreSombre, P.ombreProfonde, 0.3)), tunic: r(mixColor(P.jauneBle, P.ambre, 0.4)), accent: r(P.parchemin), head: 'short', outfit: 'tunic' }),
@@ -88,15 +88,15 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
   },
   danseur_des_courants: {
     look: look({ skin: SKIN_DARK, hair: r(mixColor(P.bleuNuit, P.ardoise, 0.3)), tunic: r(mixColor(P.ecume, P.ciel, 0.4)), accent: r(P.cyanEclat), head: 'short', outfit: 'tunic' }),
-    gear: { headgear: 'bandana', weapon: 'daggers' },
+    gear: { headgear: 'bandana', weapon: 'daggers', scarf: true },
   },
   invocateur_de_pierres_anciennes: {
     look: look({ hair: r(P.grisRoux), tunic: r(mixColor(P.pierre, P.sable, 0.3)), accent: r(P.cyanEclat), head: 'hood', outfit: 'dress' }),
-    gear: { headgear: 'none', weapon: 'staff_stone', glow: P.cyanEclat },
+    gear: { headgear: 'cowl', weapon: 'staff_stone', glow: P.cyanEclat, build: 'robed' },
   },
   faconneur_de_racines: {
     look: look({ hair: r(mixColor(P.mousse, P.olive, 0.4)), tunic: r(mixColor(P.terreSeche, P.olive, 0.3)), accent: r(P.vertDore), head: 'long', outfit: 'dress' }),
-    gear: { headgear: 'leaves', weapon: 'staff_branch' },
+    gear: { headgear: 'leaves', weapon: 'staff_branch', build: 'robed' },
   },
   ingenieur_des_ruines: {
     look: look({ hair: r(mixColor(P.terreSombre, P.ocre, 0.3)), tunic: r(mixColor(P.ocre, P.terreSeche, 0.4)), accent: r(P.cyanEclat), head: 'short', outfit: 'tunic' }),
@@ -104,13 +104,13 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
   },
   chasseur_de_serpents_de_mer: {
     look: look({ skin: SKIN_DARK, hair: r(mixColor(P.ecume, P.pierre, 0.5)), tunic: r(mixColor(P.sable, P.terreSeche, 0.4)), accent: r(P.bleuGris), head: 'bun', outfit: 'tunic' }),
-    gear: { headgear: 'bandana', weapon: 'harpoon' },
+    gear: { headgear: 'bandana', weapon: 'harpoon', build: 'brute' },
   },
 
   /* ---------- Écumeurs du Gué ---------- */
   ecumeur_sabreur: {
     look: look({ tunic: r(mixColor(P.terreSeche, P.terreCuite, 0.35)), accent: r(P.ocre), head: 'short', outfit: 'tunic' }),
-    gear: { headgear: 'bandana', weapon: 'axe' },
+    gear: { headgear: 'bandana', weapon: 'axe', build: 'brute' },
   },
   ecumeur_archer: {
     look: look({ tunic: r(mixColor(P.oliveSombre, P.terreSombre, 0.35)), accent: r(P.ocre), head: 'hood', outfit: 'cloak' }),
@@ -118,15 +118,15 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
   },
   ecumeur_lancier: {
     look: look({ skin: SKIN_DARK, tunic: r(mixColor(P.metalClair, P.grisRoux, 0.5)), accent: r(P.ocre), head: 'short', outfit: 'tunic' }),
-    gear: { headgear: 'helmet', weapon: 'spear', shield: true },
+    gear: { headgear: 'helmet', weapon: 'spear', shield: true, build: 'armored' },
   },
   ecumeur_incendiaire: {
     look: look({ tunic: r(mixColor(P.brique, P.terreSombre, 0.3)), accent: r(P.orangeForge), head: 'hood', outfit: 'dress' }),
-    gear: { headgear: 'none', weapon: 'torch', glow: P.braise },
+    gear: { headgear: 'cowl', weapon: 'torch', glow: P.braise, build: 'robed' },
   },
   brakk: {
     look: look({ skin: SKIN_DARK, hair: r(mixColor(P.rougeCendre, P.orangeForge, 0.3)), tunic: r(mixColor(P.terreSeche, P.grisRoux, 0.3)), accent: r(P.jauneBle), pants: r(mixColor(P.terreSombre, P.ombreProfonde, 0.2)), head: 'long', outfit: 'cloak' }),
-    gear: { headgear: 'horned', weapon: 'greataxe' },
+    gear: { headgear: 'horned', weapon: 'greataxe', build: 'brute', cape: true },
   },
 };
 

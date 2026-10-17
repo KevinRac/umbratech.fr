@@ -68,7 +68,16 @@ export function ramp3(base: number, shade: number = P.ombreViolette, light: numb
 
 /* ---------- Équipement de classe (décision n°60) ---------- */
 
-export type Headgear = 'none' | 'helmet' | 'horned' | 'hat' | 'bandana' | 'circlet' | 'leaves' | 'goggles';
+export type Headgear = 'none' | 'helmet' | 'greathelm' | 'horned' | 'hat' | 'bandana' | 'circlet' | 'leaves' | 'goggles' | 'cowl';
+
+/**
+ * Corpulence de la classe (la silhouette se lit avant les détails, comme les
+ * classes des Fire Emblem GBA) : `normal` (gabarit commun), `armored` (armure
+ * lourde, épaulières larges, jambières de métal), `brute` (bras nus massifs,
+ * mantelet, pantalon bouffant, jambes écartées), `robed` (robe longue évasée,
+ * manches en cloche, seuls les pieds dépassent).
+ */
+export type Build = 'normal' | 'armored' | 'brute' | 'robed';
 export type HeldWeapon =
   | 'none'
   | 'sword'
@@ -92,6 +101,11 @@ export interface CharacterGear {
   readonly weapon: HeldWeapon;
   readonly shield?: boolean;
   readonly quiver?: boolean;
+  readonly build?: Build;
+  /** Cape qui flotte derrière le personnage. */
+  readonly cape?: boolean;
+  /** Longue écharpe qui vole au vent. */
+  readonly scarf?: boolean;
   /** Lueur de l'arme (flamme, magie, rune) : palpite d'une image à l'autre. */
   readonly glow?: number;
 }
@@ -435,7 +449,128 @@ const LEGS_SIDE: readonly Rows[] = [
 const LEGS_DRESS: readonly Rows[] = LEGS_FRONT.map((legs) => ['..ttttttttttTT..', '..TTTTTTTTTTTT..', ...legs.slice(2)]);
 const LEGS_DRESS_SIDE: readonly Rows[] = LEGS_SIDE.map((legs) => ['..tttttttttT....', '..TTTTTTTTTT....', ...legs.slice(2)]);
 
-export const CHARACTER_SHAPES = { HEAD, BODY, LEGS_FRONT, LEGS_SIDE, LEGS_DRESS, LEGS_DRESS_SIDE } as const;
+/* ---------- Corpulences de classe (combat) ---------- */
+
+type BuildShapes = { readonly body: Readonly<Record<CharPose, Rows>>; readonly legsFront: readonly Rows[]; readonly legsSide: readonly Rows[] };
+
+const swap = (rows: Rows, pairs: readonly (readonly [RegExp, string])[]): Rows => rows.map((row) => pairs.reduce((r, [re, to]) => r.replace(re, to), row));
+
+/** Armure lourde : épaulières sur toute la largeur, bras de métal détachés du torse, tabard aux couleurs du camp. */
+const ARMORED_DOWN: Rows = [
+  '.....mmmmmm.....',
+  '.mmmmmaaaammmmm.',
+  'mmmmmmccccmmmmmM',
+  'mmmm.mccccm.mmmM',
+  '.mm.mmccccmm.mM.',
+  '.mm.mmccccmm.mM.',
+  '.mm.llllgllL.mM.',
+  '.mm.cccccccC.mM.',
+  '....cccccccC....',
+];
+const ARMORED: BuildShapes = {
+  body: {
+    down: ARMORED_DOWN,
+    up: swap(ARMORED_DOWN, [[/a/g, 'm'], [/g/g, 'l']]),
+    side: [
+      '.....mmmmm......',
+      '....mmmmmmmm....',
+      '...mmmmmmmmmM...',
+      '...mmcmmmmmmM...',
+      '....ccmmmmmM....',
+      '....ccmmmmmM....',
+      '....cclllllg....',
+      '...ccccccccC....',
+      '....cccccccC....',
+    ],
+  },
+  legsFront: [
+    ['...mmmm..mmmM...', '...mmmm..mmmM...', '...mmmm..mmmM...', '...bbbb..bbbB...', '..bbbbb..bbbBB..'],
+    ['...mmmm..mmmM...', '...bbbb..mmmM...', '..bbbbb..mmmM...', '.........bbbB...', '.........bbbBB..'],
+    ['...mmmm..mmmM...', '...mmmm..mmmM...', '...mmmm..mmmM...', '...bbbb..bbbB...', '..bbbbb..bbbBB..'],
+    ['...mmmm..mmmM...', '...mmmm..bbbB...', '...mmmm..bbbBB..', '...bbbb.........', '..bbbbb.........'],
+  ],
+  legsSide: LEGS_SIDE.map((legs) => swap(legs, [[/p/g, 'm'], [/P/g, 'M']])),
+};
+
+/** Brute : épaules massives, bras nus, mantelet de fourrure et baudrier aux couleurs du camp. */
+const BRUTE_DOWN: Rows = [
+  '....ssccccss....',
+  '.ssscccccctsss..',
+  'ssssccttttttssSS',
+  'sss.tccttttt.sSS',
+  'sss.ttcctttt.sSS',
+  'sss.lllcclll.sSS',
+  '.ss.ttttccTt.sS.',
+  '.ss.pppppppP.sS.',
+  '....pppppppP....',
+];
+const BRUTE: BuildShapes = {
+  body: {
+    down: BRUTE_DOWN,
+    up: BRUTE_DOWN.map((row) => [...row].reverse().join('')).map((row) => row.replace(/S/g, 's')),
+    side: [
+      '.....sscc.......',
+      '....scccccss....',
+      '...ssttttttTss..',
+      '...ssctttttTss..',
+      '....sscttttTs...',
+      '....llllcllll...',
+      '....tttttttT....',
+      '....ppppppppP...',
+      '....pppppppP....',
+    ],
+  },
+  legsFront: [
+    ['...pppp..pppP...', '..ppppp..ppppP..', '..bbbb....bbbB..', '..bbbb....bbbB..', '.bbbbb....bbbBB.'],
+    ['...pppp..pppP...', '..bbbb...ppppP..', '.bbbbb....bbbB..', '..........bbbB..', '..........bbbBB.'],
+    ['...pppp..pppP...', '..ppppp..ppppP..', '..bbbb....bbbB..', '..bbbb....bbbB..', '.bbbbb....bbbBB.'],
+    ['...pppp..pppP...', '..ppppp...bbbB..', '..bbbb....bbbBB.', '..bbbb..........', '.bbbbb..........'],
+  ],
+  legsSide: LEGS_SIDE,
+};
+
+/** Robe longue évasée, manches en cloche aux couleurs du camp, galon central. */
+const ROBED_DOWN: Rows = [
+  '.....aaaaaa.....',
+  '...ccttaattcc...',
+  '..ccctttattccc..',
+  '..ccctttattccC..',
+  '.cccctllgllcccC.',
+  '.cccctttatttccC.',
+  '.ccc.tttatttTcC.',
+  '..c.ttttatttTT..',
+  '...tttttatttTT..',
+];
+const ROBE_HEM = ['..tttttattttTT..', '..tttttattttTT..', '.tttttttatttTTT.', '.TTTTTTTTTTTTTT.'];
+const ROBE_HEM_SIDE = ['...ttttttttttT..', '..tttttttttttT..', '..tttttttttttTT.', '..TTTTTTTTTTTTT.'];
+const ROBED: BuildShapes = {
+  body: {
+    down: ROBED_DOWN,
+    up: [ROBED_DOWN[0] as string, ...swap(ROBED_DOWN.slice(1), [[/a/g, 't'], [/g/g, 'l']])],
+    side: [
+      '......aaaa......',
+      '.....cctttt.....',
+      '....ccctttTT....',
+      '....ccctttTT....',
+      '....cccllgll....',
+      '...cccctttttT...',
+      '...ccc.tttttT...',
+      '...c..ttttttT...',
+      '...ttttttttttT..',
+    ],
+  },
+  legsFront: ['...bbb....bbB...', '..bbb.....bbB...', '...bbb....bbB...', '....bbb...bbB...'].map((feet) => [...ROBE_HEM, feet]),
+  legsSide: ['.....bbbBbbB....', '...bbB....bbbB..', '.....bbbBbbB....', '....bbB..bbbB...'].map((feet) => [...ROBE_HEM_SIDE, feet]),
+};
+
+const BUILDS: Readonly<Record<Exclude<Build, 'normal'>, BuildShapes>> = { armored: ARMORED, brute: BRUTE, robed: ROBED };
+
+/** Abscisses des mains (gauche, droite à l'écran) de face et de dos, selon la corpulence. */
+const HANDS: Readonly<Record<Build, readonly [number, number]>> = { normal: [2, 13], armored: [1, 14], brute: [1, 14], robed: [2, 13] };
+/** Matière des bras : manches, métal ou peau nue. */
+const SLEEVE: Readonly<Record<Build, string>> = { normal: 'c', armored: 'm', brute: 's', robed: 'c' };
+
+export const CHARACTER_SHAPES = { HEAD, BODY, LEGS_FRONT, LEGS_SIDE, LEGS_DRESS, LEGS_DRESS_SIDE, BUILDS } as const;
 
 /* ---------- Peinture ---------- */
 
@@ -487,22 +622,24 @@ function put(cv: Canvas, x: number, y: number, m: string, dark = false): void {
 }
 
 /** Mains, bras qui balancent et accessoire, selon la pose et le pas. */
-function drawLimbs(cv: Canvas, look: CharacterLook, pose: CharPose, frame: number, bob: number): void {
+function drawLimbs(cv: Canvas, look: CharacterLook, pose: CharPose, frame: number, bob: number, build: Build = 'normal'): void {
   const swing = frame === 1 ? -1 : frame === 3 ? 1 : 0;
   const y = 20 - bob;
+  const sleeve = SLEEVE[build];
+  const hand = build === 'armored' ? 'm' : 's';
   if (pose === 'side') {
     // Bras avant : manche le long du corps, la main avance et recule.
     const hx = 8 + swing * 2;
-    const sleeve = look.outfit === 'cloak' ? 'c' : 'c';
     for (let j = 14; j <= 19; j++) put(cv, j < 17 ? 8 : 8 + Math.round((swing * (j - 16)) / 2), j - bob, sleeve, j > 17);
-    put(cv, hx, y, 's');
+    put(cv, hx, y, hand);
     put(cv, hx, y - 1, sleeve);
   } else {
     // Face / dos : les mains montent et descendent en alternance.
-    put(cv, 2, y + swing, 's');
-    put(cv, 13, y - swing, 's', true);
-    put(cv, 2, y + swing - 1, look.outfit === 'cloak' ? 'c' : 'c');
-    put(cv, 13, y - swing - 1, 'c', true);
+    const [l, r] = HANDS[build];
+    put(cv, l, y + swing, hand);
+    put(cv, r, y - swing, hand, true);
+    put(cv, l, y + swing - 1, sleeve);
+    put(cv, r, y - swing - 1, sleeve, true);
   }
   drawAccessory(cv, look, pose, swing, bob);
 }
@@ -615,13 +752,18 @@ export function paintCharacterFrame(sink: PixelSink, ox: number, oy: number, loo
   const legFrame = breathe ? 0 : f;
   const bob = breathe ? 1 : f === 1 || f === 3 ? 1 : 0;
   const dress = look.outfit === 'dress';
-  const legs = pose === 'side' ? (dress ? LEGS_DRESS_SIDE : LEGS_SIDE) : dress ? LEGS_DRESS : LEGS_FRONT;
+  const build = gear?.build ?? 'normal';
+  const shapes = build === 'normal' ? null : BUILDS[build];
+  const legs = shapes ? (pose === 'side' ? shapes.legsSide : shapes.legsFront) : pose === 'side' ? (dress ? LEGS_DRESS_SIDE : LEGS_SIDE) : dress ? LEGS_DRESS : LEGS_FRONT;
   if (gear?.quiver) drawQuiver(cv, pose, bob, 'back');
+  if (gear?.cape && pose !== 'up') drawCape(cv, pose, bob, f, build);
   stamp(cv, legs[legFrame] as Rows, 22);
-  stamp(cv, BODY[pose][look.outfit], 13 - bob);
+  stamp(cv, shapes ? shapes.body[pose] : BODY[pose][look.outfit], 13 - bob);
+  if (gear?.cape && pose === 'up') drawCape(cv, pose, bob, f, build);
   stamp(cv, HEAD[pose][gearHead(look, gear)], 2 - bob);
   if (gear) drawHeadgear(cv, gear.headgear, pose, bob);
-  drawLimbs(cv, look, pose, legFrame, bob);
+  drawLimbs(cv, look, pose, legFrame, bob, build);
+  if (gear?.scarf) drawScarf(cv, pose, bob, f);
   if (gear) drawGear(cv, gear, pose, legFrame, bob, f);
 
   const glow = gear?.glow ?? P.braise;
@@ -660,6 +802,7 @@ function gearHead(look: CharacterLook, gear: CharacterGear | undefined): HeadSty
   if (!gear) return look.head;
   switch (gear.headgear) {
     case 'helmet':
+    case 'greathelm':
     case 'horned':
     case 'bandana':
     case 'goggles':
@@ -668,6 +811,8 @@ function gearHead(look: CharacterLook, gear: CharacterGear | undefined): HeadSty
     case 'circlet':
     case 'leaves':
       return look.head === 'hood' ? 'long' : look.head;
+    case 'cowl':
+      return 'hood';
     default:
       return look.head;
   }
@@ -713,6 +858,39 @@ function drawHeadgear(cv: Canvas, headgear: Headgear, pose: CharPose, bob: numbe
         const horns: readonly (readonly [number, number])[] = side ? [[3, 1], [2, 0], [2, -1], [3, -2]] : [[1, 2], [0, 1], [-1, 0], [-1, -1], [0, -2], [14, 2], [15, 1], [16, 0], [16, -1], [15, -2]];
         for (const [x, y] of horns) put(cv, x, top + y, 'n', x > 8);
       }
+      break;
+    }
+    case 'greathelm': {
+      // Heaume de chevalier : calotte, nasal, protège-joues jusqu'au menton, grand cimier.
+      for (let j = 0; j < 5; j++) recolorRow(cv, top + j, -2, 17, null, 'm');
+      if (front) {
+        for (let j = 5; j <= 9; j++) {
+          put(cv, 2, top + j, 'm');
+          put(cv, 3, top + j, 'm');
+          put(cv, 12, top + j, 'm', true);
+          put(cv, 13, top + j, 'm', true);
+        }
+        for (let j = 4; j <= 7; j++) put(cv, 7, top + j, 'm', j > 5);
+        recolorRow(cv, top + 4, 4, 11, null, 'm', true);
+      } else if (side) {
+        for (let j = 4; j <= 9; j++) for (const x of [2, 3, 4]) put(cv, x, top + j, 'm', x === 4);
+        recolorRow(cv, top + 4, 5, 13, null, 'm', true);
+      } else {
+        for (let j = 4; j <= 9; j++) recolorRow(cv, top + j, -2, 17, 'h', 'm', j > 7);
+      }
+      const crest: readonly (readonly [number, number])[] = side
+        ? [[6, -1], [5, -1], [5, -2], [4, -2], [3, -2], [3, -3], [2, -3], [1, -3], [1, -2], [0, -2], [0, -1]]
+        : [[6, -1], [7, -1], [8, -1], [9, -1], [7, -2], [8, -2], [8, -3], [9, -3], [9, -4], [10, -4], [10, -5], [11, -5], [11, -4]];
+      for (const [x, y] of crest) put(cv, x, top + y, 'a', side ? x < 3 : x > 8);
+      break;
+    }
+    case 'cowl': {
+      // Capuche de mage à pointe tombante ; le front reste dans l'ombre.
+      const tip: readonly (readonly [number, number])[] = side
+        ? [[5, -1], [4, -1], [4, -2], [3, -2], [2, -3], [1, -3], [1, -2]]
+        : [[6, -1], [7, -1], [8, -1], [8, -2], [9, -2], [9, -3], [10, -3], [11, -4], [11, -3]];
+      for (const [x, y] of tip) put(cv, x, top + y, 'c', side ? x < 3 : x > 9);
+      if (pose !== 'up') for (let j = 3; j <= 4; j++) recolorRow(cv, top + j, -2, 17, 'h', 'c', true);
       break;
     }
     case 'hat': {
@@ -777,6 +955,46 @@ function drawHeadgear(cv: Canvas, headgear: Headgear, pose: CharPose, bob: numbe
 
 /* ---------- Équipement : armes, bouclier, carquois ---------- */
 
+/** Cape : déborde du corps et ondule (derrière le corps de face et de profil, par-dessus de dos). */
+function drawCape(cv: Canvas, pose: CharPose, bob: number, tick: number, build: Build): void {
+  const b = bob;
+  const wave = tick % 2 === 0 ? 0 : 1;
+  const wide = build === 'brute' || build === 'armored' ? 1 : 0;
+  if (pose === 'down') {
+    for (let y = 14; y <= 24; y++) {
+      const spread = y < 19 ? 0 : y < 22 ? 1 : 2;
+      put(cv, 1 - wide - spread, y - b, 'c');
+      put(cv, 14 + wide + spread, y - b, 'c', true);
+      if (spread > 0) {
+        put(cv, 2 - wide - spread, y - b, 'c');
+        put(cv, 13 + wide + spread, y - b, 'c', true);
+      }
+    }
+    put(cv, -1 - wide - wave, 25 - b, 'c', true);
+    put(cv, 16 + wide + wave, 25 - b, 'c', true);
+  } else if (pose === 'side') {
+    for (let y = 14; y <= 25; y++) {
+      const back = Math.floor((y - 14) / 3) + (y > 21 ? wave : 0);
+      for (let x = 3 - back; x <= 5; x++) put(cv, x, y - b, 'c', x === 3 - back);
+    }
+  } else {
+    for (let y = 13; y <= 24; y++) for (let x = 2 - wide; x <= 13 + wide; x++) put(cv, x, y - b, 'c', x >= 12 + wide || (y > 22 && (x + wave) % 3 === 0));
+  }
+}
+
+/** Écharpe : un long pan qui vole au vent derrière le personnage. */
+function drawScarf(cv: Canvas, pose: CharPose, bob: number, tick: number): void {
+  const b = bob;
+  const wave = tick % 2 === 0 ? 0 : 1;
+  const tail: readonly (readonly [number, number])[] =
+    pose === 'down'
+      ? [[11, 13], [12, 14], [13, 14], [14, 14], [15, 15], [16, 15], [17, 15 + wave], [18, 16 + wave], [19, 16 + wave]]
+      : pose === 'side'
+        ? [[5, 13], [4, 13], [3, 14], [2, 14], [1, 14], [0, 15], [-1, 15 + wave], [-2, 16 + wave], [-3, 16 + wave]]
+        : [[7, 14], [7, 15], [8, 16], [7, 17], [8, 18], [7 + wave, 19], [9, 14], [9, 15], [10, 16], [9, 17], [10 + wave, 18]];
+  tail.forEach(([x, y], i) => put(cv, x, y - b, 'a', i % 3 === 2));
+}
+
 function drawQuiver(cv: Canvas, pose: CharPose, bob: number, _layer: 'back'): void {
   // Carquois de cuir en travers du dos, empennes claires qui dépassent de l'épaule.
   const b = bob;
@@ -805,7 +1023,10 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
   const b = bob;
   const side = pose === 'side';
   // Main de l'arme : main droite du personnage (à gauche à l'écran de face, à droite de dos, devant de profil).
-  const hand = side ? { x: 8 + swing * 2, y: 20 - b } : pose === 'down' ? { x: 2, y: 20 - b + swing } : { x: 13, y: 20 - b - swing };
+  const build = gear.build ?? 'normal';
+  const armored = build === 'armored';
+  const [handL, handR] = HANDS[build];
+  const hand = side ? { x: 8 + swing * 2, y: 20 - b } : pose === 'down' ? { x: handL, y: 20 - b + swing } : { x: handR, y: 20 - b - swing };
   // Avec un bouclier de profil, l'arme passe derrière le corps.
   const wx = side ? (gear.shield ? 5 : hand.x + 1) : pose === 'down' ? hand.x - 1 : hand.x + 1;
   const out = pose === 'down' ? -1 : 1; // côté extérieur de la main
@@ -813,6 +1034,18 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
 
   switch (gear.weapon) {
     case 'sword':
+      if (pose === 'down') {
+        // Garde basse : lame tenue en avant, pointe vers le sol (posture de bretteur).
+        for (let y = hand.y - 1; y <= hand.y + 1; y++) put(cv, hand.x - 1, y, 'g', y > hand.y);
+        put(cv, hand.x + 1, hand.y - 1, 'g');
+        for (let k = 0; k < 7; k++) {
+          const x = hand.x - 2 - k;
+          const y = hand.y + (k >> 1);
+          put(cv, x, y, 'm', k > 4);
+          put(cv, x, y - 1, 'i');
+        }
+        break;
+      }
       shaft(cv, wx, hand.y - 9, hand.y - 2, 'm');
       for (let y = hand.y - 9; y <= hand.y - 3; y++) put(cv, wx + out, y, 'i');
       put(cv, wx, hand.y - 10, 'i');
@@ -858,13 +1091,16 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
       }
       break;
     case 'bow':
-      for (let y = hand.y - 10; y <= hand.y + 4; y++) {
-        const d = Math.abs(y - (hand.y - 3));
-        const bend = d < 3 ? 2 : d < 6 ? 1 : 0;
-        put(cv, wx + bend * out, y, 'o', d > 5);
+      // Grand arc, plus haut que le personnage n'est large : la classe se lit de loin.
+      for (let y = hand.y - 14; y <= hand.y + 5; y++) {
+        const d = Math.abs(y - (hand.y - 4.5));
+        const bend = d < 3 ? 3 : d < 6 ? 2 : d < 8.5 ? 1 : 0;
+        put(cv, wx + bend * out, y, 'o', d > 7);
+        if (bend > 0) put(cv, wx + (bend - 1) * out, y, 'o', true);
         put(cv, wx, y, bend > 0 ? 'n' : 'o');
       }
-      put(cv, wx + out, hand.y - 3, 'l', true);
+      put(cv, wx + 3 * out, hand.y - 4, 'l', true);
+      put(cv, wx + 3 * out, hand.y - 5, 'l', true);
       break;
     case 'crossbow':
       for (let i = -3; i <= 3; i++) put(cv, wx + i * out, hand.y - 1, 'o', i > 1);
@@ -873,6 +1109,20 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
       put(cv, wx + 2 * out, hand.y - 2, 'n');
       break;
     case 'tome':
+      if (pose === 'down') {
+        // Grimoire ouvert tenu à deux mains devant la poitrine, flamme qui flotte au-dessus.
+        const ty = 17 - b;
+        for (let y = ty; y <= ty + 2; y++) for (let x = 5; x <= 10; x++) put(cv, x, y, x === 5 || x === 10 ? 'a' : 'n', x === 10 || x === 8 || y === ty + 2);
+        put(cv, 4, ty + 2, 's');
+        put(cv, 11, ty + 2, 's', true);
+        put(cv, 7, ty - 2 - (flick ? 1 : 0), 'f');
+        put(cv, 8, ty - 2, 'f', !flick);
+        put(cv, 7, ty - 1, 'f', true);
+        put(cv, 8, ty - 1, 'f');
+        if (flick) put(cv, 9, ty - 4, 'f', true);
+        else put(cv, 6, ty - 4, 'f', true);
+        break;
+      }
       for (let y = hand.y - 4; y <= hand.y - 1; y++) for (let i = 0; i <= 3; i++) put(cv, wx + (i - 1) * out, y, i === 0 ? 'n' : 'a', i === 3 || y === hand.y - 1);
       put(cv, wx + out, hand.y - 3, 'g');
       put(cv, wx + out, hand.y - 6 - (flick ? 1 : 0), 'f');
@@ -939,21 +1189,26 @@ function drawGear(cv: Canvas, gear: CharacterGear, pose: CharPose, frame: number
       break;
   }
   // La main par-dessus le manche.
-  if (gear.weapon !== 'none' && gear.weapon !== 'tome' && gear.weapon !== 'flask') put(cv, hand.x, hand.y, 's');
+  if (gear.weapon !== 'none' && gear.weapon !== 'tome' && gear.weapon !== 'flask') put(cv, hand.x, hand.y, armored ? 'm' : 's');
 
   if (gear.shield) {
     // Bouclier-tour : bord de métal, champ aux couleurs du camp, umbo doré.
-    const box = pose === 'down' ? { x0: 11, x1: 15 } : pose === 'up' ? { x0: 0, x1: 3 } : { x0: 10, x1: 13 };
+    // Une armure lourde porte un pavois plus grand.
+    const box = armored
+      ? pose === 'down' ? { x0: 12, x1: 17 } : pose === 'up' ? { x0: -2, x1: 2 } : { x0: 10, x1: 14 }
+      : pose === 'down' ? { x0: 11, x1: 15 } : pose === 'up' ? { x0: 0, x1: 3 } : { x0: 10, x1: 13 };
+    const y0 = (armored ? 12 : 13) - b;
+    const y1 = (armored ? 24 : 23) - b;
     if (pose === 'up') {
-      for (let y = 14 - b; y <= 22 - b; y++) for (let x = box.x0; x <= box.x1; x++) put(cv, x, y, 'm', true);
+      for (let y = y0 + 1; y <= y1 - 1; y++) for (let x = box.x0; x <= box.x1; x++) put(cv, x, y, 'm', true);
     } else {
-      for (let y = 13 - b; y <= 23 - b; y++) {
+      for (let y = y0; y <= y1; y++) {
         for (let x = box.x0; x <= box.x1; x++) {
-          const rim = x === box.x0 || x === box.x1 || y === 13 - b || y === 23 - b;
+          const rim = x === box.x0 || x === box.x1 || y === y0 || y === y1;
           put(cv, x, y, rim ? 'm' : 'c', !rim && x === box.x1 - 1);
         }
       }
-      const cx = pose === 'down' ? 13 : 11;
+      const cx = Math.round((box.x0 + box.x1) / 2);
       put(cv, cx, 18 - b, 'g');
       put(cv, cx, 17 - b, 'a');
       put(cv, cx, 19 - b, 'a', true);
