@@ -891,7 +891,7 @@ function themePos(sp,pc){
 }
 function spawnWave(w,last){const pc=w.some(s=>s.at==='pack')?findSpawn(300):null;for(const sp of w){const p=themePos(sp,pc);room.spawning.push({x:p.x,y:p.y,type:sp.type,elite:!!sp.elite,key:sp.key,tag:sp.tag,siege:sp.siege,t:0.85+Math.random()*0.45});}room.lastSize=w.length;room.sinceWave=0;if(last&&room.waves.length>1){toast('Dernière vague',1.6);sfx('lastwave');}}
 function createEnemy(type,x,y,elite=false){const d=ED[type];const e={type,x,y,r:d.r*(elite?CHAMP.taille:1),maxHp:d.hp*hpMul()*(elite?CHAMP.pv:1),spd:d.spd*spdMul()*(elite?CHAMP.vitesse:1),dmg:d.dmg*dmgMul()*(elite?CHAMP.degats:1),xp:d.xp*(elite?CHAMP.xp:1)*(1+0.05*(G()-1)),elite,state:'walk',t:rand(1.2,2.2),windTot:0.75,cd:rand(1,2.5),kbx:0,kby:0,flash:0,stun:0,marked:0,burnT:0,burnDps:0,exposed:false,dotAcc:0,dotT:0.45,orbT:0,crownT:0,devT:0,wob:Math.random()*TAU,ang:0,dead:false,chained:false,vuln:0,wT:0,dir:Math.random()<0.5?1:-1,aim:false,tok:null,hasteT:0,singT:0,thornT:0};e.hp=e.maxHp;enemies.push(e);
- if(type==='voile'&&!SAVE.flags.voile){SAVE.flags.voile=1;persist();}if(ENEMY_INFO[type]&&!RUN.announced.has(type)){RUN.announced.add(type);if(PAL()===0)toastPause(ENEMY_INFO[type],3.2,()=>e.dead?null:{x:e.x,y:e.y,r:e.r});}
+ if(type==='voile'&&!SAVE.flags.voile){SAVE.flags.voile=1;persist();}if(ENEMY_INFO[type]&&!RUN.announced.has(type)){RUN.announced.add(type);}
  return e;}
 function createBoss(){const e=createEnemy('boss',W/2,AR.y0+(RUN.act===3?180:170));e.maxHp=[0,1000,2300,3600][RUN.act]*(PAL()>=1?1.2:1)*(PAL()>=5?1.3:1);e.hp=e.maxHp;e.dmg=[0,16,22,26][RUN.act];e.spd=58;e.xp=[0,70,90,0][RUN.act];e.name=ACTS[RUN.act].boss;e.patT=1.4;e.phase=1;e.queue=[];e.state='idle';e.spinA=0;e.spinDir=1;e.shotT=0;e.ringT=0;e.chantN=0;if(RUN.act===3){e.r=62;e.hx=W/2;e.hy=AR.y0+180;e.beatT=1.6;}room.boss=e;return e;}
 
@@ -954,7 +954,7 @@ function updateRoom(dt){
  }
 }
 function doEnter(type){let banner=null;if(type==='act'){RUN.act=2;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act2=1;persist();type='combat';banner=['Acte II',ACTS[2].name];}else if(type==='act3'){RUN.act=3;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act3=1;persist();type='combat';banner=['Acte III',ACTS[3].name];}enterRoom(type);if(banner){showBanner(banner[0],banner[1]);if(room.annT>0)room.annT=2.9;}}
-function announceTheme(){const T=room&&room.wtheme&&WTHEMES[room.wtheme];if(!T)return;showBanner('Vague à thème',T.n);if(PAL()===0)toastPause(T.h,3);}
+function announceTheme(){const T=room&&room.wtheme&&WTHEMES[room.wtheme];if(!T)return;showBanner('Vague à thème',T.n);}
 
 // ───────────────────────── Joueur : commun
 const isObscur=()=>P.cls==='lum'&&P.lan.state!=='held';
@@ -1080,7 +1080,7 @@ function land(){const L=P.lan,s=P.s;if(s.constellation)addSpectral(L.x,L.y);
  if(L.boomerang){L.state='return';L.hit=new Set();return;}
  for(const p of room.pillars){const dx=L.x-p.x,dy=L.y-p.y,d=hyp(dx,dy)||1;if(d<p.r+10){L.x=p.x+dx/d*(p.r+10);L.y=p.y+dy/d*(p.r+10);}}
  L.state='ground';L.pickCd=0.35;tlights.push({x:L.x,y:L.y,r:220,t:0.3,max:0.3,c:'warm'});sparks(L.x,L.y,8,'#ffd27a');
- if(!RUN.seenObscur){RUN.seenObscur=true;if(PAL()===0)toastPause(`Tu es dans l’Obscur : plus rapide, plus de critiques. ${KL.KeyR} pour rappeler la lanterne, ou marche dessus.`,4,()=>({x:L.x,y:L.y,r:18}));}}
+ if(!RUN.seenObscur){RUN.seenObscur=true;}}
 function addSpectral(x,y){spectrals.push({x,y,t:14});if(spectrals.length>3)spectrals.shift();}
 function pickupLantern(){P.lan.state=P.s.vivante?'orbit':'held';sfx('pick');}
 function updateLantern(dt){if(P.cls!=='lum')return;const L=P.lan,s=P.s;
@@ -1110,7 +1110,7 @@ function gouPre(dt){
  P.r=14*gouScale();
  if(t===2&&P.metaT<=0){const drain=3+Math.max(0,P.cor-100)*0.08;loseHp(drain*dt);if(P.dead)return;}
  if(!s.estomac&&P.cor>=100)rupture();
- if(gouTier()===2&&!P.seenTier2){P.seenTier2=true;if(PAL()===0)toastPause('Débordant : tes dégâts explosent, mais la Brume te ronge. Recrache avant la Rupture !',4,{el:'#hResB'});}
+ if(gouTier()===2&&!P.seenTier2){P.seenTier2=true;}
  if(P.shield>0){P.shieldT-=dt;if(P.shieldT<=0)P.shield=Math.max(0,P.shield-25*dt);}
  if(s.mutInst){if(P.mut){P.mutLeft-=dt;if(P.mutLeft<=0)P.mut=null;}P.mutT-=dt;if(P.mutT<=0){P.mut=pick(MUTS);P.mutLeft=8;P.mutT=20;toast(`Mutation : ${P.mut.n} (${P.mut.d})`,2.2);}}
  if(s.crachats){P.crachT-=dt;if(P.crachT<=0){const t2=P.cor>=5?nearestEnemy(P.x,P.y,380):null;if(t2){const a=Math.atan2(t2.y-P.y,t2.x-P.x);pproj.push({x:P.x+Math.cos(a)*P.r,y:P.y+Math.sin(a)*P.r,vx:Math.cos(a)*560,vy:Math.sin(a)*560,r:6,dmg:16,cor:true,pierce:1,hit:new Set(),life:0.8,col:'150,230,100',kind:'glob'});P.cor-=3;P.crachT=s.crachats>=2?1.0:1.6;}else P.crachT=0.3;}}
@@ -1572,7 +1572,8 @@ let toastTimer=0,hintPaused=false,msgCur=null,msgTimer=0;const MSGQ=[];
 function stackBelow(el,other){try{if(other&&other.classList.contains('show')){el.style.top=(other.offsetTop+other.offsetHeight+10)+'px';}else el.style.top='';}catch(e){}}
 function showToast(t,d,pause){toastEl.textContent=t;toastEl.classList.toggle('pause',!!pause);if(pause){const sub=document.createElement('span');sub.className='sub';sub.textContent='Espace · Entrée · clic pour continuer';toastEl.appendChild(sub);}stackBelow(toastEl,(()=>{try{return murEl;}catch(e){return null;}})());toastEl.classList.add('show');clearTimeout(toastTimer);if(!pause)toastTimer=setTimeout(()=>{toastEl.classList.remove('show');toastEl.classList.remove('pause');},d*1000);}
 function toast(t,d=1.8,pause){d=Math.max(d,1.3+t.length*0.034);if(pause){msgPush({k:'t',t,secs:d});return d;}if(msgCur)return d;showToast(t,d,false);return d;}
-const tuto=(t,d=2.2,pause,target)=>{if(PAL()!==0)return;if(pause)toastPause(t,d,target);else toast(t,d);};
+// v16.3 : plus aucune bulle jaune au palier 0 : le joueur découvre lui-même les capacités et les ennemis
+const tuto=()=>{};
 const bossArrow=e=>()=>e.dead?null:{x:e.x,y:e.y,r:e.r};
 function toastPause(t,min=2.6,target){if(!P||!RUN||RUN.hub||state!=='play'){showToast(t,Math.max(min,3),false);return;}msgPush({k:'t',t,target,secs:clamp(1.8+t.length*0.045,min,7)});}
 function msgPush(m){MSGQ.push(m);if(!msgCur)msgNext();}
@@ -5409,7 +5410,10 @@ function showMur(title,text,d,pause,who){
  stackBelow(murEl,toastEl);murEl.classList.toggle('pause',!!pause);murEl.classList.add('show');clearTimeout(murTimer);if(!pause)murTimer=setTimeout(()=>murEl.classList.remove('show'),(d||4.5)*1000);
  sfx('scream_'+(who||'brumeux'));tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}
 // le texte violet fige le jeu le temps de lire et s’accompagne d’un cri propre au PNJ qui parle
+let lastScream=-9;
 function murmur(title,text,d,who){who=who||murWho(title);
+ // v16.3 · palier 0 : plus de texte violet, le Brumeux pousse seulement un cri démoniaque (au plus un toutes les 1,2 s)
+ if(RUN&&!RUN.hub&&PAL()===0){if(state==='play'&&RUN.time-lastScream>1.2){lastScream=RUN.time;sfx('scream_'+who);tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}return;}
  if(!P||!RUN||RUN.hub||state!=='play'){showMur(title,text,d||4.5,false,who);return;}
  msgPush({k:'m',title,text,who,secs:clamp(1.8+text.length*0.04,3,6.5)});}
 function announceCm(){
@@ -6508,7 +6512,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
  const BRIEF={
   brumeux:{t:'Le Brumeux te regarde jouer',l:'Un esprit de la Brume observe ton style de combat et s’y adapte. Ce n’est pas un monstre à abattre : c’est lui qui écrit les règles de la descente.',c:[
    ['Il observe',V,'Tu frappes de loin ou au contact ? Tu esquives beaucoup ? Tu te soignes souvent ? Il retient ce que tu fais le plus.'],
-   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Un texte violet l’annonce : lis-le, il te dit comment répondre. Si ta parade tient, il change d’arme.'],
+   ['Il riposte',V,'Quand il te connaît, il lance une contre-mesure contre ton style. Il pousse alors un cri : à toi de comprendre ce qu’il envoie et de trouver comment répondre. Si ta parade tient, il change d’arme.'],
    ['Il relâche',G,'Si tu vacilles (peu de PV), il retient ses coups. Reprends ton souffle.'],
    ['Il marchande',Y,'À chaque acte, il te propose un pacte : un avantage fort contre une contrainte choisie selon ton jeu.']]},
   pacte:{t:'Un pacte, un prix',l:'Le Brumeux te tend trois offres. Chaque pacte a un gain et un coût, et dure tout l’acte.',c:[
@@ -6516,7 +6520,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
    ['− Le coût',R,'Une contrainte choisie d’après ton style de jeu. Si tu es inconnu, elle est tirée au hasard.'],
    ['Le prix caché',O,'Chaque pacte accepté rend les gardiens plus agressifs (jusqu’à trois fois).'],
    ['Refuser',Y,'Tu peux toujours refuser : tu descends sans rien devoir à la Brume.']]},
-  contre:{t:'Contre-mesure : lis, puis réponds',l:'Le texte violet dit ce que le Brumeux a vu chez toi, et ce qu’il envoie. Chaque contre-mesure a sa parade.',c:[
+  contre:{t:'Contre-mesure : observe, puis réponds',l:'Le Brumeux a vu ton style de jeu et envoie quelque chose contre lui, en poussant un cri. Chaque contre-mesure a sa parade.',c:[
    ['Traque',V,'Tu frappes de loin : des traqueurs chargent. Reste dans la lumière et frappe-les au contact.'],
    ['Pétards',O,'Tu frappes au contact : des Bouffis explosent près de toi. Abats-les à distance.'],
    ['Tir de barrage',C,'Tu esquives tout ce qui charge : des Spectres tirent du fond de la salle. Avance et coupe leurs lignes.'],
