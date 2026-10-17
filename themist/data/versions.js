@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.5',
+ actuelle:'v16.6',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-17',h:'v16.6',t:'Lisibilité : les zones d’attaque des ennemis communs (explosion du Bouffi, cri du Hurleur, coup du Voilé, charge de la Brute) sont rouges, avec contour pointillé, pour ne plus les confondre avec tes effets ; les tirs des Spectres ont un liseré rouge. Les bulles d’information en run portent une icône colorée (vert gain, rouge danger, doré info, violet Brumeux, bleu butin) et mettent les chiffres en relief. Les cartes de pacte et d’aide montrent une icône et la valeur en gros. Nouvel écran d’accueil : un gros bouton avec la forme choisie, progression en pastilles, quatre formes en tuiles à icônes (touches 1 à 4) et aperçu animé sans défiler. Nouveau fichier data/icones.js.'},
   {d:'2026-10-17',h:'v16.5',t:'Marée noire du Héraut Noyé, nouveau rendu : masse d’eau profonde en dégradé, crête d’écume ondulante avec bulles, courants sombres, remous derrière la vague, gerbes aux bords de la brèche ; avant l’impact, la vague se lève au bord de départ et des chevrons clairs défilent dans le couloir balayé.'},
   {d:'2026-10-17',h:'v16.4',t:'Le rectangle jaune d’information (niveau atteint, salle nettoyée) est collé en haut de l’écran. La Marée noire du Héraut Noyé est redessinée : mur d’eau noire à crête d’écume, brèche signalée par un halo clair, plus aucun tiret.'},
   {d:'2026-10-17',h:'v16.3',t:'Palier 0 : plus aucune bulle jaune ni texte violet, c’est au joueur de découvrir les capacités et les ennemis. Quand le Brumeux agit (contre-mesure, pacte, règle de salle, feinte), il pousse seulement un cri démoniaque. Les fenêtres de principe ne parlent plus de « texte violet ».'},

@@ -90,20 +90,23 @@ function reliques(list, F) {
 }
 
 // ── Section « Pactes et aides »
-function pactes(D) {
-  const ent = o => `<article class="ent"><h4>${esc(o.n)}</h4><p>${esc(o.d)}</p></article>`;
+function pactes(D, I) {
+  // v16.6 : chaque pacte porte une icône (data/icones.js) et une valeur courte, comme sur la carte du jeu
+  const ico = id => (I && I[id]) ? `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
+  const val = (o, k) => o.v ? `<p class="pv ${k}">${ico(o.ic)}<b>${esc(o.v)}</b></p>` : '';
+  const ent = (o, k = 'good') => `<article class="ent"><h4>${esc(o.n)}</h4>${val(o, k)}<p>${esc(o.d)}</p></article>`;
   const A = D.aide;
   const offres = A.offresParRun === 1 ? 'une offre' : `${mot(A.offresParRun)} offres`;
   const refus = A.refusAvantArret === 1 ? 'un refus' : `${mot(A.refusAvantArret)} refus`;
   return `<section class="sec" id="pactes" data-sec>${MARK('data/pactes.js')}<header class="sh"><p class="eyebrow">Choix et risque</p><h2>Pactes et aides</h2><div class="lede"><p>À partir de la version 13, le <b>Brumeux</b> propose des pactes qui donnent un bénéfice et imposent une contrainte. Le jeu t’explique chaque pacte avant que tu acceptes.</p></div></header>
 <h3 class="sub">Bénéfices du pacte</h3>
-<div class="grid g3">${Object.values(D.benefices).map(ent).join('')}</div>
+<div class="grid g3">${Object.values(D.benefices).map(o => ent(o, 'good')).join('')}</div>
 <h3 class="sub">Contraintes</h3>
 <p>Le jeu propose une contrainte qui gêne ton style, ou qui épargne ton style. Le Brumeux peut bluffer : une contrainte peut se révéler différente de son annonce.</p>
-<div class="grid g3">${Object.values(D.contraintes).map(c => `<article class="ent"><h4>${esc(c.n)}</h4><p>${esc(c.d)}</p><p class="k">Pénalise surtout si ${esc(c.why)}.</p></article>`).join('')}</div>
+<div class="grid g3">${Object.values(D.contraintes).map(c => `<article class="ent"><h4>${esc(c.n)}</h4>${val(c, 'bad')}<p>${esc(c.d)}</p><p class="k">Pénalise surtout si ${esc(c.why)}.</p></article>`).join('')}</div>
 <h3 class="sub">Aides adaptatives</h3>
 <p>Si tu échoues plusieurs fois au même endroit, la Brume t’offre un coup de pouce discret. Les raisons possibles : ${Object.values(D.raisons).map(w => `<i>${esc(w)}</i>`).join(', ')}</p>
-<div class="grid g4">${Object.values(D.aides).map(ent).join('')}</div>
+<div class="grid g4">${Object.values(D.aides).map(o => ent(o, 'aid')).join('')}</div>
 <p class="k">Au plus ${offres} par run, séparées d’au moins ${A.ecartS} secondes, et jamais avant le début d’un combat de gardien. Tu acceptes avec <kbd>G</kbd> ou tu refuses avec <kbd>B</kbd>. L’offre disparaît seule après ${A.dureeOffreS} secondes. Après ${refus} (ou « Ne plus proposer »), la Brume ne propose plus d’aide : tu la réactives à tout moment dans le menu de pause (bouton « Aide adaptative »).</p>
 <h3 class="sub">La feinte du Brumeux</h3>
 <p>Dès l’acte II (ou à partir de la 6e salle de la descente), le Brumeux dessine un cercle sous tes pieds dans les salles de combat et d’élite. Il revient toutes les 8 à 13 secondes (un peu plus vite à l’acte III). Le cercle te suit puis se fige juste avant de frapper. Tout se lit à sa couleur.</p>
@@ -136,6 +139,7 @@ function bestiaire(B) {
   const muts = B.mutationsInstables.map(m => `<article class="ent"><h4>${esc(m.n)}</h4><p>${esc(m.d)}</p></article>`).join('');
   return `<section class="sec" id="bestiaire" data-sec>${MARK('data/bestiaire.js')}<header class="sh"><p class="eyebrow">Ennemis</p><h2>Bestiaire</h2><div class="lede"><p>Les statistiques indiquées sont les valeurs de base (salle 1, palier 0). Elles augmentent à chaque salle de <b>${pct(B.montee.pvParSalle)} de PV</b> et de <b>${pct(B.montee.degatsParSalle)} de dégâts</b>, et avec les paliers de Brume. Un <b>champion</b> a ${num(C.pv)}× les PV, ${num(C.degats)}× les dégâts et ${num(C.taille)}× la taille.</p></div></header>
 <h3 class="sub">Les ennemis communs</h3>
+<p>Toutes leurs attaques de zone sont annoncées en <b>rouge</b> : disque qui se remplit (Bouffi), onde pointillée (Hurleur), cône (Voilé), couloir (Brute). Un liseré rouge entoure les tirs des Spectres. Les zones des gardiens restent orange.</p>
 <div class="grid g3">${ennemis}</div>
 <h3 class="sub">Les rôles</h3>
 <p>Plus tard dans la descente, certains ennemis reçoivent un <b>rôle</b>, signalé par une couleur. Il faut le repérer.</p>
@@ -336,7 +340,7 @@ export function build(html) {
   const D = loadData();
   let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D)));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D)));
-  out = replaceSection(out, 'pactes', pactes(D.pactes));
+  out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
   out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire));
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
