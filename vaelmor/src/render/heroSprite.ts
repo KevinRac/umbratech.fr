@@ -1,197 +1,39 @@
 /**
- * Sprite du héros (GDD §4.2, §12.4) : voyageur encapuchonné, 16×24 px.
+ * Sprite du héros (GDD §4.2, §12.4 — décision n°48) : voyageur encapuchonné,
+ * cape bleu nuit, écharpe rouge cendre, épée dans le dos. 16×28 px.
  *
- * Trois poses de base (face, dos, profil droit) × 4 images de marche. Le profil
- * gauche est le profil droit retourné par le moteur (`flipX`). Dessiné par code
- * en attendant les vrais assets : un placeholder lisible, contour compris.
- * Module sans DOM : il peint dans un « puits de pixels » (voir `waterTile.ts`).
+ * Le héros est une apparence du gabarit commun (`render/characterSprite.ts`) :
+ * les PNJ du jalon M2 réutiliseront ce gabarit avec leurs propres couleurs,
+ * coiffure, tenue et accessoire. Pieds et boîte de collision inchangés
+ * (pieds sur la rangée 26, boîte 10×8 de `balance.json`).
  */
+import { CHAR_H, CHAR_POSES, CHAR_W, CHAR_WALK_FRAMES, paintCharacterFrame, ramp3, type CharacterLook, type CharPose } from './characterSprite';
 import { PALETTE as P, mixColor } from './palette';
 import type { PixelSink } from './waterTile';
 
-export const HERO_W = 16;
-export const HERO_H = 24;
-export const HERO_WALK_FRAMES = 4;
-export const HERO_POSES = ['down', 'up', 'side'] as const;
-export type HeroPose = (typeof HERO_POSES)[number];
+export const HERO_W = CHAR_W;
+export const HERO_H = CHAR_H;
+export const HERO_WALK_FRAMES = CHAR_WALK_FRAMES;
+export const HERO_POSES = CHAR_POSES;
+export type HeroPose = CharPose;
 
-const C = {
-  ink: mixColor(P.nuitBleue, P.nuit, 0.5),
-  cloak: mixColor(P.bleuNuit, P.bleuGris, 0.45),
-  cloakLight: mixColor(P.bleuGris, P.ciel, 0.3),
-  cloakDark: mixColor(P.bleuNuit, P.violetBrume, 0.45),
-  scarf: P.rougeCendre,
-  scarfLight: P.orangeForge,
-  skin: mixColor(P.sable, P.orangeForge, 0.18),
-  skinLight: mixColor(P.parchemin, P.sable, 0.3),
-  skinDark: mixColor(P.sable, P.rougeCendre, 0.4),
-  hair: mixColor(P.grisRoux, P.nuit, 0.55),
-  belt: mixColor(P.ambre, P.grisRoux, 0.5),
-  buckle: P.jauneBle,
-  boot: mixColor(P.grisRoux, P.nuit, 0.6),
-  bootLight: P.grisRoux,
-  pants: mixColor(P.grisRoux, P.nuit, 0.35),
-  steel: P.pierre,
-  eye: P.nuit,
-} as const;
+export const HERO_LOOK: CharacterLook = {
+  skin: ramp3(mixColor(P.sable, P.orangeForge, 0.2), P.rougeCendre, P.parchemin, 0.9),
+  hair: ramp3(mixColor(P.terreSombre, P.brique, 0.25), P.ombreProfonde, P.ocre),
+  top: ramp3(mixColor(P.bleuNuit, P.bleuGris, 0.5), P.ombreProfonde, mixColor(P.ciel, P.lumiereChaude, 0.3)),
+  tunic: ramp3(mixColor(P.sable, P.terreSeche, 0.4), P.terreSombre, P.parchemin),
+  accent: ramp3(mixColor(P.rougeCendre, P.brique, 0.15), P.ombreViolette, P.orangeForge),
+  belt: ramp3(mixColor(P.ambre, P.terreSombre, 0.45), P.ombreProfonde, P.ocreClair),
+  pants: ramp3(mixColor(P.grisRoux, P.terreSombre, 0.45), P.ombreProfonde, P.pierre),
+  boots: ramp3(mixColor(P.terreSombre, P.brique, 0.3), P.ombreProfonde, P.terreSeche),
+  metal: ramp3(P.metal, P.ombreProfonde, P.metalClair),
+  eye: mixColor(P.nuitBleue, P.ombreProfonde, 0.4),
+  head: 'hood',
+  outfit: 'cloak',
+  accessory: 'sword',
+};
 
-type Grid = (number | null)[];
-
-function rect(g: Grid, x: number, y: number, w: number, h: number, color: number): void {
-  for (let j = y; j < y + h; j++) {
-    for (let i = x; i < x + w; i++) if (i >= 0 && j >= 0 && i < HERO_W && j < HERO_H) g[j * HERO_W + i] = color;
-  }
-}
-
-const px = (g: Grid, x: number, y: number, color: number): void => rect(g, x, y, 1, 1, color);
-
-/** Corps vu de face ou de dos ; `step` : -1 jambe gauche levée, 1 jambe droite levée, 0 debout. */
-function drawFrontBack(g: Grid, back: boolean, step: number, bob: number): void {
-  const y0 = -bob; // le haut du corps monte d'un pixel sur les pas
-  // Jambes et bottes.
-  const leftUp = step === -1 ? 1 : 0;
-  const rightUp = step === 1 ? 1 : 0;
-  rect(g, 5, 19, 3, 3 - leftUp, C.pants);
-  rect(g, 8, 19, 3, 3 - rightUp, C.pants);
-  rect(g, 5, 21 - leftUp, 3, 2, C.boot);
-  rect(g, 8, 21 - rightUp, 3, 2, C.boot);
-  px(g, 5, 21 - leftUp, C.bootLight);
-  px(g, 8, 21 - rightUp, C.bootLight);
-  // Cape.
-  rect(g, 4, 12 + y0, 8, 8, C.cloak);
-  rect(g, 4, 12 + y0, 2, 8, C.cloakLight);
-  rect(g, 10, 12 + y0, 2, 8, C.cloakDark);
-  rect(g, 4, 19 + y0, 8, 1, C.cloakDark);
-  // Ceinture.
-  rect(g, 4, 16 + y0, 8, 1, C.belt);
-  if (!back) px(g, 7, 16 + y0, C.buckle);
-  // Bras.
-  const swing = step;
-  rect(g, 3, 13 + y0 + (swing === 1 ? 1 : 0), 1, 5, C.cloak);
-  rect(g, 12, 13 + y0 + (swing === -1 ? 1 : 0), 1, 5, C.cloakDark);
-  px(g, 3, 18 + y0 + (swing === 1 ? 1 : 0), C.skin);
-  px(g, 12, 18 + y0 + (swing === -1 ? 1 : 0), C.skin);
-  // Écharpe.
-  rect(g, 5, 11 + y0, 6, 2, C.scarf);
-  px(g, 5, 11 + y0, C.scarfLight);
-  if (!back) {
-    px(g, 9, 13 + y0, C.scarf);
-    px(g, 9, 14 + y0, C.scarf);
-  }
-  // Tête et capuche.
-  rect(g, 4, 3 + y0, 8, 8, C.cloak);
-  rect(g, 5, 2 + y0, 6, 1, C.cloak);
-  rect(g, 4, 3 + y0, 1, 8, C.cloakLight);
-  rect(g, 11, 3 + y0, 1, 8, C.cloakDark);
-  if (back) {
-    rect(g, 6, 4 + y0, 4, 5, C.cloakDark);
-    // Fourreau d'épée en travers du dos.
-    for (let i = 0; i < 6; i++) px(g, 5 + i, 18 + y0 - i, C.steel);
-    px(g, 4, 18 + y0, C.belt);
-    px(g, 10, 12 + y0, C.buckle);
-  } else {
-    rect(g, 5, 5 + y0, 6, 5, C.skin);
-    rect(g, 5, 5 + y0, 6, 1, C.cloakDark); // ombre du capuchon sur le front
-    rect(g, 5, 6 + y0, 6, 1, C.hair);
-    px(g, 5, 7 + y0, C.hair);
-    px(g, 10, 7 + y0, C.hair);
-    px(g, 6, 7 + y0, C.skinLight);
-    px(g, 6, 8 + y0, C.eye);
-    px(g, 9, 8 + y0, C.eye);
-    px(g, 7, 7 + y0, C.skinLight);
-    px(g, 8, 9 + y0, C.skinDark);
-    rect(g, 5, 9 + y0, 6, 1, C.skinDark);
-    px(g, 7, 4 + y0, C.cloakLight);
-    px(g, 6, 3 + y0, C.cloakLight);
-  }
-}
-
-/** Profil droit. */
-function drawSide(g: Grid, frame: number, bob: number): void {
-  const y0 = -bob;
-  const step = frame === 1 ? -1 : frame === 3 ? 1 : 0;
-  // Jambes : écartées sur les pas, jointes à l'arrêt.
-  const back = step === 0 ? 7 : step === -1 ? 4 : 9;
-  const front = step === 0 ? 7 : step === -1 ? 9 : 4;
-  rect(g, back, 19, 3, 3, C.pants);
-  rect(g, back, 21, 3, 2, C.boot);
-  rect(g, front, 19, 3, 3, C.pants);
-  rect(g, front, 21, 3, 2, C.boot);
-  px(g, front + 2, 21, C.bootLight);
-  px(g, front + 2, 22, C.bootLight);
-  // Cape : pan arrière qui flotte.
-  rect(g, 4, 12 + y0, 7, 8, C.cloak);
-  rect(g, 3, 14 + y0, 1, 5, C.cloakDark);
-  rect(g, 4, 12 + y0, 2, 8, C.cloakDark);
-  rect(g, 9, 12 + y0, 2, 8, C.cloakLight);
-  rect(g, 4, 19 + y0, 7, 1, C.cloakDark);
-  rect(g, 4, 16 + y0, 7, 1, C.belt);
-  px(g, 10, 16 + y0, C.buckle);
-  // Épée au côté.
-  px(g, 4, 17 + y0, C.steel);
-  px(g, 3, 18 + y0, C.steel);
-  px(g, 3, 19 + y0, C.steel);
-  // Bras avant qui balance.
-  const armX = step === 0 ? 7 : step === -1 ? 9 : 5;
-  rect(g, armX, 13 + y0, 2, 5, C.cloakLight);
-  px(g, armX + (step === -1 ? 1 : 0), 18 + y0, C.skin);
-  // Écharpe.
-  rect(g, 6, 11 + y0, 5, 2, C.scarf);
-  px(g, 5, 12 + y0, C.scarf);
-  px(g, 4, 13 + y0, C.scarf);
-  px(g, 6, 11 + y0, C.scarfLight);
-  // Tête.
-  rect(g, 4, 3 + y0, 8, 8, C.cloak);
-  rect(g, 5, 2 + y0, 6, 1, C.cloak);
-  rect(g, 4, 3 + y0, 3, 8, C.cloakDark);
-  rect(g, 8, 5 + y0, 4, 5, C.skin);
-  rect(g, 8, 5 + y0, 4, 1, C.cloakDark);
-  rect(g, 8, 6 + y0, 3, 1, C.hair);
-  px(g, 9, 7 + y0, C.skinLight);
-  px(g, 10, 8 + y0, C.eye);
-  px(g, 8, 3 + y0, C.cloakLight);
-  px(g, 9, 2 + y0, C.cloakLight);
-  px(g, 12, 8 + y0, C.skinDark);
-  rect(g, 8, 9 + y0, 3, 1, C.skinDark);
-}
-
-/** Peint une image du héros avec un contour sombre, au coin (ox, oy) du puits de pixels. */
+/** Peint une image du héros au coin (ox, oy) du puits de pixels. */
 export function paintHeroFrame(sink: PixelSink, ox: number, oy: number, pose: HeroPose, frame: number): void {
-  const g: Grid = new Array<number | null>(HERO_W * HERO_H).fill(null);
-  const bob = frame === 1 || frame === 3 ? 1 : 0;
-  const step = frame === 1 ? -1 : frame === 3 ? 1 : 0;
-  if (pose === 'side') drawSide(g, frame, bob);
-  else drawFrontBack(g, pose === 'up', step, bob);
-
-  // Relief : liseré clair sur les bords haut/gauche, ombre sur les bords bas/droite.
-  const filled = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < HERO_W && y < HERO_H && g[y * HERO_W + x] !== null;
-  const relief = new Map<number, number>();
-  for (let y = 0; y < HERO_H; y++) {
-    for (let x = 0; x < HERO_W; x++) {
-      const c = g[y * HERO_W + x];
-      if (c == null) continue;
-      const lit = !filled(x - 1, y) || !filled(x, y - 1);
-      const dark = !filled(x + 1, y) || !filled(x, y + 1);
-      if (lit && !dark) relief.set(y * HERO_W + x, mixColor(c, P.parchemin, 0.22));
-      else if (dark && !lit) relief.set(y * HERO_W + x, mixColor(c, P.nuitBleue, 0.3));
-    }
-  }
-  relief.forEach((c, i) => {
-    g[i] = c;
-  });
-
-  // Contour.
-  const solid = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < HERO_W && y < HERO_H && g[y * HERO_W + x] !== null;
-  for (let y = 0; y < HERO_H; y++) {
-    for (let x = 0; x < HERO_W; x++) {
-      if (solid(x, y)) sink.set(ox + x, oy + y, g[y * HERO_W + x] as number);
-      else {
-        const near = [g[y * HERO_W + x - 1], g[y * HERO_W + x + 1], g[(y - 1) * HERO_W + x], g[(y + 1) * HERO_W + x]].find(
-          (c, i) => c != null && (i === 0 ? x > 0 : i === 1 ? x < HERO_W - 1 : i === 2 ? y > 0 : y < HERO_H - 1),
-        );
-        // Contour « sélectif » : la teinte du voisin, assombrie, plutôt qu'un noir uniforme.
-        if (near != null) sink.set(ox + x, oy + y, mixColor(near, C.ink, 0.72));
-      }
-    }
-  }
+  paintCharacterFrame(sink, ox, oy, HERO_LOOK, pose, frame);
 }

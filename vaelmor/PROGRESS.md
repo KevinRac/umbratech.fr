@@ -17,8 +17,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] Étape 2 : bâtiments — décision n°44 (validée le 17/10/2026)
 - [x] Étape 3 : végétation — décision n°45 (validée le 17/10/2026)
 - [x] Étape 4 : petits décors et accessoires — décision n°46 (validée le 17/10/2026)
-- [x] Étape 5 : post-effets HD-2D — décision n°47 (en attente de validation)
-- [ ] Étape 6 : héros
+- [x] Étape 5 : post-effets HD-2D — décision n°47 (validée le 17/10/2026, soir assombri)
+- [x] Étape 6 : héros — décision n°48 (en attente de validation)
 
 ## État
 - [x] M0a : GDD v0.1 rédigé, validé le 16/10/2026 (v0.2, 28 décisions)
@@ -47,7 +47,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - **Caméra** (`logic/world/camera.ts`) : zone morte 24×16, lissage indépendant du framerate, limites de la carte, arrondi à l'affichage.
 - **Zones et lieux** (`logic/world/zones.ts`) : bandeau d'entrée de zone et de lieu, « lieu découvert », teinte et particules d'ambiance par zone (pollen, feuilles, brume, braises, cendres), panneau de zone dans le HUD.
 - **Passages verrouillés** : bandes barrières le long de chaque frontière de zone (forêt dense, marais profond, falaise) percées là où une route la traverse ; la case de passage est bloquante tant que le drapeau du boss n'est pas levé (`boss_brakk`, `boss_roi_cerf`, `boss_merrow`, `boss_gardien_cendre`), brume visible et message de la zone au contact. Chaussée de pierre vers la Citadelle (îlot Z5).
-- **Héros** (`render/heroSprite.ts`) : placeholder 16×24, 3 poses (face, dos, profil retourné) × 4 images, ombre, marche 8 ips (12 en course). Profondeur : le héros passe derrière les cimes d'arbres (`canopy`).
+- **Héros** (`render/heroSprite.ts`) : placeholder 16×24 (refait en 16×28 par la décision n°48), 3 poses (face, dos, profil retourné) × 4 images, ombre, marche 8 ips (12 en course). Profondeur : le héros passe derrière les cimes d'arbres (`canopy`).
 - **Debug** (F3 ou `?debug`) : F2 téléporte au lieu suivant, F4 affiche les collisions et la boîte du héros, F6 bascule jour / soir, F9 ouvre / referme tous les passages, `?debug&at=31,58` pose le héros sur une case, `&quality=low|off` et `&fxoff=bloom,tiltShift` règlent les effets (n°47) ; case, zone, lieu et collision affichés en direct.
 - **Pause** (Échap) : reprendre / retour au titre. L'état du monde vit en mémoire (`core/session.ts`) en attendant la sauvegarde (M9).
 - **Tests** : 95 au vert (dont accessibilité de la carte passages fermés → seule la zone 1, passages ouverts → tous les lieux, et un joueur simulé qui rallie 6 lieux avec le vrai code de déplacement ; marche aléatoire de 10 min sans jamais entrer dans un mur).
@@ -114,6 +114,13 @@ Non mesurable ici : la session n'a pas de GPU (Chromium en WebGL logiciel SwiftS
   - **Réglage « Qualité »** dans le menu Pause (Échap) : Haute (tout), Basse (étalonnage et vignettage), Désactivée (aucun filtre ; la teinte `ambient` du HUD reste). Enregistré dans `vaelmor:settings` (`core/settings.ts`), Haute par défaut. Debug : `?debug&quality=low`, `?debug&fxoff=bloom,tiltShift` coupe des effets un par un pour mesurer.
   - Tests `tests/atmosphere.test.ts` : plans de qualité, défilement et lecture prudente du réglage, soir plus sombre et plus chaud pour chaque zone, scintillement borné et désynchronisé, fenêtres éteintes le jour, masque du flou symétrique et monotone.
   - **Coût mesuré en rendu logiciel** (SwiftShader, 960×540, Haut-Gué) : Désactivée ~18 ips, Basse ~13 ips, **Haute ~5 ips**. Bloom et flou de profondeur coûtent chacun ~6 passes plein écran (rayons, poussière et halos : négligeables). Sans GPU ces chiffres ne disent rien du jeu réel, mais ils montrent que la qualité Haute est la plus chère : **à vérifier par l'auteur avec F3** ; si une machine modeste descend sous 60 ips, choisir Basse.
+
+- **n°48 — Héros 16×28, gabarit commun des personnages** (refonte graphique, étape 6) :
+  - **Gabarit** `render/characterSprite.ts` : 16×28 px, proportions *Eastward* (tête de 11 rangées sur 26, gros yeux de 2 pixels, joues rosées), pieds sur la rangée 26 (même ancrage qu'avant, même boîte de collision 10×8), 3 poses (face, dos, profil droit retourné pour la gauche) × 4 images de marche : le haut du corps monte d'un pixel sur les pas, jambes et mains alternent.
+  - Formes dessinées en « pixel art texte » (une lettre par matière : peau, cheveux, cape, tunique, écharpe, ceinture, pantalon, bottes, métal) ; **ombrage à 3 tons calculé** (bord gauche/haut clair, bord droit/bas sombre, majuscule = sombre forcé) ; **contour sombre coloré** (teinte du voisin poussée vers le bleu nuit, plus sombre que celui des décors) d'un pixel d'art, soit 2 pixels à l'écran au zoom ×2. Un contour de 2 pixels d'art mangeait la silhouette sur 16 px de large.
+  - **Apparence** (`CharacterLook`) : couleurs par matière (`ramp3`), tête (capuche, cheveux courts, longs, chignon), tenue (cape, tunique, robe), accessoire (épée, besace, lanterne). Le héros est l'apparence `HERO_LOOK` (`render/heroSprite.ts`) : voyageur encapuchonné, cape bleu nuit, écharpe rouge cendre, tunique sable, épée dans le dos (poignée au-dessus de l'épaule de face, fourreau à la hanche de profil). Les PNJ du M2 déclareront leur apparence sans nouveau dessin ; aucun PNJ n'est ajouté au jeu maintenant (accord de l'auteur).
+  - Ombre au sol, silhouette derrière les toits (n°44) et animations inchangées (mêmes noms d'images).
+  - Test `tests/characterSprite.test.ts` : 16×28, tailles des formes, pieds et contour en bas, marge du rebond en haut, les 48 combinaisons tête × tenue × accessoire peintes dans le cadre avec des images de marche distinctes, 3 tons sur la cape, aucun sombre neutre ni noir.
 
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).

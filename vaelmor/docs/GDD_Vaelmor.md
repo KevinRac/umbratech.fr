@@ -1063,11 +1063,11 @@ Les sept principes de la refonte :
 |---|---|---|---|
 | 1 | **Palette et étalonnage** | Tons chauds légèrement désaturés (ocres, terre cuite, olive, bleu ardoise). Ombres **violet-bleu**, jamais grises ni noires. Lumières jaune-orangé. Un étalonnage « fin d'après-midi » **par zone**. | ✅ |
 | 2 | **Densité de détail** | Décors racontés : toits en rangées d'ardoises/bardeaux avec ombre sous chaque rang, colombages, volets, enseignes en fer forgé, jardinières, tonneaux, sacs, outils, lanternes, linge, herbes folles au pied des murs, mousse et fissures. Chaque bâtiment a **sa silhouette** : chaumière, forge, auberge, temple, moulin, tour de garde. | ✅ |
-| 3 | **Volume et relief** | Lumière **fixe en haut à gauche** sur tout le jeu. Faces de murs plus sombres que les toits. Ombres portées douces vers le bas à droite. Occlusion ambiante au contact sol/mur. Contours sombres **colorés** (teinte du matériau assombrie), plus épais sur les personnages (2 px) que sur les décors (1 px). | ✅ sol · 🔧 reste |
+| 3 | **Volume et relief** | Lumière **fixe en haut à gauche** sur tout le jeu. Faces de murs plus sombres que les toits. Ombres portées douces vers le bas à droite. Occlusion ambiante au contact sol/mur. Contours sombres **colorés** (teinte du matériau assombrie), plus sombres sur les personnages que sur les décors (1 pixel d'art = 2 px à l'écran). | ✅ |
 | 4 | **Sol** | Peu de bruit, **larges plaques de 3 tons**, transitions organiques sans bords droits ni escaliers (voir 12.2b). | ✅ |
 | 5 | **Végétation** | Arbres volumineux en 3-4 masses de feuillage éclairées, troncs avec racines, buissons, fleurs sauvages, tournesols et lavande près des villages, légère animation au vent (le blé est déjà animé). | ✅ |
-| 6 | **Atmosphère HD-2D** | Via les filtres de Phaser 4, réglables et désactivables : flou de profondeur (tilt-shift) en haut et en bas, bloom doux, vignettage, rayons de lumière obliques et poussière, halos animés (scintillement des feux), éclairage jour/soir préparé. | 🔧 étape 5 livrée, à valider |
-| 7 | **Personnages** | Proportions *Eastward* (tête un peu grosse), contour sombre, **3 tons par matériau**, petite ombre au sol. | 🔧 étape 6 |
+| 6 | **Atmosphère HD-2D** | Via les filtres de Phaser 4, réglables et désactivables : flou de profondeur (tilt-shift) en haut et en bas, bloom doux, vignettage, rayons de lumière obliques et poussière, halos animés (scintillement des feux), éclairage jour/soir préparé. | ✅ |
+| 7 | **Personnages** | Proportions *Eastward* (tête un peu grosse), contour sombre, **3 tons par matériau**, petite ombre au sol. | 🔧 étape 6 livrée, à valider |
 
 - Justification : coût d'art maîtrisable (tout est du code), rendu « beau » par la lumière et l'étalonnage plutôt que par le nombre de pixels, parfaitement adapté à Phaser/WebGL.
 - Rejetés : 3D/HD-2D complet (trop lourd), vectoriel (moins d'identité), packs d'images libres (cohérence difficile, voir décision n°22).
@@ -1148,7 +1148,7 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 
 ### 12.4 Personnages, ennemis, bâtiments, interface
 
-- **Personnages** 🔧 (étape 6) : sprite **16×28 px**, tête un peu grosse (proportions *Eastward*), contour sombre de 2 px teinté, 3 tons par matériau, petite ombre au sol, accessoires emblématiques (lanterne, bannière, harpon). Le héros sert de **modèle** que les PNJ réutilisent en M2 (changement de couleurs, coiffure, accessoire).
+- **Personnages** 🔧 (étape 6, livrée) : sprite **16×28 px**, tête de 11 rangées sur 26 (proportions *Eastward*), contour sombre teinté (2 px à l'écran), 3 tons par matériau calculés, petite ombre au sol. **Gabarit commun** (`render/characterSprite.ts`) : une apparence = couleurs par matière + tête (capuche, courts, longs, chignon) + tenue (cape, tunique, robe) + accessoire (épée, besace, lanterne) ; le héros est l'une d'elles, les PNJ du M2 déclareront les leurs sans nouveau dessin.
 - **Ennemis** ⏳ : formes distinctes par famille (Écumeurs : bandanas rouges ; Brume : silhouettes fluides violacées ; Golems : blocs de pierre).
 - **Bâtiments** ✅ (étape 2) : six silhouettes de base — **chaumière, forge, auberge, temple, moulin, tour de garde** — plus grandes qu'avant si besoin (mêmes positions de village, mêmes routes, collision au pied). Toits en rangées avec ombre sous chaque rang, façades à colombages plus sombres que les toits, volets, enseignes en fer forgé, mousse et fissures ; toit coloré par village (chaume jaune, bois vert, ardoise bleue, pierre rouge).
 - **Petits décors** ✅ (étape 4) : jardinières, tonneaux, sacs, outils, lampadaires, cordes à linge, caisses, bois coupé, charrette, bancs, étals, puits couvert, tableau d'affichage, poteries et filets au port, herbes folles au pied des murs ; rochers, falaises, remparts, ruines, épaves et camp refaits dans le même style. Chaque village a son jeu d'accessoires (ferme, bûcherons, pêche, montagne, ville). Feux de camp, bannières et linge animés.
@@ -1181,7 +1181,7 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 | **Bâtiments** | 6 silhouettes × variantes de toit par village | ~6 + variantes | ✅ |
 | **Végétation** | Arbres (3-4 variantes), buissons, fleurs, tournesols, lavande | ~15 | ✅ |
 | **Petits décors** | Tonneaux, sacs, jardinières, lanternes, linge, outils, enseignes, rochers, falaises, remparts, ruines | ~40 | ✅ |
-| **Personnages carte** | Héros 16×28 puis 12 classes × 4 directions × 4 frames (24 évolutions = recolorations) | 12 + 24 variantes | 🔧 héros · ⏳ reste |
+| **Personnages carte** | Héros 16×28 puis 12 classes × 4 directions × 4 frames (24 évolutions = recolorations) | 12 + 24 variantes | 🔧 héros et gabarit livrés · ⏳ reste |
 | **Personnages combat** | 12 classes × 5 animations | 12 feuilles | ⏳ |
 | **Portraits** | 30 PNJ + 12 recrues | ~40 | ⏳ |
 | **Ennemis** | 12 types monde + 12 sprites combat + 5 boss | ~30 | ⏳ |
@@ -1198,7 +1198,7 @@ L'art du monde n'est plus un « placeholder » : il est généré par code selon
 | Élément | Approche |
 |---|---|
 | Tilesets, bâtiments, végétation | **Générés par code** (`tools/world/*`), régénérés par `npm run generate-world` ; le test d'identité garantit que la carte livrée correspond au générateur |
-| Personnages | Modèle de héros 16×28 généré par code, décliné en PNJ par recoloration (M2) |
+| Personnages | Gabarit 16×28 généré par code (`CharacterLook`), décliné en PNJ par couleurs, tête, tenue et accessoire (M2) |
 | Portraits | Silhouettes colorées avec expression en texte |
 | Ennemis | Formes simplifiées (blobs et silhouettes) |
 | UI | Cadres générés par code (9-slice) |
@@ -1210,7 +1210,7 @@ L'art du monde n'est plus un « placeholder » : il est généré par code selon
 
 ### 12.8 Méthode de la refonte (rappel)
 
-Ordre imposé, une validation de l'auteur après chaque étape (capture 960×540 + détail ×3) : **1)** palette, étalonnage, sol ✅ validé le 17/10/2026 · **2)** bâtiments ✅ validé le 17/10/2026 · **3)** végétation ✅ validé le 17/10/2026 · **4)** petits décors ✅ validé le 17/10/2026 · **5)** post-effets HD-2D 🔧 livré · **6)** héros. Chaque étape : `generate-world`, tests, build, commit sur `main` avec `play/`, décision numérotée dans PROGRESS.md (n°47 à ce jour).
+Ordre imposé, une validation de l'auteur après chaque étape (capture 960×540 + détail ×3) : **1)** palette, étalonnage, sol ✅ validé le 17/10/2026 · **2)** bâtiments ✅ validé le 17/10/2026 · **3)** végétation ✅ validé le 17/10/2026 · **4)** petits décors ✅ validé le 17/10/2026 · **5)** post-effets HD-2D ✅ validé le 17/10/2026 · **6)** héros 🔧 livré. Chaque étape : `generate-world`, tests, build, commit sur `main` avec `play/`, décision numérotée dans PROGRESS.md (n°48 à ce jour).
 
 ---
 
