@@ -22,7 +22,7 @@
  attaques:{
   2:{file:[null,['glas','maree','cloches','charge'],['glas','maree','cloches','charge','summon','cloches'],['maree2','cloches','glas','charge','maree','summon']],
    liste:{
-    maree:{n:'Marée noire',d:'Une vague traverse la salle d’un bord à l’autre. Une brèche y reste ouverte, bordée de blanc : glisse-toi dedans ou esquive au travers.',vitesse:320,largeur:56,breche:160,preavisS:1.1,degats:1.2},
+    maree:{n:'Marée noire',d:'Un mur d’eau noire à crête d’écume traverse la salle d’un bord à l’autre. Une brèche y reste ouverte, signalée par un halo clair : glisse-toi dedans ou esquive au travers.',vitesse:320,largeur:56,breche:160,preavisS:1.1,degats:1.2},
     maree2:{n:'Double marée',d:'Au troisième temps, deux vagues se suivent, l’une en travers de l’autre. Chacune a sa brèche.',ecartS:1.3},
     cloches:{n:'Cloches noyées',d:'Des cercles orange marquent où tombent les cloches, là où tu vas. Sors-en. Elles écrasent aussi les ennemis : attire-les dessous.',nombre:[0,3,4,6],intervalleS:0.35,preavisS:0.95,rayon:72,degats:1.1},
     glas:{n:'Glas',d:'Il sonne : des anneaux s’élargissent depuis sa cloche. Esquive au travers au moment où l’anneau passe.'},

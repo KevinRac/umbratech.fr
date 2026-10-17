@@ -6313,6 +6313,8 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 #toast,#murmur{font-size:19px;max-width:min(760px,calc(100% - 28px))}
 #toast{text-align:left;padding:14px 24px}
 #toast.pause{font-size:20px;padding:16px 28px}
+/* v16.3 : le rectangle jaune d'information (niveau atteint, salle nettoyée…) est collé en haut de l'écran */
+#toast:not(.pause){top:calc(8px + env(safe-area-inset-top,0px))}
 .mrows{display:flex;flex-direction:column;gap:9px}
 .mrow2{display:flex;gap:12px;align-items:baseline;line-height:1.45;font-size:inherit}
 .mrow2 .lab{flex:none;min-width:88px;text-align:center;font-size:.8em;letter-spacing:.1em;text-transform:uppercase;padding:2px 9px;border:1px solid currentColor;border-radius:3px;color:var(--flame,#f3b94d);background:rgba(255,255,255,.05)}
@@ -7156,15 +7158,30 @@ details.fold>.chips{margin-top:8px}
     // ombre de la cloche qui descend
     const s=0.35+0.65*k;c.fillStyle=`rgba(10,8,14,${0.25+0.45*k})`;c.beginPath();c.ellipse(h.x,h.y+4,h.r*0.42*s,h.r*0.16*s,0,0,TAU);c.fill();}
    else if(h.k==='maree'){const X=h.axis==='x',a0=X?AR.y0:AR.x0,a1=X?AR.y1:AR.x1,g0=h.gc-h.gw/2,g1=h.gc+h.gw/2;
-    const band=(p,w,fill)=>{for(const [u,v] of[[a0,g0],[g1,a1]]){if(v<=u)continue;c.fillStyle=fill;if(X)c.fillRect(p-w,u,w*2,v-u);else c.fillRect(u,p-w,v-u,w*2);}};
-    // couloir sûr : la brèche, bordée de blanc, visible de bout en bout
-    c.strokeStyle=`rgba(255,255,255,${h.warn>0?0.55+0.35*Math.sin(T*18):0.5})`;c.lineWidth=2;c.setLineDash([10,8]);c.lineDashOffset=-T*30;
-    for(const g of[g0,g1]){c.beginPath();if(X){c.moveTo(AR.x0,g);c.lineTo(AR.x1,g);}else{c.moveTo(g,AR.y0);c.lineTo(g,AR.y1);}c.stroke();}c.setLineDash([]);
-    if(h.warn>0){const k=1-h.warn/h.tw;band(h.pos+h.dir*h.w*0.5,h.w*0.5*(0.4+0.6*k),`rgba(${TELE.zone},${0.18+0.3*k})`);
-     c.fillStyle=`rgba(${TELE.zone},${0.6+0.4*Math.sin(T*20)})`;for(const m of[(a0+g0)/2,(g1+a1)/2]){if(Math.abs(m-h.gc)<h.gw/2)continue;const px=X?h.pos+h.dir*22:m,py=X?m:h.pos+h.dir*22,ang=X?(h.dir>0?0:Math.PI):(h.dir>0?Math.PI/2:-Math.PI/2);c.save();c.translate(px,py);c.rotate(ang);c.beginPath();c.moveTo(12,0);c.lineTo(-8,-9);c.lineTo(-8,9);c.closePath();c.fill();c.restore();}}
-    else{band(h.pos,h.w,'rgba(40,120,120,.55)');band(h.pos,h.w*0.55,'rgba(90,220,210,.35)');
-     c.fillStyle=`rgba(${TELE.zone},.9)`;band(h.pos+h.dir*h.w,3,`rgba(${TELE.zone},.95)`);
-     for(let i=0;i<6;i++){const u=a0+((T*90+i*137)%(a1-a0));if(u>g0&&u<g1)continue;glow(c,X?h.pos:u,X?u:h.pos,16,'150,240,230',0.35);}}}
+    // v16.3 · Marée noire redessinée : un mur d'eau noire à crête d'écume, sans tirets. La brèche est simplement l'espace laissé libre.
+    const segs=[[a0,g0],[g1,a1]].filter(s=>s[1]>s[0]);
+    const rect=(p,w,u,v)=>X?c.fillRect(p-w,u,w*2,v-u):c.fillRect(u,p-w,v-u,w*2);
+    if(h.warn>0){const k=1-h.warn/h.tw,pl=0.5+0.5*Math.sin(T*14);
+     // trajectoire : le couloir que la vague va balayer, de bout en bout, sauf la brèche
+     for(const [u,v] of segs){c.fillStyle=`rgba(${TELE.zone},${0.07+0.14*k+0.04*pl})`;rect(h.pos+h.dir*h.w*0.5,h.w*0.5+Math.max(AR.x1-AR.x0,AR.y1-AR.y0)*0.5,u,v);}
+     // la vague se forme au bord de départ
+     for(const [u,v] of segs){c.fillStyle=`rgba(${TELE.zone},${0.2+0.35*k})`;rect(h.pos+h.dir*h.w*0.5,h.w*0.5*(0.3+0.7*k),u,v);}
+     // brèche : un halo clair, sans trait
+     const gl=c.createLinearGradient(X?0:g0,X?g0:0,X?0:g1,X?g1:0);gl.addColorStop(0,'rgba(255,255,255,0)');gl.addColorStop(0.5,`rgba(235,255,250,${0.10+0.10*pl})`);gl.addColorStop(1,'rgba(255,255,255,0)');
+     c.fillStyle=gl;if(X)c.fillRect(AR.x0,g0,AR.x1-AR.x0,g1-g0);else c.fillRect(g0,AR.y0,g1-g0,AR.y1-AR.y0);}
+    else{const sw=Math.max(AR.x1-AR.x0,AR.y1-AR.y0);
+     for(const [u,v] of segs){
+      // corps sombre dégradé en travers de la vague
+      const gr=c.createLinearGradient(X?h.pos-h.w:0,X?0:h.pos-h.w,X?h.pos+h.w:0,X?0:h.pos+h.w);
+      const lead=h.dir>0?1:0;gr.addColorStop(lead?0:1,'rgba(8,28,36,.2)');gr.addColorStop(0.55,'rgba(14,52,62,.82)');gr.addColorStop(lead?1:0,'rgba(120,225,215,.9)');
+      c.fillStyle=gr;rect(h.pos,h.w,u,v);
+      // crête d'écume : trait plein, sur le front de la vague
+      c.fillStyle='rgba(225,255,250,.9)';rect(h.pos+h.dir*h.w,2.5,u,v);
+      c.fillStyle='rgba(150,240,230,.35)';rect(h.pos+h.dir*(h.w-6),7,u,v);}
+     // gerbes d'écume le long de la vague, hors brèche
+     for(let i=0;i<9;i++){const u=a0+((T*70+i*113)%(a1-a0));if(u>g0&&u<g1)continue;glow(c,X?h.pos+h.dir*h.w*0.8:u,X?u:h.pos+h.dir*h.w*0.8,18,'190,250,240',0.3);}
+     // brèche : léger reflet là où l'eau passe de chaque côté
+     for(const g of[g0,g1]){glow(c,X?h.pos:g,X?g:h.pos,22,'210,255,250',0.22);}}}
    else if(h.k==='impl'){const k=h.warn>0?1-h.warn/h.tw:1,R=Math.max(1,h.r);
     c.strokeStyle=`rgba(${TELE.zone},${0.35*k+0.15})`;c.lineWidth=14;c.beginPath();c.arc(h.x,h.y,R,0,TAU);c.stroke();
     c.strokeStyle=`rgba(255,200,130,${0.7*k+0.2})`;c.lineWidth=3;if(h.warn>0){c.setLineDash([12,9]);c.lineDashOffset=T*40;}c.beginPath();c.arc(h.x,h.y,R,0,TAU);c.stroke();c.setLineDash([]);
