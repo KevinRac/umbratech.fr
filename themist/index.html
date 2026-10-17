@@ -6417,6 +6417,14 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   root.querySelectorAll('.tipx').forEach(el=>{el.addEventListener('mouseenter',()=>show(el));el.addEventListener('focus',()=>show(el));el.addEventListener('click',()=>show(el));});
   box.innerHTML=hint;}
  const enc=h=>encodeURIComponent(h);
+ // v16.19 · la fiche sous les emplacements garde toujours la même hauteur (celle de la plus longue), pour que les emplacements et le reste
+ // du panneau ne bougent plus quand on passe de l'un à l'autre. Mesure sur un double invisible.
+ function lockTip(box,htmls){try{
+  const g=box.cloneNode(false);g.removeAttribute('id');g.style.cssText='position:absolute;visibility:hidden;pointer-events:none;height:auto;min-height:0;left:0;right:0';
+  box.parentNode.insertBefore(g,box);g.style.width=box.getBoundingClientRect().width+'px';let mx=0;
+  for(const h of htmls){g.innerHTML=h;mx=Math.max(mx,g.getBoundingClientRect().height);}
+  g.remove();box.style.minHeight=Math.ceil(mx)+'px';box.style.height=Math.ceil(mx)+'px';box.style.overflowY='auto';
+ }catch(e){}}
 
  // ———— écran de trouvaille : 4 emplacements
  openEquip=function(id,title){
@@ -6432,6 +6440,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   <div class="row"><button type="button" class="btn" id="eqn">Laisser · 5</button><span class="k">Codex : ${Object.keys(M().codex||{}).length} / ${Object.keys(EQS).length}</span></div></div>`,E.r==='unique'||E.r==='legendaire'?'eq-unique':'');
   const go=sl=>{if(!armed())return;if(sl){const old=P[EQK[sl-1]];equip(id,sl);toast(`Tu portes ${E.n}.`,2);if(typeof chron==='function')chron('eq',{id,old});}else if(typeof chron==='function')chron('eqleft',{id});closeOverlay();};
   const tip=$('#eqtip'),hint='<p class="muted" style="margin:0">Survole un emplacement occupé pour comparer.</p>';tip.innerHTML=hint;
+  lockTip(tip,[hint,...EQK.map(k=>P[k]?detailHTML(P[k],''):'')]);
   overlayEl.querySelectorAll('.slotx').forEach(b=>{const n=+b.dataset.n,o=P[EQK[n-1]];
    const show=()=>{tip.innerHTML=o?detailHTML(o,''):hint;};b.addEventListener('mouseenter',show);b.addEventListener('focus',show);b.addEventListener('click',()=>go(n));});
   $('#eqn').addEventListener('click',()=>go(0));
@@ -6493,7 +6502,12 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   if(!brBox.querySelector('.prof12')&&!brBox.querySelector('.chron14'))brBox.insertAdjacentHTML('afterbegin','<p class="muted" style="margin:0 0 12px">Le journal se remplit au fil de la run : ce que la Brume retient de toi, la chronique des salles.</p>');
   const eqp=pane('eq');
   if(acts.cdx){const cb=document.createElement('div');cb.className='pzbtns';cb.appendChild(acts.cdx);eqp.appendChild(cb);}
-  bindTips(eqp,eqp.querySelector('#pztip'),`<p class="muted" style="margin:0">Survole un emplacement, un set, un pacte ou une relique pour lire son effet.</p>`);
+  const pzHint=`<p class="muted" style="margin:0">Survole un emplacement, un set, un pacte ou une relique pour lire son effet.</p>`;
+  bindTips(eqp,eqp.querySelector('#pztip'),pzHint);
+  { const bx=eqp.querySelector('#pztip'),hs=[pzHint,...[...eqp.querySelectorAll('.tipx')].map(el=>el.dataset.html?decodeURIComponent(el.dataset.html):'')];
+    // le panneau Équipement est masqué tant que son onglet n'est pas ouvert : on mesure à l'ouverture de l'onglet
+    const lock=()=>{if(bx.dataset.lk||!bx.getBoundingClientRect().width)return;bx.dataset.lk='1';lockTip(bx,hs);};
+    lock();if(!bx.dataset.lk&&window.ResizeObserver){const ro=new ResizeObserver(()=>{lock();if(bx.dataset.lk||!bx.isConnected)ro.disconnect();});ro.observe(bx);} }
   // barre d'actions
   const bar=document.createElement('div');bar.className='pzbar';
   const left=document.createElement('div');left.className='pzl';[acts.resume,acts.guide].forEach(b=>{if(b)left.appendChild(b);});
