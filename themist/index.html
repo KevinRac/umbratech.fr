@@ -1624,7 +1624,7 @@ function arrowHide(){cancelAnimationFrame(ARR_RAF);if(ARR){ARR.svg.remove();ARR=
 function msgDone(){clearTimeout(msgTimer);arrowHide();const m=msgCur;msgCur=null;if(m){if(m.k==='t'){toastEl.classList.remove('show');toastEl.classList.remove('pause');}else if(murEl)murEl.classList.remove('show');}freezeT=MSGQ.length?0.3:0;if(MSGQ.length)setTimeout(msgNext,260);else hintPaused=false;}
 function skipHint(){if(!hintPaused||!msgCur)return false;msgDone();mouse.l=mouse.r=false;keys.clear();return true;}
 window.addEventListener('keydown',ev=>{if(hintPaused&&msgCur&&(ev.code==='Space'||ev.code==='Enter')){ev.preventDefault();ev.stopImmediatePropagation();skipHint();}},true);
-window.addEventListener('pointerdown',()=>{if(hintPaused&&msgCur)skipHint();},true);
+window.addEventListener('pointerdown',e=>{if(e.button!==0)return;if(hintPaused&&msgCur)skipHint();},true);
 let bannerTimer=0;function showBanner(ey,name,boss){$('#bEy').textContent=ey;$('#bName').textContent=name;const b=$('#banner');b.classList.toggle('boss',!!boss);b.classList.add('show');clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>b.classList.remove('show'),2300);}
 
 // ───────────────────────── Talents
@@ -1908,6 +1908,8 @@ cv.addEventListener('mousemove',updMouse);
 cv.addEventListener('mousedown',e=>{updMouse(e);initAudio();if(e.button===0){mouse.l=true;if(P){P.clickQ=1;P.clickT=0.16;}}if(e.button===2){mouse.r=true;if(P){P.rclickQ=1;P.rclickT=0.16;}}});
 addEventListener('mouseup',e=>{if(e.button===0)mouse.l=false;if(e.button===2)mouse.r=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+// v16.7 · clic droit désactivé dans les menus, bulles et fiches : plus de menu du navigateur (sauf dans un champ de saisie)
+addEventListener('contextmenu',e=>{const t=e.target;if(t&&t.closest&&t.closest('input,textarea,select,[contenteditable="true"]'))return;e.preventDefault();},true);
 addEventListener('keydown',e=>{
  const c=e.code;musicKick();
  if(!overlayEl.hidden){if(overlayKeys)overlayKeys(c,e);return;}
@@ -7572,7 +7574,12 @@ function demoBoot(cls){
 #assist .aid em{display:block;font-style:normal;font-weight:800;color:#8fe9ff;font-size:15px}
 #assist .aid small{display:block;opacity:.75;font-size:13px;line-height:1.3}
 @media (prefers-reduced-motion:no-preference){#toast.rich.show .tbadge{animation:tbpop .35s cubic-bezier(.2,1.6,.4,1)}}
-@keyframes tbpop{from{transform:scale(.6)}to{transform:scale(1)}}`;
+@keyframes tbpop{from{transform:scale(.6)}to{transform:scale(1)}}
+/* v16.7 · petits écrans : centrage sûr (un panneau plus haut que l'écran défile au lieu d'être rogné) et fiche de talent collée en bas */
+#overlay{display:flex;flex-direction:column;place-items:unset}
+#overlay>*{margin:auto}
+.tree-cap{max-height:none;overflow:visible}
+@media (max-width:880px),(max-height:760px){.tree-cap{position:sticky;bottom:0;z-index:4;max-height:42vh;overflow-y:auto;box-shadow:0 -10px 18px rgba(8,10,16,.92),0 0 0 1px rgba(0,0,0,.6)}}`;
  document.head.appendChild(st);
 })();
 
