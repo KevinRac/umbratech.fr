@@ -1,0 +1,2098 @@
+{
+  "$comment": "Les 22 lieux de la carte du monde (décision n°35), leurs PNJ, boutiques et récompenses de progression. `reputation` est null pour les lieux sans habitants. Voir src/data/townSchemas.ts.",
+  "factions": [
+    {
+      "id": "marees",
+      "name": "Ordre des Marées",
+      "description": "Marins et prêtres de Port-Brume, gardiens de la côte.",
+      "color": "#5fa8c8",
+      "start": 0
+    },
+    {
+      "id": "couronne",
+      "name": "Couronne de Cendre",
+      "description": "Le pouvoir de Valcendre et de sa Régente.",
+      "color": "#b5483a",
+      "start": 0
+    },
+    {
+      "id": "racines",
+      "name": "Cercle des Racines",
+      "description": "Gardiens de la forêt, alliés des esprits.",
+      "color": "#6aa84f",
+      "start": 0
+    },
+    {
+      "id": "lanternes",
+      "name": "Veilleurs des Lanternes",
+      "description": "Les gardiens de la flamme, dans les Monts.",
+      "color": "#e3b341",
+      "start": 0
+    }
+  ],
+  "locations": [
+    {
+      "id": "haut_gue",
+      "name": "Haut-Gué",
+      "summary": "Village de pêcheurs et de fermiers au gué du fleuve Argent. Auberge, forge, rations. Tout commence ici.",
+      "reputation": {"start":10},
+      "npcs": [
+        {
+          "id": "maelys",
+          "name": "Maëlys",
+          "title": "Aubergiste",
+          "at": [75,87],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#8a4b2a",
+            "top": "#c9a24a",
+            "tunic": "#b5483a",
+            "accent": "#f0e0b8",
+            "belt": "#6b4a2a",
+            "pants": "#5a4636",
+            "boots": "#3a2a20",
+            "head": "bun",
+            "outfit": "dress",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Va-t’en. Ma maison n’accueille pas ceux qui ont fait du tort au village."],
+            "mefiant": ["Une chambre ? Elle se paie d’avance, voyageur."],
+            "neutre": ["Assieds-toi, voyageur. Si tu cherches du travail, Thom a une affaire de farine."],
+            "amical": [
+              "Tiens, un visage connu ! Ta soupe est chaude.",
+              "Et si tu veux dormir, le prix est doux pour toi."
+            ],
+            "allie": ["Ta chambre habituelle est prête. Et ce soir, la soupe est offerte."],
+            "heros_local": ["Le héros de Haut-Gué ! Toute la maison est à toi, ce soir et tous les soirs."]
+          },
+          "options": [
+            {
+              "kind": "inn",
+              "label": "Se reposer",
+              "cost": 20,
+              "freeFrom": "allie",
+              "reply": ["La chambre du fond est tranquille. Dors bien : demain, tout sera plus clair."],
+              "freeReply": ["Pas question de te faire payer ! Ta chambre est prête, comme toujours."],
+              "poorReply": ["Vingt pièces d’or, voyageur. Reviens quand tu les auras, je ne fais pas crédit."]
+            },
+            {
+              "kind": "topic",
+              "label": "La rumeur du jour",
+              "lines": [
+                "On dit que des écumeurs se cachent à l’est, près de la côte. Ils attendent la nuit pour piller les charrettes."
+              ]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "thom",
+          "name": "Thom",
+          "title": "Meunier",
+          "at": [61,80],
+          "facing": "e",
+          "look": {
+            "skin": "#e0b98a",
+            "hair": "#d8d2c0",
+            "top": "#c8b890",
+            "tunic": "#d9c9a0",
+            "accent": "#a08a5a",
+            "belt": "#5a4020",
+            "pants": "#6a5a46",
+            "boots": "#3a2a20",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "hostile": ["Fiche le camp de mon moulin."],
+            "mefiant": ["Mmh. Si tu veux de la farine, il faudra la payer."],
+            "neutre": ["Les Écumeurs ont volé ma farine ! Une saison de travail, envolée..."],
+            "amical": ["Ah, mon aide ! Les sacs tournent de nouveau, grâce à toi."],
+            "allie": ["Le moulin tourne, le pain est bon : on te le doit."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "farine_volee",
+              "offer": [
+                "Les Écumeurs ont volé ma farine. Leur chef, Brakk, tient un camp à l’est.",
+                "Chasse-les de là : je te paierai de bon cœur."
+              ],
+              "remind": ["Brakk est toujours à son camp, à l’est, près du Pont des Trois Arches."],
+              "done": ["Ma farine ! Le moulin va repartir. Tiens, prends ceci en remerciement."]
+            },
+            {
+              "kind": "topic",
+              "label": "Le moulin",
+              "lines": ["Il tourne grâce au fleuve Argent. Tant que le gué est libre, Haut-Gué mange à sa faim."]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "ilar",
+          "name": "Capitaine Ilar",
+          "title": "Garde du village",
+          "at": [79,78],
+          "facing": "s",
+          "look": {
+            "skin": "#d2a679",
+            "hair": "#4a3a30",
+            "top": "#6a7a8a",
+            "tunic": "#4f6a8a",
+            "accent": "#d8c070",
+            "belt": "#3a2a20",
+            "pants": "#3a3a46",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "hostile": ["Tu as fait du tort à notre village. Ne traîne pas près du puits."],
+            "mefiant": ["Je t’ai à l’œil, étranger. Reste tranquille."],
+            "neutre": ["Capitaine Ilar, garde de Haut-Gué. Tu veux voir la Brume ? Il faut des yeux fiables."],
+            "amical": ["Ah, c’est toi. On parle de toi à la caserne. Un éclaireur comme toi, ça se garde."],
+            "allie": ["Mes hommes te saluent. Le village dort mieux depuis ton arrivée."],
+            "heros_local": ["Le héros de Haut-Gué ! Je me mettrais au garde-à-vous si je n’avais pas ces genoux."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "eclaireur_de_la_brume",
+              "offer": [
+                "Une brume monte depuis la côte, et elle n’est pas naturelle.",
+                "Il me faut un éclaireur : franchis le Vieux Pont, trouve la source du mal, et reviens me dire."
+              ],
+              "remind": ["Le Vieux Pont, puis la forêt, puis la côte. La Brume ne se montre que de près."],
+              "done": ["Tu as vu la Brume et tu es revenu entier. Haut-Gué n’oubliera pas."]
+            },
+            {
+              "kind": "choice",
+              "label": "Parler du passage",
+              "once": true,
+              "prompt": ["Les gardes surveillent le gué. On ne passe pas sans que je le sache."],
+              "choices": [
+                {
+                  "label": "Je respecterai vos règles.",
+                  "reply": ["Bien. Un voyageur sensé est toujours le bienvenu."],
+                  "effects": [{"type":"rep","target":"haut_gue","delta":2}],
+                  "expression": "content"
+                },
+                {
+                  "label": "Je passerai, de gré ou de force.",
+                  "reply": ["Une menace ? À Haut-Gué ? Je te conseille de te taire."],
+                  "effects": [{"type":"rep","target":"haut_gue","delta":-8}],
+                  "expression": "fache"
+                }
+              ]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "bran",
+          "name": "Bran",
+          "title": "Forgeron",
+          "at": [78,86],
+          "facing": "w",
+          "look": {
+            "skin": "#b88660",
+            "hair": "#2a1f1a",
+            "top": "#7a5a3a",
+            "tunic": "#8a6a4a",
+            "accent": "#c8c0b0",
+            "belt": "#2a2020",
+            "pants": "#4a4038",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Je ne forge pas pour les ennemis de Haut-Gué."],
+            "mefiant": ["Mes lames coûtent cher. Pour toi, un peu plus."],
+            "neutre": ["Des armes simples, bien faites. Regarde ce qu’il me reste."],
+            "amical": ["Pour un ami, je trouve toujours une pièce de côté."],
+            "allie": ["Ça me fait plaisir de forger pour toi. Choisis, c’est cadeau... enfin, presque."]
+          },
+          "options": [{"kind":"shop","label":"Voir la forge","shop":"forge_de_bran"}],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "nessa",
+          "name": "Nessa",
+          "title": "Jeune colporteuse",
+          "at": [70,83],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#c9783a",
+            "top": "#3a8a8a",
+            "tunic": "#d9b25a",
+            "accent": "#f0e0b8",
+            "belt": "#5a3a20",
+            "pants": "#4a5a6a",
+            "boots": "#3a2a20",
+            "head": "long",
+            "outfit": "dress",
+            "accessory": "none"
+          },
+          "greeting": {
+            "mefiant": ["Je n’ai pas le temps pour les inconnus."],
+            "neutre": ["Mon père est parti vendre au pont, il y a trois jours. Il aurait déjà dû revenir."],
+            "amical": [
+              "Merci de t’inquiéter. Danser sur le gué, c’est tout ce que je sais faire, mais je peux apprendre à me battre."
+            ]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "colporteur_perdu",
+              "offer": [
+                "Mon père colporte jusqu’au Pont des Trois Arches. Il n’est pas revenu.",
+                "Peux-tu aller voir là-bas ? Je n’ose pas quitter le village."
+              ],
+              "remind": ["Le Pont des Trois Arches, plein est. S’il te plaît, retrouve-le."],
+              "done": ["Il est vivant ! Il s’était juste foulé la cheville. Merci, merci !"]
+            },
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "needsQuest": "colporteur_perdu",
+              "unit": {"id":"nessa","name":"Nessa","class":"danseur_des_courants"},
+              "offer": ["Je danse sur les courants depuis que je sais marcher. Je viens avec toi !"],
+              "locked": ["Ramène-moi d’abord mon père. Après, on verra."]
+            }
+          ]
+        },
+        {
+          "id": "garrec",
+          "name": "Vieux Garrec",
+          "title": "Ancien du village",
+          "at": [66,82],
+          "facing": "w",
+          "look": {
+            "skin": "#d8b28a",
+            "hair": "#e6e6e0",
+            "top": "#6a6a60",
+            "tunic": "#8a7a64",
+            "accent": "#c8b890",
+            "belt": "#4a3a28",
+            "pants": "#5a5046",
+            "boots": "#3a2a20",
+            "head": "hood",
+            "outfit": "cloak",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Les vieux ont de la mémoire. Rachète-toi, et le village te rouvrira ses portes."],
+            "mefiant": ["Je sais qui tu es. Prouve que tu vaux mieux."],
+            "neutre": ["Assieds-toi un moment, jeune. L’île a plus d’histoire que de routes."],
+            "amical": ["Tu m’écoutes, c’est rare. Alors je te dis ce que peu savent."]
+          },
+          "options": [
+            {
+              "kind": "topic",
+              "label": "L’histoire de l’île",
+              "lines": [
+                "Vaelmor est une île de marées. Quand l’eau se retire, elle laisse des cendres.",
+                "Il y a longtemps, une reine a voulu arrêter la mer. Depuis, la Brume monte chaque automne."
+              ]
+            },
+            {
+              "kind": "topic",
+              "label": "La Brume",
+              "when": {"tierMin":"amical"},
+              "lines": [
+                "Ceux qui se perdent dans la Brume reviennent changés. Ou ne reviennent pas.",
+                "Cherche les autels et les menhirs : ils tiennent encore la ligne."
+              ]
+            },
+            {
+              "kind": "donate",
+              "label": "Cagnotte du puits (100 or)",
+              "amount": 100,
+              "rep": {"target":"haut_gue","delta":3},
+              "dailyCap": 15,
+              "reply": ["Cent pièces pour réparer le puits ? Le village s’en souviendra."],
+              "capReply": ["Assez pour aujourd’hui. Le puits est plein de ta générosité."],
+              "poorReply": ["Garde ton or, tu en as besoin. Reviens quand tu en auras."]
+            }
+          ]
+        },
+        {
+          "id": "odile",
+          "name": "Odile",
+          "title": "Marchande de rations",
+          "at": [68,88],
+          "facing": "e",
+          "look": {
+            "skin": "#e0b98a",
+            "hair": "#6a3a2a",
+            "top": "#d98a5a",
+            "tunic": "#e8dcc0",
+            "accent": "#b5483a",
+            "belt": "#6b4a2a",
+            "pants": "#5a4636",
+            "boots": "#3a2a20",
+            "head": "bun",
+            "outfit": "dress",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "hostile": ["Rien à vendre pour toi."],
+            "mefiant": ["Du pain, de la soupe. Paye et passe."],
+            "neutre": ["Du pain doré tout frais ! La soupe du gué, c’est ma fierté."],
+            "amical": ["Pour toi, la meilleure miche du four."],
+            "allie": ["Tout ce que j’ai de bon, c’est pour toi."]
+          },
+          "options": [{"kind":"shop","label":"Acheter des rations","shop":"epicerie_d_odile"}],
+          "refusesWhenHostile": true
+        }
+      ],
+      "shops": [
+        {
+          "id": "forge_de_bran",
+          "name": "Forge de Bran",
+          "welcome": {
+            "neutre": ["Armes basiques, solides. Pas de magie ici."],
+            "amical": ["Regarde, j’ai sorti de belles pièces pour toi."],
+            "allie": ["Pour toi, ce qui est sur l’établi et ce qui est dans l’arrière-boutique."]
+          },
+          "refusal": ["Je ne vends rien à qui a trahi Haut-Gué."],
+          "stock": [
+            {"item":"hachette"},
+            {"item":"javeline"},
+            {"item":"arc_court"},
+            {"item":"epee_de_fer"},
+            {"item":"lance_d_estoc","minTier":"amical"},
+            {"item":"amulette_de_pierre","minTier":"allie"}
+          ]
+        },
+        {
+          "id": "epicerie_d_odile",
+          "name": "Épicerie d’Odile",
+          "welcome": {"neutre":["Pain, soupe, herbes. Regarde, choisis."],"amical":["Tout est frais du jour !"]},
+          "refusal": ["Je ne sers pas ceux qui nous veulent du mal."],
+          "stock": [
+            {"item":"pain_dore"},
+            {"item":"soupe_du_gue"},
+            {"item":"herbe_apaisante"},
+            {"item":"potion"},
+            {"item":"torche"},
+            {"item":"antidote","minTier":"amical"}
+          ]
+        }
+      ],
+      "rewards": [
+        {
+          "flag": "boss_brakk",
+          "text": "Le camp des Écumeurs est tombé : Haut-Gué respire.",
+          "effects": [{"type":"rep","target":"haut_gue","delta":12},{"type":"gold","amount":100}]
+        }
+      ]
+    },
+    {
+      "id": "ronceval",
+      "name": "Ronceval",
+      "summary": "Village sur pilotis de la Forêt-Racine. Herbes, potions, arcs, esprits des arbres.",
+      "reputation": {"start":0},
+      "npcs": [
+        {
+          "id": "sylve",
+          "name": "Sylve",
+          "title": "Première des Racines",
+          "at": [29,48],
+          "facing": "s",
+          "look": {
+            "skin": "#d8b28a",
+            "hair": "#c8d0b0",
+            "top": "#3f6a3a",
+            "tunic": "#5a8a4a",
+            "accent": "#d8c070",
+            "belt": "#4a3a28",
+            "pants": "#4a5a3a",
+            "boots": "#3a2a20",
+            "head": "long",
+            "outfit": "cloak",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Les racines murmurent ton nom. Ce n’est pas un compliment."],
+            "mefiant": ["Les arbres se souviennent des haches. Prouve que tu n’en portes pas contre nous."],
+            "neutre": ["Bienvenue à Ronceval, voyageur. Marche doucement : ici, le sol écoute."],
+            "amical": ["Les lucioles te suivent, c’est bon signe. Que cherches-tu parmi nous ?"],
+            "allie": ["Les racines te reconnaissent. Ronceval est ouvert à toi."],
+            "heros_local": ["Les racines te reconnaissent. Prends cette graine, elle ouvre la voie du Bosquet."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "roi_cerf_souffre",
+              "offer": [
+                "Le Roi-Cerf, gardien de la forêt, souffre. Une ombre le ronge de l’intérieur.",
+                "Va au Bosquet, au nord-ouest. Libère-le, sans le tuer si tu le peux."
+              ],
+              "remind": ["Le Bosquet du Roi-Cerf est à l’ouest. Ne tarde pas : la forêt s’affaiblit chaque jour."],
+              "done": ["Le Roi-Cerf respire de nouveau. La forêt te doit beaucoup."]
+            },
+            {
+              "kind": "choice",
+              "label": "Parler des arbres",
+              "once": true,
+              "prompt": ["Beaucoup de gens voient dans la forêt du bois à couper. Et toi ?"],
+              "choices": [
+                {
+                  "label": "Je respecte chaque arbre.",
+                  "reply": ["Les racines t’entendent. Merci."],
+                  "effects": [{"type":"rep","target":"ronceval","delta":3},{"type":"rep","target":"racines","delta":3}],
+                  "expression": "content"
+                },
+                {
+                  "label": "Ce n’est que du bois, après tout.",
+                  "reply": ["Alors tu n’es pas le bienvenu ici."],
+                  "effects": [{"type":"rep","target":"ronceval","delta":-8},{"type":"rep","target":"racines","delta":-5}],
+                  "expression": "fache"
+                }
+              ]
+            },
+            {
+              "kind": "donate",
+              "label": "Offrande au Grand Chêne (100 or)",
+              "amount": 100,
+              "rep": {"target":"ronceval","delta":3},
+              "dailyCap": 15,
+              "reply": ["Le Grand Chêne accepte. Les esprits s’en réjouiront."],
+              "capReply": ["Tu en as assez offert aujourd’hui. Les racines sont comblées."],
+              "poorReply": ["Une offrande ne se fait pas à crédit. Reviens plus tard."]
+            }
+          ]
+        },
+        {
+          "id": "orin",
+          "name": "Orin",
+          "title": "Herboriste",
+          "at": [25,53],
+          "facing": "s",
+          "look": {
+            "skin": "#e0b98a",
+            "hair": "#9a6a3a",
+            "top": "#7a8a4a",
+            "tunic": "#9a7a4a",
+            "accent": "#d8d098",
+            "belt": "#4a3a28",
+            "pants": "#5a5a3a",
+            "boots": "#3a2a20",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "hostile": ["Aucune herbe pour toi."],
+            "mefiant": ["Mes fioles ne sont pas données."],
+            "neutre": ["Herbes, potions, fumigations. Dis-moi ce qui te blesse."],
+            "amical": ["Pour un ami des racines, j’ai quelques préparations spéciales."],
+            "allie": ["Tout ce qui pousse ici est à ton service."]
+          },
+          "options": [{"kind":"shop","label":"Voir les herbes","shop":"herbes_d_orin"}],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "ysolde",
+          "name": "Ysolde",
+          "title": "Chasseuse",
+          "at": [36,47],
+          "facing": "w",
+          "look": {
+            "skin": "#d2a679",
+            "hair": "#2a2a2a",
+            "top": "#4a6a3a",
+            "tunic": "#6a5a3a",
+            "accent": "#c8b060",
+            "belt": "#3a2a20",
+            "pants": "#3a3a2a",
+            "boots": "#2a2020",
+            "head": "hood",
+            "outfit": "cloak",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "mefiant": ["Je ne chasse pas avec des inconnus."],
+            "neutre": ["Les Falaises sont mon pays, pas cette forêt. Mais je la protège."],
+            "amical": ["Tu sais te tenir. Le sentier du nord est dégagé, grâce à toi."],
+            "allie": ["Un arc dans une main, la main d’un ami dans l’autre. C’est tout ce qu’il me faut."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "braconniers_de_la_couronne",
+              "offer": [
+                "Des braconniers de la Couronne pillent le gibier de la forêt. Ils campent plus au sud.",
+                "Chasse-les, et les racines t’en seront reconnaissantes."
+              ],
+              "remind": ["Ils se cachent dans la forêt, sur les sentiers. Tu les reconnaîtras à leurs bannières."],
+              "done": ["Les braconniers sont partis. Les cerfs reviennent. Merci."]
+            },
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "minTier": "amical",
+              "unit": {"id":"ysolde","name":"Ysolde","class":"veilleur_des_falaises"},
+              "offer": ["Les falaises m’ont appris à viser. Je viens avec toi, ami des racines."],
+              "locked": ["Je ne suis pas encore assez sûre de toi. Gagne la confiance de Ronceval."]
+            }
+          ]
+        },
+        {
+          "id": "kael",
+          "name": "Kael",
+          "title": "Déserteur de la Couronne",
+          "at": [38,53],
+          "facing": "w",
+          "look": {
+            "skin": "#d2a679",
+            "hair": "#5a3a2a",
+            "top": "#6a3a3a",
+            "tunic": "#7a4a4a",
+            "accent": "#a09080",
+            "belt": "#3a2a20",
+            "pants": "#3a3a3a",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Je ne te dois rien."],
+            "mefiant": ["Parle moins fort, on pourrait nous entendre."],
+            "neutre": ["Ex-Couronne. Ne le dis pas à Valcendre, ou ils me reprendront."],
+            "amical": ["Tu es du genre à ne pas cafter. J’aime ça."]
+          },
+          "options": [
+            {
+              "kind": "topic",
+              "label": "Parler de la Couronne",
+              "lines": [
+                "La Régente Ysmène n’est pas cruelle, mais elle a peur. Et les gens qui ont peur font des choses stupides."
+              ]
+            },
+            {
+              "kind": "choice",
+              "label": "Acheter des informations (50 or)",
+              "when": {"gold":50},
+              "once": true,
+              "prompt": ["Cinquante pièces, et je te dis ce que j’ai vu à Valcendre. Marché conclu ?"],
+              "choices": [
+                {
+                  "label": "Marché conclu.",
+                  "reply": [
+                    "Voss garde la caserne, mais Tam, au quartier des pauvres, sait tout ce qui se trame au marché. Il parle à qui sait l’écouter."
+                  ],
+                  "effects": [{"type":"gold","amount":-50},{"type":"flag","flag":"kael_info"}]
+                },
+                {"label":"Non, merci.","reply":["Comme tu veux. L’offre reste ouverte."]}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pip",
+          "name": "Pip",
+          "title": "Gamin guide",
+          "at": [28,51],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#b87838",
+            "top": "#c8a040",
+            "tunic": "#5a7a4a",
+            "accent": "#e8dcc0",
+            "belt": "#5a3a20",
+            "pants": "#4a4a3a",
+            "boots": "#3a2a20",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "none"
+          },
+          "greeting": {
+            "mefiant": ["Ma maman dit de ne pas parler aux étrangers."],
+            "neutre": ["Hé, tu veux savoir où sont les trésors ? Moi, je sais !"],
+            "amical": ["Toi, t’es gentil ! Je te dis un secret."]
+          },
+          "options": [
+            {
+              "kind": "topic",
+              "label": "Les coffres",
+              "lines": [
+                "Il y a un coffre sous la plus grosse racine, près des pilotis. Et un autre au bord de la rivière, vers le sud !"
+              ]
+            },
+            {
+              "kind": "topic",
+              "label": "Les lucioles",
+              "lines": [
+                "Elles s’allument quand quelqu’un de bien passe. Elles brillent beaucoup autour de toi, tu sais."
+              ],
+              "expression": "content"
+            }
+          ]
+        },
+        {
+          "id": "mousse",
+          "name": "Mousse",
+          "title": "Jeune façonneur",
+          "at": [21,43],
+          "facing": "s",
+          "look": {
+            "skin": "#c89a6a",
+            "hair": "#4a5a3a",
+            "top": "#5a8a5a",
+            "tunic": "#3f6a3a",
+            "accent": "#c8d09a",
+            "belt": "#4a3a28",
+            "pants": "#3a4a2a",
+            "boots": "#2a2020",
+            "head": "hood",
+            "outfit": "cloak",
+            "accessory": "none"
+          },
+          "greeting": {
+            "mefiant": ["Pas toucher aux racines."],
+            "neutre": ["J’ai perdu la graine que ma mère m’a laissée. Sans elle, mes racines ne répondent plus."],
+            "amical": ["Tu es gentil. Les racines t’aiment bien, je crois."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "graine_perdue",
+              "offer": [
+                "Ma graine est tombée près du menhir de la forêt, au nord. Peux-tu aller voir ?",
+                "Elle brille un peu, quand on la regarde bien."
+              ],
+              "remind": ["Le menhir de la forêt, au nord de Ronceval. Une pierre dressée, très ancienne."],
+              "done": ["Ma graine ! Elle est chaude ! Merci, merci beaucoup !"]
+            },
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "needsQuest": "graine_perdue",
+              "unit": {"id":"mousse","name":"Mousse","class":"faconneur_de_racines"},
+              "offer": ["Mes racines t’obéiront aussi, si tu veux. Je viens avec toi !"],
+              "locked": ["Retrouve d’abord ma graine, s’il te plaît."]
+            }
+          ]
+        }
+      ],
+      "shops": [
+        {
+          "id": "herbes_d_orin",
+          "name": "Herbes d’Orin",
+          "welcome": {
+            "neutre": ["Potions, herbes, fumigations. Que te faut-il ?"],
+            "amical": ["Mes meilleurs mélanges sont pour toi."]
+          },
+          "refusal": ["Les forêts ne font pas de cadeaux aux ennemis."],
+          "stock": [
+            {"item":"herbe_apaisante"},
+            {"item":"potion"},
+            {"item":"antidote"},
+            {"item":"arc_court"},
+            {"item":"baton_branche"},
+            {"item":"hyper_potion","minTier":"amical"},
+            {"item":"arc_long","minTier":"amical"},
+            {"item":"broche_des_racines","minTier":"allie"}
+          ]
+        }
+      ],
+      "rewards": [
+        {
+          "flag": "boss_roi_cerf",
+          "text": "Le Roi-Cerf est libéré : la forêt vous bénit.",
+          "effects": [{"type":"rep","target":"ronceval","delta":12},{"type":"rep","target":"racines","delta":8}]
+        },
+        {
+          "flag": "brigands_foret_vaincus",
+          "text": "Les brigands de la forêt ne menacent plus Ronceval.",
+          "effects": [{"type":"rep","target":"ronceval","delta":6}]
+        }
+      ]
+    },
+    {
+      "id": "port_brume",
+      "name": "Port-Brume",
+      "summary": "Port de brume, quais de pierre et phare éteint. Siège de l’Ordre des Marées, harpons et filets.",
+      "reputation": {"start":-10},
+      "npcs": [
+        {
+          "id": "dorn",
+          "name": "Amiral Dorn Vessyr",
+          "title": "Chef de l’Ordre des Marées",
+          "at": [115,97],
+          "facing": "s",
+          "look": {
+            "skin": "#c89a6a",
+            "hair": "#d0d0d0",
+            "top": "#2f4a6a",
+            "tunic": "#3f5a7a",
+            "accent": "#d8c070",
+            "belt": "#2a2a30",
+            "pants": "#2a3040",
+            "boots": "#1f1f28",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "hostile": ["Ton nom est maudit sur les quais. Retire-toi avant que je n’appelle mes hommes."],
+            "mefiant": ["La Couronne a mauvaise presse ici. Tu n’as pas l’air d’un ami des marées."],
+            "neutre": ["La mer reprend ce qu’on lui doit. La question est : de quel côté seras-tu quand elle viendra ?"],
+            "amical": ["Les marins parlent bien de toi. Voilà qui est rare."],
+            "allie": ["Un allié de l’Ordre est toujours le bienvenu sur ces quais, capitaine."],
+            "heros_local": ["Le héros de Port-Brume ! La barque t’attend, quand tu voudras."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "phare_eteint",
+              "offer": [
+                "Le phare de la Tour du Noyé est éteint depuis dix ans. Sans sa lumière, les barques se perdent dans la Brume.",
+                "Rallume-le, et l’Ordre te devra une fière chandelle."
+              ],
+              "remind": ["La Tour du Noyé, à l’ouest. Monte tout en haut et rallume la lanterne."],
+              "done": ["Je vois la lumière d’ici. Les marées te sont reconnaissantes."]
+            },
+            {
+              "kind": "quest",
+              "quest": "soeur_merrow",
+              "offer": [
+                "Sœur Mérrow, jadis prêtresse de ce port, porte désormais la Brume en elle. Elle a pris la plage nord.",
+                "Met fin à ce malheur. Si tu y parviens, la barque vers la Citadelle sera à toi."
+              ],
+              "remind": ["Mérrow garde la côte au nord de la ville. Prépare ta compagnie avant d’y aller."],
+              "done": ["Mérrow est libérée. Tu as la barque : prends-la quand le moment viendra."],
+              "locked": ["Pas encore. L’Ordre ne confie pas Mérrow à un inconnu."]
+            },
+            {
+              "kind": "choice",
+              "label": "Prêter allégeance",
+              "once": true,
+              "prompt": ["L’Ordre des Marées cherche des alliés sûrs. Que réponds-tu ?"],
+              "choices": [
+                {
+                  "label": "Je suis avec l’Ordre.",
+                  "reply": ["Alors tu es des nôtres. Que la marée te soit douce."],
+                  "effects": [{"type":"rep","target":"marees","delta":6},{"type":"rep","target":"couronne","delta":-3}],
+                  "expression": "content"
+                },
+                {
+                  "label": "Je ne choisis aucun camp.",
+                  "reply": ["Sage ou lâche, on le verra à marée basse."],
+                  "effects": [{"type":"rep","target":"marees","delta":-2}]
+                }
+              ]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "marthe",
+          "name": "Marthe",
+          "title": "Tisseuse de filets",
+          "at": [106,111],
+          "facing": "s",
+          "look": {
+            "skin": "#d2a679",
+            "hair": "#8a8a8a",
+            "top": "#7a8a9a",
+            "tunic": "#5a7a8a",
+            "accent": "#d8d098",
+            "belt": "#4a3a28",
+            "pants": "#3a4a5a",
+            "boots": "#2a2a30",
+            "head": "bun",
+            "outfit": "dress",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "hostile": ["Pas de filets pour les ennemis du port."],
+            "mefiant": ["Un filet, c’est du travail. Je ne le vends pas aux inconnus au prix de fou... enfin, presque."],
+            "neutre": ["Filets, cordes, appâts. Tout pour la pêche et pour ce qui rampe sous l’eau."],
+            "amical": ["Ah, un habitué ! Prends ce que tu veux."],
+            "allie": ["Pour toi, mes meilleurs filets."]
+          },
+          "options": [{"kind":"shop","label":"Voir les filets","shop":"filets_de_marthe"}],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "corbin",
+          "name": "Corbin « Gueule d’Os »",
+          "title": "Chasseur de serpents",
+          "at": [112,103],
+          "facing": "w",
+          "look": {
+            "skin": "#b88660",
+            "hair": "#1f1f1f",
+            "top": "#4a5a6a",
+            "tunic": "#3a4a5a",
+            "accent": "#c8c0b0",
+            "belt": "#2a2020",
+            "pants": "#2a3040",
+            "boots": "#1f1f28",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Ouste."],
+            "mefiant": ["On ne se connaît pas. Ça ne risque pas de changer."],
+            "neutre": [
+              "J’ai chassé des choses qui feraient pâlir ton capitaine. Si tu paies bien, je chasse les tiennes."
+            ],
+            "amical": ["Toi, je t’aime bien. Ton or aussi."],
+            "allie": ["J’ai un harpon qui n’a jamais manqué. Dis-moi quel monstre tu veux."]
+          },
+          "options": [
+            {
+              "kind": "recruit",
+              "label": "Engager Corbin (300 or)",
+              "minTier": "neutre",
+              "gold": 300,
+              "unit": {"id":"corbin","name":"Corbin","class":"chasseur_de_serpents_de_mer"},
+              "offer": ["Trois cents pièces, et mon harpon est à toi. Marché conclu."],
+              "locked": [
+                "Je ne chasse pas pour des gens que le port regarde de travers. Reviens quand on parlera mieux de toi."
+              ]
+            },
+            {
+              "kind": "topic",
+              "label": "Parler des monstres",
+              "lines": [
+                "Les serpents de mer sortent de la Brume à la marée haute. Les plus gros ont des écailles comme des boucliers."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lia",
+          "name": "Lia",
+          "title": "Cartographe",
+          "at": [98,99],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#5a2a2a",
+            "top": "#c8a040",
+            "tunic": "#8a5a3a",
+            "accent": "#e8dcc0",
+            "belt": "#4a3a28",
+            "pants": "#4a3a30",
+            "boots": "#3a2a20",
+            "head": "long",
+            "outfit": "tunic",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "mefiant": ["Mes cartes ne sont pas pour tout le monde."],
+            "neutre": [
+              "Je dessine l’île, un rivage après l’autre. Il manque la plage des Épaves : personne n’ose y aller."
+            ],
+            "amical": ["Je t’ai marqué quelques points d’intérêt. Regarde mes cartes."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "epaves_de_la_plage",
+              "offer": [
+                "La plage des Épaves, au sud, regorge de coffres échoués. Va y jeter un œil et dis-moi ce que tu y trouves."
+              ],
+              "remind": ["La plage des Épaves, au sud-ouest de Port-Brume. Attention aux crabes."],
+              "done": ["Merveilleux ! Je mets tout ça sur ma carte. Prends ceci."]
+            },
+            {
+              "kind": "topic",
+              "label": "Parler de la carte",
+              "lines": [
+                "Ici, les marées dessinent l’île. Là-bas, au nord, les brumes cachent une tour. Au large, la Citadelle émerge à marée basse."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "odo",
+          "name": "Frère Odo",
+          "title": "Prêtre du phare",
+          "at": [101,109],
+          "facing": "s",
+          "look": {
+            "skin": "#e0b98a",
+            "hair": "#8a8a8a",
+            "top": "#d8d098",
+            "tunic": "#e8dcc0",
+            "accent": "#c8a040",
+            "belt": "#6b4a2a",
+            "pants": "#7a7a60",
+            "boots": "#3a2a20",
+            "head": "hood",
+            "outfit": "cloak",
+            "accessory": "lantern"
+          },
+          "greeting": {
+            "mefiant": ["Que la Lanterne éclaire ton chemin... si elle en a envie."],
+            "neutre": ["Les marins viennent prier ici avant de partir. Certains reviennent."],
+            "amical": ["Ta présence réchauffe ces vieux murs."]
+          },
+          "options": [
+            {
+              "kind": "donate",
+              "label": "Aumône du phare (100 or)",
+              "amount": 100,
+              "rep": {"target":"port_brume","delta":3},
+              "dailyCap": 15,
+              "reply": ["Que la Lanterne te rende au centuple ce que tu donnes au port."],
+              "capReply": ["Tu as déjà tant donné aujourd’hui. Va en paix."],
+              "poorReply": ["Garde ton or, mon enfant. La prière ne coûte rien."]
+            },
+            {
+              "kind": "donate",
+              "label": "Cierge pour les Veilleurs (100 or)",
+              "amount": 100,
+              "rep": {"target":"lanternes","delta":3},
+              "dailyCap": 15,
+              "reply": ["Un cierge pour les Veilleurs. Leur flamme grandit un peu."],
+              "capReply": ["La flamme est déjà vive pour aujourd’hui."],
+              "poorReply": ["Reviens quand tu pourras, je n’exige rien."]
+            }
+          ]
+        },
+        {
+          "id": "tiphaine",
+          "name": "Tiphaine",
+          "title": "Garde de l’Amiral",
+          "at": [115,103],
+          "facing": "s",
+          "look": {
+            "skin": "#d2a679",
+            "hair": "#3a2a20",
+            "top": "#2f4a6a",
+            "tunic": "#4f6a8a",
+            "accent": "#d8c070",
+            "belt": "#2a2020",
+            "pants": "#2a3040",
+            "boots": "#1f1f28",
+            "head": "bun",
+            "outfit": "cloak",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "hostile": ["Circule."],
+            "mefiant": ["Pas de remous, étranger."],
+            "neutre": ["Garde de l’Amiral Dorn. Je protège les quais."],
+            "amical": ["Les quais sont plus sûrs depuis que tu passes ici."]
+          },
+          "options": [
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "needsQuest": "phare_eteint",
+              "unit": {"id":"tiphaine","name":"Tiphaine","class":"gardien_des_marees"},
+              "offer": ["Le phare brille de nouveau. L’Amiral m’a laissé partir : je suis à toi."],
+              "locked": ["Rallume le phare, et on en reparle. L’Amiral ne me lâchera pas avant."]
+            }
+          ],
+          "refusesWhenHostile": true
+        }
+      ],
+      "shops": [
+        {
+          "id": "filets_de_marthe",
+          "name": "Filets de Marthe",
+          "welcome": {
+            "neutre": ["Filets, cordes, poudres. Que te faut-il ?"],
+            "amical": ["Mes meilleurs filets sont derrière ; je t’en sors quelques-uns."]
+          },
+          "refusal": ["Les ennemis du port, je ne leur vends rien."],
+          "stock": [
+            {"item":"filet_de_peche"},
+            {"item":"poudre_de_brume"},
+            {"item":"torche"},
+            {"item":"potion"},
+            {"item":"harpon_lourd","minTier":"amical"},
+            {"item":"arbalete_a_verin","minTier":"amical"},
+            {"item":"collier_d_ecume","minTier":"allie"}
+          ]
+        }
+      ],
+      "rewards": [
+        {
+          "flag": "boss_merrow",
+          "text": "Sœur Mérrow est libérée : Port-Brume peut respirer.",
+          "effects": [{"type":"rep","target":"port_brume","delta":15},{"type":"rep","target":"marees","delta":8}]
+        }
+      ]
+    },
+    {
+      "id": "pierre_haute",
+      "name": "Pierre-Haute",
+      "summary": "Village fortifié des Monts de Cendre. Forges, armures, siège des Veilleurs des Lanternes.",
+      "reputation": {"start":0},
+      "npcs": [
+        {
+          "id": "halvar",
+          "name": "Maître Halvar Forge-Clair",
+          "title": "Forgeron principal",
+          "at": [58,31],
+          "facing": "w",
+          "look": {
+            "skin": "#d2a679",
+            "hair": "#a0482a",
+            "top": "#6a4a3a",
+            "tunic": "#8a5a3a",
+            "accent": "#c8c0b0",
+            "belt": "#2a2020",
+            "pants": "#4a3a30",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Mon enclume est fermée pour toi."],
+            "mefiant": ["Les armes, c’est du sérieux. Montre-moi d’abord ton sérieux."],
+            "neutre": ["Armes et armures forgées à Pierre-Haute. Choisis."],
+            "amical": ["Un ami des Monts a droit à mes plus belles pièces."],
+            "allie": ["J’ai une arme dans l’arrière-boutique que je ne montre qu’aux alliés."]
+          },
+          "options": [{"kind":"shop","label":"Voir la forge","shop":"forge_de_halvar"}],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "ilmea",
+          "name": "Sœur Ilmëa",
+          "title": "Prêtresse des Lanternes",
+          "at": [67,19],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#8a3a2a",
+            "top": "#e8dcc0",
+            "tunic": "#d8b04a",
+            "accent": "#f0e0b8",
+            "belt": "#6b4a2a",
+            "pants": "#7a6a50",
+            "boots": "#3a2a20",
+            "head": "hood",
+            "outfit": "dress",
+            "accessory": "lantern"
+          },
+          "greeting": {
+            "hostile": ["Les lanternes ne s’allument pas pour les ennemis des Monts."],
+            "mefiant": ["Les flammes sont fragiles. Je suis prudente."],
+            "neutre": [
+              "Les Veilleurs gardent les lanternes. Mais trois sont éteintes, et je ne suis pas assez nombreuse."
+            ],
+            "amical": ["Les lanternes t’aiment bien, on dirait."],
+            "allie": ["Mon cœur est avec toi, et avec la flamme."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "lanternes_eteintes",
+              "offer": [
+                "Trois lanternes ont été soufflées : l’autel des Monts, le menhir de Cendre, et l’autel du Val.",
+                "Va les rallumer. Sans elles, la Brume gagne chaque nuit."
+              ],
+              "remind": [
+                "Il te reste des lanternes à rallumer : l’autel des Monts, le menhir de Cendre, l’autel du Val."
+              ],
+              "done": ["Trois flammes de plus. Les Veilleurs te remercient du fond du cœur."]
+            },
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "needsQuest": "lanternes_eteintes",
+              "unit": {"id":"ilmea","name":"Ilmëa","class":"porte_lanterne"},
+              "offer": ["Les lanternes sont rallumées. Je porterai la flamme avec toi."],
+              "locked": ["Rallume d’abord nos trois lanternes, voyageur."]
+            },
+            {
+              "kind": "donate",
+              "label": "Huile des lanternes (100 or)",
+              "amount": 100,
+              "rep": {"target":"pierre_haute","delta":3},
+              "dailyCap": 15,
+              "reply": ["De l’huile pour les lanternes. Les Monts ne l’oublieront pas."],
+              "capReply": ["Tu en as déjà tant donné aujourd’hui."],
+              "poorReply": ["Ne te prive pas pour nous. Reviens quand tu pourras."]
+            }
+          ]
+        },
+        {
+          "id": "tobias",
+          "name": "Tobias Boulon",
+          "title": "Ingénieur",
+          "at": [63,21],
+          "facing": "e",
+          "look": {
+            "skin": "#e0b98a",
+            "hair": "#6a4a2a",
+            "top": "#c8a040",
+            "tunic": "#8a7a5a",
+            "accent": "#a09080",
+            "belt": "#3a2a20",
+            "pants": "#4a4038",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "mefiant": ["Je n’ai pas le temps pour ça."],
+            "neutre": [
+              "Je répare les pièces anciennes des Ruines. Les machines d’avant la Brume marchent encore, si on les écoute."
+            ],
+            "amical": ["Tu m’intéresses : tu as de bonnes oreilles. Je travaille sur quelque chose d’utile."]
+          },
+          "options": [
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "minTier": "neutre",
+              "unit": {"id":"tobias","name":"Tobias","class":"ingenieur_des_ruines"},
+              "offer": ["Un chantier à ciel ouvert, avec des machines qui bougent ? J’en suis."],
+              "locked": [
+                "Les gens des Monts ne m’aiment pas... et toi non plus, apparemment. Reviens quand ça ira mieux."
+              ]
+            },
+            {
+              "kind": "topic",
+              "label": "Les ruines",
+              "lines": [
+                "Sous Pierre-Haute, il y a des machines qui datent d’avant la Brume. Certaines tournent encore, dans le noir."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "yrsa",
+          "name": "Garde-Cime Yrsa",
+          "title": "Gardienne des cols",
+          "at": [53,19],
+          "facing": "s",
+          "look": {
+            "skin": "#c89a6a",
+            "hair": "#3a3a3a",
+            "top": "#6a6a70",
+            "tunic": "#5a5a64",
+            "accent": "#d8b04a",
+            "belt": "#2a2020",
+            "pants": "#3a3a40",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "hostile": ["Les cols sont fermés pour toi."],
+            "mefiant": ["Les cols ne sont pas ouverts aux inconnus."],
+            "neutre": ["Garde-Cime Yrsa. Je vérifie qui monte et qui descend. Ni plus, ni moins."],
+            "amical": ["Je te connais, maintenant. Tu peux passer."],
+            "allie": ["Plus rien ne te barre la route des Monts."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "aiguille_brisee",
+              "offer": [
+                "L’Aiguille Brisée, à l’est, abrite un gardien qui a dévoré toutes mes sentinelles.",
+                "Fais-le tomber, et les Monts auront la paix."
+              ],
+              "remind": ["L’Aiguille Brisée, à l’est de la ville. Ne t’y rends pas seul."],
+              "done": ["L’Aiguille est silencieuse. Les cols sont à toi."]
+            },
+            {
+              "kind": "topic",
+              "label": "Demander le passage vers la Citadelle",
+              "when": {"tierMin":"amical"},
+              "once": true,
+              "lines": [
+                "La Citadelle ? Je ne laisse monter que mes amis. Tu as ma confiance : un marin de Port-Brume te mènera."
+              ],
+              "effects": [{"type":"flag","flag":"acces_citadelle"}],
+              "expression": "content"
+            },
+            {
+              "kind": "topic",
+              "label": "Demander le passage vers la Citadelle",
+              "when": {"tierMax":"neutre","notFlag":"acces_citadelle"},
+              "lines": [
+                "La Citadelle ? Je ne laisse monter que mes amis. Gagne la confiance de Pierre-Haute, et reviens."
+              ]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "brun",
+          "name": "Brun",
+          "title": "Mineur",
+          "at": [69,25],
+          "facing": "w",
+          "look": {
+            "skin": "#b88660",
+            "hair": "#1f1f1f",
+            "top": "#6a5a4a",
+            "tunic": "#7a6a5a",
+            "accent": "#a09080",
+            "belt": "#3a2a20",
+            "pants": "#4a4038",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "none"
+          },
+          "greeting": {
+            "mefiant": ["J’ai mal au dos, pas envie de causer."],
+            "neutre": ["Vingt ans de galeries. On entend parfois quelque chose derrière les murs."],
+            "amical": ["T’es sympa. Je te dis : le filon du nord est presque épuisé."]
+          },
+          "options": [
+            {
+              "kind": "topic",
+              "label": "Les galeries",
+              "lines": ["Il y a un puits fermé à l’est de la forge. On dit que la Brume y passe la nuit."]
+            }
+          ]
+        },
+        {
+          "id": "hild",
+          "name": "Hild",
+          "title": "Aubergiste",
+          "at": [58,25],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#c0702a",
+            "top": "#a05a3a",
+            "tunic": "#c8783a",
+            "accent": "#f0e0b8",
+            "belt": "#5a3a20",
+            "pants": "#5a4636",
+            "boots": "#3a2a20",
+            "head": "bun",
+            "outfit": "dress",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Ma maison est fermée."],
+            "mefiant": ["Une chambre, c’est trente pièces ici."],
+            "neutre": ["Ragoût de montagne, lit de paille. Bienvenue à Pierre-Haute."],
+            "amical": ["Un ami des Monts dort dans mon meilleur lit."],
+            "allie": ["Toi, tu n’as rien à payer."]
+          },
+          "options": [
+            {
+              "kind": "inn",
+              "label": "Se reposer",
+              "cost": 30,
+              "freeFrom": "allie",
+              "reply": ["Bonne nuit. Il fait froid, couvre-toi bien."],
+              "freeReply": ["Pour toi, c’est gratuit. Dors, ici on veille."],
+              "poorReply": ["Trente pièces, voyageur. Pas moins."]
+            }
+          ],
+          "refusesWhenHostile": true
+        }
+      ],
+      "shops": [
+        {
+          "id": "forge_de_halvar",
+          "name": "Forge de Halvar",
+          "welcome": {
+            "neutre": ["Acier des Monts, rien d’autre. Que veux-tu ?"],
+            "allie": ["Mon meilleur travail est pour toi."]
+          },
+          "refusal": ["Je ne forge pas pour les ennemis des Monts."],
+          "stock": [
+            {"item":"epee_de_fer"},
+            {"item":"banniere_lance"},
+            {"item":"brandon_de_poix"},
+            {"item":"amulette_de_pierre"},
+            {"item":"baton_menhir","minTier":"amical"},
+            {"item":"arbalete_a_verin","minTier":"amical"},
+            {"item":"bague_de_cendre","minTier":"allie"}
+          ]
+        }
+      ],
+      "rewards": [
+        {
+          "flag": "boss_aiguille",
+          "text": "Le gardien de l’Aiguille est tombé : les Monts respirent.",
+          "effects": [{"type":"rep","target":"pierre_haute","delta":15},{"type":"rep","target":"lanternes","delta":8}]
+        }
+      ]
+    },
+    {
+      "id": "valcendre",
+      "name": "Valcendre",
+      "summary": "Capitale déchue : murailles, marchés, caserne, cathédrale à demi effondrée. Siège de la Couronne de Cendre.",
+      "reputation": {"start":0},
+      "npcs": [
+        {
+          "id": "ysmene",
+          "name": "Régente Ysmène",
+          "title": "Dirigeante de la Couronne",
+          "at": [118,49],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#d0d0d8",
+            "top": "#8a2a3a",
+            "tunic": "#a8404a",
+            "accent": "#e8dcc0",
+            "belt": "#d8b04a",
+            "pants": "#4a3040",
+            "boots": "#2a2020",
+            "head": "long",
+            "outfit": "dress",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Gardes, escortez cet individu hors des murs."],
+            "mefiant": ["La Couronne n’a pas à se justifier devant des inconnus."],
+            "neutre": ["La couronne ne se mendie pas. Elle se mérite. Aidez-nous, et nous parlerons de la mer."],
+            "amical": ["Votre réputation vous précède. Les gens de Valcendre parlent de vous avec respect."],
+            "allie": ["Vous êtes un pilier de cette ville, capitaine. Dites-moi ce dont vous avez besoin."],
+            "heros_local": ["Valcendre vous doit sa renaissance. Les portes de la Cathédrale vous sont ouvertes."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "conspiration_au_marche",
+              "offer": [
+                "Des rumeurs de conspiration courent au marché. Quelqu’un veut me voir tomber.",
+                "Allez voir Tam, au quartier des pauvres : il entend tout. Et dites-moi ce qu’il sait."
+              ],
+              "remind": ["Tam, au quartier des pauvres, sait ce qui se trame. Parlez-lui avec tact."],
+              "done": ["Les conspirateurs sont démasqués. Valcendre sera plus sûr, grâce à vous."],
+              "locked": ["Pas encore. Ce genre d’affaire ne se confie qu’à un ami de la Couronne."]
+            },
+            {
+              "kind": "choice",
+              "label": "Parler de la Couronne",
+              "once": true,
+              "prompt": ["Que pensez-vous de la Couronne de Cendre ?"],
+              "choices": [
+                {
+                  "label": "Je la servirai.",
+                  "reply": ["Voilà qui est bien parlé. La Couronne n’oublie pas ses fidèles."],
+                  "effects": [{"type":"rep","target":"couronne","delta":6},{"type":"rep","target":"racines","delta":-3}],
+                  "expression": "content"
+                },
+                {
+                  "label": "Elle ne m’inspire rien.",
+                  "reply": ["Tant pis. Mais ne vous attendez pas à de la clémence."],
+                  "effects": [{"type":"rep","target":"couronne","delta":-4}],
+                  "expression": "fache"
+                },
+                {"label":"Je ne choisis pas de camp.","reply":["Une prudence qui a son prix, mais soit."]}
+              ]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "voss",
+          "name": "Capitaine Voss",
+          "title": "Commandant de la caserne",
+          "at": [128,47],
+          "facing": "s",
+          "look": {
+            "skin": "#c89a6a",
+            "hair": "#2a2a2a",
+            "top": "#5a5a70",
+            "tunic": "#6a6a82",
+            "accent": "#d8c070",
+            "belt": "#2a2020",
+            "pants": "#33333f",
+            "boots": "#1f1f28",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "hostile": ["Plus un pas. La caserne est interdite aux traîtres."],
+            "mefiant": ["Les mercenaires ne servent que ceux qui paient et qu’on connaît."],
+            "neutre": ["Caserne de Valcendre. Les mercenaires, c’est par ici, si tu as de quoi payer."],
+            "amical": ["Tu as une bonne réputation. Ça, c’est utile pour un soldat."],
+            "allie": ["Mes hommes te saluent, capitaine. Dis un mot, et je te prête une escouade."]
+          },
+          "options": [
+            {
+              "kind": "choice",
+              "label": "Parler de la caserne",
+              "once": true,
+              "prompt": ["Tu veux voir la caserne ? Il y a des règles."],
+              "choices": [
+                {
+                  "label": "Je suivrai vos règles.",
+                  "reply": ["Bien. On s’entendra."],
+                  "effects": [{"type":"rep","target":"valcendre","delta":2}],
+                  "expression": "content"
+                },
+                {
+                  "label": "Je vais faire à ma manière.",
+                  "reply": ["Ça ne se passera pas comme ça."],
+                  "effects": [{"type":"rep","target":"valcendre","delta":-6}],
+                  "expression": "fache"
+                }
+              ]
+            },
+            {
+              "kind": "topic",
+              "label": "Les mercenaires",
+              "lines": ["Les mercenaires ne coûtent pas cher, mais ils ne sont pas loyaux. Vérifie qui tu engages."]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "lorn",
+          "name": "Maître Lorn",
+          "title": "Marchand d’objets rares",
+          "at": [113,54],
+          "facing": "s",
+          "look": {
+            "skin": "#d8b28a",
+            "hair": "#bfb7a0",
+            "top": "#4a3a5a",
+            "tunic": "#6a4a7a",
+            "accent": "#d8b04a",
+            "belt": "#2a2020",
+            "pants": "#3a3040",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "hostile": ["Je ne vends pas aux gens qu’on pourchasse."],
+            "mefiant": ["Mes pièces rares sont chères, et pour toi elles le sont davantage."],
+            "neutre": ["Reliques, amulettes, tomes anciens. Tout a son histoire, tout a son prix."],
+            "amical": ["Un amateur averti. Regarde, j’ai ceci en réserve pour les connaisseurs."],
+            "allie": ["Mon meilleur stock est à toi, et au prix le plus honnête."]
+          },
+          "options": [
+            {"kind":"shop","label":"Voir les raretés","shop":"raretes_de_lorn"},
+            {
+              "kind": "choice",
+              "label": "Marchander",
+              "once": true,
+              "prompt": ["Tu veux un meilleur prix ? Voyons comment tu t’y prends."],
+              "choices": [
+                {
+                  "label": "Je paierai le prix juste.",
+                  "reply": ["Voilà un client agréable. Je m’en souviendrai."],
+                  "effects": [{"type":"rep","target":"valcendre","delta":2}],
+                  "expression": "content"
+                },
+                {
+                  "label": "Baisse tes prix, ou gare à toi.",
+                  "reply": ["Des menaces ? Dans MA boutique ? Dehors !"],
+                  "effects": [{"type":"rep","target":"valcendre","delta":-6}],
+                  "expression": "fache"
+                }
+              ]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "berthe",
+          "name": "Berthe",
+          "title": "Marchande du marché",
+          "at": [113,47],
+          "facing": "s",
+          "look": {
+            "skin": "#e0b98a",
+            "hair": "#6a4a2a",
+            "top": "#d98a5a",
+            "tunic": "#c8a050",
+            "accent": "#e8dcc0",
+            "belt": "#6b4a2a",
+            "pants": "#5a4636",
+            "boots": "#3a2a20",
+            "head": "bun",
+            "outfit": "dress",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "hostile": ["Pas de marché pour toi."],
+            "mefiant": ["Mes étals ne sont pas pour tout le monde."],
+            "neutre": ["Le marché de Valcendre ! Potions, vivres, tout pour la route."],
+            "amical": ["Un client fidèle ! Regarde, j’ai réservé les meilleures."]
+          },
+          "options": [{"kind":"shop","label":"Voir le marché","shop":"marche_de_berthe"}],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "alden",
+          "name": "Sire Alden",
+          "title": "Chevalier déchu",
+          "at": [132,53],
+          "facing": "w",
+          "look": {
+            "skin": "#d8b28a",
+            "hair": "#6a5a4a",
+            "top": "#8a8a96",
+            "tunic": "#a0a0b0",
+            "accent": "#a8404a",
+            "belt": "#2a2020",
+            "pants": "#3a3a46",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "cloak",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "hostile": ["Passe ton chemin."],
+            "mefiant": ["Je n’ai de leçon à recevoir de personne."],
+            "neutre": ["J’ai trahi mon serment. Depuis, je cherche comment le rompre sans qu’il me poursuive."],
+            "amical": ["Tu ne me juges pas. Merci."],
+            "allie": ["Un serment, c’est ce qui reste d’un homme. Je veux le retrouver."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "serment_brise",
+              "offer": [
+                "Mon serment à la Couronne est brisé : j’ai quitté mon poste quand elle l’a le plus exigé.",
+                "Parle à Cendrine, la chanteuse. Elle connaît les paroles de l’ancien serment. J’ai besoin de les entendre."
+              ],
+              "remind": ["Cendrine chante sur la grand-place. Elle sait ce que je cherche."],
+              "done": ["Les mots me sont revenus. Je suis de nouveau chevalier."],
+              "locked": ["Ma honte n’est pas à partager avec n’importe qui."]
+            },
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "needsQuest": "serment_brise",
+              "unit": {"id":"alden","name":"Alden","class":"lame_du_serment"},
+              "offer": ["Mon épée est à toi, désormais. C’est le serment que je prête."],
+              "locked": ["Tant que mon serment est brisé, je ne peux pas servir."]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "cendrine",
+          "name": "Cendrine",
+          "title": "Chanteuse",
+          "at": [126,61],
+          "facing": "s",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#2a1f3a",
+            "top": "#8a4a8a",
+            "tunic": "#a8608a",
+            "accent": "#e8dcc0",
+            "belt": "#d8b04a",
+            "pants": "#4a3a50",
+            "boots": "#3a2a20",
+            "head": "long",
+            "outfit": "dress",
+            "accessory": "none"
+          },
+          "greeting": {
+            "mefiant": ["Je ne chante pas pour tout le monde."],
+            "neutre": ["Les chansons de Valcendre sont des histoires. Veux-tu en entendre une ?"],
+            "amical": ["Toi, je te chante ma meilleure. Elle parle d’un héros qui n’en a pas l’air."],
+            "allie": ["Mon cœur bat plus fort quand tu passes. Sérieusement, c’est le tambour."]
+          },
+          "options": [
+            {
+              "kind": "topic",
+              "label": "Demander le chant du serment",
+              "when": {"quest":"serment_brise","questStatus":"active"},
+              "lines": [
+                "« Par la cendre et par la mer, je garderai la couronne ou je tomberai. » C’est ainsi qu’il commence.",
+                "Va dire ces mots à Alden. Il comprendra."
+              ],
+              "effects": [{"type":"flag","flag":"serment_retrouve"}],
+              "once": true,
+              "expression": "content"
+            },
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "minTier": "amical",
+              "unit": {"id":"cendrine","name":"Cendrine","class":"heraut_des_bannieres"},
+              "offer": ["Un chant de bataille vaut mieux qu’un cri de peur. Je viens avec toi !"],
+              "locked": ["Je chante seulement pour mes amis. Gagne ma confiance, et ma voix est à toi."]
+            }
+          ]
+        },
+        {
+          "id": "yvonne",
+          "name": "Mère Yvonne",
+          "title": "Soigneuse",
+          "at": [114,61],
+          "facing": "s",
+          "look": {
+            "skin": "#e0b98a",
+            "hair": "#d8d8d8",
+            "top": "#e8dcc0",
+            "tunic": "#d8d098",
+            "accent": "#a8404a",
+            "belt": "#6b4a2a",
+            "pants": "#7a7a60",
+            "boots": "#3a2a20",
+            "head": "bun",
+            "outfit": "dress",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Mes mains guérissent tout le monde, même toi. Mais d’abord, fais amende honorable."],
+            "mefiant": ["Je soigne les malades, sans regarder qui ils sont."],
+            "neutre": ["Les pauvres de Valcendre ont besoin de tout. Chaque pièce compte, mon enfant."],
+            "amical": ["Tu as le cœur large, enfant. Les pauvres te bénissent."],
+            "allie": ["Valcendre est plus doux depuis que tu y marches. Merci."]
+          },
+          "options": [
+            {
+              "kind": "donate",
+              "label": "Don à l’œuvre (100 or)",
+              "amount": 100,
+              "rep": {"target":"valcendre","delta":3},
+              "dailyCap": 15,
+              "reply": ["Cent pièces pour les pauvres de Valcendre. Que la Lanterne te garde."],
+              "capReply": ["Tu en as déjà tant donné aujourd’hui. Repose-toi, mon enfant."],
+              "poorReply": ["Garde tes pièces, tu en auras besoin. Reviens quand tu pourras."]
+            },
+            {
+              "kind": "topic",
+              "label": "Les pauvres",
+              "lines": [
+                "Le quartier est à l’est. Les gens y ont perdu leur maison dans l’effondrement de la cathédrale."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "zephyrin",
+          "name": "Zéphyrin",
+          "title": "Alchimiste",
+          "at": [110,60],
+          "facing": "e",
+          "look": {
+            "skin": "#e8c9a0",
+            "hair": "#3a8a5a",
+            "top": "#5a8a5a",
+            "tunic": "#6a5a8a",
+            "accent": "#d8d098",
+            "belt": "#3a2a20",
+            "pants": "#4a4a5a",
+            "boots": "#2a2020",
+            "head": "hood",
+            "outfit": "cloak",
+            "accessory": "satchel"
+          },
+          "greeting": {
+            "mefiant": ["Pas touche aux fioles."],
+            "neutre": ["L’alchimie, c’est la science des saisons. Je cherche un partenaire pour mes expériences."],
+            "amical": ["Tu m’intéresses : tu as les mains propres et le regard curieux."]
+          },
+          "options": [
+            {
+              "kind": "recruit",
+              "label": "Engager Zéphyrin (500 or)",
+              "minTier": "neutre",
+              "gold": 500,
+              "unit": {"id":"zephyrin","name":"Zéphyrin","class":"alchimiste_des_saisons"},
+              "offer": ["Cinq cents pièces pour financer mes ingrédients. En échange, mes fioles sont à toi."],
+              "locked": ["Je ne travaille pas avec ceux que Valcendre regarde de travers."]
+            }
+          ]
+        },
+        {
+          "id": "gerard",
+          "name": "Gérard « Pierre-Cœur »",
+          "title": "Maçon de pierres anciennes",
+          "at": [132,46],
+          "facing": "w",
+          "look": {
+            "skin": "#b88660",
+            "hair": "#4a3a30",
+            "top": "#7a7a70",
+            "tunic": "#8a8a80",
+            "accent": "#c8c0b0",
+            "belt": "#3a2a20",
+            "pants": "#4a4a4a",
+            "boots": "#2a2020",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "none"
+          },
+          "greeting": {
+            "mefiant": ["Je n’ai pas de temps à perdre."],
+            "neutre": ["Les pierres de Valcendre ont mille ans. Certaines chantent, si on les caresse."],
+            "amical": ["Tu me comprends, toi. Les pierres, c’est comme les amis."]
+          },
+          "options": [
+            {
+              "kind": "recruit",
+              "label": "Proposer de rejoindre la compagnie",
+              "needsQuest": "arene_des_cendres",
+              "unit": {"id":"gerard","name":"Gérard","class":"invocateur_de_pierres_anciennes"},
+              "offer": ["Tu as fait tes preuves dans l’arène. Mes pierres sont à toi."],
+              "locked": ["Prouve ta valeur dans l’Arène des Cendres, et on parlera de pierres."]
+            }
+          ]
+        },
+        {
+          "id": "dax",
+          "name": "Maître d’arène Dax",
+          "title": "Organisateur des combats",
+          "at": [110,47],
+          "facing": "s",
+          "look": {
+            "skin": "#b88660",
+            "hair": "#1f1f1f",
+            "top": "#b5483a",
+            "tunic": "#8a3a2a",
+            "accent": "#d8b04a",
+            "belt": "#2a2020",
+            "pants": "#33333f",
+            "boots": "#1f1f28",
+            "head": "short",
+            "outfit": "tunic",
+            "accessory": "sword"
+          },
+          "greeting": {
+            "hostile": ["L’arène ne veut pas de toi."],
+            "mefiant": ["Les combats, ça se paie. Reviens quand tu auras fait tes preuves."],
+            "neutre": ["L’Arène des Cendres ! Gloire, or, et un peu de sang. Tu t’inscris ?"],
+            "amical": ["Mon champion préféré ! La foule demande ton nom."],
+            "allie": ["L’arène t’attend, capitaine."]
+          },
+          "options": [
+            {
+              "kind": "quest",
+              "quest": "arene_des_cendres",
+              "offer": [
+                "Trois combats d’affilée dans l’Arène des Cendres. Gagne-les, et la foule t’adorera.",
+                "Les inscriptions ouvrent bientôt : reviens quand l’arène sera prête."
+              ],
+              "remind": ["L’arène n’est pas encore ouverte. Patience, champion."],
+              "done": ["Tu es notre champion ! Les cendres se souviendront de ton nom."],
+              "locked": ["L’arène se mérite. Fais-toi un nom à Valcendre d’abord."]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "rosalind",
+          "name": "Rosalind",
+          "title": "Aubergiste du Corbeau",
+          "at": [127,53],
+          "facing": "s",
+          "look": {
+            "skin": "#d8b28a",
+            "hair": "#1f1f1f",
+            "top": "#3a3a50",
+            "tunic": "#4a4a6a",
+            "accent": "#d8b04a",
+            "belt": "#2a2020",
+            "pants": "#33333f",
+            "boots": "#1f1f28",
+            "head": "bun",
+            "outfit": "dress",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Le Corbeau est fermé pour toi."],
+            "mefiant": ["Quarante pièces la nuit. Pas moins."],
+            "neutre": ["Auberge du Corbeau. Lits propres, vin sec, mauvaises langues en prime."],
+            "amical": ["Un client de plus, et un ami en prime !"],
+            "allie": ["Ta chambre est prête, comme toujours."]
+          },
+          "options": [
+            {
+              "kind": "inn",
+              "label": "Se reposer",
+              "cost": 40,
+              "freeFrom": "allie",
+              "reply": ["Bonne nuit. Le Corbeau veille, comme toujours."],
+              "freeReply": ["Ça ne se discute pas : pour toi, c’est gratuit."],
+              "poorReply": ["Quarante pièces. Je ne fais pas crédit."]
+            },
+            {
+              "kind": "topic",
+              "label": "Les rumeurs",
+              "lines": [
+                "On dit que la Régente est nerveuse. Que des hommes en capuche rôdent autour du marché la nuit..."
+              ]
+            }
+          ],
+          "refusesWhenHostile": true
+        },
+        {
+          "id": "tam",
+          "name": "Vieux Tam",
+          "title": "Mendiant du quartier des pauvres",
+          "at": [118,61],
+          "facing": "e",
+          "look": {
+            "skin": "#d2a679",
+            "hair": "#bfb7a0",
+            "top": "#6a5a4a",
+            "tunic": "#7a6a58",
+            "accent": "#a09080",
+            "belt": "#3a2a20",
+            "pants": "#4a4038",
+            "boots": "#2a2020",
+            "head": "hood",
+            "outfit": "cloak",
+            "accessory": "none"
+          },
+          "greeting": {
+            "hostile": ["Va-t’en, je ne te dirai rien."],
+            "mefiant": ["Les mendiants voient tout, et ne disent rien aux inconnus."],
+            "neutre": ["Un peu de monnaie pour un vieux ? On entend tant de choses, sur ce banc..."],
+            "amical": ["Toi, je t’aime bien. Tu me regardes dans les yeux."]
+          },
+          "options": [
+            {
+              "kind": "choice",
+              "label": "Interroger Tam sur la conspiration",
+              "when": {"quest":"conspiration_au_marche","questStatus":"active"},
+              "once": true,
+              "prompt": ["La conspiration ? Ils se retrouvent près des étals, après la fermeture. Que veux-tu faire ?"],
+              "choices": [
+                {
+                  "label": "Les dénoncer à la Régente.",
+                  "reply": ["Alors ce sera fait. Va dire à Ysmène où se tenir cette nuit."],
+                  "effects": [
+                    {"type":"flag","flag":"conspiration_demasquee"},
+                    {"type":"rep","target":"couronne","delta":4}
+                  ]
+                },
+                {
+                  "label": "Les menacer d’abord.",
+                  "reply": ["Une menace ? Fort bien : ils auront peur, mais je ne te dis plus rien."],
+                  "effects": [
+                    {"type":"rep","target":"valcendre","delta":-5},
+                    {"type":"flag","flag":"conspiration_demasquee"}
+                  ],
+                  "expression": "fache"
+                }
+              ]
+            },
+            {
+              "kind": "topic",
+              "label": "Le quartier",
+              "lines": ["Le quartier des pauvres a des yeux partout. Si tu veux savoir, demande-moi poliment."]
+            }
+          ]
+        }
+      ],
+      "shops": [
+        {
+          "id": "marche_de_berthe",
+          "name": "Marché de Berthe",
+          "welcome": {
+            "neutre": ["Potions, vivres, torches, tout pour la route."],
+            "amical": ["Pour toi, mes meilleures denrées !"]
+          },
+          "refusal": ["On ne sert pas ceux que la ville déteste."],
+          "stock": [
+            {"item":"pain_dore"},
+            {"item":"potion"},
+            {"item":"antidote"},
+            {"item":"torche"},
+            {"item":"herbe_apaisante"},
+            {"item":"hyper_potion","minTier":"amical"}
+          ]
+        },
+        {
+          "id": "raretes_de_lorn",
+          "name": "Raretés de Lorn",
+          "welcome": {"neutre":["Rien d’ordinaire, ici. Regarde."],"allie":["Mon arrière-boutique est à toi."]},
+          "refusal": ["Dehors. Je ne vends pas aux ennemis de la ville."],
+          "stock": [
+            {"item":"tome_des_cendres"},
+            {"item":"baton_lanterne"},
+            {"item":"fioles_d_automne"},
+            {"item":"dagues_jumelles"},
+            {"item":"collier_d_ecume","minTier":"amical"},
+            {"item":"bague_de_cendre","minTier":"amical"},
+            {"item":"eclat_de_lanterne","minTier":"allie"}
+          ]
+        }
+      ],
+      "rewards": [
+        {
+          "flag": "boss_gardien_cendre",
+          "text": "Le Gardien de Cendre est vaincu : Valcendre renaît.",
+          "effects": [{"type":"rep","target":"valcendre","delta":20},{"type":"rep","target":"couronne","delta":10}]
+        }
+      ]
+    },
+    {
+      "id": "camp_ecumeurs",
+      "name": "Camp des Écumeurs",
+      "summary": "Camp des Écumeurs, à l’est de Haut-Gué. Brakk y tient ses pillards.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "bosquet_roi_cerf",
+      "name": "Bosquet du Roi-Cerf",
+      "summary": "Clairière sacrée de la Forêt-Racine, où veille le Roi-Cerf.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "tour_noye",
+      "name": "Tour du Noyé",
+      "summary": "Tour du Noyé et son phare éteint, sur la côte ouest.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "aiguille_brisee",
+      "name": "Aiguille Brisée",
+      "summary": "Aiguille Brisée : donjon des Monts de Cendre.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "citadelle",
+      "name": "Citadelle Engloutie",
+      "summary": "Citadelle Engloutie, au large : dernier donjon de l’île.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "pont_trois_arches",
+      "name": "Pont des Trois Arches",
+      "summary": "Pont des Trois Arches sur le fleuve Argent.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "pont_vieux",
+      "name": "Vieux Pont",
+      "summary": "Vieux Pont, passage de la plaine vers la forêt.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "plage_epaves",
+      "name": "Plage des Épaves",
+      "summary": "Plage des Épaves : coffres échoués et crabes agressifs.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "menhir_aubemer",
+      "name": "Menhir d'Aubemer",
+      "summary": "Menhir d’Aubemer, pierre dressée des plaines.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "menhir_foret",
+      "name": "Menhir de la Forêt",
+      "summary": "Menhir de la Forêt, au nord de Ronceval.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "menhir_cendre",
+      "name": "Menhir de Cendre",
+      "summary": "Menhir de Cendre, dans les Monts.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "autel_aubemer",
+      "name": "Autel d'Aubemer",
+      "summary": "Autel d’Aubemer : point de retour pour la compagnie.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "autel_racine",
+      "name": "Autel de la Forêt-Racine",
+      "summary": "Autel de la Forêt-Racine : point de retour.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "autel_valcendre",
+      "name": "Autel du Val",
+      "summary": "Autel du Val : point de retour.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "autel_cote",
+      "name": "Autel de la Côte",
+      "summary": "Autel de la Côte : point de retour.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "autel_monts",
+      "name": "Autel des Monts",
+      "summary": "Autel des Monts : point de retour.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    },
+    {
+      "id": "autel_citadelle",
+      "name": "Autel de la Citadelle",
+      "summary": "Autel de la Citadelle : point de retour.",
+      "reputation": null,
+      "npcs": [],
+      "shops": [],
+      "rewards": []
+    }
+  ]
+}

@@ -104,6 +104,8 @@ export const balanceFileSchema = z.strictObject({
     cameraLerp: z.number().gt(0).max(1),
     cameraDeadzoneWidth: z.number().int().min(0),
     cameraDeadzoneHeight: z.number().int().min(0),
+    /** Distance (px) à laquelle on peut parler à un PNJ, du pied du héros au pied du PNJ. */
+    interactRange: z.number().int().positive(),
   }),
   combat: z.strictObject({
     hitChanceMin: percent,
@@ -135,6 +137,15 @@ export const balanceFileSchema = z.strictObject({
     promotionMinLevel: z.number().int().positive(),
   }),
   defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1) }),
+  /** Économie de départ (jalon M2) : or, capacité du sac (nombre de lignes), pile maximale. */
+  economy: z.strictObject({
+    startingGold: z.number().int().min(0),
+    inventoryCapacity: z.number().int().positive(),
+    maxStack: z.number().int().positive(),
+    startingItems: z.array(z.strictObject({ item: idSchema, qty: z.number().int().positive() })),
+  }),
+  /** Dialogues : vitesse de la machine à écrire (GDD §13.3), facteur quand on l'accélère. */
+  dialogue: z.strictObject({ charsPerSecond: z.number().positive(), fastMultiplier: z.number().min(1) }),
   injury: z.strictObject({ mobilityPenalty: z.number().int().min(0), statPenaltyRatio: z.number().min(0).max(1) }),
   /** Effets HD-2D du monde ouvert (décision n°47) ; le réglage « Qualité » choisit lesquels s'appliquent. */
   visuals: z.strictObject({
@@ -308,11 +319,46 @@ export const weaponSchema = z.strictObject({
   /** Élément offensif (armes magiques) : entre dans le triangle élémentaire (décision n°51). */
   element: idSchema.nullable(),
   effective: z.array(z.enum(EFFECTIVE_TAGS)),
+  /** Prix de base chez un marchand (sans modulation de réputation) ; absent = non vendue (armes d'ennemis). */
+  price: z.number().int().min(1).optional(),
+});
+
+/* ---------- Objets : consommables, accessoires, objets de quête (jalon M2 ; effets en combat au M5) ---------- */
+
+/** Effets des consommables ; leur application en combat arrive au jalon M5. */
+export const CONSUMABLE_EFFECTS = ['soin', 'soin_statut', 'fuite', 'lumiere', 'ration'] as const;
+
+export const consumableSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  description: z.string().min(1),
+  /** Prix de base chez un marchand. */
+  price: z.number().int().min(1),
+  effect: z.strictObject({ kind: z.enum(CONSUMABLE_EFFECTS), amount: z.number().int().min(0).optional() }),
+});
+
+export const accessorySchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  description: z.string().min(1),
+  price: z.number().int().min(1),
+  /** Bonus de stats portés (un seul emplacement d'accessoire par unité, GDD §9.8). */
+  bonus: z.partialRecord(z.enum(STAT_KEYS), z.number().int()),
+});
+
+/** Objets de quête et rares : ni achetés ni revendus. */
+export const keyItemSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  description: z.string().min(1),
 });
 
 export const itemsFileSchema = z.strictObject({
   $comment: comment,
   weapons: z.array(weaponSchema).min(1),
+  consumables: z.array(consumableSchema),
+  accessories: z.array(accessorySchema),
+  keyItems: z.array(keyItemSchema),
 });
 
 /* ---------- Ennemis (GDD §7, §9.15) ---------- */
@@ -422,6 +468,9 @@ export type StatKey = (typeof STAT_KEYS)[number];
 export type StatBlock = z.infer<typeof statBlock>;
 export type GrowthBlock = z.infer<typeof growthBlock>;
 export type WeaponDef = z.infer<typeof weaponSchema>;
+export type ConsumableDef = z.infer<typeof consumableSchema>;
+export type AccessoryDef = z.infer<typeof accessorySchema>;
+export type KeyItemDef = z.infer<typeof keyItemSchema>;
 export type DamageKind = (typeof DAMAGE_KINDS)[number];
 export type EffectiveTag = (typeof EFFECTIVE_TAGS)[number];
 export type EnemyDef = z.infer<typeof enemySchema>;

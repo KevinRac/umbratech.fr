@@ -55,7 +55,7 @@
         { "enemy": "ecumeur_lancier", "level": 3 },
         { "enemy": "ecumeur_incendiaire", "level": 4 }
       ],
-      "victoryFlags": []
+      "victoryFlags": ["brigands_foret_vaincus"]
     },
     {
       "id": "camp_des_ecumeurs",

@@ -23,6 +23,7 @@ import { VerticalMenu } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
 
 const DEPTH = { ambience: 60, tint: 80, hud: 100, banner: 110, pause: 200, toasts: 300 } as const;
+const GAUGE_EXPANDED_MS = 3200;
 const HINT_DURATION_MS = 9000;
 
 export interface PauseHandlers {
@@ -31,6 +32,17 @@ export interface PauseHandlers {
   /** Qualité des effets HD-2D en cours, et changement demandé (décision n°47). */
   readonly quality: () => Quality;
   readonly onQuality: (quality: Quality) => void;
+}
+
+/** Ce que la jauge de réputation affiche pour le lieu où se trouve le joueur. */
+export interface ReputationView {
+  readonly place: string;
+  readonly value: number;
+  readonly min: number;
+  readonly max: number;
+  readonly tierName: string;
+  readonly tierColor: number;
+  readonly tiers: readonly { readonly min: number; readonly max: number; readonly color: number }[];
 }
 
 export class WorldHudScene extends Phaser.Scene {
@@ -52,6 +64,13 @@ export class WorldHudScene extends Phaser.Scene {
   private pauseObjects: Phaser.GameObjects.GameObject[] = [];
   private pauseMenu: VerticalMenu | null = null;
   private pauseHandlers: PauseHandlers | null = null;
+  private gold: number | null = null;
+  private goldParts: Phaser.GameObjects.GameObject[] = [];
+  private reputation: ReputationView | null = null;
+  private gaugeExpandedUntil = 0;
+  private gaugeParts: Phaser.GameObjects.GameObject[] = [];
+  private promptText: string | null = null;
+  private promptParts: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: SCENES.worldHud, active: false });
@@ -78,6 +97,12 @@ export class WorldHudScene extends Phaser.Scene {
       this.zoneText = null;
       this.ambienceKind = null;
       this.pauseHandlers = null;
+      this.gold = null;
+      this.goldParts = [];
+      this.reputation = null;
+      this.gaugeParts = [];
+      this.promptText = null;
+      this.promptParts = [];
     });
     this.ready = true;
     const queued = this.pending;
@@ -86,7 +111,13 @@ export class WorldHudScene extends Phaser.Scene {
   }
 
   override update(): void {
-    if (this.ready) this.pauseMenu?.update();
+    if (!this.ready) return;
+    this.pauseMenu?.update();
+    // La jauge de réputation se replie après quelques secondes.
+    if (this.reputation && this.gaugeExpandedUntil > 0 && this.time.now > this.gaugeExpandedUntil) {
+      this.gaugeExpandedUntil = 0;
+      this.buildGauge();
+    }
   }
 
   /* ---------- API appelée par WorldScene ---------- */
@@ -115,6 +146,39 @@ export class WorldHudScene extends Phaser.Scene {
 
   toast(message: string): void {
     this.run(() => this.toasts.push(message));
+  }
+
+  /** Notifications de jeu (réputation, or, objets, quêtes) : deux messages par bulle au plus. */
+  notify(messages: readonly string[]): void {
+    this.run(() => {
+      for (let i = 0; i < messages.length; i += 2) this.toasts.push(messages.slice(i, i + 2).join('   ·   '));
+    });
+  }
+
+  /** Or du joueur, en haut à droite. */
+  setGold(amount: number): void {
+    this.run(() => {
+      this.gold = amount;
+      this.buildGold();
+    });
+  }
+
+  /** Jauge de réputation du lieu (null hors d'un village). `expand` : grande jauge pendant quelques secondes. */
+  setReputation(view: ReputationView | null, expand = false): void {
+    this.run(() => {
+      this.reputation = view;
+      this.gaugeExpandedUntil = view && expand ? this.time.now + GAUGE_EXPANDED_MS : 0;
+      this.buildGauge();
+    });
+  }
+
+  /** Invite d'interaction en bas de l'écran (« E  Parler à Maëlys »), ou null. */
+  setPrompt(text: string | null): void {
+    this.run(() => {
+      if (text === this.promptText) return;
+      this.promptText = text;
+      this.buildPrompt();
+    });
   }
 
   showBanner(title: string, subtitle: string, holdMs: number): void {
@@ -183,6 +247,9 @@ export class WorldHudScene extends Phaser.Scene {
     this.banner?.destroy(true);
     this.banner = null;
     this.buildHint();
+    this.buildGold();
+    this.buildGauge();
+    this.buildPrompt();
     if (this.zoneText !== null) this.buildZone();
     if (this.ambienceKind !== null) this.buildAmbience();
     if (this.pauseHandlers) this.buildPause();
@@ -195,6 +262,83 @@ export class WorldHudScene extends Phaser.Scene {
     const label = addText(this, 22 * S, 14 * S, this.zoneText ?? '', { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud + 1);
     const panel = drawPanel(this, 8 * S, 8 * S, Math.ceil(label.width) + 28 * S, 40 * S, { scale: 2 * S, depth: DEPTH.hud }).setAlpha(0.9);
     this.zoneParts = [panel, label];
+  }
+
+  private buildGold(): void {
+    for (const part of this.goldParts) part.destroy();
+    this.goldParts = [];
+    if (this.gold === null) return;
+    const S = this.S;
+    const label = addText(this, 0, 0, `${this.gold}`, { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.hud + 1);
+    const width = Math.ceil(label.width) + 66 * S;
+    const x = this.scale.width - width - 8 * S;
+    const panel = drawPanel(this, x, 8 * S, width, 32 * S, { scale: 2 * S, depth: DEPTH.hud }).setAlpha(0.9);
+    // Pièce : disque ambre et reflet.
+    const coin = this.add.circle(x + 16 * S, 24 * S, 7 * S, PALETTE.ambre).setDepth(DEPTH.hud + 1).setStrokeStyle(S, PALETTE.rougeCendre);
+    const shine = this.add.rectangle(x + 13 * S, 20 * S, 3 * S, 4 * S, PALETTE.lumiereDoree).setOrigin(0, 0).setDepth(DEPTH.hud + 2);
+    label.setPosition(x + 32 * S, 14 * S);
+    const unit = addText(this, x + width - 8 * S, 18 * S, 'or', { font: 'small', scale: S + 1, color: PALETTE.metalClair, align: 'right' }).setDepth(DEPTH.hud + 1);
+    this.goldParts = [panel, coin, shine, label, unit];
+  }
+
+  private buildGauge(): void {
+    for (const part of this.gaugeParts) part.destroy();
+    this.gaugeParts = [];
+    const view = this.reputation;
+    if (!view) return;
+    const S = this.S;
+    const expanded = this.gaugeExpandedUntil > 0;
+    const width = 240 * S;
+    const height = (expanded ? 62 : 44) * S;
+    const x = 8 * S;
+    // En bas à gauche, au-dessus de l'aide des touches : la bannière du lieu occupe le haut de l'écran.
+    const y = this.scale.height - height - 44 * S;
+    const panel = drawPanel(this, x, y, width, height, { scale: S, depth: DEPTH.hud }).setAlpha(expanded ? 0.95 : 0.78);
+    const place = addText(this, x + 12 * S, y + 6 * S, view.place, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud + 1);
+    const tier = addText(this, x + width - 12 * S, y + 6 * S, view.tierName, { scale: S, color: view.tierColor, align: 'right' }).setDepth(DEPTH.hud + 1);
+    this.gaugeParts.push(panel, place, tier);
+
+    const barX = x + 12 * S;
+    const barY = y + 30 * S;
+    const barW = width - 24 * S;
+    const barH = 8 * S;
+    const span = view.max - view.min;
+    const at = (v: number): number => barX + Math.round(((v - view.min) / span) * barW);
+    this.gaugeParts.push(this.add.rectangle(barX - S, barY - S, barW + 2 * S, barH + 2 * S, PALETTE.encre).setOrigin(0, 0).setDepth(DEPTH.hud + 1));
+    for (const t of view.tiers) {
+      const x0 = at(t.min);
+      const x1 = at(t.max + 1);
+      this.gaugeParts.push(this.add.rectangle(x0, barY, Math.max(S, x1 - x0 - S), barH, t.color, 0.38).setOrigin(0, 0).setDepth(DEPTH.hud + 2));
+    }
+    // Remplissage depuis le milieu de l'échelle (0) jusqu'à la valeur : à gauche = défiance, à droite = faveur.
+    const zero = at(0);
+    const here = at(view.value);
+    this.gaugeParts.push(this.add.rectangle(Math.min(zero, here), barY, Math.max(S, Math.abs(here - zero)), barH, view.tierColor, 1).setOrigin(0, 0).setDepth(DEPTH.hud + 3));
+    this.gaugeParts.push(this.add.rectangle(zero, barY - 2 * S, S, barH + 4 * S, PALETTE.parchemin, 0.8).setOrigin(0, 0).setDepth(DEPTH.hud + 4));
+    this.gaugeParts.push(this.add.rectangle(here - S, barY - 3 * S, 3 * S, barH + 6 * S, 0xffffff, 1).setOrigin(0, 0).setDepth(DEPTH.hud + 5).setStrokeStyle(S, PALETTE.encre));
+    if (expanded) {
+      const sign = view.value > 0 ? '+' : view.value < 0 ? '-' : '';
+      const detail = addText(this, x + 12 * S, y + 44 * S, `Réputation  ${sign}${Math.abs(view.value)}`, { font: 'small', scale: S + 1, color: PALETTE.metalClair }).setDepth(DEPTH.hud + 1);
+      this.gaugeParts.push(detail);
+    }
+  }
+
+  private buildPrompt(): void {
+    for (const part of this.promptParts) part.destroy();
+    this.promptParts = [];
+    if (this.promptText === null) return;
+    const S = this.S;
+    const { width, height } = this.scale;
+    const key = addText(this, 0, 0, 'E', { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.hud + 2);
+    const label = addText(this, 0, 0, this.promptText, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud + 2);
+    const total = Math.ceil(key.width) + Math.ceil(label.width) + 52 * S;
+    const x = Math.round((width - total) / 2);
+    const y = height - 92 * S;
+    const panel = drawPanel(this, x, y, total, 32 * S, { scale: S, depth: DEPTH.hud + 1 }).setAlpha(0.92);
+    const keyBox = this.add.rectangle(x + 10 * S, y + 6 * S, 22 * S, 20 * S, PALETTE.violetBrume, 0.9).setOrigin(0, 0).setDepth(DEPTH.hud + 1).setStrokeStyle(S, PALETTE.ambre);
+    key.setPosition(Math.round(x + 21 * S - key.width / 2), y + 8 * S);
+    label.setPosition(x + 40 * S, y + 8 * S);
+    this.promptParts = [panel, keyBox, key, label];
   }
 
   private buildHint(): void {

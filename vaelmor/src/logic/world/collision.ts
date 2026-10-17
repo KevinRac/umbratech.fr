@@ -11,6 +11,8 @@ export class CollisionGrid {
   /** 1 = solide pour le héros. Recalculé quand les drapeaux changent. */
   private readonly solid: Uint8Array;
   private openFlags: ReadonlySet<string> = new Set();
+  /** Cases rendues solides par des occupants (PNJ), en plus de la carte. */
+  private extraSolid: ReadonlySet<number> = new Set();
 
   constructor(
     readonly width: number,
@@ -35,6 +37,12 @@ export class CollisionGrid {
     this.refresh();
   }
 
+  /** Cases occupées par des PNJ : solides tant qu'ils sont là (indices `ty * largeur + tx`). */
+  setExtraSolid(cells: Iterable<number>): void {
+    this.extraSolid = new Set(cells);
+    this.refresh();
+  }
+
   private refresh(): void {
     for (let i = 0; i < this.values.length; i++) {
       const v = this.values[i] as number;
@@ -45,6 +53,7 @@ export class CollisionGrid {
       }
       this.solid[i] = solid ? 1 : 0;
     }
+    for (const i of this.extraSolid) if (i >= 0 && i < this.solid.length) this.solid[i] = 1;
   }
 
   inBounds(tx: number, ty: number): boolean {

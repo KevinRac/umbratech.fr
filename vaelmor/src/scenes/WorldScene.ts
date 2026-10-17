@@ -20,6 +20,13 @@ import { CollisionGrid } from '../logic/world/collision';
 import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '../logic/world/movement';
 import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker } from '../logic/world/zones';
+import { getGameCtx } from '../core/townContext';
+import { collectFlagRewards, enterLocation, newProgress, newlyReady, npcPresent, questStatus, questTierOk, reputationOf, tierIdOf, type GameCtx, type Notice } from '../logic/game';
+import type { NpcDef } from '../data/townSchemas';
+import { formatNotices } from '../ui/notices';
+import { facingPose, facingToward } from '../render/npcSprites';
+import { TOWN_TEX, ensureMarkerTextures, ensureNpcTexture } from '../render/townTextures';
+import type { MenuTab } from './MenuScene';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
 import { worldView, type WorldView } from '../render/viewport';
 import { parseQuality, type Quality } from '../render/atmosphere';
@@ -31,7 +38,7 @@ import { WATER_FRAMES } from '../render/waterTile';
 import { WHEAT_FRONT_BELOW, WHEAT_FRONT_FRAMES, WHEAT_FRONT_H, WHEAT_FRONT_MS } from '../render/wheatFront';
 import { fixGpuTileAnimations } from '../render/tileAnimations';
 import { SCENES } from './keys';
-import type { WorldHudScene } from './WorldHudScene';
+import type { ReputationView, WorldHudScene } from './WorldHudScene';
 
 const DEPTH = {
   water: -10,
@@ -42,6 +49,7 @@ const DEPTH = {
   canopy: 10,
   /** Silhouette du héros au-dessus des toits : visible seulement là où un toit le cache. */
   heroGhost: 10.2,
+  marker: 10.4,
   smoke: 10.5,
   fog: 11,
   debug: 90,
@@ -51,6 +59,22 @@ const TILESET_NAME = 'world_tiles';
 const WATER_FRAME_MS = 420;
 const SMOKE_PERIOD_MS = 520;
 const GATE_MESSAGE_COOLDOWN_MS = 4000;
+
+/** Un PNJ posé dans le monde. */
+interface NpcActor {
+  readonly def: NpcDef;
+  readonly locationId: string;
+  readonly x: number;
+  /** Pieds du PNJ (pixels). */
+  readonly footY: number;
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly shadow: Phaser.GameObjects.Image;
+  readonly marker: Phaser.GameObjects.Image;
+  readonly phase: number;
+  facing: NpcDef['facing'];
+  /** Instant où le PNJ reprend son regard d'origine après une conversation. */
+  resetAt: number;
+}
 
 export interface WorldSceneData {
   /** Vrai pour une nouvelle partie : l'état du monde repart du point de départ. */
@@ -101,12 +125,32 @@ export class WorldScene extends Phaser.Scene {
   private teleportIndex = -1;
   private debugClock = 0;
 
+  /* Villages (jalon M2) */
+  private gameCtx!: GameCtx;
+  private npcs = new Map<string, NpcActor>();
+  private nearNpc: NpcActor | null = null;
+  /** Vrai pendant un dialogue ou un menu : le héros ne bouge plus. */
+  private modal = false;
+  private modalCooldownUntil = 0;
+  private announced = new Set<string>();
+  private village: string | null = null;
+  private lastGold = -1;
+  private lastRepKey = '';
+
   constructor() {
     super(SCENES.world);
   }
 
   create(data: WorldSceneData = {}): void {
     this.leaving = false;
+    this.modal = false;
+    this.modalCooldownUntil = 0;
+    this.npcs = new Map();
+    this.nearNpc = null;
+    this.announced = new Set();
+    this.village = null;
+    this.lastGold = -1;
+    this.lastRepKey = '';
     this.view = worldView(this, worldZoomFor(this.scale.height));
     try {
       this.data_ = loadGameData();
@@ -124,8 +168,10 @@ export class WorldScene extends Phaser.Scene {
     ensureWorldTextures(this);
     ensureHeroAnimations(this);
 
-    if (data.newGame || !getWorldState()) setWorldState(newWorldState(this.map));
+    if (data.newGame || !getWorldState()) setWorldState(newWorldState(this.map, newProgress({ balance: this.data_.balance, locations: this.data_.locations, factions: this.data_.factions })));
     this.state = getWorldState() as WorldState;
+    this.gameCtx = getGameCtx() as GameCtx;
+    this.applyTownDebug(data.newGame === true);
     this.grid = CollisionGrid.fromMap(this.map, this.state.openFlags);
     this.tracker = new ZoneTracker(this.map, this.data_.zones);
 
@@ -142,6 +188,7 @@ export class WorldScene extends Phaser.Scene {
     this.buildMapLayers(worldWidth, worldHeight);
     this.buildAmbientDecor();
     this.buildHero();
+    this.buildNpcs();
     this.buildGateFog();
     this.debugOverlay = this.add.graphics().setDepth(DEPTH.debug);
 
@@ -159,6 +206,8 @@ export class WorldScene extends Phaser.Scene {
     this.camera_ = centerOn({ x: this.body_.x, y: this.body_.y - 10 }, this.cameraConfig);
     this.applyCamera();
     this.cameras.main.fadeIn(600, 0, 0, 0);
+    this.syncTownHud();
+    this.checkProgress(true);
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
@@ -294,6 +343,14 @@ export class WorldScene extends Phaser.Scene {
 
   override update(time: number, delta: number): void {
     if (!this.map || this.leaving) return;
+    if (this.modal) {
+      const dtModal = delta / 1000;
+      this.updateNpcs(time);
+      this.pollTownHud();
+      this.updateAtmosphere(dtModal);
+      this.atmosphere?.update(dtModal);
+      return;
+    }
     if (this.actions.justPressed('cancel')) {
       this.togglePause();
     }
@@ -312,6 +369,9 @@ export class WorldScene extends Phaser.Scene {
     this.applyCamera();
     this.syncHero();
     this.updateZones();
+    this.updateNpcs(time);
+    this.updateInteraction(time);
+    this.pollTownHud();
     this.updateAtmosphere(dt);
     this.atmosphere?.update(dt);
     this.updateDebug(delta);
@@ -359,6 +419,236 @@ export class WorldScene extends Phaser.Scene {
     this.state.player.facing = body.facing;
   }
 
+  /* ---------- Villages : PNJ, dialogues, réputation (jalon M2) ---------- */
+
+  /**
+   * Outils de debug : `?debug&rep=haut_gue:-70,racines:20&gold=999&flags=boss_brakk`
+   * règlent réputations, or et drapeaux au lancement d'une partie (une seule fois).
+   */
+  private applyTownDebug(newGame: boolean): void {
+    if (newGame) this.registry.set('town.debugApplied', false);
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('debug') || this.registry.get('town.debugApplied') === true) return;
+    this.registry.set('town.debugApplied', true);
+    const progress = this.gameCtx.progress;
+    for (const entry of (params.get('rep') ?? '').split(',')) {
+      const [target, value] = entry.split(':');
+      if (target && value !== undefined && Number.isFinite(Number(value)) && progress.reputation[target] !== undefined) progress.reputation[target] = Math.max(-100, Math.min(100, Number(value)));
+    }
+    if (params.has('gold')) progress.gold = Math.max(0, Math.floor(Number(params.get('gold')) || 0));
+    for (const flag of (params.get('flags') ?? '').split(',')) if (flag) addUnique(this.state.openFlags, flag);
+  }
+
+  private buildNpcs(): void {
+    ensureMarkerTextures(this);
+    for (const { npc, location } of this.gameCtx.index.npcs.values()) {
+      if (!npcPresent(this.gameCtx, npc)) continue;
+      const size = this.map.tileSize;
+      const [tx, ty] = npc.at;
+      const x = tx * size + size / 2;
+      const footY = (ty + 1) * size;
+      const texture = ensureNpcTexture(this, npc);
+      const { pose, flipX } = facingPose(npc.facing);
+      const sprite = this.add.sprite(x, footY, texture, TOWN_TEX.npcFrame(pose, 0)).setOrigin(0.5, 1).setFlipX(flipX).setDepth(DEPTH.entities + (footY - 1) / 100000);
+      const shadow = this.add.image(x, footY - 1, WORLD_TEX.shadow).setDepth(DEPTH.shadow);
+      const marker = this.add.image(x, footY - 34, TOWN_TEX.markerAvailable).setDepth(DEPTH.marker).setVisible(false);
+      this.npcs.set(npc.id, { def: npc, locationId: location.id, x, footY, sprite, shadow, marker, phase: (tx * 37 + ty * 91) % 700, facing: npc.facing, resetAt: 0 });
+    }
+    this.refreshNpcSolids();
+    // Le point d'apparition ou la case de départ ne doit pas tomber dans un PNJ.
+    if (this.grid.isSolidRect(this.body_.x - 5, this.body_.y - 8, 10, 8)) this.snapToFree(this.body_);
+    this.syncHero();
+    this.refreshMarkers();
+  }
+
+  private refreshNpcSolids(): void {
+    const size = this.map.tileSize;
+    this.grid.setExtraSolid([...this.npcs.values()].map((a) => (a.footY / size - 1) * this.map.width + Math.floor(a.x / size)));
+  }
+
+  /** Pastilles « ! » (quête à prendre) et « ? » (quête à rendre) au-dessus des PNJ. */
+  private refreshMarkers(): void {
+    const ctx = this.gameCtx;
+    for (const actor of this.npcs.values()) {
+      let texture: string | null = null;
+      for (const option of actor.def.options) {
+        if (option.kind !== 'quest') continue;
+        const status = questStatus(ctx, option.quest);
+        const quest = ctx.index.quests.get(option.quest);
+        if (status === 'ready') texture = TOWN_TEX.markerReady;
+        else if (status === 'available' && quest && questTierOk(ctx, quest) && texture === null) texture = TOWN_TEX.markerAvailable;
+      }
+      const hostile = ctx.progress.reputation[actor.locationId] !== undefined && tierIdOf(reputationOf(ctx.progress, actor.locationId), ctx.data.reputation) === 'hostile' && actor.def.refusesWhenHostile === true;
+      if (texture === null || hostile) actor.marker.setVisible(false);
+      else actor.marker.setTexture(texture).setVisible(true);
+    }
+  }
+
+  /** Respiration des PNJ, pastilles qui flottent, regard qui revient à sa place. */
+  private updateNpcs(time: number): void {
+    const frame = (actor: NpcActor): number => (Math.floor((time + actor.phase) / 700) % 2);
+    for (const actor of this.npcs.values()) {
+      if (actor.resetAt > 0 && time > actor.resetAt) {
+        actor.resetAt = 0;
+        actor.facing = actor.def.facing;
+      }
+      const { pose, flipX } = facingPose(actor.facing);
+      actor.sprite.setFlipX(flipX).setFrame(TOWN_TEX.npcFrame(pose, frame(actor)));
+      if (actor.marker.visible) actor.marker.setY(actor.footY - 34 + Math.round(Math.sin(time / 260 + actor.phase)));
+    }
+  }
+
+  /** PNJ le plus proche à portée de parole (pieds à pieds). */
+  private findNearNpc(): NpcActor | null {
+    const range = this.data_.balance.exploration.interactRange;
+    let best: NpcActor | null = null;
+    let bestDistance = range;
+    for (const actor of this.npcs.values()) {
+      const d = Math.hypot(actor.x - this.body_.x, actor.footY - 1 - this.body_.y);
+      if (d <= bestDistance) {
+        best = actor;
+        bestDistance = d;
+      }
+    }
+    return best;
+  }
+
+  private updateInteraction(time: number): void {
+    const near = this.findNearNpc();
+    if (near !== this.nearNpc) {
+      this.nearNpc = near;
+      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : null);
+    }
+    if (near && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startDialogue(near);
+    if (time > this.modalCooldownUntil && this.actions.justPressed('menu')) this.openMenu('inventaire');
+    else if (time > this.modalCooldownUntil && this.actions.justPressed('journal')) this.openMenu('quetes');
+  }
+
+  private enterModal(): void {
+    this.modal = true;
+    this.body_.moved = false;
+    this.body_.sprinting = false;
+    this.body_.vx = 0;
+    this.body_.vy = 0;
+    this.nearNpc = null;
+    this.hud.setPrompt(null);
+    this.syncHero();
+  }
+
+  private leaveModal(): void {
+    this.modal = false;
+    this.modalCooldownUntil = this.time.now + 250;
+    this.grid.setOpenFlags(this.state.openFlags);
+    this.refreshGates();
+    this.refreshMarkers();
+    this.checkProgress(false);
+  }
+
+  private startDialogue(actor: NpcActor): void {
+    this.enterModal();
+    // Le PNJ se tourne vers le héros, et le héros vers lui.
+    actor.facing = facingToward(this.body_.x - actor.x, this.body_.y - (actor.footY - 1));
+    actor.resetAt = 0;
+    const toward = facingToward(actor.x - this.body_.x, actor.footY - 1 - this.body_.y);
+    this.body_.facing = toward;
+    this.syncHero();
+    this.scene.launch(SCENES.dialogue, {
+      npcId: actor.def.id,
+      onClose: (result: { recruited: boolean }) => {
+        if (result.recruited) this.removeNpc(actor);
+        else actor.resetAt = this.time.now + 1500;
+        this.leaveModal();
+      },
+    });
+  }
+
+  private removeNpc(actor: NpcActor): void {
+    actor.sprite.destroy();
+    actor.shadow.destroy();
+    actor.marker.destroy();
+    this.npcs.delete(actor.def.id);
+    this.refreshNpcSolids();
+  }
+
+  private openMenu(tab: MenuTab): void {
+    this.enterModal();
+    this.scene.launch(SCENES.menu, { tab, onClose: () => this.leaveModal() });
+  }
+
+  /** Jauge de réputation du lieu habité où se trouve le héros (null ailleurs). */
+  private reputationView(): ReputationView | null {
+    if (!this.village) return null;
+    const ctx = this.gameCtx;
+    const value = reputationOf(ctx.progress, this.village);
+    const cfg = ctx.data.reputation;
+    const tier = cfg.tiers.find((t) => t.id === tierIdOf(value, cfg)) ?? cfg.tiers[2];
+    const color = (hex: string): number => Phaser.Display.Color.HexStringToColor(hex).color;
+    return {
+      place: ctx.index.locations.get(this.village)?.name ?? this.village,
+      value,
+      min: cfg.min,
+      max: cfg.max,
+      tierName: tier?.name ?? '',
+      tierColor: color(tier?.color ?? '#c9bfa9'),
+      tiers: cfg.tiers.map((t) => ({ min: t.min, max: t.max, color: color(t.color) })),
+    };
+  }
+
+  private syncTownHud(): void {
+    this.lastGold = this.gameCtx.progress.gold;
+    this.hud.setGold(this.lastGold);
+  }
+
+  /** Suit l'or et la réputation du lieu : le HUD se met à jour quand ils changent (dialogue, menu, récompense). */
+  private pollTownHud(): void {
+    const gold = this.gameCtx.progress.gold;
+    if (gold !== this.lastGold) {
+      this.lastGold = gold;
+      this.hud.setGold(gold);
+    }
+    if (this.village) {
+      const key = `${this.village}:${reputationOf(this.gameCtx.progress, this.village)}`;
+      if (key !== this.lastRepKey) {
+        const first = this.lastRepKey === '';
+        this.lastRepKey = key;
+        this.hud.setReputation(this.reputationView(), !first);
+      }
+    }
+  }
+
+  /** Entrée dans un village : décroissance de visite (décision n°10), jauge de réputation. */
+  private onLocationEntered(id: string): void {
+    if (this.gameCtx.progress.reputation[id] === undefined || this.gameCtx.index.locations.get(id)?.reputation === null) {
+      this.village = null;
+      this.lastRepKey = '';
+      this.hud.setReputation(null);
+      return;
+    }
+    enterLocation(this.gameCtx.progress, id, this.gameCtx.data.reputation);
+    this.village = id;
+    this.lastRepKey = `${id}:${reputationOf(this.gameCtx.progress, id)}`;
+    this.hud.setReputation(this.reputationView(), true);
+  }
+
+  private onLocationLeft(): void {
+    this.village = null;
+    this.lastRepKey = '';
+    this.hud.setReputation(null);
+  }
+
+  /** Récompenses de boss et quêtes dont l'objectif vient d'être atteint. */
+  private checkProgress(silentStart: boolean): void {
+    const notices: Notice[] = collectFlagRewards(this.gameCtx);
+    if (silentStart) {
+      for (const id of Object.keys(this.gameCtx.progress.quests)) if (questStatus(this.gameCtx, id) === 'ready') this.announced.add(id);
+    }
+    notices.push(...newlyReady(this.gameCtx, this.announced));
+    if (notices.length > 0) this.time.delayedCall(silentStart ? 1200 : 0, () => this.hud.notify(formatNotices(this.gameCtx, notices)));
+    this.grid.setOpenFlags(this.state.openFlags);
+    this.refreshGates();
+    this.refreshMarkers();
+  }
+
   /* ---------- Zones et lieux ---------- */
 
   private updateZones(): void {
@@ -368,6 +658,10 @@ export class WorldScene extends Phaser.Scene {
       const id = String(update.location.props['id']);
       const isNew = addUnique(this.state.discoveredLocations, id);
       this.hud.showBanner(update.location.name, isNew ? 'Lieu découvert' : '', 1400);
+      this.onLocationEntered(id);
+      if (isNew) this.checkProgress(false);
+    } else if (update.locationChanged) {
+      this.onLocationLeft();
     }
   }
 

@@ -6,7 +6,7 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M2 : villages, PNJ, réputation** (GDD §5, §6, §17) — `locations.json` (décision n°35), PNJ au gabarit commun 16×28 (n°48 : `CharacterLook` du monde, sans corpulence ni équipement de combat ; les corpulences n°61 sont propres aux unités de combat), dialogues, boutique, jauge de réputation et prix. Puis **M3** (ennemis visibles du monde) : le contact lance le combat sur le terrain du contact avec `this.scene.start(SCENES.battle, { encounterId, returnTo: 'world', site: { x, y }, initiative })` (voir `WorldScene.startBattle`, branché pour l'instant sur F7 au point du héros) ; les ennemis de la rencontre viendront des tables de la zone.
+**M3 : ennemis visibles du monde** (GDD §7, §17) — le contact lance le combat avec `this.scene.start(SCENES.battle, { encounterId, returnTo: 'world', site: { x, y }, initiative })` (voir `WorldScene.startBattle`, branché pour l'instant sur F7). Les ennemis de la rencontre viennent des tables de la zone. À brancher en M3 : réaction hostile des gardes (embuscade), défaite → retour au dernier village avec perte d'or (n°56), drapeaux d'accès `acces_citadelle` / `barque_de_dorn` sur les portes de zone.
 Ensuite, dans l'ordre du GDD §17 : M5 (préparation, objets, compétences, boss à 2 phases, renforts), M6, M9, M7, M8, M10.
 
 ## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)
@@ -26,7 +26,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M0 : squelette technique** (16/10/2026) — voir « Livré en M0 »
 - [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
 - [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
-- [ ] M2, M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
+- [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°69 à valider
+- [ ] M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -198,6 +199,26 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **n°59 — Le champ de bataille est l'art du monde**, avec son atmosphère HD-2D (sans flou de profondeur) ; le terrain suit ce qui est dessiné (portes réelles, bâtiments, obstacles).
 - **n°60 — Unités au gabarit commun 16×28 avec équipement de classe** (remplace les sprites 16×20).
 - **n°61 — Corpulence par classe** (armure, brute, robe) en plus de l'équipement : la classe se lit à la silhouette, comme dans les Fire Emblem GBA. Le héros et les PNJ du monde gardent le gabarit commun.
+
+## Livré en M2
+- **Données** : `data/locations.json` (22 lieux, 37 PNJ, 5 boutiques, 4 factions) et `data/quests.json` (14 quêtes), validés par Zod + vérifications croisées (`src/data/validate.ts`) et contre la carte (`src/data/townMap.ts` : PNJ dans le lieu, hors collision, hors portes). Prix des objets, consommables, accessoires, objets-clés, `balance.economy` et `balance.dialogue`.
+- **Logique pure** `src/logic/game/` : progression (inventaire, or, réputation, décroissance à la visite), dialogues à variantes par palier, boutique (achat/vente, prix selon palier, revente 40 %), quêtes (statut calculé : disponible, active, prête, terminée), effets.
+- **Monde** : PNJ visibles (gabarit 16×28, apparences propres, respiration), marqueurs « ! » et « ? », invite « E Parler à X », collision des PNJ.
+- **Dialogues** : boîte en bas, portrait 64×64 à gauche (4 expressions), machine à écrire, menu d'options, choix, offres de quête, recrutement, dons (+15 réputation max par jour).
+- **Boutique** : onglets Acheter/Vendre, détail, stock selon palier. Palier hostile : refus de commerce, un PNJ « don » par village permet de remonter.
+- **UI** : compteur d'or, jauge de réputation (dépliée 3,2 s puis compacte), notifications, menu Tab/M (Inventaire, Réputation, Quêtes ; J ouvre le journal).
+- **Débogage** : paramètres d'URL `?debug&rep=id:val&gold=N&flags=a,b`.
+- Tests : 336 passent ; `npm run build` OK.
+
+### Décisions n°62 à n°69 (jalon M2) — à valider par l'auteur
+- **n°62 — Port-Brume démarre à -10**, soit « Neutre » sur l'échelle §6.2 (le GDD dit « Méfiant »).
+- **n°63 — PNJ statiques** (pas de déambulation) dans ce prototype.
+- **n°64 — Quêtes liées aux boss** (`boss_*`) attendent leurs drapeaux jusqu'en M3/M5.
+- **n°65 — Gardes hostiles / embuscade** reportés en M3.
+- **n°66 — Recrues** seulement enregistrées (le PNJ quitte le village) ; l'effectif jouable arrive en M5/M6.
+- **n°67 — Accès** : implémenté par refus de boutique, repos gratuit, conditions de quête/recrutement ; `acces_citadelle` et `barque_de_dorn` existent mais ne ferment pas encore de portes.
+- **n°68 — Valcendre compte 12 PNJ** ; la quête d'arène attend un jalon ultérieur.
+- **n°69 — Paramètres de débogage** `rep`, `gold`, `flags` conservés en mode `?debug`.
 
 ## Modèle / effort conseillés
 Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).

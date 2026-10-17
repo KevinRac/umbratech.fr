@@ -5,6 +5,7 @@
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { checkTownsOnMap } from '../src/data/townMap';
 import { parseWorldMap } from '../src/data/worldMap';
 import { DATA_KEYS, dataFileName, validateGameData, type RawGameData } from '../src/data/validate';
 
@@ -38,6 +39,7 @@ async function main(): Promise<number> {
       try {
         const rawMap = JSON.parse(await readFile(resolve(dataDir, '..', 'assets', 'maps', 'world.json'), 'utf8')) as unknown;
         const map = parseWorldMap(rawMap, { zones: d.zones, terrains: d.terrains, tileSize: d.balance.exploration.tileSize });
+        if (map.ok) problems.push(...checkTownsOnMap(d, map.map));
         if (map.ok) mapSummary = ` Carte du monde ${map.map.width}×${map.map.height} : ${map.map.locations.length} lieux, ${map.map.gates.length} passages.`;
         else problems.push(...map.issues);
       } catch (error) {
@@ -48,7 +50,7 @@ async function main(): Promise<number> {
           `✓ Données valides : ${d.classes.length} classes, ` +
             `${d.classes.reduce((n, c) => n + c.evolutions.length, 0)} évolutions, ` +
             `${d.terrains.length} terrains, ${d.elements.length} éléments, ${d.reputation.tiers.length} paliers de réputation, ` +
-            `${d.weapons.length} armes, ${d.enemies.length} ennemis, ${d.encounters.encounters.length} rencontres.${mapSummary}`,
+            `${d.weapons.length} armes, ${d.enemies.length} ennemis, ${d.encounters.encounters.length} rencontres, ${d.locations.length} lieux, ${d.locations.reduce((n, l) => n + l.npcs.length, 0)} PNJ, ${d.quests.length} quêtes.${mapSummary}`,
         );
         return 0;
       }

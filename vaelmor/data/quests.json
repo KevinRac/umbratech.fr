@@ -1,0 +1,156 @@
+{
+  "$comment": "Quêtes : étapes (drapeau levé ou lieu découvert) et récompenses. Les paroles vivent dans les PNJ (option « quest » de locations.json).",
+  "quests": [
+    {
+      "id": "farine_volee",
+      "name": "La farine volée",
+      "giver": "thom",
+      "summary": "Les Écumeurs ont volé la farine de Thom. Leur chef Brakk tient un camp à l’est de Haut-Gué.",
+      "steps": [{"kind":"flag","flag":"boss_brakk","text":"Vaincre Brakk au camp des Écumeurs"}],
+      "reward": {"gold":80,"rep":[{"target":"haut_gue","delta":10}],"items":[{"item":"pain_dore","qty":3}]}
+    },
+    {
+      "id": "colporteur_perdu",
+      "name": "Le colporteur perdu",
+      "giver": "nessa",
+      "summary": "Le père de Nessa, colporteur, n’est pas revenu du Pont des Trois Arches.",
+      "steps": [{"kind":"visit","location":"pont_trois_arches","text":"Rejoindre le Pont des Trois Arches"}],
+      "reward": {"gold":50,"rep":[{"target":"haut_gue","delta":15}],"items":[{"item":"potion","qty":1}]}
+    },
+    {
+      "id": "eclaireur_de_la_brume",
+      "name": "Éclaireur de la Brume",
+      "giver": "ilar",
+      "principal": true,
+      "summary": "Franchir le Vieux Pont et découvrir l’origine de la Brume.",
+      "steps": [
+        {"kind":"visit","location":"pont_vieux","text":"Franchir le Vieux Pont"},
+        {"kind":"flag","flag":"boss_roi_cerf","text":"Délivrer le Roi-Cerf, premier mal de la Brume"}
+      ],
+      "reward": {"gold":200,"rep":[{"target":"haut_gue","delta":25}],"items":[{"item":"carte_des_brumes","qty":1}]}
+    },
+    {
+      "id": "roi_cerf_souffre",
+      "name": "Le Roi-Cerf souffre",
+      "giver": "sylve",
+      "principal": true,
+      "summary": "Libérer le Roi-Cerf au Bosquet, au nord-ouest de Ronceval.",
+      "steps": [
+        {"kind":"visit","location":"bosquet_roi_cerf","text":"Atteindre le Bosquet du Roi-Cerf"},
+        {"kind":"flag","flag":"boss_roi_cerf","text":"Vaincre l’ombre qui ronge le Roi-Cerf"}
+      ],
+      "reward": {
+        "gold": 150,
+        "rep": [{"target":"ronceval","delta":25},{"target":"racines","delta":10}],
+        "items": [{"item":"broche_des_racines","qty":1}]
+      }
+    },
+    {
+      "id": "graine_perdue",
+      "name": "Graine perdue",
+      "giver": "mousse",
+      "summary": "Mousse a perdu sa graine près du menhir de la forêt.",
+      "steps": [{"kind":"visit","location":"menhir_foret","text":"Fouiller autour du Menhir de la Forêt"}],
+      "reward": {
+        "gold": 40,
+        "rep": [{"target":"ronceval","delta":10},{"target":"racines","delta":5}],
+        "items": [{"item":"graine_du_bosquet","qty":1}]
+      }
+    },
+    {
+      "id": "braconniers_de_la_couronne",
+      "name": "Les braconniers de la Couronne",
+      "giver": "ysolde",
+      "minTier": "neutre",
+      "summary": "Chasser les braconniers de la Couronne qui pillent le gibier de la forêt.",
+      "steps": [{"kind":"flag","flag":"brigands_foret_vaincus","text":"Vaincre les brigands de la forêt"}],
+      "reward": {
+        "gold": 90,
+        "rep": [{"target":"ronceval","delta":10},{"target":"racines","delta":8},{"target":"couronne","delta":-5}]
+      }
+    },
+    {
+      "id": "epaves_de_la_plage",
+      "name": "Les épaves de la plage",
+      "giver": "lia",
+      "summary": "Explorer la plage des Épaves pour la carte de Lia.",
+      "steps": [{"kind":"visit","location":"plage_epaves","text":"Explorer la plage des Épaves"}],
+      "reward": {"gold":60,"rep":[{"target":"port_brume","delta":10}],"items":[{"item":"filet_de_peche","qty":1}]}
+    },
+    {
+      "id": "phare_eteint",
+      "name": "Le phare éteint",
+      "giver": "dorn",
+      "summary": "Rallumer le phare de la Tour du Noyé.",
+      "steps": [{"kind":"visit","location":"tour_noye","text":"Atteindre la Tour du Noyé"}],
+      "reward": {
+        "gold": 120,
+        "rep": [{"target":"port_brume","delta":20},{"target":"marees","delta":6}],
+        "items": [{"item":"eclat_de_lanterne","qty":1}]
+      }
+    },
+    {
+      "id": "soeur_merrow",
+      "name": "Sœur Mérrow",
+      "giver": "dorn",
+      "minTier": "neutre",
+      "principal": true,
+      "summary": "Libérer Sœur Mérrow, prêtresse prise par la Brume, sur la plage nord.",
+      "steps": [{"kind":"flag","flag":"boss_merrow","text":"Vaincre Sœur Mérrow"}],
+      "reward": {
+        "gold": 250,
+        "rep": [{"target":"port_brume","delta":25},{"target":"marees","delta":10}],
+        "flags": ["barque_de_dorn"]
+      }
+    },
+    {
+      "id": "lanternes_eteintes",
+      "name": "Les lanternes éteintes",
+      "giver": "ilmea",
+      "summary": "Rallumer les trois lanternes des Monts.",
+      "steps": [
+        {"kind":"visit","location":"autel_monts","text":"Rallumer la lanterne de l’autel des Monts"},
+        {"kind":"visit","location":"menhir_cendre","text":"Rallumer la lanterne du Menhir de Cendre"},
+        {"kind":"visit","location":"autel_valcendre","text":"Rallumer la lanterne de l’autel du Val"}
+      ],
+      "reward": {"gold":150,"rep":[{"target":"pierre_haute","delta":25},{"target":"lanternes","delta":10}]}
+    },
+    {
+      "id": "aiguille_brisee",
+      "name": "L’Aiguille Brisée",
+      "giver": "yrsa",
+      "minTier": "neutre",
+      "summary": "Faire tomber le gardien de l’Aiguille Brisée.",
+      "steps": [{"kind":"flag","flag":"boss_aiguille","text":"Vaincre le gardien de l’Aiguille Brisée"}],
+      "reward": {"gold":300,"rep":[{"target":"pierre_haute","delta":20},{"target":"lanternes","delta":8}]}
+    },
+    {
+      "id": "serment_brise",
+      "name": "Le serment brisé",
+      "giver": "alden",
+      "minTier": "neutre",
+      "summary": "Aider Sire Alden à retrouver les paroles de son serment.",
+      "steps": [{"kind":"flag","flag":"serment_retrouve","text":"Obtenir de Cendrine le chant du serment"}],
+      "reward": {"gold":60,"rep":[{"target":"valcendre","delta":15},{"target":"couronne","delta":4}]}
+    },
+    {
+      "id": "conspiration_au_marche",
+      "name": "Conspiration au marché",
+      "giver": "ysmene",
+      "minTier": "amical",
+      "refusalPenalty": {"target":"valcendre","delta":-5},
+      "summary": "Démasquer les conspirateurs qui menacent la Régente.",
+      "steps": [{"kind":"flag","flag":"conspiration_demasquee","text":"Interroger Tam au quartier des pauvres"}],
+      "reward": {"gold":200,"rep":[{"target":"valcendre","delta":15},{"target":"couronne","delta":8}]}
+    },
+    {
+      "id": "arene_des_cendres",
+      "name": "Arène des Cendres",
+      "giver": "dax",
+      "minTier": "neutre",
+      "summary": "Gagner une série de combats dans l’Arène des Cendres (ouverture à un jalon ultérieur).",
+      "steps": [{"kind":"flag","flag":"arene_serie_1","text":"Gagner la première série de l’arène"}],
+      "reward": {"gold":150,"rep":[{"target":"valcendre","delta":10}]}
+    }
+  ]
+}

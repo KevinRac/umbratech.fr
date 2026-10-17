@@ -3,6 +3,7 @@
  * sauvegardé (jalon M9). Aucune dépendance au rendu.
  */
 import type { WorldMap } from '../../data/worldMap';
+import type { Progress } from '../game/progress';
 import type { Facing8 } from './movement';
 
 export interface WorldState {
@@ -13,6 +14,8 @@ export interface WorldState {
   readonly discoveredZones: string[];
   /** Identifiants des lieux visités (villages, autels…). */
   readonly discoveredLocations: string[];
+  /** Or, sac, réputations, quêtes, recrues (jalon M2). */
+  readonly progress: Progress;
 }
 
 /** Centre en pixels d'un objet de carte (le pied d'un point d'apparition est sa position). */
@@ -27,10 +30,10 @@ export function findSpawn(map: WorldMap, id: string): { x: number; y: number } |
 }
 
 /** État d'une nouvelle partie : le héros apparaît au point « start ». */
-export function newWorldState(map: WorldMap): WorldState {
+export function newWorldState(map: WorldMap, progress: Progress): WorldState {
   const start = findSpawn(map, 'start');
   if (!start) throw new Error('La carte du monde n’a pas de point d’apparition « start ».');
-  return { player: { x: start.x, y: start.y, facing: 's' }, openFlags: [], discoveredZones: [], discoveredLocations: [] };
+  return { player: { x: start.x, y: start.y, facing: 's' }, openFlags: [], discoveredZones: [], discoveredLocations: [], progress };
 }
 
 /** Ajoute `value` à une liste sans doublon (renvoie vrai si c'est nouveau). */

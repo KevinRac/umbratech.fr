@@ -1,5 +1,5 @@
 {
-  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). Toute valeur de réglage passe par ce fichier. `visuals` : effets HD-2D du monde ouvert (décision n°47).",
+  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). Toute valeur de réglage passe par ce fichier. `economy` : or de départ, capacité du sac (lignes, GDD §13.2 : 40) et pile maximale ; `dialogue` : machine à écrire (GDD §13.3 : 30 caractères par seconde). `visuals` : effets HD-2D du monde ouvert (décision n°47).",
   "exploration": {
     "tileSize": 16,
     "walkSpeed": 80,
@@ -13,7 +13,8 @@
     "cornerAssist": 4,
     "cameraLerp": 0.12,
     "cameraDeadzoneWidth": 24,
-    "cameraDeadzoneHeight": 16
+    "cameraDeadzoneHeight": 16,
+    "interactRange": 24
   },
   "combat": {
     "hitChanceMin": 5,
@@ -42,6 +43,19 @@
   },
   "defeat": {
     "goldLossRatio": 0.1
+  },
+  "economy": {
+    "startingGold": 150,
+    "inventoryCapacity": 40,
+    "maxStack": 99,
+    "startingItems": [
+      { "item": "potion", "qty": 2 },
+      { "item": "pain_dore", "qty": 1 }
+    ]
+  },
+  "dialogue": {
+    "charsPerSecond": 30,
+    "fastMultiplier": 4
   },
   "injury": {
     "mobilityPenalty": 2,

@@ -4,6 +4,8 @@ export const SCENES = {
   title: 'Title',
   world: 'World',
   worldHud: 'WorldHud',
+  dialogue: 'Dialogue',
+  menu: 'Menu',
   battle: 'Battle',
   battleHud: 'BattleHud',
   debug: 'Debug',

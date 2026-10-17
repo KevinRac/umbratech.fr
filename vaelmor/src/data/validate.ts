@@ -18,7 +18,10 @@ import {
   reputationFileSchema,
   terrainsFileSchema,
   zonesFileSchema,
+  type AccessoryDef,
   type BalanceConfig,
+  type ConsumableDef,
+  type KeyItemDef,
   type ClassDef,
   type ElementDef,
   type EncountersFile,
@@ -28,6 +31,14 @@ import {
   type TerrainDef,
   type ZoneDef,
 } from './schemas';
+import {
+  TIER_IDS,
+  locationsFileSchema,
+  questsFileSchema,
+  type FactionDef,
+  type LocationDef,
+  type QuestDef,
+} from './townSchemas';
 
 z.config(z.locales.fr());
 
@@ -42,6 +53,8 @@ export const DATA_SCHEMAS = {
   items: itemsFileSchema,
   enemies: enemiesFileSchema,
   encounters: encountersFileSchema,
+  locations: locationsFileSchema,
+  quests: questsFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -63,6 +76,13 @@ export interface GameData {
   readonly enemies: readonly EnemyDef[];
   /** Rencontres tactiques, légende des cartes et compagnie d'essai. */
   readonly encounters: EncountersFile;
+  readonly consumables: readonly ConsumableDef[];
+  readonly accessories: readonly AccessoryDef[];
+  readonly keyItems: readonly KeyItemDef[];
+  /** Les 22 lieux de la carte (villages avec réputation, PNJ, boutiques). */
+  readonly locations: readonly LocationDef[];
+  readonly factions: readonly FactionDef[];
+  readonly quests: readonly QuestDef[];
 }
 
 export type ValidationResult =
@@ -199,6 +219,7 @@ function crossCheck(data: GameData): string[] {
   }
 
   checkEncounters(data, issues);
+  checkTowns(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -317,6 +338,8 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     items: z.infer<typeof itemsFileSchema>;
     enemies: z.infer<typeof enemiesFileSchema>;
     encounters: z.infer<typeof encountersFileSchema>;
+    locations: z.infer<typeof locationsFileSchema>;
+    quests: z.infer<typeof questsFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -328,6 +351,12 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     weapons: files.items.weapons,
     enemies: files.enemies.enemies,
     encounters: files.encounters,
+    consumables: files.items.consumables,
+    accessories: files.items.accessories,
+    keyItems: files.items.keyItems,
+    locations: files.locations.locations,
+    factions: files.locations.factions,
+    quests: files.quests.quests,
   };
 
   const crossIssues = crossCheck(data);
@@ -340,5 +369,120 @@ export class GameDataError extends Error {
   constructor(readonly issues: readonly string[]) {
     super(`Données de jeu invalides (${issues.length} problème(s)) :\n- ${issues.join('\n- ')}`);
     this.name = 'GameDataError';
+  }
+}
+
+/** Lieux, PNJ, boutiques, quêtes : identifiants uniques et références résolues. */
+function checkTowns(data: GameData, issues: string[]): void {
+  const file = 'locations.json';
+  const tierIds = new Set<string>(data.reputation.tiers.map((t) => t.id));
+  for (const id of TIER_IDS) if (!tierIds.has(id)) issues.push(`reputation.json › palier « ${id} » manquant (utilisé par les dialogues)`);
+
+  // Objets : un seul espace d'identifiants pour tout ce qui peut être possédé
+  const itemIds = new Map<string, string>();
+  checkUniqueIds('items.json', 'consommable', data.consumables, issues, itemIds);
+  checkUniqueIds('items.json', 'accessoire', data.accessories, issues, itemIds);
+  checkUniqueIds('items.json', 'objet de quête', data.keyItems, issues, itemIds);
+  for (const w of data.weapons) {
+    if (itemIds.has(w.id)) issues.push(`items.json › identifiant « ${w.id} » partagé par une arme et un autre objet`);
+    itemIds.set(w.id, 'arme');
+  }
+  const sellableIds = new Set<string>([
+    ...data.weapons.filter((w) => w.price !== undefined).map((w) => w.id),
+    ...data.consumables.map((c) => c.id),
+    ...data.accessories.map((a) => a.id),
+  ]);
+  const classIds = new Set(data.classes.map((c) => c.id));
+  for (const item of data.balance.economy.startingItems) {
+    if (!itemIds.has(item.item)) issues.push(`balance.json › economy.startingItems référence un objet inconnu : « ${item.item} »`);
+  }
+
+  checkUniqueIds(file, 'lieu', data.locations, issues);
+  checkUniqueIds(file, 'faction', data.factions, issues);
+  const factionIds = new Set(data.factions.map((f) => f.id as string));
+  const repTargets = new Set<string>(factionIds);
+  const locationIds = new Set(data.locations.map((l) => l.id));
+  for (const loc of data.locations) if (loc.reputation !== null) repTargets.add(loc.id);
+
+  const questIds = new Set(data.quests.map((q) => q.id));
+  checkUniqueIds('quests.json', 'quête', data.quests, issues);
+
+  const npcIds = new Map<string, string>();
+  const shopIds = new Set<string>();
+  const checkLines = (at: string, lines: unknown): void => {
+    if (Array.isArray(lines) || lines === undefined) return;
+    for (const key of Object.keys(lines as object)) if (!tierIds.has(key)) issues.push(`${at} : palier inconnu « ${key} »`);
+  };
+  const checkEffects = (at: string, effects: readonly { type: string; target?: string; item?: string }[] | undefined): void => {
+    for (const e of effects ?? []) {
+      if (e.type === 'rep' && !repTargets.has(e.target ?? '')) issues.push(`${at} : réputation inconnue « ${e.target} »`);
+      if (e.type === 'item' && !itemIds.has(e.item ?? '')) issues.push(`${at} : objet inconnu « ${e.item} »`);
+    }
+  };
+  const checkCond = (at: string, c: { quest?: string; recruited?: string } | undefined): void => {
+    if (c?.quest !== undefined && !questIds.has(c.quest)) issues.push(`${at}.when : quête inconnue « ${c.quest} »`);
+  };
+
+  for (const loc of data.locations) {
+    const here = `${file} › ${loc.id}`;
+    if (loc.reputation === null && loc.npcs.some((n) => n.options.some((o) => o.kind === 'donate' || o.kind === 'inn'))) {
+      // un lieu sans réputation n'a pas de palier : les services y seraient toujours « neutres »
+      issues.push(`${here} : un lieu sans réputation ne peut pas offrir de repos ni de dons`);
+    }
+    const localShops = new Set<string>();
+    for (const shop of loc.shops) {
+      if (shopIds.has(shop.id)) issues.push(`${here} : boutique « ${shop.id} » en double`);
+      shopIds.add(shop.id);
+      localShops.add(shop.id);
+      checkLines(`${here}.shops.${shop.id}.welcome`, shop.welcome);
+      checkLines(`${here}.shops.${shop.id}.refusal`, shop.refusal);
+      for (const entry of shop.stock) {
+        if (!itemIds.has(entry.item)) issues.push(`${here}.shops.${shop.id} : objet inconnu « ${entry.item} »`);
+        else if (!sellableIds.has(entry.item)) issues.push(`${here}.shops.${shop.id} : « ${entry.item} » n'a pas de prix, il ne peut pas être vendu`);
+      }
+    }
+    for (const r of loc.rewards) checkEffects(`${here}.rewards.${r.flag}`, r.effects);
+    for (const npc of loc.npcs) {
+      const at = `${here}.${npc.id}`;
+      const previous = npcIds.get(npc.id);
+      if (previous !== undefined) issues.push(`${file} › PNJ « ${npc.id} » en double (déjà dans ${previous})`);
+      npcIds.set(npc.id, loc.id);
+      checkLines(`${at}.greeting`, npc.greeting);
+      npc.options.forEach((o, i) => {
+        const oat = `${at}.options[${i}]`;
+        checkCond(oat, o.when);
+        if (o.kind === 'shop' && !localShops.has(o.shop)) issues.push(`${oat} : boutique « ${o.shop} » absente du lieu`);
+        if (o.kind === 'quest' && !questIds.has(o.quest)) issues.push(`${oat} : quête inconnue « ${o.quest} »`);
+        if (o.kind === 'recruit') {
+          if (!classIds.has(o.unit.class)) issues.push(`${oat} : classe inconnue « ${o.unit.class} »`);
+          if (o.needsQuest !== undefined && !questIds.has(o.needsQuest)) issues.push(`${oat} : quête inconnue « ${o.needsQuest} »`);
+        }
+        if (o.kind === 'donate' && !repTargets.has(o.rep.target)) issues.push(`${oat} : réputation inconnue « ${o.rep.target} »`);
+        if (o.kind === 'topic') checkEffects(oat, o.effects);
+        if (o.kind === 'choice') {
+          for (const c of o.choices) {
+            checkEffects(oat, c.effects);
+            checkCond(oat, c.when);
+          }
+        }
+      });
+    }
+  }
+
+  for (const q of data.quests) {
+    const at = `quests.json › ${q.id}`;
+    const giver = npcIds.get(q.giver);
+    if (giver === undefined) issues.push(`${at}.giver référence un PNJ inconnu : « ${q.giver} »`);
+    else if (data.locations.find((l) => l.id === giver)?.reputation === null) issues.push(`${at} : le donneur vit dans un lieu sans réputation`);
+    const offered = data.locations.some((l) =>
+      l.npcs.some((n) => n.id === q.giver && n.options.some((o) => o.kind === 'quest' && o.quest === q.id)),
+    );
+    if (giver !== undefined && !offered) issues.push(`${at} : le PNJ « ${q.giver} » n'a pas d'option de quête pour elle`);
+    for (const s of q.steps) {
+      if (s.kind === 'visit' && !locationIds.has(s.location)) issues.push(`${at} : lieu inconnu « ${s.location} »`);
+    }
+    for (const r of q.reward.rep) if (!repTargets.has(r.target)) issues.push(`${at}.reward : réputation inconnue « ${r.target} »`);
+    for (const it of q.reward.items ?? []) if (!itemIds.has(it.item)) issues.push(`${at}.reward : objet inconnu « ${it.item} »`);
+    if (q.refusalPenalty && !repTargets.has(q.refusalPenalty.target)) issues.push(`${at}.refusalPenalty : réputation inconnue « ${q.refusalPenalty.target} »`);
   }
 }
