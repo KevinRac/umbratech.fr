@@ -151,6 +151,8 @@ export const balanceFileSchema = z.strictObject({
     halos: z.strictObject({ dayFactor: unit01, lamp: haloKind, fire: haloKind, window: haloKind, rune: haloKind }),
     /** Moment de la journée : 0 jour, 1 soir (préparé, non activé : 0 par défaut). */
     evening: unit01,
+    /** Part de la lumière retirée au soir complet (l'image s'assombrit, les halos restent vifs). */
+    eveningDarkness: unit01,
   }),
 });
 

@@ -1165,7 +1165,7 @@ Contrainte : palette globale limitée à quelques dizaines de couleurs de base ;
 | **Bloom doux** | `ParallelFilters` + seuil (0,86) + flou, ajouté (pas de filtre Bloom dédié en Phaser 4) : fenêtres, feux, lanternes, cristaux ; intensité par zone, plus forte le soir | Qualité Haute | 🔧 livré |
 | **Rayons de lumière et poussière** | 4 bandes obliques additives teintées par la zone, poussière qui flotte dans les rayons ; intensité par zone (forêt forte, côte faible) | Qualité Haute | 🔧 livré |
 | **Halos ponctuels** | Sprites additifs sur lanternes, feux, runes et fenêtres (le soir), scintillement propre à chaque type ; positions écrites par le générateur | Qualité Haute | 🔧 livré |
-| **Jour / soir** | Étalonnage du soir dérivé de celui du jour (`eveningGrade`), interpolé ; fenêtres allumées, halos et bloom renforcés (préparé, non activé ; F6 en debug) | — | 🔧 livré |
+| **Jour / soir** | Étalonnage du soir dérivé de celui du jour (`eveningGrade`), interpolé, lumière d'ensemble −45 % (`eveningDarkness`) ; fenêtres allumées, halos et bloom renforcés (préparé, non activé ; F6 en debug) | — | 🔧 livré |
 | **Ombres douces et ombres portées** | Dessinées dans les sprites (bas-droite) | — | ✅ décors · 🔧 héros (étape 6) |
 | **Particules** | Poussière, feuilles, braises, bulles, lucioles ; fumée de cheminée animée | — | ✅ (cheminées) · ⏳ reste |
 | **Eau** | Vagues animées (TileSprite) | — | ✅ |

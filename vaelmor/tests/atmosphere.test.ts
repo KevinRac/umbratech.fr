@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../src/data';
-import { blendGrade, effectsFor, eveningGrade, flicker, haloStrength, LIGHT_KINDS, nextQuality, parseLightKind, parseQuality, QUALITIES, tiltMaskAlpha } from '../src/render/atmosphere';
+import { blendGrade, effectsFor, eveningGrade, flicker, gradeMatrixAt, haloStrength, LIGHT_KINDS, nextQuality, parseLightKind, parseQuality, QUALITIES, tiltMaskAlpha } from '../src/render/atmosphere';
 import { applyMatrix, gradeMatrix } from '../src/render/grade';
 
 /** Atmosphère HD-2D (décision n°47). */
@@ -33,6 +33,20 @@ describe('jour / soir', () => {
       const e = applyMatrix(gradeMatrix(evening), grey);
       expect(luma(e), zone.id).toBeLessThan(luma(d));
       expect(e[0] - e[2], zone.id).toBeGreaterThan(d[0] - d[2]);
+    }
+  });
+});
+
+describe('soir sombre', () => {
+  it('le soir complet retire au moins un tiers de la lumière, en gardant une nuit bleutée', () => {
+    const darkness = data.balance.visuals.eveningDarkness;
+    for (const zone of data.zones) {
+      const grey: [number, number, number] = [160, 160, 160];
+      const day = applyMatrix(gradeMatrixAt(zone.grade, 0, darkness), grey);
+      const night = applyMatrix(gradeMatrixAt(zone.grade, 1, darkness), grey);
+      expect(day).toEqual(applyMatrix(gradeMatrix(zone.grade), grey));
+      expect(luma(night), zone.id).toBeLessThan(luma(day) * 0.67);
+      expect(luma(night), zone.id).toBeGreaterThan(20);
     }
   });
 });

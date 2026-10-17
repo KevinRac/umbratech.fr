@@ -19,8 +19,8 @@
 import Phaser from 'phaser';
 import type { BalanceConfig, ZoneDef } from '../data/schemas';
 import type { MapObject } from '../data/worldMap';
-import { blendGrade, effectsFor, eveningGrade, type EffectPlan, flicker, haloStrength, parseLightKind, tiltMaskAlpha, type LightKind, type Quality } from './atmosphere';
-import { gradeMatrix, lerpMatrix } from './grade';
+import { effectsFor, gradeMatrixAt, type EffectPlan, flicker, haloStrength, parseLightKind, tiltMaskAlpha, type LightKind, type Quality } from './atmosphere';
+import { lerpMatrix } from './grade';
 import { PALETTE } from './palette';
 
 type Visuals = BalanceConfig['visuals'];
@@ -229,7 +229,7 @@ export class WorldAtmosphere {
 
   private applyGrade(durationMs: number): void {
     if (!this.zone) return;
-    const target = gradeMatrix(blendGrade(this.zone.grade, eveningGrade(this.zone.grade), this.evening));
+    const target = gradeMatrixAt(this.zone.grade, this.evening, this.visuals.eveningDarkness);
     const from = this.gradeNow;
     this.gradeTween?.stop();
     if (!from || durationMs <= 0) {
@@ -257,7 +257,7 @@ export class WorldAtmosphere {
     const plan = this.plan();
     const v = this.visuals;
     // Le soir, le bloom s'intensifie un peu (lumières plus présentes).
-    this.bloom.blend.amount = v.bloom.amount * this.light.bloom * (1 + 0.4 * this.evening);
+    this.bloom.blend.amount = v.bloom.amount * this.light.bloom * (1 + 0.8 * this.evening);
     const view = this.camera.worldView;
     if (plan.rays) this.updateRays(view);
     if (plan.halos) this.updateHalos(view);
@@ -292,7 +292,7 @@ export class WorldAtmosphere {
         continue;
       }
       const f = flicker(this.clock, halo.seed, halo.kind);
-      halo.image.setVisible(true).setAlpha(v[halo.kind].alpha * strength * f);
+      halo.image.setVisible(true).setAlpha(Math.min(1, v[halo.kind].alpha * strength * f * (1 + this.visuals.eveningDarkness * 1.6 * this.evening)));
       if (halo.kind === 'fire') halo.image.setScale(((v.fire.radius * 2) / 64) * (0.94 + 0.08 * f));
     }
   }

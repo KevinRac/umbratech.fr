@@ -3,7 +3,7 @@
  * réglage « Qualité », étalonnage du soir, scintillement des lumières, masque du
  * flou de profondeur. Calculs purs (sans Phaser), testés dans `tests/atmosphere.test.ts`.
  */
-import type { Grade } from './grade';
+import { gradeMatrix, type Grade } from './grade';
 import { rgb } from './palette';
 
 /* ---------- Réglage « Qualité » (GDD §12.5) ---------- */
@@ -83,6 +83,20 @@ export function blendGrade(a: Grade, b: Grade, t: number): Grade {
     contrast: lerp(a.contrast, b.contrast),
     brightness: lerp(a.brightness, b.brightness),
   };
+}
+
+/**
+ * Matrice d'étalonnage au moment `evening` (0 jour, 1 soir) : étalonnage du
+ * soir, puis baisse de la lumière d'ensemble (`darkness` = part de lumière
+ * retirée au soir complet), un peu moins sur le bleu pour garder une nuit
+ * bleutée plutôt que noire. Les lumières (halos, bloom) s'ajoutent après.
+ */
+export function gradeMatrixAt(day: Grade, evening: number, darkness: number): number[] {
+  const e = clamp(evening, 0, 1);
+  const m = gradeMatrix(blendGrade(day, eveningGrade(day), e));
+  const gains = [1 - darkness * e, 1 - darkness * 0.95 * e, 1 - darkness * 0.75 * e];
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) m[row * 5 + col] = (m[row * 5 + col] as number) * (gains[row] as number);
+  return m;
 }
 
 /* ---------- Halos ---------- */
