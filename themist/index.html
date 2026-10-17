@@ -424,6 +424,11 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/gardiens.js"></script>
 <script src="data/resonances.js"></script>
 <script src="data/talents.js"></script>
+<script src="data/formes.js"></script>
+<script src="data/sanctuaire.js"></script>
+<script src="data/memoire.js"></script>
+<script src="data/histoire.js"></script>
+<script src="data/versions.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -743,34 +748,20 @@ let SAVE=loadSave();
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SAVE));}catch(e){}}
 const mr=id=>SAVE.meta[id]||0;
 const relicUnlocked=r=>!r.lock||SAVE.relics.includes(r.id);
-const META=[
- {id:'vig',name:'Vigueur',desc:'+8 PV max par rang.',max:5,cost:[10,15,22,30,40]},
- {id:'ard',name:'Ardeur',desc:'+5 % de dégâts par rang.',max:3,cost:[15,25,40]},
- {id:'ref',name:'Réflexes',desc:'Ton esquive se recharge 8 % plus vite par rang.',max:3,cost:[12,20,30]},
- {id:'for',name:'Fortune',desc:'+15 % d’or ramassé par rang.',max:3,cost:[10,18,28]},
- {id:'mar',name:'Marchandage',desc:'Les prix du Colporteur baissent de 10 % par rang.',max:2,cost:[15,25]},
- {id:'rel',name:'Indécision',desc:'+1 relance de talents par acte, par rang.',max:2,cost:[20,35]},
- {id:'sav',name:'Savoir ancien',desc:'Tu commences chaque run avec un niveau de plus, par rang.',max:2,cost:[25,45]},
- {id:'bag',name:'Bagage',desc:'Tu commences chaque run en choisissant une relique parmi trois.',max:1,cost:[40]},
- {id:'cho',name:'Vision élargie',desc:'4 talents proposés à chaque niveau au lieu de 3.',max:1,cost:[60]},
- {id:'sec',name:'Seconde flamme',desc:'Une fois par run, tu te relèves avec 40 % de tes PV.',max:1,cost:[70]},
-];
-const PALIERS=[
- {n:0,name:'Sans palier',desc:'La Brume telle que tu la connais.'},
- {n:1,name:'Brume épaisse',desc:'Les ennemis ont +20 % de PV.'},
- {n:2,name:'Meute',desc:'Les vagues sont 20 % plus fournies.'},
- {n:3,name:'Crocs',desc:'Les ennemis infligent +20 % de dégâts.'},
- {n:4,name:'Disette',desc:'Les soins des haltes et du Colporteur sont divisés par deux. Prix +25 %.'},
- {n:5,name:'Gardiens enragés',desc:'Les gardiens ont +30 % de PV et enchaînent plus vite.'},
-];
+// Améliorations, paliers, noms des personnages : data/sanctuaire.js
+const SA_D=window.BRUME_DATA.sanctuaire;
+const META=SA_D.ameliorations;
+const PALIERS=SA_D.paliers.slice();
 const HUB_NPCS=[
  {id:'portail',x:W/2,y:AR.y0+40,tx:W/2,ty:AR.y0+46,tr:58,name:'Le Portail',role:'Descendre dans la Brume',light:180,tint:'violet',lx:W/2,ly:AR.y0+56},
  {id:'veilleuse',x:330,y:290,tx:330,ty:300,tr:66,solid:18,name:'Sœur Ismène',role:'Autel de Mémoire',robe:'#3b3550',eye:'190,200,255',light:175,tint:'cold'},
  {id:'fondeur',x:950,y:290,tx:950,ty:300,tr:66,solid:20,name:'Maître Corbin',role:'Forge des reliques',robe:'#4a3326',eye:'255,170,90',light:190,tint:'rage',lx:1005,ly:285},
  {id:'archiviste',x:330,y:540,tx:330,ty:548,tr:66,solid:18,name:'L’Archiviste',role:'Registres et chroniques',robe:'#2c3a36',eye:'170,240,220',light:160,tint:'bile'},
 ];
+for(const n of HUB_NPCS)Object.assign(n,{name:SA_D.pnj[n.id].name,role:SA_D.pnj[n.id].role});
 const BRAZIERS=[[170,180],[1110,180],[170,630],[1110,630]];
 const MERCHANT={id:'colporteur',x:W/2,y:288,tx:W/2,ty:405,tr:70,name:'Tobiah',role:'Le Colporteur',robe:'#2f4a3e',eye:'150,255,200',light:200,tint:'bile',lx:W/2,ly:335};
+Object.assign(MERCHANT,{name:SA_D.pnj.colporteur.name,role:SA_D.pnj.colporteur.role});
 const MERCHANT_LINES=['Approche, approche. Tout ce que la Brume a perdu, je l’ai retrouvé. Pour un prix.','Les pièces ? Elles ne valent rien là-haut. Ici, elles achètent un lendemain.','Ne me demande pas comment je suis arrivé là. Demande plutôt ce que j’ai en stock.','Ismène te salue ? Non ? Elle ne salue jamais personne, celle-là.','Un client qui revient, c’est un client qui n’est pas mort. J’aime les clients qui reviennent.'];
 const LINES={
  portail:[[S=>true,'Le portail respire. De l’autre côté, la Brume attend ton pas.'],[S=>S.wins>=1,'Le portail bat plus vite depuis ta victoire. La Brume s’épaissit pour toi.']],
@@ -779,22 +770,26 @@ const LINES={
  archiviste:[[S=>true,'Je consigne les descentes. Toutes. Les tiennes commencent aujourd’hui.'],[S=>S.runs>=1,'Une page de plus. Au début, elles se ressemblent toutes. C’est ensuite qu’elles divergent.'],[S=>S.flags.act2,'Les Cryptes Chantantes… Mes registres les plus anciens en parlent à voix basse. Lis les chroniques, tu comprendras pourquoi.'],[S=>S.flags.act3,'Le Cœur… Aucun registre ne le décrit. Tu en écris les premières pages.'],[S=>S.wins>=1,'J’ai dû recoudre la reliure. Ta victoire ne tenait pas dans l’ancien registre.']],
 };
 function lineFor(id){const L=LINES[id];if(!L)return '';let t=L[0][1];for(const [c,x] of L)if(c(SAVE))t=x;if(id==='fondeur'&&chosenCls==='gou'&&SAVE.runs>=1&&SAVE.wins<1)t='Toi, le gros, ne touche à rien. La dernière fois qu’un Gouffre est entré dans ma forge, j’ai perdu trois marteaux.';return v6Line(id,t);}
-const LORE=[
- {id:'eveil',t:'L’Éveil',c:S=>true,h:'',x:'Nul ne sait d’où vient la Brume. Les plus vieux registres parlent d’une cloche qui sonna trop longtemps au cœur de la cité, jusqu’à ce que le son lui-même devienne brouillard.'},
- {id:'chute',t:'La première chute',c:S=>S.deaths>=1,h:'Tomber une première fois dans la Brume.',x:'Mourir dans la Brume n’est pas une fin. Le corps s’y dissout, mais la mémoire remonte comme une bulle jusqu’au Sanctuaire. Ismène la recueille. Elle seule sait comment.'},
- {id:'lum',t:'Le Lumenarque',c:S=>S.flags.lum,h:'Descendre avec le Lumenarque.',x:'La première lanterne fut allumée à la flamme du Sanctuaire, et toutes les autres à celle-ci. Quand l’une d’elles s’éteint, Ismène le sent.'},
- {id:'gou',t:'Le Gouffre',c:S=>S.flags.gou,h:'Descendre avec le Gouffre.',x:'Les Gouffres sont des Éveillés qui ont retenu leur souffle trop longtemps dans la Brume. Elle est entrée en eux, et ils ont appris à la garder.'},
- {id:'faub',t:'Les Faubourgs',c:S=>S.best>=4,h:'Atteindre la quatrième salle.',x:'Les Faubourgs étaient le quartier des tanneurs et des cordiers. Certains Rampants portent encore un lambeau de tablier.'},
- {id:'colp',t:'Le Colporteur',c:S=>S.flags.merchant,h:'Rencontrer le Colporteur.',x:'Tobiah ne craint pas la Brume. Selon lui, la Brume ne voit pas ce qui se vend. Jusqu’ici, sa théorie tient.'},
- {id:'mere',t:'La Mère-Brume',c:S=>S.bossKills>=1,h:'Vaincre le gardien du premier acte.',x:'Elle n’est pas née de la Brume : elle l’a enfantée. C’est du moins ce qu’affirment les Spectres, quand on prend le temps de les écouter avant de les abattre.'},
- {id:'asc',t:'L’Ascension',c:S=>S.flags.asc,h:'Accomplir le Rituel d’Ascension.',x:'Le Rituel n’a pas été inventé. On l’a découvert sur le corps des premiers Éveillés revenus de la Mère-Brume, changés à jamais.'},
- {id:'cryp',t:'Les Cryptes Chantantes',c:S=>S.flags.act2,h:'Atteindre le deuxième acte.',x:'Sous la cathédrale engloutie, les morts chantent encore la dernière messe. Ils ne savent pas qu’elle s’est achevée il y a trois siècles.'},
- {id:'hera',t:'Le Héraut Noyé',c:S=>S.flags.heraut,h:'Vaincre le gardien des Cryptes.',x:'Il sonnait la cloche. Il l’a sonnée jusqu’à la noyade, et après. Son chant n’est pas une attaque, c’est un appel. Reste à savoir qui il appelle.'},
- {id:'voile',t:'Les Voilés',c:S=>S.flags.voile,h:'Croiser un Voilé.',x:'Ils portent des masques de miroir pour ne pas voir ce qu’ils sont devenus. La lumière les force à se regarder, et c’est seulement alors qu’ils saignent.'},
- {id:'coeur',t:'Le Cœur de la Brume',c:S=>S.flags.act3,h:'Atteindre le troisième acte.',x:'Sous les Cryptes, la pierre cède à la chair. Les murs ont des yeux, et les veines du sol battent au rythme d’un cœur que personne n’avait jamais vu.'},
- {id:'glas',t:'Le Glas Originel',c:S=>S.wins>=1,h:'Faire taire le Glas Originel.',x:'C’était la première cloche, celle qui sonna trop longtemps. Elle n’a jamais cessé : elle a seulement appris à battre comme un cœur. Chaque Éveillé qui tombe est un écho de son glas.'},
- {id:'pal',t:'La Brume apprend',c:S=>S.palierMax>=2,h:'Faire taire le Glas Originel au palier 1.',x:'Après chaque victoire, la Brume s’épaissit. Elle apprend de ceux qui la traversent, et chaque retour la rend plus dense, plus affamée.'},
-];
+// Codex, Carte du Glas et fragments : data/histoire.js. Ici, les conditions de déblocage.
+const HI_D=window.BRUME_DATA.histoire;
+const LORE_C={
+ eveil:S=>true,
+ chute:S=>S.deaths>=1,
+ lum:S=>S.flags.lum,
+ gou:S=>S.flags.gou,
+ faub:S=>S.best>=4,
+ colp:S=>S.flags.merchant,
+ mere:S=>S.bossKills>=1,
+ asc:S=>S.flags.asc,
+ cryp:S=>S.flags.act2,
+ hera:S=>S.flags.heraut,
+ voile:S=>S.flags.voile,
+ coeur:S=>S.flags.act3,
+ glas:S=>S.wins>=1,
+ pal:S=>S.palierMax>=2,
+ her:S=>S.flags.her,
+ tis:S=>S.flags.tis};
+const LORE=HI_D.codex.map(o=>Object.assign({},o,{c:LORE_C[o.id]||(()=>false)}));
 
 // Ennemis, rôles, thèmes, contre-mesures, règles de salle : data/bestiaire.js. Ici, seulement le comportement.
 const BE_D=window.BRUME_DATA.bestiaire;
@@ -1741,7 +1736,7 @@ function openEnd(win,abandon){
  state='over';paused=true;hudEl.hidden=true;
  if(!RUN.final){
   const before=LORE.filter(l=>l.c(SAVE)).map(l=>l.id);
-  const kills=Math.floor(RUN.kills/8),base=RUN.sh.rooms+RUN.sh.elites+RUN.sh.bosses+kills+(win?25:0),mult=1+0.2*RUN.palier;
+  const kills=Math.floor(RUN.kills/8),base=RUN.sh.rooms+RUN.sh.elites+RUN.sh.bosses+kills+(win?25:0),mult=1+SA_D.parPalier.eclats*RUN.palier;
   RUN.final={kills,base,mult,total:Math.round(base*mult),win:!!win,v9:[]};v9Final(RUN.final,win,abandon);
   SAVE.runs++;if(win)SAVE.wins++;else if(!abandon)SAVE.deaths++;
   SAVE.kills+=RUN.kills;SAVE.shards+=RUN.final.total;SAVE.total+=RUN.final.total;
@@ -1771,21 +1766,20 @@ function openEnd(win,abandon){
  $('#again').addEventListener('click',()=>{if(armed())startRun();});
  overlayKeys=c=>{if(c==='Enter'&&armed())enterHub();};
 }
-const CLASSLIST=[
- {id:'lum',name:'Le Lumenarque',pitch:'Sa lanterne expose les ennemis. La lancer le plonge dans l’Obscur : plus vif, plus mortel.',mech:'Lumière et Obscur',on:true},
- {id:'gou',name:'Le Gouffre',pitch:'Dévore la Brume, enfle jusqu’au bord de la Rupture, puis la recrache d’un seul coup.',mech:'Jauge de corruption',on:true},
- {id:'her',name:'Le Héraut du Glas',pitch:'Frappe au rythme d’une cloche funèbre. Les coups en mesure résonnent.',mech:'Rythme',on:true},
- {id:'tis',name:'Le Tisse-Destin',pitch:'Attache ses ennemis par des fils et les retourne contre leurs alliés.',mech:'Fils et pantins',on:true}];
-function keysFor0(cls){return cls==='gou'?[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Mâchoire (maintenir)'],['Clic D','Dévorer : aspire et remplit la Corruption'],['Espace','Ruée'],[KL.KeyR,'Recracher toute ta Corruption'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']]
- :[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Coup de lanterne (maintenir)'],['Clic D','Faisceau, consomme la Lueur'],['Espace','Esquive'],[KL.KeyR,'Lancer ou rappeler la lanterne'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];}
-function tipFor0(cls){return cls==='gou'?'Ta Corruption a trois paliers. Plus elle monte, plus tu frappes fort et plus tu éclaires loin. Au-delà de 67, elle te ronge. À 100, c’est la Rupture : tu exploses et tu encaisses une partie du choc.':'Les ennemis dans ta lumière sont exposés : ralentis, ils subissent 25 % de dégâts en plus. Frapper un ennemi exposé recharge ta Lueur.';}
+// Accroche, mécanique, difficulté, aide, astuce et commandes des formes : data/formes.js
+const FO_D=window.BRUME_DATA.formes;
+const CLASSLIST=FO_D.ordre.map(id=>({id,name:CLS[id].name,pitch:FO_D.fiches[id].pitch,mech:FO_D.fiches[id].mech,on:true}));
+const keyTok=k=>k.replace('{MOVE}',MOVE()).replace('{R}',KL.KeyR).replace('{A}',KL.KeyQ).replace('{E}',KL.KeyE).replace('{F}',KL.KeyF);
+const keysOf=cls=>FO_D.fiches[cls].commandes.map(([k,v])=>[keyTok(k),v]);
+function keysFor0(cls){return keysOf(cls==='gou'?'gou':'lum');}
+function tipFor0(cls){return FO_D.fiches[cls==='gou'?'gou':'lum'].astuce;}
 const keysHTML=list=>`<dl class="keys">${list.map(([k,v])=>`<dt><kbd>${esc(k)}</kbd></dt><dd>${v}</dd>`).join('')}</dl>`;
 function openTitle(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
  const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.7</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · ${window.BRUME_DATA.versions.actuelle}</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
  overlayKeys=c=>{if(c==='Enter')enterHub();};
@@ -2802,11 +2796,9 @@ const V6HINT={her:()=>`<kbd>${MOVE()}</kbd> se déplacer · <kbd>Clic G</kbd> Co
 function v6Stats(){const s=P.s,x=v=>v.toFixed(1).replace('.',',');
  if(P.cls==='her')return[['PV',`${Math.ceil(P.hp)} / ${Math.round(s.maxHp)}`],['Coup de cloche',`${fmt(s.atkDmg*s.dmg)} · ×${x(1.4*(1+s.beatDmg))} en mesure`],['Tempo',`${s.bpm} BPM · fenêtre ±${Math.round(s.beatWin*1000)} ms`],['Cadence',`${s.cadMax} max · +${x(s.cadPer*100)} % par point`],['Critique',pct(s.crit)+(s.beatCrit?` · +${pct(s.beatCrit)} en mesure`:'')],['Volée',`${fmt(26*s.voleeDmg*s.dmg)} · rayon ${fmt(s.voleeR)}`],['Grand Glas à 100',`${fmt(180*s.glasDmg*s.dmg)} · rayon ${fmt(s.glasR)}`],['Ondes',`${fmt(8*s.waveDmg*s.dmg)} · portée ${fmt(s.waveRange)}`],['Dégâts subis',pct(s.dmgTaken)],['Vitesse',fmt(s.speed)]];
  return[['PV',`${Math.ceil(P.hp)} / ${Math.round(s.maxHp)}`],['Aiguilles',`${fmt(s.atkDmg*s.dmg)} · +${Math.round(s.tension*100)} % sur les attachés`],['Vitesse d’attaque',`×${s.atkSpeed.toFixed(2).replace('.',',')}`],['Critique',pct(s.crit)],['Dégâts critiques',`×${s.critMult.toFixed(2).replace('.',',')}`],['Fils',`${s.filRouge?1:s.filMax} max · ${s.filRouge?'permanent':Math.round(s.filDur)+' s'} · ${Math.round(s.filCost)} Bobine`],['Arracher',`${fmt(25*s.yankDmg*s.dmg)} à l’impact · choc ${fmt(18*s.collideDmg*s.dmg)}`],['Bobine',`+${x(s.bobRegen)} par seconde`],['Dégâts subis',pct(s.dmgTaken)],['Vitesse',fmt(s.speed)]];}
-function keysFor(cls){if(cls==='her')return[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Coup de cloche, à frapper en rythme'],['Clic D','Volée : une onde de choc autour de toi'],['Espace','Pas de danse, invulnérable en mesure'],[KL.KeyR,'Grand Glas : une cloche tombe au curseur au temps suivant'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
- if(cls==='tis')return[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Aiguilles (maintenir)'],['Clic D','Nouer un fil sur l’ennemi visé'],['Espace','Esquive'],[KL.KeyR,'Arracher : projette les ennemis attachés vers le curseur'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
+function keysFor(cls){if(cls==='her'||cls==='tis')return keysOf(cls);
  return keysFor0(cls);}
-function tipFor(cls){if(cls==='her')return 'Un métronome bat sous tes pieds. Agis quand le cercle se referme : en mesure, tes coups frappent plus fort, renvoient les tirs et lancent une onde. Chaque action en mesure monte ta Cadence (+3 % de dégâts par point). Hors mesure, elle retombe à zéro et tu perds le temps suivant.';
- if(cls==='tis')return 'Un ennemi attaché est exposé, ralenti, et tes aiguilles le blessent davantage. Arracher projette d’un coup tous les ennemis attachés vers le curseur : ceux qu’ils percutent encaissent le choc. Chaque fil coûte de la Bobine, qui se recharge seule.';
+function tipFor(cls){if(cls==='her'||cls==='tis')return FO_D.fiches[cls].astuce;
  return tipFor0(cls);}
 function v6Line(id,t){if(id==='fondeur'&&SAVE.runs>=1&&SAVE.wins<1){if(chosenCls==='her')return 'Un sonneur ? Garde ta cloche loin de mon enclume. Les deux chantent faux ensemble.';if(chosenCls==='tis')return 'Tes fils… J’en ai vu de pareils sur un rouet, autrefois. Le rouet était vide, et il tournait quand même.';}return t;}
 const CLASSKEYS={lum:{q:()=>nova(),e:()=>lame(),r:()=>lanternAction()},gou:{q:()=>festin(),e:()=>carapace(),r:()=>spit()},her:{q:()=>herBell(),e:()=>herOrgue(),r:()=>grandGlas()},tis:{q:()=>tisToile(),e:()=>tisPluie(),r:()=>tisYank()}};
@@ -2859,9 +2851,6 @@ relFx({
  fuseau:s=>{s.bobRegen*=1.4;}});
 Object.assign(EXCL,{car_k1:['car_k2','car_n6'],car_k2:['car_k1'],trm_k1:['trm_k2'],trm_k2:['trm_k1']});
 Object.assign(NUMSTYLE,{beat:[14,'#9fd0ff'],miss:[13,'#8a8796'],pup:[14,'#ff9ec0']});
-LORE.splice(4,0,
- {id:'her',t:'Le Héraut du Glas',c:S=>S.flags.her,h:'Descendre avec le Héraut du Glas.',x:'Les Hérauts sonnaient les heures de la cité. Quand la Brume est montée, ils ont continué, parce qu’un glas qui se tait est un glas qu’on oublie. Leur cloche a fini par se fondre à leur crâne.'},
- {id:'tis',t:'Le Tisse-Destin',c:S=>S.flags.tis,h:'Descendre avec le Tisse-Destin.',x:'Elles filaient les linceuls des Faubourgs. Un soir, un fil a refusé de se couper. Depuis, les Tisse-Destin savent que tout ce qui vit pend à une ficelle, et qu’il suffit de tirer.'});
 
 // ───────────────────────── Rendu : héros
 function drawHerHero(x,y,face,o){
@@ -2983,11 +2972,13 @@ const foeName=(k,act)=>k==='boss'?(ACTS[act]?ACTS[act].boss:'un gardien'):(V7FOE
 const cap1=s=>s.charAt(0).toUpperCase()+s.slice(1);
 
 // ───────────────────────── Accoutumance
-const ADAPT={
- lum:{what:'ta lumière',name:'Paupières de cendre',desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins de ta lumière : Faisceau, éclats et couronne.`,counter:'Depuis l’Obscur, tu les prends au dépourvu : +15 % de dégâts. Le gardien, lui, ouvre son noyau toutes les 9 − 1,2 × niveau secondes : 3 s pour le frapper, +30 %.'},
- gou:{what:'ta corruption',name:'Bile amère',desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins tant que ta Corruption est entre 34 et 66.`,counter:'Au-delà de 67, leur garde cède : +15 % de dégâts. À toi de flirter avec la Rupture. Le gardien, lui, laisse fuir sa corruption toutes les 11 − 1,2 × niveau secondes : 3 s pour le frapper, +30 %.'},
- her:{what:'ton rythme',name:'Oreilles cousues',desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins tant que ta Cadence n’est pas pleine.`,counter:'À Cadence maximale, la cloche perce leur silence : +15 % de dégâts. Le gardien, lui, se tait toutes les 10 − 1,2 × niveau secondes : 3 s pour le frapper, +30 %.'},
- tis:{what:'tes fils',name:'Rompt-fil',desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins quand ils sont attachés ou pris dans une toile. Les gardiens${L>=2?' et les champions':''} tranchent tes fils à intervalles réguliers.`,counter:'Un frémissement rouge annonce la coupe. Juste après, l’ennemi reste à vif 3 s : +30 % de dégâts.'}};
+// Adaptations et traits (textes) : data/memoire.js. Ici, les formules.
+const ME_D=window.BRUME_DATA.memoire;
+const ADAPT=dataMerge(ME_D.adaptations,{
+ lum:{desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins de ta lumière : Faisceau, éclats et couronne.`},
+ gou:{desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins tant que ta Corruption est entre 34 et 66.`},
+ her:{desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins tant que ta Cadence n’est pas pleine.`},
+ tis:{desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins quand ils sont attachés ou pris dans une toile. Les gardiens${L>=2?' et les champions':''} tranchent tes fils à intervalles réguliers.`}});
 // Fenêtres d’exposition des gardiens accoutumés : un signal (1,1 s), puis 3 s « à nu » (+30 %).
 // cd = intervalle de base, réduit de 1,2 s par niveau. Le Tisse-Destin a sa propre mécanique (coupe des fils).
 const BOSSX=GA_D.fenetres;
@@ -3049,50 +3040,10 @@ const _updateHud=updateHud;
 updateHud=function(){_updateHud();if(!hAdaptEl)return;const b=room&&room.boss;if(b&&!b.dead&&b.adapt){hAdaptEl.hidden=false;const X=BOSSX[P.cls]||BOSSX.tis;const t=b.cutWarn>0?X.warn:b.rawT>0?X.label:`Accoutumé à ${ADAPT[P.cls].what} · ${ADAPT[P.cls].name} ${ROM[b.adapt]}${v9Cd(b)}`;if(hAdaptEl.textContent!==t)hAdaptEl.textContent=t;hAdaptEl.classList.toggle('hot',b.cutWarn>0||b.rawT>0);}else hAdaptEl.hidden=true;};
 
 // ───────────────────────── Carte du Glas
-const CHAP=[null,
- {n:'I',t:'La ville aux mille cloches',hint:'Ces fragments dorment dans les Faubourgs Engloutis.',ok:()=>true,
-  truth:'Le Mal d’oubli',tx:'Valsonne n’a pas été engloutie d’un coup. Elle a commencé par oublier. Le Mal d’oubli est monté des Faubourgs comme une marée lente : les noms, puis les visages, puis les morts eux-mêmes, que plus personne ne pleurait parce que plus personne ne s’en souvenait. Une seule chose ralentissait le mal : le son des cloches. Tant qu’une cloche sonnait, on se souvenait.'},
- {n:'II',t:'La Fonte',hint:'Ces fragments se trouvent dans les Cryptes Chantantes.',ok:()=>RUN.act>=2,
-  truth:'Mémoire',tx:'Pour sauver Valsonne de l’oubli, le roi fit fondre toutes ses cloches en une seule : Mémoire. Chaque famille y versa un souvenir de bronze. Quand elle sonna pour la première fois, la ville entière se rappela ses morts d’un coup, et pleura de joie. On crut le mal vaincu. Mais Mémoire n’était pas une cloche comme les autres : elle était faite de souvenirs, et les souvenirs n’aiment pas se taire.'},
- {n:'III',t:'Le Héraut',hint:'Dans les Cryptes, une fois le Héraut Noyé réduit au silence au moins une fois.',ok:()=>RUN.act>=2&&!!SAVE.flags.heraut,
-  truth:'Le Héraut et sa sœur',tx:'Le Héraut Noyé s’appelait Élias. Il a sonné Mémoire jusqu’à en mourir, parce que le roi l’avait ordonné, et parce qu’il ne supportait pas qu’on oublie les morts. Ismène, sa sœur, a veillé sa lampe tout ce temps. Elle ne t’a jamais menti. Elle ne t’a simplement jamais dit que l’homme que tu affrontes dans les Cryptes est son frère.'},
- {n:'IV',t:'La Mère et la Brume',hint:'Ces fragments battent au Cœur de la Brume.',ok:()=>RUN.act>=3,
-  truth:'La Mère-Brume',tx:'La Brume est née du chagrin d’une reine. Mahaut ne voulait pas oublier son enfant, alors elle a exigé que Mémoire sonne pour toujours. Le son, incapable de s’éteindre, s’est condensé en brouillard : la mémoire de toute une ville, trop lourde pour l’air. La Mère-Brume n’a pas enfanté la Brume par haine. Elle l’a enfantée par amour, ce qui est pire.'},
- {n:'V',t:'Le dernier écho',hint:'Seuls ceux qui ont fait taire le Glas Originel peuvent les trouver, où qu’ils descendent.',ok:()=>SAVE.wins>=1,
-  truth:'Le dernier écho',tx:'Tu es un souvenir. Pas un faux : un vrai, celui qu’une ville entière garde de quelqu’un qui l’a aimée. Ismène te recueille, Corbin t’arme, l’Archiviste te compte, et tous espèrent la même chose : qu’un écho finisse par apprendre à la cloche comment se taire. La Brume se souvient de toi. C’est précisément pour cela qu’elle t’écoute.'}];
+const CHAP_OK=[()=>true,()=>RUN.act>=2,()=>RUN.act>=2&&!!SAVE.flags.heraut,()=>RUN.act>=3,()=>SAVE.wins>=1];
+const CHAP=[null,...HI_D.chapitres.map((o,i)=>Object.assign({},o,{ok:CHAP_OK[i]}))];
 // row 4 = chapitre I (bas de la carte) … row 0 = chapitre V (sommet du beffroi)
-const FRAGS=[
- ['f11',1,0,'Le Marais d’Étain','reeds','Hors les murs, le marais. C’est là qu’on jeta d’abord ceux que plus personne ne reconnaissait.'],
- ['f12',1,1,'La Porte Basse','gate','Le registre des gardes de la Porte Basse s’interrompt au milieu d’une phrase : « Aujourd’hui, ma fille m’a demandé qui j’étais. »'],
- ['f13',1,2,'Les Tanneries','vat','Avant la Brume, on comptait les heures à Valsonne au nombre de cloches qui sonnaient. Les tanneurs n’en entendaient qu’une : celle de la fin du travail.'],
- ['f14',1,3,'Le Puits-Murmure','well','Les premiers malades venaient boire ici. Ils oubliaient d’abord des mots, puis des visages, puis le chemin du retour. On appela cela le Mal d’oubli.'],
- ['f15',1,4,'La Corderie','rope','Les cordiers tressaient les cordes des cloches. On disait qu’une corde de Valsonne pouvait tenir un bourdon de six tonnes et le chagrin d’une veuve.'],
- ['f16',1,5,'Le Pont des Pendus','bridge','Sur ce pont, on pendait les voleurs de bronze. Le bronze des cloches était sacré : il gardait la voix des morts.'],
- ['f21',2,0,'Le Marché aux bronzes','coin','Chaque famille dut apporter son bronze : bougeoirs, alliances, médailles des morts. Un marchand en racheta une partie en douce. Il n’a jamais dit à qui il la revendit.'],
- ['f22',2,1,'La Fonderie Royale','anvil','Le roi Aldéric ordonna qu’on fonde toutes les cloches de la ville en une seule, assez grande pour couvrir Valsonne entière de sa voix. On l’appela Mémoire.'],
- ['f23',2,2,'La Cathédrale de Saint-Glas','church','Mémoire fut hissée dans la tour de la cathédrale. Il fallut quarante jours et trois morts. Le maître fondeur jura qu’elle sonnerait juste.'],
- ['f24',2,3,'Les Cryptes','skull','Sous la cathédrale, les chantres répétaient la messe de consécration. Ils la répètent encore. Personne ne leur a dit que la cérémonie était finie.'],
- ['f25',2,4,'La Rue des Ciriers','candle','Les premiers jours, Mémoire sonnait une heure à l’aube et une heure au crépuscule. Les malades se souvenaient de nouveau. On dansait dans la rue des Ciriers.'],
- ['f26',2,5,'L’Atelier du fondeur','book','Dans le carnet du maître fondeur, une ligne raturée : « Le métal a refusé de refroidir. Il chantait encore dans le moule. » Le carnet est signé d’un C.'],
- ['f31',3,0,'La Loge des Hérauts','bell','On confia Mémoire au meilleur sonneur de la ville, Élias, Héraut du Glas. Sa sœur cadette veillait sur sa lampe pendant qu’il sonnait.'],
- ['f32',3,1,'L’Escalier des Mille Marches','stairs','Dès que Mémoire se taisait, les malades oubliaient de nouveau. Le roi décréta qu’elle ne se tairait plus. Élias monta les mille marches et ne les redescendit jamais.'],
- ['f33',3,2,'La Chambre des cordes','rope','Élias sonnait jour et nuit. Quand ses mains saignèrent, il attacha la corde à ses poignets. Quand il s’endormit, il sonna en dormant.'],
- ['f34',3,3,'Les Fontaines Hautes','wave','Les pluies vinrent. L’eau monta dans la tour. Élias ne s’arrêta pas : s’il s’arrêtait, Valsonne oubliait ses morts. Il sonna jusqu’à la noyade, puis après.'],
- ['f35',3,4,'La Lanterne de la Veilleuse','lamp','Sa sœur veilla sa lampe en haut de la tour. Quand l’eau monta, elle descendit le chercher dans les Cryptes ; sa lanterne s’y éteignit. Elle s’appelle Ismène. « Sœur » n’a jamais été un titre.'],
- ['f36',3,5,'Le Glas Noyé','bell','Le chant du Héraut Noyé n’est pas une attaque. C’est le même appel, encore et encore : « Ne m’oubliez pas. Ne les oubliez pas. »'],
- ['f41',4,0,'La Chambre du prince','cradle','Dans la chambre du prince, un berceau, et une phrase gravée au couteau : « Tant que la cloche sonne, il est là. »'],
- ['f42',4,1,'Le Palais d’Aldéric','crown','La reine Mahaut avait perdu son fils au Mal d’oubli. Quand Mémoire sonna, elle se souvint de lui. Elle supplia qu’on ne la laisse jamais se taire.'],
- ['f43',4,2,'La Chapelle de la Reine','church','Mahaut entra dans la Brume pour rejoindre son fils. Elle n’en sortit pas. Les Spectres l’appellent la Mère, parce que c’est elle qui a voulu que tout cela dure.'],
- ['f44',4,3,'Le Cœur','heart','Au centre de la Brume, Mémoire bat encore. Elle ne sonne plus : elle bat, comme un cœur. Le Glas Originel n’est pas un monstre. C’est une cloche qui ne sait pas s’arrêter.'],
- ['f45',4,4,'Les Jardins suspendus','tree','Le son de Mémoire ne s’éteignait plus. Il s’accumulait dans les rues comme de l’eau dans une cuve. Un matin, il devint visible : un brouillard pâle qui sentait le bronze chaud.'],
- ['f46',4,5,'Le Grand Canal','wave','La Brume n’est pas un poison. C’est la mémoire de Valsonne, toute sa mémoire à la fois, condensée par le glas. Ceux qui s’y perdent se souviennent de tout, sauf d’eux-mêmes.'],
- ['f51',5,0,'Le Seuil','door','Les Éveillés ne viennent pas de nulle part. Ce sont des souvenirs que la ville garde de ceux qui l’ont aimée, rendus assez lourds par Mémoire pour marcher.'],
- ['f52',5,1,'L’Étal du Colporteur','coin','Tobiah racheta le bronze en douce au Marché et le revendit au fondeur royal. Il se croit invisible à la Brume parce qu’une part d’elle, c’est lui qui l’a payée.'],
- ['f53',5,2,'Le Beffroi','tower','Le Sanctuaire n’est pas un refuge bâti contre la Brume. C’est le sommet de la tour de Mémoire, le dernier étage que le brouillard n’a pas atteint.'],
- ['f54',5,3,'La Forge du Beffroi','anvil','Corbin a coulé Mémoire. Le carnet signé C, c’est le sien. Il forge des reliques pour ceux qui descendent parce qu’il ne peut pas refondre la cloche.'],
- ['f55',5,4,'La Salle des Registres','book','L’Archiviste consigne tout et n’oublie rien. Il n’a pas le choix : c’est lui qui a signé le décret. Aldéric n’a jamais quitté son royaume. Il en tient seulement les comptes.'],
- ['f56',5,5,'Le Silence','star','Faire taire le Glas ne détruit pas la Brume. Cela laisse à la ville le droit d’oublier un peu. Chaque victoire est un deuil enfin accepté.'],
-].map(([id,ch,col,name,glyph,text])=>({id,ch,col,row:5-ch,name,glyph,text}));
+const FRAGS=HI_D.fragments.map(({id,ch,col,name,glyph,text})=>({id,ch,col,row:5-ch,name,glyph,text}));
 const fragById=id=>FRAGS.find(f=>f.id===id);
 const chapDone=ch=>{const L=FRAGS.filter(f=>f.ch===ch),n=L.filter(f=>M().frags.includes(f.id)).length;return n>=L.length-(has9('M7')?1:0);};
 function giveFrag(src,x,y,delay){
@@ -3158,13 +3109,14 @@ const _openNpc=openNpc;
 openNpc=function(id){_openNpc(id);const m=M();if(m.react&&m.react[id]&&!m.reactSeen[id]){m.reactSeen[id]=1;persist();}};
 
 // ───────────────────────── Échos : traits et réputation
-const TRAITS=[
- {id:'perfect',name:'Implacable',k:m=>m.style.perfect,tiers:[1,3,6],desc:'Gardiens vaincus sans une égratignure.'},
- {id:'close',name:'Increvable',k:m=>m.style.close,tiers:[1,3,6],desc:'Gardiens vaincus avec moins d’un cinquième de tes PV.'},
- {id:'abandons',name:'Fuyard',k:m=>m.style.abandons,tiers:[1,3,6],desc:'Descentes abandonnées avant la fin.'},
- {id:'early',name:'Téméraire',k:m=>m.style.early,tiers:[2,5,10],desc:'Chutes dans les trois premières salles.'},
- {id:'deep',name:'Plongeur',k:m=>m.style.deep,tiers:[1,4,10],desc:'Descentes qui ont atteint le Cœur de la Brume.'},
- {id:'acharne',name:'Acharné',k:m=>Object.values(m.clsRuns).reduce((a,b)=>a+b,0),tiers:[10,25,50],desc:'Descentes au total.'}];
+const TRAIT_K={
+ perfect:m=>m.style.perfect,
+ close:m=>m.style.close,
+ abandons:m=>m.style.abandons,
+ early:m=>m.style.early,
+ deep:m=>m.style.deep,
+ acharne:m=>Object.values(m.clsRuns).reduce((a,b)=>a+b,0)};
+const TRAITS=ME_D.traits.map(t=>Object.assign({},t,{k:TRAIT_K[t.id]}));
 const tierOf=(t,m)=>{const v=t.k(m);let i=0;while(i<3&&v>=t.tiers[i])i++;return i;};
 function favCls(m){const tot=Object.values(m.clsRuns).reduce((a,b)=>a+b,0);let best=null,bv=0;for(const c in m.clsRuns)if(m.clsRuns[c]>bv){bv=m.clsRuns[c];best=c;}return tot>=5&&bv/tot>=0.6?best:null;}
 const versatile=m=>['lum','gou','her','tis'].every(c=>(m.clsRuns[c]||0)>=2);
@@ -3261,11 +3213,11 @@ openEnd=function(win,abandon){
  if(RUN.act>=3)s.deep++;
  // Accoutumance
  const lvBefore=adaptLv(cls);let share=R.tot>0?R.sig/R.tot:0;
- if(RUN.g>=3){const gain=clamp((share-0.4)*1.25*v9GainMul(),-0.4,0.5);m.adapt[cls]=clamp((m.adapt[cls]||0)+gain,0,3.4);}
+ if(RUN.g>=3){const gain=clamp((share-ME_D.accoutumance.seuil)*1.25*v9GainMul(),-0.4,0.5);m.adapt[cls]=clamp((m.adapt[cls]||0)+gain,0,3.4);}
  if(!has9('L5'))for(const c in m.adapt)if(c!==cls)m.adapt[c]=Math.max(0,m.adapt[c]-0.3);
  const lvAfter=adaptLv(cls);
  // Prime d'accoutumance : la Brume qui apprend paie mieux
- const bonus=lvBefore>0?Math.round(F.base*F.mult*0.06*lvBefore):0;if(bonus){F.total+=bonus;SAVE.shards+=bonus;SAVE.total+=bonus;}
+ const bonus=lvBefore>0?Math.round(F.base*F.mult*ME_D.accoutumance.eclatsParNiveau*lvBefore):0;if(bonus){F.total+=bonus;SAVE.shards+=bonus;SAVE.total+=bonus;}
  // Tombe d'Écho
  let grave=null;if(died){const gx=clamp(P.x,AR.x0+70,AR.x1-70),gy=clamp(P.y,AR.y0+110,AR.y1-150);grave={act:RUN.act,room:RUN.roomIdx,x:gx,y:gy,cls,n:SAVE.runs,by:R.lastSrc||'brume'};m.graves=m.graves.filter(g=>!(g.act===grave.act&&g.room===grave.room));m.graves.push(grave);if(m.graves.length>(has9('P3')?8:6))m.graves.shift();}
  // Pitié : jamais plus de deux descentes d'affilée sans fragment
@@ -5103,8 +5055,8 @@ window.__v10={F:()=>P.s.v10,pv,NODES,nodeAvailable,rollOffers,takeNode,majCount1
 const BAL={
  hpPerRoom:BE_D.montee.pvParSalle,   // PV ennemis : +8,5 % par salle franchie dans la run
  dmgPerRoom:BE_D.montee.degatsParSalle,   // dégâts ennemis : +3 % par salle
- palHp:0.04,        // chaque palier : +4 % de PV ennemis (en plus de son effet propre)
- palDmg:0.03,       // chaque palier : +3 % de dégâts ennemis
+ palHp:SA_D.parPalier.pvEnnemis,        // chaque palier : +4 % de PV ennemis (en plus de son effet propre)
+ palDmg:SA_D.parPalier.degatsEnnemis,       // chaque palier : +3 % de dégâts ennemis
  palBudget:0.04,    // chaque palier : +4 % d’ennemis par vague
  bossMul:[1,1.9,1.8,1.8], // PV des gardiens par acte (acte I : 1000 → 1900 au palier 0)
  phaseLock:GA_D.verrouPhase.dureeS,     // à chaque changement de phase, le gardien se protège 1,2 s…
@@ -5112,10 +5064,6 @@ const BAL={
  p6Spd:1.12, p8Elite:1.4, p8Hp:0.85};
 
 // ───────────────────────── Paliers : rampe continue + trois nouveaux paliers
-PALIERS.push(
- {n:6,name:'Hâte',desc:'Les ennemis sont 12 % plus rapides.'},
- {n:7,name:'Vagues sans fin',desc:'Chaque salle de combat compte une vague de plus.'},
- {n:8,name:'Le Glas éternel',desc:'Tu as 15 % de PV max en moins et les champions ont +40 % de PV.'});
 hpMul=function(){return (1+BAL.hpPerRoom*(G()-1))*(PAL()>=1?1.2:1)*(1+BAL.palHp*PAL());};
 dmgMul=function(){return (1+BAL.dmgPerRoom*(G()-1))*(PAL()>=3?1.2:1)*(1+BAL.palDmg*PAL());};
 spdMul=function(){return (1+0.012*(G()-1))*(PAL()>=6?BAL.p6Spd:1);};
@@ -5130,9 +5078,10 @@ applyMeta=function(){_am11();if(P&&RUN&&!RUN.hub&&PAL()>=8){P.s.maxHp=Math.round
 // ───────────────────────── Classes
 const _bs11=baseStats;
 baseStats=function(cls){const s=_bs11(cls);
- if(cls==='lum'){s.atkDmg=15;}
- if(cls==='her'){s.atkDmg=13;s.beatWin=0.11;}
- if(cls==='tis'){s.maxHp=100;s.tension=0.4;}
+ if(cls==='her'){s.beatWin=0.11;}
+ if(cls==='tis'){s.tension=0.4;}
+ // statistiques de départ de chaque forme : data/formes.js
+ Object.assign(s,window.BRUME_DATA.formes.fiches[cls].depart);
  return s;};
 
 // ───────────────────────── Gardiens : plus de PV, phases garanties, chrono
@@ -5265,12 +5214,8 @@ drawNums=function(){_dn11();
  c.restore();};
 
 // ───────────────────────── Guide « Comment jouer »
-const DIFF={lum:'Accessible',gou:'Intermédiaire',her:'Exigeant',tis:'Intermédiaire'};
-const CLSHELP={
- lum:'Ta lanterne éclaire et expose. Clic droit : Faisceau (coûte de la Lueur, regagnée en frappant les exposés). Lancer la lanterne = l’Obscur : plus rapide, plus de critiques.',
- gou:'Clic droit maintenu : dévore la Brume pour monter ta Corruption (plus de dégâts). Recrache-la (R) avant 100, sinon Rupture.',
- her:'Frappe quand le cercle sous tes pieds se referme : coups en mesure = plus de dégâts et de Cadence. R : le Grand Glas.',
- tis:'Aiguilles à distance. Clic droit : noue un fil sur un ennemi. R : Arrache les fils pour projeter les ennemis.'};
+const DIFF=Object.fromEntries(FO_D.ordre.map(c=>[c,FO_D.fiches[c].difficulte]));
+const CLSHELP=Object.fromEntries(FO_D.ordre.map(c=>[c,FO_D.fiches[c].aide]));
 function openGuide(back){
  if(!SAVE.flags.guide){SAVE.flags.guide=1;persist();}
  const card=(n,t,x)=>`<div class="gd-card"><b>${n}</b><h3>${t}</h3><p>${x}</p></div>`;
@@ -5307,7 +5252,7 @@ openTitle=function(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`:'';
  const cards=CLASSLIST.map((c,i)=>`<button type="button" class="cls ${c.id===chosenCls?'sel':''}" data-cls="${c.id}" style="--c:${CLS[c.id].color}" aria-pressed="${c.id===chosenCls}"><span class="top"><h3>${c.name}</h3><span class="tag">${c.id===chosenCls?'Choisi':DIFF[c.id]}</span></span><p>${c.pitch}</p><span class="mech">${c.mech} · touche ${i+1}</span></button>`).join('');
- openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · v15.7</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
+ openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · ${window.BRUME_DATA.versions.actuelle}</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p>
  <div class="row" style="margin-top:0"><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><button type="button" class="btn big" id="howto">Comment jouer</button></div>
  <p class="tip">Avec ${art(chosenCls)}. ${back?'':'Nouveau ? Lis « Comment jouer » : deux minutes suffisent.'}</p><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div>
  <div>${prog}<p class="h-sec"${back?'':' style="margin-top:0"'}>Choisis ta forme</p><div class="classes">${cards}</div><p class="tip">Tu pourras en changer au Portail du Sanctuaire. Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
@@ -6996,13 +6941,9 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 // ───────────────────────── v16 · menus allégés : Portail, Sanctuaire, Colporteur
 // Principe : une information principale par bloc, le détail à la demande (survol, dépliant, palier sélectionné).
 (function(){
- // 1. Textes courts
- const PD={0:['Sans palier','La Brume habituelle.'],1:['Brume épaisse','Ennemis : +20 % de PV.'],2:['Meute','Vagues plus fournies : +20 %.'],3:['Crocs','Ennemis : +20 % de dégâts.'],4:['Disette','Soins divisés par deux, prix +25 %.'],5:['Gardiens enragés','Gardiens : +30 % de PV, plus rapides.'],6:['Hâte','Ennemis 12 % plus rapides.'],7:['Vagues sans fin','Une vague de plus par salle.'],8:['Le Glas éternel','PV max −15 %, champions +40 % de PV.']};
- PALIERS.forEach(p=>{if(PD[p.n]){p.name=PD[p.n][0];p.desc=PD[p.n][1];}});
- const MD={vig:'+8 PV max par rang',ard:'+5 % de dégâts par rang',ref:'Esquive rechargée 8 % plus vite par rang',for:'+15 % d’or par rang',mar:'Prix du Colporteur −10 % par rang',rel:'+1 relance par acte, par rang',sav:'+1 niveau de départ par rang',bag:'Une relique de départ au choix',cho:'4 talents proposés au lieu de 3',sec:'Une fois par run, relève-toi à 40 % de PV'};
- META.forEach(m=>{if(MD[m.id])m.desc=MD[m.id];});
- const SHORT={lum:'Une lanterne qui expose, l’Obscur qui tue.',gou:'Dévore la Brume, puis la recrache.',her:'Des coups en rythme qui résonnent.',tis:'Des fils pour retourner les ennemis.'};
- const TIP={lum:'Les ennemis éclairés sont exposés : ils subissent plus de dégâts.',gou:'Plus ta Corruption monte, plus tu frappes fort. À 100, c’est la Rupture.',her:'Agis quand le cercle se referme : en mesure, tes coups frappent plus fort.',tis:'Attache des fils aux ennemis, puis arrache-les d’un coup.'};
+ // 1. Textes courts (paliers, améliorations, accroches et conseils des formes : data/sanctuaire.js et data/formes.js)
+ const SHORT=Object.fromEntries(Object.entries(window.BRUME_DATA.formes.fiches).map(([c,f])=>[c,f.court]));
+ const TIP=Object.fromEntries(Object.entries(window.BRUME_DATA.formes.fiches).map(([c,f])=>[c,f.conseil]));
  const cut=s=>String(s).replace('Compétences de l’arbre','Compétences').split(/ : |, /)[0];
 
  // 2. Le Portail

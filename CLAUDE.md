@@ -7,7 +7,8 @@
 - Toute modification du jeu doit être reflétée dans le wiki :
   - si elle touche `themist/data/`, lancer `node themist/outils/wiki.mjs` (la CI le fait aussi avant le déploiement) ;
   - sinon, mettre à jour la section du wiki à la main dans le même commit.
-- Les sections générées portent un commentaire « Section générée par outils/wiki.mjs » : ne pas les modifier à la main, modifier les données ou le gabarit dans `outils/wiki.mjs`.
+- Les sections générées portent un commentaire « Section générée par outils/wiki.mjs », et les fragments générés sont entourés de `<!-- gen:nom -->` … `<!-- /gen:nom -->` : ne pas les modifier à la main, modifier les données ou le gabarit dans `outils/wiki.mjs`. Le reste du wiki (explications, FAQ, conseils) se modifie à la main.
+- Version et journal : à chaque évolution du jeu, ajouter une ligne en tête du journal dans `themist/data/versions.js` (et changer `actuelle` pour une nouvelle version : l'écran titre et le wiki suivent).
 - Talents : noms, descriptions, améliorations, rangs et exclusions se modifient dans `themist/data/talents.js`. Les textes écrits dans les `N(…)` d'index.html sont remplacés au chargement par ceux des données ; les effets (`apply`) et la structure de l'arbre restent dans index.html.
 - `node themist/outils/wiki.mjs --check` vérifie que le wiki est à jour.
 - Publication : push direct sur `main` (déploiement automatique sur IONOS).

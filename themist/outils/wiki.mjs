@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // La Brume · générateur du wiki
-// Réécrit dans wiki.html les sections qui viennent des données du jeu (data/*.js),
-// et aligne le numéro de version du wiki sur celui du jeu (index.html).
+// Réécrit dans wiki.html les sections et les fragments (<!-- gen:… -->) qui viennent des données
+// du jeu (data/*.js), et aligne le numéro de version du wiki sur data/versions.js.
+// Le reste du wiki (textes d'explication, FAQ, conseils) s'écrit à la main dans wiki.html.
 //
 //   node themist/outils/wiki.mjs           met wiki.html à jour
 //   node themist/outils/wiki.mjs --check   échoue (code 1) si wiki.html n'est pas à jour
@@ -14,7 +15,6 @@ import vm from 'node:vm';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const WIKI = join(ROOT, 'wiki.html');
-const GAME = join(ROOT, 'index.html');
 
 // ── Chargement des données, exactement comme le navigateur les lit
 function loadData() {
@@ -230,17 +230,71 @@ ${blocs}
 </section>`;
 }
 
+
+// ── Fragments générés à l'intérieur des sections écrites à la main
+// Ils sont repérés par <!-- gen:nom --> … <!-- /gen:nom --> dans wiki.html.
+function replaceFragment(html, name, content) {
+  const a = `<!-- gen:${name} -->`, b = `<!-- /gen:${name} -->`;
+  const i = html.indexOf(a), j = html.indexOf(b);
+  if (i < 0 || j < i) throw new Error(`Fragment ${name} introuvable dans wiki.html`);
+  return html.slice(0, i + a.length) + content + html.slice(j);
+}
+// Touches par défaut (clavier AZERTY), comme le jeu les affiche
+const TOUCHES = { '{MOVE}': 'ZQSD', '{R}': 'R', '{A}': 'A', '{E}': 'E', '{F}': 'F' };
+const touche = k => k.replace(/\{\w+\}/g, t => TOUCHES[t] || t);
+const sec = x => `${num(x)} s`;
+
+function fragments(D) {
+  const T = D.talents, FO = D.formes, F = FO.fiches, ordre = FO.ordre, SA = D.sanctuaire, ME = D.memoire, HI = D.histoire;
+  const out = {};
+  out['intro-compte'] = `les ${mot(ordre.length)} formes, leurs ${Object.keys(T.noeuds).length} talents, les ${D.reliques.length} reliques, les ${Object.keys(D.equipements.objets).length} équipements`;
+  out['intro-actes'] = D.gardiens.actes.map(a => esc(a.name)).join(', ');
+  out.commandes = `<div class="tabs" data-tabs>\n${ordre.map((c, i) => `<button type="button" class="tab${i ? '' : ' on'}" data-t="k-${c}" style="--c:${T.formes[c].color}">${esc(T.formes[c].short)}</button>`).join('')}\n</div>\n`
+    + ordre.map((c, i) => `<div class="tabpane${i ? '' : ' on'}" id="k-${c}"><dl class="kv">${F[c].commandes.map(([k, v]) => `<dt><kbd>${esc(touche(k))}</kbd></dt><dd>${esc(v)}</dd>`).join('')}</dl></div>`).join('');
+  const branches = c => Object.keys(T.branches).filter(b => T.branches[b].cls === c);
+  const carte = c => { const C = T.formes[c], f = F[c], main = branches(c).filter(b => !T.branches[b].sub), subs = branches(c).filter(b => T.branches[b].sub);
+    return `<article class="ent clscard" id="forme-${c}" style="--c:${C.color}" data-cls="${c}">
+  <div class="clshead"><h3 style="color:${C.color}">${esc(C.name)}</h3><span class="tag" style="--t:${C.color}">${esc(f.difficulte)}</span></div>
+  <p class="pitch">${esc(f.pitch)}</p>
+  <p>${esc(f.aide)}</p>
+  <dl class="kv"><dt>Mécanique</dt><dd>${esc(f.mech)}</dd><dt>Éveil</dt><dd>${esc(C.rootDesc)}</dd><dt>Branches</dt><dd>${main.map(b => `<a href="#talents-${b}">${esc(T.branches[b].name)}</a>`).join(', ')}</dd><dt>Sous-classes</dt><dd>${subs.map(b => `<a href="#talents-${b}">${esc(T.branches[b].name)}</a> <small>(${esc(T.branches[b].voie)})</small>`).join(', ')}</dd></dl>
+  <p class="links"><a href="#talents-${main[0]}">Voir les talents →</a></p></article>`; };
+  out.formes = `<div class="grid g2">${ordre.map(carte).join('')}</div>
+<h3 class="sub">Statistiques de départ</h3>
+<table class="tbl"><thead><tr><th>Forme</th><th>PV</th><th>Vitesse</th><th>Dégâts</th><th>Cadence</th><th>Esquive</th></tr></thead><tbody>
+${ordre.map(c => { const d = F[c].depart; return `<tr><td>${esc(T.formes[c].short)}</td><td>${d.maxHp}</td><td>${d.speed}</td><td>${d.atkDmg}</td><td>${d.atkCd.toFixed(2).replace('.', ',')} s</td><td>${sec(d.dashCd)}</td></tr>`; }).join('\n')}</tbody></table>`;
+  out.pnj = `<div class="grid g4">${Object.values(SA.pnj).map(n => `<article class="ent"><h4>${esc(n.name)}</h4><p class="k">${esc(n.role)}</p><p>${esc(n.desc)}</p></article>`).join('')}</div>`;
+  const B = D.resonances.bareme, P = SA.parPalier;
+  out.eclats = `<p>Tu gagnes des <b>Éclats</b> à chaque descente, réussie ou non. Une mort conserve <b>${pct(B.mort)}</b> des éclats du run, un abandon <b>${pct(B.abandon)}</b>, une victoire <b>${pct(B.victoire)}</b>. Les éclats achètent des améliorations permanentes à la flamme d’Ismène.</p>
+<div class="grid g2">${SA.ameliorations.map(m => `<article class="ent"><div class="eh"><h4>${esc(m.name)}</h4><span class="tag">${m.max} rang${m.max > 1 ? 's' : ''}</span></div><p>${esc(m.desc)}</p><p class="k">Coût : ${m.cost.map(c => `${c} ✦`).join(' · ')}</p></article>`).join('')}</div>`;
+  out.paliers = `<p>Après ta première victoire, tu peux redescendre plus difficilement. Chaque palier <b>s’ajoute aux précédents</b>, renforce les ennemis de ${pct(P.pvEnnemis)} de PV et ${pct(P.degatsEnnemis)} de dégâts, et rapporte <b>${pct(P.eclats)} d’éclats en plus</b>. Faire taire le Glas Originel débloque le palier suivant.</p>
+<table class="tbl"><thead><tr><th>Palier</th><th>Nom</th><th>Effet</th></tr></thead><tbody>
+${SA.paliers.map(p => `<tr><td>${p.n}</td><td><b>${esc(p.name)}</b></td><td>${esc(p.desc)}</td></tr>`).join('')}</tbody></table>`;
+  const A = ME.accoutumance;
+  out.accoutumance = `<p>Chaque descente, la Brume mesure la part de tes dégâts qui repose sur la mécanique de ta classe. Au-delà de <b>${pct(A.seuil)}</b>, elle <b>apprend</b> ; en dessous, ou avec une autre classe, elle oublie. Jusqu’à trois niveaux. Une Brume qui a appris rapporte plus d’éclats (+${pct(A.eclatsParNiveau)} par niveau). Les accoutumés encaissent mieux ton mécanisme, mais le contre-jeu t’est donné.</p>`;
+  out.adaptations = `<div class="grid g2">${Object.entries(ME.adaptations).map(([c, a]) => `<article class="ent" data-cls="${c}"><h4 style="color:${T.formes[c].color}">${esc(T.formes[c].short)} · ${esc(a.name)}</h4><p>La Brume observe <b>${esc(a.what)}</b>.</p><p><b>Contre-jeu :</b> ${esc(a.counter)}</p></article>`).join('')}</div>`;
+  out.traits = `<table class="tbl"><thead><tr><th>Trait</th><th>Paliers</th><th>Mesure</th></tr></thead><tbody>
+${ME.traits.map(t => `<tr><td><b>${esc(t.name)}</b></td><td>${t.tiers.join(' · ')}</td><td>${esc(t.desc)}</td></tr>`).join('')}</tbody></table>`;
+  out.carte = HI.chapitres.map((C, i) => { const fr = HI.fragments.filter(f => f.ch === i + 1);
+    return `<article class="ent chap"><div class="eh"><h4>Chapitre ${C.n} · ${esc(C.t)}</h4><span class="tag">${fr.length} fragments</span></div><p class="k">${esc(C.hint)}</p>
+<details class="spoil"><summary>Révéler la Vérité : « ${esc(C.truth)} »</summary><p>${esc(C.tx)}</p></details>
+<details class="spoil"><summary>Révéler les fragments</summary>${fr.map(f => `<p><b>${esc(f.name)}</b> — ${esc(f.text)}</p>`).join('')}</details></article>`; }).join('');
+  out.codex = `<table class="tbl"><thead><tr><th>Entrée</th><th>Condition</th></tr></thead><tbody>
+${HI.codex.map(l => `<tr><td><b>${esc(l.t)}</b></td><td>${esc(l.h || 'Dès le début.')}</td></tr>`).join('')}</tbody></table>`;
+  out.journal = `<ol class="log">${D.versions.journal.map(e => `<li><span class="d">${esc(e.d)}</span><span class="h">${esc(e.h)}</span><span class="s">${esc(e.t)}</span></li>`).join('')}</ol>`;
+  return out;
+}
+
 // ── Assemblage
 function replaceSection(html, id, content) {
   const re = new RegExp(`<section class="sec" id="${id}"[^>]*>[\\s\\S]*?</section>`);
   if (!re.test(html)) throw new Error(`Section #${id} introuvable dans wiki.html`);
   return html.replace(re, () => content);
 }
-function gameVersion() {
-  const vs = [...readFileSync(GAME, 'utf8').matchAll(/Prototype jouable · (v\d+(?:\.\d+)*)/g)].map(m => m[1]);
-  if (!vs.length) throw new Error('Version du jeu introuvable dans index.html');
-  if (new Set(vs).size > 1) throw new Error(`Versions différentes dans index.html : ${[...new Set(vs)].join(', ')}`);
-  return vs[0];
+function gameVersion(D) {
+  const v = D.versions && D.versions.actuelle;
+  if (!/^v\d+(\.\d+)*$/.test(v || '')) throw new Error('Version du jeu absente ou invalide dans data/versions.js');
+  return v;
 }
 function syncVersion(html, v) {
   return html
@@ -259,7 +313,8 @@ export function build(html) {
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
   out = replaceSection(out, 'talents', talents(D.talents));
-  return syncVersion(out, gameVersion());
+  for (const [name, content] of Object.entries(fragments(D))) out = replaceFragment(out, name, content);
+  return syncVersion(out, gameVersion(D));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
