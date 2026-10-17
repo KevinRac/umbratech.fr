@@ -71,12 +71,9 @@ function equipements(E, F) {
 </section>`;
 }
 
-// ── Formes (nom court et couleur), lues dans index.html
-function formes() {
-  const src = readFileSync(GAME, 'utf8'), F = {};
-  for (const m of src.matchAll(/(?:^ |CLS\.)(\w{3})[:=]\{name:'[^']*',short:'([^']*)',color:'(#[0-9a-fA-F]{6})'/gm)) F[m[1]] = { n: m[2], col: m[3] };
-  if (Object.keys(F).length < 4) throw new Error('Formes introuvables dans index.html');
-  return F;
+// ── Formes (nom court et couleur), lues dans data/talents.js
+function formes(D) {
+  return Object.fromEntries(Object.entries(D.talents.formes).map(([c, f]) => [c, { n: f.short, col: f.color }]));
 }
 const MOTS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix'];
 const mot = n => MOTS[n] || String(n);
@@ -202,6 +199,37 @@ ${ponts}
 </section>`;
 }
 
+// ── Section « Arbres de talents »
+function talents(T) {
+  const N = T.noeuds, K = T.genres, X = T.exclusions;
+  const brOf = id => id.split('_')[0];
+  // incompatibilités symétriques : la liste du talent, puis ceux qui le listent
+  const excl = id => { const out = [...(X[id] || [])]; for (const k in X) if (X[k].includes(id) && !out.includes(k)) out.push(k); return out.filter(k => N[k]); };
+  const carte = (id, cls) => {
+    const n = N[id], ex = excl(id);
+    const tag = n.k === 'x' ? `${K.x} ${id.endsWith('a') ? 'A' : 'B'}` : K[n.k];
+    return `<article class="ent node k-${n.k}" data-cls="${cls}"><div class="eh"><h4>${esc(n.name)}${n.max > 1 ? ` <span class="rank">×${n.max}</span>` : ''}</h4><span class="tag">${esc(tag)}</span></div>`
+      + `<p>${esc(n.k === 'x' ? n.mod : n.desc)}</p>${n.up ? `<p class="up"><b>Rang supérieur</b> ${esc(n.up)}</p>` : ''}${n.k === 'x' ? `<p class="syn"><b>Synergie</b> ${esc(n.syn)}</p>` : ''}`
+      + `${ex.length ? `<p class="ex"><b>Incompatible avec</b> ${ex.map(k => esc(N[k].name)).join(', ')}</p>` : ''}</article>`;
+  };
+  const GROUPES = [['c', 'Racine'], ['m', 'Mineurs'], ['s', 'Compétences'], ['x', 'Majeurs (choix A ou B)'], ['k', 'Nœuds clés']];
+  const branche = br => {
+    const B = T.branches[br], ids = Object.keys(N).filter(id => brOf(id) === br);
+    const groupes = GROUPES.map(([k, titre]) => { const l = ids.filter(id => N[id].k === k); return l.length ? `<h5 class="grp">${titre}</h5><div class="grid g3">${l.map(id => carte(id, B.cls)).join('')}</div>` : ''; }).join('');
+    return `<div class="branch" id="talents-${br}" style="--c:${B.color}"><h3 class="bh"><span class="dot"></span>${esc(B.name)} ${B.sub ? `<span class="tag" style="--t:${B.color}">${esc(B.voie)}</span> ` : ''}<small>${ids.length} talents</small></h3>${groupes}</div>`;
+  };
+  const formes = Object.entries(T.formes);
+  const blocs = formes.map(([c, F]) => `<div class="clsblock" id="talents-${c}" data-cls="${c}" style="--c:${F.color}"><h3 class="cb" style="color:${F.color}">${esc(F.name)}</h3><p class="k">${esc(F.rootDesc)}</p>${Object.keys(T.branches).filter(b => T.branches[b].cls === c).map(branche).join('')}</div>`).join('');
+  return `<section class="sec" id="talents" data-sec>${MARK('data/talents.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>Arbres de talents</h2><div class="lede"><p>Chaque niveau te propose <b>3 talents</b> à choisir (4 avec <i>Vision élargie</i>). Chaque forme possède trois branches mineures et deux sous-classes (voies). Les <b>Majeurs</b> arrivent par paires : tu prends A <i>ou</i> B. Les <b>nœuds clés</b> changent le style de jeu, et certains s’excluent mutuellement.</p></div></header>
+<div class="filters" id="clsfilter"><span>Afficher :</span>
+<button type="button" class="chip on" data-f="all">Toutes les formes</button>
+${formes.map(([c, F]) => `<button type="button" class="chip" data-f="${c}" style="--cc:${F.color}">${esc(F.short)}</button>`).join('')}
+</div>
+<aside class="note ">La disponibilité de certains talents dépend de ce que tu as déjà pris. Les incompatibilités sont listées sous chaque carte ; elles sont symétriques (si A bloque B, B bloque A).</aside>
+${blocs}
+</section>`;
+}
+
 // ── Assemblage
 function replaceSection(html, id, content) {
   const re = new RegExp(`<section class="sec" id="${id}"[^>]*>[\\s\\S]*?</section>`);
@@ -224,12 +252,13 @@ function syncVersion(html, v) {
 
 export function build(html) {
   const D = loadData();
-  let out = replaceSection(html, 'equipements', equipements(D.equipements, formes()));
-  out = replaceSection(out, 'reliques', reliques(D.reliques, formes()));
+  let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D)));
+  out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D)));
   out = replaceSection(out, 'pactes', pactes(D.pactes));
   out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire));
-  out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes()));
+  out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
+  out = replaceSection(out, 'talents', talents(D.talents));
   return syncVersion(out, gameVersion());
 }
 

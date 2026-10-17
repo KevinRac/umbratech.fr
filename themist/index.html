@@ -423,6 +423,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/bestiaire.js"></script>
 <script src="data/gardiens.js"></script>
 <script src="data/resonances.js"></script>
+<script src="data/talents.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -509,27 +510,16 @@ function sfx(k){if(!AC||muted)return;switch(k){
 }}
 
 // ───────────────────────── Données : classes, arbres
-const CLS={
- lum:{name:'Le Lumenarque',short:'Lumenarque',color:'#f3b94d',root:'Éveil du Lumenarque',rootDesc:'Ton kit de base : Coup de lanterne, Faisceau, Esquive et Lancer de lanterne.',subs:['sol','omb']},
- gou:{name:'Le Gouffre',short:'Gouffre',color:'#8fd46e',root:'Éveil du Gouffre',rootDesc:'Ton kit de base : Mâchoire, Dévorer, Ruée et Recracher.',subs:['sai','abe']},
-};
-const BR={
- ray:{cls:'lum',name:'Rayonnement',color:'#f2c14e',ang:-90,sub:false},
- pen:{cls:'lum',name:'Pénombre',color:'#a387ec',ang:135,sub:false},
- fan:{cls:'lum',name:'Fanal',color:'#ea7a43',ang:45,sub:false},
- sol:{cls:'lum',name:'Soleil Noir',color:'#ff5f45',ang:0,sub:true,voie:'Voie de la lumière'},
- omb:{cls:'lum',name:'Ombrelame',color:'#7a95ff',ang:180,sub:true,voie:'Voie de l’ombre'},
- vor:{cls:'gou',name:'Voracité',color:'#7fd06a',ang:-90,sub:false},
- dif:{cls:'gou',name:'Difformité',color:'#e0574f',ang:135,sub:false},
- reg:{cls:'gou',name:'Régurgitation',color:'#dcc84c',ang:45,sub:false},
- sai:{cls:'gou',name:'Saint Dévorant',color:'#f1e2b4',ang:0,sub:true,voie:'Voie de la purification'},
- abe:{cls:'gou',name:'Aberration',color:'#c25bd6',ang:180,sub:true,voie:'Voie de la mutation'},
-};
+// Formes, branches, genres et textes des talents : data/talents.js. Ici, la structure de l'arbre et les effets.
+// Les noms, descriptions, améliorations et rangs écrits plus bas dans les N(…) sont remplacés au chargement par ceux de data/talents.js.
+const T_D=window.BRUME_DATA.talents;
+const CLS=Object.assign({},T_D.formes);
+const BR=Object.assign({},T_D.branches);
 const MAIN_SLOTS={n1:[1,0],n2:[2,-1],n3:[2,1],n4:[3,-1],n5:[3,1],n6:[4,-1.3],n7:[4,0],n8:[4,1.3],k1:[5,-0.75],k2:[5,0.75]};
 const MAIN_EDGES=[['root','n1'],['n1','n2'],['n1','n3'],['n2','n4'],['n3','n5'],['n4','n6'],['n4','n7'],['n5','n7'],['n5','n8'],['n6','k1'],['n7','k1'],['n7','k2'],['n8','k2']];
 const SUB_SLOTS={s1:[1,0],s2:[2,-0.85],s3:[2,0.85],s4:[3,-0.85],s5:[3,0.85],sk:[4,0]};
 const SUB_EDGES=[['root','s1'],['s1','s2'],['s1','s3'],['s2','s4'],['s3','s5'],['s4','sk'],['s5','sk']];
-const KIND={m:'Mineur',s:'Compétence',k:'Nœud clé',c:'Sous-classe'};
+const KIND=Object.assign({},T_D.genres);
 const NODES={};
 function N(br,slot,kind,name,max,desc,apply,up){const id=br+'_'+slot;NODES[id]={id,br,cls:BR[br].cls,slot,kind,name,max,desc,apply,up};}
 // ── Lumenarque
@@ -620,20 +610,6 @@ N('abe','s5','s','Yeux multiples',2,'+8 % de critique par mutation de salle.',(s
 N('abe','sk','k','Métamorphose',1,'Débloque Métamorphose [F] : 8 s en forme monstrueuse. Taille ×1,5, dégâts ×1,5, Mâchoire à 360°, dégâts subis −30 %. Recharge 26 s.',s=>{s.metamorph=1;});
 
 // ── Héraut du Glas et Tisse-Destin (v6)
-CLS.her={name:'Le Héraut du Glas',short:'Héraut',color:'#8ec5ff',root:'Éveil du Héraut',rootDesc:'Ton kit de base : Coup de cloche, Volée, Pas de danse et Grand Glas. Agis en mesure pour faire résonner chaque geste.',subs:['dgl','chd']};
-CLS.tis={name:'Le Tisse-Destin',short:'Tisse-Destin',color:'#ff6b8a',root:'Éveil du Tisse-Destin',rootDesc:'Ton kit de base : Aiguilles, Fil, Esquive et Arracher. Noue, puis tire.',subs:['gts','mdp']};
-Object.assign(BR,{
- car:{cls:'her',name:'Carillon',color:'#e0b468',ang:-90,sub:false},
- cad:{cls:'her',name:'Cadence',color:'#8ec5ff',ang:135,sub:false},
- req:{cls:'her',name:'Requiem',color:'#b48cff',ang:45,sub:false},
- dgl:{cls:'her',name:'Dernier Glas',color:'#ff8f6b',ang:0,sub:true,voie:'Voie de l’exécution'},
- chd:{cls:'her',name:'Chœur des Damnés',color:'#9fe6e0',ang:180,sub:true,voie:'Voie des échos'},
- trm:{cls:'tis',name:'Trame',color:'#ff6b8a',ang:-90,sub:false},
- aig:{cls:'tis',name:'Aiguilles',color:'#e8d9c8',ang:135,sub:false},
- pnt:{cls:'tis',name:'Pantins',color:'#c58cff',ang:45,sub:false},
- gts:{cls:'tis',name:'Grande Tisseuse',color:'#ff9ec0',ang:0,sub:true,voie:'Voie de la toile'},
- mdp:{cls:'tis',name:'Maître des Pantins',color:'#c9a26a',ang:180,sub:true,voie:'Voie du contrôle'},
-});
 // ── Héraut : Carillon
 N('car','n1','m','Bronze pur',3,'+12 % de dégâts des ondes et du Grand Glas.',s=>{s.waveDmg*=1.12;s.glasDmg*=1.12;});
 N('car','n2','m','Écho long',3,'+15 % de portée des ondes.',s=>{s.waveRange*=1.15;});
@@ -4047,7 +4023,6 @@ addEventListener('keydown',e=>{
 // ═════════════════════════════════════════════════════════════════════════════
 // v10 · Arbres de talents refondus : mineurs de gameplay + 3 majeurs A/B par branche
 // ═════════════════════════════════════════════════════════════════════════════
-KIND.x='Majeur';
 const F10=()=>P.s.v10||(P.s.v10={});
 const pv=()=>{let v=P.v10;if(!v)v=P.v10={zones:[],suns:[],beamOn:0,devHold:0,bites:0,prime:0,sinceMaj:0,lastRef:-9,fireT:0,glasQ2:[],casc:[],souls:0,venN:0,venT:0};return v;};
 
@@ -6671,7 +6646,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 (function(){
  // nœuds clés qui posent un état : lanterne jamais posée, jamais lancée, jamais rappelée, plus d'esquive, etc.
  const KFLAG={ray_k1:'coeur',fan_k1:'vivante',pen_k1:'enfant',dif_k1:'colosse',reg_k2:'canon',trm_k2:'filRouge',vor_k1:'faim'};
- const KNAME={coeur:'Cœur de Soleil',vivante:'Lanterne Vivante',enfant:'Enfant de la Nuit',colosse:'Colosse',canon:'Ventre-Canon',filRouge:'Fil Rouge',faim:'Faim Éternelle'};
+ const KNAME=new Proxy({},{get:(o,f)=>{const id=Object.keys(KFLAG).find(k=>KFLAG[k]===f);return id&&NODES[id]?NODES[id].name:f;}});
  const SUBKEY={ray_k1:['omb'],reg_k2:['sai']};          // sous-classes incompatibles avec un nœud clé
  const SUBWHY={omb:['coeur','Ombrelame vit dans l’Obscur, et Cœur de Soleil t’en interdit : ta lanterne ne quitte plus ta main.'],sai:['canon','Saint Dévorant se nourrit de Recracher, que Ventre-Canon remplace par un rayon continu.']};
  const add=(id,fl)=>{const n=NODES[id];if(!n)return;n.blk=Array.from(new Set([].concat(n.blk||[],fl)));};
@@ -7126,6 +7101,18 @@ details.fold>.chips{margin-top:8px}
 .lore li.fold h3:focus-visible{outline:2px solid var(--flame);outline-offset:3px}
 `;document.head.appendChild(st);
 })();
+
+// ───────────────────────── Talents : textes, rangs et exclusions depuis data/talents.js
+// Appliqué en dernier, après toutes les reconstructions de l'arbre (v10, v15.2…).
+(function(){const T=T_D.noeuds;
+ for(const id in T){const n=NODES[id],d=T[id];if(!n){console.warn('Talent inconnu dans les données :',id);continue;}
+  if(d.k!==n.kind)console.warn('Genre différent pour',id,':',d.k,'≠',n.kind);
+  n.name=d.name;n.max=d.max;
+  if(n.kind==='x'){n.mod=d.mod;n.syn=d.syn;n.desc=d.mod+' Synergie : '+d.syn;}else n.desc=d.desc;
+  if(d.up!==undefined)n.up=d.up;}
+ for(const id in NODES)if(!T[id])console.warn('Talent absent de data/talents.js :',id);
+ for(const k in EXCL)delete EXCL[k];
+ for(const k in T_D.exclusions)EXCL[k]=T_D.exclusions[k].slice();})();
 
 if(window.claude&&window.claude.hot&&window.claude.hot.ready)window.claude.hot.ready(()=>start());else start();
 })();
