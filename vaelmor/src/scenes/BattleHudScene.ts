@@ -460,7 +460,7 @@ export class BattleHudScene extends Phaser.Scene {
       const S = this.S;
       const big = request.large === true;
       const lineHeight = (big ? 38 : 26) * S;
-      const titleH = request.title ? (big ? 28 : 22) * S : 0;
+      const titleH = request.title ? (big ? 34 : 22) * S : 0;
       const w = (big ? 228 : 172) * S;
       const h = request.items.length * lineHeight + titleH + (big ? 18 : 14) * S;
       const x = this.winX(w);
@@ -468,7 +468,7 @@ export class BattleHudScene extends Phaser.Scene {
       const y = big ? Math.max(this.stackTop(), (TOP_BAR + 6 + FORECAST_MAX_H + 8) * S) : this.stackTop();
       this.menuParts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.menu }));
       this.menuRect = { x, y, w, h };
-      if (request.title) this.menuParts.push(addText(this, x + w / 2, y + (big ? 9 : 7) * S, request.title, { scale: S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));
+      if (request.title) this.menuParts.push(addText(this, x + w / 2, y + (big ? 7 : 7) * S, request.title, { scale: (big ? 1.5 : 1) * S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));
       this.menu = new VerticalMenu(this, x + 6 * S, y + (big ? 9 : 7) * S + titleH, request.items, this.actions, {
         width: w - 12 * S,
         lineHeight,
