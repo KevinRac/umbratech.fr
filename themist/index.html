@@ -421,6 +421,8 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/reliques.js"></script>
 <script src="data/pactes.js"></script>
 <script src="data/bestiaire.js"></script>
+<script src="data/gardiens.js"></script>
+<script src="data/resonances.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -824,10 +826,9 @@ const ED=Object.fromEntries(Object.entries(BE_D.ennemis).map(([k,e])=>[k,e.stats
 const CHAMP=BE_D.champion;
 const UNLOCK=Object.fromEntries(Object.entries(BE_D.ennemis).filter(([,e])=>e.salle).map(([k,e])=>[k,e.salle]));
 const ENEMY_INFO=Object.fromEntries(Object.entries(BE_D.ennemis).filter(([,e])=>e.salle).map(([k,e])=>[k,`Nouvel ennemi · ${e.n} : ${e.desc}`]));
-const ACTS=[null,
- {name:'Les Faubourgs Engloutis',rooms:7,boss:'La Mère-Brume',done:'La Mère-Brume est vaincue'},
- {name:'Les Cryptes Chantantes',rooms:6,boss:'Le Héraut Noyé',done:'Le Héraut Noyé est vaincu'},
- {name:'Le Cœur de la Brume',rooms:7,boss:'Le Glas Originel',done:'Le Glas Originel se tait'}];
+// Actes et gardiens (noms, textes, fenêtres, couleurs) : data/gardiens.js. Ici, seulement le comportement.
+const GA_D=window.BRUME_DATA.gardiens;
+const ACTS=[null,...GA_D.actes];
 const DOOR={combat:{l:'Combat',c:'214,210,196',g:'C'},elite:{l:'Élite',c:'243,185,77',g:'É'},autel:{l:'Autel',c:'143,178,255',g:'A'},halte:{l:'Halte',c:'255,154,82',g:'H'},boss:{l:'Gardien',c:'255,77,77',g:'G'},act:{l:'Acte II',c:'180,140,255',g:'II'},act3:{l:'Acte III',c:'225,205,255',g:'III'},marchand:{l:'Colporteur',c:'120,220,170',g:'¤'},sanctuaire:{l:'Sanctuaire',c:'0,0,0',g:''},title:{l:'',c:'0,0,0',g:''}};
 
 // ───────────────────────── État
@@ -3013,11 +3014,7 @@ const ADAPT={
  tis:{what:'tes fils',name:'Rompt-fil',desc:L=>`Les accoutumés subissent ${12*L} % de dégâts en moins quand ils sont attachés ou pris dans une toile. Les gardiens${L>=2?' et les champions':''} tranchent tes fils à intervalles réguliers.`,counter:'Un frémissement rouge annonce la coupe. Juste après, l’ennemi reste à vif 3 s : +30 % de dégâts.'}};
 // Fenêtres d’exposition des gardiens accoutumés : un signal (1,1 s), puis 3 s « à nu » (+30 %).
 // cd = intervalle de base, réduit de 1,2 s par niveau. Le Tisse-Destin a sa propre mécanique (coupe des fils).
-const BOSSX={
- lum:{cd:9,warn:'Il s’apprête à ouvrir son noyau',label:'Noyau exposé · +30 %',toast:'Il ouvre son noyau à la lumière. Frappe pendant 3 secondes : +30 % de dégâts.'},
- gou:{cd:11,warn:'Sa corruption s’apprête à fuir',label:'Corruption à nu · +30 %',toast:'Sa corruption fuit par à-coups. Frappe pendant 3 secondes : +30 % de dégâts.'},
- her:{cd:10,warn:'Il va se taire : ton rythme peut le percer',label:'Silence rompu · +30 %',toast:'Son silence se fend. Frappe pendant 3 secondes : +30 % de dégâts.'},
- tis:{warn:'Il s’apprête à trancher tes fils',label:'À vif : +30 % de dégâts'}};
+const BOSSX=GA_D.fenetres;
 function exposeBoss(e){const X=BOSSX[P.cls];if(!X||!X.toast)return;e.rawT=v9RawWin();
  fx.push({k:'ring',x:e.x,y:e.y,r0:e.r,r1:e.r*3.2,w:8,t:0.45,max:0.45,col:'rgba('+CRGB[P.cls]+',',fill:false});
  sparks(e.x,e.y,14,CCOL(P.cls));addNum(e.x,e.y-e.r-24,X.label,'raw');sfx('crit');shake(4,0.12);
@@ -3406,85 +3403,17 @@ window.__mem={get M(){return M();},FRAGS,give:(n=1)=>{for(let i=0;i<n;i++){const
 // ═════════════════════════ v9 · Les Résonances
 // Arbre de talents permanent : 7 zones, 59 nœuds (56 actifs), dépensés chez Ismène avec des Résonances.
 // Les Résonances se gagnent en jouant (descentes, Échos, premiers gardiens, Carte du Glas). Les talents déplacent le risque, ils ne le suppriment pas.
-const RZ_MAXKEY=3;            // keystones actifs en même temps
-const RZ_BAREME={mort:0.6,abandon:0.8,victoire:1}; // part des éclats du run conservée (proposition v9)
-const RZ_RESPEC=10;           // éclats par point de coût et par respec déjà fait
-const RZ_ORDER=['D','V','R','C','M','L','P'];
-const RZ_Z={
- D:{n:'Descente',p:'Les Marches',c:'#7fb8ff',t:'Pousser plus loin, plus vite, pour un butin croissant.'},
- V:{n:'Voile',p:'Le Voile',c:'#b8a2ff',t:'Fuite, repli et premier coup.'},
- R:{n:'Résilience',p:'Les Braises',c:'#ff7d6e',t:'Encaisser et convertir le butin en survie.'},
- C:{n:'Camp',p:'Le Foyer',c:'#f3b94d',t:'Tout se joue avant la première salle.'},
- M:{n:'Mémoire',p:'La Cloche',c:'#6fdcc4',t:'Échos, tombes, Carte du Glas.'},
- L:{n:'Lame',p:'L’Acier de brume',c:'#e4dec9',t:'Maîtrise de ta classe contre l’Accoutumance.'},
- P:{n:'Pillage',p:'Les Mains noires',c:'#8fd46e',t:'Autels, tombes et champions : le risque contre des éclats.'}};
-const RZ_KIND={m:'Mineur',n:'Notable',k:'Keystone',b:'Pont'};
-const RZ_COST={m:1,n:2,k:4,b:1};
-// [id, genre, nom, effet, contrepartie, synergie, prérequis (tous), prérequis (un seul), actif]
-const RZ_DEF=[
- ['D1','m','Regard en avant','Le thème de la prochaine salle de combat est annoncé dès l’ouverture des portes.','Aucune : le coût est le point.','D3, D6',[],[],1],
- ['D2','m','Souffle long','+10 % de PV max à partir de la 4e salle de chaque acte.','−5 % de PV max dans les salles 1 à 3.','D4, Résilience',['D1'],[],1],
- ['D3','m','Raccourci appris','Une fois par acte, une porte « Raccourci » remplace une porte de combat : la salle est traversée sans combat.','Tout le butin de la salle est perdu (éclats, or, tombe, fragment).','D5, Voile',['D1'],[],1],
- ['D4','m','Palier gagné','Entrer dans l’acte II ou III soigne 12 % des PV max.','Aucun soin si un raccourci a été pris dans l’acte quitté.','D2',['D2'],[],1],
- ['D5','n','Descente directe','À partir de la 4e salle d’un acte, une porte « Gardien » s’ouvre (une fois par acte) et mène directement au gardien.','Gardien +10 % de PV ; salles sautées sans récompense.','D7, Camp',['D3'],[],1],
- ['D6','n','Défier l’élite','Chaque salle d’élite propose un défi : si tu l’acceptes, les éclats du champion sont doublés.','Champion +20 % de PV et +10 % de dégâts.','D7, Pillage',['D2'],[],1],
- ['D7','k','Toujours plus bas','À partir de la 8e salle de la run : +6 % d’éclats et +6 % de chances de fragment par salle franchie, jusqu’à +36 %.','En cas de mort, les éclats gagnés depuis la 8e salle sont perdus.','Voile, Résilience',[],['D5','D6'],1],
- ['R1','m','Souffle retenu','Après un coup subi d’au moins 20 % de tes PV max : −20 % de dégâts subis pendant 3 s (1 fois par salle).','Ne protège pas du coup initial.','R4',[],[],1],
- ['R2','m','Pansement de fortune','Un autel peut soigner 25 % de tes PV max au lieu d’offrir une relique.','La relique de l’autel est perdue.','Pillage',['R1'],[],1],
- ['R3','m','Mémoire du sang','Salle purifiée sans aucun dégât subi : +3 % de PV.','Rien dès qu’un seul coup est reçu.','Implacable, Lame',['R1'],[],1],
- ['R4','m','Flasque','Touche C : 1 charge, soigne 30 % de tes PV en 2 s immobile. Elle se recharge à chaque changement d’acte.','Bouger ou être touché l’interrompt, et la charge est perdue.','Voile',['R2'],[],1],
- ['R5','n','Rançon','À ta première mort du run : tu restes à 25 % de PV, mais tu sacrifies la moitié des éclats du run (1 fois par run).','−50 % des éclats du run, cumulable avec le barème de perte.','Pillage, D7',['R2'],[],1],
- ['R6','n','Seuil de rupture','Sous 20 % de PV : +10 % de dégâts et −10 % de dégâts subis.','Soins reçus −25 % sous 20 % de PV.','Increvable',['R3'],[],1],
- ['R7','k','Cœur lent','+35 % de PV max.','Soins reçus −50 % ; les tombes ne soignent plus.','R1, R3',[],['R5','R6'],1],
- ['P1','m','Fouille bruyante','Chance de fragment aux autels : 15 → 20 %.','Un autel fait surgir 2 Rampants.','P6',[],[],1],
- ['P2','m','Poches pleines','+10 % d’éclats gagnés en salle.','Chaque coup subi fait tomber 3 % de ton or (ramassable 4 s).','Rançon',['P1'],[],1],
- ['P3','m','Pilleur de tombes','Tombes d’Écho : 6 → 8 au maximum ; fragment de tombe 60 → 70 %.','Recueillir une tombe réveille un Spectre.','Mémoire',['P1'],[],1],
- ['P4','m','Recyclage','Touche V : dépense 40 or pour soigner 15 % de tes PV (1 fois par salle).','L’or dépensé est perdu.','Résilience',['P2'],[],1],
- ['P5','n','Bronze revendu','Les champions rapportent le double d’éclats.','Champion +15 % de PV.','Lame, D6',['P2'],[],1],
- ['P6','n','Pari du glas','Après un champion : choisis +10 éclats ou 25 % de chances d’un fragment.','Choix exclusif ; compte dans le plafond de fragments par run.','P1',['P3'],[],1],
- ['P7','k','Appât','Chances de fragment ×1,3 (gardien 40 → 52 %, champion 20 → 26 %, autel 15 → 20 %, tombe 60 → 78 %).','Chaque fragment tiré par chance donne +8 % de PV aux ennemis normaux pour le reste de la run (3 cumuls max).','Mémoire',[],['P5','P6'],1],
- ['C1','m','Provisions','Avant de descendre : 1 provision au choix parmi 2 tirées (PV max, éclats, premier coup annulé, or, relance).','Un seul choix, sans relance (sauf Marchandage).','C4, C7',[],[],1],
- ['C2','m','Veillée d’Ismène','Après une mort, +10 % de PV max à la descente suivante.','Annulée si la dernière descente s’est terminée par un abandon, et par le Coffre du Foyer.','Ismène',['C1'],[],1],
- ['C3','m','Dette de Corbin','À la mort, 70 % des éclats conservés au lieu de 60 %.','Les tombes ne donnent plus d’or.','Pillage',['C1'],[],1],
- ['C4','m','Marchandage','Relance les provisions pour 40 éclats (1 fois par descente).','Les éclats dépensés sont perdus.','C1',['C2'],[],1],
- ['C5','n','Raccourci par le Portail','Après avoir vaincu un gardien, le Portail propose de démarrer la descente suivante à l’acte suivant.','Départ sans provision, −10 % de PV max, niveaux compensés à 4 par acte sauté.','D5, D7',['C3'],[],1],
- ['C6','n','Coffre du Foyer','À la mort, les 100 premiers éclats du run sont toujours conservés.','La Veillée d’Ismène (C2) ne s’applique plus.','Résilience',['C2'],[],1],
- ['C7','k','Foyer ardent','Provisions : tu en choisis 2 parmi 3, effets ×1,5, relance gratuite.','Après une mort en acte III ou face à un gardien, le Foyer s’éteint : pas de provision à la descente suivante (rallumage : 150 éclats).','C1, D5',[],['C5','C6'],1],
- ['V1','m','Sortie de secours','À l’abandon, 90 % des éclats conservés au lieu de 80 %.','Tu ne gagnes pas de Résonance de fin de descente quand tu abandonnes.','D7',[],[],1],
- ['V2','m','Repli','Sous 30 % de PV dans un combat : ton esquive se recharge instantanément (1 fois par salle).','Les ennemis vivants de la salle gagnent +10 % de PV.','Flasque',['V1'],[],1],
- ['V3','m','Pas de loup','Les ennemis de la 1re vague d’un combat restent figés 3 s.','La salle compte 1 Rampant de plus.','V6',['V1'],[],1],
- ['V4','m','Voyager léger','+10 % de vitesse tant que tu portes moins de 150 or.','Perdu dès que tu dépasses 150 or.','Voile',['V2'],[],1],
- ['V5','n','Fuite calculée','En cas d’abandon, la salle en cours compte comme purifiée (ses éclats sont gagnés).','Embuscade à la sortie : −20 % de PV max à la descente suivante.','V7',['V2'],[],1],
- ['V6','n','Frappe du loup','Premier coup d’un combat normal : +40 % de dégâts si aucun ennemi ne t’a encore touché.','Sans effet sur les champions et les gardiens.','Lame',['V3'],[],1],
- ['V7','k','Sans ancre','À l’abandon, 100 % des éclats sont conservés.','−25 % d’éclats rapportés à chaque descente.','D7, Résilience',[],['V5','V6'],1],
- ['L1','m','Variation','+6 % de dégâts hors de la mécanique de ta classe.','Aucune : s’oppose à la spécialisation.','Leçon du tueur',[],[],1],
- ['L2','m','Regard du gardien','Le signal d’exposition du gardien accoutumé arrive 1,5 s avant, au lieu de 1,1 s.','Fenêtre « à nu » 3 → 2,5 s.','Chronique des gardiens',['L1'],[],1],
- ['L3','m','Mécanique pure','+8 % de dégâts de la mécanique de ta classe.','Gain d’Accoutumance ×1,25.','Contre-jeu appris',['L1'],[],1],
- ['L4','m','Coup de grâce','+20 % de dégâts sur les ennemis étourdis.','Aucune : récompense les thèmes Pétards et Siège.','Pétards, Siège',['L2'],[],1],
- ['L5','n','Contre-jeu appris','Contre-jeu 15 → 22 % de dégâts bonus (Obscur, Corruption ≥ 67, Cadence pleine).','Les autres classes ne font plus baisser l’Accoutumance de celle-ci.','Acier nu',['L3'],[],1],
- ['L6','n','Chasseur de gardiens','Gardien « à nu » : +30 → +45 % de dégâts.','Intervalle d’exposition +1,5 s.','Mémoire',['L2'],[],1],
- ['L7','k','Acier nu','+25 % de dégâts de la mécanique de ta classe.','Plus aucune fenêtre d’exposition (ni coupe de fils) ; gain d’Accoutumance ×1,5.','Mémoire',[],['L5','L6'],1],
- ['M1','m','Marque d’Écho','À l’ouverture des portes, tu sais si la prochaine salle abrite une tombe d’Écho.','Aucune : le coût est le point.','P3, M6',[],[],1],
- ['M2','m','Cause lue','L’ennemi qui t’a tué à la dernière descente est marqué d’un repère doré.','N’agit que pour le dernier tueur.','Leçon du tueur',['M1'],[],1],
- ['M3','m','Fragments lus','Tes fragments sont tirés dans le 2e chapitre le plus bas disponible.','Le chapitre le plus bas ne reçoit aucun fragment.','Appât',['M1'],[],1],
- ['M4','m','Écho dominant','Avant une descente, choisis un trait d’Écho : son prochain palier compte double.','Les autres traits ne progressent pas pendant ce run.','Lame',['M2'],[],0],
- ['M5','n','Chronique des gardiens','Le HUD affiche le compte à rebours de la prochaine exposition du gardien accoutumé.','Gardien +8 % de PV (il se sait lu).','Regard du gardien',['M2'],[],1],
- ['M6','n','Écho choisi','Une tombe donne au choix une seule récompense doublée : or ×2, +30 % de PV ou un fragment sûr.','Les deux autres récompenses sont perdues.','Pilleur de tombes',['M3'],[],1],
- ['M7','k','Mal d’oubli accepté','Un chapitre de la Carte du Glas est complet (Vérité) dès 5 fragments sur 6.','La pitié (fragment garanti après 3 descentes sans) est désactivée.','Appât, Acier nu',[],['M5','M6'],1],
- // Ponts : 1 mineur dans chacune des deux zones reliées
- ['B1','b','Marche silencieuse','Salle traversée par un raccourci : tu gardes la moitié de son butin.','Gardien suivant +5 % de PV.','D3, Voile',[],[],1,['D','V']],
- ['B2','b','Retraite blessée','Après un abandon, +10 % de PV max à la descente suivante.','Aucun bonus après une mort.','Sortie de secours',[],[],1,['V','R']],
- ['B3','b','Ration de fer','Les provisions de PV donnent ×1,5.','La Flasque met 3 s au lieu de 2.','Provisions, Flasque',[],[],1,['R','C']],
- ['B4','b','Veillée aux Échos','Après une mort, la première tombe du run suivant est déjà purifiée.','Cette tombe donne −50 % d’or.','Veillée, Marque d’Écho',[],[],0,['C','M']],
- ['B5','b','Leçon du tueur','+10 % de dégâts contre l’ennemi marqué par Cause lue.','−5 % de dégâts contre les autres ennemis normaux.','Cause lue, Variation',[],[],1,['M','L']],
- ['B6','b','Pillard aguerri','Champion tué alors qu’il est accoutumé : +25 % d’éclats de champion.','Il faut laisser l’Accoutumance monter.','Variation, Bronze revendu',[],[],1,['L','P']],
- ['B7','b','Sac cousu','Poches pleines ne fait plus tomber d’or dès la 8e salle de la run.','Poches pleines passe de +10 % à +5 %.','Poches pleines, D7',[],[],1,['P','D']],
- ['B8','b','Carte de route','La première salle d’élite de chaque acte est annoncée au Sanctuaire.','Aucune : le coût est le point.','Regard en avant, Provisions',[],[],0,['D','C']],
- ['B9','b','Jeu de dés','Recyclage coûte 30 or au lieu de 40.','Utilisable seulement sous 50 % de PV.','Recyclage, Pansement',[],[],1,['R','P']],
- ['B10','b','Dos au mur','Après un Repli, ton premier coup porté dans les 5 s fait +30 % de dégâts.','Le Repli coûte 8 % de tes PV.','Repli, Variation',[],[],1,['V','L']]
-];
+// Arbre des Résonances (zones, nœuds, coûts, textes) : data/resonances.js. Ici, la logique et les effets.
+const RZ_D=window.BRUME_DATA.resonances;
+const RZ_MAXKEY=RZ_D.keystonesMax;            // keystones actifs en même temps
+const RZ_BAREME=RZ_D.bareme; // part des éclats du run conservée
+const RZ_RESPEC=RZ_D.respec;           // éclats par point de coût et par respec déjà fait
+const RZ_ORDER=RZ_D.ordre;
+const RZ_Z=RZ_D.zones;
+const RZ_KIND=RZ_D.genres;
+const RZ_COST=RZ_D.couts;
 const RZN={};
-for(const d of RZ_DEF){const [id,k,name,eff,con,syn,pre,any,impl,zones]=d;RZN[id]={id,k,name,eff,con,syn,pre,any,impl:!!impl,zones:zones||null,z:k==='b'?null:id[0],cost:RZ_COST[k]};}
+for(const d of RZ_D.noeuds){const {id,k,name,eff,con,syn}=d;RZN[id]={id,k,name,eff,con,syn,pre:d.pre||[],any:d.any||[],impl:!!d.impl,zones:d.zones||null,z:k==='b'?null:id[0],cost:RZ_COST[k]};}
 // Positions : anneau de 7 zones, 7 nœuds par zone
 const RZ_SLOT={1:[-84,0],2:[-38,-52],3:[-38,52],4:[0,-80],5:[22,46],6:[22,-46],7:[84,0]};
 const RZ_C=500;
@@ -3655,7 +3584,7 @@ function rzRender(){
  overlayEl.innerHTML=`<div class="panel"><div class="rz-head"><p class="eyebrow" style="margin:0">Autel de Mémoire · Sœur Ismène</p>${rzTabs()}</div>
  <div class="rz-top"><p class="purse"><span>Résonances libres</span><b>${free}</b></p><p class="k">${S.earned} gagnées · ${rzSpent()} dépensées · keystones ${rzKeys()} / ${RZ_MAXKEY} · respecs : ${S.respecs}</p></div>
  <div class="rz-wrap"><div class="rz-tree">${rzTreeSVG()}</div><div id="rzdet">${rzDetail(RZ_SEL)}</div></div>
- <div class="row" style="margin-top:14px"><button type="button" class="btn primary" id="close">Fermer</button><span class="k">Se gagnent : 1 par descente (jusqu’à la 15e, puis 1 sur 4), 1 par palier d’Écho, 1 par premier gardien, 2 par chapitre de la Carte du Glas. · Échap pour fermer · Maj + T : +5 Résonances (test)</span></div></div>`;
+ <div class="row" style="margin-top:14px"><button type="button" class="btn primary" id="close">Fermer</button><span class="k">Se gagnent : ${RZ_D.gains} · Échap pour fermer · Maj + T : +5 Résonances (test)</span></div></div>`;
  rzBindTabs();
  const det=$('#rzdet');
  const bindAct=()=>{const b=$('#rzact');if(!b)return;b.addEventListener('click',()=>{if(!armed())return;const id=RZ_SEL;if(RZS().nodes[id])rzSell(id);else rzBuy(id);rzRender();});};
@@ -3703,8 +3632,8 @@ function v9Low(elig){
  return (has9('M3')&&cs.length>1)?cs[1]:cs[0];
 }
 // ───────────────────────── Accoutumance : constantes modifiées par la Lame
-const v9RawWin=()=>has9('L2')?2.5:3;
-const v9Raw=()=>1.3+(has9('L6')?0.15:0);
+const v9RawWin=()=>GA_D.aNu.dureeS-(has9('L2')?0.5:0);
+const v9Raw=()=>GA_D.aNu.mult+(has9('L6')?0.15:0);
 const v9Counter=()=>1.15+(has9('L5')?0.07:0);
 const v9Warn=()=>has9('L2')?1.5:1.1;
 const v9CdPlus=()=>has9('L6')?1.5:0;
@@ -5203,8 +5132,8 @@ const BAL={
  palDmg:0.03,       // chaque palier : +3 % de dégâts ennemis
  palBudget:0.04,    // chaque palier : +4 % d’ennemis par vague
  bossMul:[1,1.9,1.8,1.8], // PV des gardiens par acte (acte I : 1000 → 1900 au palier 0)
- phaseLock:1.2,     // à chaque changement de phase, le gardien se protège 1,2 s…
- phaseLockDmg:0.15, // …et ne subit que 15 % des dégâts pendant ce temps
+ phaseLock:GA_D.verrouPhase.dureeS,     // à chaque changement de phase, le gardien se protège 1,2 s…
+ phaseLockDmg:GA_D.verrouPhase.degats, // …et ne subit que 15 % des dégâts pendant ce temps
  p6Spd:1.12, p8Elite:1.4, p8Hp:0.85};
 
 // ───────────────────────── Paliers : rampe continue + trois nouveaux paliers
@@ -5584,10 +5513,7 @@ const MERE_Q=[null,['voile','etreinte','charge'],['voile','etreinte','charge','c
 const MERE_PH=['','Observation','Adaptation','Désespoir'];
 const MERE_PAL={1:{mist:[124,112,178],body:[60,52,86],dark:[20,16,30],core:[190,160,255],eye:[205,175,255],bone:[216,207,182]},
  3:{mist:[150,46,70],body:[84,28,44],dark:[28,9,16],core:[255,96,96],eye:[255,84,92],bone:[240,231,210]}};
-const MERE_COPY={
- volee:{what:'tes coups à distance',hint:'Elle tire des salves visées : les lignes violettes montrent où elles partent.'},
- balayage:{what:'ton corps à corps',hint:'Elle fond sur toi et balaie devant elle : sors du cône orange.'},
- esquive:{what:'ton esquive',hint:'Elle se dérobe à tes coups et resurgit près de toi : quitte le cercle orange.'}};
+const MERE_COPY=GA_D.copies;
 const rgb12=a=>a.map(v=>Math.round(v)).join(',');
 const mixA=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k);
 function merePalTarget(e){
@@ -6043,9 +5969,7 @@ const _dep13=drawEnemyPost;
 drawEnemyPost=function(e){_dep13(e);if(e.role&&!e.dead)drawRolePost(e);};
 
 // ───────────────────────── Gardiens II et III : trois temps
-const B13={
- 2:{p1:[90,220,210],p3:[255,96,96],l1:'Il t’écoute',l3:'La cloche se fend',t3:'La cloche se fend et la brume se retire : son battant est à nu, +25 % de dégâts. Il sonne plus vite.'},
- 3:{p1:[210,170,255],p3:[255,90,120],l1:'Il bat pour toi',l3:'La Brume se retire',t3:'La Brume se retire du Cœur : il est à nu, +25 % de dégâts. Il bat plus vite.'}};
+const B13=GA_D.failles;
 function b13Pal(e){const B=B13[RUN.act];if(e.phase===2)return(CRGB[P.cls]||'201,180,255').split(',').map(Number);return e.phase===3?B.p3:B.p1;}
 function b13Init(e){e.c13=1;e.mk=1;e.pal13=B13[RUN.act].p1.slice();e.fade=1;
  if(eqIs('larme')){e.knows=true;e.copy=mereChooseCopy();}

@@ -158,6 +158,50 @@ function bestiaire(B) {
 </section>`;
 }
 
+// ── Section « Les gardiens »
+function gardiens(G, F) {
+  const A = G.actes;
+  const cartes = A.map((a, i) => `<article class="ent boss"><span class="num">${ROM[i + 1]}</span><h3>${esc(a.boss)}</h3><p class="k">${esc(a.name)} · ${a.rooms} salles</p><p>${esc(a.done)}.</p></article>`).join('');
+  const copies = Object.values(G.copies).map(c => `<article class="ent"><h4>Si tu abuses de ${esc(c.what)}</h4><p>${esc(c.hint)}</p></article>`).join('');
+  const failles = Object.entries(G.failles).map(([a, f]) => `<article class="ent"><h4>${esc(A[a - 1].boss)}</h4><p><b>${esc(f.l1)}.</b></p><p><b>${esc(f.l3)}.</b> ${esc(f.t3)}</p></article>`).join('');
+  const fen = Object.entries(G.fenetres).map(([c, x]) => `<article class="ent" data-cls="${c}"><h4 style="color:${F[c].col}">${esc(F[c].n)}</h4><p><b>Avertissement :</b> ${esc(x.warn)}.</p><p><b>Fenêtre :</b> ${esc(x.label)}.</p></article>`).join('');
+  const titre2 = Object.keys(G.failles).map((a, i) => `${esc(i ? lower(A[a - 1].boss) : A[a - 1].boss)} · Acte ${ROM[a]}`).join(' et ');
+  return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Chaque acte se termine par un gardien. Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p></div></header>
+<div class="grid g3">${cartes}</div>
+
+<h3 class="sub">${esc(A[0].boss)} · Acte I</h3>
+<p>Elle se déroule en trois temps : <b>Observation</b>, <b>Adaptation</b>, <b>Désespoir</b>. Elle copie ce que tu fais le plus :</p>
+<div class="grid g3">${copies}</div>
+
+<h3 class="sub">${titre2}</h3>
+<p>Ces deux gardiens passent par trois temps. Lors de la troisième phase, une <b>faille</b> s’ouvre :</p>
+<div class="grid g2">${failles}</div>
+
+<h3 class="sub">Fenêtres de vulnérabilité</h3>
+<p>Selon ta forme, le gardien expose périodiquement une faiblesse. Un message te prévient ; tu as <b>${num(G.aNu.dureeS)} secondes</b> pour frapper avec <b>+${Math.round((G.aNu.mult - 1) * 100)} %</b> de dégâts. L’intervalle diminue avec le niveau d’Accoutumance.</p>
+<div class="grid g4">${fen}</div>
+<aside class="note ">Pendant le changement de phase, le gardien est brièvement verrouillé (${num(G.verrouPhase.dureeS)} s). Prends ce temps pour te replacer et te soigner.</aside>
+</section>`;
+}
+
+// ── Section « Arbre des Résonances »
+function resonances(R) {
+  const node = n => {
+    const tags = n.k === 'b'
+      ? [`<span class="tag">${esc(R.genres.b)}</span>`, ...n.zones.map(z => `<span class="tag" style="--t:${R.zones[z].c}">${esc(R.zones[z].n)}</span>`)]
+      : [`<span class="tag">${esc(R.genres[n.k])}</span>`, `<span class="tag">${R.couts[n.k]} ✦</span>`, ...(n.impl ? [] : ['<span class="tag">à venir</span>'])];
+    return `<article class="ent rzn"><div class="eh"><h4>${esc(n.name)}</h4><div class="tags">${tags.join('')}</div></div><p class="gain"><b>＋</b> ${esc(n.eff)}</p><p class="cost"><b>－</b> ${esc(n.con)}</p>${n.k !== 'b' && n.syn ? `<p class="k">Synergies : ${esc(n.syn)}</p>` : ''}</article>`;
+  };
+  const branche = z => { const Z = R.zones[z];
+    return `<div class="branch" id="rz-${z}" style="--c:${Z.c}"><h3 class="bh"><span class="dot"></span>${esc(Z.n)} <small>${esc(Z.p)}</small></h3><p class="k">${esc(Z.t)}</p><div class="grid g2">${R.noeuds.filter(n => n.k !== 'b' && n.id[0] === z).map(node).join('')}</div></div>`; };
+  const ponts = `<div class="branch" id="rz-ponts" style="--c:#aaa"><h3 class="bh"><span class="dot"></span>Ponts <small>entre deux zones</small></h3><div class="grid g2">${R.noeuds.filter(n => n.k === 'b').map(node).join('')}</div></div>`;
+  return `<section class="sec" id="resonances" data-sec>${MARK('data/resonances.js')}<header class="sh"><p class="eyebrow">Progression permanente</p><h2>Arbre des Résonances</h2><div class="lede"><p>Les <b>Résonances</b> sont un arbre permanent, dépensé chez Ismène. Elles ne donnent pas de puissance gratuite : chaque nœud <b>déplace un risque</b>, il t’offre un avantage et t’en coûte un autre. Tu peux avoir ${R.keystonesMax} keystones actifs en même temps.</p></div></header>
+<dl class="kv"><dt>Gagner</dt><dd>${esc(R.gains)}</dd><dt>Types de nœuds</dt><dd>Mineur (●), Notable (◎), Keystone (◆), Pont (○). Un pont relie deux zones : il faut un nœud mineur dans chacune.</dd><dt>Respec</dt><dd>Tu peux réinitialiser, au prix de ${R.respec} éclats par point de coût et par respec déjà effectué.</dd></dl>
+${R.ordre.map(branche).join('')}
+${ponts}
+</section>`;
+}
+
 // ── Assemblage
 function replaceSection(html, id, content) {
   const re = new RegExp(`<section class="sec" id="${id}"[^>]*>[\\s\\S]*?</section>`);
@@ -184,6 +228,8 @@ export function build(html) {
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes()));
   out = replaceSection(out, 'pactes', pactes(D.pactes));
   out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire));
+  out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes()));
+  out = replaceSection(out, 'resonances', resonances(D.resonances));
   return syncVersion(out, gameVersion());
 }
 
