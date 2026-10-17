@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../src/data';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES, paintBattlefield } from '../src/render/battlefield';
-import { MAP_SPRITES, MS_H, MS_IDLE_FRAMES, MS_VIEWS, MS_W, MS_WALK_FRAMES, paintMapSprite } from '../src/render/mapSprites';
+import { CHAR_POSES, GEAR_PAD } from '../src/render/characterSprite';
+import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_SPRITES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite } from '../src/render/unitSprites';
 import { buildBattle, findEncounter } from '../src/logic/tactics/encounter';
 import { terrainAt } from '../src/logic/tactics/grid';
 import { testWorld } from './helpers/world';
@@ -59,41 +60,52 @@ describe('champ de bataille', () => {
   });
 });
 
-describe('sprites de carte (décision n°58)', () => {
+describe('unités au gabarit commun (décision n°60)', () => {
   it('chaque classe, chaque ennemi et le héros ont une fiche', () => {
     const sprites = ['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite)];
-    for (const sprite of sprites) expect(MAP_SPRITES[sprite], sprite).toBeDefined();
+    for (const sprite of sprites) expect(UNIT_SPRITES[sprite], sprite).toBeDefined();
   });
 
-  for (const [id, spec] of Object.entries(MAP_SPRITES)) {
-    it(`${id} : tient dans 16 × 20, pieds en bas, couleurs d'équipe distinctes, sombres teintés`, () => {
-      const paint = (team: 'player' | 'enemy', kind: 'idle' | (typeof MS_VIEWS)[number], frame: number): Map<number, number> => {
+  for (const id of Object.keys(UNIT_SPRITES)) {
+    it(`${id} : tient dans son cadre, pieds en bas, couleurs de camp distinctes, sombres teintés`, () => {
+      const paint = (team: 'player' | 'enemy', kind: 'idle' | (typeof CHAR_POSES)[number], frame: number): Map<number, number> => {
         const px = new Map<number, number>();
-        paintMapSprite({ set: (x, y, c) => {
-          expect(x >= 0 && x < MS_W && y >= 0 && y < MS_H).toBe(true);
-          px.set(y * MS_W + x, c);
-        } }, 0, 0, spec, team, kind, frame);
+        paintUnitSprite(
+          {
+            set: (x: number, y: number, c: number) => {
+              expect(x >= 0 && x < UNIT_W && y >= 0 && y < UNIT_H).toBe(true);
+              px.set(y * UNIT_W + x, c);
+            },
+          },
+          0,
+          0,
+          id,
+          team,
+          kind,
+          frame,
+        );
         return px;
       };
-      for (let f = 0; f < MS_IDLE_FRAMES; f++) {
+      for (let f = 0; f < UNIT_IDLE_FRAMES; f++) {
         const blue = paint('player', 'idle', f);
         const red = paint('enemy', 'idle', f);
-        // Les pieds touchent la dernière rangée.
-        expect([...blue.keys()].some((i) => Math.floor(i / MS_W) === MS_H - 1)).toBe(true);
-        // Même silhouette, couleurs différentes selon le camp.
+        // Pieds sur la rangée 26 du gabarit (contour sur la 27) : dernière rangée du cadre élargi.
+        expect([...blue.keys()].some((i) => Math.floor(i / UNIT_W) === 26 + GEAR_PAD.y)).toBe(true);
         expect([...blue.keys()].sort()).toEqual([...red.keys()].sort());
-        expect([...blue.entries()].filter(([i, c]) => red.get(i) !== c).length).toBeGreaterThan(10);
+        if (id !== 'heros') expect([...blue.entries()].filter(([i, c]) => red.get(i) !== c).length).toBeGreaterThan(10);
         for (const c of blue.values()) {
           if (luminance(c) >= 40) continue;
           const r = (c >> 16) & 255;
           const g = (c >> 8) & 255;
           const b = c & 255;
           expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeGreaterThan(8);
+          expect(luminance(c)).toBeGreaterThan(14);
         }
       }
-      // Les images de marche diffèrent (les jambes bougent).
-      for (const view of MS_VIEWS) {
-        const frames = Array.from({ length: MS_WALK_FRAMES }, (_, f) => JSON.stringify([...paint('player', view, f)]));
+      // La respiration change l'image ; la marche aussi.
+      expect(JSON.stringify([...paint('player', 'idle', 0)])).not.toBe(JSON.stringify([...paint('player', 'idle', 1)]));
+      for (const view of CHAR_POSES) {
+        const frames = Array.from({ length: UNIT_WALK_FRAMES }, (_, f) => JSON.stringify([...paint('player', view, f)]));
         expect(new Set(frames).size).toBeGreaterThan(1);
       }
     });

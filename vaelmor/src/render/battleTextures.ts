@@ -1,21 +1,22 @@
 /**
  * Textures du combat tactique (jalon M4), toutes générées par code :
  * champ de bataille (images d'eau animée), feuilles de sprites des unités
- * façon GBA (`mapSprites.ts`), curseur, cases colorées, marqueurs.
+ * au gabarit commun (`unitSprites.ts`), curseur, cases colorées, marqueurs.
  */
 import type Phaser from 'phaser';
 import { BF_WATER_FRAMES, paintBattlefield } from './battlefield';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas } from './pixelCanvas';
-import { MS_H, MS_IDLE_FRAMES, MS_VIEWS, MS_W, MS_WALK_FRAMES, mapSpriteSpec, paintMapSprite, type MsTeam, type MsView } from './mapSprites';
+import { CHAR_POSES, type CharPose } from './characterSprite';
+import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitTeam } from './unitSprites';
 
 export const BATTLE_TEX = {
   field: (key: string, frame: number): string => `battle:field:${key}:${frame}`,
-  /** Sprites de carte façon GBA (décision n°58), aux couleurs du camp. */
-  ms: (sprite: string, team: MsTeam): string => `battle:ms:${sprite}:${team}`,
-  msFrame: (kind: 'idle' | MsView, frame: number): string => `${kind}_${frame}`,
-  msIdle: (sprite: string, team: MsTeam): string => `battle:ms:${sprite}:${team}:idle`,
-  msWalk: (sprite: string, team: MsTeam, view: MsView): string => `battle:ms:${sprite}:${team}:walk:${view}`,
+  /** Unités : gabarit 16×28 équipé selon la classe, aux couleurs du camp (décision n°60). */
+  ms: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}`,
+  msFrame: (kind: 'idle' | CharPose, frame: number): string => `${kind}_${frame}`,
+  msIdle: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}:idle`,
+  msWalk: (sprite: string, team: UnitTeam, view: CharPose): string => `battle:unit:${sprite}:${team}:walk:${view}`,
   cursor: (frame: number): string => `battle:cursor:${frame}`,
   tile: 'battle:tile',
   crown: 'battle:crown',
@@ -39,23 +40,21 @@ export function ensureBattlefield(scene: Phaser.Scene, key: string, rows: readon
 }
 
 /**
- * Feuille d'un sprite de carte (décision n°58) : 3 images d'attente puis
- * 4 images de marche par vue (face, dos, profil), et leurs animations.
- * L'attente « respire » comme sur GBA : 0 → 1 → 2, la deuxième plus brève.
+ * Feuille d'une unité (décision n°60) : 2 images d'attente (respiration) puis
+ * 4 images de marche par pose (face, dos, profil), et leurs animations.
  */
-export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: MsTeam): void {
+export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitTeam): void {
   const key = BATTLE_TEX.ms(sprite, team);
   if (!scene.textures.exists(key)) {
-    const spec = mapSpriteSpec(sprite);
-    const rows: ['idle' | MsView, number][] = [['idle', MS_IDLE_FRAMES], ...MS_VIEWS.map((v) => [v, MS_WALK_FRAMES] as [MsView, number])];
-    const sheet = new PixelCanvas(MS_W * MS_WALK_FRAMES, MS_H * rows.length);
+    const rows: ['idle' | CharPose, number][] = [['idle', UNIT_IDLE_FRAMES], ...CHAR_POSES.map((v) => [v, UNIT_WALK_FRAMES] as [CharPose, number])];
+    const sheet = new PixelCanvas(UNIT_W * UNIT_WALK_FRAMES, UNIT_H * rows.length);
     rows.forEach(([kind, count], row) => {
-      for (let f = 0; f < count; f++) paintMapSprite({ set: (x, y, color) => sheet.set(x, y, color) }, f * MS_W, row * MS_H, spec, team, kind, f);
+      for (let f = 0; f < count; f++) paintUnitSprite({ set: (x, y, color) => sheet.set(x, y, color) }, f * UNIT_W, row * UNIT_H, sprite, team, kind, f);
     });
     sheet.toTexture(scene, key);
     const texture = scene.textures.get(key);
     rows.forEach(([kind, count], row) => {
-      for (let f = 0; f < count; f++) texture.add(BATTLE_TEX.msFrame(kind, f), 0, f * MS_W, row * MS_H, MS_W, MS_H);
+      for (let f = 0; f < count; f++) texture.add(BATTLE_TEX.msFrame(kind, f), 0, f * UNIT_W, row * UNIT_H, UNIT_W, UNIT_H);
     });
   }
   const idle = BATTLE_TEX.msIdle(sprite, team);
@@ -63,21 +62,19 @@ export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: MsTea
     scene.anims.create({
       key: idle,
       frames: [
-        { key, frame: BATTLE_TEX.msFrame('idle', 0), duration: 420 },
-        { key, frame: BATTLE_TEX.msFrame('idle', 1), duration: 160 },
-        { key, frame: BATTLE_TEX.msFrame('idle', 2), duration: 420 },
-        { key, frame: BATTLE_TEX.msFrame('idle', 1), duration: 160 },
+        { key, frame: BATTLE_TEX.msFrame('idle', 0), duration: 640 },
+        { key, frame: BATTLE_TEX.msFrame('idle', 1), duration: 520 },
       ],
       repeat: -1,
     });
   }
-  for (const view of MS_VIEWS) {
+  for (const view of CHAR_POSES) {
     const walk = BATTLE_TEX.msWalk(sprite, team, view);
     if (scene.anims.exists(walk)) continue;
     scene.anims.create({
       key: walk,
-      frames: Array.from({ length: MS_WALK_FRAMES }, (_, f) => ({ key, frame: BATTLE_TEX.msFrame(view, f) })),
-      frameRate: 10,
+      frames: Array.from({ length: UNIT_WALK_FRAMES }, (_, f) => ({ key, frame: BATTLE_TEX.msFrame(view, f) })),
+      frameRate: 8,
       repeat: -1,
     });
   }

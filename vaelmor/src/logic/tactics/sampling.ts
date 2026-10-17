@@ -6,10 +6,9 @@
  *
  * 1. `sampleTerrain` choisit une fenêtre de la carte du monde qui contient le
  *    point de contact (décalée si besoin pour éviter de jouer dans la mer) et
- *    convertit chaque case : le terrain du sol est gardé ; une case bloquée
- *    devient un bâtiment dans un lieu habité (avec une porte visitable par
- *    bâtiment ; un petit objet isolé du village est ignoré), une falaise
- *    (montagne) dans un amas de rochers, un bosquet (forêt) ailleurs.
+ *    convertit chaque case (`convertCell`) : le combat affiche l'art du monde
+ *    (décision n°59), le terrain suit donc ce qui est dessiné — sol gardé,
+ *    murs de bâtiments, portes visitables, falaises, arbres, obstacles.
  * 2. `placeUnits` pose la compagnie et les ennemis : un camp au point de
  *    contact, l'autre à ~10 cases de déplacement, chacun groupé et
  *    toujours relié à l'autre par un chemin praticable.
@@ -32,6 +31,8 @@ export interface TerrainSource {
   blocked(x: number, y: number): boolean;
   /** Case dans un lieu habité (village, ville, camp). */
   settlement(x: number, y: number): boolean;
+  /** Porte d'un bâtiment dessinée sur cette case (décision n°59). */
+  door(x: number, y: number): boolean;
   /** Valeur de zone (couche `zones`), 0 si aucune. */
   zone(x: number, y: number): number;
 }
@@ -50,6 +51,8 @@ export function worldTerrainSource(map: WorldMap): TerrainSource {
     }
   }
   const at = (x: number, y: number): number => Math.min(map.height - 1, Math.max(0, y)) * map.width + Math.min(map.width - 1, Math.max(0, x));
+  const doors = new Set<number>();
+  for (const o of map.ambient) if (o.kind === 'door') doors.add(at(Math.floor(o.x / size), Math.floor(o.y / size)));
   return {
     width: map.width,
     height: map.height,
@@ -59,6 +62,7 @@ export function worldTerrainSource(map: WorldMap): TerrainSource {
       return c === COLLISION.blocked || c === COLLISION.gate;
     },
     settlement: (x, y) => settled[at(x, y)] === 1,
+    door: (x, y) => doors.has(at(x, y)),
     zone: (x, y) => map.zones[at(x, y)] as number,
   };
 }
@@ -106,59 +110,33 @@ export function sampleTerrain(src: TerrainSource, site: Cell, size: { width: num
     for (let x = 0; x < w; x++) row.push(convertCell(src, best.x + x, best.y + y));
     rows.push(row);
   }
-  addDoors(rows);
   return { origin: best, rows, site: { x: site.x - best.x, y: site.y - best.y } };
 }
 
+/**
+ * Terrain de combat d'une case du monde (décision n°59 : ce qui est dessiné fait
+ * foi, puisque le combat affiche l'art du monde). Une case libre garde son sol ;
+ * une case bloquée devient, selon ce qu'elle porte : la porte d'un bâtiment
+ * (case visitable), le mur d'un bâtiment, une falaise (amas de rochers), un
+ * arbre de forêt (couvert praticable) ou un obstacle (objet isolé).
+ */
 function convertCell(src: TerrainSource, x: number, y: number): string {
   const ground = src.terrain(x, y);
   if (!src.blocked(x, y)) return ground === 'village' ? 'route' : ground;
   if (ground === 'montagne' || ground === 'riviere' || ground === 'eau_profonde') return ground;
-  if (src.settlement(x, y)) return 'batiment';
+  if (src.door(x, y)) return 'village';
   let blockedAround = 0;
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && src.blocked(x + dx, y + dy)) blockedAround++;
-  return blockedAround >= 4 ? 'montagne' : 'foret';
-}
-
-/** Chaque maison (amas compact de cases « batiment ») reçoit une porte visitable au milieu de sa rangée du bas (village, GDD §3.5). */
-function addDoors(rows: string[][]): void {
-  const h = rows.length;
-  const w = rows[0]?.length ?? 0;
-  const seen = new Set<number>();
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (rows[y]?.[x] !== 'batiment' || seen.has(y * w + x)) continue;
-      const blob: Cell[] = [];
-      const stack: Cell[] = [{ x, y }];
-      seen.add(y * w + x);
-      while (stack.length > 0) {
-        const c = stack.pop() as Cell;
-        blob.push(c);
-        for (const d of DIRECTIONS) {
-          const nx = c.x + d.x;
-          const ny = c.y + d.y;
-          if (nx < 0 || ny < 0 || nx >= w || ny >= h || seen.has(ny * w + nx) || rows[ny]?.[nx] !== 'batiment') continue;
-          seen.add(ny * w + nx);
-          stack.push({ x: nx, y: ny });
-        }
-      }
-      if (blob.length < 2) {
-        // Petit objet d'un village (tonneau, puits, étal) : on l'ignore, la case reste praticable.
-        (rows[y] as string[])[x] = 'plaine';
-        continue;
-      }
-      // Seules les maisons (amas compacts) ont une porte ; palissades et remparts (amas allongés) n'en ont pas.
-      const xs = blob.map((c) => c.x);
-      const ys = blob.map((c) => c.y);
-      const bw = Math.max(...xs) - Math.min(...xs) + 1;
-      const bh = Math.max(...ys) - Math.min(...ys) + 1;
-      if (bw > 6 || bh > 5 || blob.length < 0.6 * bw * bh) continue;
-      const bottom = Math.max(...blob.map((c) => c.y));
-      const base = blob.filter((c) => c.y === bottom).sort((a, b) => a.x - b.x);
-      const door = base[Math.floor(base.length / 2)] as Cell;
-      (rows[door.y] as string[])[door.x] = 'village';
+  let blockedSides = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (!(dx || dy) || !src.blocked(x + dx, y + dy)) continue;
+      blockedAround++;
+      if (dx === 0 || dy === 0) blockedSides++;
     }
   }
+  if (src.settlement(x, y)) return blockedSides > 0 ? 'batiment' : 'obstacle';
+  if (ground === 'foret') return 'foret';
+  return blockedAround >= 4 ? 'montagne' : 'obstacle';
 }
 
 /** Coûts de déplacement depuis une case, sans tenir compte des unités (Dijkstra). */

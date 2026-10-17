@@ -192,6 +192,7 @@ interface Ctx {
   gateFlag: (string | undefined)[];
   chimneys: { x: number; y: number }[]; // sorties de cheminée (pixels) : fumée animée
   lights: { x: number; y: number; kind: string }[]; // halos (pixels), décision n°47
+  doors: { x: number; y: number }[]; // portes des bâtiments (pixels), décision n°59
   /** Cases de blé où le héros s'enfonce (décision n°50) : `dense` au cœur, `edge` en bordure. */
   wheat: Map<number, 'dense' | 'edge'>;
   tiles: TilesetBuilder;
@@ -286,6 +287,7 @@ function commit(c: Ctx, name: string, v: number, x: number, y: number): void {
   if (s.chimney) c.chimneys.push({ x: x * TILE + s.chimney.x, y: y * TILE + s.chimney.y });
   if (s.building) c.buildings.push({ name, v, x, y });
   for (const l of s.lights) c.lights.push({ x: x * TILE + l.x, y: y * TILE + l.y, kind: l.kind });
+  for (const d of s.doors) c.doors.push({ x: x * TILE + d.x, y: y * TILE + d.y });
   const fx = x + s.foot.x;
   const fy = y + s.foot.y;
   const phase = s.frames.length > 1 && !s.building ? (-(fx >> 1) & 3) % s.frames.length : 0;
@@ -1641,6 +1643,7 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
     gateFlag: new Array<string | undefined>(N).fill(undefined),
     chimneys: [],
     lights: [],
+    doors: [],
     wheat: new Map(),
     tiles: new TilesetBuilder(),
   };
@@ -1810,6 +1813,10 @@ export function generateWorld(zones: readonly ZoneDef[]): GeneratedWorld {
   }
   for (const chimney of c.chimneys) {
     ambient.push({ id: nextId++, name: 'Cheminée', type: 'chimney', x: chimney.x, y: chimney.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [] });
+  }
+  // Portes : le combat en fait des cases visitables (décision n°59).
+  for (const door of c.doors) {
+    ambient.push({ id: nextId++, name: 'Porte', type: 'door', x: door.x, y: door.y, width: 0, height: 0, rotation: 0, visible: true, point: true, properties: [] });
   }
 
   composeLayers(c);

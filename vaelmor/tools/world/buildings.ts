@@ -18,7 +18,7 @@
  */
 import { hash2 } from './noise';
 import { RAMPS, SHADE, ramp, type Ramp, type Rnd } from './art';
-import { emitLight } from './lights';
+import { emitDoor, emitLight } from './lights';
 import { mix, type Px } from './px';
 import { PALETTE as P } from '../../src/render/palette';
 
@@ -492,6 +492,7 @@ interface DoorOpts {
  */
 function doorAt(px: Px, x: number, yb: number, o: DoorOpts = {}): void {
   const w = o.w ?? 10;
+  emitDoor(x + w / 2, yb - 3);
   const hh = o.h ?? 18;
   const m = o.m ?? M.wood;
   const top = yb - 1 - hh;

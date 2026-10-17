@@ -35,3 +35,31 @@ export function captureLights(paint: () => void): StampLight[] {
 export function emitLight(x: number, y: number, kind: LightKind): void {
   sink?.push({ x: Math.round(x), y: Math.round(y), kind });
 }
+
+/* ---------- Portes (décision n°59) ---------- */
+
+/** Porte d'un tampon : milieu du bas du vantail, en pixels dans le tampon. */
+export interface StampDoor {
+  readonly x: number;
+  readonly y: number;
+}
+
+let doorSink: StampDoor[] | null = null;
+
+/** Exécute `paint` en recueillant les portes qu'il dessine (le combat en fait des cases visitables). */
+export function captureDoors(paint: () => void): StampDoor[] {
+  const previous = doorSink;
+  const doors: StampDoor[] = [];
+  doorSink = doors;
+  try {
+    paint();
+  } finally {
+    doorSink = previous;
+  }
+  return doors;
+}
+
+/** Signale une porte (sans effet hors de `captureDoors`). */
+export function emitDoor(x: number, y: number): void {
+  doorSink?.push({ x: Math.round(x), y: Math.round(y) });
+}

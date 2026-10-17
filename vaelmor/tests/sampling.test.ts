@@ -10,15 +10,16 @@ import { testWorld } from './helpers/world';
 /** Cartes de combat tirées du monde (décision n°57). */
 const data = loadGameData();
 
-/** Petit monde en texte : . plaine  f forêt  ~ rivière  # bloqué  H maison (bloquée, dans un village). */
+/** Petit monde en texte : . plaine  f forêt  F arbre (forêt, bloqué)  ~ rivière  # bloqué  H mur de maison  D porte  b objet de village. */
 function textWorld(rows: readonly string[]): TerrainSource {
   const at = (x: number, y: number): string => rows[Math.max(0, Math.min(rows.length - 1, y))]?.[Math.max(0, Math.min((rows[0]?.length ?? 1) - 1, x))] ?? '.';
   return {
     width: rows[0]?.length ?? 0,
     height: rows.length,
-    terrain: (x, y) => ({ f: 'foret', '~': 'riviere' })[at(x, y)] ?? 'plaine',
-    blocked: (x, y) => at(x, y) === '#' || at(x, y) === 'H',
-    settlement: (x, y) => at(x, y) === 'H',
+    terrain: (x, y) => ({ f: 'foret', F: 'foret', '~': 'riviere' })[at(x, y)] ?? 'plaine',
+    blocked: (x, y) => '#HDbF'.includes(at(x, y)),
+    settlement: (x, y) => 'HDb'.includes(at(x, y)),
+    door: (x, y) => at(x, y) === 'D',
     zone: () => 1,
   };
 }
@@ -38,28 +39,29 @@ function expectPlayable(s: BattleState): void {
 }
 
 describe('fenêtre tirée du monde', () => {
-  it('garde le terrain, change les cases bloquées en bâtiments, falaises ou bosquets, ajoute une porte par maison', () => {
+  it('suit ce qui est dessiné : murs, portes du monde, objets, arbres, falaises', () => {
     const world = textWorld([
       '..........~~..........',
       '..HHH.....~~....####..',
-      '..HHH.....~~....####..',
+      '..HDH.....~~....####..',
       '..........~~....####..',
-      '....#.....~~...H......',
+      '....#.....~~...b......',
       '..........~~..........',
       '......................',
-      'ffffff....~~..........',
+      'ffFfff....~~..........',
     ]);
     const sample = sampleTerrain(world, { x: 10, y: 4 }, { width: 22, height: 8 }, data.terrains);
     expect(sample.origin).toEqual({ x: 0, y: 0 });
     expect(sample.site).toEqual({ x: 10, y: 4 });
     const at = (x: number, y: number): string => sample.rows[y]?.[x] ?? '?';
     expect(at(10, 0)).toBe('riviere');
-    expect(at(0, 7)).toBe('foret');
+    expect([at(0, 7), at(2, 7)]).toEqual(['foret', 'foret']); // un tronc de forêt reste un couvert praticable
     expect([at(2, 1), at(4, 2)]).toEqual(['batiment', 'batiment']);
-    expect(at(3, 2)).toBe('village'); // la porte, au milieu du bas de la maison
+    expect(at(3, 2)).toBe('village'); // la porte dessinée devient une case visitable
     expect(at(17, 2)).toBe('montagne'); // amas de rochers
-    expect(at(4, 4)).toBe('foret'); // obstacle isolé hors d'un village : un bosquet
-    expect(at(15, 4)).toBe('plaine'); // petit objet isolé dans un village : ignoré
+    expect(at(4, 4)).toBe('obstacle'); // obstacle isolé
+    expect(at(15, 4)).toBe('obstacle'); // objet de village (tonneau, puits…)
+    expect(at(3, 3)).toBe('plaine');
   });
 
   it('reste dans le monde et contient le point de contact, même au bord', () => {

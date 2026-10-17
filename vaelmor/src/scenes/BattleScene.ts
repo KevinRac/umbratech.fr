@@ -27,10 +27,13 @@ import type { BattleEvent, BattleRules, BattleState, BattleUnit, Cell, Strike } 
 import { addUnique } from '../logic/world/worldState';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES } from '../render/battlefield';
 import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureMapSprite } from '../render/battleTextures';
-import { gradeMatrix } from '../render/grade';
-import { WORLD_MAP_KEY } from '../render/worldTextures';
+import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureWorldTextures } from '../render/worldTextures';
+import { WATER_FRAMES } from '../render/waterTile';
+import { fixGpuTileAnimations } from '../render/tileAnimations';
+import { WorldAtmosphere } from '../render/worldAtmosphere';
+import { UNIT_IDLE_FRAMES } from '../render/unitSprites';
 import { loadQuality } from '../core/settings';
-import { loadWorldMap } from '../data/worldMap';
+import { loadWorldMap, type WorldMap } from '../data/worldMap';
 import { worldTerrainSource, type TerrainSource } from '../logic/tactics/sampling';
 import { PALETTE, mixColor } from '../render/palette';
 import { addText } from '../ui/text';
@@ -67,7 +70,8 @@ interface UnitView {
 const T = BF_TILE;
 /** Libellé court de la vitesse des animations (la colonne du menu est étroite). */
 const ANIM_SPEED_SHORT: Readonly<Record<AnimSpeed, string>> = { normal: '×1', fast: '×2', off: 'max' };
-const DEPTH = { field: 0, frame: 1, threat: 2, highlight: 3, units: 10, cursor: 30, fx: 40, numbers: 50 } as const;
+/** Profondeurs : l'art du monde (sol, décors, cimes), la grille, les cases colorées, puis les unités au-dessus de tout le décor (lisibilité tactique). Halos, rayons et poussière de l'atmosphère se placent vers 10,6–10,9. */
+const DEPTH = { water: -10, field: 0, decor: 1, canopy: 2, grid: 3, outside: 3.5, threat: 4, highlight: 5, frame: 6, shadow: 9.9, units: 10, cursor: 30, fx: 40, numbers: 50 } as const;
 const COLORS = {
   move: 0x4f93e6,
   attack: 0xe0584c,
@@ -94,6 +98,15 @@ export class BattleScene extends Phaser.Scene {
   private zoom = 3;
   private field!: Phaser.GameObjects.Image;
   private fieldKey = '';
+  private worldMap: WorldMap | null = null;
+  /**
+   * Coin du champ de bataille en pixels du monde. Les couches GPU de Phaser 4.2.1
+   * ignorent leur position : le monde reste en place et c'est le combat qui se pose
+   * dessus. Toutes les positions passent par `px` / `py`.
+   */
+  private base = { x: 0, y: 0 };
+  /** Étalonnage, bloom, rayons, poussière, halos du monde ouvert (décision n°47), sur la caméra du combat. */
+  private atmosphere: WorldAtmosphere | null = null;
   private views = new Map<string, UnitView>();
   private cursor!: Phaser.GameObjects.Image;
   private cursorCell: Cell = { x: 0, y: 0 };
@@ -153,6 +166,7 @@ export class BattleScene extends Phaser.Scene {
     for (const unit of this.state.units) ensureMapSprite(this, unit.sprite, unit.team);
     this.buildField();
     this.layoutCamera();
+    this.buildAtmosphere();
     this.buildUnits();
     this.buildCursor();
     this.sparks = this.add.particles(0, 0, BATTLE_TEX.spark, {
@@ -187,7 +201,73 @@ export class BattleScene extends Phaser.Scene {
 
   /* ---------- Construction ---------- */
 
+  /**
+   * Le champ de bataille (décision n°59) : sur une carte tirée du monde, c'est
+   * **l'art du monde lui-même** — sol organique, bâtiments, arbres et blé au vent,
+   * eau animée — décalé pour que la case (0, 0) du combat tombe sur le coin de
+   * la fenêtre. Autour, le monde continue, assombri. Une carte fixe (scénario)
+   * est peinte par `battlefield.ts`.
+   */
   private buildField(): void {
+    const origin = this.state.worldOrigin;
+    this.base = origin ? { x: origin.x * T, y: origin.y * T } : { x: 0, y: 0 };
+    const w = this.state.map.width * T;
+    const h = this.state.map.height * T;
+    if (origin && this.worldMap) this.buildWorldField(this.worldMap);
+    else this.buildPaintedField();
+
+    // Grille discrète : liseré d'un pixel au bord haut et gauche de chaque case.
+    const grid = this.add.graphics().setDepth(DEPTH.grid).setPosition(this.base.x, this.base.y);
+    grid.fillStyle(mixColor(PALETTE.ombreViolette, PALETTE.ombreProfonde, 0.3), 0.16);
+    for (let x = 0; x <= this.state.map.width; x++) grid.fillRect(x * T, 0, 1, h);
+    for (let y = 0; y <= this.state.map.height; y++) grid.fillRect(0, y * T, w, 1);
+
+    // Cadre du champ de bataille : le monde au-delà est assombri, liseré doré.
+    const outside = this.add.graphics().setDepth(DEPTH.outside).setPosition(this.base.x, this.base.y);
+    const far = 4000;
+    outside.fillStyle(PALETTE.nuit, 0.55);
+    outside.fillRect(-far, -far, 2 * far + w, far);
+    outside.fillRect(-far, h, 2 * far + w, far);
+    outside.fillRect(-far, 0, far, h);
+    outside.fillRect(w, 0, far, h);
+    const frame = this.add.graphics().setDepth(DEPTH.frame).setPosition(this.base.x, this.base.y);
+    frame.lineStyle(1, PALETTE.ambre, 0.7).strokeRect(-0.5, -0.5, w + 1, h + 1);
+  }
+
+  private buildWorldField(map: WorldMap): void {
+    ensureWorldTextures(this);
+    const ox = 0;
+    const oy = 0;
+    const worldW = map.width * T;
+    const worldH = map.height * T;
+    const water = this.add.tileSprite(ox, oy, worldW, worldH, WORLD_TEX.water(0)).setOrigin(0, 0).setDepth(DEPTH.water);
+    let waterFrame = 0;
+    this.time.addEvent({
+      delay: WATER_FRAME_MS,
+      loop: true,
+      callback: () => {
+        waterFrame = (waterFrame + 1) % WATER_FRAMES;
+        water.setTexture(WORLD_TEX.water(waterFrame));
+      },
+    });
+    const tilemap = this.make.tilemap({ key: WORLD_MAP_KEY });
+    const tileset = tilemap.addTilesetImage('world_tiles', WORLD_TILESET_KEY);
+    if (!tileset) throw new Error('Tileset du monde introuvable.');
+    // Vent dans les feuillages et le blé, ailes du moulin, flammes : tuiles animées par le GPU (décision n°45).
+    fixGpuTileAnimations(tileset, this.renderer);
+    const layers: [string, number][] = [
+      ['ground', DEPTH.field],
+      ['decor', DEPTH.decor],
+      ['canopy', DEPTH.canopy],
+    ];
+    for (const [name, depth] of layers) {
+      const layer = tilemap.createLayer(name, tileset, ox, oy, true);
+      if (!layer) throw new Error(`Couche « ${name} » impossible à créer.`);
+      layer.setDepth(depth);
+    }
+  }
+
+  private buildPaintedField(): void {
     const rows: string[][] = [];
     for (let y = 0; y < this.state.map.height; y++) {
       const row: string[] = [];
@@ -196,7 +276,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.fieldKey = this.state.encounterId;
     ensureBattlefield(this, this.fieldKey, rows, 7);
-    this.field = this.add.image(0, -BF_TOP, BATTLE_TEX.field(this.fieldKey, 0)).setOrigin(0, 0).setDepth(DEPTH.field);
+    this.field = this.add.image(this.base.x, this.base.y - BF_TOP, BATTLE_TEX.field(this.fieldKey, 0)).setOrigin(0, 0).setDepth(DEPTH.field);
     let frame = 0;
     this.time.addEvent({
       delay: WATER_FRAME_MS,
@@ -206,28 +286,49 @@ export class BattleScene extends Phaser.Scene {
         this.field.setTexture(BATTLE_TEX.field(this.fieldKey, frame));
       },
     });
-    // Cadre autour du champ de bataille : liseré sombre puis métal.
-    const w = this.state.map.width * T;
-    const h = this.state.map.height * T;
-    const g = this.add.graphics().setDepth(DEPTH.frame);
-    g.fillStyle(PALETTE.encre, 0.55).fillRect(-3, h + 1, w + 6, 3);
-    g.lineStyle(1, PALETTE.encre, 1).strokeRect(-1.5, -1.5, w + 3, h + 3);
-    g.lineStyle(1, PALETTE.metal, 1).strokeRect(-2.5, -2.5, w + 5, h + 5);
-    // Le débord des décors au-dessus de la première rangée est rogné au cadre.
-    this.field.setCrop(0, BF_TOP - 2, w, h + 2);
+    this.field.setCrop(0, BF_TOP - 2, this.state.map.width * T, this.state.map.height * T + 2);
+  }
+
+  /**
+   * Atmosphère HD-2D du monde (décision n°47) sur le combat : étalonnage de la
+   * zone, bloom, vignettage, rayons, poussière, halos des lanternes et des feux
+   * de la fenêtre. Le flou de profondeur est coupé : sur une carte tactique,
+   * chaque case doit rester nette (décision n°59).
+   */
+  private buildAtmosphere(): void {
+    const origin = this.state.worldOrigin;
+    const map = this.worldMap;
+    const lights = origin && map
+      ? map.ambient
+          .filter((o) => o.kind === 'light')
+          .filter((o) => o.x > this.base.x - 2 * T && o.y > this.base.y - 2 * T && o.x < this.px(this.state.map.width + 2) && o.y < this.py(this.state.map.height + 2))
+      : [];
+    this.atmosphere = new WorldAtmosphere(this, this.gameData.balance.visuals, lights);
+    this.atmosphere.setQuality(loadQuality(), ['tiltShift']);
+    const zone = this.gameData.zones.find((z) => z.id === this.state.zone);
+    if (zone) this.atmosphere.setZone(zone);
   }
 
   /** Carte du monde (cache du chargement) : le combat se joue sur son terrain. */
   private worldSource(): TerrainSource | undefined {
     const raw = this.cache.tilemap.get(WORLD_MAP_KEY)?.data as unknown;
     if (!raw) return undefined;
-    return worldTerrainSource(loadWorldMap(raw, { zones: this.gameData.zones, terrains: this.gameData.terrains, tileSize: this.gameData.balance.exploration.tileSize }));
+    this.worldMap = loadWorldMap(raw, { zones: this.gameData.zones, terrains: this.gameData.terrains, tileSize: this.gameData.balance.exploration.tileSize });
+    return worldTerrainSource(this.worldMap);
+  }
+
+  /** Pixel du monde du bord gauche (haut) d'une colonne (rangée) de la carte de combat. */
+  private px(x: number): number {
+    return this.base.x + x * T;
+  }
+
+  private py(y: number): number {
+    return this.base.y + y * T;
   }
 
   /**
-   * Caméra GBA (décision n°58) : zoom ×2, entre le bandeau du haut et la barre
-   * d'aide du bas ; la carte défile avec le curseur. L'étalonnage de la zone du
-   * monde où se joue le combat est appliqué (sauf qualité « Désactivée »).
+   * Caméra (décision n°58) : zoom ×2 comme le monde ouvert, entre le bandeau du
+   * haut et la barre d'aide du bas ; la carte défile avec le curseur.
    */
   private layoutCamera(): void {
     const { width: W, height: H } = this.scale;
@@ -238,8 +339,6 @@ export class BattleScene extends Phaser.Scene {
     this.viewSize = { w: W / this.zoom, h: vpH / this.zoom };
     const camera = this.cameras.main;
     camera.setViewport(0, top, W, vpH).setZoom(this.zoom).setBackgroundColor(mixColor(PALETTE.nuit, PALETTE.ombreProfonde, 0.4));
-    const zone = this.gameData.zones.find((z) => z.id === this.state.zone);
-    if (zone && loadQuality() !== 'off') camera.filters.internal.addColorMatrix().colorMatrix.set(gradeMatrix(zone.grade));
   }
 
   /** Bornes du défilement : la carte reste à l'écran ; plus petite que l'écran, elle est centrée. */
@@ -247,8 +346,10 @@ export class BattleScene extends Phaser.Scene {
     const mapW = this.state.map.width * T;
     const mapH = this.state.map.height * T;
     const { w, h } = this.viewSize;
-    const cx = mapW <= w ? (mapW - w) / 2 : Math.max(-4, Math.min(mapW - w + 4, x));
-    const cy = mapH <= h ? (mapH - h) / 2 : Math.max(-4, Math.min(mapH - h + 4, y));
+    const m = 12; // on aperçoit le monde assombri au-delà du bord
+    const top = 26; // les personnages de la première rangée dépassent de leur case vers le haut
+    const cx = mapW <= w ? (mapW - w) / 2 : Math.max(-m, Math.min(mapW - w + m, x));
+    const cy = mapH + top <= h ? (mapH - h) / 2 - top / 2 : Math.max(-top, Math.min(mapH - h + m, y));
     return { x: cx, y: cy };
   }
 
@@ -265,7 +366,7 @@ export class BattleScene extends Phaser.Scene {
     const { w, h } = this.viewSize;
     if (cell.x * T < x + m) x = cell.x * T - m;
     if ((cell.x + 1) * T > x + w - m) x = (cell.x + 1) * T - w + m;
-    if (cell.y * T < y + m) y = cell.y * T - m;
+    if (cell.y * T - T < y + m) y = cell.y * T - T - m;
     if ((cell.y + 1) * T > y + h - m) y = (cell.y + 1) * T - h + m;
     this.camTarget = this.clampCam(x, y);
   }
@@ -273,7 +374,7 @@ export class BattleScene extends Phaser.Scene {
   private applyCamera(): void {
     const camera = this.cameras.main;
     const origin = zoomOrigin(camera.width, camera.height, this.zoom);
-    camera.setScroll(Math.round(this.cam.x) - origin.x, Math.round(this.cam.y) - origin.y);
+    camera.setScroll(Math.round(this.cam.x + this.base.x) - origin.x, Math.round(this.cam.y + this.base.y) - origin.y);
     // Les fenêtres passent du côté opposé au curseur.
     const screenX = (this.cursorCell.x * T + T / 2 - this.cam.x) * this.zoom;
     const side: DodgeSide = screenX < this.scale.width / 2 ? 'right' : 'left';
@@ -298,14 +399,16 @@ export class BattleScene extends Phaser.Scene {
   private buildUnits(): void {
     for (const unit of this.state.units) {
       const sprite = this.add.sprite(0, 0, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1);
+      // Ombre au sol du monde ouvert, légèrement teintée par le camp.
+      const shadow = this.add.image(0, -2, WORLD_TEX.shadow).setTint(unit.team === 'player' ? 0x9cc0ff : 0xffb0a0);
       const hpBg = this.add.rectangle(-6, -2, 12, 2, PALETTE.encre, 0.9).setOrigin(0, 0);
       const hpFill = this.add.rectangle(-6, -2, 12, 2, COLORS.heal, 1).setOrigin(0, 0);
-      const parts: Phaser.GameObjects.GameObject[] = [sprite, hpBg, hpFill];
-      if (unit.isBoss) parts.push(this.add.image(0, -23, BATTLE_TEX.crown));
-      if (unit.isHero) parts.push(this.add.image(5, -21, BATTLE_TEX.heroMark));
+      const parts: Phaser.GameObjects.GameObject[] = [shadow, sprite, hpBg, hpFill];
+      if (unit.isBoss) parts.push(this.add.image(0, -36, BATTLE_TEX.crown));
+      if (unit.isHero) parts.push(this.add.image(0, -36, BATTLE_TEX.heroMark));
       const container = this.add.container(0, 0, parts);
       this.views.set(unit.id, { container, sprite, hpBg, hpFill });
-      sprite.anims.play({ key: BATTLE_TEX.msIdle(unit.sprite, unit.team), startFrame: Math.floor(Math.random() * 3) });
+      sprite.anims.play({ key: BATTLE_TEX.msIdle(unit.sprite, unit.team), startFrame: Math.floor(Math.random() * UNIT_IDLE_FRAMES) });
       this.syncUnit(unit);
     }
   }
@@ -321,7 +424,7 @@ export class BattleScene extends Phaser.Scene {
   private syncUnit(unit: BattleUnit): void {
     const view = this.views.get(unit.id);
     if (!view) return;
-    view.container.setPosition(unit.x * T + T / 2, unit.y * T + T).setDepth(DEPTH.units + unit.y * 0.01);
+    view.container.setPosition(this.px(unit.x) + T / 2, this.py(unit.y) + T).setDepth(DEPTH.units + unit.y * 0.01);
     view.container.setVisible(unit.hp > 0);
     const ratio = unit.hp / unit.stats.pv;
     view.hpFill.width = Math.max(1, Math.round(12 * ratio));
@@ -349,7 +452,7 @@ export class BattleScene extends Phaser.Scene {
     const x = Math.max(0, Math.min(this.state.map.width - 1, cell.x));
     const y = Math.max(0, Math.min(this.state.map.height - 1, cell.y));
     this.cursorCell = { x, y };
-    this.cursor.setPosition(x * T - 2, y * T - 2);
+    this.cursor.setPosition(this.px(x) - 2, this.py(y) - 2);
     this.followCell(this.cursorCell);
     this.refreshHover();
   }
@@ -369,8 +472,8 @@ export class BattleScene extends Phaser.Scene {
     const camera = this.cameras.main;
     if (pointer.y < camera.y || pointer.y >= camera.y + camera.height) return null;
     const p = camera.getWorldPoint(pointer.x, pointer.y);
-    const x = Math.floor(p.x / T);
-    const y = Math.floor(p.y / T);
+    const x = Math.floor((p.x - this.base.x) / T);
+    const y = Math.floor((p.y - this.base.y) / T);
     return inBounds(this.state.map, x, y) ? { x, y } : null;
   }
 
@@ -390,7 +493,7 @@ export class BattleScene extends Phaser.Scene {
 
   private paintTiles(pool: Phaser.GameObjects.Image[], cells: Iterable<Cell>, color: number, alpha: number, depth: number): void {
     for (const c of cells) {
-      pool.push(this.add.image(c.x * T, c.y * T, BATTLE_TEX.tile).setOrigin(0, 0).setTint(color).setAlpha(alpha).setDepth(depth));
+      pool.push(this.add.image(this.px(c.x), this.py(c.y), BATTLE_TEX.tile).setOrigin(0, 0).setTint(color).setAlpha(alpha).setDepth(depth));
     }
   }
 
@@ -432,6 +535,7 @@ export class BattleScene extends Phaser.Scene {
   override update(_time: number, delta: number): void {
     if (!this.alive || !this.state) return;
     this.updateCamera(delta);
+    this.atmosphere?.update(delta / 1000);
     this.updateDebug();
     // Le mode vient de changer pendant cette image (menu validé dans l'interface) : on attend la suivante.
     if (this.modeFrame === this.game.loop.frame) return;
@@ -825,7 +929,7 @@ export class BattleScene extends Phaser.Scene {
 
   private setCursorQuiet(cell: Cell): void {
     this.cursorCell = { x: cell.x, y: cell.y };
-    this.cursor.setPosition(cell.x * T - 2, cell.y * T - 2);
+    this.cursor.setPosition(this.px(cell.x) - 2, this.py(cell.y) - 2);
     this.followCell(this.cursorCell);
     this.hud.showTerrain(terrainAt(this.state.map, cell.x, cell.y));
   }
@@ -878,7 +982,7 @@ export class BattleScene extends Phaser.Scene {
       view.sprite.setFlipX(to.x < from.x);
       const anim = BATTLE_TEX.msWalk(unit.sprite, unit.team, pose);
       if (view.sprite.anims.currentAnim?.key !== anim) view.sprite.anims.play(anim);
-      await this.tween({ targets: view.container, x: to.x * T + T / 2, y: to.y * T + T, duration: step });
+      await this.tween({ targets: view.container, x: this.px(to.x) + T / 2, y: this.py(to.y) + T, duration: step });
     }
     view.sprite.setFlipX(false);
     view.sprite.anims.play(BATTLE_TEX.msWalk(unit.sprite, unit.team, 'down'));
@@ -931,7 +1035,7 @@ export class BattleScene extends Phaser.Scene {
     const sv = this.views.get(striker.id);
     const tv = this.views.get(target.id);
     if (!sv || !tv) return;
-    const home = { x: striker.x * T + T / 2, y: striker.y * T + T };
+    const home = { x: this.px(striker.x) + T / 2, y: this.py(striker.y) + T };
     const dx = Math.sign(target.x - striker.x);
     const dy = Math.sign(target.y - striker.y);
     const weapon = striker.weapon;
@@ -946,8 +1050,8 @@ export class BattleScene extends Phaser.Scene {
       await this.tween({ targets: sv.container, x: home.x + dx * 6, y: home.y + dy * 6, duration: this.dur(MS.lunge), ease: 'Quad.easeIn' });
     }
 
-    const tx = target.x * T + T / 2;
-    const ty = target.y * T + T;
+    const tx = this.px(target.x) + T / 2;
+    const ty = this.py(target.y) + T;
     if (strike.hit) {
       // Impact : flash blanc, étincelles, secousse, chiffre.
       flashWhite(tv.sprite, true);
@@ -977,10 +1081,10 @@ export class BattleScene extends Phaser.Scene {
   private async projectile(from: BattleUnit, to: BattleUnit): Promise<void> {
     const magic = from.weapon.damage === 'magique';
     const color = from.weapon.element ? Phaser.Display.Color.HexStringToColor(this.gameData.elements.find((e) => e.id === from.weapon.element)?.color ?? '#ffffff').color : magic ? PALETTE.cyanEclat : PALETTE.parchemin;
-    const sx = from.x * T + T / 2;
-    const sy = from.y * T + T - 12;
-    const ex = to.x * T + T / 2;
-    const ey = to.y * T + T - 12;
+    const sx = this.px(from.x) + T / 2;
+    const sy = this.py(from.y) + T - 14;
+    const ex = this.px(to.x) + T / 2;
+    const ey = this.py(to.y) + T - 14;
     const angle = Math.atan2(ey - sy, ex - sx);
     const shot = magic
       ? this.add.image(sx, sy, BATTLE_TEX.spark).setScale(1.6).setTint(color).setBlendMode(Phaser.BlendModes.ADD)
@@ -1008,7 +1112,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private floatText(unit: BattleUnit, text: string, color: number, offsetY = 0): void {
-    const label = addText(this, unit.x * T + T / 2, unit.y * T - 8 + offsetY, text, { font: 'small', color, align: 'center', shadow: PALETTE.encre }).setDepth(DEPTH.numbers);
+    const label = addText(this, this.px(unit.x) + T / 2, this.py(unit.y) - 18 + offsetY, text, { font: 'small', color, align: 'center', shadow: PALETTE.encre }).setDepth(DEPTH.numbers);
     const duration = this.dur(MS.number, 350);
     this.tweens.add({ targets: label, y: label.y - 8, duration: duration * 0.5, ease: 'Quad.easeOut' });
     this.tweens.add({ targets: label, alpha: 0, delay: duration * 0.6, duration: duration * 0.4, onComplete: () => label.destroy() });
@@ -1099,6 +1203,9 @@ export class BattleScene extends Phaser.Scene {
 
   private onShutdown(): void {
     this.alive = false;
+    this.atmosphere?.destroy();
+    this.atmosphere = null;
+    this.worldMap = null;
     this.views.clear();
     this.highlights = [];
     this.threatTiles = [];

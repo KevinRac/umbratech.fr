@@ -10,7 +10,7 @@ import { hashString, mulberry32 } from './noise';
 import { type Rnd } from './art';
 import { Px } from './px';
 import * as A from './accessories';
-import { captureLights, type StampLight } from './lights';
+import { captureDoors, captureLights, type StampDoor, type StampLight } from './lights';
 import { WHEAT_VARIANTS, paintWheat } from './wheat';
 import { MILL_MS, paintCottage, paintForge, paintGuardTower, paintHut, paintInn, paintLogHouse, paintMill, paintSlateHouse, paintStoneHouse, paintTemple, paintTownHouse } from './buildings';
 import { DEAD_FOOT, OAK_FOOT, PINE_FOOT, WIND_MS, paintBush, paintDarkPine, paintDeadTree, paintFlowers, paintLavender, paintOak, paintPine, paintReeds, paintSunflowers, paintTallGrass } from './flora';
@@ -40,6 +40,8 @@ export interface Stamp {
   readonly overlap: boolean;
   /** Sources de lumière (fenêtres, lanternes, foyers, runes) : halos du jeu (n°47). */
   readonly lights: readonly StampLight[];
+  /** Portes dessinées (pixels dans le tampon), recueillies comme les lumières (décision n°59). */
+  readonly doors: readonly StampDoor[];
 }
 
 type Painter = (px: Px, rnd: Rnd, variant: number, frame: number) => void;
@@ -179,10 +181,17 @@ export function getStamp(name: string, variant = 0): Stamp {
   if (cached) return cached;
   const frames: Px[] = [];
   let lights: StampLight[] = [];
+  let doors: StampDoor[] = [];
   for (let f = 0; f < Math.max(1, def.frameMs?.length ?? 0); f++) {
     const fpx = new Px(def.w * T, def.h * T);
-    const found = captureLights(() => def.paint(fpx, mulberry32(hashString(`stamp:${key}`)), v, f));
-    if (f === 0) lights = found;
+    let found: StampLight[] = [];
+    const foundDoors = captureDoors(() => {
+      found = captureLights(() => def.paint(fpx, mulberry32(hashString(`stamp:${key}`)), v, f));
+    });
+    if (f === 0) {
+      lights = found;
+      doors = foundDoors;
+    }
     frames.push(fpx);
   }
   const px = frames[0] as Px;
@@ -196,7 +205,7 @@ export function getStamp(name: string, variant = 0): Stamp {
       blocked.push(b);
     }
   }
-  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows, shadowRows: def.shadowRows ?? 0, chimney: def.chimney ?? null, building: def.building ?? false, frames, frameMs: frames.length > 1 ? (def.frameMs ?? []) : [], foot: def.foot ?? { x: 0, y: def.h - 1 }, overlap: def.overlap ?? false, lights };
+  const stamp: Stamp = { name, variant: v, w: def.w, h: def.h, px, blocked, canopyRows: def.canopyRows, shadowRows: def.shadowRows ?? 0, chimney: def.chimney ?? null, building: def.building ?? false, frames, frameMs: frames.length > 1 ? (def.frameMs ?? []) : [], foot: def.foot ?? { x: 0, y: def.h - 1 }, overlap: def.overlap ?? false, lights, doors };
   cache.set(key, stamp);
   return stamp;
 }
