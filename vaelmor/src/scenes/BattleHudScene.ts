@@ -459,7 +459,7 @@ export class BattleHudScene extends Phaser.Scene {
       this.closeMenuNow();
       const S = this.S;
       const big = request.large === true;
-      const lineHeight = (big ? 44 : 26) * S;
+      const lineHeight = (big ? 38 : 26) * S;
       const titleH = request.title ? (big ? 28 : 22) * S : 0;
       const w = (big ? 228 : 172) * S;
       const h = request.items.length * lineHeight + titleH + (big ? 18 : 14) * S;
@@ -474,7 +474,7 @@ export class BattleHudScene extends Phaser.Scene {
         lineHeight,
         depth: DEPTH.menu + 1,
         scale: (big ? 3 : 2) * S,
-        textScale: (big ? 2 : 1) * S,
+        textScale: (big ? 1.5 : 1) * S,
         // Grand texte : ombre d'un seul pixel, sinon les lettres paraissent doublées.
         shadowOffset: S,
         centerLabels: big,
