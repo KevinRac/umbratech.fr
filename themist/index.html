@@ -5223,7 +5223,7 @@ function openGuide(back){
  const html=`<div class="panel guide"><p class="eyebrow">Guide</p><h2>Comment jouer</h2>
  <p class="sub">Roguelite d’action : tu descends salle après salle, tu tombes, tu reviens plus fort.</p>
  <p class="h-sec">L’essentiel</p><div class="gd-grid">
- ${card(1,'Descendre','3 actes : des salles, puis un gardien. Salle purifiée → choisis une porte au nord (combat, champion, autel, halte, Colporteur).')}
+ ${card(1,'Descendre','3 actes : des salles, puis un gardien. Salle purifiée → choisis une porte au nord (combat, champion, autel, halte, Colporteur, parfois une Brèche : combat plus dur, relique à la clé).')}
  ${card(2,'Mourir, c’est normal','Tu perds niveau, talents, reliques et or. Tu gardes des Éclats de Mémoire et tes déblocages.')}
  ${card(3,'Se renforcer','Chaque niveau = un talent (bouton Talents ou Tab). Autels et champions donnent des reliques ; le Colporteur vend contre de l’or.')}
  ${card(4,'Lumière et Brume','Un ennemi dans ta lumière est exposé : ralenti et +25 % de dégâts. Garde les Voilés dans la lumière.')}
@@ -7042,6 +7042,36 @@ details.fold>.chips{margin-top:8px}
 .lore li.fold:not(.open) p{display:none}
 .lore li.fold h3:focus-visible{outline:2px solid var(--flame);outline-offset:3px}
 `;document.head.appendChild(st);
+})();
+
+// ───────────────────────── v15.9 · La Brèche : porte facultative, combat renforcé à règle imposée, relique à la sortie
+(function(){const BR_=BE_D.breche;
+ DOOR.breche={l:BR_.n,c:'255,92,150',g:'B'};
+ Object.assign(ICONS,{breche:'M13 2.5l-3 6.5 4 3-4.5 3.5 3 6.5M7 6.5l-3.5 2.5M17.5 11l3.5 1.5M6.5 14.5l-3 2M16 17l3.5 3M10.5 9.5l-2.5-.5'});delete P2D.breche;
+ const _md15=makeDoors;
+ makeDoors=function(){_md15();
+  if(!RUN||RUN.hub||!room||!room.doors||room.type==='boss'||room.breche)return;
+  const next=RUN.roomIdx+1,A=ACTS[RUN.act];
+  if(next<BR_.premiereSalle||next>=A.rooms-2)return;
+  const d=room.doors.find(x=>x.type==='combat');
+  if(d&&Math.random()*100<BR_.chance)d.type='breche';};
+ const _de15=doEnter;
+ doEnter=function(type){if(type==='breche'){RUN.brecheNow=true;type='combat';}_de15(type);};
+ const _er15=enterRoom;
+ enterRoom=function(type){const br=!!(RUN&&RUN.brecheNow);if(RUN)RUN.brecheNow=false;_er15(type);
+  if(!br||!RUN||RUN.hub||!room||room.type!=='combat')return;
+  room.breche=true;
+  const B=budget(),al=allowedTypes();
+  for(let i=0;i<BR_.vaguesEnPlus-1;i++)room.waves.push(genWave(B*BR_.budgetVague,al));
+  const et=pick(G()>=14?['voile','nourrice','brute','hurleur']:G()>=8?['brute','spectre','hurleur']:['brute','spectre']);
+  room.waves.push([{type:et,elite:true},...genWave(B*BR_.budgetChampion,al)]);
+  const r=room;later(0.3,()=>{if(room===r&&!r.cleared)showBanner('Brèche','La Brume se déchire : une relique est au bout.');});
+  later(2.2,()=>{if(room!==r||r.cleared||r.rule)return;r.mutAt=rand(RS.mutationMinS,RS.mutationMaxS);setRule(pick(rulePool()),false);});};
+ const _orc15=onRoomCleared;
+ onRoomCleared=function(){const br=room&&room.breche;_orc15();
+  if(!br||!RUN||RUN.hub)return;
+  addGold(BR_.orBase+BR_.orParActe*RUN.act,true);
+  enqueue(()=>openRelics('La Brèche se referme','Elle laisse une relique derrière elle. Choisis-en une.'));};
 })();
 
 // ───────────────────────── Talents : textes, rangs et exclusions depuis data/talents.js

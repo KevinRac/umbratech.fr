@@ -124,7 +124,7 @@ function chance(p, court) {
   return court ? `${nb} sur ${mot(d)}` : `${nb} chance${n > 1 ? 's' : ''} sur ${mot(d)}`;
 }
 function bestiaire(B) {
-  const E = B.ennemis, C = B.champion, RS = B.reglesSalle;
+  const E = B.ennemis, C = B.champion, RS = B.reglesSalle, BR = B.breche;
   const nom = k => E[k].n;
   const ennemis = Object.values(E).filter(e => e.desc).map(e =>
     `<article class="ent enemy"><div class="eh"><h4>${esc(e.n)}</h4><span class="tag">${e.salle ? `Apparaît dès la salle ${e.salle}` : 'Dès le début'}</span></div><p>${esc(e.desc)}</p>\n`
@@ -149,6 +149,8 @@ function bestiaire(B) {
 <h3 class="sub">Règles de salle</h3>
 <div class="grid g4">${regles}</div>
 <p>À partir de la ${RS.desLaSalle}e salle, une salle de combat ou d’élite reçoit parfois une règle (${chance(RS.chanceActeI)} à l’acte I, ${chance(RS.chanceEnsuite, true)} ensuite). La règle est choisie selon tes PV : sous ${RS.seuilBrume} %, seulement la brume ; sous ${RS.seuilBrumeSol} %, la brume ou le sol ; au-dessus, les quatre. <b>La règle mute une fois</b> en plein combat, entre ${RS.mutationMinS} et ${RS.mutationMaxS} secondes après son apparition : elle est remplacée par une autre règle possible à ton niveau de PV. Purifier une salle à règle rapporte <b>une relance de talents</b> et de l’or (${RS.orBase} + ${RS.orParActe} par acte).</p>
+<h3 class="sub">La Brèche</h3>
+<p>À partir de la ${BR.premiereSalle}e salle, une porte de combat peut devenir une <b>Brèche</b> (${chance(BR.chance)} par porte de combat remplaçable ; jamais dans les deux dernières salles avant le gardien, ni deux fois de suite). C’est facultatif : un combat plus dur qu’un combat ordinaire, avec une vague de plus qui compte <b>un champion</b>, et une <b>règle de salle imposée</b> (choisie selon tes PV comme ci-dessus, avec la même mutation). En échange, la Brèche donne <b>une relique au choix</b>, de l’or (${BR.orBase} + ${BR.orParActe} par acte) et, comme toute salle à règle, <b>une relance de talents</b>.</p>
 <h3 class="sub">Mutation Instable (talent du Gouffre)</h3>
 <p>Ces mutations ne touchent pas les ennemis : c’est toi qui mutes. Le talent <b>Mutation Instable</b> du Gouffre te donne l’une d’elles au hasard toutes les 20 secondes, pendant 8 secondes.</p>
 <div class="grid g4">${muts}</div>

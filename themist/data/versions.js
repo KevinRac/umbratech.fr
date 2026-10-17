@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v15.8',
+ actuelle:'v15.9',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-17',h:'v15.9',t:'La Brèche : une porte facultative (à partir de la 3e salle) mène à un combat plus dur avec un champion et une règle de salle imposée ; elle donne une relique au choix, de l’or et une relance de talents.'},
   {d:'2026-10-17',h:'v15.8',t:'Jouabilité : l’esquive est mise en mémoire 0,18 s (une pression un peu trop tôt n’est plus perdue) et un très bref arrêt sur image souligne chaque coup reçu.'},
   {d:'2026-10-17',h:'v15.7',t:'Base technique : les textes et réglages du jeu (équipements, reliques, pactes, bestiaire, gardiens, Résonances, talents, formes, Sanctuaire, chroniques) sont rassemblés dans des fichiers de données, et le wiki est généré automatiquement à partir d’eux.'},
   {d:'2026-10-17',h:'5da259d',t:'Menus allégés : Portail (paliers en pastilles, commandes réduites), Sanctuaire, Colporteur'},
