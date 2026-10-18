@@ -100,6 +100,8 @@ const R = (o) => Object.assign({ type: 'combat', act: 1, roomIdx: A.premiereSall
 ok(F.asmEligible(A, R({})), 'salle de combat éligible');
 ok(F.asmEligible(A, R({ type: 'elite', act: 2 })), 'salle d\'élite éligible');
 ok(F.asmEligible(A, R({ breche: true })) === !!A.dansBreche, 'Brèche selon dansBreche');
+ok(F.asmEligible(A, R({ breche: true, roomIdx: 1, depuis: 0 })) === !!A.dansBreche, 'Brèche : ni salle minimale ni écart');
+ok(A.chanceBreche === 100, 'Brèche : il vient à chaque fois');
 ok(!F.asmEligible(A, R({ type: 'boss', roomIdx: 7 })), 'jamais au gardien');
 for (const t of ['autel', 'halte', 'marchand', 'sanctuaire']) ok(!F.asmEligible(A, R({ type: t })), `jamais en salle ${t}`);
 ok(!F.asmEligible(A, R({ demo: true })) && !F.asmEligible(A, R({ hub: true })), 'jamais en ?demo= ni au Sanctuaire');

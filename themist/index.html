@@ -7941,8 +7941,9 @@ function demoBoot(cls){
  // Peut-il apparaître dans cette salle ? r : {type, act, roomIdx, actRooms, breche, demo, hub}
  // r : {type, act, roomIdx, actRooms, breche, demo, hub, depuis (salles depuis sa dernière apparition)}
  function asmEligible(A,r){
-  if(r.demo||r.hub||(r.type!=='combat'&&r.type!=='elite')||(r.breche&&!A.dansBreche)||r.act<A.desActe||r.roomIdx<(A.premiereSalle||1))return false;
-  if(r.depuis!=null&&r.depuis<A.ecartSalles)return false;   // depuis = 0 : la salle juste après sa dernière apparition
+  if(r.demo||r.hub||(r.type!=='combat'&&r.type!=='elite')||(r.breche&&!A.dansBreche)||r.act<A.desActe)return false;
+  if(!r.breche&&r.roomIdx<(A.premiereSalle||1))return false;                     // la Brèche l'appelle toujours, même tôt
+  if(!r.breche&&r.depuis!=null&&r.depuis<A.ecartSalles)return false;   // depuis = 0 : la salle juste après sa dernière apparition
   return r.roomIdx<r.actRooms-A.gardeAvantGardien;}                 // salle de gardien = actRooms : jamais
  // Vient-il te chercher ? m : {salles (salles de combat purgées dans la run), tempsS (leur temps total), sansDegatsS}
  function asmAppel(A,m){const vite=m.salles>=A.vite.sallesMin&&m.tempsS/Math.max(1,m.salles)<=A.vite.salleMaxS,intact=m.sansDegatsS>=A.intact.sansDegatsS;return{vite,intact,ok:vite||intact};}
@@ -8067,10 +8068,10 @@ function demoBoot(cls){
  planRoom=function(type){const w=_pr.apply(this,arguments);
   try{if((type==='combat'||type==='elite')&&RUN&&!RUN.hub&&room&&w.length){
    const M=RUN.asm=RUN.asm||{dernier:null,vaincus:[],salle:-99},R=PR();
-   const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTS[RUN.act].rooms,breche:!!(room.breche||RUN.brecheNow),demo:DEMO,hub:!!RUN.hub,depuis:RUN.g-M.salle-1};
+   const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTS[RUN.act].rooms,breche:!!(room.breche||RUN.brecheNow||RUN.asmBr),demo:DEMO,hub:!!RUN.hub,depuis:RUN.g-M.salle-1};
    const ap=asmAppel(A,{salles:R.rooms||0,tempsS:R.clearT||0,sansDegatsS:RUN.time-(RUN.asmHit||0)});
    const force=window.__asm.forcer>0;
-   if(force||(asmEligible(A,r)&&(ap.ok||!A.exigeDomination)&&Math.random()*100<A.chance)){   // exigeDomination faux : une chance sur deux partout
+   if(force||(asmEligible(A,r)&&(r.breche||ap.ok||!A.exigeDomination)&&Math.random()*100<(r.breche&&A.chanceBreche!=null?A.chanceBreche:A.chance))){   // exigeDomination faux : une chance sur deux partout
     if(force)window.__asm.forcer--;
     const seed=(Math.random()*4294967296)>>>0,rnd=asmRng(seed),mem=SAVE.asm18||{};
     const dernier=M.dernier||mem.dernier||null;
@@ -8084,6 +8085,8 @@ function demoBoot(cls){
      M.dernier=co.base;M.salle=RUN.g;SAVE.asm18=Object.assign({},mem,{dernier:co.base});persist();}}}}
   catch(err){console.error(err);}
   return w;};
+ // la Brèche efface son drapeau avant de préparer la salle : on note nous-mêmes qu'on y entre
+ const _de=doEnter;doEnter=function(type){if(RUN)RUN.asmBr=type==='breche';try{return _de.apply(this,arguments);}finally{if(RUN)RUN.asmBr=false;}};
  // il ne compte pas les PV perdus pendant les pauses : RUN.time n'avance qu'en jeu
  const _lh=loseHp;loseHp=function(n){if(RUN&&!RUN.hub&&P&&!P.dead&&n>0)RUN.asmHit=RUN.time;return _lh.apply(this,arguments);};
  const _ce=createEnemy;

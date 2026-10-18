@@ -81,6 +81,7 @@
  // Une forme = une capacité, toujours (zones rouges). Il porte un masque, toujours le même (dessin : data/masque.js).
  // v16.25 · Il vient chercher le joueur qui domine : dans toute salle de combat (combat, élite, Brèche ; jamais au gardien),
  //   il apparaît chance % du temps à partir de la salle premiereSalle de chaque acte (v16.31).
+ //   chanceBreche : % dans une Brèche (v16.32 : 100, il tient toujours la Brèche, sans condition de salle ni d'écart).
  //   exigeDomination vrai : seulement si tu vas vite OU si tu n'as pas perdu de PV depuis longtemps (vite, intact) ; faux : partout.
  //   desActe / premiereSalle : premier acte et première salle de l'acte où il peut venir ;
  //   vite : tu as purgé au moins sallesMin salles de combat dans la run en salleMaxS secondes en moyenne ou moins ;
@@ -104,7 +105,7 @@
  //   La Brute ne prend pas la Charge : son Fracas en est déjà une, dans quatre directions.
  // poidsProfil : pondération du tirage selon ton profil (profile()) ; désactivée tant que actif est faux.
  //   Pour chaque capacité : ax (axe du profil), hi (vrai : plus probable si l'axe est haut), force (poids × (1 + force × écart)).
- assemble:{n:'Masqué',desActe:1,premiereSalle:3,chance:50,exigeDomination:false,vite:{sallesMin:2,salleMaxS:25},intact:{sansDegatsS:60},ecartSalles:0,gardeAvantGardien:0,dansBreche:true,
+ assemble:{n:'Masqué',desActe:1,premiereSalle:3,chance:50,chanceBreche:100,exigeDomination:false,vite:{sallesMin:2,salleMaxS:25},intact:{sansDegatsS:60},ecartSalles:0,gardeAvantGardien:0,dansBreche:true,
   recompense:{reliques:1,titre:'Le masque se brise',texte:'Sous ses éclats, une relique de plus. Choisis-en une.'},
   stats:{pv:460,degats:13,xp:30,contact:0.8},
   escorte:{1:2,2:3,3:4},
