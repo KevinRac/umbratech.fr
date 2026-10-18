@@ -55,7 +55,7 @@ import { ALLY_OUTLINE } from '../render/unitSprites';
 import type { AllyJoin } from '../logic/tactics/encounter';
 import { findEncounter } from '../logic/tactics/encounter';
 import { FoeActor } from '../render/foeActors';
-import { ensureFoeTextures, FOE_TEX } from '../render/foeTextures';
+import { ensureFoeTextures } from '../render/foeTextures';
 import type { NpcDef } from '../data/townSchemas';
 import { formatNotices } from '../ui/notices';
 import { facingPose, facingToward } from '../render/npcSprites';
@@ -1248,12 +1248,12 @@ export class WorldScene extends Phaser.Scene {
     this.leaving = true; // fige l'exploration (déplacements, ennemis) pendant l'avertissement
     this.hud.setPrompt(null);
     const mark = (x: number, y: number, scale: number): void => {
-      const img = this.add.image(x, y, FOE_TEX.bangRed).setDepth(5000).setScale(0.2);
+      const img = this.add.image(x, y, TOWN_TEX.markerAmbush).setDepth(5000).setScale(0.4);
       this.tweens.add({ targets: img, scale, duration: 160, ease: 'Back.easeOut' });
       this.tweens.add({ targets: img, y: y - 3, duration: 140, yoyo: true, repeat: 3, delay: 200 });
     };
-    mark(this.body_.x, this.body_.y - 40, 3);
-    mark(sim.x, sim.y - 44, 2);
+    mark(this.body_.x, this.body_.y - 42, 2);
+    mark(sim.x, sim.y - 46, 2);
     this.cameras.main.shake(260, 0.004);
     this.cameras.main.flash(120, 255, 60, 40);
     const dark = sim.def.kind === 'garde' ? 'La milice vous tombe dessus.' : 'Des ennemis surgissent : vous êtes pris au dépourvu.';

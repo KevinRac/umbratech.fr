@@ -18,6 +18,8 @@ export const TOWN_TEX = {
   portrait: (id: string, expression: Expression): string => `portrait:${id}:${expression}`,
   markerAvailable: 'marker:available',
   markerReady: 'marker:ready',
+  /** « ! » rouge de l'embuscade : le « ! » des donneurs de quête, en rouge. */
+  markerAmbush: 'marker:ambush',
   questGlow: 'marker:glow',
   questSpark: 'marker:spark',
 } as const;
@@ -167,6 +169,13 @@ export function ensureMarkerTextures(scene: Phaser.Scene): void {
     READY_MARK,
     { O: mixColor(P.ombreProfonde, P.nuitBleue, 0.4), H: P.ecume, L: mixColor(P.cyanEclat, P.ecume, 0.5), M: P.cyanEclat, D: mixColor(P.cyanEclat, P.nuitBleue, 0.45) },
     P.cyanEclat,
+  );
+  paintEmblem(
+    scene,
+    TOWN_TEX.markerAmbush,
+    QUEST_MARK,
+    { O: mixColor(P.ombreProfonde, P.rougeCendre, 0.4), H: 0xffd9cf, L: 0xff7a62, M: 0xe8302a, D: 0x9c1c1c },
+    0xe8302a,
   );
   paintEmblem(scene, TOWN_TEX.questSpark, SPARK, { H: P.ecume, L: P.lumiereDoree }, P.lumiereDoree);
   paintGlow(scene);
