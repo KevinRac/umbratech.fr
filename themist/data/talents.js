@@ -5,10 +5,10 @@
 (function(D){D.talents={
  // Formes jouables : nom, nom court, couleur, racine de l'arbre, kit de base, sous-classes
  formes:{
-  lum:{name:'Le Lumenarque',short:'Lumenarque',color:'#f3b94d',root:'Éveil du Lumenarque',rootDesc:'Ton kit de base : Coup de lanterne, Faisceau, Esquive et Lancer de lanterne.',subs:['sol','omb']},
-  gou:{name:'Le Gouffre',short:'Gouffre',color:'#8fd46e',root:'Éveil du Gouffre',rootDesc:'Ton kit de base : Mâchoire, Dévorer, Ruée et Recracher.',subs:['sai','abe']},
-  her:{name:'Le Héraut du Glas',short:'Héraut',color:'#8ec5ff',root:'Éveil du Héraut',rootDesc:'Ton kit de base : Coup de cloche, Volée, Pas de danse et Grand Glas. Agis au bon moment pour faire résonner chaque geste.',subs:['dgl','chd']},
-  tis:{name:'Le Tisse-Destin',short:'Tisse-Destin',color:'#ff6b8a',root:'Éveil du Tisse-Destin',rootDesc:'Ton kit de base : Aiguilles, Fil, Esquive et Arracher. Noue, puis tire.',subs:['gts','mdp']}},
+  lum:{name:'Le Lumenarque',short:'Lumenarque',color:'#f3b94d',root:'Éveil du Lumenarque',rootDesc:'Ton kit de base : Coup de lanterne, Faisceau, Esquive et Lancer de lanterne.',subs:['sol','omb','pha']},
+  gou:{name:'Le Gouffre',short:'Gouffre',color:'#8fd46e',root:'Éveil du Gouffre',rootDesc:'Ton kit de base : Mâchoire, Dévorer, Ruée et Recracher.',subs:['sai','abe','aby']},
+  her:{name:'Le Héraut du Glas',short:'Héraut',color:'#8ec5ff',root:'Éveil du Héraut',rootDesc:'Ton kit de base : Coup de cloche, Volée, Pas de danse et Grand Glas. Agis au bon moment pour faire résonner chaque geste.',subs:['dgl','chd','val']},
+  tis:{name:'Le Tisse-Destin',short:'Tisse-Destin',color:'#ff6b8a',root:'Éveil du Tisse-Destin',rootDesc:'Ton kit de base : Aiguilles, Fil, Esquive et Arracher. Noue, puis tire.',subs:['gts','mdp','bro']}},
  // Branches : forme, nom, couleur, angle dans l'arbre, sous-classe (voie)
  branches:{
   ray:{cls:'lum',name:'Rayonnement',color:'#f2c14e',ang:-90,sub:false},
@@ -16,21 +16,25 @@
   fan:{cls:'lum',name:'Fanal',color:'#ea7a43',ang:45,sub:false},
   sol:{cls:'lum',name:'Soleil Noir',color:'#ff5f45',ang:0,sub:true,voie:'Voie de la lumière'},
   omb:{cls:'lum',name:'Ombrelame',color:'#7a95ff',ang:180,sub:true,voie:'Voie de l’ombre'},
+  pha:{cls:'lum',name:'Gardien du Phare',color:'#ffe39a',ang:90,sub:true,voie:'Voie de la lanterne'},
   vor:{cls:'gou',name:'Voracité',color:'#7fd06a',ang:-90,sub:false},
   dif:{cls:'gou',name:'Difformité',color:'#e0574f',ang:135,sub:false},
   reg:{cls:'gou',name:'Régurgitation',color:'#dcc84c',ang:45,sub:false},
   sai:{cls:'gou',name:'Saint Dévorant',color:'#f1e2b4',ang:0,sub:true,voie:'Voie de la purification'},
   abe:{cls:'gou',name:'Aberration',color:'#c25bd6',ang:180,sub:true,voie:'Voie de la mutation'},
+  aby:{cls:'gou',name:'Gueule-Abîme',color:'#3fc8a8',ang:90,sub:true,voie:'Voie de la faim'},
   car:{cls:'her',name:'Carillon',color:'#e0b468',ang:-90,sub:false},
   cad:{cls:'her',name:'Cadence',color:'#8ec5ff',ang:135,sub:false},
   req:{cls:'her',name:'Requiem',color:'#b48cff',ang:45,sub:false},
   dgl:{cls:'her',name:'Dernier Glas',color:'#ff8f6b',ang:0,sub:true,voie:'Voie de l’exécution'},
   chd:{cls:'her',name:'Chœur des Damnés',color:'#9fe6e0',ang:180,sub:true,voie:'Voie des échos'},
+  val:{cls:'her',name:'Valseur Funèbre',color:'#f29ad8',ang:90,sub:true,voie:'Voie de la danse'},
   trm:{cls:'tis',name:'Trame',color:'#ff6b8a',ang:-90,sub:false},
   aig:{cls:'tis',name:'Aiguilles',color:'#e8d9c8',ang:135,sub:false},
   pnt:{cls:'tis',name:'Pantins',color:'#c58cff',ang:45,sub:false},
   gts:{cls:'tis',name:'Grande Tisseuse',color:'#ff9ec0',ang:0,sub:true,voie:'Voie de la toile'},
-  mdp:{cls:'tis',name:'Maître des Pantins',color:'#c9a26a',ang:180,sub:true,voie:'Voie du contrôle'}},
+  mdp:{cls:'tis',name:'Maître des Pantins',color:'#c9a26a',ang:180,sub:true,voie:'Voie du contrôle'},
+  bro:{cls:'tis',name:'Brodeuse d’Âmes',color:'#ffd36e',ang:90,sub:true,voie:'Voie de l’aiguille'}},
  // Genres de nœud affichés
  genres:{m:'Mineur',s:'Compétence',k:'Nœud clé',c:'Sous-classe',x:'Majeur'},
  // Talents. k : genre (m mineur, s compétence, x majeur, k nœud clé, c sous-classe), fixé par le code de l'arbre
@@ -92,6 +96,34 @@
   mdp_s4:{k:'s',name:'Fils de Commande',max:2,desc:'Arracher convertit les 2 ennemis tirés les plus faibles.',up:'Les 3 plus faibles.'},
   mdp_s5:{k:'s',name:'Sacrifice',max:2,desc:'À la fin de son temps, un pantin explose (rayon 100, 50 dégâts).',up:'Explosion à 90 dégâts.'},
   mdp_sk:{k:'k',name:'Grand Guignol',max:1,desc:'Débloque Grand Guignol [F] : tous les ennemis de la salle, sauf le gardien, deviennent tes pantins pendant 5 s, puis reprennent leurs esprits. Recharge 28 s.'},
+  // Gardien du Phare (Lumenarque)
+  pha_s1:{k:'c',name:'Gardien du Phare',max:1,desc:'Posée au sol, ta lanterne devient un phare : toutes les 1,5 s, elle émet une pulsation de lumière autour d’elle (20 dégâts, rayon 130).'},
+  pha_s2:{k:'m',name:'Huile de baleine',max:3,desc:'+15 % de dégâts de ta lanterne : lancer, pulsations et éclats.'},
+  pha_s3:{k:'m',name:'Lentille de Fresnel',max:3,desc:'+10 % de rayon pour la lumière de ta lanterne posée et pour ses pulsations.'},
+  pha_s4:{k:'s',name:'Feu de position',max:2,desc:'Posée, ta lanterne tire un éclat de lumière (14) sur l’ennemi le plus proche toutes les 0,8 s.',up:'Un éclat toutes les 0,5 s.'},
+  pha_s5:{k:'s',name:'Corne de brume',max:2,desc:'Les pulsations ralentissent les ennemis touchés de 30 % pendant 1,5 s.',up:'Elles les étourdissent aussi 0,3 s.'},
+  pha_sk:{k:'k',name:'Phare Tournant',max:1,desc:'Débloque Phare Tournant [F] : un phare se dresse là où tu te tiens pendant 7 s. Son double faisceau (540 de long) tourne sur lui-même, brûle tout ce qu’il balaie (90 par seconde) et l’expose. Recharge 26 s.'},
+  // Gueule-Abîme (Gouffre)
+  aby_s1:{k:'c',name:'Gueule-Abîme',max:1,desc:'Dévorer attire 30 % plus fort. Un ennemi qui meurt pendant que tu le dévores est englouti : +8 Corruption et +4 PV.'},
+  aby_s2:{k:'m',name:'Estomac sans fond',max:3,desc:'+10 % de dégâts de Dévorer.'},
+  aby_s3:{k:'m',name:'Mâchoires larges',max:3,desc:'+8 % de portée de Dévorer.'},
+  aby_s4:{k:'s',name:'Avaleur de Brume',max:2,desc:'Dévorer avale les projectiles ennemis pris dans son cône : +2 Corruption chacun.',up:'Chaque projectile avalé te rend aussi 2 PV.'},
+  aby_s5:{k:'s',name:'Engloutir',max:2,desc:'Dévorer achève d’un coup les ennemis ordinaires (ni élites ni gardiens) sous 15 % de PV.',up:'Seuil porté à 25 %.'},
+  aby_sk:{k:'k',name:'Gueule du Monde',max:1,desc:'Débloque Gueule du Monde [F] : une gueule géante s’ouvre dans le sol, là où tu vises. Pendant 2,5 s, elle aspire les ennemis et avale leurs projectiles (rayon 260), puis se referme : 200 dégâts. Chaque ennemi qu’elle tue te rend 10 Corruption et 5 PV. Recharge 26 s.'},
+  // Valseur Funèbre (Héraut)
+  val_s1:{k:'c',name:'Valseur Funèbre',max:1,desc:'Un Pas de danse correct trace une piste de danse au sol (rayon 90) pendant 3 temps : à chaque temps, elle frappe les ennemis qui s’y trouvent (16 dégâts). Tant que tu danses sur une piste, ta Cadence ne retombe pas.'},
+  val_s2:{k:'m',name:'Talons ferrés',max:3,desc:'+15 % de dégâts de tes pistes de danse.'},
+  val_s3:{k:'m',name:'Grand salon',max:3,desc:'+12 % de rayon pour tes pistes de danse.'},
+  val_s4:{k:'s',name:'Ronde',max:2,desc:'Tes pistes de danse durent 5 temps.',up:'Elles ralentissent aussi de 30 % les ennemis qui s’y trouvent.'},
+  val_s5:{k:'s',name:'Révérence',max:2,desc:'Un Pas de danse parfait fait éclater toutes tes pistes : chacune inflige 40 dégâts et repousse les ennemis.',up:'Éclat porté à 65 dégâts.'},
+  val_sk:{k:'k',name:'Bal des Morts',max:1,desc:'Débloque Bal des Morts [F] : pendant 8 temps, toute la salle devient un damier qui s’allume en alternance au rythme du glas. Chaque ennemi sur une dalle allumée subit 30 dégâts et reste étourdi 0,3 s. Ta Cadence ne retombe pas pendant le bal. Recharge 26 s.'},
+  // Brodeuse d’Âmes (Tisse-Destin)
+  bro_s1:{k:'c',name:'Brodeuse d’Âmes',max:1,desc:'Toutes les 6 aiguilles qui touchent, ta prochaine aiguille est une Aiguille d’âme : dorée, elle traverse tout et inflige ×2,5.'},
+  bro_s2:{k:'m',name:'Acier fin',max:3,desc:'+8 % de dégâts des aiguilles.'},
+  bro_s3:{k:'m',name:'Point serré',max:3,desc:'Il faut une aiguille de moins par rang pour charger une Aiguille d’âme (5, puis 4, puis 3).'},
+  bro_s4:{k:'s',name:'Dé à coudre',max:2,desc:'À son premier impact, une Aiguille d’âme se fend en 3 aiguilles (60 % de dégâts).',up:'5 aiguilles.'},
+  bro_s5:{k:'s',name:'Faufilage',max:2,desc:'Tes aiguilles ralentissent les ennemis touchés de 25 % pendant 1 s.',up:'Ralentissement de 40 %.'},
+  bro_sk:{k:'k',name:'Temps Suspendu',max:1,desc:'Débloque Temps Suspendu [F] : le temps se fige 2,5 s et le monde perd ses couleurs. Les ennemis et leurs projectiles s’arrêtent, et chaque aiguille que tu tires reste suspendue dans l’air. Quand le temps reprend, elles repartent toutes d’un coup en Aiguilles d’âme, à tête chercheuse. Recharge 28 s.'},
   // Rayonnement (Lumenarque)
   ray_n1:{k:'m',name:'Faisceau chargé',max:3,desc:'Garder le Faisceau sur la durée le charge : jusqu’à +17 % / +33 % / +50 % de dégâts après 2 s de tir continu.'},
   ray_n2:{k:'m',name:'Lueur d’aplomb',max:3,desc:'Tuer un ennemi exposé rend 4 Lueur par rang. Chaque coup de lanterne sur un exposé en rend 1,5 de plus par rang.'},

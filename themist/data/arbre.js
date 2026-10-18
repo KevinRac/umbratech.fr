@@ -39,7 +39,7 @@
  const rot=(x,y,t)=>{const c=Math.cos(t*Math.PI/180),s=Math.sin(t*Math.PI/180),dx=x-TC,dy=y-TC;return[TC+dx*c-dy*s,TC+dx*s+dy*c];};
  const angle=br=>{let t=-90-T.branches[br].ang;while(t>180)t-=360;while(t<=-180)t+=360;return t;};
  function cadre(cls,br){
-  if(!br||br==='tout')return{x:40,y:0,w:820,h:800,t:0};
+  if(!br||br==='tout')return{x:40,y:0,w:820,h:828,t:0};
   const t=angle(br),pts=[[TC,TC],...idsOf(cls).filter(id=>brOf(id)===br).map(id=>rot(...pos(id),t)),[TC,TC-(T.branches[br].sub?372:440)]];
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   for(const [x,y] of pts){x0=Math.min(x0,x-70);x1=Math.max(x1,x+70);y0=Math.min(y0,y-30);y1=Math.max(y1,y+54);}
@@ -97,7 +97,7 @@
  // (qui contre-pivote, pour que les noms restent droits). Voir vue().
  function dessiner(o){
   const cls=o.cls,F=T.formes[cls],etat=o.etat||(()=>({})),st=!!o.statique;
-  let s=`<svg class="ar" data-cls="${cls}" viewBox="40 0 820 800" role="group" aria-label="Arbre de talents : ${esc(F.short)}">`;
+  let s=`<svg class="ar" data-cls="${cls}" viewBox="40 0 820 828" role="group" aria-label="Arbre de talents : ${esc(F.short)}">`;
   s+=G.anneaux.map(r=>`<circle class="ar-ring" cx="${TC}" cy="${TC}" r="${r}"/>`).join('');
   s+='<g class="world">';
   for(const [a,b,br] of aretes(cls)){
@@ -114,7 +114,8 @@
   };
   for(const br of branchesOf(cls)){
    const B=T.branches[br],a=B.ang*Math.PI/180,sealed=!st&&B.sub&&o.scelle&&o.scelle(br);
-   if(B.sub){s+=titre(br,'ov',TC+Math.cos(a)*252,TC-100,sealed)+titre(br,'zl',TC+Math.cos(a)*372,TC+Math.sin(a)*372+8,sealed);}
+   // voie du bas (troisième sous-classe) : titre d'ensemble sous son dernier nœud ; voies latérales : dans un quart libre du haut
+   if(B.sub){s+=(Math.sin(a)>0.5?titre(br,'ov',TC,TC+352,sealed):titre(br,'ov',TC+Math.cos(a)*252,TC-100,sealed))+titre(br,'zl',TC+Math.cos(a)*372,TC+Math.sin(a)*372+8,sealed);}
    else{const R=B.ang===-90?434:452;s+=titre(br,'ov',TC+Math.cos(a)*R,TC+Math.sin(a)*R+(B.ang===-90?10:8),false);}
   }
   const er=etat('root')||{};
