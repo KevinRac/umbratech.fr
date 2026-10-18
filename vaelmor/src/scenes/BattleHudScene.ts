@@ -990,7 +990,7 @@ export class BattleHudScene extends Phaser.Scene {
     const rosterH = (34 + rosterRows * 22 + 6) * S;
     parts.push(drawPanel(this, lx, top, colW, rosterH, { scale: 2 * S, depth: DEPTH.prep }));
     this.prepRects.push({ x: lx, y: top, w: colW, h: rosterH });
-    parts.push(addText(this, lx + 10 * S, top + 7 * S, 'Compagnie', { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 1));
+    parts.push(addText(this, lx + 10 * S, top + 7 * S, '1 · Compagnie', { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 1));
     parts.push(addText(this, lx + colW - 10 * S, top + 7 * S, `${view.deployed}/${view.maxDeploy} déployés`, { scale: S, color: view.deployed >= view.maxDeploy ? PALETTE.lumiereDoree : PALETTE.parchemin, align: 'right' }).setDepth(DEPTH.prep + 1));
     const rosterFrame = this.add.rectangle(lx + 3 * S, top + 29 * S, colW - 6 * S, rosterRows * 22 * S + 6 * S, 0, 0).setOrigin(0, 0).setStrokeStyle(S, PALETTE.ambre, 0.8).setDepth(DEPTH.prep + 1);
     parts.push(rosterFrame);
@@ -1049,22 +1049,24 @@ export class BattleHudScene extends Phaser.Scene {
     parts.push(addText(this, rx + 10 * S, top + 7 * S, 'Ennemis en vue', { scale: S, color: PALETTE.braise }).setDepth(DEPTH.prep + 1));
     parts.push(...infoTexts);
 
+    // Dans l'ordre où l'on prépare : formation, équipement, objets, puis « Combattre » (la validation) en bas.
     const items: MenuItem[] = [
-      { label: 'Combattre', onSelect: () => cb.onFight() },
       { label: 'Formation Auto', enabled: !view.locked, onSelect: () => cb.onAuto() },
       { label: 'Placer les unités', enabled: !view.locked, onSelect: () => cb.onPlace() },
       { label: 'Équipement', enabled: view.unit !== null, onSelect: () => cb.onEquip() },
       { label: 'Objets', enabled: view.unit !== null, onSelect: () => cb.onItems() },
+      { label: 'Combattre !', onSelect: () => cb.onFight() },
       ...(cb.onBack && view.canRetreat ? [{ label: 'Retour', onSelect: () => cb.onBack?.() }] : []),
     ];
     const lineH = 26 * S;
     const my = top + infoH + 6 * S;
-    const mh = items.length * lineH + 14 * S;
+    const mh = items.length * lineH + 30 * S;
     parts.push(drawPanel(this, rx, my, colW, mh, { scale: 2 * S, depth: DEPTH.prep }));
     this.prepRects.push({ x: rx, y: my, w: colW, h: mh });
-    const menuFrame = this.add.rectangle(rx + 3 * S, my + 3 * S, colW - 6 * S, mh - 6 * S, 0, 0).setOrigin(0, 0).setStrokeStyle(S, PALETTE.ambre, 0.8).setDepth(DEPTH.prep + 1);
+    const menuFrame = this.add.rectangle(rx + 3 * S, my + 19 * S, colW - 6 * S, mh - 22 * S, 0, 0).setOrigin(0, 0).setStrokeStyle(S, PALETTE.ambre, 0.8).setDepth(DEPTH.prep + 1);
     parts.push(menuFrame);
-    this.prepMenu = new VerticalMenu(this, rx + 6 * S, my + 7 * S, items, this.actions, { width: colW - 12 * S, lineHeight: lineH, depth: DEPTH.prep + 1, scale: 2 * S, textScale: S });
+    parts.push(addText(this, rx + 10 * S, my + 7 * S, '2 · Préparer, puis combattre', { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 1));
+    this.prepMenu = new VerticalMenu(this, rx + 6 * S, my + 23 * S, items, this.actions, { width: colW - 12 * S, lineHeight: lineH, depth: DEPTH.prep + 1, scale: 2 * S, textScale: S });
     this.prepMenu.selectIndex(menuIndex);
     this.prepFrames = { roster: rosterFrame, menu: menuFrame };
     if (view.message) parts.push(addText(this, width / 2, height - (BOTTOM_BAR + 22) * S, view.message, { scale: S, color: PALETTE.braise, align: 'center' }).setDepth(DEPTH.prep + 2));
