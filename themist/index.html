@@ -4298,7 +4298,7 @@ function ring10(x,y,R,dmg,o={}){
  if(!o.quiet)tlights.push({x,y,r:R*1.6,t:0.3,max:0.3,c:o.tint||'warm'});
  return n;}
 function slowIn10(x,y,R,k,t){for(const e of enemies){if(e.dead)continue;if(hyp(e.x-x,e.y-y)<R+e.r){e.slowT=Math.max(e.slowT||0,t);e.slowK=Math.max(e.slowK||0,k);}}}
-function needleAt(x,y,a,dmg,o={}){pproj.push({v6:true,kind:'needle',needle:true,free:true,x:x+Math.cos(a)*10,y:y+Math.sin(a)*10,vx:Math.cos(a)*880,vy:Math.sin(a)*880,r:4,dmg,pierce:1,hit:new Set(),life:0.7,col:'255,120,150',home:o.home?1:0,pref:!!o.pref});}
+function needleAt(x,y,a,dmg,o={}){pproj.push({v6:true,kind:'needle',needle:true,free:true,x:x+Math.cos(a)*10,y:y+Math.sin(a)*10,vx:Math.cos(a)*880,vy:Math.sin(a)*880,r:4,dmg,pierce:1,hit:new Set(o.skip?[o.skip]:[]),life:0.7,col:'255,120,150',home:o.home?1:0,pref:!!o.pref});}
 
 // ───────────────────────── hitEnemy : multiplicateurs, compensation corps à corps, effets sur coup
 const _hit10=hitEnemy;
@@ -4372,7 +4372,7 @@ function onKill10(e){
   if(f.ames){P.res=Math.min(resCap(),P.res+2*f.ames);v.souls=Math.min(5,v.souls+1);}
   if(f.req2B&&RUN.time<v.venT){v.venN=Math.min(5,v.venN+1);P.res=Math.min(resCap(),P.res+4);}
  }else if(cls==='tis'){
-  if(f.aig3A&&v.inNeedle){for(let i=0;i<2;i++){const t=nearestFoe(x,y,420,o=>o!==e&&!o.dead);const a=t?Math.atan2(t.y-y,t.x-x)+(i?0.5:-0.5):rand(0,TAU);needleAt(x,y,a,s.atkDmg*0.8,{home:true,pref:true});}}
+  if(f.aig3A&&v.inNeedle){for(let i=0;i<2;i++){const t=nearestFoe(x,y,420,o=>o!==e&&!o.dead);const a=t?Math.atan2(t.y-y,t.x-x)+(i?0.5:-0.5):rand(0,TAU);needleAt(x,y,a,s.atkDmg*0.8,{home:true,pref:true,skip:e});}}
   if(f.trm1B&&e.tethered&&!(e.boomed>RUN.time-0.5)){e.boomed=RUN.time;deferred.push(()=>{explosion(x,y,80,0,35,{col:'rgba(255,110,160,',spark:'#ff9ec0',light:'blood'});const n=nearestFoe(x,y,150,o=>o!==e&&!o.tethered);if(n)tether(n,true);});}
  }
 }
@@ -4459,7 +4459,7 @@ projHit=function(p,e){
   if(e.tethered){
    if(f.trm3A)P.bob=Math.min(100,P.bob+1);
    if(f.trm1A)for(const th of P.threads)if(th.e!==e&&!th.e.dead)rawHit(th.e,d0*0.25);
-   if(f.pique&&Math.random()<0.25*f.pique){const t=nearestFoe(e.x,e.y,340,o=>o!==e);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),s.atkDmg*0.7);}
+   if(f.pique&&Math.random()<0.25*f.pique){const t=nearestFoe(e.x,e.y,340,o=>o!==e);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),s.atkDmg*0.7,{skip:e});}
    if(p.b10){if(p.lastT&&p.lastT!==e&&!p.lastT.dead&&!e.dead){rawHit(e,20);rawHit(p.lastT,20);fx.push({k:'line',x1:e.x,y1:e.y,x2:p.lastT.x,y2:p.lastT.y,w:3,t:0.25,max:0.25,col:'rgba(255,110,150,'});}p.lastT=e;}
   }
   if(f.trm3B&&P.bob>=99.5&&!e.tethered&&!e.dead&&Math.random()<0.15)tether(e,true);
@@ -4970,7 +4970,7 @@ function tickTis(dt,s,f,v){
  if(f.pnt2A)for(const e of enemies){
   if(e.dead||!(e.puppet>0))continue;
   e.psT=(e.psT||0)-dt;
-  if(e.psT<=0){e.psT=0.7;const t=nearestFoe(e.x,e.y,520,o=>o!==e&&!o.fixed);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),8*s.pupDmg);}
+  if(e.psT<=0){e.psT=0.7;const t=nearestFoe(e.x,e.y,520,o=>o!==e&&!o.fixed);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),8*s.pupDmg,{skip:e});}
  }
  // Toile aimantée / Éventail : les aiguilles qui traversent une toile se multiplient
  if((f.aig1A||f.pnt1A)&&webs.length){
