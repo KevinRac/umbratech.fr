@@ -22,6 +22,7 @@ import type { BattleUnit, Team } from '../logic/tactics/types';
 import { BATTLE_TEX } from '../render/battleTextures';
 import { PALETTE } from '../render/palette';
 import { ALLY_OUTLINE } from '../render/unitSprites';
+import { PrepSheet, type SheetCallbacks, type SheetView } from '../ui/PrepSheet';
 import { drawPanel } from '../ui/panel';
 import { ScrollList, type ListRow } from '../ui/ScrollList';
 import { addText, setText, type PixelText } from '../ui/text';
@@ -117,6 +118,8 @@ export interface PrepCallbacks {
   readonly onToggle: (member: number) => void;
   readonly onFight: () => void;
   readonly onAuto: () => void;
+  /** Clic droit sur un membre : sa fiche, son équipement et son sac. */
+  readonly onSheet: (member: number) => void;
   readonly onEquip: () => void;
   readonly onItems: () => void;
   readonly onPlace: () => void;
@@ -628,7 +631,7 @@ export class BattleHudScene extends Phaser.Scene {
 
   isOverMenu(x: number, y: number): boolean {
     const r = this.menuRect;
-    return (r !== null && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) || this.isOverPrep(x, y);
+    return (r !== null && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) || this.isOverPrep(x, y) || this.sheetOpen;
   }
 
   openMenu(request: MenuRequest): void {
@@ -942,6 +945,7 @@ export class BattleHudScene extends Phaser.Scene {
 
   closePrep(): void {
     this.run(() => {
+      this.sheet?.close();
       this.prepRoster?.destroy();
       this.prepRoster = null;
       this.prepMenu?.destroy();
@@ -951,6 +955,36 @@ export class BattleHudScene extends Phaser.Scene {
       this.prepCallbacks = null;
       this.prepFrames = null;
       this.prepRects = [];
+    });
+  }
+
+  /* ---------- Fiche d'un membre (clic droit) ---------- */
+
+  private sheet: PrepSheet | null = null;
+  private sheetCallbacks: SheetCallbacks | null = null;
+
+  get sheetOpen(): boolean {
+    return this.sheet?.isOpen === true;
+  }
+
+  openSheet(view: SheetView, callbacks: SheetCallbacks): void {
+    this.run(() => {
+      this.sheet ??= new PrepSheet(this, this.S);
+      this.sheetCallbacks = callbacks;
+      this.sheet.draw(view, callbacks);
+    });
+  }
+
+  updateSheet(view: SheetView): void {
+    this.run(() => {
+      if (this.sheet?.isOpen && this.sheetCallbacks) this.sheet.draw(view, this.sheetCallbacks);
+    });
+  }
+
+  closeSheet(): void {
+    this.run(() => {
+      this.sheet?.close();
+      this.sheetCallbacks = null;
     });
   }
 
@@ -1003,7 +1037,8 @@ export class BattleHudScene extends Phaser.Scene {
       onCursor: (i) => {
         if (this.prepView && this.prepView.cursor !== i) cb.onCursor(i);
       },
-      clickSelects: true,
+      hoverSelects: false,
+      onContext: (i) => cb.onSheet(i),
       onActivate: (i) => cb.onToggle(i),
     });
     this.prepRoster.reset(view.roster, cursor);
@@ -1017,7 +1052,7 @@ export class BattleHudScene extends Phaser.Scene {
       const range = unit.weapon.range[0] === unit.weapon.range[1] ? `${unit.weapon.range[0]}` : `${unit.weapon.range[0]}-${unit.weapon.range[1]}`;
       lines.push([`${unit.weapon.name} · portée ${range}`, PALETTE.ocreClair]);
       lines.push([`Accessoire : ${extra?.accessory ?? '—'}`, PALETTE.parchemin]);
-      lines.push([`Objets : ${extra && extra.items.length > 0 ? extra.items.join(', ') : '—'}`, PALETTE.parchemin]);
+      lines.push([`Objets : ${extra && extra.items.length > 0 ? `${extra.items.length} sorte(s), clic droit pour le sac` : '—'}`, PALETTE.parchemin]);
       if (extra?.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}`, PALETTE.lumiereDoree]);
       const fh = Math.min(height - (BOTTOM_BAR + 6) * S - fy, (58 + lines.length * 16) * S);
       parts.push(drawPanel(this, lx, fy, colW, fh, { scale: 2 * S, depth: DEPTH.prep }));
@@ -1087,6 +1122,10 @@ export class BattleHudScene extends Phaser.Scene {
   }
 
   private updatePrepInput(): void {
+    if (this.sheet?.isOpen) {
+      if (this.actions.justPressed('cancel')) this.sheetCallbacks?.onClose();
+      return;
+    }
     if (this.prepPaused || !this.prepView) return;
     if (this.actions.justPressed('left') && this.prepFocus === 'menu') {
       this.prepFocus = 'roster';

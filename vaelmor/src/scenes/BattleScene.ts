@@ -70,6 +70,7 @@ import { PALETTE, mixColor } from '../render/palette';
 import { addText } from '../ui/text';
 import type { MenuItem } from '../ui/VerticalMenu';
 import type { ListRow } from '../ui/ScrollList';
+import type { SheetView } from '../ui/PrepSheet';
 import { BOTTOM_BAR, TEAM_COLOR, TOP_BAR, type BattleHudScene, type DodgeSide, type PrepView, type UnitExtra } from './BattleHudScene';
 import { SCENES } from './keys';
 
@@ -810,8 +811,8 @@ export class BattleScene extends Phaser.Scene {
   private refreshHelp(): void {
     const lines: Record<Mode, readonly (readonly [string, string])[]> = {
       prep: [
-        ['Flèches', 'compagnie / boutons'],
-        ['Entrée ou 2e clic', 'déployer, retirer'],
+        ['Clic gauche', 'déployer, retirer'],
+        ['Clic droit', 'fiche, équipement, sac'],
         ['Clic sur la carte', 'prendre, poser, échanger'],
       ],
       place: [
@@ -900,8 +901,9 @@ export class BattleScene extends Phaser.Scene {
         this.applyPrep();
         this.hud.toast('Formation : les unités de front devant, les soigneurs derrière.');
       },
-      onEquip: () => this.openEquip(),
-      onItems: () => this.openItems(),
+      onSheet: (m) => this.openSheet(m),
+      onEquip: () => this.openSheet(this.prepCursor),
+      onItems: () => this.openSheet(this.prepCursor),
       onPlace: () => this.startPlace(),
       onBack: this.state.ambush ? null : () => this.retreatFromPrep(),
     });
@@ -1066,95 +1068,91 @@ export class BattleScene extends Phaser.Scene {
     if (this.actions.justPressed('confirm')) this.prepClick(this.cursorCell, false, false);
   }
 
-  /** Équipement du membre choisi : arme (du type de sa classe), accessoire. */
-  private openEquip(): void {
-    const m = this.prepCursor;
-    const member = this.party[m];
-    const cls = member ? this.gameData.classes.find((c) => c.id === member.class) : undefined;
-    const loadout = this.loadouts[m];
-    if (!member || !cls || !loadout) return;
-    const weaponName = (id: string | null): string => this.gameData.weapons.find((w) => w.id === (id ?? cls.startingWeapon))?.name ?? '—';
-    const accName = (id: string | null): string => (id ? (this.gameData.accessories.find((a) => a.id === id)?.name ?? id) : 'aucun');
-    const reopen = (index = 0): void => {
-      const weapons = weaponChoices(this.gameData, cls, this.convoy, this.loadouts, m);
-      const accessories = accessoryChoices(this.gameData, this.convoy, this.loadouts, m);
-      const items: MenuItem[] = [
-        {
-          label: `Arme : ${weaponName(loadout.weapon)}`,
-          enabled: weapons.length > 1,
-          onSelect: () => {
-            const current = weapons.indexOf(loadout.weapon ?? cls.startingWeapon);
-            const next = weapons[(current + 1) % weapons.length] as string;
-            loadout.weapon = next === cls.startingWeapon ? null : next;
-            this.applyPrep();
-            reopen(0);
-          },
-        },
-        {
-          label: `Accessoire : ${accName(loadout.accessory)}`,
-          enabled: accessories.length > 1 || loadout.accessory !== null,
-          onSelect: () => {
-            const list = loadout.accessory !== null && !accessories.includes(loadout.accessory) ? [...accessories, loadout.accessory] : accessories;
-            const current = list.indexOf(loadout.accessory);
-            loadout.accessory = list[(current + 1) % list.length] ?? null;
-            this.applyPrep();
-            reopen(1);
-          },
-        },
-        { label: 'Terminé', onSelect: () => this.hud.closeMenu() },
-      ];
-      this.hud.openMenu({ title: `Équipement de ${member.name}`, items, onCancel: () => this.hud.closeMenu(), centered: true, initialIndex: index });
+  /** Fiche du membre : caractéristiques, équipement (un clic change), sac en cases. */
+  private sheetView(member: number, message: string | null = null): SheetView | null {
+    const def = this.party[member];
+    const cls = def ? this.gameData.classes.find((c) => c.id === def.class) : undefined;
+    const loadout = this.loadouts[member];
+    if (!def || !cls || !loadout || !this.plan) return null;
+    const unit = memberUnit(this.gameData, this.rules, def, loadout, 'sheet', member, 0, 0);
+    const max = this.gameData.balance.prep.maxItems;
+    const itemName = (id: string): string => this.gameData.consumables.find((c) => c.id === id)?.name ?? id;
+    const slots: (string | null)[] = [];
+    for (const st of loadout.items) for (let i = 0; i < st.qty; i++) slots.push(itemName(st.item));
+    while (slots.length < max) slots.push(null);
+    const bag = this.gameData.consumables
+      .filter((c) => c.battle && this.convoy.some((st) => st.item === c.id))
+      .map((c) => {
+        const left = Math.max(0, convoyLeft(this.convoy, this.loadouts, c.id));
+        return { id: c.id, label: c.name, left, enabled: left > 0 && carried(loadout) < max };
+      });
+    this.sheetBag = bag.map((b) => b.id);
+    const range = unit.weapon.range[0] === unit.weapon.range[1] ? `${unit.weapon.range[0]}` : `${unit.weapon.range[0]}-${unit.weapon.range[1]}`;
+    const accessory = unit.accessory ? (this.gameData.accessories.find((a) => a.id === unit.accessory)?.name ?? unit.accessory) : 'aucun';
+    const extra = this.unitExtra(unit);
+    const s = unit.stats;
+    return {
+      name: unit.name,
+      kind: unit.kindName,
+      level: unit.level,
+      sprite: unit.sprite,
+      deployed: this.plan.slots.includes(member),
+      stats: [['PV', s.pv], ['Fo', s.fo], ['Mag', s.mag], ['Dex', s.dex], ['Vit', s.vit], ['Déf', s.def], ['Rés', s.res], ['Chc', s.chc], ['Mob', s.mob]],
+      weapon: { name: unit.weapon.name, range, canChange: weaponChoices(this.gameData, cls, this.convoy, this.loadouts, member).length > 1 },
+      accessory: { name: accessory, canChange: accessoryChoices(this.gameData, this.convoy, this.loadouts, member).length > 1 || loadout.accessory !== null },
+      skill: extra.skill ? `${extra.skill.name} · ${extra.skill.cost}` : null,
+      slots,
+      bag,
+      count: `${carried(loadout)}/${max} objets`,
+      message,
     };
-    if (weaponChoices(this.gameData, cls, this.convoy, this.loadouts, m).length <= 1 && accessoryChoices(this.gameData, this.convoy, this.loadouts, m).length <= 1 && loadout.accessory === null) {
-      this.hud.toast(`${member.name} n'a rien d'autre à équiper : le sac ne contient ni arme du même type ni accessoire libre.`);
-      return;
-    }
-    reopen();
   }
 
-  /** Objets du membre choisi : reprendre ce qu'il porte, prendre dans le sac (5 au plus). */
-  private openItems(): void {
-    const m = this.prepCursor;
-    const member = this.party[m];
-    const loadout = this.loadouts[m];
-    if (!member || !loadout) return;
-    const max = this.gameData.balance.prep.maxItems;
-    const name = (id: string): string => this.gameData.consumables.find((c) => c.id === id)?.name ?? id;
-    const build = (): { rows: ListRow[]; actions: (() => string | null)[] } => {
-      const rows: ListRow[] = [];
-      const actions: (() => string | null)[] = [];
-      // Le sac d'abord (le curseur reste sur l'objet qu'on donne), puis ce que l'unité porte.
-      for (const c of this.gameData.consumables) {
-        if (!c.battle) continue;
-        const left = convoyLeft(this.convoy, this.loadouts, c.id);
-        const owned = this.convoy.some((st) => st.item === c.id);
-        if (!owned) continue;
-        rows.push({ label: c.name, right: `×${Math.max(0, left)} dans le sac`, enabled: carried(loadout) < max && left > 0 });
-        actions.push(() => giveItem(this.loadouts, this.convoy, m, c.id, max));
-      }
-      for (const st of loadout.items) {
-        rows.push({ label: `Porté : ${name(st.item)} ×${st.qty}`, right: 'reprendre', color: PALETTE.lumiereDoree });
-        actions.push(() => {
-          takeItem(this.loadouts, m, st.item);
-          return null;
-        });
-      }
-      if (rows.length === 0) rows.push({ label: 'Le sac est vide.', enabled: false });
-      return { rows, actions };
-    };
-    let current = build();
-    const footer = (): string => `${carried(loadout)}/${max} objets portés par ${member.name}`;
-    const refresh = (): void => {
-      current = build();
+  private sheetBag: string[] = [];
+
+  /** Clic droit sur un membre (ou « Équipement », « Objets ») : sa fiche. */
+  private openSheet(member: number): void {
+    this.prepCursor = member;
+    const refresh = (message: string | null = null): void => {
       this.applyPrep();
-      this.hud.updateList(current.rows, footer());
+      const view = this.sheetView(member, message);
+      if (view) this.hud.updateSheet(view);
     };
-    const activate = (index: number): void => {
-      const message = current.actions[index]?.() ?? null;
-      if (message) this.hud.toast(message);
-      refresh();
-    };
-    this.hud.openList(`Objets de ${member.name}`, current.rows, activate, () => this.hud.closeList(), footer());
+    const m = this.party[member];
+    const cls = m ? this.gameData.classes.find((c) => c.id === m.class) : undefined;
+    const loadout = this.loadouts[member];
+    const view = this.sheetView(member);
+    if (!m || !cls || !loadout || !view) return;
+    this.hud.setPrepPaused(true);
+    this.hud.openSheet(view, {
+      onWeapon: () => {
+        const weapons = weaponChoices(this.gameData, cls, this.convoy, this.loadouts, member);
+        const next = weapons[(weapons.indexOf(loadout.weapon ?? cls.startingWeapon) + 1) % weapons.length] as string;
+        loadout.weapon = next === cls.startingWeapon ? null : next;
+        refresh();
+      },
+      onAccessory: () => {
+        const accessories = accessoryChoices(this.gameData, this.convoy, this.loadouts, member);
+        const list = loadout.accessory !== null && !accessories.includes(loadout.accessory) ? [...accessories, loadout.accessory] : accessories;
+        loadout.accessory = list[(list.indexOf(loadout.accessory) + 1) % list.length] ?? null;
+        refresh();
+      },
+      onTake: (slot) => {
+        const flat: string[] = [];
+        for (const st of loadout.items) for (let i = 0; i < st.qty; i++) flat.push(st.item);
+        const item = flat[slot];
+        if (item) takeItem(this.loadouts, member, item);
+        refresh();
+      },
+      onGive: (index) => {
+        const id = this.sheetBag[index];
+        refresh(id ? giveItem(this.loadouts, this.convoy, member, id, this.gameData.balance.prep.maxItems) : null);
+      },
+      onClose: () => {
+        this.hud.closeSheet();
+        this.hud.setPrepPaused(false);
+      },
+    });
   }
 
   private async startFight(): Promise<void> {

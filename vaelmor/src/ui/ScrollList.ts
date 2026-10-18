@@ -27,8 +27,10 @@ export interface ScrollListOptions {
   readonly textScale?: number;
   readonly onCursor?: (index: number) => void;
   readonly onActivate?: (index: number) => void;
-  /** Souris : le survol ne choisit pas, un clic choisit, un clic sur la ligne choisie valide. */
-  readonly clickSelects?: boolean;
+  /** Souris : faux = le survol ne déplace pas le curseur (l'écran qui l'affiche se reconstruirait à chaque survol). */
+  readonly hoverSelects?: boolean;
+  /** Clic droit sur une ligne. */
+  readonly onContext?: (index: number) => void;
 }
 
 export class ScrollList {
@@ -62,13 +64,11 @@ export class ScrollList {
       this.rights.push(right);
       const zone = scene.add.zone(x, rowY, width, rowHeight).setOrigin(0, 0).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => {
-        if (!options.clickSelects) this.moveTo(this.top + i);
+        if (options.hoverSelects !== false) this.moveTo(this.top + i);
       });
-      zone.on('pointerdown', () => {
-        // `clickSelects` : un premier clic choisit la ligne (l'écran qui l'affiche peut alors se reconstruire),
-        // un clic sur la ligne déjà choisie la valide.
-        if (options.clickSelects && this.cursor !== this.top + i) {
-          this.moveTo(this.top + i);
+      zone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (pointer.rightButtonDown()) {
+          options.onContext?.(this.top + i);
           return;
         }
         this.moveTo(this.top + i);
