@@ -5310,6 +5310,8 @@ function openGuide(back){
 }
 const _eh11=enterHub;
 enterHub=function(){_eh11();if(!SAVE.flags.guide)later(1.3,()=>{if(overlayEl.hidden&&state==='play'&&RUN&&RUN.hub)openGuide();});};
+// v16.39 · palier 0 terminé : au premier retour au Sanctuaire, on rappelle que la difficulté se monte au Portail (une seule fois)
+{const _eh1639=enterHub;enterHub=function(){_eh1639();if(SAVE.palierMax>=1&&!SAVE.flags.palHint&&SAVE.flags.guide){SAVE.flags.palHint=1;persist();later(2.4,()=>{if(state==='play'&&RUN&&RUN.hub)toast('Palier 0 terminé ! Au Portail, choisis un Palier de Brume pour monter la difficulté : plus dur, mais plus d’Éclats.',6);});}};}
 
 // ───────────────────────── Écran titre : choix de la forme avant le Sanctuaire
 function titleCls(c){if(!CLS[c])return;chosenCls=c;SAVE.cls=c;persist();P=newPlayer(c);P.x=W/2+150;P.y=H/2+40;sfx('pick');openTitle();}

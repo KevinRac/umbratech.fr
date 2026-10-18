@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.38',
+ actuelle:'v16.39',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-19',h:'v16.39',t:'Palier 0 terminé : au premier retour au Sanctuaire, un message rappelle qu’on peut monter la difficulté en choisissant un Palier de Brume au Portail (affiché une seule fois).'},
   {d:'2026-10-19',h:'v16.38',t:'Piqûre ricochet : 20 % de chances par rang sur tout ennemi touché, 30 % par rang si l’ennemi touché est attaché par un fil (au lieu de 25 % sur un ennemi attaché uniquement).'},
   {d:'2026-10-19',h:'v16.37',t:'Piqûre ricochet (Tisseuse) : l’aiguille gratuite ne se déclenchait presque jamais, car il fallait toucher un ennemi attaché par un fil. Elle se déclenche maintenant sur n’importe quelle aiguille qui touche un ennemi (25 % par rang), attaché ou non, y compris sur le coup qui le tue.'},
   {d:'2026-10-19',h:'v16.36',t:'Correctif : Piqûre ricochet (Tisseuse) lançait bien l’aiguille gratuite, mais elle naissait sur l’ennemi touché, le re-touchait aussitôt et disparaissait sans jamais atteindre le second ennemi. Elle l’ignore maintenant et part droit vers sa cible. Même correction pour les autres aiguilles gratuites nées d’un ennemi (talent de branche Aiguille, marionnette).'},
