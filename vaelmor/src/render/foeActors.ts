@@ -13,6 +13,8 @@ import { FOE_TEX, ensureFoeTextures } from './foeTextures';
 export interface FoeLook {
   readonly color: number;
   readonly boss: boolean;
+  /** Zone de vision à marcher (pixels, degrés) : cône et/ou cercle. Rien pour les ennemis qui n'ont pas de vue (embuscade, boss). */
+  readonly vision?: { readonly circle: number; readonly cone: number; readonly coneAngle: number } | null;
 }
 
 export class FoeActor {
@@ -20,6 +22,7 @@ export class FoeActor {
   private readonly shadow: Phaser.GameObjects.Image;
   private readonly skull: Phaser.GameObjects.Image;
   private readonly bubble: Phaser.GameObjects.Image;
+  private readonly zone: Phaser.GameObjects.Graphics;
   private bubbleUntil = 0;
   private lastKey = '';
   private readonly phase: number;
@@ -40,6 +43,7 @@ export class FoeActor {
     if (boss) this.sprite.setScale(1.15);
     this.skull = scene.add.image(sim.x, sim.y - 36, FOE_TEX.skull).setDepth(depth.marker).setTint(look.color).setVisible(false);
     this.bubble = scene.add.image(sim.x, sim.y - 42, FOE_TEX.bang).setDepth(depth.marker + 0.01).setVisible(false);
+    this.zone = scene.add.graphics().setDepth(depth.shadow + 0.05).setVisible(false);
   }
 
   /** Bulle au-dessus de la tête : « ! » (repéré) ou « ? » (piste perdue). */
@@ -57,6 +61,7 @@ export class FoeActor {
     this.sprite.setVisible(!hidden);
     this.shadow.setVisible(!hidden);
     if (hidden) {
+      this.zone.setVisible(false);
       this.skull.setVisible(false);
       this.bubble.setVisible(false);
       return;
@@ -78,13 +83,53 @@ export class FoeActor {
     const bob = Math.round(Math.sin((time + this.phase) / 300) * 1);
     const top = y - 38 - (this.look.boss ? 5 : 0);
     this.skull.setVisible(indicator && sim.mode !== 'flee').setPosition(x, top + bob);
+    // Le « ! » reste affiché tant que l'ennemi donne l'alerte ou poursuit : on voit qu'on est repéré.
+    const hunting = sim.mode === 'alert' || sim.mode === 'chase';
+    if (hunting && time >= this.bubbleUntil) this.bubbleUntil = time + 1;
     const bubbleOn = time < this.bubbleUntil;
-    this.bubble.setVisible(bubbleOn).setPosition(x, top - (indicator ? 12 : 0));
+    if (hunting) this.bubble.setTexture(FOE_TEX.bang);
+    const pulse = hunting ? 1 + 0.15 * Math.sin(time / 90) : 1;
+    this.bubble.setVisible(bubbleOn).setPosition(x, top - (indicator ? 12 : 0)).setScale(pulse);
+    this.drawVision(x, y, indicator, hunting);
     // La vigie alertée ou le poursuivant se tient « sur ses gardes » : léger sursaut.
     if (sim.mode === 'alert') this.sprite.setY(y + 2 - (Math.floor(time / 90) % 2));
   }
 
+  /** Cône et cercle de vision à l'écran, comme dans un jeu d'infiltration : on sait où l'on est vu. */
+  private drawVision(x: number, y: number, indicator: boolean, hunting: boolean): void {
+    const v = this.look.vision;
+    const sim = this.sim;
+    const visible = v != null && indicator && sim.mode !== 'flee' && sim.mode !== 'dormant';
+    this.zone.setVisible(visible);
+    if (!visible || !v) return;
+    const g = this.zone;
+    g.clear();
+    const color = hunting ? 0xff3a20 : 0xffb030;
+    const fill = hunting ? 0.32 : 0.2;
+    const feetY = y - 6;
+    if (v.cone > 0) {
+      const half = (v.coneAngle / 2) * (Math.PI / 180);
+      g.fillStyle(color, fill);
+      g.slice(x, feetY, v.cone, sim.aim - half, sim.aim + half, false);
+      g.fillPath();
+      g.lineStyle(1, color, hunting ? 0.9 : 0.5);
+      g.beginPath();
+      g.moveTo(x, feetY);
+      g.lineTo(x + Math.cos(sim.aim - half) * v.cone, feetY + Math.sin(sim.aim - half) * v.cone);
+      g.arc(x, feetY, v.cone, sim.aim - half, sim.aim + half, false);
+      g.lineTo(x, feetY);
+      g.strokePath();
+    }
+    if (v.circle > 0) {
+      g.fillStyle(color, fill * 0.7);
+      g.fillCircle(x, feetY, v.circle);
+      g.lineStyle(1, color, hunting ? 0.9 : 0.45);
+      g.strokeCircle(x, feetY, v.circle);
+    }
+  }
+
   destroy(): void {
+    this.zone.destroy();
     this.sprite.destroy();
     this.shadow.destroy();
     this.skull.destroy();

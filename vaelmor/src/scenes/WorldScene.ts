@@ -1027,7 +1027,9 @@ export class WorldScene extends Phaser.Scene {
         const boss = def.kind === 'boss';
         const sim = createFoe(def, { encounterId: encounter.id, level, weak: foeFlees(foesCfg, def, level, this.partyLvl) }, tile);
         const color = Phaser.Display.Color.HexStringToColor(difficultyOf(foesCfg, level, this.partyLvl, boss).color).color;
-        this.foeActors.set(def.id, new FoeActor(this, sim, def.sprite, { color, boss }, { entities: DEPTH.entities, marker: DEPTH.marker, shadow: DEPTH.shadow }));
+        const det = foesCfg.detection[def.kind];
+        const vision = det.radius > 0 || det.coneRange > 0 ? { circle: det.radius * tile, cone: det.coneRange * tile, coneAngle: det.coneAngle } : null;
+        this.foeActors.set(def.id, new FoeActor(this, sim, def.sprite, { color, boss, vision: boss || def.kind === 'embuscade' ? null : vision }, { entities: DEPTH.entities, marker: DEPTH.marker, shadow: DEPTH.shadow }));
       } else if (!present && actor) {
         actor.destroy();
         this.foeActors.delete(def.id);
