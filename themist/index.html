@@ -8018,7 +8018,7 @@ function demoBoot(cls){
    const n=o.points==null?MQ.coutures.length:o.points;c.lineCap='round';
    // n peut être fractionnaire pendant la couture : le point en cours se trace trait par trait (une diagonale, puis l'autre)
    for(let i=0;i<n&&i<MQ.coutures.length;i++){const [px,py,pa]=MQ.coutures[i],f=Math.min(1,n-i),a1=clamp(f*2,0,1),a2=clamp(f*2-1,0,1);c.save();c.translate(px,py);c.rotate(pa*Math.PI/180);
-    for(const [w,col] of [[3.4,COL.trait],[1.3,COL.fil||COL.fissure]]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(-6,-4);c.lineTo(-6+12*a1,-4+8*a1);if(a2>0){c.moveTo(-6,4);c.lineTo(-6+12*a2,4-8*a2);}c.stroke();}c.restore();}}
+    const ep=o.couture?1.6:1;for(const [w,col] of [[3.4*ep,COL.trait],[1.3*ep,o.couture?'#f4ecff':(COL.fil||COL.fissure)]]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(-6,-4);c.lineTo(-6+12*a1,-4+8*a1);if(a2>0){c.moveTo(-6,4);c.lineTo(-6+12*a2,4-8*a2);}c.stroke();}c.restore();}}
   c.restore();}
  window.__asm.drawMask=drawMask;
  // Pour essayer en jeu, depuis la console : __asm.essai() ; __asm.essai('voile:onde+cone>charge', 3) ; troisième argument vrai : sans la première vague
@@ -8212,21 +8212,25 @@ function demoBoot(cls){
   let mx=fx,my=fy,sc=1;
   if(!M.pose){const k=ease((M.t-d0)/MO.masqueS);my=(fy-off)-(RM?0:(1-k)*170);if(RM)c.globalAlpha=M.t<d0?0:clamp((M.t-d0)/MO.masqueS,0.25,1);}
   const N=MQ.coutures.length,pf=M.pose?clamp((M.t-d1)/MO.coutureS*N,0,N):0,cur=Math.min(N-1,Math.floor(pf)),fr=pf-Math.floor(pf);
-  if(M.pose){const u=clamp((M.t-d1)/0.12,0,1);sc=RM?1:1.28-0.28*u;
+  const Z=MO.zoomCouture||1,zin=RM?1:clamp((M.t-d1-0.1)/0.2,0,1),zout=RM?1:clamp((d2-M.t)/0.25,0,1),zk=M.pose&&M.t<d2?Math.min(zin,zout):0,zoom=1+(Z-1)*zk;
+  if(M.pose){const u=clamp((M.t-d1)/0.12,0,1);sc=(RM?1:1.28-0.28*u)*zoom;
    // chaque point tire le masque contre la tête : il se serre un instant
    if(!RM&&pf<N){const tug=Math.max(0,1-fr*4);sc*=1-0.05*tug;my+=1.5*tug;}}
-  drawMask(c,mx,my,h,'calme',{sc,points:pf,lit:M.t>=d2});c.globalAlpha=1;
+  if(zk>0){c.save();c.globalCompositeOperation='lighter';glow(c,mx,my,h*zoom*0.9,'190,160,255',0.22*zk);c.restore();}
+  drawMask(c,mx,my,h,'calme',{sc,points:pf,lit:M.t>=d2,couture:M.pose&&M.t<d2});c.globalAlpha=1;
   // l'aiguille : elle trace le point en cours, tirée par un fil qui remonte jusqu'à la croix du Brumeux
   if(M.pose&&pf<N&&M.t<d2){const s2=h/MQ.vb[1]*sc,[px,py,pa]=MQ.coutures[cur],ra=pa*Math.PI/180,f1=clamp(fr*2,0,1),f2=clamp(fr*2-1,0,1);
    const lx=f2>0?-6+12*f2:-6+12*f1,ly=f2>0?4-8*f2:-4+8*f1,dx=f2>0?12:12,dy=f2>0?-8:8;
    const W=(u,v)=>[mx+(px-MQ.centre[0]+u*Math.cos(ra)-v*Math.sin(ra))*s2,my+(py-MQ.centre[1]+u*Math.sin(ra)+v*Math.cos(ra))*s2];
-   const [nx,ny]=W(lx,ly),[tx,ty]=W(lx+dx*0.9,ly+dy*0.9),ang=Math.atan2(ty-ny,tx-nx),L=15;
+   const [nx,ny]=W(lx,ly),[tx,ty]=W(lx+dx*0.9,ly+dy*0.9),ang=Math.atan2(ty-ny,tx-nx),L=28;
    const ex=nx-Math.cos(ang)*L,ey=ny-Math.sin(ang)*L;
    c.save();c.lineCap='round';
-   c.strokeStyle=`rgba(${FIL},0.8)`;c.lineWidth=1.2;c.beginPath();c.moveTo(ex,ey);c.quadraticCurveTo(ex-10,(ey+by)/2,bx,by);c.stroke();
-   c.strokeStyle='rgba(20,14,34,.95)';c.lineWidth=3.6;c.beginPath();c.moveTo(ex,ey);c.lineTo(nx,ny);c.stroke();
-   c.strokeStyle='#e9e4f4';c.lineWidth=1.8;c.beginPath();c.moveTo(ex,ey);c.lineTo(nx,ny);c.stroke();
-   c.globalCompositeOperation='lighter';glow(c,nx,ny,8,'235,220,255',0.85);c.restore();}
+   c.strokeStyle=`rgba(${FIL},0.25)`;c.lineWidth=5;c.beginPath();c.moveTo(ex,ey);c.quadraticCurveTo(ex-10,(ey+by)/2,bx,by);c.stroke();
+   c.strokeStyle='rgba(244,236,255,.95)';c.lineWidth=1.8;c.beginPath();c.moveTo(ex,ey);c.quadraticCurveTo(ex-10,(ey+by)/2,bx,by);c.stroke();
+   c.strokeStyle='rgba(20,14,34,.95)';c.lineWidth=6;c.beginPath();c.moveTo(ex,ey);c.lineTo(nx,ny);c.stroke();
+   c.strokeStyle='#f1edf8';c.lineWidth=3;c.beginPath();c.moveTo(ex,ey);c.lineTo(nx,ny);c.stroke();
+   c.fillStyle='rgba(20,14,34,.95)';c.beginPath();c.arc(ex+Math.cos(ang)*4,ey+Math.sin(ang)*4,1.6,0,TAU);c.fill();   // le chas
+   c.globalCompositeOperation='lighter';glow(c,nx,ny,16,'235,220,255',0.95);c.restore();}
   // fils de marionnette : une croix de manipulation au-dessus, des fils vers ses épaules et vers le masque ; coupés, ils remontent
   if(q>=1)return;
   const pts=[[e.x-e.r*0.8,e.y-e.r*0.15],[e.x+e.r*0.8,e.y-e.r*0.15],[mx,my-h*0.5]],lerp=(a,b,t)=>a+(b-a)*t;
@@ -8242,7 +8246,8 @@ function demoBoot(cls){
   if(!M.sol&&M.t>=d0){M.sol=true;sparks(e.x,e.y+e.r*0.6,6,'#b9a6ff');if(!RM)shake(2,0.08);sfx('asm_sol');}
   if(!M.pose&&M.t>=d1){M.pose=true;e.flash=0.12;if(!RM)shake(3,0.1);sfx('asm_pose');}
   const N=MQ.coutures.length,n=M.pose?Math.min(N,Math.floor((M.t-d1)/MO.coutureS*N)+1):0;
-  while(M.n<n){M.n++;sfx('asm_point');}
+  while(M.n<n){M.n++;sfx('asm_point');   // étincelles là où l'aiguille perce
+   try{const [px0,py0]=facePos(e),h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max)*(MO.zoomCouture||1),s2=h/MQ.vb[1],[px,py]=MQ.coutures[M.n-1];sparks(px0+(px-MQ.centre[0])*s2,py0+(py-MQ.centre[1])*s2,5,'#efe4ff');}catch(err){}}
   if(!M.coupe&&M.t>=d2){M.coupe=true;sfx('asm_coupe');}
   if(M.t>=M.tot){S.mont=null;tlights.push({x:e.x,y:e.y,r:260,t:0.35,max:0.35,c:'violet'});sfx('asm_pret');}}
  window.__asm.montage=MT;
