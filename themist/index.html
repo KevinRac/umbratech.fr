@@ -410,6 +410,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 @media (max-width:860px){.rz-wrap{grid-template-columns:1fr}.rz-d{position:static}}
 </style>
 <script src="data/equipements.js"></script>
+<script src="data/icones-objets.js"></script>
 <script src="data/reliques.js"></script>
 <script src="data/icones.js"></script>
 <script src="data/pactes.js"></script>
@@ -5822,7 +5823,24 @@ function drawRolePost(e){const R=ROLES[e.role];if(!R)return;const c=ctx,x=e.x,y=
 // Données des équipements (noms, raretés, textes, taux) : data/equipements.js. Ici, seulement les effets codés.
 const EQ_D=window.BRUME_DATA.equipements,RAR=EQ_D.raretes;
 const eqFx=(O,F)=>{for(const k in F)Object.assign(O[k],F[k]);};
-const EQ_IC={arme:'M5 19l9-9m0 0l4-6 2 2-6 4m-5 4l2 2m-6 0l3 3',armure:'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z',relique:'M9 4h6l1 3H8zM8 7h8v9a4 4 0 01-8 0zM12 11v4',talisman:'M7 4c2 3 8 3 10 0M12 7v3M12 10a4 4 0 104 4 4 4 0 00-4-4z'};
+const EQ_IC=window.BRUME_DATA.iconesObjets.vide;
+// v16.33 · emplacements fixes : un seul type d'objet par emplacement (I Arme · II Main gauche · III Armure · IV Talisman, data/equipements.js).
+// Icônes peintes (data/icones-objets.js) et fiche d'objet lisible d'un coup d'œil (eqTip), utilisées partout : trouvaille, pause, codex, HUD.
+const EQ_SL=EQ_D.emplacements,BD_IO=window.BRUME_DATA;
+const eqSi=id=>Math.max(0,EQ_SL.findIndex(x=>x.id===EQ_D.objets[id].slot));
+const eqSn=id=>EQ_SL[eqSi(id)].n;
+const eqArt=(id,cls)=>BD_IO.iconeObjet(id,{col:RAR[EQ_D.objets[id].r].col,cls:cls||'io'});
+function eqLine(t,k){const m=String(t).match(/^([+−-]\s?\d[\d,]*(?:\s?%)?)\s+(.+)$/);
+ return m?`<li class="${k} st"><b>${esc(m[1])}</b> ${esc(m[2])}</li>`:`<li class="${k} fx">${esc(t)}</li>`;}
+function eqTip(id,o){o=o||{};const E=EQS[id],R=RAR[E.r];
+ const sk=typeof SETS!=='undefined'?Object.keys(SETS).find(k=>SETS[k].items.includes(id)):null;let sh='';
+ if(sk){const S=SETS[sk],worn=S.items.filter(i=>EQK.some(q=>P&&P[q]===i)),on=!!(P&&P.sets&&P.sets[sk]);
+  sh=`<div class="eqt-set${on?' on':''}"><p class="sn">${esc(S.n)} <span>${worn.length} / ${S.items.length}</span></p>${S.items.map(i=>`<p class="si${worn.includes(i)?' on':''}">${esc(EQS[i].n)} <em>${esc(eqSn(i))}</em></p>`).join('')}<p class="sb">(${S.items.length}) ${esc(S.d)}</p></div>`;}
+ const fm=E.cls&&BD_IO.talents&&BD_IO.talents.formes[E.cls];
+ return `<div class="eqt" style="--c:rgb(${R.col})"><div class="eqt-h">${eqArt(id,'io big')}<div><p class="eqt-n">${esc(E.n)}</p><p class="eqt-t">${esc(eqSn(id))} · ${esc(R.n)}${o.tag?` · ${esc(o.tag)}`:''}</p></div></div>`
+  +`<ul class="eqt-l">${E.plus.map(t=>eqLine(t,'p')).join('')}${E.moins.map(t=>eqLine(t,'m')).join('')}</ul>`
+  +`${o.extra?`<p class="eqt-x">${o.extra}</p>`:''}${sh}${fm?`<p class="eqt-r">Réservé à la forme ${esc(fm.short)}</p>`:''}${E.src?`<p class="eqt-r">Arraché ${esc(E.src.replace(/^Le /,'au ').replace(/^La /,'à la '))}</p>`:''}${E.fl?`<p class="eqt-f">${esc(E.fl)}</p>`:''}</div>`;}
+function eqVide(i,note){const S=EQ_SL[i];return `<div class="eqt empty"><div class="eqt-h"><span class="eqt-v">${BD_IO.iconeVide(S.id,'ic')}</span><div><p class="eqt-n">${esc(S.n)}</p><p class="eqt-t">Emplacement ${['I','II','III','IV'][i]} · libre</p></div></div><p class="eqt-x">${esc(note||S.d)}</p></div>`;}
 const EQS=dataMerge(EQ_D.objets,{
  lame:{on(s){s.atkSpeed*=0.9;},off(s){s.atkSpeed/=0.9;}},
  gilet:{on(s){s.dmgTaken*=0.9;s.dashCd*=1.08;},off(s){s.dmgTaken/=0.9;s.dashCd/=1.08;}},
@@ -5832,7 +5850,7 @@ const EQS=dataMerge(EQ_D.objets,{
  amulette:{on(s){s.maxHp*=0.95;P.hp=Math.min(P.hp,s.maxHp);},off(s){s.maxHp/=0.95;}}});
 function eqDiscover(id){const m=M();if(!m.codex)m.codex={};if(!m.codex[id]){m.codex[id]=1;persist();return true;}return false;}
 const EQK=['eq','eq2','eq3','eq4'];
-function equip(id,slot){const s=P.s,key=EQK[(slot||1)-1]||'eq',old=P[key];if(old&&EQS[old].off)EQS[old].off(s);if(old==='murmure')delete P.eqS.rank;if(old==='coeur')delete P.eqS.st;P[key]=id;if(!P.eqS)P.eqS={};if(id&&EQS[id].on)EQS[id].on(s);renderRelics();if(typeof refreshSets==='function')refreshSets();}
+function equip(id,slot){if(id)slot=eqSi(id)+1;const s=P.s,key=EQK[(slot||1)-1]||'eq',old=P[key];if(old&&EQS[old].off)EQS[old].off(s);if(old==='murmure')delete P.eqS.rank;if(old==='coeur')delete P.eqS.st;P[key]=id;if(!P.eqS)P.eqS={};if(id&&EQS[id].on)EQS[id].on(s);renderRelics();if(typeof refreshSets==='function')refreshSets();}
 function rollEquip(){const a=(RUN&&RUN.act)||1,x=Math.random();let r='commun';
  const tb=EQ_D.tirage[Math.min(3,Math.max(1,a))];let acc=0;for(const k of ['legendaire','epique','rare']){acc+=(tb[k]||0)/100;if(x<acc){r=k;break;}}
  const ok=k=>!EQK.some(q=>P[q]===k)&&(!EQS[k].cls||EQS[k].cls===P.cls);let pool=Object.keys(EQS).filter(k=>EQS[k].r===r&&ok(k));
@@ -6399,21 +6417,16 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
  const ROMS=['I','II','III','IV'];
  const sentences=t=>String(t).split(/(?<=[.!?])\s+(?=[A-ZÉÈÀÂÎÔÛ«])/).map(x=>x.trim()).filter(Boolean);
  const ln=(k,t)=>`<div class="ln ${k}"><i>${k==='boon'?'+':'−'}</i><div>${sentences(t).map(x=>`<span>${esc(x)}</span>`).join('')}</div></div>`;
- const eqIcon=(slot,cls)=>`<svg class="ic ${cls||''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[slot]}"/></svg>`;
- // fiche détaillée d'un objet (utilisée partout : pause, trouvaille, codex)
- function eqBody(id){const E=EQS[id];return ln('boon',E.up)+ln('cons',E.down)+(E.src?`<p class="why">Arraché à ${esc(E.src)}.</p>`:'');}
- eqCard=function(id,tag){
-  if(!id)return `<div class="card eqc empty"><span class="meta"><span class="br">● ${tag}</span></span><h3>Vide</h3><p>Aucun équipement porté.</p></div>`;
+ // v16.33 · icône peinte de l'objet (par id) et fiche lisible d'un coup d'œil
+ const eqIcon=(id,cls)=>eqArt(id,cls||'io');
+ function eqBody(id){return eqTip(id);}
+ eqCard=function(id,tag){if(!id)return `<div class="eqt empty"><div class="eqt-h"><div><p class="eqt-n">Vide</p><p class="eqt-t">${esc(tag||'')}</p></div></div></div>`;return eqTip(id,{tag});};
+ // tuile d'emplacement : l'emplacement est fixe (I Arme, II Main gauche, III Armure, IV Talisman)
+ const tile=(k,i)=>{const id=P[k],S=EQ_SL[i];
+  if(!id)return `<button type="button" class="slotx empty" data-tip="" data-n="${i+1}"><span class="num">${ROMS[i]}</span><span class="ico">${BD_IO.iconeVide(S.id,'ic')}</span><span class="nm">${esc(S.n)}</span><span class="rr">Emplacement libre</span></button>`;
   const E=EQS[id],R=RAR[E.r];
-  return `<div class="card eqc" style="--c:rgb(${R.col})"><span class="meta"><span class="br">● ${R.n} · ${E.slot}</span><span>${tag}</span></span><h3>${eqIcon(E.slot)} ${esc(E.n)}</h3>${eqBody(id)}${id==='murmure'&&P.eqS&&P.eqS.rank?`<p class="k">Rang ${P.eqS.rank} / 5</p>`:''}</div>`;};
-
- // tuile d'emplacement (compacte) ; l'objet complet s'affiche au survol
- const tile=(k,i)=>{const id=P[k];
-  if(!id)return `<button type="button" class="slotx empty" data-tip="" data-n="${i+1}"><span class="num">${ROMS[i]}</span><span class="ico">+</span><span class="nm">Emplacement libre</span></button>`;
-  const E=EQS[id],R=RAR[E.r];
-  return `<button type="button" class="slotx" style="--c:rgb(${R.col})" data-n="${i+1}"><span class="num">${ROMS[i]}</span><span class="ico">${eqIcon(E.slot)}</span><span class="nm">${esc(E.n)}</span><span class="rr">${R.n} · ${E.slot}</span></button>`;};
- function detailHTML(id,extra){const E=EQS[id],R=RAR[E.r];
-  return `<div class="eqpause" style="--c:rgb(${R.col})"><p class="eqh">${eqIcon(E.slot)}<strong>${esc(E.n)}</strong></p><p class="eqr">${R.n} · ${E.slot}</p>${eqBody(id)}${extra?`<p class="eqx">${extra}</p>`:''}</div>`;}
+  return `<button type="button" class="slotx" style="--c:rgb(${R.col})" data-n="${i+1}"><span class="num">${ROMS[i]}</span><span class="ico">${eqIcon(id)}</span><span class="nm">${esc(E.n)}</span><span class="rr">${esc(S.n)} · ${R.n}</span></button>`;};
+ function detailHTML(id,extra){return eqTip(id,{extra});}
  function bindTips(root,box,hint){
   const show=el=>{const h=el.dataset.html;box.innerHTML=h?decodeURIComponent(h):hint;root.querySelectorAll('.tipx.on').forEach(x=>x.classList.remove('on'));el.classList.add('on');};
   root.querySelectorAll('.tipx').forEach(el=>{el.addEventListener('mouseenter',()=>show(el));el.addEventListener('focus',()=>show(el));el.addEventListener('click',()=>show(el));});
@@ -6428,32 +6441,28 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   g.remove();box.style.minHeight=Math.ceil(mx)+'px';box.style.height=Math.ceil(mx)+'px';box.style.overflowY='auto';
  }catch(e){}}
 
- // ———— écran de trouvaille : 4 emplacements
+ // ———— écran de trouvaille (v16.33) : l'objet va dans l'emplacement de son type ; comparaison avec ce qui s'y trouve
+ const xtra=id=>{try{return eqExtra(id);}catch(e){return '';}};
  openEquip=function(id,title){
-  if(!RUN||RUN.hub||P.dead||!id)return;const E=EQS[id],R=RAR[E.r],isNew=eqDiscover(id);
+  if(!RUN||RUN.hub||P.dead||!id)return;const E=EQS[id],R=RAR[E.r],isNew=eqDiscover(id),si=eqSi(id),k=EQK[si],cur=P[k],S=EQ_SL[si];
   sfx(E.r==='unique'||E.r==='legendaire'?'level':E.r==='rare'||E.r==='epique'?'buy':'pick');
-  const free=EQK.findIndex(k=>!P[k]);
-  const slots=EQK.map((k,i)=>{const o=P[k];
-   const body=o?`<span class="rr">${EQS[o].n}</span>`:'<span class="rr">Libre</span>';
-   return `<button type="button" class="slotx ${o?'':'empty'} ${i===free?'rec':''}" data-n="${i+1}" ${o?`style="--c:rgb(${RAR[EQS[o].r].col})"`:''}><span class="num">${ROMS[i]}</span><span class="ico">${o?eqIcon(EQS[o].slot):'+'}</span><span class="nm">${o?esc(EQS[o].n):'Emplacement libre'}</span>${o?`<span class="rr">${RAR[EQS[o].r].n} · ${EQS[o].slot}</span>`:''}<span class="act">${o?'Remplacer':'Équiper'} · ${i+1}</span></button>`;}).join('');
-  const sets=EQK.map(k=>P[k]&&setHint(id,P[k])).filter(Boolean).join('');
-  openOverlay(`<div class="panel narrow wide3"><p class="eyebrow">Équipement · ${R.n}${isNew?' · nouveau dans le codex':''}</p><h2>${esc(title)}</h2><p class="sub">Choisis un emplacement. L’objet qu’il remplace est perdu. Survole un emplacement pour lire ce qu’il contient.</p>
-  <div class="eqfind"><div><p class="h-sec" style="margin-top:0">Trouvé</p>${eqCard(id,'')}${sets}</div><div><p class="h-sec" style="margin-top:0">Tes emplacements</p><div class="slotgrid">${slots}</div><div id="eqtip" class="eqtip"></div></div></div>
-  <div class="row"><button type="button" class="btn" id="eqn">Laisser · 5</button><span class="k">Codex : ${Object.keys(M().codex||{}).length} / ${Object.keys(EQS).length}</span></div></div>`,E.r==='unique'||E.r==='legendaire'?'eq-unique':'');
-  const go=sl=>{if(!armed())return;if(sl){const old=P[EQK[sl-1]];equip(id,sl);toast(`Tu portes ${E.n}.`,2);if(typeof chron==='function')chron('eq',{id,old});}else if(typeof chron==='function')chron('eqleft',{id});closeOverlay();};
-  const tip=$('#eqtip'),hint='<p class="muted" style="margin:0">Survole un emplacement occupé pour comparer.</p>';tip.innerHTML=hint;
-  lockTip(tip,[hint,...EQK.map(k=>P[k]?detailHTML(P[k],''):'')]);
-  overlayEl.querySelectorAll('.slotx').forEach(b=>{const n=+b.dataset.n,o=P[EQK[n-1]];
-   const show=()=>{tip.innerHTML=o?detailHTML(o,''):hint;};b.addEventListener('mouseenter',show);b.addEventListener('focus',show);b.addEventListener('click',()=>go(n));});
-  $('#eqn').addEventListener('click',()=>go(0));
-  overlayKeys=c=>{const m=NUMKEY[c];if(m!==undefined&&m<4)go(m+1);else if(c==='Digit5'||c==='Numpad5'||c==='Escape')go(0);};};
+  const mini=EQ_SL.map((x,i)=>{const o=P[EQK[i]];return `<span class="eqm${i===si?' tg':''}"${o?` style="--c:rgb(${RAR[EQS[o].r].col})"`:''}>${o?eqIcon(o):`<span class="eqm-v">${BD_IO.iconeVide(x.id,'ic')}</span>`}<b>${ROMS[i]} · ${esc(x.n)}</b></span>`;}).join('');
+  const gain=Object.keys(SETS).filter(sk=>SETS[sk].items.includes(id)&&SETS[sk].items.every(i=>i===id||EQK.some((q,j)=>j!==si&&P[q]===i))).map(sk=>`<p class="k set">Équiper active le set ${esc(SETS[sk].n)} : ${esc(SETS[sk].d)}</p>`).join('');
+  const lost=cur?Object.keys(SETS).filter(sk=>P.sets&&P.sets[sk]&&SETS[sk].items.includes(cur)).map(sk=>`<p class="k warn">Remplacer défait le set ${esc(SETS[sk].n)}.</p>`).join(''):'';
+  openOverlay(`<div class="panel narrow wide3"><p class="eyebrow">Équipement · ${R.n}${isNew?' · nouveau dans le codex':''}</p><h2>${esc(title)}</h2><p class="sub">Emplacement <b>${ROMS[si]} · ${esc(S.n)}</b>${cur?' : l’objet porté sera perdu.':' : il est libre.'}</p>
+  <div class="eqcmp"><div><p class="h-sec">Trouvé</p>${eqTip(id)}</div><div><p class="h-sec">Porté · ${esc(S.n)}</p>${cur?eqTip(cur,{extra:xtra(cur)}):eqVide(si)}</div></div>
+  <div class="eqmini">${mini}</div>${gain}${lost}
+  <div class="row"><button type="button" class="btn primary" id="eqy">${cur?'Remplacer':'Équiper'} · 1</button><button type="button" class="btn" id="eqn">Laisser · 2</button><span class="k">Codex : ${Object.keys(M().codex||{}).length} / ${Object.keys(EQS).length}</span></div></div>`,E.r==='unique'||E.r==='legendaire'?'eq-unique':'');
+  const go=y=>{if(!armed())return;if(y){equip(id);toast(`Tu portes ${E.n}.`,2);if(typeof chron==='function')chron('eq',{id,old:cur});}else if(typeof chron==='function')chron('eqleft',{id});closeOverlay();};
+  $('#eqy').addEventListener('click',()=>go(1));$('#eqn').addEventListener('click',()=>go(0));
+  overlayKeys=c=>{const m=NUMKEY[c];if(m===0||c==='Enter'||c==='NumpadEnter')go(1);else if(m===1||c==='Escape')go(0);};};
 
  // ———— renderRelics : les 4 icônes d'équipement dans le HUD
  const _rr=renderRelics;
  renderRelics=function(){_rr();if(!P||!RUN||RUN.hub)return;const box=$('#hRelics');if(!box)return;
   box.querySelectorAll('.relic.eq').forEach(x=>x.remove());
   for(const k of ['eq4','eq3','eq2','eq']){const id=P[k];if(!id)continue;const E=EQS[id],R=RAR[E.r];
-   box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${id==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${id==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}">${eqIcon(E.slot)}</span>`);}
+   box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} · ${eqSn(id)} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${id==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${id==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}">${eqIcon(id)}</span>`);}
   box.querySelectorAll('.relic.eq').forEach(ic=>ic.addEventListener('click',()=>{if(state==='play')openPause();}));};
 
  // ———— pause : onglets + gestionnaire + barre d'actions fixe
@@ -6476,7 +6485,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   // — Équipement
   const hub=!!RUN.hub;
   const tips=[];const tp=(html,cls,inner,style)=>{return `<button type="button" class="tipx ${cls||''}" ${style?`style="${style}"`:''} data-html="${enc(html)}">${inner}</button>`;};
-  const slotsHTML=EQK.map((k,i)=>{const id=P[k];if(!id||hub)return tile(k,i).replace('data-tip=""','').replace('class="slotx empty"','class="slotx empty tipx"');
+  const slotsHTML=EQK.map((k,i)=>{const id=P[k];if(!id||hub)return tile(k,i).replace('data-tip=""',`data-html="${enc(eqVide(i))}"`).replace('class="slotx empty"','class="slotx empty tipx"');
    const E=EQS[id],R=RAR[E.r];let ex='';try{ex=eqExtra(id);}catch(e){}
    return tile(k,i).replace('class="slotx"','class="slotx tipx"').replace('data-n=',`data-html="${enc(detailHTML(id,ex))}" data-n=`);}).join('');
   const sets=hub?'':Object.keys(SETS).filter(k=>P.sets&&P.sets[k]).map(k=>tp(`<div class="eqpause setp"><p class="eqh"><strong>Set · ${esc(SETS[k].n)}</strong></p>${ln('boon',SETS[k].d)}<p class="eqx">Actif : ${SETS[k].items.map(i=>esc(EQS[i].n)).join(' + ')}</p></div>`,'chipx set',`★ ${esc(SETS[k].n)}`)).join('');
@@ -6576,6 +6585,69 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
 .mrow2.concl{font-size:1.04em;color:#fff}
 `;document.head.appendChild(st);
 })();
+// ───────────────────────── v16.33 · fiches d'objets (infobulle), icônes peintes, emplacements fixes
+(function(){const st=document.createElement('style');st.textContent=`
+.eqt{position:relative;padding:12px 14px;border:1px solid var(--line-hi);border-color:color-mix(in srgb,var(--c,#888) 60%,transparent);border-radius:6px;background:linear-gradient(180deg,rgba(16,13,24,.97),rgba(8,7,12,.97));box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 6px 18px rgba(0,0,0,.45);text-align:left;color:#e9e3d6}
+.eqt-h{display:flex;gap:12px;align-items:center;margin-bottom:9px}
+.eqt .io.big{width:54px;height:54px;flex:none;filter:drop-shadow(0 2px 5px rgba(0,0,0,.6))}
+.eqt-n{margin:0;font-size:18px;font-weight:800;color:var(--c,#e9e3d6);line-height:1.2}
+.eqt-t{margin:3px 0 0;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:#a8a194}
+.eqt-l{list-style:none;margin:0;padding:9px 0 0;border-top:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;gap:5px}
+.eqt-l li{font-size:15.5px;line-height:1.35;padding-left:19px;position:relative}
+.eqt-l li::before{position:absolute;left:0;top:.28em;font-size:10.5px;line-height:1}
+.eqt-l li.p{color:#c6efbb}.eqt-l li.p::before{content:'▲';color:#7fdc74}
+.eqt-l li.m{color:#f6b8b8}.eqt-l li.m::before{content:'▼';color:#ff7a7a}
+.eqt-l li.st b{font-size:17px;font-weight:800;margin-right:3px}
+.eqt-l li.p.st b{color:#a6f597}.eqt-l li.m.st b{color:#ff9090}
+.eqt-x{margin:8px 0 0;font-size:14px;color:#ffdf9a}
+.eqt-set{margin:9px 0 0;padding-top:8px;border-top:1px solid rgba(255,255,255,.09)}
+.eqt-set .sn{margin:0 0 3px;font-size:14px;font-weight:700;color:#ffdf9a}.eqt-set .sn span{color:#a8a194;font-weight:600;margin-left:6px}
+.eqt-set .si{margin:0;padding-left:12px;font-size:13.5px;color:#7d776c}.eqt-set .si.on{color:#e9e3d6}
+.eqt-set .si em{font-style:normal;font-size:11px;letter-spacing:.07em;text-transform:uppercase;opacity:.7;margin-left:5px}
+.eqt-set .sb{margin:4px 0 0;font-size:13.5px;color:#7d776c}.eqt-set.on .sb{color:#a6f597}
+.eqt-r{margin:7px 0 0;font-size:13px;color:#c9a8ff}
+.eqt-f{margin:8px 0 0;font-size:13.5px;font-style:italic;color:#d8c38e;opacity:.85}.eqt-f::before{content:'« '}.eqt-f::after{content:' »'}
+.eqt.empty{border-style:dashed;border-color:rgba(255,255,255,.2);background:rgba(10,9,14,.6)}
+.eqt.empty .eqt-n{color:#c9c3b8}
+.eqt-v{width:54px;height:54px;flex:none;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.25);border-radius:6px;color:#8d8778}
+.eqt-v .ic,.eqm-v .ic,.slotx.empty .ico .ic{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.eqt-v .ic{width:26px;height:26px}
+.eqcmp{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:8px 0 12px}
+.eqcmp .h-sec{margin-top:0}
+.eqmini{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.eqm{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border:1px solid rgba(255,255,255,.12);border-radius:6px;font-size:12.5px;color:#a8a194;letter-spacing:.04em}
+.eqm .io{width:30px;height:30px;display:block}
+.eqm-v{width:30px;height:30px;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.22);border-radius:4px}.eqm-v .ic{width:16px;height:16px}
+.eqm.tg{border-color:var(--flame,#f3b94d);color:var(--flame,#f3b94d);box-shadow:inset 0 0 0 1px var(--flame,#f3b94d)}
+.k.warn{color:#ff9a8a}
+@media (max-width:760px){.eqcmp{grid-template-columns:1fr}}
+.slotx{grid-template-columns:48px 1fr;padding-right:26px}
+.slotx .nm{font-size:15.5px}
+.slotx:not(.empty) .ico{border:0;background:none;border-radius:0;width:46px;height:46px}
+.slotx .ico .io{width:46px;height:46px;display:block}
+.slotx.empty .ico{color:var(--ash)}.slotx.empty .ico .ic{width:22px;height:22px}
+.relic.eq{border:0;background:none;padding:0;overflow:visible}
+.relic.eq .io{width:100%;height:100%;display:block}
+.eqtip .eqt{margin:0}
+
+.eqt.unk .eqt-v{font:700 22px var(--f-display,serif);color:var(--c)}
+.eqt.unk .eqt-n{color:#8d8778}
+.codexs{margin:14px 0 4px}.codexs:first-of-type{margin-top:6px}
+.codexs span{color:var(--ash);margin-left:6px;letter-spacing:.06em}
+.codexg{max-height:none;overflow:visible;margin:6px 0 4px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));align-items:start}
+.codexw{max-height:60vh;overflow:auto;padding-right:6px}
+`;document.head.appendChild(st);})();
+// Codex des équipements, rangé par emplacement ; les objets non découverts gardent leur emplacement et leur rareté
+openCodex=function(back){
+ const got=M().codex||{},ids=Object.keys(EQS),n=ids.filter(k=>got[k]).length;
+ const where=E=>E.r==='unique'?`Se gagne en vainquant ${E.src}.`:E.r==='legendaire'?'Une trouvaille très rare, dans les Cryptes ou le Cœur.':E.r==='epique'?'Se trouve sur les élites des actes II et III.':E.r==='rare'?'Se trouve sur certains élites.':'Se trouve sur les élites.';
+ const cell=k=>{const E=EQS[k],R=RAR[E.r];
+  if(got[k])return eqTip(k,{tag:P&&EQK.some(q=>P[q]===k)?'Porté':''});
+  return `<div class="eqt unk" style="--c:rgb(${R.col})"><div class="eqt-h"><span class="eqt-v">?</span><div><p class="eqt-n">? ? ?</p><p class="eqt-t">${esc(eqSn(k))} · ${esc(R.n)}</p></div></div><p class="eqt-x">${esc(where(E))}</p></div>`;};
+ const body=EQ_SL.map((S,i)=>{const ks=ids.filter(k=>eqSi(k)===i);return `<p class="h-sec codexs">${['I','II','III','IV'][i]} · ${esc(S.n)}<span>${ks.filter(k=>got[k]).length} / ${ks.length}</span></p><div class="codexg">${ks.map(cell).join('')}</div>`;}).join('');
+ openOverlay(`<div class="panel"><p class="eyebrow">Codex des équipements · ${n} / ${ids.length}</p><h2>Ce que la Brume t’a déjà donné</h2><div class="codexw">${body}</div><div class="row"><button type="button" class="btn primary" id="cdx">Retour</button></div></div>`);
+ const done=()=>{closeOverlay();if(back)back();};
+ $('#cdx').addEventListener('click',done);overlayKeys=c=>{if(c==='Escape'||c==='KeyP'||c==='Enter')done();};};
 
 // ───────────────────────── v15.5 · fenêtres de principe (premier palier uniquement)
 (function(){
@@ -6608,11 +6680,11 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
    ['Nœuds clés',O,'Ils changent ta façon de jouer (lanterne vivante, cœur de soleil…) et verrouillent les talents incompatibles.'],
    ['Incompatible',R,'Un talent grisé « Incompatible » contredit un choix déjà fait. Réfléchis à ton build avant une clé.'],
    ['Ascension',V,'Après le premier gardien, une sous-classe s’offre à toi, avec ses propres talents.']]},
-  equip:{t:'Équipement : quatre emplacements',l:'Les élites et les gardiens laissent des objets. Chacun a un gain et un coût.',c:[
-   ['Quatre emplacements',Y,'Chaque objet va dans l’un des quatre emplacements. Un emplacement libre est signalé en vert.'],
-   ['Gain et coût',G,'Lis les deux : un objet puissant impose toujours une contrepartie.'],
-   ['Sets',O,'Certaines paires d’objets forment un set avec un bonus supplémentaire.'],
-   ['Remplacer',R,'Un objet remplacé est perdu. Tu peux aussi laisser la trouvaille.']]}};
+  equip:{t:'Équipement : quatre emplacements fixes',l:'Les élites et les gardiens laissent des objets. Chacun a un gain et un coût.',c:[
+   ['Un type par emplacement',Y,'I Arme · II Main gauche · III Armure · IV Talisman. Un objet ne va que dans l’emplacement de son type.'],
+   ['Gain et coût',G,'▲ en vert : ce que l’objet donne. ▼ en rouge : ce qu’il coûte. Compare avec l’objet porté, affiché à côté.'],
+   ['Sets',O,'Certaines paires d’objets (toujours dans deux emplacements différents) forment un set avec un bonus supplémentaire.'],
+   ['Remplacer',R,'L’objet remplacé est perdu. Tu peux aussi laisser la trouvaille.']]}};
  const seen=k=>!!(SAVE.flags&&SAVE.flags['b_'+k]);
  function brief(key,next){
   const B=BRIEF[key];

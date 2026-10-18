@@ -33,13 +33,17 @@ const aLa = s => s.replace(/^Le /, 'au ').replace(/^La /, 'à la ').replace(/^Le
 const lower = s => s.charAt(0).toLowerCase() + s.slice(1);
 const MARK = src => `<!-- Section générée par outils/wiki.mjs depuis ${src} : ne pas modifier à la main -->`;
 
-// ── Section « Équipements »
-function equipements(E, F) {
-  const R = E.raretes, O = E.objets, S = E.sets;
+// ── Section « Équipements » (v16.33 : emplacements fixes, icônes peintes, fiches façon infobulle)
+function equipements(E, F, D) {
+  const R = E.raretes, O = E.objets, S = E.sets, SL = E.emplacements;
   const col = r => `rgb(${R[r].col})`;
+  const ico = (id, cls) => D.iconeObjet(id, { col: R[O[id].r].col, cls: cls || 'io' });
+  const slotN = id => SL.find(x => x.id === O[id].slot).n;
   const setOf = id => Object.values(S).find(s => s.items.includes(id));
   const uniques = Object.values(O).filter(o => o.src);
   const order = ['commun', 'rare', 'epique', 'legendaire'];
+  const line = (t, k) => { const m = String(t).match(/^([+−-]\s?\d[\d,]*(?:\s?%)?)\s+(.+)$/);
+    return m ? `<li class="${k} st"><b>${esc(m[1])}</b> ${esc(m[2])}</li>` : `<li class="${k}">${esc(t)}</li>`; };
 
   const chips = Object.keys(R).map(r => `<span class="chip" style="--cc:${col(r)}">${esc(R[r].n)}</span>`).join('');
   const tirage = Object.keys(E.tirage).map(a => {
@@ -47,26 +51,50 @@ function equipements(E, F) {
     const parts = order.filter(r => t[r]).map(r => `${t[r]} % ${lower(R[r].n)}`).join(' · ');
     return `<article class="ent"><h4>Acte ${ROM[a]}</h4><p>${parts}.</p></article>`;
   }).join('');
-  const items = Object.entries(O).map(([id, o]) => {
-    const st = setOf(id);
-    const tags = [`<span class="tag" style="--t:${col(o.r)}">${esc(R[o.r].n)}</span>`, `<span class="tag">${esc(o.slot)}</span>`];
-    if (o.cls) tags.push(`<span class="tag" style="--t:${F[o.cls].col}">${esc(F[o.cls].n)}</span>`);
-    if (st) tags.push(`<span class="tag">Set · ${esc(st.n)}</span>`);
-    return `<article class="ent equip" data-r="${o.r}"><div class="eh"><h4 style="color:${col(o.r)}">${esc(o.n)}</h4><div class="tags">${tags.join('')}</div></div>\n`
-      + `<p class="gain"><b>＋</b> ${esc(o.up)}</p><p class="cost"><b>－</b> ${esc(o.down)}</p>${o.src ? `<p class="src">Source : ${esc(o.src)}</p>` : ''}</article>`;
+  const slots = SL.map((x, i) => {
+    const ks = Object.keys(O).filter(k => O[k].slot === x.id);
+    return `<article class="ent weq-slot"><div class="weq-sh">${D.iconeVide(x.id, 'wv')}<div><h4>${ROM[i + 1]} · ${esc(x.n)}</h4><p class="k">${esc(x.d)}</p></div></div><div class="weq-row">${ks.map(k => `<a href="#eq-${k}" title="${esc(O[k].n)}">${ico(k)}</a>`).join('')}</div></article>`;
   }).join('');
+  const card = id => {
+    const o = O[id], st = setOf(id);
+    const set = st ? `<div class="weq-set"><p class="sn">Set · ${esc(st.n)}</p>${st.items.map(i => `<p class="si">${esc(O[i].n)} <em>${esc(slotN(i))}</em></p>`).join('')}<p class="sb">(${st.items.length}) ${esc(st.d)}</p></div>` : '';
+    return `<article class="ent equip weq" id="eq-${id}" data-r="${o.r}" style="--c:${col(o.r)}"><div class="weq-h">${ico(id, 'io big')}<div><h4>${esc(o.n)}</h4><p class="weq-t">${esc(slotN(id))} · ${esc(R[o.r].n)}</p></div></div>\n`
+      + `<ul class="weq-l">${o.plus.map(t => line(t, 'p')).join('')}${o.moins.map(t => line(t, 'm')).join('')}</ul>${set}`
+      + `${o.cls ? `<p class="weq-r">Réservé à la forme ${esc(F[o.cls].n)}</p>` : ''}${o.src ? `<p class="weq-r">Arraché ${esc(aLa(o.src))}</p>` : ''}${o.fl ? `<p class="weq-f">« ${esc(o.fl)} »</p>` : ''}</article>`;
+  };
+  const items = SL.map((x, i) => {
+    const ks = Object.keys(O).filter(k => O[k].slot === x.id);
+    return `<h5 class="grp">${ROM[i + 1]} · ${esc(x.n)} · ${ks.length} objets</h5>\n<div class="grid g3">${ks.map(card).join('\n')}</div>`;
+  }).join('\n');
   const sets = Object.values(S).map(s =>
-    `<article class="ent"><h4>${esc(s.n)}</h4><p class="k">${s.items.map(i => esc(O[i].n)).join(' + ')}</p><p>${esc(s.d)}</p></article>`).join('');
+    `<article class="ent weq-st"><div class="weq-row">${s.items.map(i => `<a href="#eq-${i}" title="${esc(O[i].n)}">${ico(i)}</a>`).join('<span class="pl">+</span>')}</div><h4>${esc(s.n)}</h4><p class="k">${s.items.map(i => `${esc(O[i].n)} (${esc(slotN(i))})`).join(' + ')}</p><p>${esc(s.d)}</p></article>`).join('');
 
-  return `<section class="sec" id="equipements" data-sec>${MARK('data/equipements.js')}<header class="sh"><p class="eyebrow">Équipement</p><h2>Équipements</h2><div class="lede"><p>Chaque équipement apporte un <b>gain</b> et un <b>coût</b> : rien n’est gratuit. Ils se gèrent dans le menu de pause (onglet Équipement), qui offre 4 emplacements avec le détail au survol. Les raretés vont du commun à l’unique.</p></div></header>
+  return `<section class="sec" id="equipements" data-sec>${MARK('data/equipements.js et data/icones-objets.js')}<style>
+.weq-sh{display:flex;gap:12px;align-items:center}.weq-sh h4{margin:0}.weq-sh .k{margin:2px 0 0}
+.wv{flex:none;width:40px;height:40px;padding:8px;border:1px dashed #3a3f58;border-radius:8px;fill:none;stroke:var(--mute);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.weq-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}.weq-row a{display:block;line-height:0}.weq-row .io{width:40px;height:40px}.weq-row .pl{color:var(--mute);font-size:20px;padding:0 2px}
+.weq{background:linear-gradient(180deg,#120f1b,#09080d);border-color:color-mix(in srgb,var(--c) 55%,transparent)}
+.weq-h{display:flex;gap:12px;align-items:center;margin-bottom:8px}.weq-h h4{margin:0;color:var(--c);font-size:20px}.weq .io.big{flex:none;width:56px;height:56px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.6))}
+.weq-t{margin:2px 0 0;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.weq-l{list-style:none;margin:0;padding:8px 0 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.weq-l li{position:relative;padding-left:19px;line-height:1.4}.weq-l li::before{position:absolute;left:0;top:.35em;font-size:10.5px;line-height:1}
+.weq-l li.p{color:#c6efbb}.weq-l li.p::before{content:'▲';color:var(--good)}.weq-l li.m{color:#f6b8b8}.weq-l li.m::before{content:'▼';color:var(--bad)}
+.weq-l li.st b{font-size:18px;margin-right:3px}.weq-l li.p.st b{color:#a6f597}.weq-l li.m.st b{color:#ff9090}
+.weq-set{margin:9px 0 0;padding-top:8px;border-top:1px solid var(--line);font-size:15px}.weq-set p{margin:0}.weq-set .sn{font-weight:700;color:#ffdf9a}.weq-set .si{padding-left:12px;color:var(--bone)}.weq-set .si em{font-style:normal;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--mute);margin-left:5px}.weq-set .sb{margin-top:3px;color:var(--good)}
+.weq-r{margin:7px 0 0;font-size:14.5px;color:#c9a8ff}.weq-f{margin:8px 0 0;font-size:15px;font-style:italic;color:#d8c38e}
+.weq-st .weq-row{margin:0 0 6px}
+</style><header class="sh"><p class="eyebrow">Équipement</p><h2>Équipements</h2><div class="lede"><p>Chaque équipement apporte un <b>gain</b> (▲, en vert) et un <b>coût</b> (▼, en rouge) : rien n’est gratuit. Tu as <b>quatre emplacements fixes</b>, un par type d’objet. Ils se gèrent dans le menu de pause (onglet Équipement). Les raretés vont du commun à l’unique ; la couleur du cadre de l’icône donne la rareté.</p></div></header>
 <div class="chips">${chips}</div>
+<h3 class="sub">Les quatre emplacements</h3>
+<p>Un objet ne va que dans l’emplacement de son type. S’il est déjà occupé, la trouvaille <b>remplace</b> l’objet porté, qui disparaît pour la run : l’écran de trouvaille montre les deux fiches côte à côte pour comparer. Tu peux aussi laisser l’objet. Les équipements disparaissent à la mort, comme les reliques.</p>
+<div class="grid g2">${slots}</div>
 <h3 class="sub">Où les trouver</h3>
 <p>Un champion (salle d’élite) laisse tomber un équipement dans ${E.chanceChampion} % des cas. La rareté dépend de l’acte : plus tu descends, plus les objets épiques et légendaires deviennent probables. Les objets uniques ne se tirent pas : ils s’arrachent à un gardien (${uniques.map(o => `<i>${esc(o.n)}</i> ${esc(aLa(o.src))}`).join(', ')}).</p>
 <div class="grid g3">${tirage}</div>
-<p>Tu disposes de quatre emplacements, et n’importe quel objet peut aller dans n’importe lequel. Remplacer un objet le fait <b>disparaître</b> pour la run. Deux pièces d’un même set portées ensemble déclenchent un bonus (messages « Set » en jeu). Les équipements disparaissent à la mort, comme les reliques.</p>
-<div class="grid g2">${items}</div>
+<h3 class="sub">Tous les objets</h3>
+${items}
 <h3 class="sub">Sets</h3>
-<p>Équiper les deux pièces d’un même set active un bonus supplémentaire.</p>
+<p>Équiper les deux pièces d’un même set active un bonus supplémentaire (message « Set » en jeu). Les deux pièces sont toujours dans deux emplacements différents.</p>
 <div class="grid g3">${sets}</div>
 </section>`;
 }
@@ -363,7 +391,7 @@ function syncVersion(html, v) {
 
 export function build(html) {
   const D = loadData();
-  let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D)));
+  let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D), D));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D)));
   out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
   out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque));

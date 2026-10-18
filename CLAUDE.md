@@ -11,5 +11,6 @@
 - Version et journal : à chaque évolution du jeu, ajouter une ligne en tête du journal dans `themist/data/versions.js` (et changer `actuelle` pour une nouvelle version : l'écran titre et le wiki suivent).
 - Talents : noms, descriptions, améliorations, rangs et exclusions se modifient dans `themist/data/talents.js`. Les textes écrits dans les `N(…)` d'index.html sont remplacés au chargement par ceux des données ; les effets (`apply`) et la structure de l'arbre restent dans index.html.
 - `node themist/outils/wiki.mjs --check` vérifie que le wiki est à jour.
+- Équipements : emplacements fixes (`emplacements` : un seul type d'objet par emplacement), objets et fiches (`plus` / `moins` : lignes courtes, `fl` : texte d'ambiance) dans `themist/data/equipements.js` ; icônes peintes dans `themist/data/icones-objets.js` (`BRUME_DATA.iconeObjet(id, {col})`, utilisé par le jeu et le wiki). Un set doit toujours réunir deux emplacements différents.
 - Le Masqué (élite assemblé) : réglages dans `themist/data/bestiaire.js` (`assemble`), dessin du masque dans `themist/data/masque.js`. `node themist/outils/sim-masque.mjs` vérifie le tirage et la file de sorts ; en jeu, `__asm.essai()` dans la console ouvre une salle avec un Masqué.
 - Publication : push direct sur `main` (déploiement automatique sur IONOS).
