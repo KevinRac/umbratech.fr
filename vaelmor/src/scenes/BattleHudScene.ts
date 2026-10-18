@@ -516,7 +516,7 @@ export class BattleHudScene extends Phaser.Scene {
         container.add(this.add.rectangle(0, top, width, bandH, PALETTE.nuit, 0.8).setOrigin(0, 0));
         container.add(this.add.rectangle(0, top, width, 2 * S, color, 0.9).setOrigin(0, 0));
         container.add(this.add.rectangle(0, top + bandH - 2 * S, width, 2 * S, color, 0.9).setOrigin(0, 0));
-        const title = addText(this, width / 2, top + 10 * S, team === 'player' ? 'Phase du joueur' : 'Phase ennemie', { font: 'title', scale: 3 * S, color, align: 'center' });
+        const title = addText(this, width / 2, top + 10 * S, team === 'player' ? 'PHASE DU JOUEUR' : 'PHASE ENNEMIE', { font: 'body', scale: 2 * S, color, align: 'center', shadowOffset: 2 * S });
         const sub = addText(this, width / 2, top + 42 * S, `Tour ${turn}`, { scale: S, color: PALETTE.parchemin, align: 'center' });
         container.add([title, sub]);
         container.x = width;
