@@ -4219,7 +4219,7 @@ mk10('req',[
 mk10('aig',[
  {n:'Cadence tressée',m:3,fl:'cadence',d:'Tant que tu tires, ta cadence monte jusqu’à +10 % / +20 % / +30 % (en 2 s).'},
  {n:'Pelote',m:3,fl:'pelote',d:'Une aiguille qui touche rend 0,5 Bobine par rang.'},
- {n:'Piqûre ricochet',m:3,fl:'pique',d:'Une aiguille qui touche un ennemi a 25 % de chances par rang de lancer une aiguille gratuite sur un autre ennemi.'},
+ {n:'Piqûre ricochet',m:3,fl:'pique',d:'Une aiguille qui touche un ennemi a 20 % de chances par rang de lancer une aiguille gratuite sur un autre ennemi (30 % par rang si l’ennemi touché est attaché).'},
  {keep:'n4'},
  {n:'Saignée',m:3,fl:'saigne',d:'Tes aiguilles font saigner : 4 dégâts par seconde et par rang pendant 3 s.',f:(s,r)=>{s.bleed=4*r;}},
  {keep:'n6'}
@@ -4456,7 +4456,7 @@ projHit=function(p,e){
  if(p.b10)p.dmg=d0*1.25;
  if(!p.free){
   if(f.pelote)P.bob=Math.min(100,P.bob+0.5*f.pelote);
-  if(f.pique&&Math.random()<0.25*f.pique){const t=nearestFoe(e.x,e.y,340,o=>o!==e);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),s.atkDmg*0.7,{skip:e});}
+  if(f.pique&&Math.random()<(e.tethered?0.30:0.20)*f.pique){const t=nearestFoe(e.x,e.y,340,o=>o!==e);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),s.atkDmg*0.7,{skip:e});}
   if(e.tethered){
    if(f.trm3A)P.bob=Math.min(100,P.bob+1);
    if(f.trm1A)for(const th of P.threads)if(th.e!==e&&!th.e.dead)rawHit(th.e,d0*0.25);
