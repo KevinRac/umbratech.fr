@@ -5,7 +5,7 @@
  * silhouette « normale ». Module sans DOM : il peint dans un puits de pixels.
  */
 import type { LookDef, NpcFacing } from '../data/townSchemas';
-import { CHAR_H, CHAR_W, paintCharacterFrame, ramp3, type CharPose, type CharacterLook } from './characterSprite';
+import { CHAR_H, CHAR_W, CHAR_WALK_FRAMES, paintCharacterFrame, ramp3, type CharPose, type CharacterLook } from './characterSprite';
 import { PALETTE as P, mixColor } from './palette';
 import type { PixelSink } from './waterTile';
 
@@ -13,6 +13,8 @@ export const NPC_W = CHAR_W;
 export const NPC_H = CHAR_H;
 /** Images d'attente : debout, puis la respiration (le haut du corps descend d'un pixel). */
 export const NPC_IDLE_FRAMES = 2;
+/** Images de marche (quatre, comme le héros). */
+export const NPC_WALK_FRAMES = CHAR_WALK_FRAMES;
 export const NPC_POSES = ['down', 'up', 'side'] as const satisfies readonly CharPose[];
 
 const parseHex = (hex: string): number => Number.parseInt(hex.slice(1), 16);
@@ -61,4 +63,9 @@ export function facingToward(dx: number, dy: number): NpcFacing {
 /** Peint une image d'attente d'un PNJ au coin (ox, oy). */
 export function paintNpcFrame(sink: PixelSink, ox: number, oy: number, look: CharacterLook, pose: CharPose, idleFrame: number): void {
   paintCharacterFrame(sink, ox, oy, look, pose, 0, { breathe: idleFrame % NPC_IDLE_FRAMES === 1 });
+}
+
+/** Peint une image de marche d'un PNJ au coin (ox, oy). */
+export function paintNpcWalkFrame(sink: PixelSink, ox: number, oy: number, look: CharacterLook, pose: CharPose, walkFrame: number): void {
+  paintCharacterFrame(sink, ox, oy, look, pose, walkFrame);
 }

@@ -26,7 +26,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M0 : squelette technique** (16/10/2026) — voir « Livré en M0 »
 - [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
 - [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
-- [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°71 à valider
+- [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°71 validées le 18/10/2026 (n°63 révisée : les PNJ se promènent)
 - [ ] M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
@@ -210,9 +210,9 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **Débogage** : paramètres d'URL `?debug&rep=id:val&gold=N&flags=a,b`.
 - Tests : 336 passent ; `npm run build` OK.
 
-### Décisions n°62 à n°71 (jalon M2) — à valider par l'auteur
+### Décisions n°62 à n°71 (jalon M2) — validées par l'auteur le 18/10/2026 (n°63 révisée)
 - **n°62 — Port-Brume démarre à -10**, soit « Neutre » sur l'échelle §6.2 (le GDD dit « Méfiant »).
-- **n°63 — PNJ statiques** (pas de déambulation) dans ce prototype.
+- **n°63 — PNJ qui se promènent** (révisée à la demande de l'auteur, 18/10/2026) : chaque PNJ marche case par case, avec animation, dans une zone de rayon `roam` (3 à 10 cases, `locations.json`) autour de son poste, évite portes, eau et obstacles, ne se superpose jamais à un autre PNJ ni au héros, et s'arrête pendant une conversation. Logique pure dans `src/logic/game/wander.ts`.
 - **n°64 — Quêtes liées aux boss** (`boss_*`) attendent leurs drapeaux jusqu'en M3/M5.
 - **n°65 — Gardes hostiles / embuscade** reportés en M3.
 - **n°66 — Recrues** seulement enregistrées (le PNJ quitte le village) ; l'effectif jouable arrive en M5/M6.

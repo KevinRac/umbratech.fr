@@ -5,7 +5,7 @@
  */
 import Phaser from 'phaser';
 import type { Expression, NpcDef } from '../data/townSchemas';
-import { NPC_H, NPC_IDLE_FRAMES, NPC_POSES, NPC_W, lookFromDef, paintNpcFrame } from './npcSprites';
+import { NPC_H, NPC_IDLE_FRAMES, NPC_POSES, NPC_W, NPC_WALK_FRAMES, lookFromDef, paintNpcFrame, paintNpcWalkFrame } from './npcSprites';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas, bayer } from './pixelCanvas';
 import { paintPortraitHD } from './portraitPainter';
@@ -13,6 +13,7 @@ import { paintPortraitHD } from './portraitPainter';
 export const TOWN_TEX = {
   npc: (id: string): string => `npc:${id}`,
   npcFrame: (pose: string, frame: number): string => `${pose}_${frame}`,
+  npcWalk: (pose: string, frame: number): string => `${pose}_w${frame}`,
   portrait: (id: string, expression: Expression): string => `portrait:${id}:${expression}`,
   markerAvailable: 'marker:available',
   markerReady: 'marker:ready',
@@ -20,21 +21,25 @@ export const TOWN_TEX = {
   questSpark: 'marker:spark',
 } as const;
 
-/** Une feuille 2 × 3 (images d'attente × poses) par PNJ. */
+/** Une feuille par PNJ : images d'attente puis images de marche, une rangée par pose. */
 export function ensureNpcTexture(scene: Phaser.Scene, npc: NpcDef): string {
   const key = TOWN_TEX.npc(npc.id);
   if (scene.textures.exists(key)) return key;
   const look = lookFromDef(npc.look);
-  const sheet = new PixelCanvas(NPC_W * NPC_IDLE_FRAMES, NPC_H * NPC_POSES.length);
+  const sheet = new PixelCanvas(NPC_W * (NPC_IDLE_FRAMES + NPC_WALK_FRAMES), NPC_H * NPC_POSES.length);
   NPC_POSES.forEach((pose, row) => {
     for (let frame = 0; frame < NPC_IDLE_FRAMES; frame++) {
       paintNpcFrame({ set: (x, y, color, alpha) => sheet.set(x, y, color, alpha ?? 255) }, frame * NPC_W, row * NPC_H, look, pose, frame);
+    }
+    for (let frame = 0; frame < NPC_WALK_FRAMES; frame++) {
+      paintNpcWalkFrame({ set: (x, y, color, alpha) => sheet.set(x, y, color, alpha ?? 255) }, (NPC_IDLE_FRAMES + frame) * NPC_W, row * NPC_H, look, pose, frame);
     }
   });
   sheet.toTexture(scene, key);
   const texture = scene.textures.get(key);
   NPC_POSES.forEach((pose, row) => {
     for (let frame = 0; frame < NPC_IDLE_FRAMES; frame++) texture.add(TOWN_TEX.npcFrame(pose, frame), 0, frame * NPC_W, row * NPC_H, NPC_W, NPC_H);
+    for (let frame = 0; frame < NPC_WALK_FRAMES; frame++) texture.add(TOWN_TEX.npcWalk(pose, frame), 0, (NPC_IDLE_FRAMES + frame) * NPC_W, row * NPC_H, NPC_W, NPC_H);
   });
   return key;
 }

@@ -37,22 +37,26 @@ export class CollisionGrid {
     this.refresh();
   }
 
-  /** Cases occupées par des PNJ : solides tant qu'ils sont là (indices `ty * largeur + tx`). */
+  /** Cases occupées par des PNJ : solides tant qu'ils sont là (indices `ty * largeur + tx`). Mise à jour incrémentale. */
   setExtraSolid(cells: Iterable<number>): void {
-    this.extraSolid = new Set(cells);
-    this.refresh();
+    const next = new Set(cells);
+    const old = this.extraSolid;
+    this.extraSolid = next;
+    for (const i of old) if (!next.has(i) && i >= 0 && i < this.solid.length) this.solid[i] = this.baseSolid(i) ? 1 : 0;
+    for (const i of next) if (i >= 0 && i < this.solid.length) this.solid[i] = 1;
+  }
+
+  private baseSolid(i: number): boolean {
+    const v = this.values[i] as number;
+    if (v === COLLISION.gate) {
+      const flag = this.gateFlagByCell.get(i);
+      return flag === undefined || !this.openFlags.has(flag);
+    }
+    return v === COLLISION.blocked || v === COLLISION.water;
   }
 
   private refresh(): void {
-    for (let i = 0; i < this.values.length; i++) {
-      const v = this.values[i] as number;
-      let solid = v === COLLISION.blocked || v === COLLISION.water;
-      if (v === COLLISION.gate) {
-        const flag = this.gateFlagByCell.get(i);
-        solid = flag === undefined || !this.openFlags.has(flag);
-      }
-      this.solid[i] = solid ? 1 : 0;
-    }
+    for (let i = 0; i < this.values.length; i++) this.solid[i] = this.baseSolid(i) ? 1 : 0;
     for (const i of this.extraSolid) if (i >= 0 && i < this.solid.length) this.solid[i] = 1;
   }
 

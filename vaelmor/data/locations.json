@@ -43,6 +43,7 @@
           "title": "Aubergiste",
           "at": [75,87],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#8a4b2a",
@@ -94,6 +95,7 @@
           "title": "Meunier",
           "at": [61,80],
           "facing": "e",
+          "roam": 8,
           "look": {
             "skin": "#e0b98a",
             "hair": "#d8d2c0",
@@ -140,6 +142,7 @@
           "title": "Garde du village",
           "at": [79,78],
           "facing": "s",
+          "roam": 5,
           "look": {
             "skin": "#d2a679",
             "hair": "#4a3a30",
@@ -202,6 +205,7 @@
           "title": "Forgeron",
           "at": [78,86],
           "facing": "w",
+          "roam": 3,
           "look": {
             "skin": "#b88660",
             "hair": "#2a1f1a",
@@ -232,6 +236,7 @@
           "title": "Jeune colporteuse",
           "at": [70,83],
           "facing": "s",
+          "roam": 8,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#c9783a",
@@ -280,6 +285,7 @@
           "title": "Ancien du village",
           "at": [66,82],
           "facing": "w",
+          "roam": 6,
           "look": {
             "skin": "#d8b28a",
             "hair": "#e6e6e0",
@@ -336,6 +342,7 @@
           "title": "Marchande de rations",
           "at": [68,88],
           "facing": "e",
+          "roam": 3,
           "look": {
             "skin": "#e0b98a",
             "hair": "#6a3a2a",
@@ -415,6 +422,7 @@
           "title": "Première des Racines",
           "at": [29,48],
           "facing": "s",
+          "roam": 8,
           "look": {
             "skin": "#d8b28a",
             "hair": "#c8d0b0",
@@ -486,6 +494,7 @@
           "title": "Herboriste",
           "at": [25,53],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#e0b98a",
             "hair": "#9a6a3a",
@@ -516,6 +525,7 @@
           "title": "Chasseuse",
           "at": [36,47],
           "facing": "w",
+          "roam": 8,
           "look": {
             "skin": "#d2a679",
             "hair": "#2a2a2a",
@@ -563,6 +573,7 @@
           "title": "Déserteur de la Couronne",
           "at": [38,53],
           "facing": "w",
+          "roam": 8,
           "look": {
             "skin": "#d2a679",
             "hair": "#5a3a2a",
@@ -616,6 +627,7 @@
           "title": "Gamin guide",
           "at": [28,51],
           "facing": "s",
+          "roam": 10,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#b87838",
@@ -659,6 +671,7 @@
           "title": "Jeune façonneur",
           "at": [21,43],
           "facing": "s",
+          "roam": 8,
           "look": {
             "skin": "#c89a6a",
             "hair": "#4a5a3a",
@@ -746,6 +759,7 @@
           "title": "Chef de l’Ordre des Marées",
           "at": [115,97],
           "facing": "s",
+          "roam": 5,
           "look": {
             "skin": "#c89a6a",
             "hair": "#d0d0d0",
@@ -818,6 +832,7 @@
           "title": "Tisseuse de filets",
           "at": [106,111],
           "facing": "s",
+          "roam": 8,
           "look": {
             "skin": "#d2a679",
             "hair": "#8a8a8a",
@@ -848,6 +863,7 @@
           "title": "Chasseur de serpents",
           "at": [112,103],
           "facing": "w",
+          "roam": 6,
           "look": {
             "skin": "#b88660",
             "hair": "#1f1f1f",
@@ -898,6 +914,7 @@
           "title": "Cartographe",
           "at": [98,99],
           "facing": "s",
+          "roam": 8,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#5a2a2a",
@@ -944,6 +961,7 @@
           "title": "Prêtre du phare",
           "at": [101,109],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#e0b98a",
             "hair": "#8a8a8a",
@@ -992,6 +1010,7 @@
           "title": "Garde de l’Amiral",
           "at": [115,103],
           "facing": "s",
+          "roam": 5,
           "look": {
             "skin": "#d2a679",
             "hair": "#3a2a20",
@@ -1065,6 +1084,7 @@
           "title": "Forgeron principal",
           "at": [58,31],
           "facing": "w",
+          "roam": 3,
           "look": {
             "skin": "#d2a679",
             "hair": "#a0482a",
@@ -1095,6 +1115,7 @@
           "title": "Prêtresse des Lanternes",
           "at": [67,19],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#8a3a2a",
@@ -1157,6 +1178,7 @@
           "title": "Ingénieur",
           "at": [63,21],
           "facing": "e",
+          "roam": 3,
           "look": {
             "skin": "#e0b98a",
             "hair": "#6a4a2a",
@@ -1204,6 +1226,7 @@
           "title": "Gardienne des cols",
           "at": [53,19],
           "facing": "s",
+          "roam": 8,
           "look": {
             "skin": "#c89a6a",
             "hair": "#3a3a3a",
@@ -1264,6 +1287,7 @@
           "title": "Mineur",
           "at": [69,25],
           "facing": "w",
+          "roam": 6,
           "look": {
             "skin": "#b88660",
             "hair": "#1f1f1f",
@@ -1297,6 +1321,7 @@
           "title": "Aubergiste",
           "at": [58,25],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#c0702a",
@@ -1372,6 +1397,7 @@
           "title": "Dirigeante de la Couronne",
           "at": [118,49],
           "facing": "s",
+          "roam": 5,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#d0d0d8",
@@ -1436,6 +1462,7 @@
           "title": "Commandant de la caserne",
           "at": [128,47],
           "facing": "s",
+          "roam": 5,
           "look": {
             "skin": "#c89a6a",
             "hair": "#2a2a2a",
@@ -1492,6 +1519,7 @@
           "title": "Marchand d’objets rares",
           "at": [113,54],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#d8b28a",
             "hair": "#bfb7a0",
@@ -1544,6 +1572,7 @@
           "title": "Marchande du marché",
           "at": [113,47],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#e0b98a",
             "hair": "#6a4a2a",
@@ -1573,6 +1602,7 @@
           "title": "Chevalier déchu",
           "at": [132,53],
           "facing": "w",
+          "roam": 6,
           "look": {
             "skin": "#d8b28a",
             "hair": "#6a5a4a",
@@ -1623,6 +1653,7 @@
           "title": "Chanteuse",
           "at": [126,61],
           "facing": "s",
+          "roam": 6,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#2a1f3a",
@@ -1672,6 +1703,7 @@
           "title": "Soigneuse",
           "at": [114,61],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#e0b98a",
             "hair": "#d8d8d8",
@@ -1719,6 +1751,7 @@
           "title": "Alchimiste",
           "at": [110,60],
           "facing": "e",
+          "roam": 3,
           "look": {
             "skin": "#e8c9a0",
             "hair": "#3a8a5a",
@@ -1756,6 +1789,7 @@
           "title": "Maçon de pierres anciennes",
           "at": [132,46],
           "facing": "w",
+          "roam": 6,
           "look": {
             "skin": "#b88660",
             "hair": "#4a3a30",
@@ -1792,6 +1826,7 @@
           "title": "Organisateur des combats",
           "at": [110,47],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#b88660",
             "hair": "#1f1f1f",
@@ -1834,6 +1869,7 @@
           "title": "Aubergiste du Corbeau",
           "at": [127,53],
           "facing": "s",
+          "roam": 3,
           "look": {
             "skin": "#d8b28a",
             "hair": "#1f1f1f",
@@ -1881,6 +1917,7 @@
           "title": "Mendiant du quartier des pauvres",
           "at": [118,61],
           "facing": "e",
+          "roam": 6,
           "look": {
             "skin": "#d2a679",
             "hair": "#bfb7a0",

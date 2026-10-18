@@ -20,6 +20,8 @@ import { CollisionGrid } from '../logic/world/collision';
 import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '../logic/world/movement';
 import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker } from '../logic/world/zones';
+import { DEFAULT_WANDER, Wanderer } from '../logic/game/wander';
+import { Rng } from '../logic/rng';
 import { getGameCtx } from '../core/townContext';
 import { collectFlagRewards, enterLocation, newProgress, newlyReady, npcPresent, questStatus, questTierOk, reputationOf, tierIdOf, type GameCtx, type Notice } from '../logic/game';
 import type { NpcDef } from '../data/townSchemas';
@@ -64,9 +66,15 @@ const GATE_MESSAGE_COOLDOWN_MS = 4000;
 interface NpcActor {
   readonly def: NpcDef;
   readonly locationId: string;
-  readonly x: number;
+  x: number;
   /** Pieds du PNJ (pixels). */
-  readonly footY: number;
+  footY: number;
+  readonly walker: Wanderer;
+  readonly rng: Rng;
+  /** Vrai pendant une conversation : il finit son pas puis ne bouge plus. */
+  talking: boolean;
+  /** Cases réservées au dernier calcul (pour ne mettre la collision à jour qu'au besoin). */
+  reservedKey: string;
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly shadow: Phaser.GameObjects.Image;
   readonly marker: Phaser.GameObjects.Image;
@@ -74,8 +82,6 @@ interface NpcActor {
   readonly spark: Phaser.GameObjects.Image;
   readonly phase: number;
   facing: NpcDef['facing'];
-  /** Instant où le PNJ reprend son regard d'origine après une conversation. */
-  resetAt: number;
 }
 
 export interface WorldSceneData {
@@ -347,7 +353,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.map || this.leaving) return;
     if (this.modal) {
       const dtModal = delta / 1000;
-      this.updateNpcs(time);
+      this.updateNpcs(time, delta);
       this.pollTownHud();
       this.updateAtmosphere(dtModal);
       this.atmosphere?.update(dtModal);
@@ -371,7 +377,7 @@ export class WorldScene extends Phaser.Scene {
     this.applyCamera();
     this.syncHero();
     this.updateZones();
-    this.updateNpcs(time);
+    this.updateNpcs(time, delta);
     this.updateInteraction(time);
     this.pollTownHud();
     this.updateAtmosphere(dt);
@@ -441,8 +447,19 @@ export class WorldScene extends Phaser.Scene {
     for (const flag of (params.get('flags') ?? '').split(',')) if (flag) addUnique(this.state.openFlags, flag);
   }
 
+  /** Cases où un PNJ peut marcher : libres, hors portes et devant-de-porte. */
+  private npcWalkable = (x: number, y: number): boolean => this.grid.valueAt(x, y) === 0 && !this.doorCells.has(y * this.map.width + x);
+  private doorCells = new Set<number>();
+
   private buildNpcs(): void {
     ensureMarkerTextures(this);
+    this.doorCells = new Set();
+    for (const o of this.map.ambient) {
+      if (o.kind !== 'door') continue;
+      const x = Math.floor(o.x / this.map.tileSize);
+      const y = Math.floor(o.y / this.map.tileSize);
+      for (const [dx, dy] of [[0, 0], [0, 1], [-1, 1], [1, 1], [0, 2]] as const) this.doorCells.add((y + dy) * this.map.width + x + dx);
+    }
     for (const { npc, location } of this.gameCtx.index.npcs.values()) {
       if (!npcPresent(this.gameCtx, npc)) continue;
       const size = this.map.tileSize;
@@ -456,7 +473,10 @@ export class WorldScene extends Phaser.Scene {
       const marker = this.add.image(x, footY - 40, TOWN_TEX.markerAvailable).setDepth(DEPTH.marker).setVisible(false);
       const spark = this.add.image(x, footY - 40, TOWN_TEX.questSpark).setDepth(DEPTH.marker + 0.01).setVisible(false);
       const glow = this.add.image(x, footY - 2, TOWN_TEX.questGlow).setDepth(DEPTH.shadow - 0.01).setVisible(false);
-      this.npcs.set(npc.id, { def: npc, locationId: location.id, x, footY, sprite, shadow, marker, glow, spark, phase: (tx * 37 + ty * 91) % 700, facing: npc.facing, resetAt: 0 });
+      const rng = Rng.fromSeed(`${npc.id}:${Math.floor(Math.random() * 1e9)}`);
+      const walkable = (wx: number, wy: number): boolean => (wx === tx && wy === ty) || this.npcWalkable(wx, wy);
+      const walker = new Wanderer({ home: { x: tx, y: ty }, radius: npc.roam, ...DEFAULT_WANDER }, walkable, rng, npc.facing);
+      this.npcs.set(npc.id, { def: npc, locationId: location.id, x, footY, sprite, shadow, marker, glow, spark, walker, rng, talking: false, reservedKey: '', phase: (tx * 37 + ty * 91) % 700, facing: npc.facing });
     }
     this.refreshNpcSolids();
     // Le point d'apparition ou la case de départ ne doit pas tomber dans un PNJ.
@@ -467,7 +487,13 @@ export class WorldScene extends Phaser.Scene {
 
   private refreshNpcSolids(): void {
     const size = this.map.tileSize;
-    this.grid.setExtraSolid([...this.npcs.values()].map((a) => (a.footY / size - 1) * this.map.width + Math.floor(a.x / size)));
+    const cells: number[] = [];
+    for (const a of this.npcs.values()) {
+      for (const t of a.walker.reserved) cells.push(t.y * this.map.width + t.x);
+      a.reservedKey = a.walker.reserved.map((t) => `${t.x},${t.y}`).join(';');
+    }
+    void size;
+    this.grid.setExtraSolid(cells);
   }
 
   /** Pastilles « ! » (quête à prendre) et « ? » (quête à rendre) au-dessus des PNJ. */
@@ -495,19 +521,43 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Respiration des PNJ, pastilles qui flottent, regard qui revient à sa place. */
-  private updateNpcs(time: number): void {
+  /** Un PNJ peut-il entrer dans cette case maintenant ? (ni autre PNJ, ni héros) */
+  private canNpcEnter(self: NpcActor, x: number, y: number): boolean {
+    for (const other of this.npcs.values()) {
+      if (other === self) continue;
+      for (const t of other.walker.reserved) if (t.x === x && t.y === y) return false;
+    }
+    const size = this.map.tileSize;
+    const b = this.body_;
+    // Rectangle du héros (10×8, pieds en bas) contre la case, avec une marge.
+    return !(b.x + 7 > x * size && b.x - 7 < (x + 1) * size && b.y + 2 > y * size && b.y - 10 < (y + 1) * size);
+  }
+
+  /** Marche et respiration des PNJ, pastilles qui flottent. */
+  private updateNpcs(time: number, delta = 0): void {
     const frame = (actor: NpcActor): number => (Math.floor((time + actor.phase) / 700) % 2);
+    const size = this.map.tileSize;
+    let changed = false;
     for (const actor of this.npcs.values()) {
-      if (actor.resetAt > 0 && time > actor.resetAt) {
-        actor.resetAt = 0;
-        actor.facing = actor.def.facing;
-      }
+      const talkingToHero = actor.talking;
+      if (talkingToHero && !actor.walker.walking) actor.walker.face(facingToward(this.body_.x - actor.x, this.body_.y - (actor.footY - 1)));
+      if (delta > 0) actor.walker.update(Math.min(delta, 100), actor.rng, (x, y) => this.canNpcEnter(actor, x, y), this.modal || talkingToHero);
+      const pos = actor.walker.position(size);
+      const px = Math.round(pos.x);
+      const py = Math.round(pos.footY);
+      actor.x = px;
+      actor.footY = py;
+      actor.facing = actor.walker.facing;
+      const key = actor.walker.reserved.map((t) => `${t.x},${t.y}`).join(';');
+      if (key !== actor.reservedKey) changed = true;
       const { pose, flipX } = facingPose(actor.facing);
-      actor.sprite.setFlipX(flipX).setFrame(TOWN_TEX.npcFrame(pose, frame(actor)));
+      const name = actor.walker.walking ? TOWN_TEX.npcWalk(pose, Math.floor((time + actor.phase) / 140) % 4) : TOWN_TEX.npcFrame(pose, frame(actor));
+      actor.sprite.setPosition(px, py).setFlipX(flipX).setFrame(name).setDepth(DEPTH.entities + (py - 1) / 100000);
+      actor.shadow.setPosition(px, py - 1);
+      actor.glow.setPosition(px, py - 2);
       if (actor.marker.visible) {
         const bob = Math.round(Math.sin(time / 260 + actor.phase) * 1.5);
-        actor.marker.setY(actor.footY - 40 + bob);
+        actor.marker.setPosition(actor.x, actor.footY - 40 + bob);
         actor.glow.setAlpha(0.7 + 0.3 * Math.sin(time / 420 + actor.phase));
         // Étincelle qui scintille à un coin de l'emblème, un coin différent à chaque cycle.
         const cycle = (time + actor.phase * 3) / 1400;
@@ -518,6 +568,7 @@ export class WorldScene extends Phaser.Scene {
         actor.spark.setPosition(actor.x + sx, actor.footY - 40 + bob + sy).setAlpha(t < 0.4 ? Math.sin((t / 0.4) * Math.PI) : 0);
       }
     }
+    if (changed) this.refreshNpcSolids();
   }
 
   /** PNJ le plus proche à portée de parole (pieds à pieds). */
@@ -569,8 +620,7 @@ export class WorldScene extends Phaser.Scene {
   private startDialogue(actor: NpcActor): void {
     this.enterModal();
     // Le PNJ se tourne vers le héros, et le héros vers lui.
-    actor.facing = facingToward(this.body_.x - actor.x, this.body_.y - (actor.footY - 1));
-    actor.resetAt = 0;
+    actor.talking = true;
     const toward = facingToward(actor.x - this.body_.x, actor.footY - 1 - this.body_.y);
     this.body_.facing = toward;
     this.syncHero();
@@ -578,7 +628,7 @@ export class WorldScene extends Phaser.Scene {
       npcId: actor.def.id,
       onClose: (result: { recruited: boolean }) => {
         if (result.recruited) this.removeNpc(actor);
-        else actor.resetAt = this.time.now + 1500;
+        actor.talking = false;
         this.leaveModal();
       },
     });

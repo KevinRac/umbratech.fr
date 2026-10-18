@@ -213,6 +213,8 @@ export const npcSchema = z.strictObject({
   /** Case (x, y) où se tient le PNJ ; ses pieds sont au bas de la case. */
   at: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
   facing: z.enum(FACINGS),
+  /** Rayon (en cases) de la zone où il se promène autour de son poste ; 0 : il reste en place. */
+  roam: z.number().int().min(0).max(12).default(5),
   look: lookSchema,
   portrait: portraitSchema,
   /** Ce qu'il dit en premier, selon le palier de réputation du lieu. */
