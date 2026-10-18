@@ -138,9 +138,14 @@
    fracas:{n:'Fracas',ic:'u_cross4',forme:'croix',menace:3,chargeS:0.9,effetS:0.3,longueur:420,largeur:60,degats:2.4},
    eclats:{n:'Éclats',ic:'u_diamonds',forme:'losanges',menace:3,chargeS:0.85,effetS:0.25,nombre:5,ecart:118,taille:46,degats:2},
    damier:{n:'Damier',ic:'u_grid',forme:'damier',menace:3,chargeS:0.85,effetS:0.25,cote:74,degats:2.2}},
+  // Montage (v16.28) : à son arrivée, le Brumeux pousse son cri d'invocation, descend le corps d'origine au bout de fils de marionnette,
+  // fait tomber le masque sur sa tête et le coud de force (points un par un), puis coupe les fils. Il ne frappe pas et ne peut pas être
+  // blessé pendant le montage (si immunise). Durées des quatre temps en secondes ; hauteur : d'où le corps descend (px) ;
+  // fil : couleur des fils (r,g,b). Avec « mouvements réduits », le corps apparaît en fondu au lieu de descendre.
+  montage:{descenteS:0.5,masqueS:0.35,coutureS:0.7,coupeS:0.25,hauteur:230,fil:'205,180,255',immunise:true},
   // Le masque. couleurs : jamais de rouge (les zones le sont) ; taille : hauteur du masque en rayons du corps, bornée en px.
   // Ses états : calme, yeux allumés pendant un chargement, fissures sous fissurePV % de PV, brisé à la mort (brisureS secondes).
-  masque:{couleurs:{haut:'#e4dcf4',bas:'#8f7fb8',trait:'#120c20',creux:'#160f28',oeil:'#b892ff',oeilVif:'#f1e6ff',fissure:'#c9a8ff'},
+  masque:{couleurs:{haut:'#e4dcf4',bas:'#8f7fb8',trait:'#120c20',creux:'#160f28',oeil:'#b892ff',oeilVif:'#f1e6ff',fissure:'#c9a8ff',fil:'#cdb4ff'},
    taille:1.3,min:36,max:50,fissurePV:50,brisureS:0.7}},
  // Mutations du talent Mutation Instable (Gouffre)
  mutationsInstables:[{id:'griffes',n:'Griffes',d:'+40 % de dégâts'},{id:'membres',n:'Membres allongés',d:'+35 % de portée'},{id:'pierre',n:'Peau de pierre',d:'−40 % de dégâts subis'},{id:'fievre',n:'Fièvre',d:'+30 % de vitesse'}]

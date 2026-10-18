@@ -8007,14 +8007,17 @@ function demoBoot(cls){
   c.fillStyle=lit?'#ffffff':oe;for(const [x,y,r] of MQ.lueurs){c.beginPath();c.arc(x,y,r*(lit?1:0.75),0,TAU);c.fill();}
   if(fis){c.lineCap='round';c.lineJoin='round';for(const p of MP.fissures){c.strokeStyle=COL.trait;c.lineWidth=6;c.stroke(p);c.strokeStyle=COL.fissure;c.lineWidth=2.4;c.stroke(p);}}}
  // etat : calme | charge | fissure | brise ; o.lit (yeux allumés), o.k (avancement de la brisure 0…1), o.a (opacité)
- function drawMask(c,x,y,h,etat,o){o=o||{};const s=h/MQ.vb[1],lit=!!o.lit,fis=etat==='fissure'||etat==='brise',k=o.k||0;
+ function drawMask(c,x,y,h,etat,o){o=o||{};const s=h/MQ.vb[1]*(o.sc||1),lit=!!o.lit,fis=etat==='fissure'||etat==='brise',k=o.k||0;
   c.save();c.translate(x-MQ.centre[0]*s,y-MQ.centre[1]*s);c.scale(s,s);c.globalAlpha=o.a==null?1:o.a;
   const pul=lit&&!RM?0.8+0.2*Math.sin(T*16):1;
   c.save();c.globalCompositeOperation='lighter';for(const [ex,ey,r] of MQ.lueurs)glow(c,ex,ey,r*(lit?9:5.5),rgb(lit?COL.oeilVif:COL.oeil),(lit?0.55:0.25)*pul);c.restore();
   if(etat==='brise'){const d=5+k*(RM?0:46);
    for(const sh of MP.eclats){c.save();c.translate(sh.dir[0]*d,sh.dir[1]*d+(RM?0:k*k*30));if(!RM){c.translate(50,56);c.rotate(sh.dir[0]*k*0.7);c.translate(-50,-56);}
     c.lineJoin='round';c.strokeStyle=COL.trait;c.lineWidth=5;c.stroke(sh.p);c.clip(sh.p);face(c,false,true,1);c.restore();}}
-  else{c.lineJoin='round';c.strokeStyle=COL.trait;c.lineWidth=5;c.stroke(MP.contour);face(c,lit,fis,pul);}
+  else{c.lineJoin='round';c.strokeStyle=COL.trait;c.lineWidth=5;c.stroke(MP.contour);face(c,lit,fis,pul);
+   const n=o.points==null?MQ.coutures.length:o.points;c.lineCap='round';
+   for(let i=0;i<n&&i<MQ.coutures.length;i++){const [px,py,pa]=MQ.coutures[i];c.save();c.translate(px,py);c.rotate(pa*Math.PI/180);
+    for(const [w,col] of [[3.4,COL.trait],[1.3,COL.fil||COL.fissure]]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(-6,-4);c.lineTo(6,4);c.moveTo(-6,4);c.lineTo(6,-4);c.stroke();}c.restore();}}
   c.restore();}
  window.__asm.drawMask=drawMask;
  // Pour essayer en jeu, depuis la console : __asm.essai() ; __asm.essai('voile:onde+cone>charge', 3) ; troisième argument vrai : sans la première vague
@@ -8089,11 +8092,16 @@ function demoBoot(cls){
    e.maxHp*=A.stats.pv*C.pv/(d.hp*CHAMP.pv);e.hp=e.maxHp;e.dmg*=A.stats.degats/(d.dmg*CHAMP.degats);
    e.r=d.r*C.taille;e.spd=d.spd*spdMul()*C.vitesse;e.xp=A.stats.xp*(1+0.05*(G()-1));e.state='walk';e.tok=null;
    e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co),z:null,flash:null,dash:null};
+   if(MO){e.asm.mont={t:0,tot:MT(),n:0};e.asm.st.t=Math.max(e.asm.st.t,MT());}
    showCard(e,false);sfx('asm_in');}}catch(err){console.error(err);}
   return e;};
  // pas de contre-mesure, pas de règle de salle, et la salle ne compte pas dans la moyenne qui sert à juger les contre-mesures
  const _bp=brumeuxPlan;brumeuxPlan=function(){if(room&&room.asm)return;return _bp.apply(this,arguments);};
  const _sr=setRule;setRule=function(){if(room&&room.asm)return;return _sr.apply(this,arguments);};
+ const immun=e=>e&&e.asm&&e.asm.mont&&MO&&MO.immunise;
+ const _he=hitEnemy;hitEnemy=function(e){if(immun(e))return 0;return _he.apply(this,arguments);};
+ const _fh=friendlyHit;friendlyHit=function(o){if(immun(o))return;return _fh.apply(this,arguments);};
+ const _rh=rawHit;rawHit=function(e){if(immun(e))return;return _rh.apply(this,arguments);};
  const _mp=makePuppet;makePuppet=function(e){if(e&&e.asm)return;return _mp.apply(this,arguments);};
  let ZR=[],ZB=[];
  const _er=enterRoom;
@@ -8132,6 +8140,7 @@ function demoBoot(cls){
   if(C.mouvement==='approche'){if(!tg.pl||dP>70)moveTo(e,tg.x,tg.y,sp,dt);else{const a=Math.atan2(e.y-P.y,e.x-P.x)+0.8*e.dir*dt;moveTo(e,P.x+Math.cos(a)*64,P.y+Math.sin(a)*64,sp*0.7,dt);}}
   else keepRange(e,tg,sp,dt,C.distance[0],C.distance[1]);}
  function update(e,dt,rooted){const S=e.asm,st=S.st;let fige=false;
+  if(S.mont){montStep(e,dt);asmPas(A,st,{dt,act:RUN.act,pv:100,dist:999,autre:true,fige:false},S.rnd);return;}
   if(e.stun>0){e.stun-=dt/A.etourdissement;fige=true;}
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
   const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,autre:!tg.pl||zoneAutre(e),fige},S.rnd);
@@ -8193,12 +8202,46 @@ function demoBoot(cls){
   const a=e.ang||0,st=e.asm&&e.asm.st,lean=st&&st.ph==='charge'&&st.k==='charge'?-4:e.asm&&e.asm.dash?5:0,d=r*0.72+lean;return[e.x+Math.cos(a)*d,e.y+Math.sin(a)*d];}
  function faceY(e){return facePos(e)[1];}
  function topY(e){return e.type==='spectre'?e.y-e.r*1.5:e.type==='voile'?e.y-e.r*1.9:e.y-e.r*1.1;}
+ // ── Montage : le corps d'origine descend au bout des fils du Brumeux, le masque tombe sur sa tête, il est cousu, les fils sont coupés
+ const MO=A.montage,MT=()=>MO?MO.descenteS+MO.masqueS+MO.coutureS+MO.coupeS:0,ease=k=>1-Math.pow(1-clamp(k,0,1),3);
+ function montOff(e){const M=e.asm&&e.asm.mont;if(!M||RM)return 0;const k=clamp(M.t/MO.descenteS,0,1),sm=k*k*(3-2*k);return -(1-sm)*MO.hauteur+(k<1?Math.sin(M.t*18)*2*(1-k):0);}  // descente lente puis posée, le corps se balance au bout des fils
+ function montPost(c,e,M,fx,fy,h){const d0=MO.descenteS,d1=d0+MO.masqueS,d2=d1+MO.coutureS,off=M.off||0,FIL=MO.fil;
+  const by=Math.max(14,fy-off-250),bx=e.x,q=M.t<d2?0:clamp((M.t-d2)/MO.coupeS,0,1);
+  // masque : suspendu à son fil, il tombe sur la tête, puis il est cousu (points un par un, l'aiguille brille sur le dernier)
+  let mx=fx,my=fy,sc=1;
+  if(!M.pose){const k=ease((M.t-d0)/MO.masqueS);my=(fy-off)-(RM?0:(1-k)*170);if(RM)c.globalAlpha=M.t<d0?0:clamp((M.t-d0)/MO.masqueS,0.25,1);}
+  else{const u=clamp((M.t-d1)/0.12,0,1);sc=RM?1:1.28-0.28*u;}
+  drawMask(c,mx,my,h,'calme',{sc,points:M.pose?M.n:0,lit:M.t>=d2});c.globalAlpha=1;
+  if(M.pose&&M.n>0&&M.n<=MQ.coutures.length&&M.t<d2){const s2=h/MQ.vb[1],[px,py]=MQ.coutures[M.n-1];c.save();c.globalCompositeOperation='lighter';glow(c,mx+(px-MQ.centre[0])*s2,my+(py-MQ.centre[1])*s2,9,'235,220,255',0.9);c.restore();}
+  // fils de marionnette : une croix de manipulation au-dessus, des fils vers ses épaules et vers le masque ; coupés, ils remontent
+  if(q>=1)return;
+  const pts=[[e.x-e.r*0.8,e.y-e.r*0.15],[e.x+e.r*0.8,e.y-e.r*0.15],[mx,my-h*0.5]],lerp=(a,b,t)=>a+(b-a)*t;
+  c.save();c.globalAlpha=1-q;c.lineCap='round';
+  for(const [px,py] of pts){const ex=lerp(px,bx+(px-bx)*0.35,q),ey=lerp(py,by,q);
+   c.strokeStyle=`rgba(${FIL},0.18)`;c.lineWidth=5;c.beginPath();c.moveTo(bx+(px-bx)*0.35,by);c.lineTo(ex,ey);c.stroke();
+   c.strokeStyle=`rgba(${FIL},0.85)`;c.lineWidth=1.4;c.beginPath();c.moveTo(bx+(px-bx)*0.35,by);c.lineTo(ex,ey);c.stroke();}
+  c.strokeStyle='rgba(20,14,34,.95)';c.lineWidth=6;c.beginPath();c.moveTo(bx-30,by);c.lineTo(bx+30,by);c.moveTo(bx,by-12);c.lineTo(bx,by+16);c.stroke();
+  c.strokeStyle=`rgba(${FIL},0.95)`;c.lineWidth=2.6;c.beginPath();c.moveTo(bx-30,by);c.lineTo(bx+30,by);c.moveTo(bx,by-12);c.lineTo(bx,by+16);c.stroke();
+  c.save();c.globalCompositeOperation='lighter';glow(c,bx,by,26,FIL,0.35);c.restore();
+  c.restore();}
+ function montStep(e,dt){const S=e.asm,M=S.mont,d0=MO.descenteS,d1=d0+MO.masqueS,d2=d1+MO.coutureS;M.t+=dt;
+  if(!M.sol&&M.t>=d0){M.sol=true;sparks(e.x,e.y+e.r*0.6,6,'#b9a6ff');if(!RM)shake(2,0.08);sfx('asm_sol');}
+  if(!M.pose&&M.t>=d1){M.pose=true;e.flash=0.12;if(!RM)shake(3,0.1);sfx('asm_pose');}
+  const N=MQ.coutures.length,n=M.pose?Math.min(N,Math.floor((M.t-d1)/MO.coutureS*N)+1):0;
+  while(M.n<n){M.n++;sfx('asm_point');}
+  if(!M.coupe&&M.t>=d2){M.coupe=true;sfx('asm_coupe');}
+  if(M.t>=M.tot){S.mont=null;tlights.push({x:e.x,y:e.y,r:260,t:0.35,max:0.35,c:'violet'});sfx('asm_pret');}}
+ window.__asm.montage=MT;
+ const _deb=drawEnemyBody;
+ drawEnemyBody=function(e){const M=e.asm&&e.asm.mont;if(!M){_deb(e);return;}const y=e.y;ctx.save();if(RM)ctx.globalAlpha=clamp(M.t/MO.descenteS,0.15,1);e.y+=montOff(e);try{_deb(e);}finally{e.y=y;ctx.restore();}};
  const _dep=drawEnemyPost;
- drawEnemyPost=function(e){if(!e.asm){_dep(e);return;}
-  const S=e.asm,st=S.st,hp=e.hp,el=e.elite,ty=e.type;e.hp=e.maxHp;e.elite=false;e.type='masque';try{_dep(e);}finally{e.hp=hp;e.elite=el;e.type=ty;}  // le masque remplace ses yeux : pas d'yeux d'origine ni de marque de champion
+ drawEnemyPost=function(e){if(!e.asm){_dep(e);return;}const M=e.asm.mont;if(!M){postAsm(e);return;}
+  const y=e.y;M.off=montOff(e);e.y+=M.off;try{postAsm(e);}finally{e.y=y;}};
+ function postAsm(e){
+  const S=e.asm,st=S.st,M=S.mont,hp=e.hp,el=e.elite,ty=e.type;e.hp=e.maxHp;e.elite=false;if(!(M&&!M.pose))e.type='masque';try{_dep(e);}finally{e.hp=hp;e.elite=el;e.type=ty;}  // le masque remplace ses yeux : pas d'yeux d'origine ni de marque de champion
   try{const c=ctx,lit=st.ph==='charge',h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max),fis=e.hp/e.maxHp*100<=A.masque.fissurePV;
    let jx=0,jy=0;if(lit&&!RM&&A.signatures[st.k]){jx=rand(-0.7,0.7);jy=rand(-0.7,0.7);}
-   const [fx_,fy_]=facePos(e);drawMask(c,fx_+jx,fy_+jy,h,fis?'fissure':'calme',{lit});
+   const [fx_,fy_]=facePos(e);if(M)montPost(c,e,M,fx_,fy_,h);else drawMask(c,fx_+jx,fy_+jy,h,fis?'fissure':'calme',{lit});
    const PS=A.passive;if(PS&&S.pas!=null&&S.pas>0&&S.pas<=PS.preavisS){const k=1-S.pas/PS.preavisS;c.save();c.globalCompositeOperation='lighter';glow(c,fx_,fy_+h*0.42,4+10*k,'255,110,100',0.5+0.4*k);c.restore();}
    const top=Math.min(topY(e),faceY(e)-h*0.5)-6;
    // PV (violet), barre de chargement, icônes
@@ -8214,7 +8257,7 @@ function demoBoot(cls){
     if(on){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.2,'255,120,110',0.6);c.restore();}
     drawIcon(c,X.ic,x,iy,on?sz*1.25:sz,on?'#ffffff':k===st.sig?'rgba(225,205,255,.98)':'rgba(236,228,250,.92)',k===st.sig?2.3:2);});
    if(e.stun>0){c.fillStyle='rgba(255,230,140,.95)';for(let i=0;i<3;i++){const a2=T*6+i*TAU/3;c.beginPath();c.arc(e.x+Math.cos(a2)*e.r*0.8,top+4+Math.sin(a2)*3,2.2,0,TAU);c.fill();}}}
-  catch(err){console.error(err);}};
+  catch(err){console.error(err);}}
  const _dfx=drawFx;
  drawFx=function(){_dfx();if(!ZB.length)return;const c=ctx;for(const b of ZB){const k=1-b.t/b.max;drawMask(c,b.x,b.y,b.h,'brise',{k,a:RM?(k<0.6?1:0):1-k*k});}};
  const _ke=killEnemy;
@@ -8248,7 +8291,13 @@ function demoBoot(cls){
  sfx=function(k,d){
   if(k==='asm_ch'){if(!AC||muted)return;d=d||0.7;tone(240,d,'sawtooth',0.035,620);tone(120,d,'triangle',0.04,300);return;}
   if(k==='asm_sig'){if(!AC||muted)return;d=d||1;tone(150,d,'sawtooth',0.05,520);tone(75,d,'square',0.03,260);noise(d,0.05,400,'lowpass');tone(880,0.12,'sine',0.04,null,d-0.12);return;}
-  if(k==='asm_in'){if(!AC||muted)return;tone(92,0.9,'sawtooth',0.06,58);noise(0.6,0.05,700,'lowpass');if(window.__rire)window.__rire(0.25);return;}
+  // cri d'invocation du Brumeux, puis les bruits du montage (le corps touche le sol, le masque claque, chaque point, les fils coupés)
+  if(k==='asm_in'){if(!AC||muted)return;_sfx('scream_brumeux');tone(92,1.2,'sawtooth',0.06,58);noise(0.8,0.05,700,'lowpass');return;}
+  if(k==='asm_sol'){if(!AC||muted)return;tone(70,0.25,'sine',0.12,40);noise(0.18,0.07,400,'lowpass');return;}
+  if(k==='asm_pose'){if(!AC||muted)return;tone(110,0.16,'square',0.07,60);noise(0.1,0.09,1800,'bandpass');return;}
+  if(k==='asm_point'){if(!AC||muted)return;tone(1500,0.035,'square',0.025,1100);noise(0.04,0.05,4200,'highpass');return;}
+  if(k==='asm_coupe'){if(!AC||muted)return;noise(0.07,0.12,5200,'highpass');noise(0.07,0.1,3800,'highpass',0.06);tone(1900,0.1,'triangle',0.03,700);return;}
+  if(k==='asm_pret'){if(!AC||muted)return;if(window.__rire)window.__rire(0);return;}
   if(k==='asm_eveil'){if(!AC||muted)return;noise(0.22,0.12,2600,'highpass');tone(520,0.28,'square',0.045,1040);tone(260,0.4,'sawtooth',0.04,520,0.08);if(window.__rire)window.__rire(0.2);return;}
   if(k==='asm_brise'){if(!AC||muted)return;noise(0.35,0.16,3200,'highpass');noise(0.6,0.08,900,'bandpass',0.05);tone(700,0.5,'triangle',0.05,180);tone(1400,0.25,'sine',0.03,500,0.04);return;}
   _sfx(k);};

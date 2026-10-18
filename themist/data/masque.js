@@ -17,6 +17,8 @@
  sillons:['M30.5 59L36 59L33.5 86Z','M69.5 59L64 59L66.5 86Z'],
  // fissures qui apparaissent à mi-vie
  fissures:['M40 11L36 21L41 28L34 36L37 43','M29 57L24 64L28 71L25 76','M75 70L68 76L71 84'],
+ // points de couture : le masque est cousu de force sur la tête (tempes, joues, menton). [x, y, angle du point en degrés]
+ coutures:[[12,44,-20],[88,44,20],[24,70,-40],[76,70,40],[50,113,90],[50,4,90]],
  // éclats quand il se brise : quatre morceaux qui recouvrent le contour, et la direction où chacun part
  eclats:[
   {d:'M9 42C10 24 24 13 40 12L50 1L50 39L45 46L28 44L9 46Z',dir:[-1,-1]},
@@ -34,6 +36,7 @@
    +M.yeux.map(d=>p(d,`fill="${col.creux}"`)).join('')
    +`<g filter="url(#${k}f)">${M.lueurs.map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r*(lit?1.9:1.3)}" fill="${oeil}"/>`).join('')}</g>`
    +M.lueurs.map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r*(lit?1:0.75)}" fill="${lit?'#fff':oeil}"/>`).join('')
+   +M.coutures.map(([x,y,a])=>`<g transform="translate(${x} ${y}) rotate(${a})"><path d="M-6 -4L6 4M-6 4L6 -4" stroke="${col.trait}" stroke-width="3.4" stroke-linecap="round"/><path d="M-6 -4L6 4M-6 4L6 -4" stroke="${col.fil||col.fissure}" stroke-width="1.3" stroke-linecap="round"/></g>`).join('')
    +(fis?M.fissures.map(d=>p(d,`fill="none" stroke="${col.trait}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"`)+p(d,`fill="none" stroke="${col.fissure}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"`)).join(''):'');
   const halo=`<g filter="url(#${k}f)" opacity="${lit?0.9:0.45}">${M.yeux.map(d=>p(d,`fill="${oeil}"`)).join('')}</g>`;
   const corps=etat==='brise'

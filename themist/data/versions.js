@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.27',
+ actuelle:'v16.28',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.28',t:'Le Masqué est monté sous tes yeux : le Brumeux pousse son cri d’invocation, descend le corps d’origine au bout de fils de marionnette (croix de manipulation au-dessus), fait tomber le masque sur sa tête et le coud de force, point par point, puis coupe les fils et rit. Le montage dure 1,8 s ; pendant ce temps, il ne frappe pas et ne peut pas être blessé. Les points de couture restent sur le masque.'},
   {d:'2026-10-18',h:'v16.27',t:'Le Masqué est plus vif : il enchaîne ses sorts plus vite (pause de 0,25 s entre deux, chargements plus courts, signature toujours à 0,8 s au moins), se déplace environ 35 % plus vite et tire un trait toutes les 1,4 s en plus de ses sorts (son menton s’allume juste avant). Son masque est maintenant porté sur sa tête : devant la Brute, en haut du Spectre et du Voilé.'},
   {d:'2026-10-18',h:'v16.26',t:'Le Masqué arrive avec la deuxième vague, au milieu des autres ennemis, au lieu d’attendre la fin de la salle. Jamais deux zones à la fois : pendant ses sorts, les autres ennemis retiennent les leurs, et s’il attend trop longtemps, la prochaine zone est pour lui.'},
   {d:'2026-10-18',h:'v16.25',t:'Le Masqué vient chercher le joueur qui domine : dès la 3e salle de l’acte I, dans toute salle de combat (combat, élite, Brèche ; jamais face au gardien), il apparaît une fois sur deux si tu vas vite (25 s par salle ou moins en moyenne) ou si tu n’as pas perdu de PV depuis 60 s. Il entre en dernière vague ; hors salle d’élite, il donne aussi l’or et les éclats d’un champion.'},
