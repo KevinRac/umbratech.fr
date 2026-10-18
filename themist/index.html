@@ -8070,7 +8070,7 @@ function demoBoot(cls){
    const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTS[RUN.act].rooms,breche:!!(room.breche||RUN.brecheNow),demo:DEMO,hub:!!RUN.hub,depuis:RUN.g-M.salle-1};
    const ap=asmAppel(A,{salles:R.rooms||0,tempsS:R.clearT||0,sansDegatsS:RUN.time-(RUN.asmHit||0)});
    const force=window.__asm.forcer>0;
-   if(force||(asmEligible(A,r)&&ap.ok&&Math.random()*100<A.chance)){
+   if(force||(asmEligible(A,r)&&(ap.ok||!A.exigeDomination)&&Math.random()*100<A.chance)){   // exigeDomination faux : une chance sur deux partout
     if(force)window.__asm.forcer--;
     const seed=(Math.random()*4294967296)>>>0,rnd=asmRng(seed),mem=SAVE.asm18||{};
     const dernier=M.dernier||mem.dernier||null;
