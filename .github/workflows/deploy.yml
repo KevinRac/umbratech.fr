@@ -38,8 +38,12 @@ jobs:
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
 
     steps:
+      - uses: actions/checkout@v5
+
       - name: Installer le client de connexion
         run: |
           sudo apt-get update
@@ -56,3 +60,25 @@ jobs:
           printf '%s\n' "$IONOS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
           sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o PubkeyAuthentication=no "$IONOS_USER@$IONOS_HOST" 'set -eu; cd ~/public; test "$(git branch --show-current)" = main; git pull --ff-only origin main'
+
+      # GW1 : écrit gw1/api/config.local.php sur le serveur à partir des secrets GitHub
+      # (le fichier n'est jamais dans le dépôt). Sans les secrets, l'étape est ignorée.
+      - name: Écrire la configuration de la communauté GW1
+        env:
+          IONOS_HOST: ${{ secrets.SSH_IONOS }}
+          IONOS_USER: ${{ secrets.SSH_USER }}
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          GW1_DB_HOST: ${{ secrets.GW1_DB_HOST }}
+          GW1_DB_NAME: ${{ secrets.GW1_DB_NAME }}
+          GW1_DB_USER: ${{ secrets.GW1_DB_USER }}
+          GW1_DB_PASS: ${{ secrets.GW1_DB_PASS }}
+          GW1_SECRET: ${{ secrets.GW1_SECRET }}
+          GW1_SMTP_USER: ${{ secrets.GW1_SMTP_USER }}
+          GW1_SMTP_PASS: ${{ secrets.GW1_SMTP_PASS }}
+        run: |
+          if [ -z "$GW1_SECRET" ]; then
+            echo "Secrets GW1 absents : configuration du serveur laissée telle quelle."
+            exit 0
+          fi
+          node .github/scripts/gw1-config.mjs | sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o PubkeyAuthentication=no "$IONOS_USER@$IONOS_HOST" 'set -eu; umask 077; cd ~/public/gw1/api; cat > config.local.php.tmp; mv config.local.php.tmp config.local.php'
+          echo "config.local.php écrit sur le serveur."
