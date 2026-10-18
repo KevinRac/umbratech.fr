@@ -342,7 +342,7 @@ function fragments(D) {
   <p class="pitch">${esc(f.pitch)}</p>
   <p>${esc(f.aide)}</p>
   <dl class="kv"><dt>Mécanique</dt><dd>${esc(f.mech)}</dd><dt>Éveil</dt><dd>${esc(C.rootDesc)}</dd><dt>Branches</dt><dd>${main.map(b => `<a href="#talents-${b}">${esc(T.branches[b].name)}</a>`).join(', ')}</dd><dt>Sous-classes</dt><dd>${subs.map(b => `<a href="#talents-${b}">${esc(T.branches[b].name)}</a> <small>(${esc(T.branches[b].voie)})</small>`).join(', ')}</dd></dl>
-  ${(FO.apercus && FO.apercus[c]) ? `<h4 class="sub">Aperçu en trois gestes</h4><ol class="apercu">${FO.apercus[c].map(([t, d]) => `<li><b>${esc(t.replace('{R}', 'R'))}</b> — ${esc(d.replace('{R}', 'R'))}</li>`).join('')}</ol>` : ''}
+  ${(FO.apercus && FO.apercus[c]) ? `<div class="apv" data-cls="${c}"><div class="apvhead"><p class="h-sec">Aperçu · ${esc(C.short)}</p><span class="apvdiff">${esc(f.mech)} · ${esc(f.difficulte)}</span></div><div class="apvstage"><iframe title="Aperçu du gameplay : ${esc(C.short)}" data-src="index.html?demo=${c}" tabindex="-1" scrolling="no" loading="lazy"></iframe></div><ol class="apvsteps">${FO.apercus[c].map(([t, d], n) => `<li><button type="button" data-ph="${n}" data-d="${esc(touche(d))}"><i>${n + 1}</i><span>${esc(touche(t))}</span></button></li>`).join('')}</ol><p class="apvdesc">${esc(touche(FO.apercus[c][0][1]))}</p></div>` : ''}
   <p class="links"><a href="#talents-${main[0]}">Voir les talents →</a></p></article>`; };
   out.formes = `<div class="grid g2">${ordre.map(carte).join('')}</div>
 <h3 class="sub">Statistiques de départ</h3>
