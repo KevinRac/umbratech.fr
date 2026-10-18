@@ -24,6 +24,8 @@ export const BATTLE_TEX = {
   crown: 'battle:crown',
   heroMark: 'battle:heroMark',
   spark: 'battle:spark',
+  /** Flèche du chemin de déplacement : segment droit (W–E), virage (W–S), pointe (vers l'est), départ (vers l'est). */
+  arrow: (kind: 'line' | 'corner' | 'head' | 'start'): string => `battle:arrow:${kind}`,
   px: 'battle:px',
 } as const;
 
@@ -151,6 +153,31 @@ export function ensureBattleFxTextures(scene: Phaser.Scene): void {
   const spark = new PixelCanvas(5, 5);
   for (const [x, y, a] of [[2, 0, 160], [2, 1, 255], [0, 2, 160], [1, 2, 255], [2, 2, 255], [3, 2, 255], [4, 2, 160], [2, 3, 255], [2, 4, 160]] as const) spark.set(x, y, 0xffffff, a);
   spark.toTexture(scene, BATTLE_TEX.spark);
+
+  // Flèche de déplacement façon GBA : ruban cyan clair à liseré sombre, dessiné vers l'est.
+  const ribbon = (name: 'line' | 'corner' | 'head' | 'start', cells: (x: number, y: number) => boolean): void => {
+    const c = new PixelCanvas(16, 16);
+    const inside = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < 16 && y < 16 && cells(x, y);
+    const ink = mixColor(P.ombreProfonde, P.nuit, 0.5);
+    const dark = mixColor(P.cyanEclat, P.bleuNuit, 0.45);
+    for (let y = -1; y <= 16; y++) {
+      for (let x = -1; x <= 16; x++) {
+        if (inside(x, y)) {
+          const light = !inside(x, y - 1) || !inside(x - 1, y);
+          const shade = !inside(x, y + 1) || !inside(x + 1, y);
+          c.set(x, y, light ? 0xeafcff : shade ? dark : P.cyanEclat);
+        } else if (x >= 0 && y >= 0 && x < 16 && y < 16 && (inside(x - 1, y) || inside(x + 1, y) || inside(x, y - 1) || inside(x, y + 1))) {
+          c.set(x, y, ink);
+        }
+      }
+    }
+    c.toTexture(scene, BATTLE_TEX.arrow(name));
+  };
+  const band = (_x: number, y: number): boolean => y >= 6 && y <= 9;
+  ribbon('line', (x, y) => band(x, y) && x >= 0);
+  ribbon('corner', (x, y) => (y >= 6 && y <= 9 && x <= 9) || (x >= 6 && x <= 9 && y >= 6));
+  ribbon('start', (x, y) => y >= 6 && y <= 9 && x >= 6);
+  ribbon('head', (x, y) => (y >= 6 && y <= 9 && x <= 5) || (x >= 5 && Math.abs(y - 7.5) <= (15 - x) * 0.66 + 0.5));
 
   const px = new PixelCanvas(1, 1);
   px.set(0, 0, 0xffffff);

@@ -25,7 +25,7 @@ import { planEnemyAction } from '../logic/ai/enemyAi';
 import { forecast } from '../logic/combat/combat';
 import { attackUnit, endPhase, livingUnits, moveUnit, phaseComplete, readyUnits, summarize, undoMove, waitUnit } from '../logic/tactics/battle';
 import { battleRules, buildBattle, findEncounter } from '../logic/tactics/encounter';
-import { cellIndex, cellsInRange, getUnit, inBounds, inWeaponRange, reachable, targetsFrom, terrainAt, threatCells, unitAt, type Reach } from '../logic/tactics/grid';
+import { cellIndex, cellsInRange, getUnit, inBounds, inWeaponRange, pathTo, reachable, targetsFrom, terrainAt, threatCells, unitAt, type Reach } from '../logic/tactics/grid';
 import type { BattleEvent, BattleRules, BattleState, BattleUnit, Cell, Strike } from '../logic/tactics/types';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES } from '../render/battlefield';
 import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureMapSprite } from '../render/battleTextures';
@@ -123,6 +123,8 @@ export class BattleScene extends Phaser.Scene {
   private cursor!: Phaser.GameObjects.Image;
   private cursorCell: Cell = { x: 0, y: 0 };
   private highlights: Phaser.GameObjects.Image[] = [];
+  /** Flèche du chemin que prendra l'unité choisie jusqu'à la case visée. */
+  private arrowTiles: Phaser.GameObjects.Image[] = [];
   private threatTiles: Phaser.GameObjects.Image[] = [];
   private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
 
@@ -476,6 +478,7 @@ export class BattleScene extends Phaser.Scene {
     this.cursorCell = { x, y };
     this.cursor.setPosition(this.px(x) - 2, this.py(y) - 2);
     this.followCell(this.cursorCell);
+    this.refreshArrow();
     this.refreshHover();
   }
 
@@ -611,6 +614,7 @@ export class BattleScene extends Phaser.Scene {
     this.modeSince = this.time.now;
     this.modeFrame = this.game.loop.frame;
     this.lastHover = '';
+    this.refreshArrow();
     this.cursor.setVisible(mode !== 'enemy' && mode !== 'end');
     this.refreshHelp();
     this.refreshHover();
@@ -707,6 +711,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud.showDetails(unit);
     this.playReady(unit);
     this.setMode('move');
+    this.refreshArrow();
   }
 
   private deselect(): void {
@@ -747,11 +752,67 @@ export class BattleScene extends Phaser.Scene {
     // Clic sur un ennemi atteignable : on va sur la case la plus proche d'où il est à portée.
     const enemy = unitAt(this.state, cell.x, cell.y);
     if (enemy && enemy.team !== unit.team) {
-      const from = reach.stops
-        .filter((s) => inWeaponRange(unit, s, enemy) && !(unitAt(this.state, s.x, s.y) && (s.x !== unit.x || s.y !== unit.y)))
-        .sort((a, b) => (reach.cost.get(cellIndex(this.state.map, a.x, a.y)) ?? 0) - (reach.cost.get(cellIndex(this.state.map, b.x, b.y)) ?? 0))[0];
+      const from = this.attackStop(unit, reach, enemy);
       if (from) void this.moveSelected(from, enemy);
     }
+  }
+
+  /** Case atteignable la moins chère d'où l'ennemi est à portée de l'arme. */
+  private attackStop(unit: BattleUnit, reach: Reach, enemy: BattleUnit): Cell | undefined {
+    return reach.stops
+      .filter((s) => inWeaponRange(unit, s, enemy) && !(unitAt(this.state, s.x, s.y) && (s.x !== unit.x || s.y !== unit.y)))
+      .sort((a, b) => (reach.cost.get(cellIndex(this.state.map, a.x, a.y)) ?? 0) - (reach.cost.get(cellIndex(this.state.map, b.x, b.y)) ?? 0))[0];
+  }
+
+  /** Dessine la flèche du départ jusqu'à la case visée par le curseur (case libre atteignable, ou ennemi à portée). */
+  private refreshArrow(): void {
+    this.clearTiles(this.arrowTiles);
+    const unit = this.selected;
+    const reach = this.reach;
+    if (this.mode !== 'move' || !unit || !reach) return;
+    const cell = this.cursorCell;
+    let goal: Cell | undefined;
+    if (reach.stops.some((s) => s.x === cell.x && s.y === cell.y)) goal = cell;
+    else {
+      const enemy = unitAt(this.state, cell.x, cell.y);
+      if (enemy && enemy.team !== unit.team) goal = this.attackStop(unit, reach, enemy);
+    }
+    if (!goal || (goal.x === unit.x && goal.y === unit.y)) return;
+    const path = pathTo(reach, this.state.map, goal);
+    if (path.length < 2) return;
+    // Directions en quarts de tour dans le sens horaire depuis l'est : 0 E, 1 S, 2 O, 3 N.
+    const dir = (a: Cell, b: Cell): number => (b.x > a.x ? 0 : b.y > a.y ? 1 : b.x < a.x ? 2 : 3);
+    path.forEach((c, i) => {
+      const next = path[i + 1];
+      const prev = path[i - 1];
+      let kind: 'line' | 'corner' | 'head' | 'start';
+      let turns: number;
+      if (!prev && next) {
+        kind = 'start';
+        turns = dir(c, next);
+      } else if (prev && !next) {
+        kind = 'head';
+        turns = dir(prev, c);
+      } else if (prev && next) {
+        const from = dir(c, prev); // côté par lequel on arrive
+        const to = dir(c, next);
+        if ((from + 2) % 4 === to) {
+          kind = 'line';
+          turns = to % 2;
+        } else {
+          kind = 'corner';
+          // Le virage de base relie l'ouest (2) et le sud (1) ; chaque quart de tour horaire décale les deux côtés de +1.
+          const sides = [from, to];
+          turns = [0, 1, 2, 3].find((k) => sides.includes((2 + k) % 4) && sides.includes((1 + k) % 4)) ?? 0;
+        }
+      } else return;
+      const image = this.add
+        .image(this.px(c.x) + T / 2, this.py(c.y) + T / 2, BATTLE_TEX.arrow(kind))
+        .setAngle(turns * 90)
+        .setDepth(DEPTH.highlight + 0.5)
+        .setAlpha(0.95);
+      this.arrowTiles.push(image);
+    });
   }
 
   private async moveSelected(to: Cell, thenTarget: BattleUnit | null): Promise<void> {
@@ -1336,6 +1397,7 @@ export class BattleScene extends Phaser.Scene {
     this.worldMap = null;
     this.views.clear();
     this.highlights = [];
+    this.arrowTiles = [];
     this.threatTiles = [];
     this.marked.clear();
     this.selected = null;
