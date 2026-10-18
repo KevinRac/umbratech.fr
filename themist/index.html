@@ -459,7 +459,7 @@ const MOVE=()=>KL.KeyW+KL.KeyA+KL.KeyS+KL.KeyD;
 
 // ───────────────────────── Son (synthèse)
 let AC=null,muted=false,lastHitSfx=0,noiseBuf=null;
-function initAudio(){musicKick();if(AC){if(AC.state==='suspended')AC.resume();return;}try{AC=new(window.AudioContext||window.webkitAudioContext)();const g=AC.createGain();g.gain.value=0.45;g.connect(AC.destination);AC.master=g;}catch(e){AC=null;}}
+function initAudio(){musicKick();if(AC){if(AC.state==='suspended')AC.resume();return;}try{AC=new(window.AudioContext||window.webkitAudioContext)();const g=AC.createGain();g.gain.value=0.36;g.connect(AC.destination);AC.master=g;}catch(e){AC=null;}}
 function getNoise(){if(!noiseBuf){noiseBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*0.6),AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}return noiseBuf;}
 function tone(f,dur,type='sine',vol=0.2,f2=null,delay=0){if(!AC||muted)return;const t=AC.currentTime+delay;const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t+dur);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(AC.master);o.start(t);o.stop(t+dur+0.03);}
 function noise(dur,vol=0.2,freq=1200,type='bandpass',delay=0){if(!AC||muted)return;const t=AC.currentTime+delay;const s=AC.createBufferSource();s.buffer=getNoise();const fl=AC.createBiquadFilter();fl.type=type;fl.frequency.value=freq;const g=AC.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(fl);fl.connect(g);g.connect(AC.master);s.start(t);s.stop(t+dur+0.03);}
@@ -2411,7 +2411,7 @@ function drawRoomPost(){const c=ctx;
 
 // ───────────────────────── Musique : pistes par lieu, fondu enchaîné
 // Dépose les fichiers dans le dossier publié « music/ » puis renseigne leurs chemins ici.
-const MUSIC={files:{titre:'music/titre.mp3',sanctuaire:'music/sanctuaire.mp3',acte1:'music/acte1.mp3',acte2:'music/acte2.mp3',acte3:'music/acte3.mp3',boss3:'music/boss3.mp3',boss1:'music/boss1.mp3',boss2:'music/boss2.mp3',colporteur:'music/colporteur.mp3',victoire:'music/victoire.mp3',fin:'music/fin.mp3'},tracks:[],cur:null,vol:0.55,blocked:false};
+const MUSIC={files:{titre:'music/titre.mp3',sanctuaire:'music/sanctuaire.mp3',acte1:'music/acte1.mp3',acte2:'music/acte2.mp3',acte3:'music/acte3.mp3',boss3:'music/boss3.mp3',boss1:'music/boss1.mp3',boss2:'music/boss2.mp3',colporteur:'music/colporteur.mp3',victoire:'music/victoire.mp3',fin:'music/fin.mp3'},tracks:[],cur:null,vol:0.3,blocked:false};
 const ONE_SHOT=['victoire','fin'];
 function newTrack(key){const el=new Audio(MUSIC.files[key]);el.loop=false;el.preload='auto';el.volume=0;const t={key,el,v:0,target:1};el.addEventListener('error',()=>{t.dead=true;});MUSIC.tracks.push(t);return t;}
 try{const v=localStorage.getItem('la-brume-music');if(v!==null&&!isNaN(+v))MUSIC.vol=clamp(+v,0,1);}catch(e){}
