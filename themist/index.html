@@ -8016,8 +8016,9 @@ function demoBoot(cls){
     c.lineJoin='round';c.strokeStyle=COL.trait;c.lineWidth=5;c.stroke(sh.p);c.clip(sh.p);face(c,false,true,1);c.restore();}}
   else{c.lineJoin='round';c.strokeStyle=COL.trait;c.lineWidth=5;c.stroke(MP.contour);face(c,lit,fis,pul);
    const n=o.points==null?MQ.coutures.length:o.points;c.lineCap='round';
-   for(let i=0;i<n&&i<MQ.coutures.length;i++){const [px,py,pa]=MQ.coutures[i];c.save();c.translate(px,py);c.rotate(pa*Math.PI/180);
-    for(const [w,col] of [[3.4,COL.trait],[1.3,COL.fil||COL.fissure]]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(-6,-4);c.lineTo(6,4);c.moveTo(-6,4);c.lineTo(6,-4);c.stroke();}c.restore();}}
+   // n peut être fractionnaire pendant la couture : le point en cours se trace trait par trait (une diagonale, puis l'autre)
+   for(let i=0;i<n&&i<MQ.coutures.length;i++){const [px,py,pa]=MQ.coutures[i],f=Math.min(1,n-i),a1=clamp(f*2,0,1),a2=clamp(f*2-1,0,1);c.save();c.translate(px,py);c.rotate(pa*Math.PI/180);
+    for(const [w,col] of [[3.4,COL.trait],[1.3,COL.fil||COL.fissure]]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(-6,-4);c.lineTo(-6+12*a1,-4+8*a1);if(a2>0){c.moveTo(-6,4);c.lineTo(-6+12*a2,4-8*a2);}c.stroke();}c.restore();}}
   c.restore();}
  window.__asm.drawMask=drawMask;
  // Pour essayer en jeu, depuis la console : __asm.essai() ; __asm.essai('voile:onde+cone>charge', 3) ; troisième argument vrai : sans la première vague
@@ -8204,15 +8205,28 @@ function demoBoot(cls){
  function topY(e){return e.type==='spectre'?e.y-e.r*1.5:e.type==='voile'?e.y-e.r*1.9:e.y-e.r*1.1;}
  // ── Montage : le corps d'origine descend au bout des fils du Brumeux, le masque tombe sur sa tête, il est cousu, les fils sont coupés
  const MO=A.montage,MT=()=>MO?MO.descenteS+MO.masqueS+MO.coutureS+MO.coupeS:0,ease=k=>1-Math.pow(1-clamp(k,0,1),3);
- function montOff(e){const M=e.asm&&e.asm.mont;if(!M||RM)return 0;const k=clamp(M.t/MO.descenteS,0,1),sm=k*k*(3-2*k);return -(1-sm)*MO.hauteur+(k<1?Math.sin(M.t*18)*2*(1-k):0);}  // descente lente puis posée, le corps se balance au bout des fils
+ function montOff(e){const M=e.asm&&e.asm.mont;if(!M||RM)return 0;const k=clamp(M.t/MO.descenteS,0,1),sm=k*k*(3-2*k);return -(1-sm)*MO.hauteur+(k<1?Math.sin(M.t*(MO.balancement||7))*4*(1-k):0);}  // descente lente puis posée, le corps se balance au bout des fils
  function montPost(c,e,M,fx,fy,h){const d0=MO.descenteS,d1=d0+MO.masqueS,d2=d1+MO.coutureS,off=M.off||0,FIL=MO.fil;
   const by=Math.max(14,fy-off-250),bx=e.x,q=M.t<d2?0:clamp((M.t-d2)/MO.coupeS,0,1);
   // masque : suspendu à son fil, il tombe sur la tête, puis il est cousu (points un par un, l'aiguille brille sur le dernier)
   let mx=fx,my=fy,sc=1;
   if(!M.pose){const k=ease((M.t-d0)/MO.masqueS);my=(fy-off)-(RM?0:(1-k)*170);if(RM)c.globalAlpha=M.t<d0?0:clamp((M.t-d0)/MO.masqueS,0.25,1);}
-  else{const u=clamp((M.t-d1)/0.12,0,1);sc=RM?1:1.28-0.28*u;}
-  drawMask(c,mx,my,h,'calme',{sc,points:M.pose?M.n:0,lit:M.t>=d2});c.globalAlpha=1;
-  if(M.pose&&M.n>0&&M.n<=MQ.coutures.length&&M.t<d2){const s2=h/MQ.vb[1],[px,py]=MQ.coutures[M.n-1];c.save();c.globalCompositeOperation='lighter';glow(c,mx+(px-MQ.centre[0])*s2,my+(py-MQ.centre[1])*s2,9,'235,220,255',0.9);c.restore();}
+  const N=MQ.coutures.length,pf=M.pose?clamp((M.t-d1)/MO.coutureS*N,0,N):0,cur=Math.min(N-1,Math.floor(pf)),fr=pf-Math.floor(pf);
+  if(M.pose){const u=clamp((M.t-d1)/0.12,0,1);sc=RM?1:1.28-0.28*u;
+   // chaque point tire le masque contre la tête : il se serre un instant
+   if(!RM&&pf<N){const tug=Math.max(0,1-fr*4);sc*=1-0.05*tug;my+=1.5*tug;}}
+  drawMask(c,mx,my,h,'calme',{sc,points:pf,lit:M.t>=d2});c.globalAlpha=1;
+  // l'aiguille : elle trace le point en cours, tirée par un fil qui remonte jusqu'à la croix du Brumeux
+  if(M.pose&&pf<N&&M.t<d2){const s2=h/MQ.vb[1]*sc,[px,py,pa]=MQ.coutures[cur],ra=pa*Math.PI/180,f1=clamp(fr*2,0,1),f2=clamp(fr*2-1,0,1);
+   const lx=f2>0?-6+12*f2:-6+12*f1,ly=f2>0?4-8*f2:-4+8*f1,dx=f2>0?12:12,dy=f2>0?-8:8;
+   const W=(u,v)=>[mx+(px-MQ.centre[0]+u*Math.cos(ra)-v*Math.sin(ra))*s2,my+(py-MQ.centre[1]+u*Math.sin(ra)+v*Math.cos(ra))*s2];
+   const [nx,ny]=W(lx,ly),[tx,ty]=W(lx+dx*0.9,ly+dy*0.9),ang=Math.atan2(ty-ny,tx-nx),L=15;
+   const ex=nx-Math.cos(ang)*L,ey=ny-Math.sin(ang)*L;
+   c.save();c.lineCap='round';
+   c.strokeStyle=`rgba(${FIL},0.8)`;c.lineWidth=1.2;c.beginPath();c.moveTo(ex,ey);c.quadraticCurveTo(ex-10,(ey+by)/2,bx,by);c.stroke();
+   c.strokeStyle='rgba(20,14,34,.95)';c.lineWidth=3.6;c.beginPath();c.moveTo(ex,ey);c.lineTo(nx,ny);c.stroke();
+   c.strokeStyle='#e9e4f4';c.lineWidth=1.8;c.beginPath();c.moveTo(ex,ey);c.lineTo(nx,ny);c.stroke();
+   c.globalCompositeOperation='lighter';glow(c,nx,ny,8,'235,220,255',0.85);c.restore();}
   // fils de marionnette : une croix de manipulation au-dessus, des fils vers ses épaules et vers le masque ; coupés, ils remontent
   if(q>=1)return;
   const pts=[[e.x-e.r*0.8,e.y-e.r*0.15],[e.x+e.r*0.8,e.y-e.r*0.15],[mx,my-h*0.5]],lerp=(a,b,t)=>a+(b-a)*t;

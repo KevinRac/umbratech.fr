@@ -141,8 +141,8 @@
   // Montage (v16.28) : à son arrivée, le Brumeux pousse son cri d'invocation, descend le corps d'origine au bout de fils de marionnette,
   // fait tomber le masque sur sa tête et le coud de force (points un par un), puis coupe les fils. Il ne frappe pas et ne peut pas être
   // blessé pendant le montage (si immunise). Durées des quatre temps en secondes ; hauteur : d'où le corps descend (px) ;
-  // fil : couleur des fils (r,g,b). Avec « mouvements réduits », le corps apparaît en fondu au lieu de descendre.
-  montage:{descenteS:0.5,masqueS:0.35,coutureS:0.7,coupeS:0.25,hauteur:230,fil:'205,180,255',immunise:true},
+  // balancement : vitesse du balancement pendant la descente ; fil : couleur des fils (r,g,b). Avec « mouvements réduits », le corps apparaît en fondu au lieu de descendre.
+  montage:{descenteS:1.1,masqueS:0.5,coutureS:1.3,coupeS:0.55,hauteur:230,balancement:5,fil:'205,180,255',immunise:true},
   // Le masque. couleurs : jamais de rouge (les zones le sont) ; taille : hauteur du masque en rayons du corps, bornée en px.
   // Ses états : calme, yeux allumés pendant un chargement, fissures sous fissurePV % de PV, brisé à la mort (brisureS secondes).
   masque:{couleurs:{haut:'#e4dcf4',bas:'#8f7fb8',trait:'#120c20',creux:'#160f28',oeil:'#b892ff',oeilVif:'#f1e6ff',fissure:'#c9a8ff',fil:'#cdb4ff'},
