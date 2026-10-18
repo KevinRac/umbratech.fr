@@ -2411,7 +2411,7 @@ function drawRoomPost(){const c=ctx;
 
 // ───────────────────────── Musique : pistes par lieu, fondu enchaîné
 // Dépose les fichiers dans le dossier publié « music/ » puis renseigne leurs chemins ici.
-const MUSIC={files:{titre:'music/titre.mp3',sanctuaire:'music/sanctuaire.mp3',acte1:'music/acte1.mp3',acte2:'music/acte2.mp3',acte3:'music/acte3.mp3',boss3:'music/boss3.mp3',boss1:'music/boss1.mp3',boss2:'music/boss2.mp3',colporteur:'music/colporteur.mp3',victoire:'music/victoire.mp3',fin:'music/fin.mp3'},tracks:[],cur:null,vol:0.3,blocked:false};
+const MUSIC={files:{titre:'music/titre.mp3',sanctuaire:'music/sanctuaire.mp3',acte1:'music/acte1.mp3',acte2:'music/acte2.mp3',acte3:'music/acte3.mp3',boss3:'music/boss3.mp3',boss1:'music/boss1.mp3',boss2:'music/boss2.mp3',colporteur:'music/colporteur.mp3',victoire:'music/victoire.mp3',fin:'music/fin.mp3'},tracks:[],cur:null,vol:0.15,blocked:false};
 const ONE_SHOT=['victoire','fin'];
 function newTrack(key){const el=new Audio(MUSIC.files[key]);el.loop=false;el.preload='auto';el.volume=0;const t={key,el,v:0,target:1};el.addEventListener('error',()=>{t.dead=true;});MUSIC.tracks.push(t);return t;}
 try{const v=localStorage.getItem('la-brume-music');if(v!==null&&!isNaN(+v))MUSIC.vol=clamp(+v,0,1);}catch(e){}
