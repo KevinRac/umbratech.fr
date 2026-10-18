@@ -25,7 +25,7 @@ import { ALLY_OUTLINE } from '../render/unitSprites';
 import { PrepSheet, type SheetCallbacks, type SheetView } from '../ui/PrepSheet';
 import { drawPanel } from '../ui/panel';
 import { ScrollList, type ListRow } from '../ui/ScrollList';
-import { addText, setText, type PixelText } from '../ui/text';
+import { addText, fitText, setText, type PixelText } from '../ui/text';
 import { Toasts } from '../ui/Toasts';
 import { VerticalMenu, type MenuItem } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
@@ -1050,7 +1050,7 @@ export class BattleHudScene extends Phaser.Scene {
       const range = unit.weapon.range[0] === unit.weapon.range[1] ? `${unit.weapon.range[0]}` : `${unit.weapon.range[0]}-${unit.weapon.range[1]}`;
       lines.push([`${unit.weapon.name} · portée ${range}`, PALETTE.ocreClair]);
       lines.push([`Accessoire : ${extra?.accessory ?? '—'}`, PALETTE.parchemin]);
-      lines.push([`Objets : ${extra && extra.items.length > 0 ? `${extra.items.length} sorte(s), clic droit pour le sac` : '—'}`, PALETTE.parchemin]);
+      lines.push([`Objets : ${extra && extra.items.length > 0 ? `${extra.items.length} (clic droit : sac)` : '—'}`, PALETTE.parchemin]);
       if (extra?.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}`, PALETTE.lumiereDoree]);
       const fh = Math.min(height - (BOTTOM_BAR + 6) * S - fy, (58 + lines.length * 16) * S);
       parts.push(drawPanel(this, lx, fy, colW, fh, { scale: 2 * S, depth: DEPTH.prep }));
@@ -1058,10 +1058,10 @@ export class BattleHudScene extends Phaser.Scene {
       parts.push(this.add.rectangle(lx + 8 * S, fy + 8 * S, 30 * S, 36 * S, TEAM_COLOR.player, 0.22).setOrigin(0, 0).setDepth(DEPTH.prep + 1));
       parts.push(this.add.image(lx + 23 * S, fy + 44 * S, BATTLE_TEX.ms(unit.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(S).setDepth(DEPTH.prep + 2));
       const textW = colW - 46 * S - 10 * S;
-      parts.push(addText(this, lx + 46 * S, fy + 7 * S, `${unit.name}  Niv ${unit.level}`, { scale: S, color: PALETTE.parchemin, maxWidth: textW }).setDepth(DEPTH.prep + 2));
-      parts.push(addText(this, lx + 46 * S, fy + 21 * S, unit.kindName, { scale: S, color: PALETTE.cyanEclat, maxWidth: textW }).setDepth(DEPTH.prep + 2));
+      parts.push(fitText(addText(this, lx + 46 * S, fy + 7 * S, `${unit.name}  Niv ${unit.level}`, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.prep + 2), textW));
+      parts.push(fitText(addText(this, lx + 46 * S, fy + 21 * S, unit.kindName, { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 2), textW));
       parts.push(addText(this, lx + 46 * S, fy + 35 * S, `PV ${unit.stats.pv}`, { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.prep + 2));
-      lines.forEach(([t, c], i) => parts.push(addText(this, lx + 10 * S, fy + (54 + i * 16) * S, t, { scale: S, color: c, maxWidth: colW - 20 * S }).setDepth(DEPTH.prep + 2)));
+      lines.forEach(([t, c], i) => parts.push(fitText(addText(this, lx + 10 * S, fy + (54 + i * 16) * S, t, { scale: S, color: c }).setDepth(DEPTH.prep + 2), colW - 20 * S)));
     }
 
     // Colonne de droite : objectif, ennemis, renforts, puis les boutons.

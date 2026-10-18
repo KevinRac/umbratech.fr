@@ -8,7 +8,7 @@ import Phaser from 'phaser';
 import { PALETTE } from '../render/palette';
 import { BATTLE_TEX } from '../render/battleTextures';
 import { drawPanel } from './panel';
-import { addText } from './text';
+import { addText, fitText } from './text';
 
 export interface SheetView {
   readonly name: string;
@@ -67,8 +67,8 @@ export class PrepSheet {
     const height = this.scene.scale.height;
     const parts = this.parts;
     const D = SHEET_DEPTH;
-    const w = 520 * S;
-    const h = 340 * S;
+    const w = 600 * S;
+    const h = 400 * S;
     const x = Math.round((width - w) / 2);
     const y = Math.round((height - h) / 2);
 
@@ -86,44 +86,50 @@ export class PrepSheet {
     });
     parts.push(body);
 
+    // Une seule ligne par texte : trop long, il est tronqué par « … » plutôt que de sortir du cadre.
     const text = (tx: number, ty: number, t: string, color: number, extra: { maxWidth?: number; align?: 'left' | 'center' | 'right' } = {}): void => {
-      parts.push(addText(this.scene, tx, ty, t, { scale: S, color, ...extra }).setDepth(D + 3));
+      const obj = addText(this.scene, tx, ty, t, { scale: S, color, ...(extra.align ? { align: extra.align } : {}) }).setDepth(D + 3);
+      if (extra.maxWidth) fitText(obj, extra.maxWidth);
+      parts.push(obj);
     };
 
     // En-tête : portrait, nom, classe.
     parts.push(this.scene.add.rectangle(x + 10 * S, y + 10 * S, 40 * S, 50 * S, 0x6fa8e8, 0.22).setOrigin(0, 0).setDepth(D + 2));
     parts.push(this.scene.add.image(x + 30 * S, y + 58 * S, BATTLE_TEX.ms(view.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(D + 3));
-    text(x + 60 * S, y + 12 * S, `${view.name}  Niv ${view.level}`, PALETTE.parchemin, { maxWidth: w - 140 * S });
-    text(x + 60 * S, y + 28 * S, view.kind, PALETTE.cyanEclat, { maxWidth: w - 140 * S });
+    text(x + 60 * S, y + 12 * S, `${view.name}  Niv ${view.level}`, PALETTE.parchemin, { maxWidth: w - 190 * S });
+    text(x + 60 * S, y + 28 * S, view.kind, PALETTE.cyanEclat, { maxWidth: w - 190 * S });
     text(x + 60 * S, y + 44 * S, view.deployed ? 'Déployé' : 'Au camp', view.deployed ? 0x7fcf6a : PALETTE.desactive);
     text(x + w - 10 * S, y + 12 * S, 'Clic droit : fermer', PALETTE.ambre, { align: 'right' });
 
-    // Caractéristiques, sur trois colonnes.
+    // Caractéristiques : trois colonnes ; la compétence à droite.
     const sx = x + 10 * S;
-    const sy = y + 70 * S;
+    const sy = y + 78 * S;
     view.stats.forEach(([label, value], i) => {
-      text(sx + (i % 3) * 70 * S, sy + Math.floor(i / 3) * 15 * S, `${label} ${value}`, PALETTE.parchemin);
+      text(sx + (i % 3) * 78 * S, sy + Math.floor(i / 3) * 18 * S, `${label} ${value}`, PALETTE.parchemin);
     });
-    if (view.skill) text(x + 240 * S, sy, view.skill, PALETTE.lumiereDoree, { maxWidth: w - 250 * S });
+    if (view.skill) {
+      text(x + 260 * S, sy, 'Compétence', PALETTE.cyanEclat);
+      text(x + 260 * S, sy + 18 * S, view.skill, PALETTE.lumiereDoree, { maxWidth: w - 270 * S });
+    }
 
     // Équipement : un clic change.
-    const ey = y + 124 * S;
+    const ey = y + 140 * S;
     text(x + 10 * S, ey, 'Équipement', PALETTE.cyanEclat);
-    this.button(x + 10 * S, ey + 14 * S, 245 * S, 20 * S, `Arme : ${view.weapon.name} (${view.weapon.range})`, view.weapon.canChange, cb.onWeapon);
-    this.button(x + 265 * S, ey + 14 * S, 245 * S, 20 * S, `Accessoire : ${view.accessory.name}`, view.accessory.canChange, cb.onAccessory);
+    this.button(x + 10 * S, ey + 18 * S, 285 * S, 26 * S, `Arme : ${view.weapon.name} (${view.weapon.range})`, view.weapon.canChange, cb.onWeapon);
+    this.button(x + 305 * S, ey + 18 * S, 285 * S, 26 * S, `Accessoire : ${view.accessory.name}`, view.accessory.canChange, cb.onAccessory);
 
     // Le sac : les cases, puis le contenu du sac de la compagnie.
-    const by = y + 170 * S;
+    const by = y + 200 * S;
     text(x + 10 * S, by, 'Sac', PALETTE.cyanEclat);
     text(x + w - 10 * S, by, view.count, PALETTE.parchemin, { align: 'right' });
-    const slotW = 96 * S;
+    const slotW = 108 * S;
     view.slots.forEach((item, i) => {
-      const sxp = x + 10 * S + i * (slotW + 4 * S);
-      const syp = by + 14 * S;
+      const sxp = x + 10 * S + i * (slotW + 10 * S);
+      const syp = by + 18 * S;
       const filled = item !== null;
       const box = this.scene.add.rectangle(sxp, syp, slotW, 30 * S, filled ? PALETTE.violetBrume : PALETTE.encre, filled ? 0.7 : 0.6).setOrigin(0, 0).setDepth(D + 2).setStrokeStyle(S, filled ? PALETTE.ambre : PALETTE.desactive, 0.9);
       parts.push(box);
-      text(sxp + slotW / 2, syp + 9 * S, item ?? '·', filled ? PALETTE.parchemin : PALETTE.desactive, { align: 'center', maxWidth: slotW - 6 * S });
+      text(sxp + slotW / 2, syp + 7 * S, item ?? '·', filled ? PALETTE.parchemin : PALETTE.desactive, { align: 'center', maxWidth: slotW - 8 * S });
       if (filled) {
         const zone = this.scene.add.zone(sxp, syp, slotW, 30 * S).setOrigin(0, 0).setDepth(D + 4).setInteractive({ useHandCursor: true });
         zone.on('pointerdown', (p: Phaser.Input.Pointer) => (p.rightButtonDown() ? cb.onClose() : cb.onTake(i)));
@@ -132,12 +138,12 @@ export class PrepSheet {
         parts.push(zone);
       }
     });
-    text(x + 10 * S, by + 50 * S, 'Sac de la compagnie : un clic donne l’objet à cette unité', PALETTE.ambre);
-    if (view.bag.length === 0) text(x + 10 * S, by + 66 * S, 'Le sac est vide.', PALETTE.desactive);
+    text(x + 10 * S, by + 60 * S, 'Sac de la compagnie (un clic donne l’objet)', PALETTE.ambre);
+    if (view.bag.length === 0) text(x + 10 * S, by + 80 * S, 'Le sac est vide.', PALETTE.desactive);
     view.bag.forEach((b, i) => {
-      this.button(x + 10 * S + (i % 3) * 168 * S, by + 64 * S + Math.floor(i / 3) * 22 * S, 164 * S, 20 * S, `${b.label} ×${b.left}`, b.enabled, () => cb.onGive(i));
+      this.button(x + 10 * S + (i % 3) * 196 * S, by + 80 * S + Math.floor(i / 3) * 30 * S, 186 * S, 26 * S, `${b.label} ×${b.left}`, b.enabled, () => cb.onGive(i));
     });
-    if (view.message) text(x + w / 2, y + h - 16 * S, view.message, PALETTE.braise, { align: 'center' });
+    if (view.message) text(x + w / 2, y + h - 20 * S, view.message, PALETTE.braise, { align: 'center' });
   }
 
   private button(bx: number, by: number, bw: number, bh: number, label: string, enabled: boolean, onClick: () => void): void {
@@ -145,7 +151,7 @@ export class PrepSheet {
     const D = SHEET_DEPTH;
     const box = this.scene.add.rectangle(bx, by, bw, bh, PALETTE.violetBrume, enabled ? 0.55 : 0.2).setOrigin(0, 0).setDepth(D + 2).setStrokeStyle(S, enabled ? PALETTE.ambre : PALETTE.desactive, 0.8);
     this.parts.push(box);
-    this.parts.push(addText(this.scene, bx + 6 * S, by + 4 * S, label, { scale: S, color: enabled ? PALETTE.parchemin : PALETTE.desactive, maxWidth: bw - 10 * S }).setDepth(D + 3));
+    this.parts.push(fitText(addText(this.scene, bx + 8 * S, by + 5 * S, label, { scale: S, color: enabled ? PALETTE.parchemin : PALETTE.desactive }).setDepth(D + 3), bw - 16 * S));
     if (!enabled) return;
     const zone = this.scene.add.zone(bx, by, bw, bh).setOrigin(0, 0).setDepth(D + 4).setInteractive({ useHandCursor: true });
     zone.on('pointerdown', (p: Phaser.Input.Pointer) => {

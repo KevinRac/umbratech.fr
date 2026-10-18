@@ -54,3 +54,17 @@ function realign(obj: PixelText): void {
   const x = obj.anchorAlign === 'center' ? obj.anchorX - width / 2 : obj.anchorAlign === 'right' ? obj.anchorX - width : obj.anchorX;
   obj.x = Math.round(x);
 }
+
+/** Tronque un texte d'une ligne avec « … » pour qu'il tienne dans `maxWidth` pixels (jamais de débordement du cadre). */
+export function fitText(obj: PixelText, maxWidth: number): PixelText {
+  const full = obj.text;
+  if (obj.width <= maxWidth) return obj;
+  let n = full.length;
+  while (n > 1) {
+    n -= 1;
+    obj.setText(`${full.slice(0, n).trimEnd()}…`);
+    if (obj.width <= maxWidth) break;
+  }
+  realign(obj);
+  return obj;
+}
