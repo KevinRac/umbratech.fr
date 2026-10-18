@@ -55,7 +55,7 @@ import { ALLY_OUTLINE } from '../render/unitSprites';
 import type { AllyJoin } from '../logic/tactics/encounter';
 import { findEncounter } from '../logic/tactics/encounter';
 import { FoeActor } from '../render/foeActors';
-import { ensureFoeTextures } from '../render/foeTextures';
+import { ensureFoeTextures, FOE_TEX } from '../render/foeTextures';
 import type { NpcDef } from '../data/townSchemas';
 import { formatNotices } from '../ui/notices';
 import { facingPose, facingToward } from '../render/npcSprites';
@@ -1235,7 +1235,33 @@ export class WorldScene extends Phaser.Scene {
     const tile = this.map.tileSize;
     // Une rencontre de repaire se joue autour du boss ; les autres, là où le héros se tient.
     const site = encounter.sampled?.anchor === 'enemy' ? feetCell(sim.x, sim.y, tile) : feetCell(this.body_.x, this.body_.y, tile);
-    this.startBattle(encounter.id, site, { ...options, foeId: sim.def.id, extraEnemies: extra });
+    const go = (): void => this.startBattle(encounter.id, site, { ...options, foeId: sim.def.id, extraEnemies: extra });
+    if (options.ambush) this.warnAmbush(sim, go);
+    else go();
+  }
+
+  /**
+   * Embuscade : le monde se fige une seconde, un grand « ! » rouge s'affiche sur
+   * le héros et sur l'ennemi, un bandeau dit ce qui arrive et pourquoi, puis le combat commence.
+   */
+  private warnAmbush(sim: FoeSim, then: () => void): void {
+    this.leaving = true; // fige l'exploration (déplacements, ennemis) pendant l'avertissement
+    this.hud.setPrompt(null);
+    const mark = (x: number, y: number, scale: number): void => {
+      const img = this.add.image(x, y, FOE_TEX.bangRed).setDepth(5000).setScale(0.2);
+      this.tweens.add({ targets: img, scale, duration: 160, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: img, y: y - 3, duration: 140, yoyo: true, repeat: 3, delay: 200 });
+    };
+    mark(this.body_.x, this.body_.y - 40, 3);
+    mark(sim.x, sim.y - 44, 2);
+    this.cameras.main.shake(260, 0.004);
+    this.cameras.main.flash(120, 255, 60, 40);
+    const dark = sim.def.kind === 'garde' ? 'La milice vous tombe dessus.' : 'Des ennemis surgissent : vous êtes pris au dépourvu.';
+    this.hud.showAmbush('EMBUSCADE !', `${dark} Positions imposées, l'ennemi joue en premier.`);
+    this.time.delayedCall(1100, () => {
+      this.leaving = false;
+      then();
+    });
   }
 
   /** Défaite : la compagnie se réveille au dernier village (ou au départ) ; la position du héros est posée avant sa construction. */

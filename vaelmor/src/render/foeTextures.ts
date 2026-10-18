@@ -11,6 +11,8 @@ import { PixelCanvas } from './pixelCanvas';
 export const FOE_TEX = {
   skull: 'foe:skull',
   bang: 'foe:bang',
+  /** Point d'exclamation rouge de l'embuscade. */
+  bangRed: 'foe:bangRed',
   question: 'foe:question',
   /** Zone d'ombre sous les pieds d'un ennemi plus large que celle du héros (boss). */
   shadowBig: 'foe:shadowBig',
@@ -75,6 +77,7 @@ function paintPattern(scene: Phaser.Scene, key: string, rows: readonly string[],
 export function ensureFoeTextures(scene: Phaser.Scene): void {
   paintPattern(scene, FOE_TEX.skull, SKULL, 0xffffff, P.ombreProfonde);
   paintPattern(scene, FOE_TEX.bang, BANG, P.jauneBle, P.rougeCendre);
+  paintPattern(scene, FOE_TEX.bangRed, BANG, 0xe8302a, P.encre);
   paintPattern(scene, FOE_TEX.question, QUESTION, P.ecume, P.bleuNuit);
   if (!scene.textures.exists(FOE_TEX.shadowBig)) {
     const shadow = new PixelCanvas(18, 7);

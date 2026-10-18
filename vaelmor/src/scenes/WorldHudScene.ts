@@ -216,6 +216,27 @@ export class WorldHudScene extends Phaser.Scene {
     });
   }
 
+  /** Alerte d'embuscade : bandeau rouge, tout de suite visible (le jeu est figé une seconde). */
+  showAmbush(title: string, subtitle: string): void {
+    this.run(() => {
+      const S = this.S;
+      this.banner?.destroy(true);
+      const container = this.add.container(0, 0).setDepth(DEPTH.banner);
+      const cx = this.scale.width / 2;
+      const top = 62 * S;
+      const titleText = addText(this, cx, top + 10 * S, title, { scale: 2 * S, shadow: false, color: 0xff5a4a, align: 'center' });
+      const lineY = top + 10 * S + Math.ceil(titleText.height) + 4 * S;
+      const bottom = lineY + 24 * S;
+      container.add(this.add.rectangle(0, top, this.scale.width, bottom - top, 0x2a0a0a, 0.85).setOrigin(0, 0));
+      container.add(this.add.rectangle(0, top, this.scale.width, S, 0xe8302a, 0.9).setOrigin(0, 0));
+      container.add(this.add.rectangle(0, bottom - S, this.scale.width, S, 0xe8302a, 0.9).setOrigin(0, 0));
+      container.add(titleText);
+      container.add(addText(this, cx, lineY + 6 * S, subtitle, { scale: S, shadow: false, color: PALETTE.parchemin, align: 'center' }));
+      this.banner = container;
+      this.tweens.add({ targets: container, alpha: { from: 0.4, to: 1 }, duration: 120, yoyo: true, repeat: 2 });
+    });
+  }
+
   showPause(handlers: PauseHandlers): void {
     this.run(() => {
       this.pauseHandlers = handlers;
