@@ -9,7 +9,7 @@
  * Phase du joueur : choisir une unité → la déplacer (cases bleues) → Attaquer
  * (prévision affichée, cases rouges) ou Attendre ; Échap annule le
  * déplacement. Phase ennemie : chaque ennemi joue le plan de son IA.
- * Souris : survol = curseur, clic gauche = valider, clic droit = annuler.
+ * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
 import Phaser from 'phaser';
 import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, loadAnimSpeed, nextAnimSpeed, saveAnimSpeed, type AnimSpeed } from '../core/settings';
@@ -671,7 +671,15 @@ export class BattleScene extends Phaser.Scene {
       this.openMapMenu();
       return;
     }
-    if (click?.right || this.actions.justPressed('cancel')) {
+    // Clic droit : seulement effacer les zones de menace marquées ; le menu de combat ne s'ouvre qu'avec Échap (ou Tab).
+    if (click?.right) {
+      if (this.marked.size > 0) {
+        this.marked.clear();
+        this.refreshThreat();
+      }
+      return;
+    }
+    if (this.actions.justPressed('cancel')) {
       if (this.marked.size > 0) {
         this.marked.clear();
         this.refreshThreat();
