@@ -212,7 +212,7 @@
   // Aiguilles (Tisse-Destin)
   aig_n1:{k:'m',name:'Cadence tressée',max:3,desc:'Tant que tu tires, ta cadence monte jusqu’à +10 % / +20 % / +30 % (en 2 s).'},
   aig_n2:{k:'m',name:'Pelote',max:3,desc:'Une aiguille qui touche rend 0,5 Bobine par rang.'},
-  aig_n3:{k:'m',name:'Piqûre ricochet',max:3,desc:'Une aiguille qui touche un ennemi attaché a 25 % de chances par rang de lancer une aiguille gratuite sur un autre ennemi.'},
+  aig_n3:{k:'m',name:'Piqûre ricochet',max:3,desc:'Une aiguille qui touche un ennemi a 25 % de chances par rang de lancer une aiguille gratuite sur un autre ennemi.'},
   aig_n4:{k:'s',name:'Pluie d’aiguilles',max:2,desc:'Débloque Pluie d’aiguilles [E] : 12 aiguilles jaillissent tout autour de toi. Recharge 8 s.',up:'20 aiguilles.'},
   aig_n5:{k:'m',name:'Saignée',max:3,desc:'Tes aiguilles font saigner : 4 dégâts par seconde et par rang pendant 3 s.'},
   aig_n6:{k:'s',name:'Aiguilles Chercheuses',max:2,desc:'Tes aiguilles s’incurvent vers l’ennemi le plus proche.',up:'Elles transpercent un ennemi de plus.'},
