@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.23',
+ actuelle:'v16.24',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.24',t:'Le Masqué : dès l’acte II, une salle d’élite sur quatre est tenue par un élite assemblé (corps de Brute, Spectre ou Voilé, deux capacités empruntées à d’autres ennemis, un sort signature : croix, losanges ou damier). Il porte toujours le même masque, montre ses icônes à son arrivée, charge chaque sort à vue (barre, zone rouge, son qui monte), n’en lance qu’un à la fois et éveille une troisième capacité à mi-vie. Brisé, il donne une relique de plus qu’un champion.'},
   {d:'2026-10-18',h:'v16.23',t:'Le rire du Brumeux est refait : un vrai « ha ha ha HAAA » démoniaque (souffle puis voyelle grave et saturée, descendante, le dernier « ha » est tenu), à la place de la série de bruits.'},
   {d:'2026-10-18',h:'v16.22',t:'Son : la musique démarre par défaut au cran bas du curseur (15 %), le réglage de la pause reste libre.'},
   {d:'2026-10-18',h:'v16.21',t:'Son : le volume de base baisse (musique de 55 % à 30 %, bruitages d’environ 20 %). Le curseur de musique de la pause reste réglable et garde ton réglage s’il est déjà enregistré.'},

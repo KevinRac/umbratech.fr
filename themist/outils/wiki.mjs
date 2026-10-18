@@ -123,7 +123,7 @@ function chance(p, court) {
   const nb = n === 1 ? 'une' : mot(n);
   return court ? `${nb} sur ${mot(d)}` : `${nb} chance${n > 1 ? 's' : ''} sur ${mot(d)}`;
 }
-function bestiaire(B, I) {
+function bestiaire(B, I, MQ) {
   const E = B.ennemis, C = B.champion, RS = B.reglesSalle, BR = B.breche, EF = B.efficacite;
   const nom = k => E[k].n;
   const ennemis = Object.values(E).filter(e => e.desc).map(e =>
@@ -137,6 +137,16 @@ function bestiaire(B, I) {
   const ES = B.enSalle;
   const plaf = ES.plafond === 1 ? 'une fois' : `${mot(ES.plafond)} fois`;
   const regles = Object.values(B.regles).map(r => `<article class="ent"><h4>${esc(r.n)}</h4><p>${esc(r.d)}</p></article>`).join('');
+  // v16.24 : le Masqué (élite assemblé), son masque dessiné depuis data/masque.js
+  const AS = B.assemble, MC = AS.masque.couleurs, E2 = B.ennemis;
+  const MOUV = { approche: 'Il vient au contact', distance: 'Il garde ses distances', rodeur: 'Il rôde tout près' };
+  const FORME = { disque: 'disque autour de lui', anneau: 'anneau qui s’étend, avec une brèche', couloir: 'couloir vers toi', cone: 'cône devant lui', rayons: 'rayons en éventail', croix: 'croix centrée sur lui', losanges: 'losanges autour de toi', damier: 'damier sous tes pieds' };
+  const masques = [['calme', 'Au repos'], ['charge', 'Il charge un sort'], ['fissure', `Sous ${AS.masque.fissurePV} % de PV`], ['brise', 'Vaincu']]
+    .map(([e, t], i) => `<figure class="msq"><span>${MQ.svg(MC, e, 'wmq' + i, 'Le masque du Masqué : ' + lower(t))}</span><figcaption>${esc(t)}</figcaption></figure>`).join('');
+  const corps = Object.values(AS.corps).map(C => { const S = AS.signatures[C.signature];
+    return `<article class="ent"><h4>${esc(C.n)}</h4><p>${esc(MOUV[C.mouvement] || '')}${C.salle ? ` · dès la salle ${C.salle}` : ''}.</p><p class="k">Signature : ${ico(S.ic)}<b>${esc(S.n)}</b> (${esc(FORME[S.forme])})${C.exclut && C.exclut.length ? ` · jamais : ${C.exclut.map(k => esc(AS.capacites[k].n)).join(', ')}` : ''}</p></article>`; }).join('');
+  const caps = Object.values(AS.capacites).map(X => `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(FORME[X.forme])}.</p><p class="k">Empruntée ${E2[X.de] ? `${X.de === 'brute' ? 'à la' : 'au'} ${esc(E2[X.de].n)}` : ''} · chargement ${sec(X.chargeS)}</p></article>`).join('');
+  const sigs = Object.values(AS.signatures).map(X => `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(FORME[X.forme])}.</p><p class="k">Chargement ${sec(Math.max(X.chargeS, AS.signatureMinS))} (jamais moins de ${sec(AS.signatureMinS)})</p></article>`).join('');
   const muts = B.mutationsInstables.map(m => `<article class="ent"><h4>${esc(m.n)}</h4><p>${esc(m.d)}</p></article>`).join('');
   return `<section class="sec" id="bestiaire" data-sec>${MARK('data/bestiaire.js')}<header class="sh"><p class="eyebrow">Ennemis</p><h2>Bestiaire</h2><div class="lede"><p>Les statistiques indiquées sont les valeurs de base (salle 1, palier 0). Elles augmentent à chaque salle de <b>${pct(B.montee.pvParSalle)} de PV</b> et de <b>${pct(B.montee.degatsParSalle)} de dégâts</b>, et avec les paliers de Brume. Un <b>champion</b> a ${num(C.pv)}× les PV, ${num(C.degats)}× les dégâts et ${num(C.taille)}× la taille.</p></div></header>
 <h3 class="sub">Les ennemis communs</h3>
@@ -153,6 +163,17 @@ function bestiaire(B, I) {
 <div class="grid g4">${cms}</div>
 <p><b>Il juge ses contre-mesures.</b> Après chaque salle où il en a lancé une, le Brumeux compare ce qu’elle t’a coûté à tes salles ordinaires : les PV perdus (pour ${EF.partDegats} %) et le temps passé (pour le reste). Plus de ${EF.seuilEfficace} % au-dessus de ta moyenne : elle a <b>porté</b>, il la relancera plus volontiers (mais il varie : chaque nouvel usage dans la même descente la rend un peu moins tentante). Plus de ${-EF.seuilDejouee} % en dessous : tu l’as <b>déjouée</b>, il s’en détourne. Déjouée ${EF.abandonApres} fois dans la même descente, il y <b>renonce</b> jusqu’à la fin de la descente. Son jugement se garde d’une descente à l’autre. Un texte violet donne le verdict à la fin de la salle, et l’écran de fin le rappelle.</p>
 <p><b>Il décide en pleine salle.</b> Dès que sa contre-mesure est sur le terrain, le Brumeux regarde ce qu’elle te coûte par tranches de ${num(ES.fenetreS)} secondes de jeu (les pauses, lectures et arrêts sur image ne comptent pas). Si tu perds moins de ${ES.mordMin} % de tes PV max sur une tranche, elle ne mord pas : il <b>insiste</b>. Une bulle violette s’affiche avec l’icône de la contre-mesure et un <b style="color:#ff6b6b">▲</b> rouge, un son montant retentit, et l’étiquette de salle affiche ▲ ; l’escalade n’agit que ${num(ES.preavisS)} s plus tard, et ses ennemis apparaissent comme les autres, marqués de l’œil violet. Une seule escalade à la fois (les ennemis de la précédente doivent être tombés), ${ES.delaiS} secondes au moins entre deux, ${plaf} au plus par salle, et jamais juste avant ou après une mutation de règle. Si tu perds ${ES.mordTrop} % de tes PV max sur une tranche, ou si tes PV passent sous ${ES.relacheSousPV} %, elle mord trop : il <b>relâche</b> (bulle au <b style="color:#8be07a">▼</b> vert, son descendant). Les ennemis de contre-mesure pas encore arrivés sont annulés, le malus de soin est levé, et il n’insiste plus de la salle ; ce qui est déjà sur le terrain reste. Une salle où il a relâché compte comme une contre-mesure qui a porté. Il ne décide jamais en pleine salle dans une salle de gardien ni dans les ${mot(ES.gardeAvantGardien)} salles qui la précèdent${ES.dansBreche ? '' : ', ni dans une Brèche'}.</p>
+<h3 class="sub" id="masque">Le Masqué</h3>
+<div class="msqs">${masques}</div>
+<p>À partir de l’acte ${ROM[AS.desActe]}, ${(([n, d]) => `${n === 1 ? 'une' : mot(n)} salle${n > 1 ? 's' : ''} d’élite sur ${mot(d)}`)(fraction(AS.chance))} est tenue par un <b>Masqué</b> au lieu d’un champion. On le reconnaît à son masque, toujours le même. C’est un ennemi <b>assemblé</b> : un corps (Brute, Spectre ou Voilé), <b>deux capacités</b> empruntées à d’autres ennemis et un <b>sort signature</b> propre à son corps. Ses icônes s’affichent au-dessus de sa tête et dans une bulle à son arrivée ; une icône fermée signale la capacité qui dort encore. Sous ${AS.eveilPV} % de PV, elle <b>s’éveille</b> (masque fissuré, bulle au ▲, son) et rejoint ses sorts.</p>
+<p>Il n’entre qu’une fois la première vague tombée, escorté de quelques Rampants. Chaque sort se <b>charge</b> : barre au-dessus de lui, zone rouge dès le début, son qui monte, yeux du masque allumés, icône du sort qui s’éclaire. Une forme correspond toujours au même sort. Il ne lance <b>qu’un sort à la fois</b>, avec ${sec(AS.pauseS)} de pause entre deux, et souffle un peu plus après sa signature. Ses sorts tournent en cycle : chaque capacité une fois, dans un ordre qui change, puis la signature. Ses étourdissements durent ${AS.etourdissement === 0.5 ? 'moitié moins' : `${pct(AS.etourdissement)} de la normale`}. Pas de contre-mesure ni de règle de salle avec lui, et jamais dans une salle de gardien, dans les ${mot(AS.gardeAvantGardien)} salles qui la précèdent, ni dans une Brèche. Brisé, il donne ce que donne un champion, <b>plus ${AS.recompense.reliques > 1 ? `${mot(AS.recompense.reliques)} reliques` : 'une relique'}</b>.</p>
+<h4 class="sub">Corps</h4>
+<div class="grid g3">${corps}</div>
+<h4 class="sub">Capacités empruntées</h4>
+<div class="grid g4">${caps}</div>
+<p class="k">Jamais ensemble : ${AS.incompatibles.map(([a, b]) => `${esc(AS.capacites[a].n)} et ${esc(AS.capacites[b].n)}`).join(' ; ')}.</p>
+<h4 class="sub">Sorts signature</h4>
+<div class="grid g3">${sigs}</div>
 <h3 class="sub">Règles de salle</h3>
 <div class="grid g4">${regles}</div>
 <p>À partir de la ${RS.desLaSalle}e salle, une salle de combat ou d’élite reçoit parfois une règle (${chance(RS.chanceActeI)} à l’acte I, ${chance(RS.chanceEnsuite, true)} ensuite). La règle est choisie selon tes PV : sous ${RS.seuilBrume} %, seulement la brume ; sous ${RS.seuilBrumeSol} %, la brume ou le sol ; au-dessus, les quatre. <b>La règle mute une fois</b> en plein combat, entre ${RS.mutationMinS} et ${RS.mutationMaxS} secondes après son apparition : elle est remplacée par une autre règle possible à ton niveau de PV. Purifier une salle à règle rapporte <b>une relance de talents</b> et de l’or (${RS.orBase} + ${RS.orParActe} par acte).</p>
@@ -343,7 +364,7 @@ export function build(html) {
   let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D)));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D)));
   out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
-  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones));
+  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque));
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
   out = replaceSection(out, 'talents', talents(D.talents, D.arbre));

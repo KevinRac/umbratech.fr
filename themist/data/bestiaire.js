@@ -76,6 +76,62 @@
  reglesSalle:{desLaSalle:3,chanceActeI:20,chanceEnsuite:30,seuilBrume:45,seuilBrumeSol:75,mutationMinS:14,mutationMaxS:18,orBase:20,orParActe:10},
  // La Brèche : porte facultative, un combat plus dur pour une relique. chance en % par porte de combat remplaçable
  breche:{n:'Brèche',chance:40,premiereSalle:3,vaguesEnPlus:1,budgetVague:0.9,budgetChampion:0.5,orBase:30,orParActe:15},
+ // v16.24 · Le Masqué : un élite « assemblé » pour qui va vite. Un corps (ennemi existant : silhouette, déplacement, PV)
+ // + deux capacités empruntées à d'autres ennemis + un sort signature propre au corps ; une troisième capacité s'éveille à mi-vie.
+ // Une forme = une capacité, toujours (zones rouges). Il porte un masque, toujours le même (dessin : data/masque.js).
+ // desActe : premier acte où il peut remplacer un élite ordinaire ; chance : % des salles d'élite remplacées.
+ //   Jamais dans une salle de gardien ni dans les gardeAvantGardien salles qui la précèdent, jamais en Brèche ni en aperçu ?demo=.
+ // recompense : ce qu'il donne EN PLUS d'un élite ordinaire (or, relique, chance d'équipement).
+ // stats : pv et degats de base (avant la montée par salle et les paliers), multipliés par le corps ; xp ; contact : part des dégâts au toucher.
+ // escorte : nombre de Rampants qui entrent avec lui, par acte (il n'entre qu'une fois la première vague tombée).
+ // annonceS : il apparaît, montre son masque et ses icônes, et ne frappe pas pendant ce temps.
+ // pauseS : pause fixe entre la fin d'un sort de zone et le chargement du suivant (jamais deux zones à la fois).
+ // apresSignatureS : souffle en plus après le sort signature. signatureMinS : durée minimale du chargement de la signature
+ //   (aucune combinaison ni aucun acte ne la raccourcit). chargeMinS : plancher pour les autres capacités.
+ // accelerationActe : chargement des capacités (pas de la signature) multiplié par ce facteur par acte au-delà de desActe.
+ // eveilPV : % de PV où la troisième capacité s'éveille ; eveilS : temps de lecture du signal avant le sort suivant.
+ // etourdissement : durée des étourdissements subis (1 = normale). attenteS : temps qu'il prend pour s'approcher avant un sort court.
+ // budgetMenace : plafond de menace par acte (corps + signature + les trois capacités).
+ // incompatibles : paires de capacités jamais ensemble (explosion et onde : deux zones rondes centrées sur lui).
+ //   La Brute ne prend pas la Charge : son Fracas en est déjà une, dans quatre directions.
+ // poidsProfil : pondération du tirage selon ton profil (profile()) ; désactivée tant que actif est faux.
+ //   Pour chaque capacité : ax (axe du profil), hi (vrai : plus probable si l'axe est haut), force (poids × (1 + force × écart)).
+ assemble:{n:'Masqué',desActe:2,chance:25,gardeAvantGardien:2,
+  recompense:{reliques:1,titre:'Le masque se brise',texte:'Sous ses éclats, une relique de plus. Choisis-en une.'},
+  stats:{pv:460,degats:13,xp:30,contact:0.8},
+  escorte:{2:3,3:4},
+  annonceS:1.4,pauseS:0.4,apresSignatureS:1.1,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
+  eveilPV:50,eveilS:0.7,etourdissement:0.5,attenteS:1.2,
+  budgetMenace:{2:11,3:13},
+  incompatibles:[['explosion','onde']],
+  poidsProfil:{actif:false,regles:{
+   explosion:{ax:'portee',hi:false,force:0.8},tirs:{ax:'portee',hi:true,force:0.8},
+   onde:{ax:'esquive',hi:false,force:0.6},charge:{ax:'esquive',hi:false,force:0.6},cone:{ax:'risque',hi:true,force:0.6}}},
+  // Corps. pv / taille / vitesse : multiplicateurs ; mouvement : approche, distance ou rodeur ([près, loin] en px) ;
+  // salle : première salle de la run où ce corps peut servir ; exclut : capacités qu'il ne prend jamais ; signature : son sort.
+  // adj : forme de l'adjectif (m : masculin, f : féminin) pour le nom composé.
+  corps:{
+   brute:{n:'Brute',g:'f',pv:1.1,taille:1.45,vitesse:1.05,mouvement:'approche',menace:2,signature:'fracas',exclut:['charge']},
+   spectre:{n:'Spectre',g:'m',pv:0.85,taille:1.6,vitesse:1,mouvement:'distance',distance:[210,300],menace:1,signature:'eclats',exclut:['explosion','cone']},
+   voile:{n:'Voilé',g:'m',salle:14,pv:0.95,taille:1.6,vitesse:1.1,mouvement:'rodeur',distance:[110,170],menace:2,signature:'damier',exclut:['tirs']}},
+  // Capacités empruntées. de : l'ennemi qui la prête ; ic : icône (data/icones.js) ; forme : sa zone (toujours la même) ;
+  // chargeS : durée du chargement ; effetS : durée de la zone après le chargement ; degats : × ses dégâts de base ;
+  // portee : il s'approche à cette distance avant un sort court (au plus attenteS secondes).
+  capacites:{
+   explosion:{n:'Explosion',de:'bouffi',ic:'u_burst',forme:'disque',adj:{m:'explosif',f:'explosive'},menace:2,chargeS:0.8,effetS:0.25,rayon:100,degats:1.6,portee:150},
+   onde:{n:'Onde',de:'hurleur',ic:'u_wave',forme:'anneau',adj:{m:'hurlant',f:'hurlante'},menace:2,chargeS:0.75,rayonMax:340,vitesse:240,breche:70,degats:1.2},
+   charge:{n:'Charge',de:'brute',ic:'u_charge',forme:'couloir',adj:{m:'furieux',f:'furieuse'},menace:3,chargeS:0.8,suivi:0.45,longueur:380,vitesse:620,degats:1.9,sonne:0.6},
+   cone:{n:'Lame',de:'voile',ic:'u_blade',forme:'cone',adj:{m:'tranchant',f:'tranchante'},menace:2,chargeS:0.6,effetS:0.2,rayon:95,arc:2.2,degats:1.8,portee:120},
+   tirs:{n:'Salve',de:'spectre',ic:'u_volley',forme:'rayons',adj:{m:'tireur',f:'tireuse'},menace:2,chargeS:0.7,effetS:0.15,nombre:5,ecart:0.2,vitesse:250,longueur:420,degats:0.9}},
+  // Sorts signature (un par corps), chacun avec une forme qu'aucun autre sort n'utilise.
+  signatures:{
+   fracas:{n:'Fracas',ic:'u_cross4',forme:'croix',menace:3,chargeS:1.1,effetS:0.3,longueur:420,largeur:60,degats:2.4},
+   eclats:{n:'Éclats',ic:'u_diamonds',forme:'losanges',menace:3,chargeS:1.0,effetS:0.25,nombre:5,ecart:118,taille:46,degats:2},
+   damier:{n:'Damier',ic:'u_grid',forme:'damier',menace:3,chargeS:1.0,effetS:0.25,cote:74,degats:2.2}},
+  // Le masque. couleurs : jamais de rouge (les zones le sont) ; taille : hauteur du masque en rayons du corps, bornée en px.
+  // Ses états : calme, yeux allumés pendant un chargement, fissures sous fissurePV % de PV, brisé à la mort (brisureS secondes).
+  masque:{couleurs:{haut:'#e4dcf4',bas:'#8f7fb8',trait:'#120c20',creux:'#160f28',oeil:'#b892ff',oeilVif:'#f1e6ff',fissure:'#c9a8ff'},
+   taille:1.55,min:36,max:56,fissurePV:50,brisureS:0.7}},
  // Mutations du talent Mutation Instable (Gouffre)
  mutationsInstables:[{id:'griffes',n:'Griffes',d:'+40 % de dégâts'},{id:'membres',n:'Membres allongés',d:'+35 % de portée'},{id:'pierre',n:'Peau de pierre',d:'−40 % de dégâts subis'},{id:'fievre',n:'Fièvre',d:'+30 % de vitesse'}]
 };})(window.BRUME_DATA=window.BRUME_DATA||{});
