@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../src/data';
 import { NPC_IDLE_FRAMES, facingPose, facingToward, lookFromDef, paintNpcFrame } from '../src/render/npcSprites';
-import { PORTRAIT_SIZE, paintPortrait } from '../src/render/portraits';
+import { paintPortraitHD } from '../src/render/portraitPainter';
 import { EXPRESSIONS } from '../src/data/townSchemas';
 
 const data = loadGameData();
@@ -47,18 +47,46 @@ describe('sprites de PNJ', () => {
   });
 });
 
-describe('portraits', () => {
-  it('ont quatre expressions différentes pour chaque PNJ', () => {
+/** Contexte 2D factice : enregistre les appels de dessin (sans DOM). */
+function recorder(): { ctx: CanvasRenderingContext2D; log: string[] } {
+  const log: string[] = [];
+  const gradient = { addColorStop: (o: number, c: string) => log.push(`stop ${o} ${c}`) };
+  const target: Record<string, unknown> = {};
+  const ctx = new Proxy(target, {
+    get(t, key: string) {
+      if (key in t) return t[key];
+      if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => gradient;
+      return (...args: unknown[]) => {
+        log.push(`${key}(${args.map((a) => (typeof a === 'number' ? a.toFixed(2) : String(a))).join(',')})`);
+      };
+    },
+    set(t, key: string, value: unknown) {
+      t[key] = value;
+      log.push(`${key}=${String(value)}`);
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+  return { ctx, log };
+}
+
+function painted(npc: (typeof npcs)[number], expression: (typeof EXPRESSIONS)[number]): string {
+  const { ctx, log } = recorder();
+  paintPortraitHD(ctx, { id: npc.id, look: lookFromDef(npc.look), traits: npc.portrait, expression }, 192);
+  return log.join('\n');
+}
+
+describe('portraits peints', () => {
+  it('ont quatre expressions différentes pour chaque PNJ, sans valeur invalide', () => {
     for (const npc of npcs) {
-      const look = lookFromDef(npc.look);
-      const images = EXPRESSIONS.map((e) => sheet((set) => paintPortrait({ set }, look, e), PORTRAIT_SIZE, PORTRAIT_SIZE).join(','));
+      const images = EXPRESSIONS.map((e) => painted(npc, e));
       expect(new Set(images).size, npc.id).toBe(EXPRESSIONS.length);
+      for (const image of images) expect(image, npc.id).not.toMatch(/NaN|undefined|Infinity/);
     }
   });
 
-  it('remplissent tout le cadre 64×64', () => {
-    const look = lookFromDef((npcs[0] as (typeof npcs)[number]).look);
-    const image = sheet((set) => paintPortrait({ set }, look, 'neutre'), PORTRAIT_SIZE, PORTRAIT_SIZE);
-    expect(image.every((c) => c >= 0)).toBe(true);
+  it('sont déterministes et propres à chaque PNJ', () => {
+    const first = npcs[0] as (typeof npcs)[number];
+    expect(painted(first, 'neutre')).toBe(painted(first, 'neutre'));
+    expect(new Set(npcs.map((n) => painted(n, 'neutre'))).size).toBe(npcs.length);
   });
 });

@@ -26,7 +26,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M0 : squelette technique** (16/10/2026) — voir « Livré en M0 »
 - [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
 - [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
-- [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°69 à valider
+- [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°71 à valider
 - [ ] M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
@@ -210,7 +210,7 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **Débogage** : paramètres d'URL `?debug&rep=id:val&gold=N&flags=a,b`.
 - Tests : 336 passent ; `npm run build` OK.
 
-### Décisions n°62 à n°69 (jalon M2) — à valider par l'auteur
+### Décisions n°62 à n°71 (jalon M2) — à valider par l'auteur
 - **n°62 — Port-Brume démarre à -10**, soit « Neutre » sur l'échelle §6.2 (le GDD dit « Méfiant »).
 - **n°63 — PNJ statiques** (pas de déambulation) dans ce prototype.
 - **n°64 — Quêtes liées aux boss** (`boss_*`) attendent leurs drapeaux jusqu'en M3/M5.
@@ -219,39 +219,5 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **n°67 — Accès** : implémenté par refus de boutique, repos gratuit, conditions de quête/recrutement ; `acces_citadelle` et `barque_de_dorn` existent mais ne ferment pas encore de portes.
 - **n°68 — Valcendre compte 12 PNJ** ; la quête d'arène attend un jalon ultérieur.
 - **n°69 — Paramètres de débogage** `rep`, `gold`, `flags` conservés en mode `?debug`.
-
-## Modèle / effort conseillés
-Opus 5.5 élevé pour M4, M5, M9 ; Sonnet 5.5 moyen pour M1, M2, M3, M10 (élevé pour M8) ; Haiku 5.5 pour le remplissage de données (M6, M7).
-
-## Décisions prises
-- Les 28 décisions du GDD §19 sont validées telles quelles (16/10/2026).
-- n°29 Hébergement : jeu compilé servi sur `umbratech.fr/vaelmor/play/` ; la sortie du build `vaelmor/play/` est commitée (le serveur IONOS fait un `git pull` sans build).
-- n°30 Musique : pistes générées avec Suno (`music/README.md`), tracées dans `CREDITS.md`.
-- n°31 Version de Phaser : **Phaser 4.2.1** (16/10/2026, validée par l’auteur). La 3.x n'évolue plus depuis mai 2025 ; la décision n°1 laissait la version ouverte. Ajoutée au GDD §19.
-
-## Conventions
-- **Langue** : textes du jeu, commentaires et messages d'erreur en français ; identifiants de code (fonctions, classes, variables) en anglais.
-- **Identifiants de contenu** : `snake_case` ASCII sans accents (`gardien_des_marees`, `heros_local`). Clés de stats : `pv fo mag dex vit def res chc mob` (comme le GDD).
-- **Données** : tout réglage chiffré va dans `data/*.json`, jamais en dur dans le code. Objets stricts (une clé inconnue est une erreur) ; `$comment` autorisé en tête de fichier.
-- **Logique** : fonctions pures dans `src/logic/`, qui reçoivent la config en paramètre ; hasard uniquement via `Rng` (graine) pour des combats rejouables.
-- **Rendu pixel art** : coordonnées entières, échelles entières (×2, ×3), couleurs de `render/palette.ts`. Texte uniquement via `addText()` (`ui/text.ts`). Placeholders dessinés par code avec `PixelCanvas` (tramage de Bayer, deux teintes max par transition).
-- **Entrées** : les scènes lisent des actions (`ActionInput`, `core/input.ts`), jamais des touches. ZQSD et WASD sont liés ensemble.
-- **Scènes** : clé dans `scenes/keys.ts`, enregistrement dans `main.ts`. La scène Debug reste au-dessus de toutes.
-- **Assets** : dans `assets/` et `music/`, référencés avec `assetUrl('assets/…')` (marche en dev et depuis `play/`). Toute source tierce est listée dans `CREDITS.md` avec sa licence.
-- **Avant chaque commit touchant le jeu** : `npm run build` (valide, teste, compile), puis commiter `play/` avec le code.
-
-## Pièges connus
-- L'hébergement est statique : le serveur IONOS fait `git pull` de `main` à chaque push (`.github/workflows/deploy.yml`). Tout ce qui est poussé sur `main` part en ligne ; le build doit donc être commité. Les noms de fichiers de `play/js/` changent à chaque build (hachage) : commiter la suppression de l'ancien.
-- Phaser 4 : `Scale.MAX_ZOOM` n'est calculé qu'au démarrage → l'échelle est gérée par `render/displayScaler.ts`. Le type `BitmapFontCharacterData` omet `xAdvance` (pourtant lu par le moteur). `Geom.Point` n'existe plus (utiliser `Vector2`), `Math.TAU` vaut 2π. Guides officiels dans `node_modules/phaser/skills/` (dont `v3-to-v4-migration`).
-- `Phaser.Input.Keyboard.JustDown` perd les appuis très brefs (enfoncé et relâché dans la même image) : passer par `ActionInput`, qui écoute les événements `keydown`.
-- Vite 8 : l'option de build s'appelle `build.rolldownOptions` (et non `rollupOptions`). Le plugin `vaelmor-entry-as-index` renomme `play/game.html` en `play/index.html`.
-- **Couches GPU Phaser 4 (`createLayer(..., true)`)** : les cases vides sont dessinées avec la tuile d'indice 0 du tileset ! La tuile n°1 du tileset est donc volontairement **transparente** (le générateur la réserve) ; sans cela tout l'écran passe en rouge (le repère de collision « bloqué »). Une seule texture par couche, tuiles nettes. Les couches `collision` et `zones` (valeurs brutes) ne sont jamais créées côté Phaser.
-- Les composants d'interface créés dans une scène qui défile (`Toasts`, `VerticalMenu` avec `fixed: true`, HUD) doivent être en `setScrollFactor(0)` : sinon ils restent à leur position du monde et sortent de l'écran.
-- **Tuiles animées des couches GPU (Phaser 4.2.1)** : deux défauts dans `Tileset.createAnimationDataTexture` — la table tuile → animation donne le numéro d'animation au lieu du texel (×2), et la texture est envoyée retournée (`flipY`) alors que le shader la lit à l'endroit (visible dès qu'elle dépasse une ligne de 4096 texels). Symptôme : des cases affichent des tuiles quelconques de l'atlas. `fixGpuTileAnimations` (à appeler AVANT `createLayer`) remplace cette construction ; il ne s'applique qu'à la 4.2.1 et avertit dans la console sur une autre version (à revérifier à chaque mise à jour de Phaser). Test : `tests/tileAnimPack.test.ts` émule la lecture du shader.
-- Tileset du monde : 128 colonnes (`TILESET_COLUMNS`), ~13 500 tuiles depuis la n°43 (une tuile par combinaison de voisinage). Garder la hauteur de l'atlas sous 4096 px (limite de texture de certains GPU) : élargir l'atlas plutôt que l'allonger.
-- Pour modifier la carte : soit éditer `tools/world/layout.ts` / le générateur puis `npm run generate-world` (le test d'identité échoue tant qu'on n'a pas régénéré), soit éditer `assets/maps/world.json` dans Tiled (alors supprimer ou adapter le test « identique à la sortie du générateur » : le générateur écraserait les retouches).
-- **Phaser 4 : `setTintFill` n'existe plus** : `sprite.setTint(couleur).setTintMode(Phaser.TintModes.FILL)`, puis `setTintMode(Phaser.TintModes.MULTIPLY).clearTint()` pour revenir (voir `flashWhite` dans `BattleScene`).
-- **Deux scènes, un même appui** : `BattleScene` et `BattleHudScene` ont chacune leur `ActionInput`. Un menu validé dans l'interface change le mode du combat pendant la même image ; `BattleScene` ignore donc les entrées de l'image où son mode a changé (`modeFrame`), et l'interface consomme l'appui qui ouvre un menu (`openMenu`). Les clics arrivés pendant un changement de mode (< 120 ms) sont ignorés.
-- Les scènes Phaser sont **réutilisées** : tout champ d'instance (drapeaux, listes d'objets) doit être remis à zéro dans `create()`.
-- Vérification visuelle dans une session Claude : `npx playwright install chromium` fonctionne (dans le dossier temporaire, pas dans `vaelmor/`) ; lancer Chromium avec `--use-angle=swiftshader --enable-unsafe-swiftshader` pour avoir WebGL, servir la racine du dépôt (`python3 -m http.server`) et ouvrir `/vaelmor/play/`.
-- Accès réseau des sessions Claude : le registre npm était bloqué le 16/10/2026 au matin, ouvert le soir même. En cas de refus du proxy, autoriser les registres de paquets dans les réglages d'exécution de code.
+- **n°70 — Portraits de dialogue peints en haute définition** (demande de l'auteur, 18/10/2026) : style anime, peints au canevas 2D (`src/render/portraitPainter.ts`) à partir des couleurs, de la coiffure, de la tenue et de l'accessoire du PNJ, plus des traits propres au portrait dans `locations.json` (`portrait` : genre, âge, barbe, couleur des yeux, cicatrice / taches de rousseur). Quatre expressions. Seule exception assumée au pixel art ; le portrait (108 × échelle) dépasse du haut de la boîte, elle-même réduite à 112 de haut.
+- **n°71 — Emblèmes de quête** : « ! » doré et « ? » argent-cyan en pixel art biseauté, avec étincelle et halo au sol sous le PNJ.

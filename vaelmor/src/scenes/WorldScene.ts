@@ -71,6 +71,7 @@ interface NpcActor {
   readonly shadow: Phaser.GameObjects.Image;
   readonly marker: Phaser.GameObjects.Image;
   readonly glow: Phaser.GameObjects.Image;
+  readonly spark: Phaser.GameObjects.Image;
   readonly phase: number;
   facing: NpcDef['facing'];
   /** Instant où le PNJ reprend son regard d'origine après une conversation. */
@@ -452,9 +453,10 @@ export class WorldScene extends Phaser.Scene {
       const { pose, flipX } = facingPose(npc.facing);
       const sprite = this.add.sprite(x, footY, texture, TOWN_TEX.npcFrame(pose, 0)).setOrigin(0.5, 1).setFlipX(flipX).setDepth(DEPTH.entities + (footY - 1) / 100000);
       const shadow = this.add.image(x, footY - 1, WORLD_TEX.shadow).setDepth(DEPTH.shadow);
-      const marker = this.add.image(x, footY - 38, TOWN_TEX.markerAvailable).setDepth(DEPTH.marker).setVisible(false);
+      const marker = this.add.image(x, footY - 40, TOWN_TEX.markerAvailable).setDepth(DEPTH.marker).setVisible(false);
+      const spark = this.add.image(x, footY - 40, TOWN_TEX.questSpark).setDepth(DEPTH.marker + 0.01).setVisible(false);
       const glow = this.add.image(x, footY - 2, TOWN_TEX.questGlow).setDepth(DEPTH.shadow - 0.01).setVisible(false);
-      this.npcs.set(npc.id, { def: npc, locationId: location.id, x, footY, sprite, shadow, marker, glow, phase: (tx * 37 + ty * 91) % 700, facing: npc.facing, resetAt: 0 });
+      this.npcs.set(npc.id, { def: npc, locationId: location.id, x, footY, sprite, shadow, marker, glow, spark, phase: (tx * 37 + ty * 91) % 700, facing: npc.facing, resetAt: 0 });
     }
     this.refreshNpcSolids();
     // Le point d'apparition ou la case de départ ne doit pas tomber dans un PNJ.
@@ -484,7 +486,9 @@ export class WorldScene extends Phaser.Scene {
       if (texture === null || hostile) {
         actor.marker.setVisible(false);
         actor.glow.setVisible(false);
+        actor.spark.setVisible(false);
       } else {
+        actor.spark.setVisible(true);
         actor.marker.setTexture(texture).setVisible(true);
         actor.glow.setVisible(true).setTint(texture === TOWN_TEX.markerReady ? 0x9ee8f0 : 0xffffff);
       }
@@ -502,8 +506,16 @@ export class WorldScene extends Phaser.Scene {
       const { pose, flipX } = facingPose(actor.facing);
       actor.sprite.setFlipX(flipX).setFrame(TOWN_TEX.npcFrame(pose, frame(actor)));
       if (actor.marker.visible) {
-        actor.marker.setY(actor.footY - 38 + Math.round(Math.sin(time / 260 + actor.phase) * 1.5));
+        const bob = Math.round(Math.sin(time / 260 + actor.phase) * 1.5);
+        actor.marker.setY(actor.footY - 40 + bob);
         actor.glow.setAlpha(0.7 + 0.3 * Math.sin(time / 420 + actor.phase));
+        // Étincelle qui scintille à un coin de l'emblème, un coin différent à chaque cycle.
+        const cycle = (time + actor.phase * 3) / 1400;
+        const corner = Math.floor(cycle) % 3;
+        const t = cycle - Math.floor(cycle);
+        const sx = corner === 0 ? 6 : corner === 1 ? -6 : 5;
+        const sy = corner === 0 ? -9 : corner === 1 ? -4 : 4;
+        actor.spark.setPosition(actor.x + sx, actor.footY - 40 + bob + sy).setAlpha(t < 0.4 ? Math.sin((t / 0.4) * Math.PI) : 0);
       }
     }
   }
@@ -577,6 +589,7 @@ export class WorldScene extends Phaser.Scene {
     actor.shadow.destroy();
     actor.marker.destroy();
     actor.glow.destroy();
+    actor.spark.destroy();
     this.npcs.delete(actor.def.id);
     this.refreshNpcSolids();
   }

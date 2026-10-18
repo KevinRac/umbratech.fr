@@ -56,6 +56,7 @@
             "outfit": "dress",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#5f8a46","marks":[]},
           "greeting": {
             "hostile": ["Va-t’en. Ma maison n’accueille pas ceux qui ont fait du tort au village."],
             "mefiant": ["Une chambre ? Elle se paie d’avance, voyageur."],
@@ -106,6 +107,7 @@
             "outfit": "tunic",
             "accessory": "satchel"
           },
+          "portrait": {"face":"m","age":"age","beard":"moustache","eyes":"#6a7a8a","marks":[]},
           "greeting": {
             "hostile": ["Fiche le camp de mon moulin."],
             "mefiant": ["Mmh. Si tu veux de la farine, il faudra la payer."],
@@ -151,6 +153,7 @@
             "outfit": "cloak",
             "accessory": "sword"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"courte","eyes":"#4a6a8a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["Tu as fait du tort à notre village. Ne traîne pas près du puits."],
             "mefiant": ["Je t’ai à l’œil, étranger. Reste tranquille."],
@@ -212,6 +215,7 @@
             "outfit": "tunic",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"pleine","eyes":"#5a3a2a","marks":[]},
           "greeting": {
             "hostile": ["Je ne forge pas pour les ennemis de Haut-Gué."],
             "mefiant": ["Mes lames coûtent cher. Pour toi, un peu plus."],
@@ -241,6 +245,7 @@
             "outfit": "dress",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"jeune","beard":"aucune","eyes":"#3f8a7a","marks":["taches"]},
           "greeting": {
             "mefiant": ["Je n’ai pas le temps pour les inconnus."],
             "neutre": ["Mon père est parti vendre au pont, il y a trois jours. Il aurait déjà dû revenir."],
@@ -288,6 +293,7 @@
             "outfit": "cloak",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"age","beard":"pleine","eyes":"#7a8a9a","marks":[]},
           "greeting": {
             "hostile": ["Les vieux ont de la mémoire. Rachète-toi, et le village te rouvrira ses portes."],
             "mefiant": ["Je sais qui tu es. Prouve que tu vaux mieux."],
@@ -343,6 +349,7 @@
             "outfit": "dress",
             "accessory": "satchel"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#6a4a2a","marks":[]},
           "greeting": {
             "hostile": ["Rien à vendre pour toi."],
             "mefiant": ["Du pain, de la soupe. Paye et passe."],
@@ -421,6 +428,7 @@
             "outfit": "cloak",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"age","beard":"aucune","eyes":"#5a8a4a","marks":[]},
           "greeting": {
             "hostile": ["Les racines murmurent ton nom. Ce n’est pas un compliment."],
             "mefiant": ["Les arbres se souviennent des haches. Prouve que tu n’en portes pas contre nous."],
@@ -491,6 +499,7 @@
             "outfit": "tunic",
             "accessory": "satchel"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"courte","eyes":"#6a7a3a","marks":[]},
           "greeting": {
             "hostile": ["Aucune herbe pour toi."],
             "mefiant": ["Mes fioles ne sont pas données."],
@@ -520,6 +529,7 @@
             "outfit": "cloak",
             "accessory": "sword"
           },
+          "portrait": {"face":"f","age":"jeune","beard":"aucune","eyes":"#3a6a3a","marks":["cicatrice"]},
           "greeting": {
             "mefiant": ["Je ne chasse pas avec des inconnus."],
             "neutre": ["Les Falaises sont mon pays, pas cette forêt. Mais je la protège."],
@@ -566,6 +576,7 @@
             "outfit": "cloak",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"jeune","beard":"courte","eyes":"#6a4a3a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["Je ne te dois rien."],
             "mefiant": ["Parle moins fort, on pourrait nous entendre."],
@@ -618,6 +629,7 @@
             "outfit": "tunic",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"enfant","beard":"aucune","eyes":"#5a7aaa","marks":["taches"]},
           "greeting": {
             "mefiant": ["Ma maman dit de ne pas parler aux étrangers."],
             "neutre": ["Hé, tu veux savoir où sont les trésors ? Moi, je sais !"],
@@ -660,6 +672,7 @@
             "outfit": "cloak",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"jeune","beard":"aucune","eyes":"#6a9a4a","marks":[]},
           "greeting": {
             "mefiant": ["Pas toucher aux racines."],
             "neutre": ["J’ai perdu la graine que ma mère m’a laissée. Sans elle, mes racines ne répondent plus."],
@@ -746,6 +759,7 @@
             "outfit": "cloak",
             "accessory": "sword"
           },
+          "portrait": {"face":"m","age":"age","beard":"pleine","eyes":"#4a6a9a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["Ton nom est maudit sur les quais. Retire-toi avant que je n’appelle mes hommes."],
             "mefiant": ["La Couronne a mauvaise presse ici. Tu n’as pas l’air d’un ami des marées."],
@@ -817,6 +831,7 @@
             "outfit": "dress",
             "accessory": "satchel"
           },
+          "portrait": {"face":"f","age":"age","beard":"aucune","eyes":"#5a6a7a","marks":[]},
           "greeting": {
             "hostile": ["Pas de filets pour les ennemis du port."],
             "mefiant": ["Un filet, c’est du travail. Je ne le vends pas aux inconnus au prix de fou... enfin, presque."],
@@ -846,6 +861,7 @@
             "outfit": "cloak",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"courte","eyes":"#8a7a3a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["Ouste."],
             "mefiant": ["On ne se connaît pas. Ça ne risque pas de changer."],
@@ -895,6 +911,7 @@
             "outfit": "tunic",
             "accessory": "satchel"
           },
+          "portrait": {"face":"f","age":"jeune","beard":"aucune","eyes":"#6a4a3a","marks":["taches"]},
           "greeting": {
             "mefiant": ["Mes cartes ne sont pas pour tout le monde."],
             "neutre": [
@@ -940,6 +957,7 @@
             "outfit": "cloak",
             "accessory": "lantern"
           },
+          "portrait": {"face":"m","age":"age","beard":"aucune","eyes":"#6a6a5a","marks":[]},
           "greeting": {
             "mefiant": ["Que la Lanterne éclaire ton chemin... si elle en a envie."],
             "neutre": ["Les marins viennent prier ici avant de partir. Certains reviennent."],
@@ -987,6 +1005,7 @@
             "outfit": "cloak",
             "accessory": "sword"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#3a5a7a","marks":[]},
           "greeting": {
             "hostile": ["Circule."],
             "mefiant": ["Pas de remous, étranger."],
@@ -1059,6 +1078,7 @@
             "outfit": "tunic",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"pleine","eyes":"#5a3a2a","marks":[]},
           "greeting": {
             "hostile": ["Mon enclume est fermée pour toi."],
             "mefiant": ["Les armes, c’est du sérieux. Montre-moi d’abord ton sérieux."],
@@ -1088,6 +1108,7 @@
             "outfit": "dress",
             "accessory": "lantern"
           },
+          "portrait": {"face":"f","age":"jeune","beard":"aucune","eyes":"#a07a2a","marks":[]},
           "greeting": {
             "hostile": ["Les lanternes ne s’allument pas pour les ennemis des Monts."],
             "mefiant": ["Les flammes sont fragiles. Je suis prudente."],
@@ -1149,6 +1170,7 @@
             "outfit": "tunic",
             "accessory": "satchel"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"moustache","eyes":"#4a5a3a","marks":[]},
           "greeting": {
             "mefiant": ["Je n’ai pas le temps pour ça."],
             "neutre": [
@@ -1195,6 +1217,7 @@
             "outfit": "cloak",
             "accessory": "sword"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#6a7a8a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["Les cols sont fermés pour toi."],
             "mefiant": ["Les cols ne sont pas ouverts aux inconnus."],
@@ -1254,6 +1277,7 @@
             "outfit": "tunic",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"pleine","eyes":"#3a2a20","marks":[]},
           "greeting": {
             "mefiant": ["J’ai mal au dos, pas envie de causer."],
             "neutre": ["Vingt ans de galeries. On entend parfois quelque chose derrière les murs."],
@@ -1286,6 +1310,7 @@
             "outfit": "dress",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#4a6a3a","marks":["taches"]},
           "greeting": {
             "hostile": ["Ma maison est fermée."],
             "mefiant": ["Une chambre, c’est trente pièces ici."],
@@ -1360,6 +1385,7 @@
             "outfit": "dress",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#7a3a6a","marks":[]},
           "greeting": {
             "hostile": ["Gardes, escortez cet individu hors des murs."],
             "mefiant": ["La Couronne n’a pas à se justifier devant des inconnus."],
@@ -1423,6 +1449,7 @@
             "outfit": "cloak",
             "accessory": "sword"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"courte","eyes":"#4a4a5a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["Plus un pas. La caserne est interdite aux traîtres."],
             "mefiant": ["Les mercenaires ne servent que ceux qui paient et qu’on connaît."],
@@ -1478,6 +1505,7 @@
             "outfit": "cloak",
             "accessory": "satchel"
           },
+          "portrait": {"face":"m","age":"age","beard":"courte","eyes":"#6a4a8a","marks":[]},
           "greeting": {
             "hostile": ["Je ne vends pas aux gens qu’on pourchasse."],
             "mefiant": ["Mes pièces rares sont chères, et pour toi elles le sont davantage."],
@@ -1529,6 +1557,7 @@
             "outfit": "dress",
             "accessory": "satchel"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#5a4a2a","marks":[]},
           "greeting": {
             "hostile": ["Pas de marché pour toi."],
             "mefiant": ["Mes étals ne sont pas pour tout le monde."],
@@ -1557,6 +1586,7 @@
             "outfit": "cloak",
             "accessory": "sword"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"courte","eyes":"#5a6a8a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["Passe ton chemin."],
             "mefiant": ["Je n’ai de leçon à recevoir de personne."],
@@ -1606,6 +1636,7 @@
             "outfit": "dress",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"jeune","beard":"aucune","eyes":"#8a4a9a","marks":[]},
           "greeting": {
             "mefiant": ["Je ne chante pas pour tout le monde."],
             "neutre": ["Les chansons de Valcendre sont des histoires. Veux-tu en entendre une ?"],
@@ -1654,6 +1685,7 @@
             "outfit": "dress",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"age","beard":"aucune","eyes":"#6a7a6a","marks":[]},
           "greeting": {
             "hostile": ["Mes mains guérissent tout le monde, même toi. Mais d’abord, fais amende honorable."],
             "mefiant": ["Je soigne les malades, sans regarder qui ils sont."],
@@ -1700,6 +1732,7 @@
             "outfit": "cloak",
             "accessory": "satchel"
           },
+          "portrait": {"face":"m","age":"jeune","beard":"aucune","eyes":"#3aaa6a","marks":[]},
           "greeting": {
             "mefiant": ["Pas touche aux fioles."],
             "neutre": ["L’alchimie, c’est la science des saisons. Je cherche un partenaire pour mes expériences."],
@@ -1736,6 +1769,7 @@
             "outfit": "tunic",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"pleine","eyes":"#5a4a3a","marks":[]},
           "greeting": {
             "mefiant": ["Je n’ai pas de temps à perdre."],
             "neutre": ["Les pierres de Valcendre ont mille ans. Certaines chantent, si on les caresse."],
@@ -1771,6 +1805,7 @@
             "outfit": "tunic",
             "accessory": "sword"
           },
+          "portrait": {"face":"m","age":"adulte","beard":"moustache","eyes":"#8a3a2a","marks":["cicatrice"]},
           "greeting": {
             "hostile": ["L’arène ne veut pas de toi."],
             "mefiant": ["Les combats, ça se paie. Reviens quand tu auras fait tes preuves."],
@@ -1812,6 +1847,7 @@
             "outfit": "dress",
             "accessory": "none"
           },
+          "portrait": {"face":"f","age":"adulte","beard":"aucune","eyes":"#3a3a6a","marks":[]},
           "greeting": {
             "hostile": ["Le Corbeau est fermé pour toi."],
             "mefiant": ["Quarante pièces la nuit. Pas moins."],
@@ -1858,6 +1894,7 @@
             "outfit": "cloak",
             "accessory": "none"
           },
+          "portrait": {"face":"m","age":"age","beard":"pleine","eyes":"#7a7a6a","marks":[]},
           "greeting": {
             "hostile": ["Va-t’en, je ne te dirai rien."],
             "mefiant": ["Les mendiants voient tout, et ne disent rien aux inconnus."],

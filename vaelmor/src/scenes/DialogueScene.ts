@@ -123,23 +123,23 @@ export class DialogueScene extends Phaser.Scene {
     const y = H - bh - 16 * S;
 
     const panel = drawPanel(this, x, y, bw, bh, { scale: 2 * S, depth: DEPTH.box, fillAlpha: 0.94 });
-    const frame = drawPanel(this, x + 12 * S, y + 16 * S, 80 * S, 80 * S, { scale: S, depth: DEPTH.box + 1, fill: 0x0c0b14, fillAlpha: 1 });
+    const frame = drawPanel(this, x + 12 * S, y + bh - 126 * S, 116 * S, 116 * S, { scale: S, depth: DEPTH.box + 1, fill: 0x0c0b14, fillAlpha: 1 });
     this.portrait = this.add
-      .image(x + 12 * S + 8 * S, y + 16 * S + 8 * S, ensurePortrait(this, this.npc, this.expression))
+      .image(x + 12 * S + 4 * S, y + bh - 122 * S, ensurePortrait(this, this.npc, this.expression))
       .setOrigin(0, 0)
-      .setScale(S)
+      .setDisplaySize(108 * S, 108 * S)
       .setDepth(DEPTH.box + 2);
 
-    const nameText = addText(this, x + 108 * S, y - 14 * S, this.npc.name, { scale: S, color: PALETTE.jauneBle, shadow: PALETTE.encre }).setDepth(DEPTH.box + 3);
-    const titleText = addText(this, x + 108 * S, y + 4 * S, this.npc.title, { font: 'small', scale: S + 1, color: PALETTE.cyanEclat }).setDepth(DEPTH.box + 3);
+    const nameText = addText(this, x + 144 * S, y - 14 * S, this.npc.name, { scale: S, color: PALETTE.jauneBle, shadow: PALETTE.encre }).setDepth(DEPTH.box + 3);
+    const titleText = addText(this, x + 144 * S, y + 4 * S, this.npc.title, { font: 'small', scale: S + 1, color: PALETTE.cyanEclat }).setDepth(DEPTH.box + 3);
     const tagWidth = Math.max(Math.ceil(nameText.width), Math.ceil(titleText.width)) + 24 * S;
-    const tag = drawPanel(this, x + 98 * S, y - 22 * S, tagWidth, 44 * S, { scale: S, depth: DEPTH.box + 2, fillAlpha: 0.96 });
+    const tag = drawPanel(this, x + 134 * S, y - 22 * S, tagWidth, 44 * S, { scale: S, depth: DEPTH.box + 2, fillAlpha: 0.96 });
     // Le cadre du nom recouvre le haut de la boîte : on repasse le texte au-dessus.
     nameText.setDepth(DEPTH.box + 4);
     titleText.setDepth(DEPTH.box + 4);
 
-    this.textMaxWidth = bw - 108 * S - 28 * S;
-    this.body = addText(this, x + 108 * S, y + 32 * S, '', { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.box + 3);
+    this.textMaxWidth = bw - 144 * S - 28 * S;
+    this.body = addText(this, x + 144 * S, y + 32 * S, '', { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.box + 3);
     this.measure = addText(this, 0, 0, '', { scale: S }).setVisible(false);
     this.arrow = this.add
       .triangle(x + bw - 22 * S, y + bh - 20 * S, 0, 0, 10 * S, 0, 5 * S, 7 * S, PALETTE.ambre)

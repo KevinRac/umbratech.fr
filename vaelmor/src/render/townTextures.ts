@@ -3,12 +3,12 @@
  * portraits de dialogue (créés à la demande, un par expression) et pastilles de
  * quête (« ! » à prendre, « ? » à rendre) posées au-dessus des PNJ.
  */
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import type { Expression, NpcDef } from '../data/townSchemas';
 import { NPC_H, NPC_IDLE_FRAMES, NPC_POSES, NPC_W, lookFromDef, paintNpcFrame } from './npcSprites';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas, bayer } from './pixelCanvas';
-import { PORTRAIT_SIZE, paintPortrait } from './portraits';
+import { paintPortraitHD } from './portraitPainter';
 
 export const TOWN_TEX = {
   npc: (id: string): string => `npc:${id}`,
@@ -17,6 +17,7 @@ export const TOWN_TEX = {
   markerAvailable: 'marker:available',
   markerReady: 'marker:ready',
   questGlow: 'marker:glow',
+  questSpark: 'marker:spark',
 } as const;
 
 /** Une feuille 2 × 3 (images d'attente × poses) par PNJ. */
@@ -38,35 +39,89 @@ export function ensureNpcTexture(scene: Phaser.Scene, npc: NpcDef): string {
   return key;
 }
 
-/** Portrait d'un PNJ avec une expression (créé une fois). */
+/** Côté des portraits peints, en pixels de texture (affichés à 108 × échelle de l'interface). */
+export const PORTRAIT_TEX_SIZE = 216;
+
+/** Portrait peint d'un PNJ avec une expression (créé une fois, filtré en douceur). */
 export function ensurePortrait(scene: Phaser.Scene, npc: NpcDef, expression: Expression): string {
   const key = TOWN_TEX.portrait(npc.id, expression);
   if (scene.textures.exists(key)) return key;
-  const canvas = new PixelCanvas(PORTRAIT_SIZE, PORTRAIT_SIZE);
-  paintPortrait({ set: (x, y, color, alpha) => canvas.set(x, y, color, alpha ?? 255) }, lookFromDef(npc.look), expression, P.ardoise);
-  canvas.toTexture(scene, key);
+  const canvas = document.createElement('canvas');
+  canvas.width = PORTRAIT_TEX_SIZE;
+  canvas.height = PORTRAIT_TEX_SIZE;
+  const ctx = canvas.getContext('2d');
+  if (ctx) paintPortraitHD(ctx, { id: npc.id, look: lookFromDef(npc.look), traits: npc.portrait, expression }, PORTRAIT_TEX_SIZE);
+  scene.textures.addCanvas(key, canvas)?.setFilter(Phaser.Textures.FilterMode.LINEAR);
   return key;
 }
 
-const MARK_OUTLINE = P.ombreProfonde;
+/**
+ * Emblèmes de quête en pixel art, au relief biseauté (lumière en haut à gauche) :
+ * « ! » doré (quête à prendre) et « ? » argent-cyan (quête à rendre), avec une
+ * gemme en guise de point et une aura translucide autour du contour.
+ * Lettres : O contour, H reflet, L clair, M teinte, D ombre.
+ */
+const QUEST_MARK = [
+  '..OOOOO..',
+  '.OHLLMDO.',
+  '.OHLMMDO.',
+  '.OLLMMDO.',
+  '.OLMMDDO.',
+  '..OLMDO..',
+  '..OLMDO..',
+  '..OLMDO..',
+  '...ODO...',
+  '....O....',
+  '.........',
+  '...OOO...',
+  '..OHLDO..',
+  '..OLMDO..',
+  '..OMDDO..',
+  '...OOO...',
+];
 
-/** Pastille ronde (liseré clair, fond plein) portant un glyphe sombre : se lit de loin. */
-function paintBadge(scene: Phaser.Scene, key: string, glyph: readonly string[], fill: number, rim: number): void {
+const READY_MARK = [
+  '...OOOOO...',
+  '..OHHLLMO..',
+  '.OHLOOOMDO.',
+  '.OLO...OMDO',
+  '..O....OMDO',
+  '......OLMDO',
+  '.....OLMDO.',
+  '....OLMDO..',
+  '....OLDO...',
+  '....OMDO...',
+  '.....OO....',
+  '...........',
+  '....OOO....',
+  '...OHLDO...',
+  '...OLMDO...',
+  '...OMDDO...',
+  '....OOO....',
+];
+
+const SPARK = ['..L..', '..H..', 'LHHHL', '..H..', '..L..'];
+
+function paintEmblem(scene: Phaser.Scene, key: string, rows: readonly string[], tones: Record<string, number>, aura: number): void {
   if (scene.textures.exists(key)) return;
-  const N = 13;
-  const canvas = new PixelCanvas(N, N + 3);
-  const c = (N - 1) / 2;
-  for (let y = 0; y < N; y++) {
-    for (let x = 0; x < N; x++) {
-      const d = Math.hypot(x - c, y - c);
-      if (d <= c + 0.3) canvas.set(x, y, d > c - 1 ? MARK_OUTLINE : d > c - 2 ? rim : y < c - 1 && x < c ? mixColor(fill, P.ecume, 0.35) : fill);
+  const w = (rows[0]?.length ?? 0) + 2;
+  const h = rows.length + 2;
+  const canvas = new PixelCanvas(w, h);
+  const at = (x: number, y: number): string => rows[y]?.[x] ?? '.';
+  for (let y = -1; y <= rows.length; y++) {
+    for (let x = -1; x <= w - 2; x++) {
+      if (at(x, y) !== '.') continue;
+      let near = false;
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) if (at(x + dx, y + dy) === 'O') near = true;
+      if (near) canvas.set(x + 1, y + 1, aura, 90);
     }
   }
-  // Pointe vers le PNJ.
-  for (const [x, y] of [[5, N], [6, N], [7, N], [6, N + 1]] as const) canvas.set(x, y, MARK_OUTLINE);
-  canvas.set(6, N - 1, rim);
-  const ox = Math.floor((N - (glyph[0]?.length ?? 0)) / 2);
-  glyph.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '#') canvas.set(ox + x, 2 + y, MARK_OUTLINE); }));
+  rows.forEach((row, y) =>
+    [...row].forEach((ch, x) => {
+      const tone = tones[ch];
+      if (tone !== undefined) canvas.set(x + 1, y + 1, tone);
+    }),
+  );
   canvas.toTexture(scene, key);
 }
 
@@ -87,7 +142,21 @@ function paintGlow(scene: Phaser.Scene): void {
 }
 
 export function ensureMarkerTextures(scene: Phaser.Scene): void {
-  paintBadge(scene, TOWN_TEX.markerAvailable, ['..#..', '..#..', '..#..', '..#..', '.....', '..#..'].map((r) => r), P.jauneBle, P.lumiereDoree);
-  paintBadge(scene, TOWN_TEX.markerReady, ['.###.', '#...#', '....#', '...#.', '..#..', '.....', '..#..'], P.cyanEclat, P.ecume);
+  const outline = mixColor(P.ombreProfonde, P.terreSombre, 0.35);
+  paintEmblem(
+    scene,
+    TOWN_TEX.markerAvailable,
+    QUEST_MARK,
+    { O: outline, H: 0xfffbe8, L: 0xffe58a, M: 0xf2bf3a, D: 0xc77d22 },
+    P.lumiereDoree,
+  );
+  paintEmblem(
+    scene,
+    TOWN_TEX.markerReady,
+    READY_MARK,
+    { O: mixColor(P.ombreProfonde, P.nuitBleue, 0.4), H: P.ecume, L: mixColor(P.cyanEclat, P.ecume, 0.5), M: P.cyanEclat, D: mixColor(P.cyanEclat, P.nuitBleue, 0.45) },
+    P.cyanEclat,
+  );
+  paintEmblem(scene, TOWN_TEX.questSpark, SPARK, { H: P.ecume, L: P.lumiereDoree }, P.lumiereDoree);
   paintGlow(scene);
 }

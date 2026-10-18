@@ -100,6 +100,24 @@ export const lookSchema = z.strictObject({
 });
 export type LookDef = z.infer<typeof lookSchema>;
 
+/* ---------- Portrait de dialogue (peint, haute définition) ---------- */
+
+export const PORTRAIT_FACES = ['f', 'm'] as const;
+export const PORTRAIT_AGES = ['enfant', 'jeune', 'adulte', 'age'] as const;
+export const PORTRAIT_BEARDS = ['aucune', 'courte', 'pleine', 'moustache'] as const;
+export const PORTRAIT_MARKS = ['cicatrice', 'taches'] as const;
+
+/** Traits du visage peint (les couleurs, la coiffure et la tenue viennent de `look`). */
+export const portraitSchema = z.strictObject({
+  face: z.enum(PORTRAIT_FACES),
+  age: z.enum(PORTRAIT_AGES),
+  beard: z.enum(PORTRAIT_BEARDS).default('aucune'),
+  /** Couleur de l'iris. */
+  eyes: hexColor,
+  marks: z.array(z.enum(PORTRAIT_MARKS)).default([]),
+});
+export type PortraitDef = z.infer<typeof portraitSchema>;
+
 /* ---------- Options d'un PNJ ---------- */
 
 const optionBase = {
@@ -196,6 +214,7 @@ export const npcSchema = z.strictObject({
   at: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
   facing: z.enum(FACINGS),
   look: lookSchema,
+  portrait: portraitSchema,
   /** Ce qu'il dit en premier, selon le palier de réputation du lieu. */
   greeting: linesSchema,
   options: z.array(optionSchema),
