@@ -74,9 +74,8 @@ export class PrepSheet {
 
     // Voile : avale les clics destinés à la carte ; un clic droit dessus ferme la fiche.
     const veil = this.scene.add.rectangle(0, 0, width, height, PALETTE.nuit, 0.55).setOrigin(0, 0).setDepth(D).setInteractive();
-    veil.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (p.rightButtonDown()) cb.onClose();
-    });
+    // Un clic (gauche ou droit) hors de la fiche la ferme : on revient aussitôt à la compagnie.
+    veil.on('pointerdown', () => cb.onClose());
     parts.push(veil);
     parts.push(drawPanel(this.scene, x, y, w, h, { scale: 2 * S, depth: D + 1 }));
     // Le panneau avale aussi les clics (un clic droit dedans ferme).
@@ -99,7 +98,7 @@ export class PrepSheet {
     text(x + 60 * S, y + 12 * S, `${view.name}  Niv ${view.level}`, PALETTE.parchemin, { maxWidth: w - 190 * S });
     text(x + 60 * S, y + 28 * S, view.kind, PALETTE.cyanEclat, { maxWidth: w - 190 * S });
     text(x + 60 * S, y + 44 * S, view.deployed ? 'Déployé' : 'Au camp', view.deployed ? 0x7fcf6a : PALETTE.desactive);
-    text(x + w - 10 * S, y + 12 * S, 'Clic droit : fermer', PALETTE.ambre, { align: 'right' });
+    text(x + w - 10 * S, y + 12 * S, 'Clic droit ou Échap : fermer', PALETTE.ambre, { align: 'right' });
 
     // Caractéristiques : trois colonnes ; la compétence à droite.
     const sx = x + 10 * S;
