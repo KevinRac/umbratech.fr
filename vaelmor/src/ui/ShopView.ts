@@ -84,7 +84,7 @@ export class ShopView {
     this.detailY = listY;
     this.detailW = px + pw - 18 * S - this.detailX;
 
-    const hints = addText(scene, px + 18 * S, py + ph - 22 * S, 'Entrée : valider   Gauche/Droite : onglet   Échap : quitter', { font: 'small', scale: S + 1, color: PALETTE.metalClair }).setDepth(depth + 2);
+    const hints = addText(scene, px + 18 * S, py + ph - 22 * S, 'Entrée : valider   Gauche/Droite : onglet   Échap : quitter', { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(depth + 2);
     this.status = addText(scene, px + 18 * S, py + ph - 50 * S, '', { scale: S, color: PALETTE.parchemin, maxWidth: pw - 36 * S }).setDepth(depth + 2);
     this.parts.push(hints, this.status);
 

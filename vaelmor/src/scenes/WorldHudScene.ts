@@ -277,7 +277,7 @@ export class WorldHudScene extends Phaser.Scene {
     const coin = this.add.circle(x + 16 * S, 24 * S, 7 * S, PALETTE.ambre).setDepth(DEPTH.hud + 1).setStrokeStyle(S, PALETTE.rougeCendre);
     const shine = this.add.rectangle(x + 13 * S, 20 * S, 3 * S, 4 * S, PALETTE.lumiereDoree).setOrigin(0, 0).setDepth(DEPTH.hud + 2);
     label.setPosition(x + 32 * S, 14 * S);
-    const unit = addText(this, x + width - 8 * S, 18 * S, 'or', { font: 'small', scale: S + 1, color: PALETTE.metalClair, align: 'right' }).setDepth(DEPTH.hud + 1);
+    const unit = addText(this, x + width - 8 * S, 18 * S, 'or', { font: 'body', scale: S, color: PALETTE.metalClair, align: 'right' }).setDepth(DEPTH.hud + 1);
     this.goldParts = [panel, coin, shine, label, unit];
   }
 
@@ -318,7 +318,7 @@ export class WorldHudScene extends Phaser.Scene {
     this.gaugeParts.push(this.add.rectangle(here - S, barY - 3 * S, 3 * S, barH + 6 * S, 0xffffff, 1).setOrigin(0, 0).setDepth(DEPTH.hud + 5).setStrokeStyle(S, PALETTE.encre));
     if (expanded) {
       const sign = view.value > 0 ? '+' : view.value < 0 ? '-' : '';
-      const detail = addText(this, x + 12 * S, y + 44 * S, `Réputation  ${sign}${Math.abs(view.value)}`, { font: 'small', scale: S + 1, color: PALETTE.metalClair }).setDepth(DEPTH.hud + 1);
+      const detail = addText(this, x + 12 * S, y + 44 * S, `Réputation  ${sign}${Math.abs(view.value)}`, { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH.hud + 1);
       this.gaugeParts.push(detail);
     }
   }
@@ -349,7 +349,7 @@ export class WorldHudScene extends Phaser.Scene {
     const S = this.S;
     const { width, height } = this.scale;
     const bar = this.add.rectangle(0, height - 32 * S, width, 32 * S, PALETTE.nuit, 0.6).setOrigin(0, 0).setDepth(DEPTH.hud);
-    const hint = addText(this, 16 * S, height - 26 * S, 'ZQSD / flèches : marcher   Maj : courir   Échap : pause', { font: 'small', scale: 2 * S, color: PALETTE.metalClair }).setDepth(DEPTH.hud);
+    const hint = addText(this, 16 * S, height - 26 * S, 'ZQSD / flèches : marcher   Maj : courir   Échap : pause', { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH.hud);
     this.hintParts = [bar, hint];
     this.tweens.add({
       targets: [hint, bar],

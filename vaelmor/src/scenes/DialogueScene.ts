@@ -131,7 +131,7 @@ export class DialogueScene extends Phaser.Scene {
       .setDepth(DEPTH.box + 2);
 
     const nameText = addText(this, x + 144 * S, y - 14 * S, this.npc.name, { scale: S, color: PALETTE.jauneBle, shadow: PALETTE.encre }).setDepth(DEPTH.box + 3);
-    const titleText = addText(this, x + 144 * S, y + 4 * S, this.npc.title, { font: 'small', scale: S + 1, color: PALETTE.cyanEclat }).setDepth(DEPTH.box + 3);
+    const titleText = addText(this, x + 144 * S, y + 4 * S, this.npc.title, { font: 'body', scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.box + 3);
     const tagWidth = Math.max(Math.ceil(nameText.width), Math.ceil(titleText.width)) + 24 * S;
     const tag = drawPanel(this, x + 134 * S, y - 22 * S, tagWidth, 44 * S, { scale: S, depth: DEPTH.box + 2, fillAlpha: 0.96 });
     // Le cadre du nom recouvre le haut de la boîte : on repasse le texte au-dessus.

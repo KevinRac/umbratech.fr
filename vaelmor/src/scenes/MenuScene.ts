@@ -111,7 +111,7 @@ export class MenuScene extends Phaser.Scene {
     const dim = this.add.rectangle(0, 0, W, H, PALETTE.nuit, 0.7).setOrigin(0, 0).setDepth(DEPTH).setInteractive();
     const panel = drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH + 1, fillAlpha: 0.97 });
     const gold = addText(this, x + w - 18 * S, y + 18 * S, `Or : ${this.ctx.progress.gold}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH + 2);
-    const hints = addText(this, x + 18 * S, y + h - 22 * S, 'Gauche/Droite : onglet   Haut/Bas : choisir   Échap ou Tab : fermer', { font: 'small', scale: S + 1, color: PALETTE.metalClair }).setDepth(DEPTH + 2);
+    const hints = addText(this, x + 18 * S, y + h - 22 * S, 'Gauche/Droite : onglet   Haut/Bas : choisir   Échap ou Tab : fermer', { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH + 2);
     this.frame.push(dim, panel, gold, hints);
     this.tabTexts = TABS.map((t, i) => {
       const text = addText(this, x + 22 * S + i * 150 * S, y + 16 * S, t.label, { scale: S }).setDepth(DEPTH + 2);
@@ -156,7 +156,7 @@ export class MenuScene extends Phaser.Scene {
     const listW = Math.round(a.w * 0.48);
     const rowH = 24 * S;
     const visible = Math.max(3, Math.floor((a.h - 28 * S) / rowH));
-    this.keep(addText(this, a.x, a.y, `Sac  ${stacks.length}/${this.ctx.data.balance.economy.inventoryCapacity}`, { font: 'small', scale: S + 1, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
+    this.keep(addText(this, a.x, a.y, `Sac  ${stacks.length}/${this.ctx.data.balance.economy.inventoryCapacity}`, { font: 'body', scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
     const detail: Phaser.GameObjects.GameObject[] = [];
     const show = (i: number): void => {
       for (const d of detail) d.destroy();
@@ -169,11 +169,11 @@ export class MenuScene extends Phaser.Scene {
         detail.push(addText(this, dx, a.y + 24 * S, 'Le sac est vide. Les marchands vendent de quoi le remplir.', { scale: S, color: PALETTE.metalClair, maxWidth: dw }).setDepth(DEPTH + 2));
       } else {
         const name = addText(this, dx, a.y + 24 * S, info.name, { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH + 2);
-        const kind = addText(this, dx, a.y + 50 * S, itemKindLabel(info.kind), { font: 'small', scale: S + 1, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2);
+        const kind = addText(this, dx, a.y + 50 * S, itemKindLabel(info.kind), { font: 'body', scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2);
         const desc = addText(this, dx, a.y + 74 * S, info.description, { scale: S, maxWidth: dw }).setDepth(DEPTH + 2);
         detail.push(name, kind, desc);
         if (info.price !== null) {
-          detail.push(addText(this, dx, a.y + 74 * S + Math.ceil(desc.height) + 10 * S, `Valeur : ${info.price} or`, { font: 'small', scale: S + 1, color: PALETTE.metalClair }).setDepth(DEPTH + 2));
+          detail.push(addText(this, dx, a.y + 74 * S + Math.ceil(desc.height) + 10 * S, `Valeur : ${info.price} or`, { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH + 2));
         }
       }
       this.content.push(...detail);
@@ -212,10 +212,10 @@ export class MenuScene extends Phaser.Scene {
       const label = `${tier?.name ?? ''}  ${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value)}`;
       this.keep(addText(this, x + colW - 8 * S, y, label, { scale: S, color: dim ? PALETTE.desactive : color, align: 'right' }).setDepth(DEPTH + 2));
       bar(x, y + 26 * S, colW - 8 * S, value, dim ? PALETTE.desactive : color);
-      this.keep(addText(this, x, y + 38 * S, note, { font: 'small', scale: S + 1, color: PALETTE.metalClair }).setDepth(DEPTH + 2));
+      this.keep(addText(this, x, y + 38 * S, note, { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH + 2));
     };
-    this.keep(addText(this, a.x, a.y - 4 * S, 'Villages', { font: 'small', scale: S + 1, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
-    this.keep(addText(this, a.x + colW + 24 * S, a.y - 4 * S, 'Factions', { font: 'small', scale: S + 1, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
+    this.keep(addText(this, a.x, a.y - 4 * S, 'Villages', { font: 'body', scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
+    this.keep(addText(this, a.x + colW + 24 * S, a.y - 4 * S, 'Factions', { font: 'body', scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
     const villages = this.ctx.data.locations.filter((l) => l.reputation !== null);
     villages.forEach((loc, i) => {
       const value = this.ctx.progress.reputation[loc.id] ?? 0;
