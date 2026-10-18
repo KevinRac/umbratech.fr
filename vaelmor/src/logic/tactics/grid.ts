@@ -3,12 +3,12 @@
  *
  * - Déplacement en 4 directions ; chaque case coûte le `moveCost` de son
  *   terrain (§3.5), une case `null` est infranchissable.
- * - On traverse ses alliés mais pas ses ennemis (zone de contrôle) ; on ne
- *   s'arrête jamais sur une case occupée.
+ * - On traverse ses alliés (compagnie et alliés verts) mais pas ses ennemis
+ *   (zone de contrôle) ; on ne s'arrête jamais sur une case occupée.
  * - Portées en distance de Manhattan.
  */
 import type { TerrainDef } from '../../data/schemas';
-import type { BattleMap, BattleState, BattleUnit, Cell } from './types';
+import { hostile, type BattleMap, type BattleState, type BattleUnit, type Cell } from './types';
 
 export const DIRECTIONS: readonly Cell[] = [
   { x: 0, y: -1 },
@@ -59,9 +59,15 @@ export function getUnit(state: BattleState, id: string): BattleUnit {
   return unit;
 }
 
-/** Mobilité de la phase en cours (−1 si enlisé, jamais moins de 1). */
+/**
+ * Mobilité de la phase en cours : −1 si enlisé (jamais moins de 1), plafonnée
+ * par un statut (Entravé : 0, Harponné : 2) ; après « Pas de marée », ce qui
+ * reste du déplacement offert.
+ */
 export function mobility(unit: BattleUnit): number {
-  return Math.max(1, unit.stats.mob - (unit.bogged ? 1 : 0));
+  if (unit.cantoLeft > 0) return unit.cantoLeft;
+  const base = Math.max(1, unit.stats.mob - (unit.bogged ? 1 : 0));
+  return unit.moveCap === null ? base : Math.min(base, unit.moveCap);
 }
 
 export interface Reach {
@@ -87,12 +93,12 @@ export function reachable(state: BattleState, unit: BattleUnit, budget: number =
     if (other.hp <= 0 || other === unit) continue;
     const i = cellIndex(map, other.x, other.y);
     occupied.add(i);
-    if (other.team !== unit.team) blocked.add(i);
+    if (hostile(other.team, unit.team)) blocked.add(i);
   }
 
   const start = cellIndex(map, from.x, from.y);
   cost.set(start, 0);
-  // File de priorité simple : les cartes font au plus 18×14 cases.
+  // File de priorité simple : les cartes font au plus 32×24 cases.
   const open: number[] = [start];
   while (open.length > 0) {
     let best = 0;
@@ -162,7 +168,7 @@ export const inWeaponRange = (unit: BattleUnit, from: Cell, target: Cell): boole
 
 /** Ennemis vivants qu'une unité peut frapper depuis une case. */
 export function targetsFrom(state: BattleState, unit: BattleUnit, from: Cell): BattleUnit[] {
-  return state.units.filter((u) => u.hp > 0 && u.team !== unit.team && inWeaponRange(unit, from, u));
+  return state.units.filter((u) => u.hp > 0 && hostile(u.team, unit.team) && inWeaponRange(unit, from, u));
 }
 
 /**
@@ -173,4 +179,65 @@ export function threatCells(state: BattleState, unit: BattleUnit, reach: Reach =
   const out = new Set<number>();
   for (const stop of reach.stops) for (const c of cellsInRange(state.map, stop, unit.weapon.range)) out.add(cellIndex(state.map, c.x, c.y));
   return out;
+}
+
+/** Unités vivantes du même côté (compagnie + alliés verts, ou ennemis), l'unité comprise. */
+export function friendsOf(state: BattleState, unit: BattleUnit): BattleUnit[] {
+  return state.units.filter((u) => u.hp > 0 && !hostile(u.team, unit.team));
+}
+
+/** Unités vivantes du camp adverse. */
+export function foesOf(state: BattleState, unit: BattleUnit): BattleUnit[] {
+  return state.units.filter((u) => u.hp > 0 && hostile(u.team, unit.team));
+}
+
+/** Case franchissable et libre (pour poser une unité). */
+export function isFreeCell(state: BattleState, x: number, y: number): boolean {
+  return inBounds(state.map, x, y) && terrainAt(state.map, x, y).moveCost !== null && unitAt(state, x, y) === null;
+}
+
+/**
+ * Case libre la plus proche de `target` (en distance de Manhattan, puis dans
+ * l'ordre des cases), qui soit reliée à `anchor` par des cases franchissables
+ * si une ancre est donnée. Sert à faire entrer les renforts et à poser les invocations.
+ */
+export function nearestFreeCell(state: BattleState, target: Cell, anchor: Cell | null = null, taken: ReadonlySet<number> = new Set()): Cell | null {
+  const { map } = state;
+  let linked: Set<number> | null = null;
+  if (anchor) {
+    linked = new Set<number>();
+    const start = cellIndex(map, anchor.x, anchor.y);
+    const queue = [start];
+    linked.add(start);
+    while (queue.length > 0) {
+      const i = queue.shift() as number;
+      const c = cellOf(map, i);
+      for (const d of DIRECTIONS) {
+        const nx = c.x + d.x;
+        const ny = c.y + d.y;
+        if (!inBounds(map, nx, ny) || terrainAt(map, nx, ny).moveCost === null) continue;
+        const ni = cellIndex(map, nx, ny);
+        if (linked.has(ni)) continue;
+        linked.add(ni);
+        queue.push(ni);
+      }
+    }
+  }
+  const tx = Math.max(0, Math.min(map.width - 1, target.x));
+  const ty = Math.max(0, Math.min(map.height - 1, target.y));
+  let best: Cell | null = null;
+  let bestD = Infinity;
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const i = cellIndex(map, x, y);
+      if (taken.has(i) || !isFreeCell(state, x, y)) continue;
+      if (linked && !linked.has(i)) continue;
+      const d = Math.abs(x - tx) + Math.abs(y - ty);
+      if (d < bestD) {
+        bestD = d;
+        best = { x, y };
+      }
+    }
+  }
+  return best;
 }

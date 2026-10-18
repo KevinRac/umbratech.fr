@@ -142,6 +142,34 @@ const foesBalanceSchema = z.strictObject({
   bossIndicator: z.strictObject({ label: z.string().min(1), color: hexColor }),
 });
 
+const tierPercent = z.strictObject({ hostile: percent, mefiant: percent, neutre: percent, amical: percent, allie: percent, heros_local: percent });
+const tierCount = z.strictObject({ hostile: z.number().int().min(0), mefiant: z.number().int().min(0), neutre: z.number().int().min(0), amical: z.number().int().min(0), allie: z.number().int().min(0), heros_local: z.number().int().min(0) });
+
+const alliesBalanceSchema = z.strictObject({
+  /** Un combat engagé à moins de tant de cases d'un village (son rectangle) y appelle ses gardes. */
+  guardRange: z.number().int().min(0),
+  /** Nombre de gardes selon le palier du village (0 : aucun). */
+  guardCount: tierCount,
+  /** Tour d'arrivée des gardes selon le palier (1 ou 2). */
+  guardTurn: tierCount,
+  /** Chance (%) qu'un allié de passage rejoigne le combat, selon le palier du village de la zone. */
+  passerChance: tierPercent,
+  /** Tours possibles d'arrivée d'un allié de passage. */
+  passerTurns: z.array(z.number().int().min(1).max(10)).min(1),
+  /** Un allié errant à moins de tant de cases du combat le rejoint d'office… */
+  errantJoinRange: z.number().int().min(0),
+  /** … sinon, s'il le voit (à moins de tant de cases), il le rejoint avec cette chance (%). */
+  errantSightRange: z.number().int().min(0),
+  errantSightChance: percent,
+  /** Tour d'arrivée d'un allié errant. */
+  errantTurn: z.number().int().min(1).max(10),
+  /** Marche d'un allié errant dans le monde (px/s) et pause à chaque étape (ms). */
+  errantSpeed: z.number().positive(),
+  errantPauseMs: z.number().int().min(0),
+  /** IA alliée : ne s'éloigne pas de la compagnie de plus de tant de cases (GDD §7.8). */
+  leash: z.number().int().min(1),
+});
+
 export const balanceFileSchema = z.strictObject({
   $comment: comment,
   exploration: z.strictObject({
@@ -207,6 +235,15 @@ export const balanceFileSchema = z.strictObject({
   /** Dialogues : vitesse de la machine à écrire (GDD §13.3), facteur quand on l'accélère. */
   dialogue: z.strictObject({ charsPerSecond: z.number().positive(), fastMultiplier: z.number().min(1) }),
   injury: z.strictObject({ mobilityPenalty: z.number().int().min(0), statPenaltyRatio: z.number().min(0).max(1) }),
+  /** Écran de préparation (jalon M5, GDD §9.3) : cases bleues en plus du déploiement maximal, objets portés par unité. */
+  prep: z.strictObject({
+    extraSlots: z.number().int().min(0).max(6),
+    maxItems: z.number().int().min(1).max(8),
+    /** Sac du « Combat d'essai » de l'écran titre (sans partie en cours). */
+    testItems: z.array(z.strictObject({ item: idSchema, qty: z.number().int().positive() })),
+  }),
+  /** Alliés verts (jalon M5, GDD §7.8) : gardes, alliés de passage, alliés errants. Distances en cases. */
+  allies: alliesBalanceSchema,
   /** Effets HD-2D du monde ouvert (décision n°47) ; le réglage « Qualité » choisit lesquels s'appliquent. */
   visuals: z.strictObject({
     /** Flou de profondeur : bande nette centrée de hauteur `focus` (fraction d'écran), fondu `fade`, force `blur`. */
@@ -400,12 +437,33 @@ export const weaponSchema = z.strictObject({
   effective: z.array(z.enum(EFFECTIVE_TAGS)),
   /** Prix de base chez un marchand (sans modulation de réputation) ; absent = non vendue (armes d'ennemis). */
   price: z.number().int().min(1).optional(),
+  /** Bâton de soin (jalon M5) : l'unité peut « Soigner » un allié à portée de l'arme ; PV rendus = `heals` + Mag/2. */
+  heals: z.number().int().min(1).optional(),
 });
 
 /* ---------- Objets : consommables, accessoires, objets de quête (jalon M2 ; effets en combat au M5) ---------- */
 
-/** Effets des consommables ; leur application en combat arrive au jalon M5. */
+/** Effets des consommables dans le monde (catégorie affichée par la boutique). */
 export const CONSUMABLE_EFFECTS = ['soin', 'soin_statut', 'fuite', 'lumiere', 'ration'] as const;
+
+/** Qui un objet vise en combat : soi, soi ou un allié à portée, un ennemi à portée. */
+export const ITEM_TARGETS = ['soi', 'allie', 'ennemi'] as const;
+
+/**
+ * Usage en combat (jalon M5, GDD §9.8) : une action, depuis le menu « Objet ».
+ * Soin, purge des statuts, statut posé (sur soi ou sur l'ennemi), dégâts fixes.
+ */
+export const itemBattleSchema = z.strictObject({
+  target: z.enum(ITEM_TARGETS),
+  /** Portée (0 = soi seulement). */
+  range: z.tuple([z.number().int().min(0).max(3), z.number().int().min(0).max(3)]),
+  heal: z.number().int().min(1).optional(),
+  /** Retire les statuts négatifs (poison, brûlure, entrave…). */
+  cleanse: z.boolean().optional(),
+  /** Dégâts fixes (la Torche brûle), sans jet de précision. */
+  damage: z.number().int().min(1).optional(),
+  status: z.strictObject({ id: idSchema, turns: z.number().int().min(1).max(5) }).optional(),
+});
 
 export const consumableSchema = z.strictObject({
   id: idSchema,
@@ -414,6 +472,8 @@ export const consumableSchema = z.strictObject({
   /** Prix de base chez un marchand. */
   price: z.number().int().min(1),
   effect: z.strictObject({ kind: z.enum(CONSUMABLE_EFFECTS), amount: z.number().int().min(0).optional() }),
+  /** Effet en combat ; absent : l'objet ne s'utilise pas en combat. */
+  battle: itemBattleSchema.optional(),
 });
 
 export const accessorySchema = z.strictObject({
@@ -442,8 +502,8 @@ export const itemsFileSchema = z.strictObject({
 
 /* ---------- Ennemis (GDD §7, §9.15) ---------- */
 
-/** Profils d'IA des ennemis (GDD §9.15) ; « soutien » arrivera avec les soins (M5). */
-export const AI_PROFILES = ['agressif', 'opportuniste', 'defensif', 'chasseur_heros', 'boss'] as const;
+/** Profils d'IA (GDD §9.15) : « soutien » soigne ou renforce d'abord (jalon M5). */
+export const AI_PROFILES = ['agressif', 'opportuniste', 'defensif', 'soutien', 'chasseur_heros', 'boss'] as const;
 export const ARMOR_KINDS = ['legere', 'lourde', 'monstre'] as const;
 
 export const enemySchema = z.strictObject({
@@ -523,6 +583,13 @@ export const encounterSchema = z.strictObject({
     )
     .min(1),
   victoryFlags: z.array(idSchema),
+  /**
+   * Renforts ennemis prévus par la carte (GDD §9.11 : tours 3 et 6 sur les cartes de boss) :
+   * ils entrent au bord de la carte, côté ennemi, au début de la phase ennemie du tour indiqué.
+   */
+  reinforcements: z
+    .array(z.strictObject({ turn: z.number().int().min(1).max(30), enemies: z.array(z.strictObject({ enemy: idSchema, level })).min(1) }))
+    .optional(),
   /** Récompense garantie en plus de l'or et du butin (boss : objet assuré, GDD §7.6). */
   rewards: z.strictObject({ gold: z.number().int().min(0).optional(), items: z.array(z.strictObject({ item: idSchema, qty: z.number().int().positive() })).optional() }).optional(),
 });
@@ -564,7 +631,121 @@ export const worldEnemiesFileSchema = z.strictObject({
   foes: z.array(worldFoeSchema).min(1),
 });
 
+/* ---------- Compétences, statuts et boss (jalon M5, GDD §9.9, §9.11, §10.5) ---------- */
+
+/** Statut ou renfort posé sur une unité : il dure un certain nombre de tours de son camp. */
+export const statusSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  /** Renfort (bleu doré) ou affaiblissement (rouge) : les objets de soin purgent les affaiblissements. */
+  kind: z.enum(['buff', 'debuff']),
+  color: hexColor,
+  /** L'unité perd sa prochaine action (les boss y sont immunisés). */
+  stun: z.boolean().optional(),
+  /** Dégâts au début de chaque phase de son camp. */
+  dot: z.number().int().min(1).optional(),
+  /** Multiplicateur des dégâts reçus (Harponné : 1,25). */
+  damageTaken: z.number().positive().optional(),
+  /** Déplacement maximal (cases de coût) tant que le statut dure ; 0 = immobilisé. */
+  maxMove: z.number().int().min(0).optional(),
+  /** Esquive ajoutée. */
+  avoid: z.number().int().optional(),
+  /** Dégâts physiques reçus réduits d'autant (Rempart de Marée). */
+  guard: z.number().int().min(0).optional(),
+  /** Stats ajoutées (négatives pour un affaiblissement). */
+  stats: z.partialRecord(z.enum(STAT_KEYS), z.number().int()).optional(),
+});
+
+const statusApply = z.strictObject({ id: idSchema, turns: z.number().int().min(1).max(6) });
+
+/** Effets des compétences : un petit registre de types, réutilisés par les données (GDD §16.5). */
+export const skillEffectSchema = z.discriminatedUnion('kind', [
+  /** Attaque avec l'arme, modifiée : touche garantie, dégâts ×, Déf ignorée, bonus contre une armure, pas de riposte, déplacement après coup. */
+  z.strictObject({
+    kind: z.literal('frappe'),
+    sureHit: z.boolean().optional(),
+    damageMult: z.number().positive().optional(),
+    ignoreDef: z.number().int().min(0).optional(),
+    bonusVs: z.array(z.enum(ARMOR_KINDS)).optional(),
+    bonusMult: z.number().positive().optional(),
+    noCounter: z.boolean().optional(),
+    /** Après le coup, l'unité peut encore marcher de tant de cases (« frappe et fuite »). */
+    canto: z.number().int().min(1).max(6).optional(),
+    status: statusApply.optional(),
+  }),
+  /** Dégâts directs (zone ou cible), sans jet : stat + puissance − Déf (ou Rés). */
+  z.strictObject({ kind: z.literal('degats'), power: z.number().int().min(0), damage: z.enum(DAMAGE_KINDS), status: statusApply.optional() }),
+  /** Soin : une part des PV max, ou un montant (+ Mag/2), purge éventuelle. */
+  z.strictObject({ kind: z.literal('soin'), ratio: z.number().min(0).max(1).optional(), amount: z.number().int().min(0).optional(), cleanse: z.boolean().optional() }),
+  /** Pose un statut ou un renfort. */
+  z.strictObject({ kind: z.literal('statut'), ...statusApply.shape }),
+  /** Invoque une unité du camp du lanceur (enemies.json), pour quelques tours. */
+  z.strictObject({ kind: z.literal('invocation'), enemy: idSchema, turns: z.number().int().min(1).max(9) }),
+  /** Change le terrain des cases visées (terrains.json) pour quelques tours. */
+  z.strictObject({ kind: z.literal('terrain'), terrain: idSchema, turns: z.number().int().min(1).max(9) }),
+]);
+
+export const SKILL_TARGETS = ['soi', 'allie', 'ennemi', 'case'] as const;
+export const AREA_SHAPES = ['carre', 'losange', 'ligne'] as const;
+
+export const skillSchema = z.strictObject({
+  id: idSchema,
+  name: z.string().min(1),
+  description: z.string().min(1),
+  /** Classe dont c'est la compétence signature ; null pour une compétence de boss. */
+  owner: idSchema.nullable(),
+  /** Coût : Résonance (GDD §9.9 : 40 à 100), ressource de classe (Pierres, Charges), délai entre deux usages (boss). */
+  cost: z.strictObject({
+    resonance: z.number().int().min(0).max(100).optional(),
+    resource: z.strictObject({ id: idSchema, amount: z.number().int().min(1) }).optional(),
+    cooldown: z.number().int().min(1).max(9).optional(),
+  }),
+  target: z.enum(SKILL_TARGETS),
+  range: z.tuple([z.number().int().min(0).max(6), z.number().int().min(0).max(6)]),
+  /** Zone autour de la case visée : carré (rayon), losange (rayon), ligne perpendiculaire (longueur). */
+  area: z.strictObject({ shape: z.enum(AREA_SHAPES), size: z.number().int().min(1).max(5) }).optional(),
+  /** Qui la zone touche (par défaut : les ennemis pour une attaque, les alliés pour un soin ou un renfort). */
+  affects: z.enum(['ennemis', 'allies', 'tous']).optional(),
+  /** Élément de l'effet visuel (couleur des particules). */
+  element: idSchema.nullable(),
+  effects: z.array(skillEffectSchema).min(1),
+});
+
+/** Boss à deux phases (GDD §9.11) : changement sous un seuil de PV, nouvelle compétence, réplique. */
+export const bossSchema = z.strictObject({
+  enemy: idSchema,
+  /** Statuts sans effet sur lui (GDD §9.11 : immunité à l'étourdissement). */
+  immune: z.array(idSchema),
+  /** Compétences de la première phase. */
+  skills: z.array(idSchema),
+  phase2: z.strictObject({
+    /** Part des PV max sous laquelle la seconde phase commence. */
+    threshold: z.number().gt(0).lt(1),
+    /** Réplique affichée au changement de phase. */
+    line: z.string().min(1),
+    skills: z.array(idSchema),
+    ai: z.enum(AI_PROFILES),
+    /** Stats gagnées en seconde phase. */
+    stats: z.partialRecord(z.enum(STAT_KEYS), z.number().int()).optional(),
+    /** Compétence lancée aussitôt, sans coût (cri de guerre…). */
+    onEnter: idSchema.optional(),
+  }),
+});
+
+export const skillsFileSchema = z.strictObject({
+  $comment: comment,
+  statuses: z.array(statusSchema).min(1),
+  skills: z.array(skillSchema).min(1),
+  bosses: z.array(bossSchema),
+});
+
 /* ---------- Types dérivés ---------- */
+export type StatusDef = z.infer<typeof statusSchema>;
+export type SkillEffect = z.infer<typeof skillEffectSchema>;
+export type SkillDef = z.infer<typeof skillSchema>;
+export type BossDef = z.infer<typeof bossSchema>;
+export type ItemBattleDef = z.infer<typeof itemBattleSchema>;
+export type AlliesBalance = z.infer<typeof alliesBalanceSchema>;
 export type WorldFoeDef = z.infer<typeof worldFoeSchema>;
 export type WorldEnemiesFile = z.infer<typeof worldEnemiesFileSchema>;
 export type FoesBalance = z.infer<typeof foesBalanceSchema>;

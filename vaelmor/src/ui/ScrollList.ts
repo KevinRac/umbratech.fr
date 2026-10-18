@@ -89,6 +89,14 @@ export class ScrollList {
     this.options.onCursor?.(this.cursor);
   }
 
+  /** Remplace les lignes et place le curseur, sans prévenir `onCursor` (reconstruction d'un écran). */
+  reset(rows: readonly ListRow[], cursor: number): void {
+    this.rows = rows;
+    this.cursor = Math.max(0, Math.min(cursor, rows.length - 1));
+    this.clampWindow();
+    this.render();
+  }
+
   setLocked(locked: boolean): void {
     this.locked = locked;
   }

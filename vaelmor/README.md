@@ -16,7 +16,7 @@ RPG tactique en monde ouvert, jouable dans le navigateur. Conception : `docs/GDD
 
 `play/` est **commité** : le serveur publie le dépôt tel quel (`umbratech.fr/vaelmor/play/`). Toujours lancer `npm run build` avant de commiter une modification du jeu.
 
-Outil de debug : touche **F3**, ou `?debug` dans l'URL. Dans le monde : **F2** téléportation au lieu suivant, **F4** collisions, **F9** passages ouverts / fermés, **F7** combat sur le terrain où se tient le héros, **F8** Camp des Écumeurs (boss Brakk), `?debug&at=31,58` pose le héros sur une case. En combat : **F2** victoire immédiate, `?debug&seed=abc` rejoue un combat à l'identique.
+Outil de debug : touche **F3**, ou `?debug` dans l'URL. Dans le monde : **F2** téléportation au lieu suivant, **F4** collisions, **F9** passages ouverts / fermés, **F7** combat sur le terrain où se tient le héros, **F8** Camp des Écumeurs (boss Brakk), `?debug&at=31,58` pose le héros sur une case. En combat : **F2** victoire immédiate, `?debug&seed=abc` rejoue un combat à l'identique, `&prep=off` passe la préparation, `&res=100` donne la Résonance de départ, `&bosshp=0.55` règle les PV du boss, `&allies=garde,passage,errant` fait venir des alliés verts. Dans le monde, `&rep=haut_gue:60` règle une réputation.
 
 Combat (jalon M4) : écran titre › « Combat d'essai ». Flèches ou souris pour le curseur, Entrée / clic pour choisir, Échap / clic droit pour annuler, **R** zones de menace, **F** unité suivante, **Tab** menu (fin du tour, vitesse des animations, retraite), **Maj** maintenue accélère les animations.
 

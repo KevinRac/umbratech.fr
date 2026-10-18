@@ -1,5 +1,5 @@
 {
-  "$comment": "Rencontres tactiques (GDD §9.2, §16.3). Deux sortes de cartes. `sampled` (décision n°57) : la carte est tirée du terrain du monde, fenêtre de width × height cases autour du point de contact (`site`, en cases du monde, remplacé par le point réel quand le combat est engagé dans le monde) ; `anchor` dit qui se tient au point de contact (« player » : la compagnie, « enemy » : un repaire, le boss y est posé) ; compagnie et ennemis sont placés automatiquement. `map` (décision n°53) : carte fixe de scénario écrite en texte, une lettre par case (`legend`), avec ses cases `deploy` et la position x, y de chaque ennemi. maxDeploy : unités déployées au plus. objective : « rout » (vaincre tous les ennemis) ou « boss » (vaincre l'ennemi marqué boss). victoryFlags : drapeaux de progression levés en cas de victoire (ouvrent les passages du monde). testParty : compagnie d'essai utilisée tant que le joueur n'a pas encore de compagnie (jalons M5-M6).",
+  "$comment": "Rencontres tactiques (GDD §9.2, §16.3). Deux sortes de cartes. `sampled` (décision n°57) : la carte est tirée du terrain du monde, fenêtre de width × height cases autour du point de contact (`site`, en cases du monde, remplacé par le point réel quand le combat est engagé dans le monde) ; `anchor` dit qui se tient au point de contact (« player » : la compagnie, « enemy » : un repaire, le boss y est posé) ; compagnie et ennemis sont placés automatiquement. `map` (décision n°53) : carte fixe de scénario écrite en texte, une lettre par case (`legend`), avec ses cases `deploy` et la position x, y de chaque ennemi. maxDeploy : unités déployées au plus. objective : « rout » (vaincre tous les ennemis) ou « boss » (vaincre l'ennemi marqué boss). victoryFlags : drapeaux de progression levés en cas de victoire (ouvrent les passages du monde). testParty : compagnie d'essai (une unité par classe, jalon M5) utilisée tant que le joueur n'a pas encore de compagnie (recrutement : M6) ; l'écran de préparation choisit qui est déployé. reinforcements : renforts ennemis prévus par la carte (tour, ennemis), qui entrent au bord de la carte côté ennemi au début de la phase ennemie (GDD §9.11).",
   "legend": {
     ".": "plaine",
     "=": "route",
@@ -19,7 +19,14 @@
     { "name": "Odran", "class": "gardien_des_marees", "level": 3, "hero": false },
     { "name": "Ysolde", "class": "veilleur_des_falaises", "level": 3, "hero": false },
     { "name": "Aurèle", "class": "heritier_des_cendres", "level": 3, "hero": false },
-    { "name": "Corbin", "class": "chasseur_de_serpents_de_mer", "level": 3, "hero": false }
+    { "name": "Corbin", "class": "chasseur_de_serpents_de_mer", "level": 3, "hero": false },
+    { "name": "Ilmëa", "class": "porte_lanterne", "level": 3, "hero": false },
+    { "name": "Cendrine", "class": "heraut_des_bannieres", "level": 3, "hero": false },
+    { "name": "Zéphyrin", "class": "alchimiste_des_saisons", "level": 3, "hero": false },
+    { "name": "Nessa", "class": "danseur_des_courants", "level": 3, "hero": false },
+    { "name": "Gérard", "class": "invocateur_de_pierres_anciennes", "level": 3, "hero": false },
+    { "name": "Mousse", "class": "faconneur_de_racines", "level": 3, "hero": false },
+    { "name": "Tobias", "class": "ingenieur_des_ruines", "level": 3, "hero": false }
   ],
   "encounters": [
     {
@@ -53,7 +60,8 @@
         { "enemy": "ecumeur_archer", "level": 4 },
         { "enemy": "ecumeur_archer", "level": 3 },
         { "enemy": "ecumeur_lancier", "level": 3 },
-        { "enemy": "ecumeur_incendiaire", "level": 4 }
+        { "enemy": "ecumeur_incendiaire", "level": 4 },
+        { "enemy": "rebouteuse", "level": 4 }
       ],
       "victoryFlags": ["brigands_foret_vaincus"]
     },
@@ -74,6 +82,7 @@
         { "enemy": "ecumeur_incendiaire", "level": 3 }
       ],
       "victoryFlags": ["boss_brakk"],
+      "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "ecumeur_sabreur", "level": 2 }, { "enemy": "ecumeur_sabreur", "level": 2 }] }, { "turn": 6, "enemies": [{ "enemy": "ecumeur_archer", "level": 3 }, { "enemy": "rebouteuse", "level": 3 }] }],
       "rewards": { "gold": 80, "items": [{ "item": "hyper_potion", "qty": 2 }, { "item": "amulette_de_pierre", "qty": 1 }] }
     },
     {
@@ -244,6 +253,7 @@
         { "enemy": "bucheron_corrompu", "level": 6 }
       ],
       "victoryFlags": ["boss_roi_cerf"],
+      "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "esprit_des_ronces", "level": 6 }, { "enemy": "esprit_des_ronces", "level": 5 }] }, { "turn": 6, "enemies": [{ "enemy": "chasseur_de_ronces", "level": 6 }, { "enemy": "bucheron_corrompu", "level": 6 }] }],
       "rewards": {"gold": 120, "items": [{"item": "hyper_potion", "qty": 2}, {"item": "broche_des_racines", "qty": 1}]}
     },
     {
@@ -339,6 +349,7 @@
         { "enemy": "harponneur", "level": 10 }
       ],
       "victoryFlags": ["boss_merrow"],
+      "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "noye", "level": 10 }, { "enemy": "noye", "level": 9 }] }, { "turn": 6, "enemies": [{ "enemy": "voilee_de_brume", "level": 10 }, { "enemy": "noye", "level": 10 }] }],
       "rewards": {"gold": 200, "items": [{"item": "collier_d_ecume", "qty": 1}, {"item": "hyper_potion", "qty": 2}]}
     },
     {
@@ -434,6 +445,7 @@
         { "enemy": "arbaletrier_de_cendre", "level": 14 }
       ],
       "victoryFlags": ["boss_aiguille"],
+      "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "harpie", "level": 13 }, { "enemy": "harpie", "level": 13 }] }, { "turn": 6, "enemies": [{ "enemy": "harpie", "level": 14 }, { "enemy": "arbaletrier_de_cendre", "level": 14 }] }],
       "rewards": {"gold": 300, "items": [{"item": "bague_de_cendre", "qty": 1}, {"item": "hyper_potion", "qty": 3}]}
     },
     {
@@ -452,6 +464,7 @@
         { "enemy": "arbaletrier_de_cendre", "level": 15 }
       ],
       "victoryFlags": ["boss_gardien_cendre"],
+      "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "golem_de_cendre", "level": 14 }, { "enemy": "mercenaire_de_cendre", "level": 14 }] }, { "turn": 6, "enemies": [{ "enemy": "mercenaire_de_cendre", "level": 15 }, { "enemy": "arbaletrier_de_cendre", "level": 15 }] }],
       "rewards": {"gold": 400, "items": [{"item": "amulette_de_pierre", "qty": 1}, {"item": "hyper_potion", "qty": 3}]}
     },
     {

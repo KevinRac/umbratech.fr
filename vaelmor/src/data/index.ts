@@ -6,6 +6,7 @@
  * Ajouter un fichier : le déclarer dans `DATA_SCHEMAS` (validate.ts) puis
  * l'importer ici ; le test `data.test.ts` vérifie que les deux listes concordent.
  */
+import allies from '../../data/allies.json';
 import balance from '../../data/balance.json';
 import classes from '../../data/classes.json';
 import elements from '../../data/elements.json';
@@ -15,12 +16,13 @@ import items from '../../data/items.json';
 import locations from '../../data/locations.json';
 import quests from '../../data/quests.json';
 import reputation from '../../data/reputation.json';
+import skills from '../../data/skills.json';
 import terrains from '../../data/terrains.json';
 import worldEnemies from '../../data/worldEnemies.json';
 import zones from '../../data/zones.json';
 import { GameDataError, validateGameData, type GameData, type RawGameData } from './validate';
 
-export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies };
+export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies, skills, allies };
 
 let cache: GameData | null = null;
 

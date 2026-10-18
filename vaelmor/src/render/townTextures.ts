@@ -9,6 +9,7 @@ import { NPC_H, NPC_IDLE_FRAMES, NPC_POSES, NPC_W, NPC_WALK_FRAMES, lookFromDef,
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas, bayer } from './pixelCanvas';
 import { paintPortraitHD } from './portraitPainter';
+import { paintOutlined } from './unitSprites';
 
 export const TOWN_TEX = {
   npc: (id: string): string => `npc:${id}`,
@@ -21,19 +22,24 @@ export const TOWN_TEX = {
   questSpark: 'marker:spark',
 } as const;
 
-/** Une feuille par PNJ : images d'attente puis images de marche, une rangée par pose. */
-export function ensureNpcTexture(scene: Phaser.Scene, npc: NpcDef): string {
+/**
+ * Une feuille par PNJ : images d'attente puis images de marche, une rangée par
+ * pose. `outline` : liseré d'un pixel autour de la silhouette (alliés errants,
+ * en vert, jalon M5).
+ */
+export function ensureNpcTexture(scene: Phaser.Scene, npc: NpcDef, outline: number | null = null): string {
   const key = TOWN_TEX.npc(npc.id);
   if (scene.textures.exists(key)) return key;
   const look = lookFromDef(npc.look);
   const sheet = new PixelCanvas(NPC_W * (NPC_IDLE_FRAMES + NPC_WALK_FRAMES), NPC_H * NPC_POSES.length);
+  const sink = { set: (x: number, y: number, color: number, alpha?: number) => sheet.set(x, y, color, alpha ?? 255) };
+  const draw = (ox: number, oy: number, paint: (inner: typeof sink) => void): void => {
+    if (outline === null) paint({ set: (x, y, c, a) => sink.set(ox + x, oy + y, c, a) });
+    else paintOutlined(sink, ox, oy, NPC_W, NPC_H, outline, paint);
+  };
   NPC_POSES.forEach((pose, row) => {
-    for (let frame = 0; frame < NPC_IDLE_FRAMES; frame++) {
-      paintNpcFrame({ set: (x, y, color, alpha) => sheet.set(x, y, color, alpha ?? 255) }, frame * NPC_W, row * NPC_H, look, pose, frame);
-    }
-    for (let frame = 0; frame < NPC_WALK_FRAMES; frame++) {
-      paintNpcWalkFrame({ set: (x, y, color, alpha) => sheet.set(x, y, color, alpha ?? 255) }, (NPC_IDLE_FRAMES + frame) * NPC_W, row * NPC_H, look, pose, frame);
-    }
+    for (let frame = 0; frame < NPC_IDLE_FRAMES; frame++) draw(frame * NPC_W, row * NPC_H, (inner) => paintNpcFrame(inner, 0, 0, look, pose, frame));
+    for (let frame = 0; frame < NPC_WALK_FRAMES; frame++) draw((NPC_IDLE_FRAMES + frame) * NPC_W, row * NPC_H, (inner) => paintNpcWalkFrame(inner, 0, 0, look, pose, frame));
   });
   sheet.toTexture(scene, key);
   const texture = scene.textures.get(key);

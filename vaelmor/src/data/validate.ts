@@ -16,6 +16,7 @@ import {
   classesFileSchema,
   elementsFileSchema,
   reputationFileSchema,
+  skillsFileSchema,
   terrainsFileSchema,
   worldEnemiesFileSchema,
   zonesFileSchema,
@@ -31,6 +32,9 @@ import {
   type WeaponDef,
   type WorldFoeDef,
   type TerrainDef,
+  type BossDef,
+  type SkillDef,
+  type StatusDef,
   type ZoneDef,
 } from './schemas';
 import {
@@ -41,6 +45,7 @@ import {
   type LocationDef,
   type QuestDef,
 } from './townSchemas';
+import { alliesFileSchema, type AllyTemplateDef, type AllyVillageDef, type WandererDef } from './allySchemas';
 
 z.config(z.locales.fr());
 
@@ -58,6 +63,8 @@ export const DATA_SCHEMAS = {
   locations: locationsFileSchema,
   quests: questsFileSchema,
   worldEnemies: worldEnemiesFileSchema,
+  skills: skillsFileSchema,
+  allies: alliesFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -88,6 +95,14 @@ export interface GameData {
   readonly quests: readonly QuestDef[];
   /** Ennemis visibles du monde ouvert (jalon M3). */
   readonly worldFoes: readonly WorldFoeDef[];
+  /** Statuts, compétences et boss à deux phases (jalon M5). */
+  readonly statuses: readonly StatusDef[];
+  readonly skills: readonly SkillDef[];
+  readonly bosses: readonly BossDef[];
+  /** Alliés verts (jalon M5, GDD §7.8). */
+  readonly allyTemplates: readonly AllyTemplateDef[];
+  readonly allyVillages: readonly AllyVillageDef[];
+  readonly wanderers: readonly WandererDef[];
 }
 
 export type ValidationResult =
@@ -228,6 +243,8 @@ function crossCheck(data: GameData): string[] {
   checkZoneContent(data, issues);
   if (!data.locations.some((l) => l.id === data.balance.defeat.fallbackVillage)) issues.push(`balance.json › defeat.fallbackVillage : lieu inconnu « ${data.balance.defeat.fallbackVillage} »`);
   checkWorldFoes(data, issues);
+  checkSkills(data, issues);
+  checkAllies(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -349,6 +366,8 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     locations: z.infer<typeof locationsFileSchema>;
     quests: z.infer<typeof questsFileSchema>;
     worldEnemies: z.infer<typeof worldEnemiesFileSchema>;
+    skills: z.infer<typeof skillsFileSchema>;
+    allies: z.infer<typeof alliesFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -367,6 +386,12 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     factions: files.locations.factions,
     quests: files.quests.quests,
     worldFoes: files.worldEnemies.foes,
+    statuses: files.skills.statuses,
+    skills: files.skills.skills,
+    bosses: files.skills.bosses,
+    allyTemplates: files.allies.templates,
+    allyVillages: files.allies.villages,
+    wanderers: files.allies.wanderers,
   };
 
   const crossIssues = crossCheck(data);
@@ -561,4 +586,121 @@ function checkWorldFoes(data: GameData, issues: string[]): void {
   const needed = new Set<string>();
   for (const q of data.quests) for (const step of q.steps) if (step.kind === 'flag' && step.flag.startsWith('boss_')) needed.add(step.flag);
   for (const flag of needed) if (!bossFlags.has(flag)) issues.push(`${file} : aucun boss du monde ne lève le drapeau « ${flag} » (attendu par une quête)`);
+}
+
+/** Compétences, statuts, boss, objets de combat, renforts (jalon M5). */
+function checkSkills(data: GameData, issues: string[]): void {
+  const file = 'skills.json';
+  checkUniqueIds(file, 'statut', data.statuses, issues);
+  checkUniqueIds(file, 'compétence', data.skills, issues);
+  const statusIds = new Set(data.statuses.map((s) => s.id));
+  const skillIds = new Set(data.skills.map((s) => s.id));
+  const classes = new Map(data.classes.map((c) => [c.id, c]));
+  const enemyIds = new Set(data.enemies.map((e) => e.id));
+  const terrainIds = new Set(data.terrains.map((t) => t.id));
+  const elementIds = new Set(data.elements.map((e) => e.id));
+  for (const skill of data.skills) {
+    const at = `${file} › « ${skill.id} »`;
+    if (skill.range[0] > skill.range[1]) issues.push(`${at}.range : portée min > portée max`);
+    if (skill.target === 'soi' && (skill.range[0] !== 0 || skill.range[1] !== 0)) issues.push(`${at} : une compétence sur soi a la portée [0, 0]`);
+    if (skill.target !== 'soi' && skill.range[0] === 0) issues.push(`${at} : seule une compétence sur soi a une portée de 0`);
+    if (skill.element !== null && !elementIds.has(skill.element)) issues.push(`${at}.element : élément inconnu « ${skill.element} »`);
+    const cost = skill.cost;
+    if (cost.resonance === undefined && cost.resource === undefined && cost.cooldown === undefined) issues.push(`${at}.cost : un coût (Résonance, ressource ou délai) est attendu`);
+    if (skill.owner !== null) {
+      const cls = classes.get(skill.owner);
+      if (!cls) issues.push(`${at}.owner : classe inconnue « ${skill.owner} »`);
+      if (cost.resonance !== undefined && (cost.resonance < 40 || cost.resonance > 100) && cost.resonance !== 30) {
+        issues.push(`${at}.cost.resonance : ${cost.resonance}, attendu de 40 à 100 (GDD §9.9 ; 30 toléré pour une frappe légère)`);
+      }
+      if (cost.resource && cls && cls.resource?.id !== cost.resource.id) issues.push(`${at}.cost.resource : « ${cost.resource.id} » n'est pas la ressource de « ${cls.id} »`);
+      if (cost.resource && cls && cls.resource?.perBattle === undefined) issues.push(`${at}.cost.resource : « ${cls.id} » n'a pas de réserve par combat`);
+    } else if (cost.cooldown === undefined) issues.push(`${at}.cost : une compétence de boss a un délai (cooldown)`);
+    for (const effect of skill.effects) {
+      const status = 'status' in effect ? effect.status : undefined;
+      if (status && !statusIds.has(status.id)) issues.push(`${at} : statut inconnu « ${status.id} »`);
+      if (effect.kind === 'statut' && !statusIds.has(effect.id)) issues.push(`${at} : statut inconnu « ${effect.id} »`);
+      if (effect.kind === 'frappe' && skill.target !== 'ennemi') issues.push(`${at} : une frappe vise un ennemi`);
+      if (effect.kind === 'invocation' && !enemyIds.has(effect.enemy)) issues.push(`${at} : invocation d'un ennemi inconnu « ${effect.enemy} »`);
+      if ((effect.kind === 'invocation' || effect.kind === 'terrain') && skill.target !== 'case') issues.push(`${at} : ${effect.kind} vise une case`);
+      if (effect.kind === 'terrain') {
+        if (!terrainIds.has(effect.terrain)) issues.push(`${at} : terrain inconnu « ${effect.terrain} »`);
+        else if (data.terrains.find((t) => t.id === effect.terrain)?.moveCost !== null) issues.push(`${at} : le terrain « ${effect.terrain} » doit être infranchissable`);
+      }
+    }
+  }
+  // Une compétence signature par classe (GDD §9.9).
+  for (const cls of data.classes) {
+    const n = data.skills.filter((s) => s.owner === cls.id).length;
+    if (n !== 1) issues.push(`${file} : la classe « ${cls.id} » doit avoir exactement une compétence signature (${n} trouvée(s))`);
+  }
+  // Boss à deux phases.
+  const bossEnemies = new Set<string>();
+  for (const boss of data.bosses) {
+    const at = `${file} › boss « ${boss.enemy} »`;
+    if (!enemyIds.has(boss.enemy)) issues.push(`${at} : ennemi inconnu`);
+    if (bossEnemies.has(boss.enemy)) issues.push(`${at} : en double`);
+    bossEnemies.add(boss.enemy);
+    for (const id of boss.immune) if (!statusIds.has(id)) issues.push(`${at}.immune : statut inconnu « ${id} »`);
+    for (const id of [...boss.skills, ...boss.phase2.skills]) {
+      if (!skillIds.has(id)) issues.push(`${at} : compétence inconnue « ${id} »`);
+      else if (data.skills.find((s) => s.id === id)?.owner !== null) issues.push(`${at} : « ${id} » est la compétence d'une classe`);
+    }
+    if (boss.phase2.onEnter !== undefined && !boss.phase2.skills.includes(boss.phase2.onEnter)) issues.push(`${at}.phase2.onEnter : « ${boss.phase2.onEnter} » doit faire partie des compétences de la phase 2`);
+  }
+  for (const enc of data.encounters.encounters) {
+    for (const e of enc.enemies) if (e.boss && !bossEnemies.has(e.enemy)) issues.push(`encounters.json › « ${enc.id} » : le boss « ${e.enemy} » n'a pas de fiche de boss dans skills.json (2 phases)`);
+    for (const wave of enc.reinforcements ?? []) {
+      for (const e of wave.enemies) if (!enemyIds.has(e.enemy)) issues.push(`encounters.json › « ${enc.id} ».reinforcements : ennemi inconnu « ${e.enemy} »`);
+    }
+  }
+  // Objets en combat, soutien.
+  for (const item of data.consumables) {
+    const b = item.battle;
+    if (!b) continue;
+    const at = `items.json › « ${item.id} ».battle`;
+    if (b.status && !statusIds.has(b.status.id)) issues.push(`${at} : statut inconnu « ${b.status.id} »`);
+    if (b.range[0] > b.range[1]) issues.push(`${at}.range : portée min > portée max`);
+    if (b.target === 'soi' && b.range[1] !== 0) issues.push(`${at} : un objet sur soi a la portée [0, 0]`);
+    if (b.heal === undefined && b.cleanse !== true && b.damage === undefined && b.status === undefined) issues.push(`${at} : aucun effet`);
+  }
+  const weapons = new Map(data.weapons.map((w) => [w.id, w]));
+  for (const enemy of data.enemies) {
+    if (enemy.ai === 'soutien' && weapons.get(enemy.weapon)?.heals === undefined) issues.push(`enemies.json › « ${enemy.id} » : le profil « soutien » demande une arme qui soigne (heals)`);
+  }
+  const owned = new Set<string>([...data.weapons.map((w) => w.id), ...data.consumables.map((c) => c.id), ...data.accessories.map((a) => a.id)]);
+  for (const it of data.balance.prep.testItems) if (!owned.has(it.item)) issues.push(`balance.json › prep.testItems : objet inconnu « ${it.item} »`);
+}
+
+/** Alliés verts : modèles, villages, errants (jalon M5). */
+function checkAllies(data: GameData, issues: string[]): void {
+  const file = 'allies.json';
+  checkUniqueIds(file, 'modèle', data.allyTemplates, issues);
+  const templates = new Set(data.allyTemplates.map((t) => t.id));
+  const classIds = new Set(data.classes.map((c) => c.id));
+  for (const t of data.allyTemplates) if (!classIds.has(t.class)) issues.push(`${file} › « ${t.id} ».class : classe inconnue « ${t.class} »`);
+  const towns = new Map(data.locations.map((l) => [l.id, l]));
+  const seen = new Set<string>();
+  for (const v of data.allyVillages) {
+    const at = `${file} › village « ${v.location} »`;
+    const town = towns.get(v.location);
+    if (!town || town.reputation === null) issues.push(`${at} : lieu inconnu ou sans réputation`);
+    if (seen.has(v.location)) issues.push(`${at} : en double`);
+    seen.add(v.location);
+    for (const id of [...v.guards, ...v.passers]) if (!templates.has(id)) issues.push(`${at} : modèle inconnu « ${id} »`);
+  }
+  // Les errants sont des PNJ : leur identifiant ne doit pas croiser celui d'un PNJ de village.
+  const npcIds = new Set(data.locations.flatMap((l) => l.npcs.map((n) => n.id)));
+  checkUniqueIds(file, 'allié errant', data.wanderers, issues);
+  const items = new Set<string>([...data.weapons.map((w) => w.id), ...data.consumables.map((c) => c.id), ...data.accessories.map((a) => a.id), ...data.keyItems.map((k) => k.id)]);
+  for (const w of data.wanderers) {
+    const at = `${file} › errant « ${w.id} »`;
+    if (npcIds.has(w.id)) issues.push(`${at} : identifiant déjà pris par un PNJ de village`);
+    if (!templates.has(w.template)) issues.push(`${at}.template : modèle inconnu « ${w.template} »`);
+    if (w.route[0]?.[0] !== w.at[0] || w.route[0]?.[1] !== w.at[1]) issues.push(`${at} : la route commence à sa case de départ (at)`);
+    for (const option of w.options) {
+      if (option.kind !== 'topic') issues.push(`${at} : un errant n'a que des sujets de conversation (« topic »)`);
+      else for (const e of option.effects ?? []) if (e.type === 'item' && !items.has(e.item)) issues.push(`${at} : objet inconnu « ${e.item} »`);
+    }
+  }
 }

@@ -14,6 +14,7 @@
     { "id": "marais", "name": "Marais", "moveCost": 3, "defense": 0, "avoid": -10, "heal": 0, "tags": ["enlise"] },
     { "id": "batiment", "name": "Bâtiment", "moveCost": null, "defense": 0, "avoid": 0, "heal": 0, "tags": ["batiment"] },
     { "id": "obstacle", "name": "Obstacle", "moveCost": null, "defense": 0, "avoid": 0, "heal": 0, "tags": [] },
-    { "id": "eau_profonde", "name": "Eau profonde", "moveCost": null, "defense": 0, "avoid": 0, "heal": 0, "tags": ["eau", "mobilite_speciale"] }
+    { "id": "eau_profonde", "name": "Eau profonde", "moveCost": null, "defense": 0, "avoid": 0, "heal": 0, "tags": ["eau", "mobilite_speciale"] },
+    { "id": "ronces", "name": "Ronces", "moveCost": null, "defense": 0, "avoid": 0, "heal": 0, "tags": ["ronces", "temporaire"] }
   ]
 }

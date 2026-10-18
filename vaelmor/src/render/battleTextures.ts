@@ -24,6 +24,12 @@ export const BATTLE_TEX = {
   crown: 'battle:crown',
   heroMark: 'battle:heroMark',
   spark: 'battle:spark',
+  /** Marque de statut au-dessus d'une unité (jalon M5) : renfort, affaiblissement, gel. */
+  status: (kind: 'buff' | 'debuff' | 'stun'): string => `battle:status:${kind}`,
+  /** Ronces du Mur de ronces, posées sur une case (un peu plus hautes qu'elle). */
+  brambles: 'battle:brambles',
+  /** Halo doux (aura du boss en phase 2, éclat d'une compétence), teinté par le moteur. */
+  aura: 'battle:aura',
   /** Flèche du chemin de déplacement : segment droit (W–E), virage (W–S), pointe (vers l'est), départ (vers l'est). */
   arrow: (kind: 'line' | 'corner' | 'head' | 'start'): string => `battle:arrow:${kind}`,
   px: 'battle:px',
@@ -182,4 +188,57 @@ export function ensureBattleFxTextures(scene: Phaser.Scene): void {
   const px = new PixelCanvas(1, 1);
   px.set(0, 0, 0xffffff);
   px.toTexture(scene, BATTLE_TEX.px);
+
+  // Marques de statut (7 × 7, contour sombre teinté) : flèche dorée (renfort), flèche rouge (affaiblissement), flocon cyan (gel).
+  const ink = mixColor(P.ombreProfonde, P.nuit, 0.4);
+  const mark = (kind: 'buff' | 'debuff' | 'stun', rows: readonly string[], light: number, dark: number): void => {
+    const c = new PixelCanvas(7, 7);
+    rows.forEach((row, y) => [...row].forEach((ch, x) => {
+      if (ch === 'o') c.set(x, y, ink);
+      if (ch === 'x') c.set(x, y, light);
+      if (ch === 'd') c.set(x, y, dark);
+    }));
+    c.toTexture(scene, BATTLE_TEX.status(kind));
+  };
+  mark('buff', ['..ooo..', '.oxxxo.', 'oxxxxxo', 'ooxxdoo', '.oxxdo.', '.oxddo.', '.ooooo.'], P.lumiereDoree, P.ambre);
+  mark('debuff', ['.ooooo.', '.oxddo.', '.oxxdo.', 'ooxxdoo', 'oxxxxdo', '.oxxdo.', '..ooo..'], P.braise, P.rougeCendre);
+  mark('stun', ['o.ooo.o', '.oxoxo.', 'oxxxxxo', 'ooxdxoo', 'oxxxxxo', '.oxoxo.', 'o.ooo.o'], 0xeafcff, P.cyanEclat);
+
+  // Ronces : tiges sombres entrelacées, feuilles olive, épines brique (16 × 20, la touffe dépasse vers le haut).
+  const br = new PixelCanvas(16, 20);
+  const stem = mixColor(P.oliveSombre, P.terreSombre, 0.35);
+  const leaf = P.olive;
+  const leafLight = P.oliveClair;
+  const thorn = P.brique;
+  const curves: [number, number, number][] = [
+    [2, 19, 1],
+    [6, 19, -1],
+    [10, 19, 1],
+    [13, 19, -1],
+  ];
+  for (const [x0, y0, dir] of curves) {
+    let x = x0;
+    for (let y = y0; y > 3; y--) {
+      br.set(x, y, stem);
+      br.set(x + dir, y, mixColor(stem, P.ombreProfonde, 0.3));
+      if ((y + x0) % 4 === 0) x = Math.max(0, Math.min(15, x + dir));
+      if ((y + x0) % 5 === 0) br.set(Math.max(0, Math.min(15, x - dir)), y, thorn);
+      if ((y + x0) % 6 === 1) {
+        br.set(Math.max(0, Math.min(15, x + 2 * dir)), y, leaf);
+        br.set(Math.max(0, Math.min(15, x + 2 * dir)), y - 1, leafLight);
+      }
+    }
+  }
+  for (let x = 0; x < 16; x++) br.set(x, 19, mixColor(P.ombreViolette, P.oliveSombre, 0.5), 160);
+  br.toTexture(scene, BATTLE_TEX.brambles);
+
+  // Halo : disque doux blanc (32 × 16), teinté et additif.
+  const aura = new PixelCanvas(32, 16);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 32; x++) {
+      const d = Math.hypot((x - 15.5) / 16, (y - 7.5) / 8);
+      if (d < 1) aura.set(x, y, 0xffffff, Math.round(200 * (1 - d) * (1 - d)));
+    }
+  }
+  aura.toTexture(scene, BATTLE_TEX.aura);
 }

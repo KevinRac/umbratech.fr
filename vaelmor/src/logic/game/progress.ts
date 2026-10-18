@@ -39,6 +39,8 @@ export interface Progress {
   zoneVisits: number;
   /** Dernier village visité : on y revient après une défaite (décision n°56). */
   lastVillage: string | null;
+  /** Alliés errants blessés (jalon M5) : jour de repos où ils sont tombés ; ils reviennent au repos suivant. */
+  wounded?: Record<string, number>;
 }
 
 /** Quand un ennemi du monde a été vaincu : jour de repos, temps de jeu et compteur de zones à ce moment-là. */
@@ -81,6 +83,7 @@ export function newProgress(seed: ProgressSeed): Progress {
     clock: 0,
     zoneVisits: 0,
     lastVillage: null,
+    wounded: {},
   };
   for (const s of seed.balance.economy.startingItems) addItem(progress, s.item, s.qty, seed.balance);
   return progress;

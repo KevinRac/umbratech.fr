@@ -17,6 +17,8 @@ export interface ToastsOptions {
   readonly scale?: number;
   /** Agrandissement entier du texte (par défaut : la moitié de `scale`, arrondie, au moins 1). */
   readonly textScale?: number;
+  /** Ordonnée du haut de la zone d'affichage (sous une barre de titre, par exemple). */
+  readonly top?: number;
 }
 
 export class Toasts {
@@ -26,6 +28,7 @@ export class Toasts {
   private readonly areaWidth: number;
   private readonly k: number;
   private readonly textScale: number;
+  private readonly top: number;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -35,6 +38,7 @@ export class Toasts {
     this.areaWidth = options.width ?? scene.scale.width;
     this.k = options.scale ?? 1;
     this.textScale = options.textScale ?? 1;
+    this.top = options.top ?? 0;
   }
 
   push(message: string): void {
@@ -63,7 +67,7 @@ export class Toasts {
     this.scene.tweens.chain({
       targets: container,
       tweens: [
-        { y: 6 * k, duration: 180, ease: 'Quad.easeOut' },
+        { y: this.top + 6 * k, duration: 180, ease: 'Quad.easeOut' },
         { alpha: 1, duration: TOAST_DURATION_MS - 400 },
         { alpha: 0, duration: 220 },
       ],

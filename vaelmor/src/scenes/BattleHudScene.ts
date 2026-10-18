@@ -2,8 +2,10 @@
  * Interface du combat tactique (GDD §13.5, §13.7), dessinée en pixels natifs
  * par-dessus `BattleScene` : bandeau du haut (rencontre, objectif, tour et
  * phase), fiche de l'unité survolée, terrain sous le curseur, prévision de
- * l'échange, menus (actions, menu de carte), bandeau de phase, barres de PV de
- * l'échange en cours, notifications et écran de fin.
+ * l'échange ou de la compétence, menus (actions, objets, menu de carte),
+ * bandeaux (phase, renforts, compétence), réplique d'un boss, barres de PV de
+ * l'échange en cours, notifications, écran de préparation (jalon M5,
+ * GDD §13.4) et écran de fin.
  *
  * La carte occupe tout l'écran entre le bandeau du haut et la barre d'aide du
  * bas ; comme sur GBA, les fenêtres flottent au-dessus de la carte et passent
@@ -19,7 +21,9 @@ import type { BattleSummary } from '../logic/tactics/battle';
 import type { BattleUnit, Team } from '../logic/tactics/types';
 import { BATTLE_TEX } from '../render/battleTextures';
 import { PALETTE } from '../render/palette';
+import { ALLY_OUTLINE } from '../render/unitSprites';
 import { drawPanel } from '../ui/panel';
+import { ScrollList, type ListRow } from '../ui/ScrollList';
 import { addText, setText, type PixelText } from '../ui/text';
 import { Toasts } from '../ui/Toasts';
 import { VerticalMenu, type MenuItem } from '../ui/VerticalMenu';
@@ -36,8 +40,11 @@ const WIN_W = 228;
 
 export type DodgeSide = 'left' | 'right';
 
-const DEPTH = { panel: 10, menu: 40, exchange: 50, banner: 80, result: 100, toasts: 200 } as const;
-const TEAM_COLOR: Readonly<Record<Team, number>> = { player: 0x6fa8dc, enemy: 0xd9654b };
+const DEPTH = { panel: 10, prep: 30, menu: 40, exchange: 50, banner: 80, line: 90, result: 100, toasts: 200 } as const;
+/** Couleurs des camps : bleu (compagnie), vert menthe (alliés, comme leur liseré), rouge (ennemis). */
+export const TEAM_COLOR: Readonly<Record<Team, number>> = { player: 0x6fa8dc, ally: ALLY_OUTLINE, enemy: 0xd9654b };
+const PHASE_LABEL: Readonly<Record<Team, string>> = { player: 'Phase du joueur', ally: 'Phase alliée', enemy: 'Phase ennemie' };
+const PHASE_TITLE: Readonly<Record<Team, string>> = { player: 'PHASE DU JOUEUR', ally: 'PHASE ALLIÉE', enemy: 'PHASE ENNEMIE' };
 const STAT_LABELS: readonly (readonly [keyof BattleUnit['stats'], string])[] = [
   ['fo', 'FO'],
   ['mag', 'MAG'],
@@ -57,6 +64,63 @@ export interface MenuRequest {
   readonly large?: boolean;
   /** Menu au centre de l'écran (menu de combat, ouvert par Échap). */
   readonly centered?: boolean;
+  /** Entrée choisie à l'ouverture (menu rouvert après un réglage). */
+  readonly initialIndex?: number;
+}
+
+/** Ce que la fiche détaillée montre en plus des stats (jalon M5). */
+export interface UnitExtra {
+  /** Compétence : nom, coût, prête ou non (raison). */
+  readonly skill: { readonly name: string; readonly cost: string; readonly blocker: string | null } | null;
+  /** Ressource de classe (« Pierres 2/3 »). */
+  readonly resource: string | null;
+  /** Objets portés (« Potion ×2 »). */
+  readonly items: readonly string[];
+  /** Statuts en cours. */
+  readonly statuses: readonly { readonly name: string; readonly color: number }[];
+  /** Accessoire porté. */
+  readonly accessory: string | null;
+}
+
+/** Aperçu d'une compétence, d'un objet ou d'un soin avant de valider (fenêtre de prévision). */
+export interface SkillPreviewView {
+  readonly title: string;
+  readonly subtitle: string;
+  readonly description: string;
+  readonly lines: readonly { readonly name: string; readonly text: string; readonly color: number }[];
+}
+
+/** Écran de préparation (GDD §9.3, §13.4). */
+export interface PrepView {
+  readonly title: string;
+  readonly objective: string;
+  /** Compagnie : une ligne par membre (marque de déploiement, nom, classe). */
+  readonly roster: readonly ListRow[];
+  readonly deployed: number;
+  readonly maxDeploy: number;
+  readonly cursor: number;
+  /** Membre choisi : sa fiche (unité telle qu'elle sera déployée). */
+  readonly unit: BattleUnit | null;
+  readonly extra: UnitExtra | null;
+  /** Aperçu des ennemis (type, niveau, nombre ; boss en tête). */
+  readonly enemies: readonly { readonly text: string; readonly color: number }[];
+  /** Renforts annoncés (ennemis, alliés verts). */
+  readonly warnings: readonly { readonly text: string; readonly color: number }[];
+  /** Positions imposées (embuscade). */
+  readonly locked: boolean;
+  readonly canRetreat: boolean;
+  readonly message: string | null;
+}
+
+export interface PrepCallbacks {
+  readonly onCursor: (member: number) => void;
+  readonly onToggle: (member: number) => void;
+  readonly onFight: () => void;
+  readonly onAuto: () => void;
+  readonly onEquip: () => void;
+  readonly onItems: () => void;
+  readonly onPlace: () => void;
+  readonly onBack: (() => void) | null;
 }
 
 export interface ExchangeView {
@@ -101,9 +165,10 @@ export class BattleHudScene extends Phaser.Scene {
   create(): void {
     this.actions = new ActionInput(this);
     this.S = uiScaleFor(this.scale.height);
-    this.toasts = new Toasts(this, { depth: DEPTH.toasts, scale: 2 * this.S, textScale: this.S });
+    this.toasts = new Toasts(this, { depth: DEPTH.toasts, scale: 2 * this.S, textScale: this.S, top: TOP_BAR * this.S });
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      if (pointer.rightButtonDown() && this.menu && this.menuCancel) this.menuCancel();
+      if (pointer.rightButtonDown() && this.list && this.listCancel) this.listCancel();
+      else if (pointer.rightButtonDown() && this.menu && this.menuCancel) this.menuCancel();
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.ready = false;
@@ -128,6 +193,20 @@ export class BattleHudScene extends Phaser.Scene {
       this.helpParts = [];
       this.menuParts = [];
       this.resultParts = [];
+      this.previewParts = [];
+      this.lastPreview = null;
+      this.lastExtra = null;
+      this.listParts = [];
+      this.list = null;
+      this.listCancel = null;
+      this.prepParts = [];
+      this.prepRoster = null;
+      this.prepMenu = null;
+      this.prepView = null;
+      this.prepCallbacks = null;
+      this.prepFrames = null;
+      this.prepRects = [];
+      this.prepPaused = false;
     });
     this.ready = true;
     const queued = this.pending;
@@ -137,10 +216,13 @@ export class BattleHudScene extends Phaser.Scene {
 
   override update(): void {
     if (!this.ready) return;
-    if (this.menu) {
+    if (this.list) {
+      if (this.actions.justPressed('cancel') && this.listCancel) this.listCancel();
+      else this.list?.update();
+    } else if (this.menu) {
       if (this.actions.justPressed('cancel') && this.menuCancel) this.menuCancel();
       else this.menu?.update();
-    }
+    } else if (this.prepView) this.updatePrepInput();
     this.resultMenu?.update();
   }
 
@@ -173,7 +255,7 @@ export class BattleHudScene extends Phaser.Scene {
   setPhase(team: Team, turn: number): void {
     this.run(() => {
       if (!this.phaseLabel) return;
-      setText(this.phaseLabel, `Tour ${turn} · ${team === 'player' ? 'Phase du joueur' : 'Phase ennemie'}`);
+      setText(this.phaseLabel, `Tour ${turn} · ${PHASE_LABEL[team]}`);
       this.phaseLabel.setTint(TEAM_COLOR[team]);
     });
   }
@@ -198,6 +280,7 @@ export class BattleHudScene extends Phaser.Scene {
     this.drawUnit();
     this.drawDetails();
     this.drawForecast();
+    this.drawPreview();
     this.drawTerrain();
   }
 
@@ -205,8 +288,9 @@ export class BattleHudScene extends Phaser.Scene {
   private stackTop(): number {
     const S = this.S;
     let y = (TOP_BAR + 6) * S;
+    if (this.lastPreview) return y + this.previewHeight + 8 * S;
     if (this.lastUnit && !this.lastForecast) y += 72 * S;
-    if (this.lastDetails && !this.lastForecast) y += 96 * S;
+    if (this.lastDetails && !this.lastForecast) y += (this.detailsHeight + 6) * S;
     if (this.lastForecast) y += Math.max(this.forecastHeight, 214 * S) + 8 * S;
     return y;
   }
@@ -227,7 +311,7 @@ export class BattleHudScene extends Phaser.Scene {
   private drawUnit(): void {
     this.clear(this.unitParts);
     const unit = this.lastUnit;
-    if (!unit || this.lastForecast) return;
+    if (!unit || this.lastForecast || this.lastPreview) return;
     const S = this.S;
     const h = 66 * S;
     const y = (TOP_BAR + 6) * S;
@@ -236,7 +320,7 @@ export class BattleHudScene extends Phaser.Scene {
     const kind = unit.kindName !== unit.name ? unit.kindName : unit.weapon.name;
     const nameText = addText(this, 0, y + 6 * S, unit.name, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.panel + 2);
     const levelText = addText(this, 0, y + 6 * S, `Niv ${unit.level}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH.panel + 2);
-    const kindText = addText(this, 0, y + 21 * S, kind, { scale: S, color: unit.team === 'player' ? PALETTE.cyanEclat : PALETTE.braise }).setDepth(DEPTH.panel + 2);
+    const kindText = addText(this, 0, y + 21 * S, kind, { scale: S, color: unit.team === 'player' ? PALETTE.cyanEclat : unit.team === 'ally' ? ALLY_OUTLINE : PALETTE.braise }).setDepth(DEPTH.panel + 2);
     const needed = 56 * S + Math.max(nameText.width + 10 * S + levelText.width, kindText.width) + 10 * S;
     const w = Math.min(Math.max(WIN_W * S, Math.ceil(needed)), this.scale.width - 12 * S);
     this.unitWidth = w;
@@ -269,24 +353,35 @@ export class BattleHudScene extends Phaser.Scene {
 
   /* ---------- Fiche détaillée (unité choisie) ---------- */
 
-  showDetails(unit: BattleUnit | null): void {
+  showDetails(unit: BattleUnit | null, extra: UnitExtra | null = null): void {
     this.run(() => {
       this.lastDetails = unit;
+      this.lastExtra = extra;
       this.drawDetails();
     });
   }
 
+  private lastExtra: UnitExtra | null = null;
+  /** Hauteur de la fiche détaillée dessinée (le menu se place dessous). */
+  private detailsHeight = 90;
+
   private drawDetails(): void {
     this.clear(this.detailParts);
     const unit = this.lastDetails;
-    if (!unit || this.lastForecast) return;
+    if (!unit || this.lastForecast || this.lastPreview) return;
     const S = this.S;
     const w = this.lastUnit ? Math.max(WIN_W * S, this.unitWidth) : WIN_W * S;
-    const h = 90 * S;
     const x = this.winX(w);
     const y = (TOP_BAR + 6 + (this.lastUnit ? 72 : 0)) * S;
+    const extra = this.lastExtra;
+    const extraLines = extra ? this.extraLines(unit, extra) : [];
+    const h = (90 + extraLines.length * 16) * S;
+    this.detailsHeight = h / S;
     const parts = this.detailParts;
     parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
+    extraLines.forEach(([label, color], i) => {
+      parts.push(addText(this, x + 10 * S, y + (82 + i * 16) * S, label, { scale: S, color, maxWidth: w - 20 * S }).setDepth(DEPTH.panel + 1));
+    });
     const range = unit.weapon.range[0] === unit.weapon.range[1] ? `${unit.weapon.range[0]}` : `${unit.weapon.range[0]}-${unit.weapon.range[1]}`;
     parts.push(addText(this, x + 10 * S, y + 6 * S, `${unit.weapon.name} · portée ${range}`, { scale: S, color: PALETTE.ocreClair }).setDepth(DEPTH.panel + 1));
     const colW = (w - 20 * S) / 4;
@@ -304,6 +399,18 @@ export class BattleHudScene extends Phaser.Scene {
     parts.push(this.add.rectangle(gx, gy + 6 * S, gw, 5 * S, PALETTE.encre, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
     parts.push(this.add.rectangle(gx, gy + 6 * S, Math.round((gw * unit.resonance) / 100), 5 * S, PALETTE.cyanEclat, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 2));
     if (unit.bogged) parts.push(addText(this, x + w - 10 * S, y + 6 * S, 'Enlisé', { scale: S, color: PALETTE.braise, align: 'right' }).setDepth(DEPTH.panel + 1));
+  }
+
+  /** Lignes ajoutées à la fiche : compétence, ressource, accessoire, objets, statuts. */
+  private extraLines(unit: BattleUnit, extra: UnitExtra): [string, number][] {
+    const lines: [string, number][] = [];
+    if (extra.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}${extra.skill.blocker ? ` (${extra.skill.blocker})` : ''}`, extra.skill.blocker ? PALETTE.metalClair : PALETTE.lumiereDoree]);
+    if (extra.resource) lines.push([extra.resource, PALETTE.ocreClair]);
+    if (extra.accessory) lines.push([`Accessoire : ${extra.accessory}`, PALETTE.parchemin]);
+    if (extra.items.length > 0) lines.push([`Objets : ${extra.items.join(', ')}`, PALETTE.parchemin]);
+    if (extra.statuses.length > 0) lines.push([extra.statuses.map((st) => st.name).join(' · '), extra.statuses[0]?.color ?? PALETTE.parchemin]);
+    void unit;
+    return lines;
   }
 
   /* ---------- Terrain (bas de la colonne) ---------- */
@@ -423,6 +530,64 @@ export class BattleHudScene extends Phaser.Scene {
   /** Hauteur de la prévision affichée (le menu se place dessous). */
   private forecastHeight = 0;
 
+  /* ---------- Aperçu d'une compétence, d'un objet, d'un soin ---------- */
+
+  private lastPreview: SkillPreviewView | null = null;
+  private previewParts: Phaser.GameObjects.GameObject[] = [];
+
+  showSkillPreview(view: SkillPreviewView | null): void {
+    this.run(() => {
+      this.lastPreview = view;
+      this.drawUnit();
+      this.drawDetails();
+      this.drawPreview();
+    });
+  }
+
+  private drawPreview(): void {
+    this.clear(this.previewParts);
+    const view = this.lastPreview;
+    if (!view) return;
+    const S = this.S;
+    const w = 272 * S;
+    const x = this.winX(w);
+    const y = (TOP_BAR + 6) * S;
+    const parts = this.previewParts;
+    const text = (tx: number, ty: number, value: string, color: number, align: 'left' | 'center' | 'right' = 'left', maxWidth?: number): void => {
+      parts.push(addText(this, tx, ty, value, { scale: S, color, align, ...(maxWidth ? { maxWidth } : {}) }).setDepth(DEPTH.panel + 2));
+    };
+    text(x + w / 2, y + 7 * S, view.title, PALETTE.lumiereDoree, 'center');
+    text(x + w / 2, y + 23 * S, view.subtitle, PALETTE.cyanEclat, 'center');
+    const desc = addText(this, x + 10 * S, y + 42 * S, view.description, { scale: S, color: PALETTE.metalClair, maxWidth: w - 20 * S }).setDepth(DEPTH.panel + 2);
+    parts.push(desc);
+    let ty = y + 46 * S + desc.height;
+    parts.push(this.add.rectangle(x + 10 * S, ty, w - 20 * S, S, PALETTE.metal, 1).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
+    ty += 5 * S;
+    for (const line of view.lines.slice(0, 7)) {
+      const right = addText(this, x + w - 12 * S, ty, line.text, { scale: S, color: line.color, align: 'right' }).setDepth(DEPTH.panel + 2);
+      parts.push(right);
+      // Le nom cède la place aux chiffres : il est raccourci s'il déborde.
+      const room = w - 24 * S - right.width - 8 * S;
+      const name = addText(this, x + 12 * S, ty, line.name, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.panel + 2);
+      let label = line.name;
+      while (name.width > room && label.length > 3) {
+        label = label.slice(0, -1);
+        setText(name, `${label.trimEnd()}…`);
+      }
+      parts.push(name);
+      ty += 17 * S;
+    }
+    if (view.lines.length === 0) {
+      text(x + w / 2, ty, 'Personne n’est touché', PALETTE.metalClair, 'center');
+      ty += 17 * S;
+    }
+    const h = ty - y + 6 * S;
+    parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
+    this.previewHeight = h;
+  }
+
+  private previewHeight = 0;
+
   /* ---------- Aide (barre du bas) ---------- */
 
   showHelp(lines: readonly (readonly [string, string])[]): void {
@@ -463,7 +628,7 @@ export class BattleHudScene extends Phaser.Scene {
 
   isOverMenu(x: number, y: number): boolean {
     const r = this.menuRect;
-    return r !== null && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+    return (r !== null && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) || this.isOverPrep(x, y);
   }
 
   openMenu(request: MenuRequest): void {
@@ -492,6 +657,7 @@ export class BattleHudScene extends Phaser.Scene {
         shadowOffset: S,
         centerLabels: big,
       });
+      if (request.initialIndex !== undefined) this.menu.selectIndex(request.initialIndex);
       this.menuCancel = request.onCancel;
       // L'appui qui a ouvert le menu ne doit pas aussi le valider.
       this.actions.consume('confirm');
@@ -514,6 +680,11 @@ export class BattleHudScene extends Phaser.Scene {
   /* ---------- Bandeau de phase ---------- */
 
   phaseBanner(team: Team, turn: number, durationMs: number): Promise<void> {
+    return this.banner(PHASE_TITLE[team], `Tour ${turn}`, TEAM_COLOR[team], durationMs);
+  }
+
+  /** Bandeau qui traverse l'écran (phase, renforts, compétence d'un boss). Titres en police lisible (n°81). */
+  banner(titleText: string, subtitle: string, color: number, durationMs: number): Promise<void> {
     return new Promise((resolve) => {
       this.run(() => {
         if (durationMs <= 0) {
@@ -522,15 +693,14 @@ export class BattleHudScene extends Phaser.Scene {
         }
         const S = this.S;
         const { width, height } = this.scale;
-        const color = TEAM_COLOR[team];
         const container = this.add.container(0, 0).setDepth(DEPTH.banner);
         const bandH = 64 * S;
         const top = Math.round(height / 2 - bandH / 2);
         container.add(this.add.rectangle(0, top, width, bandH, PALETTE.nuit, 0.8).setOrigin(0, 0));
         container.add(this.add.rectangle(0, top, width, 2 * S, color, 0.9).setOrigin(0, 0));
         container.add(this.add.rectangle(0, top + bandH - 2 * S, width, 2 * S, color, 0.9).setOrigin(0, 0));
-        const title = addText(this, width / 2, top + 10 * S, team === 'player' ? 'PHASE DU JOUEUR' : 'PHASE ENNEMIE', { font: 'body', scale: 2 * S, color, align: 'center', shadowOffset: 2 * S });
-        const sub = addText(this, width / 2, top + 42 * S, `Tour ${turn}`, { scale: S, color: PALETTE.parchemin, align: 'center' });
+        const title = addText(this, width / 2, top + 10 * S, titleText, { font: 'body', scale: 2 * S, color, align: 'center', shadowOffset: 2 * S });
+        const sub = addText(this, width / 2, top + 42 * S, subtitle, { scale: S, color: PALETTE.parchemin, align: 'center' });
         container.add([title, sub]);
         container.x = width;
         this.tweens.chain({
@@ -615,6 +785,310 @@ export class BattleHudScene extends Phaser.Scene {
     this.run(() => this.toasts.push(message));
   }
 
+  /* ---------- Compétence : bandeau court au-dessus de la carte ---------- */
+
+  /** Nom de la compétence dans un cartouche, avec le portrait du lanceur (GDD §11.4 : cut-in). */
+  skillCutIn(unit: BattleUnit, name: string, durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      this.run(() => {
+        if (durationMs <= 0) {
+          resolve();
+          return;
+        }
+        const S = this.S;
+        const { width } = this.scale;
+        const color = TEAM_COLOR[unit.team];
+        const w = 300 * S;
+        const h = 48 * S;
+        const x = Math.round((width - w) / 2);
+        const y = (TOP_BAR + 10) * S;
+        const c = this.add.container(0, 0).setDepth(DEPTH.banner);
+        c.add(drawPanel(this, x, y, w, h, { scale: 2 * S }));
+        c.add(this.add.rectangle(x + 8 * S, y + 8 * S, 34 * S, 32 * S, color, 0.25).setOrigin(0, 0));
+        c.add(this.add.image(x + 25 * S, y + 46 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(S).setCrop(0, 0, 40, 30));
+        c.add(addText(this, x + 52 * S, y + 7 * S, name, { font: 'body', scale: S, color: PALETTE.lumiereDoree }));
+        c.add(addText(this, x + 52 * S, y + 25 * S, unit.name, { scale: S, color }));
+        c.setAlpha(0);
+        c.x = -40 * S;
+        this.tweens.chain({
+          targets: c,
+          tweens: [
+            { alpha: 1, x: 0, duration: durationMs * 0.2, ease: 'Cubic.easeOut' },
+            { alpha: 1, duration: durationMs * 0.6 },
+            { alpha: 0, x: 40 * S, duration: durationMs * 0.2, ease: 'Cubic.easeIn' },
+          ],
+          onComplete: () => {
+            c.destroy(true);
+            resolve();
+          },
+        });
+      });
+    });
+  }
+
+  /* ---------- Réplique d'un boss (changement de phase) ---------- */
+
+  bossLine(unit: BattleUnit, line: string, durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      this.run(() => {
+        const S = this.S;
+        const { width, height } = this.scale;
+        const w = Math.min(width - 40 * S, 620 * S);
+        const h = 92 * S;
+        const x = Math.round((width - w) / 2);
+        const y = Math.round(height * 0.62);
+        const c = this.add.container(0, 0).setDepth(DEPTH.line);
+        c.add(this.add.rectangle(0, 0, width, height, 0x2a0d12, 0.35).setOrigin(0, 0));
+        c.add(drawPanel(this, x, y, w, h, { scale: 2 * S, fillAlpha: 0.96 }));
+        c.add(this.add.rectangle(x + 10 * S, y + 10 * S, 64 * S, 72 * S, TEAM_COLOR.enemy, 0.3).setOrigin(0, 0));
+        c.add(this.add.image(x + 42 * S, y + 84 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(2 * S));
+        c.add(addText(this, x + 86 * S, y + 10 * S, `${unit.name} — phase 2`, { font: 'body', scale: S, color: PALETTE.braise }));
+        c.add(addText(this, x + 86 * S, y + 32 * S, `« ${line} »`, { scale: S, color: PALETTE.parchemin, maxWidth: w - 100 * S }));
+        c.setAlpha(0);
+        this.tweens.add({ targets: c, alpha: 1, duration: 160 });
+        const close = (): void => {
+          this.tweens.add({ targets: c, alpha: 0, duration: 180, onComplete: () => c.destroy(true) });
+          resolve();
+        };
+        this.time.delayedCall(Math.max(900, durationMs), close);
+      });
+    });
+  }
+
+  /* ---------- Liste à choisir (objets) ---------- */
+
+  private listParts: Phaser.GameObjects.GameObject[] = [];
+  private list: ScrollList | null = null;
+  private listCancel: (() => void) | null = null;
+
+  /** Liste modale au centre (objets à donner ou reprendre, objets à utiliser). */
+  openList(title: string, rows: readonly ListRow[], onActivate: (index: number) => void, onCancel: () => void, footer: string | null = null): void {
+    this.run(() => {
+      this.closeListNow();
+      const S = this.S;
+      const rowH = 24 * S;
+      const visible = Math.min(10, Math.max(3, rows.length));
+      const w = 360 * S;
+      const h = (40 + visible * 24 + (footer ? 22 : 8)) * S;
+      const x = Math.round((this.scale.width - w) / 2);
+      const y = Math.round((this.scale.height - h) / 2);
+      this.listParts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.menu }));
+      this.listParts.push(addText(this, x + w / 2, y + 8 * S, title, { scale: S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));
+      this.listFooter = footer ? addText(this, x + w / 2, y + h - 22 * S, footer, { scale: S, color: PALETTE.metalClair, align: 'center' }).setDepth(DEPTH.menu + 1) : null;
+      if (this.listFooter) this.listParts.push(this.listFooter);
+      this.menuRect = { x, y, w, h };
+      this.list = new ScrollList(this, x + 8 * S, y + 32 * S, this.actions, { width: w - 16 * S, rowHeight: rowH, visibleRows: visible, depth: DEPTH.menu + 1, scale: S, onActivate });
+      this.list.setRows(rows, false);
+      this.listCancel = onCancel;
+      this.actions.consume('confirm');
+      this.actions.consume('cancel');
+    });
+  }
+
+  private listFooter: PixelText | null = null;
+
+  /** Met à jour les lignes (et le pied) de la liste ouverte ; le curseur reste. */
+  updateList(rows: readonly ListRow[], footer: string | null = null): void {
+    this.run(() => {
+      this.list?.setRows(rows, true);
+      if (footer !== null && this.listFooter) setText(this.listFooter, footer);
+    });
+  }
+
+  closeList(): void {
+    this.run(() => this.closeListNow());
+  }
+
+  private closeListNow(): void {
+    this.list?.destroy();
+    this.list = null;
+    this.listCancel = null;
+    this.listFooter = null;
+    this.clear(this.listParts);
+    if (!this.menu) this.menuRect = null;
+  }
+
+  get listOpen(): boolean {
+    return this.list !== null;
+  }
+
+  /* ---------- Écran de préparation (GDD §9.3, §13.4) ---------- */
+
+  private prepParts: Phaser.GameObjects.GameObject[] = [];
+  private prepRoster: ScrollList | null = null;
+  private prepMenu: VerticalMenu | null = null;
+  private prepFocus: 'roster' | 'menu' = 'roster';
+  private prepCallbacks: PrepCallbacks | null = null;
+  private prepView: PrepView | null = null;
+  private prepFrames: { roster: Phaser.GameObjects.Rectangle; menu: Phaser.GameObjects.Rectangle } | null = null;
+  /** Rectangles des panneaux de préparation (un clic dessus n'est pas un clic sur la carte). */
+  private prepRects: { x: number; y: number; w: number; h: number }[] = [];
+
+  get prepOpen(): boolean {
+    return this.prepView !== null;
+  }
+
+  openPrep(view: PrepView, callbacks: PrepCallbacks): void {
+    this.run(() => {
+      this.prepCallbacks = callbacks;
+      this.prepFocus = 'roster';
+      this.drawPrep(view, true);
+    });
+  }
+
+  updatePrep(view: PrepView): void {
+    this.run(() => this.drawPrep(view, false));
+  }
+
+  closePrep(): void {
+    this.run(() => {
+      this.prepRoster?.destroy();
+      this.prepRoster = null;
+      this.prepMenu?.destroy();
+      this.prepMenu = null;
+      this.clear(this.prepParts);
+      this.prepView = null;
+      this.prepCallbacks = null;
+      this.prepFrames = null;
+      this.prepRects = [];
+    });
+  }
+
+  /** La touche Entrée / les flèches vont à la carte (placement au clavier) : le panneau ne réagit plus. */
+  setPrepPaused(paused: boolean): void {
+    this.run(() => {
+      this.prepPaused = paused;
+      this.prepRoster?.setLocked(paused);
+      this.prepMenu?.setLocked(paused);
+    });
+  }
+
+  private prepPaused = false;
+
+  private drawPrep(view: PrepView, fresh: boolean): void {
+    const S = this.S;
+    const { width, height } = this.scale;
+    const cb = this.prepCallbacks;
+    if (!cb) return;
+    const cursor = view.cursor;
+    const menuIndex = fresh ? 0 : (this.prepMenu?.selected ?? 0);
+    this.prepRoster?.destroy();
+    this.prepRoster = null;
+    this.prepMenu?.destroy();
+    this.prepMenu = null;
+    this.clear(this.prepParts);
+    this.prepView = view;
+    this.prepRects = [];
+    const parts = this.prepParts;
+    const top = (TOP_BAR + 6) * S;
+    const colW = 236 * S;
+
+    // Colonne de gauche : la compagnie.
+    const lx = 6 * S;
+    const rowH = 22 * S;
+    const rosterRows = Math.min(view.roster.length, 12);
+    const rosterH = (34 + rosterRows * 22 + 6) * S;
+    parts.push(drawPanel(this, lx, top, colW, rosterH, { scale: 2 * S, depth: DEPTH.prep }));
+    this.prepRects.push({ x: lx, y: top, w: colW, h: rosterH });
+    parts.push(addText(this, lx + 10 * S, top + 7 * S, 'Compagnie', { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 1));
+    parts.push(addText(this, lx + colW - 10 * S, top + 7 * S, `${view.deployed}/${view.maxDeploy} déployés`, { scale: S, color: view.deployed >= view.maxDeploy ? PALETTE.lumiereDoree : PALETTE.parchemin, align: 'right' }).setDepth(DEPTH.prep + 1));
+    const rosterFrame = this.add.rectangle(lx + 3 * S, top + 29 * S, colW - 6 * S, rosterRows * 22 * S + 6 * S, 0, 0).setOrigin(0, 0).setStrokeStyle(S, PALETTE.ambre, 0.8).setDepth(DEPTH.prep + 1);
+    parts.push(rosterFrame);
+    this.prepRoster = new ScrollList(this, lx + 6 * S, top + 32 * S, this.actions, {
+      width: colW - 12 * S,
+      rowHeight: rowH,
+      visibleRows: rosterRows,
+      depth: DEPTH.prep + 1,
+      scale: S,
+      onCursor: (i) => {
+        if (this.prepView && this.prepView.cursor !== i) cb.onCursor(i);
+      },
+      onActivate: (i) => cb.onToggle(i),
+    });
+    this.prepRoster.reset(view.roster, cursor);
+
+    // Sous la compagnie : la fiche du membre choisi.
+    const unit = view.unit;
+    if (unit) {
+      const fy = top + rosterH + 6 * S;
+      const extra = view.extra;
+      const lines: [string, number][] = [];
+      const range = unit.weapon.range[0] === unit.weapon.range[1] ? `${unit.weapon.range[0]}` : `${unit.weapon.range[0]}-${unit.weapon.range[1]}`;
+      lines.push([`${unit.weapon.name} · portée ${range}`, PALETTE.ocreClair]);
+      lines.push([`Accessoire : ${extra?.accessory ?? '—'}`, PALETTE.parchemin]);
+      lines.push([`Objets : ${extra && extra.items.length > 0 ? extra.items.join(', ') : '—'}`, PALETTE.parchemin]);
+      if (extra?.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}`, PALETTE.lumiereDoree]);
+      const fh = Math.min(height - (BOTTOM_BAR + 6) * S - fy, (52 + lines.length * 16) * S);
+      parts.push(drawPanel(this, lx, fy, colW, fh, { scale: 2 * S, depth: DEPTH.prep }));
+      this.prepRects.push({ x: lx, y: fy, w: colW, h: fh });
+      parts.push(this.add.rectangle(lx + 8 * S, fy + 8 * S, 30 * S, 36 * S, TEAM_COLOR.player, 0.22).setOrigin(0, 0).setDepth(DEPTH.prep + 1));
+      parts.push(this.add.image(lx + 23 * S, fy + 44 * S, BATTLE_TEX.ms(unit.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(S).setDepth(DEPTH.prep + 2));
+      parts.push(addText(this, lx + 46 * S, fy + 7 * S, `${unit.name}  Niv ${unit.level}`, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.prep + 2));
+      parts.push(addText(this, lx + 46 * S, fy + 23 * S, `${unit.kindName} · PV ${unit.stats.pv}`, { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 2));
+      lines.forEach(([t, c], i) => parts.push(addText(this, lx + 10 * S, fy + (50 + i * 16) * S, t, { scale: S, color: c, maxWidth: colW - 20 * S }).setDepth(DEPTH.prep + 2)));
+    }
+
+    // Colonne de droite : objectif, ennemis, renforts, puis les boutons.
+    const rx = width - colW - 6 * S;
+    const info: [string, number][] = [[view.objective, PALETTE.jauneBle], ...view.enemies.map((e) => [e.text, e.color] as [string, number]), ...view.warnings.map((w) => [w.text, w.color] as [string, number])];
+    if (view.locked) info.push(['Embuscade : positions imposées', PALETTE.braise]);
+    const infoH = (34 + info.length * 17 + 4) * S;
+    parts.push(drawPanel(this, rx, top, colW, infoH, { scale: 2 * S, depth: DEPTH.prep }));
+    this.prepRects.push({ x: rx, y: top, w: colW, h: infoH });
+    parts.push(addText(this, rx + 10 * S, top + 7 * S, 'Ennemis en vue', { scale: S, color: PALETTE.braise }).setDepth(DEPTH.prep + 1));
+    info.forEach(([t, c], i) => parts.push(addText(this, rx + 10 * S, top + (30 + i * 17) * S, t, { scale: S, color: c, maxWidth: colW - 20 * S }).setDepth(DEPTH.prep + 1)));
+
+    const items: MenuItem[] = [
+      { label: 'Combattre', onSelect: () => cb.onFight() },
+      { label: 'Formation Auto', enabled: !view.locked, onSelect: () => cb.onAuto() },
+      { label: 'Placer les unités', enabled: !view.locked, onSelect: () => cb.onPlace() },
+      { label: 'Équipement', enabled: view.unit !== null, onSelect: () => cb.onEquip() },
+      { label: 'Objets', enabled: view.unit !== null, onSelect: () => cb.onItems() },
+      ...(cb.onBack && view.canRetreat ? [{ label: 'Retour', onSelect: () => cb.onBack?.() }] : []),
+    ];
+    const lineH = 26 * S;
+    const my = top + infoH + 6 * S;
+    const mh = items.length * lineH + 14 * S;
+    parts.push(drawPanel(this, rx, my, colW, mh, { scale: 2 * S, depth: DEPTH.prep }));
+    this.prepRects.push({ x: rx, y: my, w: colW, h: mh });
+    const menuFrame = this.add.rectangle(rx + 3 * S, my + 3 * S, colW - 6 * S, mh - 6 * S, 0, 0).setOrigin(0, 0).setStrokeStyle(S, PALETTE.ambre, 0.8).setDepth(DEPTH.prep + 1);
+    parts.push(menuFrame);
+    this.prepMenu = new VerticalMenu(this, rx + 6 * S, my + 7 * S, items, this.actions, { width: colW - 12 * S, lineHeight: lineH, depth: DEPTH.prep + 1, scale: 2 * S, textScale: S });
+    this.prepMenu.selectIndex(menuIndex);
+    this.prepFrames = { roster: rosterFrame, menu: menuFrame };
+    if (view.message) parts.push(addText(this, width / 2, height - (BOTTOM_BAR + 22) * S, view.message, { scale: S, color: PALETTE.braise, align: 'center' }).setDepth(DEPTH.prep + 2));
+    this.refreshPrepFocus();
+    this.prepRoster.setLocked(this.prepPaused);
+    this.prepMenu.setLocked(this.prepPaused);
+  }
+
+  private refreshPrepFocus(): void {
+    if (!this.prepFrames) return;
+    this.prepFrames.roster.setVisible(this.prepFocus === 'roster');
+    this.prepFrames.menu.setVisible(this.prepFocus === 'menu');
+  }
+
+  /** Un clic sur un panneau de préparation n'est pas un clic sur la carte. */
+  isOverPrep(x: number, y: number): boolean {
+    return this.prepRects.some((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+  }
+
+  private updatePrepInput(): void {
+    if (this.prepPaused || !this.prepView) return;
+    if (this.actions.justPressed('left') && this.prepFocus === 'menu') {
+      this.prepFocus = 'roster';
+      this.refreshPrepFocus();
+      return;
+    }
+    if (this.actions.justPressed('right') && this.prepFocus === 'roster') {
+      this.prepFocus = 'menu';
+      this.refreshPrepFocus();
+      return;
+    }
+    if (this.prepFocus === 'roster') this.prepRoster?.update();
+    else this.prepMenu?.update();
+  }
+
   /* ---------- Fin du combat (GDD §13.7) ---------- */
 
   /** `opensWorld` : la victoire lève des drapeaux dans une partie en cours (un passage s'ouvre). */
@@ -646,6 +1120,7 @@ export class BattleHudScene extends Phaser.Scene {
       ];
       if (victory) {
         lines.push(summary.fallen.length > 0 ? [`Blessés (1 PV, jusqu'au prochain repos) : ${summary.fallen.join(', ')}`, PALETTE.braise] : ['Aucun blessé', 0x7fcf6a]);
+        if (summary.alliesFallen.length > 0) lines.push([`Alliés tombés : ${summary.alliesFallen.join(', ')}`, ALLY_OUTLINE]);
         if (opensWorld && summary.flags.length > 0) lines.push(['Un passage s’ouvre dans le monde…', PALETTE.cyanEclat]);
         if (rewards.length > 0) lines.push([`Butin : ${rewards.join(' · ')}`, PALETTE.lumiereDoree]);
       } else {
@@ -653,6 +1128,7 @@ export class BattleHudScene extends Phaser.Scene {
         if (rewards.length > 0) lines.push([rewards.join(' · '), PALETTE.braise]);
         if (note) lines.push([note, PALETTE.metalClair]);
       }
+      if (summary.itemsUsed.length > 0) lines.push([`Objets utilisés : ${summary.itemsUsed.reduce((n, u) => n + u.qty, 0)}`, PALETTE.metalClair]);
       lines.forEach(([text, color], i) => {
         parts.push(addText(this, width / 2, y + 74 * S + i * 22 * S, text, { scale: S, color, align: 'center', maxWidth: w - 40 * S }).setDepth(DEPTH.result + 2));
       });

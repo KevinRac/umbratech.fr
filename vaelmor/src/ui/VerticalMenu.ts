@@ -134,6 +134,16 @@ export class VerticalMenu {
     setText(text, label);
   }
 
+  /** Entrée choisie. */
+  get selected(): number {
+    return this.index;
+  }
+
+  /** Place le curseur sur une entrée (si elle est active), sans la valider. */
+  selectIndex(i: number): void {
+    if (i >= 0 && i < this.items.length && this.isEnabled(i)) this.select(i);
+  }
+
   /** Bloque les entrées (pendant une transition). */
   setLocked(locked: boolean): void {
     this.locked = locked;

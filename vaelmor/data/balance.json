@@ -1,5 +1,5 @@
 {
-  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). Toute valeur de réglage passe par ce fichier. `economy` : or de départ, capacité du sac (lignes, GDD §13.2 : 40) et pile maximale ; `dialogue` : machine à écrire (GDD §13.3 : 30 caractères par seconde). `visuals` : effets HD-2D du monde ouvert (décision n°47).",
+  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). `prep` : écran de préparation (cases bleues en plus du déploiement maximal, objets portés par unité, sac du combat d'essai). `allies` : alliés verts (GDD §7.8 ; distances en cases). Toute valeur de réglage passe par ce fichier. `economy` : or de départ, capacité du sac (lignes, GDD §13.2 : 40) et pile maximale ; `dialogue` : machine à écrire (GDD §13.3 : 30 caractères par seconde). `visuals` : effets HD-2D du monde ouvert (décision n°47).",
   "exploration": {
     "tileSize": 16,
     "walkSpeed": 80,
@@ -95,6 +95,37 @@
   "injury": {
     "mobilityPenalty": 2,
     "statPenaltyRatio": 0.1
+  },
+  "prep": {
+    "extraSlots": 3,
+    "maxItems": 5,
+    "testItems": [
+      { "item": "potion", "qty": 4 },
+      { "item": "hyper_potion", "qty": 2 },
+      { "item": "antidote", "qty": 2 },
+      { "item": "eclat_de_lanterne", "qty": 1 },
+      { "item": "poudre_de_brume", "qty": 1 },
+      { "item": "torche", "qty": 2 },
+      { "item": "filet_de_peche", "qty": 1 },
+      { "item": "amulette_de_pierre", "qty": 1 },
+      { "item": "collier_d_ecume", "qty": 1 },
+      { "item": "hachette", "qty": 1 },
+      { "item": "lance_d_estoc", "qty": 1 }
+    ]
+  },
+  "allies": {
+    "guardRange": 10,
+    "guardCount": { "hostile": 0, "mefiant": 0, "neutre": 0, "amical": 1, "allie": 2, "heros_local": 2 },
+    "guardTurn": { "hostile": 2, "mefiant": 2, "neutre": 2, "amical": 2, "allie": 1, "heros_local": 1 },
+    "passerChance": { "hostile": 0, "mefiant": 0, "neutre": 0, "amical": 10, "allie": 20, "heros_local": 35 },
+    "passerTurns": [2, 3],
+    "errantJoinRange": 6,
+    "errantSightRange": 14,
+    "errantSightChance": 50,
+    "errantTurn": 2,
+    "errantSpeed": 38,
+    "errantPauseMs": 1800,
+    "leash": 4
   },
   "visuals": {
     "tiltShift": { "focus": 0.7, "fade": 0.14, "blur": 1 },

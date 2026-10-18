@@ -218,17 +218,17 @@ describe('phases, victoire et défaite', () => {
     const s = makeBattle(plains(6, 2), [{ class: 'lame_du_serment', at: [0, 0] }], [{ enemy: 'ecumeur_sabreur', at: [5, 1] }]);
     waitUnit(s, 'p0');
     expect(phaseComplete(s)).toBe(true);
-    expect(endPhase(s)[0]).toMatchObject({ type: 'phase', team: 'enemy', turn: 1 });
+    expect(endPhase(s, R)[0]).toMatchObject({ type: 'phase', team: 'enemy', turn: 1 });
     expect(readyUnits(s).map((u) => u.id)).toEqual(['e0']);
     waitUnit(s, 'e0');
-    expect(endPhase(s)[0]).toMatchObject({ type: 'phase', team: 'player', turn: 2 });
+    expect(endPhase(s, R)[0]).toMatchObject({ type: 'phase', team: 'player', turn: 2 });
     expect(unit(s, 'p0')).toMatchObject({ acted: false, moved: false });
   });
 
   it('avantage de position : la première phase ennemie est sautée', () => {
     const s = makeBattle(plains(6, 2), [{ class: 'lame_du_serment', at: [0, 0] }], [{ enemy: 'ecumeur_sabreur', at: [5, 1] }], { initiative: true });
     waitUnit(s, 'p0');
-    const events = endPhase(s);
+    const events = endPhase(s, R);
     expect(events.filter((e) => e.type === 'phase')).toEqual([
       { type: 'phase', team: 'enemy', turn: 1, skipped: true },
       { type: 'phase', team: 'player', turn: 2, skipped: false },
@@ -241,9 +241,9 @@ describe('phases, victoire et défaite', () => {
     const gardien = unit(s, 'p0');
     gardien.hp = 10;
     waitUnit(s, 'p0');
-    endPhase(s);
+    endPhase(s, R);
     waitUnit(s, 'e0');
-    const events = endPhase(s);
+    const events = endPhase(s, R);
     expect(events).toContainEqual({ type: 'heal', unitId: 'p0', amount: Math.floor(24 * 0.2) });
     expect(gardien.hp).toBe(10 + 4);
   });
@@ -253,15 +253,15 @@ describe('phases, victoire et défaite', () => {
     const lame = unit(s, 'p0');
     moveUnit(s, 'p0', { x: 1, y: 0 });
     waitUnit(s, 'p0');
-    endPhase(s);
+    endPhase(s, R);
     waitUnit(s, 'e0');
-    endPhase(s);
+    endPhase(s, R);
     expect(mobility(lame)).toBe(4);
     moveUnit(s, 'p0', { x: 2, y: 0 });
     waitUnit(s, 'p0');
-    endPhase(s);
+    endPhase(s, R);
     waitUnit(s, 'e0');
-    endPhase(s);
+    endPhase(s, R);
     expect(mobility(lame)).toBe(5);
   });
 
@@ -285,9 +285,9 @@ describe('phases, victoire et défaite', () => {
     let events = attackUnit(s, 'p0', 'e0', R);
     // Le harpon peut manquer : on recommence jusqu'au coup au but, tour après tour.
     while (s.outcome === 'ongoing') {
-      endPhase(s);
+      endPhase(s, R);
       for (const e of readyUnits(s)) waitUnit(s, e.id);
-      endPhase(s);
+      endPhase(s, R);
       events = attackUnit(s, 'p0', 'e0', R);
     }
     expect(events.at(-1)).toEqual({ type: 'outcome', outcome: 'victory' });
@@ -341,7 +341,7 @@ function autoPlay(state: BattleState, maxTurns = 60): void {
       if (plan.targetId) attackUnit(state, u.id, plan.targetId, r);
       else waitUnit(state, u.id);
     }
-    endPhase(state);
+    endPhase(state, r);
   }
 }
 

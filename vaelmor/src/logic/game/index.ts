@@ -6,3 +6,4 @@ export * from './progress';
 export * from './quests';
 export * from './shop';
 export * from './foeRules';
+export * from './allyRules';

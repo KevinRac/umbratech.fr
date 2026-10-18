@@ -4,8 +4,10 @@
  * matière, contour coloré, lumière en haut à gauche), avec l'équipement qui
  * dit la classe au premier coup d'œil et la **couleur du camp** sur la cape,
  * les manches, la coiffe et le champ du bouclier : bleu ardoise pour la
- * compagnie, rouge cendre pour l'ennemi. Le reste des couleurs (tunique,
- * cheveux, écharpe) appartient à la classe.
+ * compagnie, rouge cendre pour l'ennemi, vert mousse pour les alliés verts
+ * (jalon M5, GDD §7.8), qui portent en plus un **liseré vert** autour de la
+ * silhouette (jamais confondu avec le vert plein des cases de soin). Le reste
+ * des couleurs (tunique, cheveux, écharpe) appartient à la classe.
  *
  * Module sans DOM.
  */
@@ -14,7 +16,7 @@ import { HERO_LOOK } from './heroSprite';
 import { PALETTE as P, mixColor } from './palette';
 import type { PixelSink } from './waterTile';
 
-export type UnitTeam = 'player' | 'enemy';
+export type UnitTeam = 'player' | 'ally' | 'enemy';
 
 export const UNIT_W = GEAR_W;
 export const UNIT_H = GEAR_H;
@@ -36,7 +38,15 @@ export type UnitFrameKind = 'idle' | 'ready' | CharPose;
 export const TEAM_TOP: Readonly<Record<UnitTeam, Ramp3>> = {
   player: ramp3(mixColor(P.bleuGris, mixColor(P.ciel, P.bleuNuit, 0.55), 0.45), P.ombreProfonde, mixColor(P.ciel, P.lumiereChaude, 0.35)),
   enemy: ramp3(mixColor(P.rougeCendre, P.brique, 0.2), P.ombreViolette, P.orangeForge),
+  ally: ramp3(mixColor(P.mousse, P.vertProfond, 0.25), P.ombreProfonde, mixColor(P.vertDore, P.lumiereChaude, 0.25)),
 };
+
+/**
+ * Liseré des alliés verts : un vert menthe clair tiré de la palette (vert doré
+ * mêlé d'éclat cyan), d'un pixel d'art autour de la silhouette. Les cases de
+ * soin sont d'un vert-jaune plein : les deux ne se confondent pas.
+ */
+export const ALLY_OUTLINE = mixColor(P.vertDore, P.cyanEclat, 0.45);
 
 const r = (base: number): Ramp3 => ramp3(base);
 const SKIN = ramp3(mixColor(P.sable, P.orangeForge, 0.2), P.rougeCendre, P.parchemin, 0.9);
@@ -239,6 +249,45 @@ export function unitSpriteSpec(sprite: string): UnitSpriteSpec {
  * la rangée UNIT_H − 2, le contour sur la dernière.
  */
 export function paintUnitSprite(sink: PixelSink, ox: number, oy: number, sprite: string, team: UnitTeam, kind: UnitFrameKind, frame: number): void {
+  if (team === 'ally') {
+    paintOutlined(sink, ox, oy, UNIT_W, UNIT_H, ALLY_OUTLINE, (inner) => paintTeamFrame(inner, sprite, team, kind, frame));
+    return;
+  }
+  paintTeamFrame({ set: (x, y, c, a) => sink.set(ox + x, oy + y, c, a) }, sprite, team, kind, frame);
+}
+
+/**
+ * Peint une image de `w` × `h` dans un tampon (coordonnées relatives), puis la
+ * recopie au coin (ox, oy) avec un liseré d'un pixel de `outline` autour des
+ * pixels pleins (alliés verts, en combat comme dans le monde).
+ */
+export function paintOutlined(sink: PixelSink, ox: number, oy: number, w: number, h: number, outline: number, paint: (inner: PixelSink) => void): void {
+  const color = new Int32Array(w * h).fill(-1);
+  const alpha = new Uint8Array(w * h);
+  paint({
+    set: (x, y, c, a = 255) => {
+      const ix = Math.floor(x);
+      const iy = Math.floor(y);
+      if (ix < 0 || iy < 0 || ix >= w || iy >= h) return;
+      color[iy * w + ix] = c;
+      alpha[iy * w + ix] = a;
+    },
+  });
+  const solid = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && (alpha[y * w + x] ?? 0) >= 200;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const c = color[i] as number;
+      if (solid(x, y)) sink.set(ox + x, oy + y, c, alpha[i]);
+      else if (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1)) sink.set(ox + x, oy + y, outline, 255);
+      else if (c >= 0) sink.set(ox + x, oy + y, c, alpha[i]);
+    }
+  }
+}
+
+function paintTeamFrame(sink: PixelSink, sprite: string, team: UnitTeam, kind: UnitFrameKind, frame: number): void {
+  const ox = 0;
+  const oy = 0;
   const spec = unitSpriteSpec(sprite);
   const lookForTeam: CharacterLook = { ...spec.look, top: TEAM_TOP[team] };
   if (kind === 'ready') {

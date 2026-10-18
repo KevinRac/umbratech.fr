@@ -18,9 +18,25 @@
  * Triangle (décision n°51) : il ne joue que si l'arme porte un élément (armes
  * magiques). Il compare l'élément de l'arme à l'élément de la cible (celui de
  * sa classe) : Marée > Cendre > Racine > Marée. Pierre et Lanterne sont neutres.
+ *
+ * Statuts (jalon M5) : Rempart retire des dégâts physiques, Harponné multiplie
+ * les dégâts reçus, Voile de brume ajoute de l'esquive. Une compétence de
+ * frappe modifie le coup (`StrikeMods`) : touche garantie, dégâts ×, Déf
+ * ignorée, bonus contre une armure, pas de riposte.
  */
 import { distance, terrainAt } from '../tactics/grid';
+import { avoidBonusOf, damageTakenOf, guardOf } from '../tactics/status';
 import type { BattleRules, BattleState, BattleUnit, Cell, Strike } from '../tactics/types';
+
+/** Modificateurs d'une frappe de compétence (skills.json, effet « frappe »). */
+export interface StrikeMods {
+  readonly sureHit?: boolean;
+  readonly damageMult?: number;
+  readonly ignoreDef?: number;
+  readonly bonusVs?: readonly string[];
+  readonly bonusMult?: number;
+  readonly noCounter?: boolean;
+}
 
 /** +1 avantage, −1 désavantage, 0 neutre. */
 export type TriangleEdge = -1 | 0 | 1;
@@ -52,21 +68,25 @@ export interface StrikeOdds {
 }
 
 /** Chiffres d'un coup de `attacker` sur `target` posée sur la case `targetAt` (son terrain la protège). */
-export function strikeOdds(state: BattleState, attacker: BattleUnit, target: BattleUnit, targetAt: Cell, rules: BattleRules): StrikeOdds {
+export function strikeOdds(state: BattleState, attacker: BattleUnit, target: BattleUnit, targetAt: Cell, rules: BattleRules, mods: StrikeMods = {}): StrikeOdds {
   const c = rules.combat;
   const w = attacker.weapon;
   const terrain = terrainAt(state.map, targetAt.x, targetAt.y);
   const triangle = triangleEdge(w.element, target.element, rules);
   const physical = w.damage === 'physique';
   const power = (physical ? attacker.stats.fo : attacker.stats.mag) + w.power + triangle * c.elementAdvantage.damage;
-  const reduction = physical ? target.stats.def + terrain.defense : target.stats.res;
+  const reduction = physical ? Math.max(0, target.stats.def - (mods.ignoreDef ?? 0)) + terrain.defense : target.stats.res;
   const effective = isEffective(attacker, target);
   let damage = Math.max(0, power - reduction);
   if (effective) damage = Math.floor(damage * c.effectiveMultiplier);
+  if (mods.bonusVs?.includes(target.armor) && mods.bonusMult) damage = Math.floor(damage * mods.bonusMult);
+  if (mods.damageMult) damage = Math.floor(damage * mods.damageMult);
+  if (physical) damage = Math.max(0, damage - guardOf(target, rules));
+  damage = Math.floor(damage * damageTakenOf(target, rules));
 
   const accuracy = w.hit + attacker.stats.dex * 2 + Math.floor(attacker.stats.chc / 2) + triangle * c.elementAdvantage.hit;
-  const avoid = target.stats.vit * 2 + Math.floor(target.stats.chc / 2) + terrain.avoid;
-  const hit = clamp(accuracy - avoid, c.hitChanceMin, c.hitChanceMax);
+  const avoid = target.stats.vit * 2 + Math.floor(target.stats.chc / 2) + terrain.avoid + avoidBonusOf(target, rules);
+  const hit = mods.sureHit ? 100 : clamp(accuracy - avoid, c.hitChanceMin, c.hitChanceMax);
   const crit = clamp(w.crit + Math.floor(attacker.stats.dex / 2) - target.stats.chc, 0, 100);
   return { damage, hit, crit, triangle, effective };
 }
@@ -93,14 +113,14 @@ export interface Forecast {
 }
 
 /** Prévision de l'échange si `attacker` frappe `defender` depuis la case `from` (sa case actuelle par défaut). */
-export function forecast(state: BattleState, attacker: BattleUnit, defender: BattleUnit, rules: BattleRules, from: Cell = attacker): Forecast {
+export function forecast(state: BattleState, attacker: BattleUnit, defender: BattleUnit, rules: BattleRules, from: Cell = attacker, mods: StrikeMods = {}): Forecast {
   const d = distance(from, defender);
-  const counter = d >= defender.weapon.range[0] && d <= defender.weapon.range[1];
+  const counter = mods.noCounter !== true && d >= defender.weapon.range[0] && d <= defender.weapon.range[1];
   return {
     attacker: {
       unitId: attacker.id,
       canStrike: true,
-      odds: strikeOdds(state, attacker, defender, defender, rules),
+      odds: strikeOdds(state, attacker, defender, defender, rules, mods),
       doubles: doubles(attacker, defender, rules),
       hp: attacker.hp,
       maxHp: attacker.stats.pv,
@@ -120,8 +140,8 @@ export function forecast(state: BattleState, attacker: BattleUnit, defender: Bat
  * Joue l'échange : modifie les PV et la Résonance des deux unités, tire les
  * dés dans le `Rng` de l'état. Les deux unités sont réveillées (profil défensif).
  */
-export function resolveExchange(state: BattleState, attacker: BattleUnit, defender: BattleUnit, rules: BattleRules): Strike[] {
-  const f = forecast(state, attacker, defender, rules);
+export function resolveExchange(state: BattleState, attacker: BattleUnit, defender: BattleUnit, rules: BattleRules, mods: StrikeMods = {}): Strike[] {
+  const f = forecast(state, attacker, defender, rules, attacker, mods);
   const order: [BattleUnit, BattleUnit, SideForecast, boolean][] = [[attacker, defender, f.attacker, false]];
   if (f.defender.canStrike) order.push([defender, attacker, f.defender, true]);
   if (f.attacker.doubles) order.push([attacker, defender, f.attacker, false]);

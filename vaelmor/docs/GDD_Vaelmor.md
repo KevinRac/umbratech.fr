@@ -549,7 +549,17 @@ Au-dessus de l'ennemi (visible à l'approche, ~10 tuiles) : icône de crâne + c
 ### 7.7 Réapparition
 
 | Type | Règle |
-|### 7.8 Alliés verts (spécification pour M5)
+|---|---|
+| Fixe de camp | **Ne réapparaît pas** une fois le camp nettoyé (persistant). |
+| Patrouille | Réapparaît après un **repos à l'auberge** (équivaut à un « jour »). |
+| Aléatoire | Réapparaît après 10 minutes de jeu ou changement de zone. |
+| Embuscade | Une seule fois par emplacement. |
+| Boss de zone | **Jamais** (défaite → état sauvegardé). |
+| Liés à quête | Dépend du script. |
+
+### 7.8 Alliés verts
+
+> **Réalisé en M5 (18/10/2026, décisions n°85 à n°104 — détail dans PROGRESS.md).** Les trois sources existent ; données dans `data/allies.json` (modèles, gardes et alliés de passage par village, alliés errants avec leur trajet) plutôt que dans `worldEnemies.json` (n°102) ; la défaite d'un allié ne compte pas, un errant tombé est « Blessé » jusqu'au prochain repos (le repos arrive avec M9).
 
 Les alliés rejoignent un combat en **renforts verts** (liseré et teinte verts, jamais confondus avec le bleu de la compagnie ni le rouge des ennemis). **Règle absolue : ils sont toujours gérés par une IA** ; le joueur ne les commande jamais. Ils ne comptent ni dans le déploiement ni dans la condition de défaite, mais gagnent de l'XP s'ils frappent (réservé à M6).
 
@@ -562,14 +572,6 @@ Les alliés rejoignent un combat en **renforts verts** (liseré et teinte verts,
 **IA des alliés** (logique pure, mêmes règles que l'IA ennemie, `src/logic/tactics`) : priorité 1 protéger le héros et les blessés, 2 attaquer l'ennemi le plus menaçant à portée, 3 s'avancer vers l'ennemi le plus proche sans quitter la compagnie de plus de 4 cases. Phase propre « Phase alliée » jouée entre le joueur et l'ennemi.
 
 **Données** : `data/allies.json` (modèles d'alliés : classe, niveau selon zone, apparence, dialogues) et, dans `data/worldEnemies.json`, de nouveaux types `allie_errant` (trajet long, `roam` large) ; chances de renfort dans `balance.json › allies`. Tout est tirable au sort avec une graine pour des tests reproductibles.
-
----|---|
-| Fixe de camp | **Ne réapparaît pas** une fois le camp nettoyé (persistant). |
-| Patrouille | Réapparaît après un **repos à l'auberge** (équivaut à un « jour »). |
-| Aléatoire | Réapparaît après 10 minutes de jeu ou changement de zone. |
-| Embuscade | Une seule fois par emplacement. |
-| Boss de zone | **Jamais** (défaite → état sauvegardé). |
-| Liés à quête | Dépend du script. |
 
 ---
 
@@ -598,6 +600,8 @@ Les alliés rejoignent un combat en **renforts verts** (liseré et teinte verts,
 ## 9. Combat tactique
 
 > **Mise à jour du 17/10/2026 (jalon M4, décisions n°51 à n°56 — détail dans PROGRESS.md).** Réalisé : grille, déplacement (coûts du terrain, alliés traversables, ennemis bloquants), attaques, ripostes, doubles, critiques, triangle élémentaire, armes efficaces, Résonance (jauge seulement), phases joueur / ennemie, avantage de position, soin des villages, enlisement, victoire « rout » / « boss », défaite (héros ou compagnie), IA à score (agressif, opportuniste, défensif, chasseur de héros, boss), prévision de combat, zones de menace, animations de coups sur la carte. Précisions de règles : le triangle ne joue que pour une arme porteuse d'un élément (armes magiques), contre l'élément de la classe ou de l'ennemi visé (n°51) ; la défense du terrain ne réduit que les dégâts physiques (formule §9.7) ; les cartes de combat sont écrites en texte dans `data/encounters.json` (n°53). **Mise à jour du 17/10/2026 (n°57, n°58)** : les rencontres ordinaires se jouent sur le terrain réel du monde autour du point de contact (fenêtre de 30×20 cases, bâtiments, portes visitables, placement automatique) ; présentation (zoom ×2, carte qui défile, fenêtres flottantes, couleurs de camp). **Charte graphique (n°59, n°60)** : le champ de bataille est l'art du monde ouvert avec son atmosphère HD-2D (sans flou de profondeur), le terrain suit ce qui est dessiné (portes réelles, obstacles) ; les unités utilisent le gabarit commun 16×28 avec un équipement de classe (coiffe, arme, bouclier) et la couleur du camp. Restent pour M5 et après : écran de préparation, objets, compétences, boss à 2 phases, renforts, XP (M6), cinématiques de combat (M8), sauvegarde (M9).
+
+> **Mise à jour du 18/10/2026 (jalon M5, décisions n°85 à n°104 — détail dans PROGRESS.md).** Réalisé : écran de préparation (§9.3 : cases bleues = déploiement max + 3, formation Auto, équipement, accessoire, 5 objets, aperçu des ennemis, objectif, renforts annoncés), objets en combat (§9.8), les 12 compétences signature payées en Résonance ou en ressource de classe (§9.9), statuts, boss à 2 phases pour les 5 boss de zone et renforts aux tours 3 et 6 (§9.11), IA à score avec le profil soutien (§9.15), alliés verts et phase alliée (§7.8). Restent : passives des niveaux 5 et 15 (proposées, n°93) et mécaniques de classe (Serment, hauteur, Saisons, Fil d'eau, Fanfare, n°92) avec M6 ; commande « Échanger » différée.
 
 ### 9.1 Transition monde → combat
 

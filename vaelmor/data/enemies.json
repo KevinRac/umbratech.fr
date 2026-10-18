@@ -305,6 +305,32 @@
       "ai": "defensif",
       "baseStats": {"pv": 39, "fo": 12, "mag": 0, "dex": 8, "vit": 7, "def": 10, "res": 5, "chc": 1, "mob": 4},
       "growths": {"pv": 80, "fo": 40, "mag": 0, "dex": 35, "vit": 20, "def": 45, "res": 10, "chc": 15}
+    },
+    {
+      "id": "rebouteuse",
+      "name": "Rebouteuse",
+      "title": "Rebouteuse des Écumeurs",
+      "family": "ecumeurs",
+      "sprite": "porte_lanterne",
+      "weapon": "baton_noueux",
+      "element": null,
+      "armor": "legere",
+      "ai": "soutien",
+      "baseStats": {"pv": 15, "fo": 0, "mag": 4, "dex": 4, "vit": 4, "def": 1, "res": 4, "chc": 3, "mob": 5},
+      "growths": {"pv": 55, "fo": 0, "mag": 45, "dex": 35, "vit": 35, "def": 10, "res": 40, "chc": 30}
+    },
+    {
+      "id": "golem_de_pierre",
+      "name": "Golem de pierre",
+      "title": "Invocation",
+      "family": "invocation",
+      "sprite": "golem_de_cendre",
+      "weapon": "poing_de_menhir",
+      "element": "pierre",
+      "armor": "lourde",
+      "ai": "defensif",
+      "baseStats": {"pv": 20, "fo": 5, "mag": 0, "dex": 3, "vit": 2, "def": 8, "res": 2, "chc": 0, "mob": 3},
+      "growths": {"pv": 0, "fo": 0, "mag": 0, "dex": 0, "vit": 0, "def": 0, "res": 0, "chc": 0}
     }
   ]
 }

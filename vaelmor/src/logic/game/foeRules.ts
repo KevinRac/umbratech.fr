@@ -7,7 +7,9 @@ import type { EncounterDef, FoesBalance, PartyMemberDef, WorldFoeDef } from '../
 import type { GameData } from '../../data/validate';
 import { Rng } from '../rng';
 import { tierAt, type GameCtx, type Notice } from './context';
+import { woundErrants } from './allyRules';
 import { giveGold, giveItem } from './effects';
+import { countItem, removeItem } from './progress';
 
 export type BattleEnd = 'victory' | 'defeat' | 'retreat';
 
@@ -113,6 +115,10 @@ export interface BattleReport {
   readonly bossDown: boolean;
   /** Graine du hasard (butin). */
   readonly seed: string;
+  /** Objets consommés pendant le combat (jalon M5) : retirés du sac, quelle que soit l'issue. */
+  readonly itemsUsed?: readonly { readonly item: string; readonly qty: number }[];
+  /** Alliés errants tombés : blessés jusqu'au prochain repos. */
+  readonly errantsFallen?: readonly string[];
 }
 
 export interface Settlement {
@@ -131,6 +137,9 @@ export interface Settlement {
 export function settleBattle(ctx: GameCtx, report: BattleReport): Settlement {
   const { progress, data } = ctx;
   const notices: Notice[] = [];
+  // Ce qui a été bu ou lancé est perdu, même en cas de retraite ou de défaite.
+  for (const used of report.itemsUsed ?? []) removeItem(progress, used.item, Math.min(used.qty, countItem(progress, used.item)));
+  woundErrants(progress, report.errantsFallen ?? []);
   if (report.end === 'retreat') return { notices, wakeAt: null, goldWon: 0, goldLost: 0 };
 
   if (report.end === 'defeat') {

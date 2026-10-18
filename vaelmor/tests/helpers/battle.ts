@@ -7,6 +7,7 @@
 import { loadGameData } from '../../src/data';
 import type { EncounterDef, PartyMemberDef } from '../../src/data/schemas';
 import { battleRules, buildBattle } from '../../src/logic/tactics/encounter';
+import { allyUnit, emptyLoadout, type Loadout } from '../../src/logic/tactics/units';
 import { getUnit } from '../../src/logic/tactics/grid';
 import type { BattleRules, BattleState, BattleUnit } from '../../src/logic/tactics/types';
 
@@ -16,6 +17,14 @@ export interface TestAlly {
   readonly at: readonly [number, number];
   readonly hero?: boolean;
   readonly name?: string;
+}
+
+/** Allié vert posé à la main (camp « ally », mené par l'IA). */
+export interface TestGreen {
+  readonly class: string;
+  readonly level?: number;
+  readonly at: readonly [number, number];
+  readonly sprite?: string;
 }
 
 export interface TestEnemy {
@@ -35,7 +44,7 @@ export function makeBattle(
   map: readonly string[],
   allies: readonly TestAlly[],
   enemies: readonly TestEnemy[],
-  options: { objective?: 'rout' | 'boss'; seed?: string; initiative?: boolean } = {},
+  options: { objective?: 'rout' | 'boss'; seed?: string; initiative?: boolean; greens?: readonly TestGreen[]; loadouts?: readonly Loadout[] } = {},
 ): BattleState {
   const hasHero = allies.some((a) => a.hero);
   const party: PartyMemberDef[] = allies.map((a, i) => ({
@@ -56,7 +65,8 @@ export function makeBattle(
     enemies: enemies.map((e) => ({ enemy: e.enemy, level: e.level ?? 1, x: e.at[0], y: e.at[1], ...(e.boss ? { boss: true } : {}), ...(e.ai ? { ai: e.ai } : {}) })),
     victoryFlags: options.objective === 'boss' ? ['boss_test'] : [],
   };
-  const state = buildBattle(encounter, party, loadGameData(), { seed: options.seed ?? 'test', initiative: options.initiative ?? false });
+  const data = loadGameData();
+  const state = buildBattle(encounter, party, data, { seed: options.seed ?? 'test', initiative: options.initiative ?? false, loadouts: options.loadouts ?? party.map(() => emptyLoadout()) });
   // Le constructeur trie le héros en tête : on retrouve chaque allié par son nom pour le poser.
   const players = state.units.filter((u) => u.team === 'player');
   allies.forEach((a, i) => {
@@ -65,6 +75,15 @@ export function makeBattle(
   });
   // Identifiants stables dans l'ordre donné par le test.
   allies.forEach((_, i) => Object.assign(players.find((u) => u.name === party[i]?.name) as BattleUnit, { id: `p${i}` }));
+  // Alliés verts : g0, g1… dans l'ordre donné.
+  const r = battleRules(data);
+  (options.greens ?? []).forEach((g, i) => {
+    const template = { id: `test_${i}`, name: `Vert ${i}`, class: g.class, sprite: g.sprite ?? g.class, levelOffset: 0 };
+    const u = allyUnit(data, r, template, g.level ?? 1, 'passage', null, `g${i}`);
+    u.x = g.at[0];
+    u.y = g.at[1];
+    state.units.push(u);
+  });
   return state;
 }
 

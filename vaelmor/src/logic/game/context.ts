@@ -16,6 +16,12 @@ export interface TownIndex {
   readonly catalog: ReadonlyMap<string, ItemInfo>;
 }
 
+/**
+ * Lieu fictif des alliés errants (jalon M5) : ils parlent comme des PNJ (même
+ * format de dialogue) mais n'appartiennent à aucun village (réputation neutre).
+ */
+export const ROADS_LOCATION_ID = 'routes';
+
 export function buildTownIndex(data: GameData): TownIndex {
   const npcs = new Map<string, { npc: NpcDef; location: LocationDef }>();
   const shops = new Map<string, { shop: ShopDef; location: LocationDef }>();
@@ -23,6 +29,8 @@ export function buildTownIndex(data: GameData): TownIndex {
     for (const npc of location.npcs) npcs.set(npc.id, { npc, location });
     for (const shop of location.shops) shops.set(shop.id, { shop, location });
   }
+  const roads: LocationDef = { id: ROADS_LOCATION_ID, name: 'Sur les routes', summary: 'Alliés errants qui parcourent l’île.', reputation: null, npcs: [...data.wanderers], shops: [], rewards: [] };
+  for (const npc of data.wanderers) npcs.set(npc.id, { npc, location: roads });
   return {
     locations: new Map(data.locations.map((l) => [l.id, l])),
     npcs,

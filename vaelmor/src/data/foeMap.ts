@@ -55,3 +55,29 @@ export function checkFoesOnMap(data: GameData, map: WorldMap): string[] {
   }
   return issues;
 }
+
+/**
+ * Alliés errants (jalon M5) : chaque étape de leur route est une case praticable
+ * de la carte, et toute la route reste dans une seule zone (les passages
+ * verrouillés entre zones ne les arrêtent donc jamais). La connexité des étapes
+ * est vérifiée par les tests, qui disposent de la recherche de chemin.
+ */
+export function checkAlliesOnMap(data: GameData, map: WorldMap): string[] {
+  const issues: string[] = [];
+  for (const w of data.wanderers) {
+    let zone: number | null = null;
+    w.route.forEach(([x, y], i) => {
+      const at = `allies.json › errant « ${w.id} ».route[${i}] (${x},${y})`;
+      if (x >= map.width || y >= map.height) {
+        issues.push(`${at} : hors de la carte`);
+        return;
+      }
+      const value = map.collision[y * map.width + x];
+      if (value !== COLLISION.free && value !== COLLISION.slow) issues.push(`${at} : case non praticable`);
+      const z = map.zones[y * map.width + x] as number;
+      if (zone === null) zone = z;
+      else if (z !== zone) issues.push(`${at} : la route d'un errant reste dans une seule zone`);
+    });
+  }
+  return issues;
+}

@@ -25,7 +25,10 @@ import { DEFAULT_WANDER, Wanderer } from '../logic/game/wander';
 import { Rng } from '../logic/rng';
 import { getGameCtx } from '../core/townContext';
 import {
+  ROADS_LOCATION_ID,
   chooseEncounter,
+  errantPresent,
+  planAllies,
   classDetectionScale,
   collectFlagRewards,
   difficultyOf,
@@ -45,7 +48,11 @@ import {
   type BattleEnd,
   type GameCtx,
   type Notice,
+  type VillageArea,
 } from '../logic/game';
+import { createWalker, updateWalker, walkerCell, type WalkerSim } from '../logic/world/allyWalkers';
+import { ALLY_OUTLINE } from '../render/unitSprites';
+import type { AllyJoin } from '../logic/tactics/encounter';
 import { findEncounter } from '../logic/tactics/encounter';
 import { FoeActor } from '../render/foeActors';
 import { ensureFoeTextures } from '../render/foeTextures';
@@ -107,6 +114,16 @@ interface NpcActor {
   readonly spark: Phaser.GameObjects.Image;
   readonly phase: number;
   facing: NpcDef['facing'];
+}
+
+/** Un allié errant posé dans le monde (jalon M5, GDD §7.8). */
+interface WandererActor {
+  readonly sim: WalkerSim;
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly shadow: Phaser.GameObjects.Image;
+  /** Halo vert sous ses pieds : « silhouette verte, sans crâne ». */
+  readonly glow: Phaser.GameObjects.Image;
+  readonly phase: number;
 }
 
 /** Ce que le combat qui vient de finir laisse derrière lui (jalon M3). */
@@ -198,6 +215,9 @@ export class WorldScene extends Phaser.Scene {
   private classScale = 1;
   private partyLvl = 3;
   private nearFoe: FoeSim | null = null;
+  /* Alliés errants (jalon M5) */
+  private wanderers = new Map<string, WandererActor>();
+  private nearWanderer: WandererActor | null = null;
   private presenceTimer = 0;
   private foesDebugOff = false;
 
@@ -217,6 +237,8 @@ export class WorldScene extends Phaser.Scene {
     this.lastRepKey = '';
     this.foeActors = new Map();
     this.nearFoe = null;
+    this.wanderers = new Map();
+    this.nearWanderer = null;
     this.presenceTimer = 0;
     if (data.newGame) this.registry.set('world.atApplied', false);
     this.view = worldView(this, worldZoomFor(this.scale.height));
@@ -260,6 +282,7 @@ export class WorldScene extends Phaser.Scene {
     this.buildAmbientDecor();
     this.buildHero();
     this.buildNpcs();
+    this.buildWanderers();
     this.buildFoes();
     this.buildGateFog();
     this.debugOverlay = this.add.graphics().setDepth(DEPTH.debug);
@@ -446,6 +469,7 @@ export class WorldScene extends Phaser.Scene {
     this.syncHero();
     this.updateZones();
     this.updateNpcs(time, delta);
+    this.updateWanderers(time, delta);
     this.updateFoes(time, delta);
     this.updateInteraction(time);
     this.pollTownHud();
@@ -531,6 +555,8 @@ export class WorldScene extends Phaser.Scene {
       for (const [dx, dy] of [[0, 0], [0, 1], [-1, 1], [1, 1], [0, 2]] as const) this.doorCells.add((y + dy) * this.map.width + x + dx);
     }
     for (const { npc, location } of this.gameCtx.index.npcs.values()) {
+      // Les alliés errants marchent sur leurs routes (voir `buildWanderers`).
+      if (location.id === ROADS_LOCATION_ID) continue;
       if (!npcPresent(this.gameCtx, npc)) continue;
       const size = this.map.tileSize;
       const [tx, ty] = npc.at;
@@ -658,13 +684,16 @@ export class WorldScene extends Phaser.Scene {
 
   private updateInteraction(time: number): void {
     const near = this.findNearNpc();
-    const surprise = near ? null : surpriseTarget([...this.foeActors.values()].map((a) => a.sim), this.body_, this.data_.balance.foes.surpriseRange);
-    if (near !== this.nearNpc || surprise !== this.nearFoe) {
+    const wanderer = near ? null : this.findNearWanderer();
+    const surprise = near || wanderer ? null : surpriseTarget([...this.foeActors.values()].map((a) => a.sim), this.body_, this.data_.balance.foes.surpriseRange);
+    if (near !== this.nearNpc || surprise !== this.nearFoe || wanderer !== this.nearWanderer) {
       this.nearNpc = near;
       this.nearFoe = surprise;
-      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : surprise ? 'Attaquer par surprise' : null);
+      this.nearWanderer = wanderer;
+      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : wanderer ? `Parler à ${wanderer.sim.def.name} (allié)` : surprise ? 'Attaquer par surprise' : null);
     }
     if (near && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startDialogue(near);
+    else if (wanderer && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startWandererDialogue(wanderer);
     else if (surprise && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.engageFoe(surprise, { initiative: true });
     if (time > this.modalCooldownUntil && this.actions.justPressed('menu')) this.openMenu('inventaire');
     else if (time > this.modalCooldownUntil && this.actions.justPressed('journal')) this.openMenu('quetes');
@@ -678,6 +707,7 @@ export class WorldScene extends Phaser.Scene {
     this.body_.vy = 0;
     this.nearNpc = null;
     this.nearFoe = null;
+    this.nearWanderer = null;
     this.hud.setPrompt(null);
     this.syncHero();
   }
@@ -707,6 +737,96 @@ export class WorldScene extends Phaser.Scene {
         this.leaveModal();
       },
     });
+  }
+
+  /* ---------- Alliés errants (jalon M5, GDD §7.8) ---------- */
+
+  /** Les alliés errants présents (pas blessés) : PNJ verts qui parcourent leur route. */
+  private buildWanderers(): void {
+    const tile = this.map.tileSize;
+    for (const def of this.data_.wanderers) {
+      if (!errantPresent(this.state.progress, def.id)) continue;
+      const sim = createWalker(def, tile);
+      const texture = ensureNpcTexture(this, def, ALLY_OUTLINE);
+      const sprite = this.add.sprite(sim.x, sim.y + 1, texture, TOWN_TEX.npcFrame('down', 0)).setOrigin(0.5, 1).setDepth(DEPTH.entities + sim.y / 100000);
+      const shadow = this.add.image(sim.x, sim.y, WORLD_TEX.shadow).setDepth(DEPTH.shadow).setTint(0xb0f0c8);
+      const glow = this.add.image(sim.x, sim.y - 1, TOWN_TEX.questGlow).setDepth(DEPTH.shadow - 0.01).setTint(ALLY_OUTLINE).setAlpha(0.7);
+      this.wanderers.set(def.id, { sim, sprite, shadow, glow, phase: (def.at[0] * 31 + def.at[1] * 17) % 700 });
+    }
+  }
+
+  private updateWanderers(time: number, delta: number): void {
+    if (this.wanderers.size === 0) return;
+    const cfg = this.data_.balance.allies;
+    const tile = this.map.tileSize;
+    const env = { grid: this.grid, tile, speed: cfg.errantSpeed, pauseMs: cfg.errantPauseMs, hero: { x: this.body_.x, y: this.body_.y } };
+    for (const w of this.wanderers.values()) {
+      if (Math.hypot(w.sim.x - this.body_.x, w.sim.y - this.body_.y) < 60 * tile) updateWalker(w.sim, Math.min(delta, 100), env);
+      const x = Math.round(w.sim.x);
+      const y = Math.round(w.sim.y) + 1;
+      const facing = w.sim.facing.length === 1 ? (w.sim.facing as 'n' | 's' | 'e' | 'w') : w.sim.facing.includes('e') ? 'e' : 'w';
+      const { pose, flipX } = facingPose(facing);
+      const frame = w.sim.moving ? TOWN_TEX.npcWalk(pose, Math.floor((time + w.phase) / 140) % 4) : TOWN_TEX.npcFrame(pose, Math.floor((time + w.phase) / 700) % 2);
+      w.sprite.setPosition(x, y).setFlipX(flipX).setFrame(frame).setDepth(DEPTH.entities + (y - 1) / 100000);
+      w.shadow.setPosition(x, y - 1);
+      w.glow.setPosition(x, y - 2).setAlpha(0.55 + 0.25 * Math.sin(time / 380 + w.phase));
+    }
+  }
+
+  private findNearWanderer(): WandererActor | null {
+    const range = this.data_.balance.exploration.interactRange;
+    let best: WandererActor | null = null;
+    let bestDistance = range;
+    for (const w of this.wanderers.values()) {
+      const d = Math.hypot(w.sim.x - this.body_.x, w.sim.y - this.body_.y);
+      if (d <= bestDistance) {
+        best = w;
+        bestDistance = d;
+      }
+    }
+    return best;
+  }
+
+  private startWandererDialogue(w: WandererActor): void {
+    this.enterModal();
+    w.sim.talking = true;
+    const toward = facingToward(this.body_.x - w.sim.x, this.body_.y - w.sim.y);
+    w.sim.facing = toward;
+    this.body_.facing = facingToward(w.sim.x - this.body_.x, w.sim.y - this.body_.y);
+    this.syncHero();
+    this.scene.launch(SCENES.dialogue, {
+      npcId: w.sim.def.id,
+      onClose: () => {
+        w.sim.talking = false;
+        this.leaveModal();
+      },
+    });
+  }
+
+  /**
+   * Alliés verts qui rejoindront un combat engagé en `site` (GDD §7.8) : gardes
+   * du village proche, allié de passage tiré au sort, alliés errants proches.
+   */
+  private planBattleAllies(site: { x: number; y: number }): AllyJoin[] {
+    const ctx = this.gameCtx;
+    const tile = this.map.tileSize;
+    const villages: VillageArea[] = [];
+    for (const loc of this.map.locations) {
+      if (loc.kind !== 'village' && loc.kind !== 'ville') continue;
+      const id = String(loc.props['id']);
+      const def = ctx.index.locations.get(id);
+      if (!def || def.reputation === null) continue;
+      const x0 = Math.floor(loc.x / tile);
+      const y0 = Math.floor(loc.y / tile);
+      const x1 = Math.ceil((loc.x + loc.width) / tile) - 1;
+      const y1 = Math.ceil((loc.y + loc.height) / tile) - 1;
+      const zone = this.map.zones[Math.floor((y0 + y1) / 2) * this.map.width + Math.floor((x0 + x1) / 2)] as number;
+      villages.push({ id, name: def.name, x0, y0, x1, y1, zone, tier: tierAt(ctx, id) });
+    }
+    const errants = [...this.wanderers.values()].map((w) => ({ id: w.sim.def.id, cell: walkerCell(w.sim, tile) }));
+    const zoneValue = this.map.zones[site.y * this.map.width + site.x] as number;
+    const rng = Rng.fromSeed(`${site.x},${site.y}:${Math.round(this.state.progress.clock)}:allies`);
+    return planAllies({ data: this.data_, site, zoneValue, villages, errants, rng });
   }
 
   private removeNpc(actor: NpcActor): void {
@@ -980,10 +1100,14 @@ export class WorldScene extends Phaser.Scene {
     camera.flash(150, 255, 255, 255);
     this.tweens.add({ targets: camera, zoom: camera.zoom * 1.5, duration: 400, ease: 'Cubic.easeIn' });
     camera.fadeOut(400, 255, 255, 255);
+    const tile = this.map.tileSize;
+    const where = site ?? { x: Math.floor(this.body_.x / tile), y: Math.floor((this.body_.y - 1) / tile) };
+    const allies = this.planBattleAllies(where);
     const data = {
       encounterId,
       returnTo: 'world',
       ...(site ? { site } : {}),
+      ...(allies.length > 0 ? { allies } : {}),
       ...(options.initiative ? { initiative: true } : {}),
       ...(options.ambush ? { ambush: true } : {}),
       ...(options.foeId ? { foeId: options.foeId } : {}),

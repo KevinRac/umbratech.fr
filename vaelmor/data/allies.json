@@ -1,0 +1,116 @@
+{
+  "$comment": "Alliés verts (jalon M5, GDD §7.8). Toujours gérés par une IA, jamais par le joueur ; ils ne comptent ni dans le déploiement ni dans la défaite. `templates` : modèles d'unités (classe de classes.json, apparence de combat de render/unitSprites.ts dessinée en vert, niveau = milieu des niveaux de la zone + levelOffset). `villages` : gardes (fixes, garantis à partir d'« Amical » : 1 garde, 2 à partir d'« Allié » ; balance.allies) et alliés de passage (un tiré au sort, chance selon le palier : 0/10/20/35 %). `wanderers` : alliés errants, des PNJ (même format que locations.json) qui parcourent `route` en boucle, s'abordent (salutation, sujets, petit cadeau) et rejoignent les combats proches (d'office à moins de balance.allies.errantJoinRange cases, sinon 50 % s'ils le voient). Un errant tombé au combat est blessé jusqu'au prochain repos à l'auberge.",
+  "templates": [
+    { "id": "garde_haut_gue", "name": "Garde de Haut-Gué", "class": "gardien_des_marees", "sprite": "milicien", "levelOffset": 0 },
+    { "id": "milicien_haut_gue", "name": "Milicien de Haut-Gué", "class": "lame_du_serment", "sprite": "milicien", "levelOffset": -1 },
+    { "id": "chasseuse_haut_gue", "name": "Chasseuse de Haut-Gué", "class": "veilleur_des_falaises", "sprite": "veilleur_des_falaises", "levelOffset": -1 },
+    { "id": "apprentie_haut_gue", "name": "Apprentie herboriste", "class": "porte_lanterne", "sprite": "porte_lanterne", "levelOffset": -1 },
+    { "id": "sentinelle_ronceval", "name": "Sentinelle de Ronceval", "class": "veilleur_des_falaises", "sprite": "chasseur_de_ronces", "levelOffset": 0 },
+    { "id": "druide_ronceval", "name": "Druide de Ronceval", "class": "faconneur_de_racines", "sprite": "faconneur_de_racines", "levelOffset": -1 },
+    { "id": "garde_port_brume", "name": "Garde du port", "class": "gardien_des_marees", "sprite": "gardien_des_marees", "levelOffset": 0 },
+    { "id": "harponneur_port_brume", "name": "Harponneur du port", "class": "chasseur_de_serpents_de_mer", "sprite": "chasseur_de_serpents_de_mer", "levelOffset": -1 },
+    { "id": "garde_pierre_haute", "name": "Veilleur de la Cime", "class": "gardien_des_marees", "sprite": "gardien_des_marees", "levelOffset": 0 },
+    { "id": "lanterne_pierre_haute", "name": "Porte-Lanterne de la Cime", "class": "porte_lanterne", "sprite": "porte_lanterne", "levelOffset": -1 },
+    { "id": "garde_valcendre", "name": "Garde de Valcendre", "class": "gardien_des_marees", "sprite": "milicien", "levelOffset": 0 },
+    { "id": "arbaletrier_valcendre", "name": "Arbalétrier de Valcendre", "class": "ingenieur_des_ruines", "sprite": "ingenieur_des_ruines", "levelOffset": -1 },
+    { "id": "voyageur_arme", "name": "Aldric", "class": "lame_du_serment", "sprite": "lame_du_serment", "levelOffset": 0 },
+    { "id": "chasseuse_errante", "name": "Brune", "class": "veilleur_des_falaises", "sprite": "veilleur_des_falaises", "levelOffset": 0 },
+    { "id": "ermite_des_greves", "name": "Frère Anselme", "class": "porte_lanterne", "sprite": "porte_lanterne", "levelOffset": 0 },
+    { "id": "chevalier_errant", "name": "Sire Gauvain", "class": "gardien_des_marees", "sprite": "gardien_des_marees", "levelOffset": 0 },
+    { "id": "mercenaire_repentie", "name": "Garance", "class": "heraut_des_bannieres", "sprite": "heraut_des_bannieres", "levelOffset": 0 }
+  ],
+  "villages": [
+    { "location": "haut_gue", "guards": ["garde_haut_gue", "milicien_haut_gue"], "passers": ["milicien_haut_gue", "chasseuse_haut_gue", "apprentie_haut_gue"] },
+    { "location": "ronceval", "guards": ["sentinelle_ronceval", "druide_ronceval"], "passers": ["sentinelle_ronceval", "druide_ronceval"] },
+    { "location": "port_brume", "guards": ["garde_port_brume", "harponneur_port_brume"], "passers": ["harponneur_port_brume", "garde_port_brume"] },
+    { "location": "pierre_haute", "guards": ["garde_pierre_haute", "lanterne_pierre_haute"], "passers": ["lanterne_pierre_haute", "garde_pierre_haute"] },
+    { "location": "valcendre", "guards": ["garde_valcendre", "arbaletrier_valcendre"], "passers": ["arbaletrier_valcendre", "garde_valcendre"] }
+  ],
+  "wanderers": [
+    {
+      "id": "aldric",
+      "name": "Aldric",
+      "title": "Voyageur armé",
+      "template": "voyageur_arme",
+      "at": [72, 81],
+      "facing": "s",
+      "roam": 0,
+      "route": [[72, 81], [61, 70], [49, 74], [40, 64], [56, 64], [72, 66]],
+      "look": { "skin": "#d9b48a", "hair": "#5a3a24", "top": "#4f7f4a", "tunic": "#c9b48a", "accent": "#e3c36b", "belt": "#6b4a2a", "pants": "#4a4036", "boots": "#3a2a20", "head": "short", "outfit": "cloak", "accessory": "sword" },
+      "portrait": { "face": "m", "age": "adulte", "beard": "courte", "eyes": "#5d7b96", "marks": ["cicatrice"] },
+      "greeting": ["Salut, compagnon de route. Les chemins d'Aubemer ne sont plus sûrs : si je vois tes couleurs dans une mêlée, je viendrai t'aider."],
+      "options": [
+        { "kind": "topic", "label": "Un conseil ?", "lines": ["Les vigies des Écumeurs regardent dans une seule direction. Passe dans leur dos, et frappe la première : tu joueras deux fois avant qu'ils ne comprennent."] },
+        { "kind": "topic", "label": "Tu as de quoi soigner ?", "once": true, "expression": "content", "lines": ["Tiens, prends cette potion. J'en ai toujours une de trop… et toi, tu en auras besoin avant moi."], "effects": [{ "type": "item", "item": "potion", "qty": 1 }] }
+      ]
+    },
+    {
+      "id": "brune",
+      "name": "Brune",
+      "title": "Chasseuse errante",
+      "template": "chasseuse_errante",
+      "at": [30, 47],
+      "facing": "e",
+      "roam": 0,
+      "route": [[30, 47], [31, 33], [41, 46], [59, 46], [78, 46], [55, 46]],
+      "look": { "skin": "#e8c9a0", "hair": "#a5652f", "top": "#3f6f46", "tunic": "#7c8a46", "accent": "#d69b3c", "belt": "#5a3a24", "pants": "#4b5634", "boots": "#3a2a20", "head": "hood", "outfit": "tunic", "accessory": "satchel" },
+      "portrait": { "face": "f", "age": "jeune", "beard": "aucune", "eyes": "#5f8a46", "marks": ["taches"] },
+      "greeting": ["Chut… tu fais fuir le gibier. Bon, puisque tu es là : la Forêt-Racine grouille de brigands. Je garde un œil sur toi."],
+      "options": [
+        { "kind": "topic", "label": "Une rumeur ?", "lines": ["Les esprits des ronces craignent le feu. Une torche bien placée, et ils brûlent comme des fagots secs."] },
+        { "kind": "topic", "label": "Un cadeau ?", "once": true, "expression": "content", "lines": ["Prends cette torche. Ici, la nuit tombe plus tôt qu'ailleurs."], "effects": [{ "type": "item", "item": "torche", "qty": 1 }] }
+      ]
+    },
+    {
+      "id": "gauvain",
+      "name": "Sire Gauvain",
+      "title": "Chevalier errant",
+      "template": "chevalier_errant",
+      "at": [121, 53],
+      "facing": "w",
+      "roam": 0,
+      "route": [[121, 53], [107, 61], [94, 48], [108, 47]],
+      "look": { "skin": "#e8c9a0", "hair": "#c9bfa9", "top": "#3f6f46", "tunic": "#c9bfa9", "accent": "#a64b3c", "belt": "#6b4a2a", "pants": "#56677a", "boots": "#3a4658", "head": "short", "outfit": "tunic", "accessory": "sword" },
+      "portrait": { "face": "m", "age": "age", "beard": "pleine", "eyes": "#56677a", "marks": [] },
+      "greeting": ["Je n'ai plus de seigneur, mais j'ai encore un bouclier. Si l'on se bat près d'ici, il sera devant toi."],
+      "options": [
+        { "kind": "topic", "label": "Un conseil ?", "lines": ["Un boss change de visage quand il est blessé à mort. Garde de la Résonance pour ce moment-là : c'est là qu'il faut frapper fort."] },
+        { "kind": "topic", "label": "Un présent ?", "once": true, "expression": "content", "lines": ["Cet antidote m'a sauvé dans les marais. À ton tour de t'en servir."], "effects": [{ "type": "item", "item": "antidote", "qty": 1 }] }
+      ]
+    },
+    {
+      "id": "anselme",
+      "name": "Frère Anselme",
+      "title": "Ermite des grèves",
+      "template": "ermite_des_greves",
+      "at": [106, 99],
+      "facing": "s",
+      "roam": 0,
+      "route": [[106, 99], [82, 102], [70, 108], [92, 100]],
+      "look": { "skin": "#d9b48a", "hair": "#edeff2", "top": "#3f6f46", "tunic": "#c9bfa9", "accent": "#ffdf9a", "belt": "#6b4a2a", "pants": "#5a4636", "boots": "#3a2a20", "head": "hood", "outfit": "dress", "accessory": "lantern" },
+      "portrait": { "face": "m", "age": "age", "beard": "pleine", "eyes": "#8fc7e8", "marks": [] },
+      "greeting": ["Que la lumière te garde, voyageur. Je marche le long des grèves et je soigne qui tombe."],
+      "options": [
+        { "kind": "topic", "label": "La Brume ?", "lines": ["La Brume vient de la Citadelle. Elle ronge la côte un peu plus chaque nuit… mais la lumière la repousse encore."] },
+        { "kind": "topic", "label": "Une bénédiction ?", "once": true, "expression": "content", "lines": ["Prends cet éclat de lanterne. Il guérit le corps et chasse les maux."], "effects": [{ "type": "item", "item": "eclat_de_lanterne", "qty": 1 }] }
+      ]
+    },
+    {
+      "id": "garance",
+      "name": "Garance",
+      "title": "Mercenaire repentie",
+      "template": "mercenaire_repentie",
+      "at": [62, 23],
+      "facing": "e",
+      "roam": 0,
+      "route": [[62, 23], [83, 19], [104, 25], [76, 25]],
+      "look": { "skin": "#c89b55", "hair": "#2c3550", "top": "#3f6f46", "tunic": "#a64b3c", "accent": "#e3c36b", "belt": "#5a3a24", "pants": "#4a4036", "boots": "#3a2a20", "head": "long", "outfit": "tunic", "accessory": "sword" },
+      "portrait": { "face": "f", "age": "adulte", "beard": "aucune", "eyes": "#a64b3c", "marks": ["cicatrice"] },
+      "greeting": ["J'ai porté les couleurs de la Couronne de Cendre. Plus maintenant. Si tu te bats dans les Monts, ma bannière sera avec toi."],
+      "options": [
+        { "kind": "topic", "label": "Les Monts de Cendre ?", "lines": ["Les golems sont lents mais durs comme la roche. Un ingénieur et son perce-armure en viennent à bout bien plus vite qu'une épée."] },
+        { "kind": "topic", "label": "Un coup de main ?", "once": true, "expression": "content", "lines": ["Une hyper-potion. Ne me remercie pas : bois-la au bon moment."], "effects": [{ "type": "item", "item": "hyper_potion", "qty": 1 }] }
+      ]
+    }
+  ]
+}

@@ -6,9 +6,8 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M5 : préparation, objets, compétences, boss à 2 phases, renforts** (GDD §17). Le combat reçoit déjà `ambush`, `extraEnemies` (renforts de sentinelle) et `initiative` ; la compagnie reste la compagnie d'essai (n°55) jusqu'à l'écran de préparation.
-**Alliés verts (spécification validée par l'auteur le 18/10/2026, voir GDD §7.8)** : toujours gérés par une **IA** (jamais par le joueur), phase alliée dédiée ; **gardes de village** fixes et garantis près de leur village à partir d'« Amical » ; **alliés de passage** tirés au hasard selon la réputation (0 / 10 / 20 / 35 %) ; **alliés errants** spontanés qui se promènent partout dans l'île, abordables, qui rejoignent les combats proches. Rien n'est codé : à implémenter en M5 (renforts), avec décisions numérotées à partir de n°85.
-Ensuite, dans l'ordre du GDD §17 : M6, M9, M7, M8, M10.
+**M6 : XP, niveaux, classes** (GDD §17, §9.12, §10) : XP par action et bonus de victoire, montée de niveau tirée au sort (croissances, une stat garantie), niveau max 20 / 30, évolutions (Sceau de Maîtrise + condition de branche ; 6 d'abord, puis 24), recrutement réel (n°66) à la place de la compagnie d'essai, **passives des niveaux 5 et 15** (proposition n°93, à valider avant de coder) et **mécaniques de classe** différées (Serment, hauteur, Saisons, Fil d'eau, Fanfare : n°92). L'XP des alliés verts (§7.8) arrive avec M6.
+Ensuite, dans l'ordre du GDD §17 : M9, M7, M8, M10.
 
 ## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)
 Ce chantier est une **mise à jour du jalon M1** (exploration), pas un nouveau jalon : il ne touche ni aux PNJ ni aux villages jouables (M2).
@@ -29,7 +28,15 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
 - [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°71 validées le 18/10/2026 (n°63 révisée : les PNJ se promènent)
 - [x] **M3 : ennemis visibles du monde** (18/10/2026) — voir « Livré en M3 » ; décisions n°72 à n°78 à valider
-- [ ] M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
+- [x] **M5 : préparation, objets, compétences, boss à 2 phases, renforts, alliés verts** (18/10/2026) — voir « Livré en M5 » ; décisions n°85 à n°104 à valider
+  - [x] Écran de préparation (§9.3, §13.4) — remplace le déploiement automatique (n°55)
+  - [x] Objets en combat et accessoires (§9.8)
+  - [x] Compétences signature et jauge de Résonance (§9.9, §10.5) — passives 5 / 15 proposées (n°93), pas codées
+  - [x] Boss à 2 phases (§9.11) : Brakk, puis Roi-Cerf, Sœur Mérrow, Mère-Harpie, Gardien de Cendre
+  - [x] Renforts des cartes de boss (tours 3 et 6)
+  - [x] IA à score : agressif, opportuniste, défensif, soutien, chasseur de héros, boss (§9.15)
+  - [x] Alliés verts : gardes, alliés de passage, alliés errants, phase alliée (§7.8)
+- [ ] M6, M9, M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -251,3 +258,62 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **n°82 — Réveil toujours dans un village** : après une défaite (héros à terre ou compagnie anéantie), la compagnie se réveille au dernier village visité, ou à Haut-Gué si aucun n'a été visité (`balance.defeat.fallbackVillage`) ; elle est posée sur la case libre la plus proche du centre du village (jamais sous un toit).
 - **n°83 — Menu de combat** (fin du tour, menaces, vitesse, retraite) ouvert par **Échap** (ou Tab/M) et affiché au centre de l'écran ; valider une case vide ne l'ouvre plus. Échap annule d'abord les menaces marquées, puis ouvre le menu.
 - **n°84 — Détection lisible** (retour de l'auteur : les vigies semblaient attaquer sans prévenir) : à moins de 10 cases, le cône et le cercle de vision de chaque ennemi sont dessinés au sol (ambre au repos, rouge en alerte) ; le « ! » pulse et reste affiché tant que l'ennemi donne l'alerte ou poursuit. Les zones montrent la portée à pied : le sprint la double, la forêt la réduit à 60 %.
+
+## Livré en M5
+- **Données** (validées par schémas Zod + contrôles croisés, `npm run validate-data`) :
+  - `data/skills.json` (nouveau) : 10 **statuts** (Rempart, Appel aux armes, Gelé, Brûlure, Poison, Harponné, Entravé, Voile, Cri de pillage, Cri de la nuée : bonus de stats, garde, dégâts reçus, esquive, étourdissement, dégâts par tour, déplacement plafonné), les **12 compétences signature** du GDD §10.5 (coût en Résonance, ressource de classe ou délai ; cible, portée, zone, effets en liste : frappe, dégâts, soin, statut, invocation, terrain), 6 **compétences de boss** et les **fiches des 5 boss** (immunités, seuil, réplique, compétences et profil d'IA de phase 2, cri d'entrée, stats gagnées).
+  - `data/allies.json` (nouveau) : 17 modèles d'alliés verts (classe ou apparence, écart de niveau), gardes et alliés de passage des 5 villages, **5 alliés errants** (Aldric, Brune, Gauvain, Anselme, Garance) avec leur trajet en boucle et leur dialogue (conseil, objet donné une fois). Le contrôle de carte vérifie que chaque trajet est praticable.
+  - `items.json` : effets de combat des consommables (`battle` : cible, portée, soin, purge, statut, dégâts), bâton noueux ; `enemies.json` : **Rebouteuse** (soigneuse des Écumeurs, profil soutien) et **Golem de pierre** (invocation) ; `terrains.json` : ronces ; `encounters.json` : **renforts** des 5 cartes de boss (tours 3 et 6), compagnie d'essai portée à 12 (une par classe) ; `balance.json` : `prep` (cases en plus, 5 objets, sac d'essai) et `allies` (portées, chances, tours, vitesse des errants, laisse).
+- **Logique pure, testée** (`src/logic/`) :
+  - `tactics/prep.ts` : plan de préparation (cases bleues, déployer / retirer, échanger, **formation Auto**, armes du type de la classe, accessoire unique, objets pris dans le sac sans en créer, 5 au plus), appliqué en reconstruisant la compagnie sans toucher aux ennemis.
+  - `tactics/status.ts`, `skills.ts`, `items.ts`, `bosses.ts`, `units.ts`, `battleCore.ts` : statuts et stats effectives, compétences (cibles, zones, prévision, lancement), objets, soins au bâton, phases de boss, fabrique d'unités (membre, ennemi, allié, invocation).
+  - `tactics/battle.ts` : commandes **Compétence**, **Objet**, **Soigner** en plus d'Attaquer / Attendre ; « frappe et fuite » (Pas de marée) ; **trois camps** (joueur → alliés → ennemis, la phase alliée est sautée sans allié) ; renforts au début de la phase de leur camp ; dégâts par tour, fin des statuts, disparition des invocations et des ronces ; bilan (objets utilisés, alliés tombés, errants blessés).
+  - `ai/enemyAi.ts` réécrit : **une note par action** (attaque, soin, compétence) et par case, profils agressif, opportuniste, défensif, **soutien**, chasseur de héros, boss ; `ai/allyAi.ts` : IA alliée (protéger le héros et les blessés, frapper l'ennemi le plus menaçant, laisse de 4 cases).
+  - `game/allyRules.ts` : qui rejoint un combat (gardes, passage, errants), errants blessés jusqu'au repos ; `world/allyWalkers.ts` : marche des errants sur leur trajet.
+- **Scènes et rendu** :
+  - **Écran de préparation** (`BattleScene` mode `prep` + `BattleHudScene.openPrep`) : liste de la compagnie à gauche (« 5/5 déployés », héros en or), fiche de l'unité choisie (arme, accessoire, objets, compétence et coût), **Ennemis en vue** à droite (boss, niveaux, objectif, avertissement « Renforts ennemis : tours 3 et 6 »), menu Combattre / Formation Auto / Placer les unités / Équipement / Objets / Retour. Les cases bleues s'affichent sur la carte ; un clic prend une unité, un second clic (ou un glisser-déposer) la pose ou l'échange ; « Retour » quitte sans combattre.
+  - **Menu d'action** : Attaquer, la compétence signature (grisée avec la raison : Résonance, délai, ressource), Objet, Soigner (bâtons), Attendre. Ciblage des compétences avec la **zone en surbrillance** et une **prévision** (chaque unité touchée : dégâts, soin, statut, « immunisé ») ; prévision des objets (« +10 PV → 22/26 »).
+  - **Animations** : bandeau de compétence (nom, lanceur), aura, flammes, gel, ronces qui poussent, golem qui sort de terre, chiffres de dégâts par tour, marques de statut au-dessus des unités ; **phase 2 du boss** : secousse, voile rouge, panneau de réplique, puis halo orange au sol et **corps qui pulse au rouge** tant qu'il vit.
+  - **Alliés verts** : sprites à **liseré vert-turquoise** (`ALLY_OUTLINE`, distinct du vert tendre des zones de soin), ombre verte, bandeau « PHASE ALLIÉE », annonce de leur arrivée. Dans le monde, les **errants** marchent sur leurs routes avec le même liseré et une lueur verte ; « E » pour leur parler.
+  - Notifications de combat sous le bandeau du haut (elles cachaient l'objectif).
+- **Débogage** : `?debug&prep=off` (pas de préparation), `&res=100` (Résonance de départ), `&bosshp=0.55` (PV du boss), `&allies=garde,passage,errant` (un allié de chaque sorte) ; dans le monde, `&rep=haut_gue:60` règle la réputation pour essayer les gardes.
+- **Tests** : 583 au vert (+50 : `skills.test.ts` 18 — Résonance, coûts, chaque signature, statuts, golem, ronces, harpon ; `bosses.test.ts` 10 — phases des 5 boss, réplique et cri, hache tournoyante, renforts 3 et 6, **équilibrage de Brakk sur 30 graines** ; `allies.test.ts` 15 — ordre des phases, jamais commandés, ni victoire ni défaite, arrivée, **IA alliée**, gardes / passage / errants, blessures ; `prep.test.ts` 7).
+- **Équilibrage de Brakk** (IA contre IA, la compagnie jouée par l'IA, ce qui la dessert : elle lance le héros dans la mêlée) : ~40 % de victoires en ~5,4 tours, phase 2 atteinte 3 fois sur 4, et gagnée un peu moins d'une fois sur deux une fois atteinte. Un joueur qui protège le héros et garde la Résonance pour la phase 2 gagne nettement plus souvent. Embuscade au gué ~75 %, Brigands de la Forêt-Racine ~52 %.
+- **Vérifié dans Chromium** (SwiftShader, 960×540) : préparation (déploiement, échange, Auto, équipement, objets), phase alliée, compétence de zone, potion, phase 2 de Brakk, errant abordé dans le monde ; aucune erreur console.
+
+### Décisions n°85 à n°104 (jalon M5) — à valider
+- **n°85 — Cases bleues** : le déploiement maximal de la carte + 3 cases de choix (`balance.prep.extraSlots`). Par défaut : le dernier déploiement du joueur (mémorisé pour la session), sinon le héros puis la compagnie dans l'ordre. Le héros est toujours déployé. En **embuscade**, les positions sont imposées : ni échange, ni Auto, seul l'équipement change.
+- **n°86 — Formation Auto** : les cases les plus proches de l'ennemi reçoivent d'abord les tanks, puis la mêlée, le tueur de boss, la distance, le contrôle et le soutien, et les soigneurs vont au plus loin ; le héros n'est jamais en première ligne.
+- **n°87 — Compagnie d'essai de 12** (une unité par classe, niveau 3 ou niveau de test `?lvl`) en attendant le recrutement (M6). Remplace la n°55 : le déploiement automatique n'existe plus que pour `?debug&prep=off`.
+- **n°88 — Équipement** : chaque unité garde son arme de classe et peut prendre une arme **du même type** dans le sac, ainsi qu'**un accessoire** (bonus de stats ajouté à la fiche) ; **5 objets au plus** ; rien n'est créé (le sac de la partie, ou le sac d'essai hors partie). Les choix sont gardés pour la session et seront sauvegardés en M9. Pas de commande « Échanger » entre unités en combat (différée).
+- **n°89 — Objets en combat (1 action)** : Potion +10, Hyper-potion +25, Antidote (purge), Éclat de lanterne (+20 et purge) sur soi ou un allié adjacent ; Poudre de Brume = Voile (+30 esquive pendant 1 tour) sur soi ; Torche = 5 dégâts + Brûlure 2 tours à un ennemi adjacent ; Filet de pêche = Entravé 1 tour (portée 1-2). Ce qui est utilisé est retiré de l'inventaire à la fin du combat, même en cas de retraite ou de défaite.
+- **n°90 — Résonance** : 0 au début du combat, +20 par coup porté, +10 par coup reçu (règle de M4), plafond 100 ; une compétence est l'action de l'unité (après le déplacement). Invocateur et Ingénieur paient avec leur ressource de classe (3 Pierres, 4 Charges par combat). Les ennemis n'ont pas de Résonance : leurs compétences de boss ont un **délai** en tours.
+- **n°91 — Signatures adaptées** : Estocade jurée ×1,5 sans condition (le Serment n'existe pas encore) ; Tir de Vent portée 2-3, ignore 3 Déf ; Nuée de braises touche **aussi les alliés** pris dans la zone ; Mur de ronces = 3 cases en ligne **infranchissables** pendant 3 tours (le GDD parlait aussi de dégâts à la traversée, contradictoire avec « bloquent le passage ») ; Harponné = +25 % de dégâts reçus et 2 cases de déplacement au plus ; le Golem de pierre est commandé par le joueur, dure 3 tours et ne compte ni dans la défaite ni dans le bilan.
+- **n°92 — Mécaniques de classe différées à M6** : Serment (Lame), bonus de hauteur (Veilleur), Saisons (Alchimiste), Fil d'eau (Danseur), Fanfare (Héraut).
+- **n°93 — Passives des niveaux 5 et 15 : proposition, non codée** (une seule équipée, la dernière apprise par défaut, modifiable à la préparation) :
+
+  | Classe | Niveau 5 | Niveau 15 |
+  |---|---|---|
+  | Gardien des Marées | Garde rapprochée : +2 Déf si un allié est adjacent | Inébranlable : immunisé contre Entravé, +5 PV max |
+  | Lame du Serment | Fil tranchant : +10 critique | Lame d'honneur : +3 dégâts contre un boss ou un ennemi de niveau supérieur |
+  | Veilleur des Falaises | Œil de faucon : +10 précision | Tir couvert : +1 portée depuis forêt, montagne ou ruines |
+  | Héritier des Cendres | Braises vives : Brûlure dure 1 tour de plus | Cendre ardente : +2 Mag sous 50 % PV |
+  | Porte-Lanterne | Lumière douce : soins +3 | Veille : 3 PV aux alliés adjacents au début de la phase |
+  | Héraut des Bannières | Étendard : +10 esquive aux alliés à 2 cases | Fanfare : +10 Résonance aux alliés à 2 cases quand il agit |
+  | Alchimiste des Saisons | Mains sûres : les objets soignent +5 | Distillation : les statuts infligés durent 1 tour de plus |
+  | Danseur des Courants | Pas léger : +15 esquive dans l'eau et le marais | Contre-courant : +10 Résonance après chaque esquive |
+  | Invocateur de Pierres | Pierre de plus : +1 Pierre par combat | Golem ancien : golems +5 PV et +2 Fo |
+  | Façonneur de Racines | Épines : 3 dégâts aux ennemis collés aux ronces en début de phase | Racines profondes : ronces +1 case et +1 tour |
+  | Ingénieur des Ruines | Charge de plus : +1 Charge par combat | Mécanique précise : attaques normales ×1,2 contre armure lourde et monstres |
+  | Chasseur de Serpents de Mer | Instinct de chasse : +10 précision contre les boss | Prise ferme : Harponné dure 1 tour de plus |
+- **n°94 — Statuts** : durées comptées en tours de l'unité touchée (un statut posé pendant la phase du joueur tient jusqu'à la même phase du tour indiqué) ; Brûlure et Poison frappent au début de la phase de l'unité et **peuvent achever** ; un même statut reposé est rafraîchi, pas cumulé ; Gelé = l'unité passe son tour.
+- **n°95 — Boss à deux phases** : la phase 2 se déclenche dès que les PV passent sous 50 % (même au milieu d'un échange, s'il survit) : réplique, effets visuels, nouvelles compétences à délai, nouveau profil d'IA (Brakk quitte son trône), stats gagnées selon la fiche, cri lancé aussitôt et gratuitement (Brakk, Mère-Harpie). Tous les boss sont **immunisés contre Gelé** (et contre Entravé pour la Mère-Harpie et le Gardien de Cendre). La **vulnérabilité anti-boss** passe par les armes efficaces contre les boss (Harpon lourd ×1,5).
+- **n°96 — Renforts** : au début de la phase ennemie des tours 3 et 6, sur les cases libres les plus proches du repaire du boss ; annoncés à la préparation. Contenu par carte dans `encounters.json` (camp de Brakk : 2 Écumeurs au tour 3, un archer et une Rebouteuse au tour 6).
+- **n°97 — IA à score** : chaque action possible (attaque, soin, compétence, sur chaque case atteignable) reçoit une note (dégâts × probabilité, coup fatal, riposte et risque, abri du terrain, bonus du profil, alliés touchés par un renfort, adversaires touchés par une zone) ; la meilleure est jouée. Le boss reste sur son trône en phase 1 et frappe ce qui l'approche.
+- **n°98 — Phase alliée** : ordre joueur → alliés → ennemis à chaque tour, bandeau « PHASE ALLIÉE » ; sautée quand il n'y a pas d'allié vert en jeu ni attendu.
+- **n°99 — Alliés verts** : jamais commandés par le joueur (même pas sélectionnables pour agir) ; ils ne comptent ni pour la victoire ni pour la défaite ; ils n'occupent pas de case de déploiement ; ils ne gagnent pas d'XP avant M6. L'IA alliée ne s'éloigne pas de plus de 4 cases de la compagnie.
+- **n°100 — Gardes de village** : le village le plus proche à 10 cases au plus de son enceinte envoie 1 garde à « Amical » (tour 2) et 2 à « Allié » ou « Héros local » (tour 1), depuis le côté du village ; aucun en dessous d'« Amical ».
+- **n°101 — Allié de passage** : tirage au lancement du combat sur le village de la zone le plus proche (Amical 10 %, Allié 20 %, Héros local 35 %), un PNJ du village qui entre par un bord de la carte au tour 2 ou 3.
+- **n°102 — Alliés errants** : définis dans `data/allies.json` (pas dans `worldEnemies.json` comme l'annonçait le GDD) ; ils marchent sur un trajet en boucle avec des pauses, patientent quand le héros se tient sur leur chemin (ils ne le traversent pas). À 6 cases ou moins du combat, ils le rejoignent au tour 2 ; à 14 cases ou moins, une fois sur deux. Tombés au combat, ils sont **Blessés** et absents du monde jusqu'au prochain repos à l'auberge.
+- **n°103 — Couleur des alliés** : liseré vert-turquoise autour du sprite (combat et monde), ombre verte au combat, lueur verte dans le monde ; jamais la teinte vert tendre des zones de soin ni le bleu de la compagnie.
+- **n°104 — Écran de préparation dans la charte** : mêmes cadres et polices que le reste du combat, titres en police `body` (n°81) ; symboles absents de la police pixel remplacés par du texte (« Brakk (boss) », puces « • »).

@@ -1,0 +1,295 @@
+{
+  "$comment": "Compétences, statuts et boss (jalon M5, GDD §9.9, §9.11, §10.5). `statuses` : statuts et renforts posés sur une unité (durée en tours de son camp). `skills` : une compétence signature par classe (`owner`), payée en Résonance (40 à 100) ou en ressource de classe (Pierres, Charges), et les compétences des boss (`owner` null, délai `cooldown` entre deux usages). Effets : frappe (attaque modifiée), degats (sans jet), soin, statut, invocation, terrain. `bosses` : boss à deux phases (seuil de PV, réplique, nouvelles compétences, IA, stats, cri lancé aussitôt).",
+  "statuses": [
+    { "id": "rempart", "name": "Rempart", "kind": "buff", "color": "#8fc7e8", "guard": 3 },
+    { "id": "appel_aux_armes", "name": "Appel aux armes", "kind": "buff", "color": "#ffdf9a", "stats": { "fo": 3, "mag": 3, "vit": 2 } },
+    { "id": "gel", "name": "Gelé", "kind": "debuff", "color": "#7fe0e8", "stun": true, "stats": { "vit": -3 } },
+    { "id": "brulure", "name": "Brûlure", "kind": "debuff", "color": "#e07b39", "dot": 3 },
+    { "id": "poison", "name": "Poison", "kind": "debuff", "color": "#a9b061", "dot": 2 },
+    { "id": "harponne", "name": "Harponné", "kind": "debuff", "color": "#c89b55", "damageTaken": 1.25, "maxMove": 2 },
+    { "id": "entrave", "name": "Entravé", "kind": "debuff", "color": "#a98a63", "maxMove": 0 },
+    { "id": "voile", "name": "Voile de brume", "kind": "buff", "color": "#c9bfa9", "avoid": 30 },
+    { "id": "cri_de_pillage", "name": "Cri de pillage", "kind": "buff", "color": "#e07b39", "stats": { "fo": 3, "vit": 2 } },
+    { "id": "cri_de_la_nuee", "name": "Cri de la nuée", "kind": "buff", "color": "#e2c07f", "stats": { "fo": 2, "vit": 3 } }
+  ],
+  "skills": [
+    {
+      "id": "rempart_de_maree",
+      "name": "Rempart de Marée",
+      "description": "Le Gardien et ses voisins reçoivent 3 dégâts physiques de moins jusqu'à la fin de la phase ennemie.",
+      "owner": "gardien_des_marees",
+      "cost": { "resonance": 40 },
+      "target": "soi",
+      "range": [0, 0],
+      "area": { "shape": "losange", "size": 1 },
+      "affects": "allies",
+      "element": "maree",
+      "effects": [{ "kind": "statut", "id": "rempart", "turns": 1 }]
+    },
+    {
+      "id": "estocade_juree",
+      "name": "Estocade jurée",
+      "description": "Une fente qui touche à coup sûr et frappe moitié plus fort.",
+      "owner": "lame_du_serment",
+      "cost": { "resonance": 60 },
+      "target": "ennemi",
+      "range": [1, 1],
+      "element": null,
+      "effects": [{ "kind": "frappe", "sureHit": true, "damageMult": 1.5 }]
+    },
+    {
+      "id": "tir_de_vent",
+      "name": "Tir de Vent",
+      "description": "Une flèche portée par le vent, jusqu'à 3 cases, qui ignore 3 points de Défense.",
+      "owner": "veilleur_des_falaises",
+      "cost": { "resonance": 50 },
+      "target": "ennemi",
+      "range": [2, 3],
+      "element": null,
+      "effects": [{ "kind": "frappe", "ignoreDef": 3 }]
+    },
+    {
+      "id": "nuee_de_braises",
+      "name": "Nuée de braises",
+      "description": "Une pluie de cendres ardentes sur 3×3 cases : dégâts magiques et Brûlure (3 par tour, 2 tours). Gare aux alliés pris dedans.",
+      "owner": "heritier_des_cendres",
+      "cost": { "resonance": 60 },
+      "target": "case",
+      "range": [1, 3],
+      "area": { "shape": "carre", "size": 1 },
+      "affects": "tous",
+      "element": "cendre",
+      "effects": [{ "kind": "degats", "power": 3, "damage": "magique", "status": { "id": "brulure", "turns": 2 } }]
+    },
+    {
+      "id": "halo",
+      "name": "Halo",
+      "description": "Rend la moitié de ses PV à un allié et chasse ses maux.",
+      "owner": "porte_lanterne",
+      "cost": { "resonance": 40 },
+      "target": "allie",
+      "range": [1, 2],
+      "element": "lanterne",
+      "effects": [{ "kind": "soin", "ratio": 0.5, "cleanse": true }]
+    },
+    {
+      "id": "appel_aux_armes",
+      "name": "Appel aux armes",
+      "description": "+3 Fo, +3 Mag et +2 Vit pendant 2 tours aux alliés à 3 cases ou moins.",
+      "owner": "heraut_des_bannieres",
+      "cost": { "resonance": 40 },
+      "target": "soi",
+      "range": [0, 0],
+      "area": { "shape": "losange", "size": 3 },
+      "affects": "allies",
+      "element": null,
+      "effects": [{ "kind": "statut", "id": "appel_aux_armes", "turns": 2 }]
+    },
+    {
+      "id": "fiole_du_gel",
+      "name": "Fiole du Gel",
+      "description": "Gèle un ennemi : il perd sa prochaine action et 3 points de Vitesse. Les boss n'y sont pas sensibles.",
+      "owner": "alchimiste_des_saisons",
+      "cost": { "resonance": 50 },
+      "target": "ennemi",
+      "range": [1, 2],
+      "element": "maree",
+      "effects": [{ "kind": "statut", "id": "gel", "turns": 1 }]
+    },
+    {
+      "id": "pas_de_maree",
+      "name": "Pas de marée",
+      "description": "Frappe, puis glisse encore de 3 cases sans provoquer de riposte.",
+      "owner": "danseur_des_courants",
+      "cost": { "resonance": 30 },
+      "target": "ennemi",
+      "range": [1, 1],
+      "element": "maree",
+      "effects": [{ "kind": "frappe", "canto": 3 }]
+    },
+    {
+      "id": "eveil_de_pierre",
+      "name": "Éveil de pierre",
+      "description": "Éveille un golem de pierre sur une case voisine (20 PV, 8 Déf) pour 3 tours. Coûte une Pierre (3 par combat).",
+      "owner": "invocateur_de_pierres_anciennes",
+      "cost": { "resource": { "id": "pierres", "amount": 1 } },
+      "target": "case",
+      "range": [1, 1],
+      "element": "pierre",
+      "effects": [{ "kind": "invocation", "enemy": "golem_de_pierre", "turns": 3 }]
+    },
+    {
+      "id": "mur_de_ronces",
+      "name": "Mur de ronces",
+      "description": "Fait jaillir un mur de 3 cases de ronces qui bloquent le passage pendant 3 tours.",
+      "owner": "faconneur_de_racines",
+      "cost": { "resonance": 40 },
+      "target": "case",
+      "range": [1, 2],
+      "area": { "shape": "ligne", "size": 3 },
+      "element": "racine",
+      "effects": [{ "kind": "terrain", "terrain": "ronces", "turns": 3 }]
+    },
+    {
+      "id": "perce_armure",
+      "name": "Perce-armure",
+      "description": "Un carreau chargé de pierre-foudre : ignore 6 Déf, ×1,5 contre armure lourde et golems. Coûte une Charge (4 par combat).",
+      "owner": "ingenieur_des_ruines",
+      "cost": { "resource": { "id": "charges", "amount": 1 } },
+      "target": "ennemi",
+      "range": [2, 2],
+      "element": null,
+      "effects": [{ "kind": "frappe", "ignoreDef": 6, "bonusVs": ["lourde", "monstre"], "bonusMult": 1.5 }]
+    },
+    {
+      "id": "harpon_enchaine",
+      "name": "Harpon enchaîné",
+      "description": "Frappe et harponne la cible pour 3 tours : elle subit 25 % de dégâts en plus de tous et ne s'éloigne plus que de 2 cases.",
+      "owner": "chasseur_de_serpents_de_mer",
+      "cost": { "resonance": 60 },
+      "target": "ennemi",
+      "range": [1, 2],
+      "element": null,
+      "effects": [{ "kind": "frappe", "status": { "id": "harponne", "turns": 3 } }]
+    },
+    {
+      "id": "cri_de_pillage",
+      "name": "Cri de pillage",
+      "description": "Brakk hurle : +3 Fo et +2 Vit aux Écumeurs à 5 cases ou moins pendant 2 tours.",
+      "owner": null,
+      "cost": { "cooldown": 3 },
+      "target": "soi",
+      "range": [0, 0],
+      "area": { "shape": "losange", "size": 5 },
+      "affects": "allies",
+      "element": "cendre",
+      "effects": [{ "kind": "statut", "id": "cri_de_pillage", "turns": 2 }]
+    },
+    {
+      "id": "hache_tournoyante",
+      "name": "Hache tournoyante",
+      "description": "Brakk tournoie : chaque adversaire au contact encaisse un coup de hache.",
+      "owner": null,
+      "cost": { "cooldown": 2 },
+      "target": "soi",
+      "range": [0, 0],
+      "area": { "shape": "losange", "size": 1 },
+      "affects": "ennemis",
+      "element": null,
+      "effects": [{ "kind": "degats", "power": 7, "damage": "physique" }]
+    },
+    {
+      "id": "racines_enragees",
+      "name": "Racines enragées",
+      "description": "Des racines jaillissent sur 3×3 cases : dégâts et immobilisation pendant un tour.",
+      "owner": null,
+      "cost": { "cooldown": 3 },
+      "target": "case",
+      "range": [1, 3],
+      "area": { "shape": "carre", "size": 1 },
+      "affects": "ennemis",
+      "element": "racine",
+      "effects": [{ "kind": "degats", "power": 4, "damage": "physique", "status": { "id": "entrave", "turns": 1 } }]
+    },
+    {
+      "id": "maree_noire",
+      "name": "Marée noire",
+      "description": "Une vague de brume noire sur 3×3 cases.",
+      "owner": null,
+      "cost": { "cooldown": 2 },
+      "target": "case",
+      "range": [1, 3],
+      "area": { "shape": "carre", "size": 1 },
+      "affects": "ennemis",
+      "element": "maree",
+      "effects": [{ "kind": "degats", "power": 6, "damage": "magique" }]
+    },
+    {
+      "id": "cri_de_la_nuee",
+      "name": "Cri de la nuée",
+      "description": "La Mère-Harpie appelle ses filles : +2 Fo et +3 Vit aux harpies à 5 cases ou moins pendant 2 tours.",
+      "owner": null,
+      "cost": { "cooldown": 3 },
+      "target": "soi",
+      "range": [0, 0],
+      "area": { "shape": "losange", "size": 5 },
+      "affects": "allies",
+      "element": null,
+      "effects": [{ "kind": "statut", "id": "cri_de_la_nuee", "turns": 2 }]
+    },
+    {
+      "id": "seisme",
+      "name": "Séisme",
+      "description": "Le Gardien frappe le sol : dégâts à 2 cases autour de lui et immobilisation pendant un tour.",
+      "owner": null,
+      "cost": { "cooldown": 3 },
+      "target": "soi",
+      "range": [0, 0],
+      "area": { "shape": "losange", "size": 2 },
+      "affects": "ennemis",
+      "element": "pierre",
+      "effects": [{ "kind": "degats", "power": 6, "damage": "physique", "status": { "id": "entrave", "turns": 1 } }]
+    }
+  ],
+  "bosses": [
+    {
+      "enemy": "brakk",
+      "immune": ["gel"],
+      "skills": [],
+      "phase2": {
+        "threshold": 0.5,
+        "line": "Assez joué ! Écumeurs, à moi ! On les taille en pièces !",
+        "skills": ["cri_de_pillage", "hache_tournoyante"],
+        "ai": "agressif",
+        "onEnter": "cri_de_pillage"
+      }
+    },
+    {
+      "enemy": "roi_cerf",
+      "immune": ["gel"],
+      "skills": [],
+      "phase2": {
+        "threshold": 0.5,
+        "line": "La forêt… crie… en moi ! Que les racines vous gardent !",
+        "skills": ["racines_enragees"],
+        "ai": "agressif",
+        "stats": { "def": 1 }
+      }
+    },
+    {
+      "enemy": "soeur_merrow",
+      "immune": ["gel"],
+      "skills": [],
+      "phase2": {
+        "threshold": 0.5,
+        "line": "La mer reprend ce qu'on lui doit… Noyez-vous avec moi !",
+        "skills": ["maree_noire"],
+        "ai": "agressif"
+      }
+    },
+    {
+      "enemy": "mere_harpie",
+      "immune": ["gel", "entrave"],
+      "skills": [],
+      "phase2": {
+        "threshold": 0.5,
+        "line": "Mes filles ! Déchirez-les !",
+        "skills": ["cri_de_la_nuee"],
+        "ai": "chasseur_heros",
+        "onEnter": "cri_de_la_nuee"
+      }
+    },
+    {
+      "enemy": "gardien_de_cendre",
+      "immune": ["gel", "entrave"],
+      "skills": [],
+      "phase2": {
+        "threshold": 0.5,
+        "line": "… LA MONTAGNE… NE PLIE PAS…",
+        "skills": ["seisme"],
+        "ai": "agressif",
+        "stats": { "fo": 2 }
+      }
+    }
+  ]
+}

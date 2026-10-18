@@ -21,7 +21,7 @@ import {
 } from '../src/logic/game';
 import { Rng } from '../src/logic/rng';
 import { endPhase } from '../src/logic/tactics/battle';
-import { buildBattle, findEncounter } from '../src/logic/tactics/encounter';
+import { battleRules, buildBattle, findEncounter } from '../src/logic/tactics/encounter';
 import { CollisionGrid, gateRequirements, isGateOpen } from '../src/logic/world/collision';
 import { buildSafeGrid, cellFeet, createFoe, detectionScale, detects, feetCell, isSurprisable, surpriseTarget, updateFoe, type FoeEnv, type FoeSim } from '../src/logic/world/foes';
 import { findPath } from '../src/logic/world/pathfinding';
@@ -381,10 +381,10 @@ describe('embuscade et renforts dans le combat', () => {
     expect(nearest(ambushed)).toBeLessThan(nearest(calm));
     expect(nearest(ambushed)).toBeGreaterThanOrEqual(7);
     expect(nearest(calm)).toBeGreaterThanOrEqual(11);
-    endPhase(ambushed);
+    endPhase(ambushed, battleRules(data));
     expect(ambushed.phase).toBe('player');
     expect(ambushed.turn).toBe(1);
-    endPhase(ambushed);
+    endPhase(ambushed, battleRules(data));
     expect(ambushed.phase).toBe('enemy');
   });
 
