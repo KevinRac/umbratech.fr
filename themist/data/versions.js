@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.33',
+ actuelle:'v16.34',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.34',t:'Icônes d’équipement retravaillées : vraies matières (métal brossé, cuir, bois, tissu, pierre, cristal, givre), halos lumineux sur les flammes, gemmes et braises, ombres portées, rivets, coutures, rayures et usure, fond peint nuageux. Nouveau cadre en métal avec clous d’angle à la couleur de la rareté ; liseré lumineux pour les objets épiques, légendaires et uniques.'},
   {d:'2026-10-18',h:'v16.33',t:'Équipement : quatre emplacements fixes, un par type d’objet (I Arme, II Main gauche, III Armure, IV Talisman) ; une trouvaille va d’office dans le sien et l’écran la compare à l’objet porté. Chaque objet a son icône peinte (cadre à la couleur de sa rareté) et une fiche façon infobulle : gains ▲ en vert, coûts ▼ en rouge, chiffres en gras, set et texte d’ambiance. Codex rangé par emplacement. Égide de givre, Fiole, Lanterne, Pièce trouée et Premier Murmure passent en main gauche ; Couronne en armure ; Chaîne d’âmes en arme ; Cœur de lanterne et Plume du Phénix en talisman, pour que chaque set reste jouable.'},
   {d:'2026-10-18',h:'v16.32',t:'La Brèche est toujours tenue par un Masqué : il arrive avec la deuxième vague, à la place du champion de la Brèche, et la salle n’a plus de règle imposée. Elle donne toujours sa relique au choix et son or, en plus de la récompense du Masqué.'},
   {d:'2026-10-18',h:'v16.31',t:'Le Masqué apparaît une fois sur deux dans n’importe quelle salle de combat (combat, élite, Brèche) à partir de la 3e salle de chaque acte, sans autre condition. Avant, il fallait aller vite ou ne pas avoir perdu de PV depuis 60 s : après un premier combat contre lui, ces conditions n’étaient presque plus jamais remplies, si bien qu’il ne venait guère qu’à la 3e salle.'},

@@ -37,7 +37,7 @@ const MARK = src => `<!-- Section générée par outils/wiki.mjs depuis ${src} :
 function equipements(E, F, D) {
   const R = E.raretes, O = E.objets, S = E.sets, SL = E.emplacements;
   const col = r => `rgb(${R[r].col})`;
-  const ico = (id, cls) => D.iconeObjet(id, { col: R[O[id].r].col, cls: cls || 'io' });
+  const ico = (id, cls) => D.iconeObjet(id, { col: R[O[id].r].col, r: O[id].r, cls: cls || 'io' });
   const slotN = id => SL.find(x => x.id === O[id].slot).n;
   const setOf = id => Object.values(S).find(s => s.items.includes(id));
   const uniques = Object.values(O).filter(o => o.src);

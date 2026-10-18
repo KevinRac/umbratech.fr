@@ -5829,7 +5829,9 @@ const EQ_IC=window.BRUME_DATA.iconesObjets.vide;
 const EQ_SL=EQ_D.emplacements,BD_IO=window.BRUME_DATA;
 const eqSi=id=>Math.max(0,EQ_SL.findIndex(x=>x.id===EQ_D.objets[id].slot));
 const eqSn=id=>EQ_SL[eqSi(id)].n;
-const eqArt=(id,cls)=>BD_IO.iconeObjet(id,{col:RAR[EQ_D.objets[id].r].col,cls:cls||'io'});
+const eqArt=(id,cls)=>BD_IO.iconeObjet(id,{col:RAR[EQ_D.objets[id].r].col,r:EQ_D.objets[id].r,cls:cls||'io'});
+// HUD : l'icône est rendue en image (dessinée une fois par le navigateur, sans recalcul des filtres pendant le combat)
+const EQ_IMG={};const eqImg=id=>EQ_IMG[id]||(EQ_IMG[id]='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(eqArt(id,'io')));
 function eqLine(t,k){const m=String(t).match(/^([+−-]\s?\d[\d,]*(?:\s?%)?)\s+(.+)$/);
  return m?`<li class="${k} st"><b>${esc(m[1])}</b> ${esc(m[2])}</li>`:`<li class="${k} fx">${esc(t)}</li>`;}
 function eqTip(id,o){o=o||{};const E=EQS[id],R=RAR[E.r];
@@ -6462,7 +6464,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
  renderRelics=function(){_rr();if(!P||!RUN||RUN.hub)return;const box=$('#hRelics');if(!box)return;
   box.querySelectorAll('.relic.eq').forEach(x=>x.remove());
   for(const k of ['eq4','eq3','eq2','eq']){const id=P[k];if(!id)continue;const E=EQS[id],R=RAR[E.r];
-   box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} · ${eqSn(id)} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${id==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${id==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}">${eqIcon(id)}</span>`);}
+   box.insertAdjacentHTML('afterbegin',`<span class="relic eq" style="--rc:${R.col}" title="${esc(`${E.n} · ${eqSn(id)} (${R.n}) : ${E.up} Contrepartie : ${E.down}`)}${id==='murmure'?` · rang ${P.eqS.rank||0}/5`:''}${id==='coeur'&&P.eqS.st?` · +${P.eqS.st} %`:''}"><img class="io" src="${eqImg(id)}" alt=""></span>`);}
   box.querySelectorAll('.relic.eq').forEach(ic=>ic.addEventListener('click',()=>{if(state==='play')openPause();}));};
 
  // ———— pause : onglets + gestionnaire + barre d'actions fixe
