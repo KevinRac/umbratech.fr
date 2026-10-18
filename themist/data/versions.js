@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.19',
+ actuelle:'v16.20',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.20',t:'Héraut du Glas : les tics du métronome sont nettement plus forts et plus secs (le tock du premier temps est plus grave), et la musique baisse d’environ 40 % quand on joue le Héraut en partie, pour que le rythme se distingue.'},
   {d:'2026-10-18',h:'v16.19',t:'Équipement : la fiche sous les quatre emplacements (pause et écran de trouvaille) garde toujours la même hauteur, la plus longue de toutes, donc les emplacements ne se décalent plus quand la description change d’un objet à l’autre.'},
   {d:'2026-10-18',h:'v16.18',t:'Arbre de talents : la fiche sous l’arbre garde toujours la même hauteur (celle de la plus longue description), donc plus rien ne bouge ni ne saute quand on survole deux nœuds dont les descriptions n’ont pas le même nombre de lignes.'},
   {d:'2026-10-18',h:'v16.17',t:'Le Brumeux garde ses secrets : plus aucun message, fenêtre, ligne de chronique ni page du wiki n’explique sa feinte (le cercle ocre ou violet reste à découvrir). Avant le tout premier pacte, une fenêtre le présente en image (silhouette sans visage, deux yeux pâles, main tendue). Son cri gagne un petit rire démoniaque court (trois « ha » qui descendent), aussi joué quand il insiste en pleine salle.'},

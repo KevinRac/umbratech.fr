@@ -493,8 +493,8 @@ function sfx(k){if(!AC||muted)return;switch(k){
  case 'heart':tone(52,0.22,'sine',0.26,38);tone(48,0.2,'sine',0.2,36,0.17);noise(0.12,0.08,120,'lowpass');break;
  case 'coin':if(!throttle('coin',45))return;tone(1046,0.06,'triangle',0.035,1397);break;
  case 'buy':tone(660,0.1,'triangle',0.08,null);tone(990,0.16,'triangle',0.08,null,0.07);break;
- case 'tick':tone(1480,0.03,'square',0.012);tone(740,0.05,'sine',0.035);break;
- case 'tock':tone(523,0.09,'triangle',0.07);tone(1046,0.05,'sine',0.03);noise(0.04,0.03,3200,'highpass');break;
+ case 'tick':tone(1900,0.045,'square',0.06);tone(950,0.08,'triangle',0.13);noise(0.03,0.1,3500);break;
+ case 'tock':tone(392,0.16,'triangle',0.22);tone(784,0.09,'sine',0.11);tone(1568,0.05,'square',0.05);noise(0.05,0.12,3000);break;
  case 'bell':tone(660,0.5,'sine',0.07);tone(1650,0.25,'sine',0.025);tone(990,0.35,'triangle',0.02);break;
  case 'bellstrong':tone(440,0.9,'sine',0.1);tone(1100,0.5,'sine',0.035);tone(660,0.7,'triangle',0.03);noise(0.06,0.05,2500);break;
  case 'volee':tone(330,0.7,'sine',0.1);tone(825,0.4,'sine',0.04);noise(0.15,0.08,900,'lowpass');break;
@@ -2421,7 +2421,8 @@ function updateMusic(dt){
  if(want!==MUSIC.cur){MUSIC.cur=want;for(const t of MUSIC.tracks)t.target=0;if(want){let t=MUSIC.tracks.filter(x=>x.key===want&&!x.handoff).pop();if(!t)t=newTrack(want);t.target=1;if(t.el.paused){if(ONE_SHOT.includes(want)||t.el.ended)try{t.el.currentTime=0;}catch(e){}t.el.play().catch(()=>{MUSIC.blocked=true;});}}}
  // boucle douce : à 2,5 s de la fin, une nouvelle lecture démarre en fondu
  for(const t of MUSIC.tracks.slice()){if(t.handoff||t.target!==1||ONE_SHOT.includes(t.key))continue;const d=t.el.duration;if(d&&isFinite(d)&&t.el.currentTime>d-2.5){t.handoff=true;t.target=0;const n=newTrack(t.key);n.el.play().catch(()=>{MUSIC.blocked=true;});}}
- const master=muted?0:MUSIC.vol*((paused&&state==='play')?0.5:1);
+ const hDuck=(state==='play'&&P&&P.cls==='her'&&RUN&&!RUN.hub)?0.6:1;// Héraut : musique plus basse pour entendre le métronome
+ const master=muted?0:MUSIC.vol*hDuck*((paused&&state==='play')?0.5:1);
  for(const t of MUSIC.tracks){const rate=dt/1.6;t.v+=clamp(t.target-t.v,-rate,rate);try{t.el.volume=clamp(t.v*master,0,1);}catch(e){}if(t.v<=0.001&&t.target===0&&!t.el.paused){t.el.pause();if(t.handoff)t.dead=true;}}
  MUSIC.tracks=MUSIC.tracks.filter(t=>!t.dead);
 }
