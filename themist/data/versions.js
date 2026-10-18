@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.34',
+ actuelle:'v16.35',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.35',t:'Menu de pause rangé : la légende de l’arbre ne prend plus de place en bas, elle s’affiche au survol d’un bouton « Légende » au bout de la rangée des branches ; la consigne sous l’arbre se lit en trois points. Les boutons se rangent sur deux lignes : Reprendre, Comment jouer, Wiki, puis le volume de la musique (le haut-parleur coupe le son, le pourcentage s’affiche) et, à l’écart, Abandonner la run, qui demande désormais un second clic pour confirmer.'},
   {d:'2026-10-18',h:'v16.34',t:'Icônes d’équipement retravaillées : vraies matières (métal brossé, cuir, bois, tissu, pierre, cristal, givre), halos lumineux sur les flammes, gemmes et braises, ombres portées, rivets, coutures, rayures et usure, fond peint nuageux. Nouveau cadre en métal avec clous d’angle à la couleur de la rareté ; liseré lumineux pour les objets épiques, légendaires et uniques.'},
   {d:'2026-10-18',h:'v16.33',t:'Équipement : quatre emplacements fixes, un par type d’objet (I Arme, II Main gauche, III Armure, IV Talisman) ; une trouvaille va d’office dans le sien et l’écran la compare à l’objet porté. Chaque objet a son icône peinte (cadre à la couleur de sa rareté) et une fiche façon infobulle : gains ▲ en vert, coûts ▼ en rouge, chiffres en gras, set et texte d’ambiance. Codex rangé par emplacement. Égide de givre, Fiole, Lanterne, Pièce trouée et Premier Murmure passent en main gauche ; Couronne en armure ; Chaîne d’âmes en arme ; Cœur de lanterne et Plume du Phénix en talisman, pour que chaque set reste jouable.'},
   {d:'2026-10-18',h:'v16.32',t:'La Brèche est toujours tenue par un Masqué : il arrive avec la deuxième vague, à la place du champion de la Brèche, et la salle n’a plus de règle imposée. Elle donne toujours sa relique au choix et son or, en plus de la récompense du Masqué.'},

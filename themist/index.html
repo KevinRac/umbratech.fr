@@ -1755,7 +1755,7 @@ function statsHTML(){const s=P.s;let rows;
 function relicsHTML(){if(!P.relics.length)return '<p class="muted" style="margin:0">Aucune relique pour l’instant. Les autels et les élites en donnent.</p>';return `<ul class="rl">${P.relics.map(id=>{const r=RELICS.find(x=>x.id===id);return `<li><span class="g">${icon(r.id)}</span><span><strong>${esc(r.name)}</strong><br>${esc(r.desc)}</span></li>`;}).join('')}</ul>`;}
 function openPause(){
  if(state!=='play'||!overlayEl.hidden||P.dead)return;
- openOverlay(`<div class="panel"><div class="lv"><div>${treeBlock([])}</div><div><p class="eyebrow">${RUN.hub?'Pause · Sanctuaire':`Pause · Acte ${ROM[RUN.act]}, salle ${RUN.roomIdx}`}</p><h2>${CLS[P.cls].name}</h2><p class="sub">Niveau ${P.level}${P.s.sub?' · '+BR[P.s.sub].name:''}</p><p class="h-sec">Caractéristiques</p>${statsHTML()}<p class="h-sec">Reliques</p>${relicsHTML()}<div class="row"><button type="button" class="btn primary" id="resume">Reprendre</button><label class="vol" for="musvol">Musique <input type="range" id="musvol" min="0" max="1" step="0.05" value="${MUSIC.vol}"></label><button type="button" class="btn" id="mute">${muted?'Activer le son':'Couper le son'}</button>${RUN.hub?'':'<button type="button" class="btn" id="quit">Abandonner la run</button>'}</div></div></div></div>`);
+ openOverlay(`<div class="panel"><div class="lv"><div>${treeBlock([],typeof PZ_HINT!=='undefined'?PZ_HINT:'')}</div><div><p class="eyebrow">${RUN.hub?'Pause · Sanctuaire':`Pause · Acte ${ROM[RUN.act]}, salle ${RUN.roomIdx}`}</p><h2>${CLS[P.cls].name}</h2><p class="sub">Niveau ${P.level}${P.s.sub?' · '+BR[P.s.sub].name:''}</p><p class="h-sec">Caractéristiques</p>${statsHTML()}<p class="h-sec">Reliques</p>${relicsHTML()}<div class="row"><button type="button" class="btn primary" id="resume">Reprendre</button><label class="vol" for="musvol">Musique <input type="range" id="musvol" min="0" max="1" step="0.05" value="${MUSIC.vol}"></label><button type="button" class="btn" id="mute">${muted?'Activer le son':'Couper le son'}</button>${RUN.hub?'':'<button type="button" class="btn" id="quit">Abandonner la run</button>'}</div></div></div></div>`);
  bindTree(overlayEl,$('#cap'));
  $('#resume').addEventListener('click',closeOverlay);
  $('#mute').addEventListener('click',e=>{muted=!muted;e.target.textContent=muted?'Activer le son':'Couper le son';});
@@ -6978,6 +6978,94 @@ openCodex=function(back){
  openPause=function(){_op157();const g=$('#pguide')||$('#resume');if(!g||$('#pwiki'))return;
   g.insertAdjacentHTML('afterend','<button type="button" class="btn" id="pwiki">Wiki</button>');
   $('#pwiki').addEventListener('click',()=>openWiki(()=>{closeOverlay();openPause();}));};
+})();
+
+// ───────────────────────── v16.35 · pause : bas d'écran rangé (légende en infobulle, consigne lisible, barre de boutons en deux lignes)
+var PZ_HINT='<span class="caphint pzh"><span><b>Survoler</b> un nœud : lire son effet</span><span><b>Clic</b> : l’épingler</span><span><b>Clic sur une branche</b> : la déplier</span></span>';
+(function(){
+ const IC=window.BRUME_DATA.icones;
+ const ico=(d,cls)=>`<svg class="pzi ${cls||''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+ const NOTE='M9 18V5l11-2v13M6 21a3 3 0 1 0 0-6a3 3 0 1 0 0 6M17 19a3 3 0 1 0 0-6a3 3 0 1 0 0 6';
+ const SND='M4 9.5h3.5L12 5.5v13l-4.5-4H4zM15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11';
+ const MUTE='M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9.5l5 5M21 9.5l-5 5';
+ const PLAY='M8 5.5v13l11-6.5z';
+ const _op=openPause;
+ openPause=function(){
+  _op();
+  const panel=overlayEl.querySelector('.panel');if(!panel||panel.dataset.pz35)return;panel.dataset.pz35='1';
+  // — légende de l'arbre : retirée du bas, affichée en infobulle depuis un bouton « Légende » posé sur l'arbre
+  const leg=panel.querySelector('.ar-leg'),wrapT=panel.querySelector('.tree-wrap .tbar');
+  if(leg&&wrapT){
+   const box=document.createElement('div');box.className='pzleg';
+   box.innerHTML=`<button type="button" class="pzleg-b" aria-label="Légende de l’arbre">${ico(IC.u_info)}<span>Légende</span></button><div class="pzleg-p" role="tooltip"><p class="pzleg-t">Formes des nœuds</p></div>`;
+   const pop=box.querySelector('.pzleg-p');
+   const forms=document.createElement('ul');forms.className='ar-leg';const etats=document.createElement('ul');etats.className='ar-leg';
+   let after=false;[...leg.children].forEach(li=>{if(li.classList.contains('sep')){after=true;return;}(after?etats:forms).appendChild(li);});
+   pop.appendChild(forms);if(etats.children.length){const t=document.createElement('p');t.className='pzleg-t';t.textContent='États';pop.appendChild(t);pop.appendChild(etats);}
+   leg.remove();wrapT.appendChild(box);
+   const b=box.querySelector('.pzleg-b');b.addEventListener('click',e=>{e.stopPropagation();box.classList.toggle('on');});
+   panel.addEventListener('click',e=>{if(!box.contains(e.target))box.classList.remove('on');});}
+  // — barre d'actions : ligne 1 = reprendre / aide ; ligne 2 = son à gauche, abandon à droite
+  const bar=panel.querySelector('.pzbar');if(!bar)return;
+  const res=bar.querySelector('#resume'),gd=bar.querySelector('#pguide'),wk=bar.querySelector('#pwiki'),q=bar.querySelector('#quit'),mt=bar.querySelector('#mute'),vol=bar.querySelector('label.vol');
+  if(res){res.innerHTML=`${ico(PLAY,'f')}<span>Reprendre</span>`;res.title='Reprendre (Échap ou P)';}
+  if(gd){gd.innerHTML=`${ico(IC.u_info)}<span class="full">Comment jouer</span><span class="short">Aide</span>`;gd.title='Comment jouer';}
+  if(wk)wk.innerHTML=`${ico(IC.u_book)}<span>Wiki</span>`;
+  // son : réglette lisible (pourcentage) et bouton à icône (le libellé suit l'état)
+  if(vol){const r=vol.querySelector('input'),pill=document.createElement('div');pill.className='pzvol';
+   const nb=document.createElement('button');nb.type='button';nb.id='mute';nb.className='pzmute';
+   const pc=document.createElement('span');pc.className='pc';
+   const upd=()=>{pc.textContent=muted?'coupé':Math.round(r.value*100)+' %';r.style.setProperty('--v',(r.value*100)+'%');pill.classList.toggle('off',!!muted);};
+   const draw=()=>{nb.innerHTML=ico(muted?MUTE:SND);nb.title=muted?'Rétablir le son':'Couper le son';nb.setAttribute('aria-label',nb.title);nb.setAttribute('aria-pressed',muted?'true':'false');upd();};
+   nb.addEventListener('click',()=>{muted=!muted;draw();});r.addEventListener('input',upd);r.setAttribute('aria-label','Volume de la musique');
+   const lb=document.createElement('span');lb.className='lb';lb.textContent='Musique';
+   pill.append(nb,lb,r,pc);vol.replaceWith(pill);if(mt)mt.remove();draw();}
+  // abandon : à l'écart, et en deux temps pour éviter le clic malheureux
+  if(q){const nq=q.cloneNode(false);q.replaceWith(nq);let arm=0,tm=null;
+   const draw=()=>{nq.innerHTML=`${ico(IC.u_door)}<span>${arm?'Confirmer l’abandon':'Abandonner la run'}</span>`;nq.classList.toggle('arm',!!arm);};draw();
+   nq.addEventListener('click',()=>{if(!arm){arm=1;draw();clearTimeout(tm);tm=setTimeout(()=>{arm=0;if(nq.isConnected)draw();},3000);return;}clearTimeout(tm);closeOverlay();openEnd(false,true);});}
+  const L=bar.querySelector('.pzl'),Mi=bar.querySelector('.pzm'),R=bar.querySelector('.pzr');
+  bar.classList.add('pz35');if(L)L.classList.add('r1');if(Mi)Mi.classList.add('r2a');if(R)R.classList.add('r2b');};
+ const st=document.createElement('style');st.textContent=`
+.pzh{display:flex;flex-wrap:wrap;gap:6px 16px}.pzh>span{display:inline-flex;align-items:center;gap:6px}
+.pzh>span::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--flame);opacity:.7}
+.pzh b{color:var(--bone);font-weight:700}
+.pzleg{position:relative;margin-left:auto;z-index:6}
+.pzleg-b{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:700;letter-spacing:.04em;padding:4px 10px 4px 7px;border-radius:999px;border:1px solid var(--line-hi);background:rgba(12,14,22,.92);color:var(--ash);cursor:help}
+.pzleg-b:hover,.pzleg-b:focus-visible,.pzleg.on .pzleg-b{color:var(--bone);border-color:var(--flame);outline:none}
+.pzleg-p{position:absolute;top:calc(100% + 6px);right:0;width:290px;padding:12px 14px;border:1px solid var(--line-hi);border-radius:8px;background:rgba(10,12,19,.98);box-shadow:0 10px 28px rgba(0,0,0,.6);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .12s,transform .12s,visibility .12s}
+.pzleg:hover .pzleg-p,.pzleg:focus-within .pzleg-p,.pzleg.on .pzleg-p{opacity:1;visibility:visible;transform:none}
+.pzleg-t{margin:0 0 6px;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.pzleg-p .ar-leg{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin:0 0 10px;font-size:13.5px}
+.pzleg-p .ar-leg:last-child{margin-bottom:0}
+.pzi{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pzi.f{fill:currentColor;stroke:none}
+.pzbar.pz35{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l l" "m r";gap:12px 12px;align-items:center;padding:14px 0 2px}
+.pzbar.pz35 .r1{grid-area:l;display:flex;gap:8px;order:0;min-width:0}
+.pzbar.pz35 .r1 .btn{flex:0 0 auto;padding:0 13px}.pzbar.pz35 .r1 #resume{flex:1 1 auto}
+.pzbar.pz35{container-type:inline-size}
+.pzbar.pz35 .short{display:none}
+@container (max-width:440px){.pzbar.pz35 .full{display:none}.pzbar.pz35 .short{display:inline}.pzbar.pz35 .pzvol .lb{display:none}}
+@media (max-width:880px){.pzbar.pz35{background:#0e111a;box-shadow:0 -14px 16px #0e111a;z-index:5}}
+.pzbar.pz35 .r2a{grid-area:m;display:flex;gap:10px;align-items:center;justify-content:flex-start;order:0;flex-basis:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)}
+.pzbar.pz35 .r2b{grid-area:r;margin:0;order:0;padding-top:12px;border-top:1px solid rgba(255,255,255,.07);align-self:stretch;display:flex;align-items:center}
+.pzbar.pz35 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 14px;font-size:15px;white-space:nowrap}
+.pzbar.pz35 .pzvol{display:flex;align-items:center;gap:9px;height:42px;padding:0 12px 0 4px;border:1px solid var(--line-hi);border-radius:6px;background:rgba(255,255,255,.03);color:var(--ash);font-size:14.5px;min-width:0}
+.pzbar.pz35 .pzvol .lb{color:var(--bone);font-weight:600}
+.pzbar.pz35 .pzvol .pc{min-width:44px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ash);font-size:13.5px}
+.pzbar.pz35 .pzmute{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:5px;border:0;background:transparent;color:var(--bone);cursor:pointer}
+.pzbar.pz35 .pzmute:hover,.pzbar.pz35 .pzmute:focus-visible{background:rgba(255,255,255,.08);outline:none}
+.pzbar.pz35 .pzvol.off .pzmute{color:#ffb38a}.pzbar.pz35 .pzvol.off input{opacity:.35}.pzbar.pz35 .pzvol.off .pc{color:#ffb38a}
+.pzbar.pz35 .pzvol input{-webkit-appearance:none;appearance:none;flex:1;min-width:50px;width:auto;height:6px;margin:0;border-radius:999px;background:linear-gradient(90deg,var(--flame) var(--v,50%),rgba(255,255,255,.14) var(--v,50%));outline:none;cursor:pointer}
+.pzbar.pz35 .pzvol input::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff4d6;border:2px solid var(--flame);box-shadow:0 0 0 3px rgba(243,185,77,.18)}
+.pzbar.pz35 .pzvol input::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff4d6;border:2px solid var(--flame)}
+.pzbar.pz35 .pzvol input:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(243,185,77,.45)}
+.pzbar.pz35 .r2a .pzvol{flex:1}
+.pzbar.pz35 #quit{background:transparent;border-color:rgba(255,110,120,.45);color:#ffb3b8}
+.pzbar.pz35 #quit:hover{background:rgba(255,80,90,.1)}
+.pzbar.pz35 #quit.arm{background:#8a1f2a;border-color:#ff6a78;color:#fff}
+@media (max-width:620px){.pzbar.pz35{grid-template-columns:1fr;grid-template-areas:"l" "m" "r"}.pzbar.pz35 .r1{flex-wrap:wrap}.pzbar.pz35 .r1 #resume{flex-basis:100%}.pzbar.pz35 .r1 .btn:not(#resume){flex:1 1 0}.pzbar.pz35 .r2b{border-top:0;padding-top:0}.pzbar.pz35 .pzvol{max-width:none}}
+`;document.head.appendChild(st);
 })();
 
 // ───────────────────────── v15.7 · portails texturés : pierre taillée, brume vivante, herse, sigils en relief
