@@ -96,6 +96,9 @@ body{margin:0;background:var(--night);color:var(--bone);font-family:var(--f-body
 /* Overlays */
 #overlay{position:absolute;inset:0;overflow-y:auto;display:grid;place-items:center;padding:28px 16px;background:radial-gradient(120% 90% at 50% 35%,rgba(10,12,20,.72),rgba(3,4,8,.95));backdrop-filter:blur(2px)}
 #overlay.see{background:linear-gradient(90deg,rgba(4,5,9,.93) 0%,rgba(4,5,9,.78) 46%,rgba(4,5,9,.45) 100%);backdrop-filter:none}
+/* v16.41 · plus de voile sombre ni de flou sur le décor : écran titre, Portail et habitants du Sanctuaire laissent voir le monde derrière leur panneau */
+#overlay:has(.title-wrap){background:linear-gradient(90deg,rgba(4,5,9,.8) 0%,rgba(4,5,9,.5) 40%,rgba(4,5,9,.12) 100%);backdrop-filter:none}
+#overlay:has(.npc-head){background:none;backdrop-filter:none}
 .panel{width:min(1140px,100%);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:28px clamp(16px,3vw,40px);box-shadow:0 30px 90px rgba(0,0,0,.65)}
 .eyebrow{margin:0;font-size:13.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ash)}
 h1,h2,h3{font-family:var(--f-display);font-weight:500;margin:0;text-wrap:balance;color:var(--bone)}
@@ -1484,8 +1487,8 @@ function render(){
 }
 function drawFog(){
  const g=fctx,fw=fogCv.width,fh=fogCv.height;const night=P.nightT>0;
- const a=state==='title'?0.88:night?0.975:room.type==='sanctuaire'?0.58:([0,0.75,0.8,0.8][RUN.act]||0.8)+(RUN.fogBoost||0);
- g.globalCompositeOperation='source-over';g.clearRect(0,0,fw,fh);g.fillStyle=`rgba(4,5,11,${a})`;g.fillRect(0,0,fw,fh);
+ const a=state==='title'?0:night?0.975:room.type==='sanctuaire'?0:([0,0.75,0.8,0.8][RUN.act]||0.8)+(RUN.fogBoost||0);
+ g.globalCompositeOperation='source-over';g.clearRect(0,0,fw,fh);g.fillStyle=`rgba(4,5,11,${Math.max(0,a)})`;g.fillRect(0,0,fw,fh);
  g.globalCompositeOperation='destination-out';
  for(const l of lights){if(l.r<=2)continue;const fl=1+Math.sin(T*9+l.x*0.01)*0.015;const r=l.r*FS*fl,x=l.x*FS,y=l.y*FS;const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(0.5,'rgba(0,0,0,0.85)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();}
  g.globalCompositeOperation='source-over';
@@ -7854,7 +7857,7 @@ function demoBoot(cls){
   P.hp=P.s.maxHp;P.dead=false;P.hurtFlash=0;
   const live=enemies.filter(e=>!e.dead&&!e.fixed);
   for(const e of live){e.dmg=0;e.maxHp=3000;e.hp=3000;e.spd=0;e.state='walk';e.t=e.cd=999;}
-  if(RUN){RUN.fogBoost=-0.42;if(RUN.as)RUN.as.busy=true;}if(room){room.doors=[];room.rule=null;room.bl=null;room.waves=[];room.spawning=[];}
+  if(RUN){RUN.fogBoost=-1;if(RUN.as)RUN.as.busy=true;}if(room){room.doors=[];room.rule=null;room.bl=null;room.waves=[];room.spawning=[];}
   const now=performance.now()/1000;
   if(ph<0){ph=0;t0=now;trans=null;fade=0;reset();}
   let tt=now-t0;

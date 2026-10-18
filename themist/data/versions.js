@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.40',
+ actuelle:'v16.41',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-19',h:'v16.41',t:'Plus de filtre sombre sur l’écran titre, au Sanctuaire et au Portail : le brouillard qui assombrissait le décor est retiré à ces endroits, de même que le voile flouté derrière les panneaux (Portail, habitants) et que l’obscurité de l’aperçu de la forme. Le brouillard reste en descente.'},
   {d:'2026-10-19',h:'v16.40',t:'Wiki, section « Les quatre formes » : l’aperçu en trois gestes est maintenant le même que celui du Portail, le vrai moteur du jeu rejoué en boucle dans un cadre, avec les trois gestes cliquables (clic pour figer l’un d’eux, re-clic pour reprendre la boucle). Le cadre ne se charge qu’en arrivant à l’écran.'},
   {d:'2026-10-19',h:'v16.39',t:'Palier 0 terminé : au premier retour au Sanctuaire, un message rappelle qu’on peut monter la difficulté en choisissant un Palier de Brume au Portail (affiché une seule fois).'},
   {d:'2026-10-19',h:'v16.38',t:'Piqûre ricochet : 20 % de chances par rang sur tout ennemi touché, 30 % par rang si l’ennemi touché est attaché par un fil (au lieu de 25 % sur un ennemi attaché uniquement).'},
