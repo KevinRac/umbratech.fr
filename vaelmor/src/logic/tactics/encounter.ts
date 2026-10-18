@@ -37,6 +37,10 @@ export interface BattleOptions {
   readonly world?: TerrainSource;
   /** Point de contact dans le monde (remplace le `site` par défaut de la rencontre). */
   readonly site?: Cell;
+  /** Embuscade subie (GDD §7.4) : les ennemis démarrent tout près et ouvrent le combat par leur phase. */
+  readonly ambush?: boolean;
+  /** Renforts appelés par une vigie (GDD §7.2) : ajoutés aux ennemis de la rencontre. */
+  readonly extraEnemies?: readonly { readonly enemy: string; readonly level: number }[];
 }
 
 interface Layout {
@@ -69,7 +73,7 @@ export function layoutEncounter(encounter: EncounterDef, partySize: number, data
         }),
       ),
     };
-    const placement = placeUnits(map, sample.site, encounter.sampled.anchor, count, encounter.enemies, Rng.fromSeed(`${options.seed}:placement`));
+    const placement = placeUnits(map, sample.site, encounter.sampled.anchor, count, encounter.enemies, Rng.fromSeed(`${options.seed}:placement`), options.ambush === true);
     const zoneValue = options.world.zone(site.x, site.y);
     const zone = data.zones.find((z) => z.value === zoneValue)?.id ?? encounter.zone;
     return { map, deploy: placement.deploy, enemies: placement.enemies, zone, worldOrigin: sample.origin };
@@ -84,7 +88,8 @@ function baseUnit(): Pick<BattleUnit, 'moved' | 'acted' | 'moveOrigin' | 'resona
   return { moved: false, acted: false, moveOrigin: null, resonance: 0, bogPending: false, bogged: false, alerted: false };
 }
 
-export function buildBattle(encounter: EncounterDef, party: readonly PartyMemberDef[], data: GameData, options: BattleOptions): BattleState {
+export function buildBattle(base: EncounterDef, party: readonly PartyMemberDef[], data: GameData, options: BattleOptions): BattleState {
+  const encounter: EncounterDef = options.extraEnemies && options.extraEnemies.length > 0 ? { ...base, enemies: [...base.enemies, ...options.extraEnemies] } : base;
   const layout = layoutEncounter(encounter, party.length, data, options);
   const map = layout.map;
   const weapons = new Map(data.weapons.map((w) => [w.id, w]));
@@ -159,9 +164,10 @@ export function buildBattle(encounter: EncounterDef, party: readonly PartyMember
     objective: encounter.objective.type,
     victoryFlags: encounter.victoryFlags,
     rng: Rng.fromSeed(options.seed),
-    phase: 'player',
+    phase: options.ambush === true ? 'enemy' : 'player',
     turn: 1,
     outcome: 'ongoing',
-    initiative: options.initiative === true,
+    initiative: options.initiative === true && options.ambush !== true,
+    ambush: options.ambush === true,
   };
 }

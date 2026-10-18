@@ -44,6 +44,39 @@
   "defeat": {
     "goldLossRatio": 0.1
   },
+  "foes": {
+    "detection": {
+      "sentinelle": { "radius": 0, "coneRange": 5, "coneAngle": 90 },
+      "patrouille": { "radius": 4, "coneRange": 6, "coneAngle": 90 },
+      "errant": { "radius": 4, "coneRange": 0, "coneAngle": 0 },
+      "embuscade": { "radius": 2, "coneRange": 0, "coneAngle": 0 },
+      "boss": { "radius": 6, "coneRange": 0, "coneAngle": 0 },
+      "garde": { "radius": 4, "coneRange": 6, "coneAngle": 90 }
+    },
+    "classDetection": { "chasseur_de_serpents_de_mer": 0.8 },
+    "alertMs": 600,
+    "loseSightMs": 6000,
+    "loseDistance": 8,
+    "contactRadius": 11,
+    "indicatorRange": 10,
+    "pauseMs": 2000,
+    "speeds": { "patrol": 36, "wander": 28, "chase": 88, "return": 56, "flee": 96 },
+    "fleeLevelGap": 5,
+    "reinforcements": { "min": 1, "max": 2 },
+    "graceMs": 4000,
+    "wanderRespawnMs": 600000,
+    "surpriseRange": 22,
+    "bossGoldMultiplier": 5,
+    "lootChance": { "consumable": 0.2, "equipment": 0.05 },
+    "difficulty": [
+      { "maxGap": -4, "id": "facile", "label": "Facile", "color": "#6fbf73" },
+      { "maxGap": -1, "id": "abordable", "label": "Abordable", "color": "#c9e07a" },
+      { "maxGap": 2, "id": "equilibre", "label": "Équilibré", "color": "#f2d64b" },
+      { "maxGap": 5, "id": "dangereux", "label": "Dangereux", "color": "#f09a3e" },
+      { "maxGap": null, "id": "mortel", "label": "Mortel", "color": "#e0453a" }
+    ],
+    "bossIndicator": { "label": "Boss", "color": "#a45be0" }
+  },
   "economy": {
     "startingGold": 150,
     "inventoryCapacity": 40,

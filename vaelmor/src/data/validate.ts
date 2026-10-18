@@ -17,6 +17,7 @@ import {
   elementsFileSchema,
   reputationFileSchema,
   terrainsFileSchema,
+  worldEnemiesFileSchema,
   zonesFileSchema,
   type AccessoryDef,
   type BalanceConfig,
@@ -28,6 +29,7 @@ import {
   type EnemyDef,
   type ReputationConfig,
   type WeaponDef,
+  type WorldFoeDef,
   type TerrainDef,
   type ZoneDef,
 } from './schemas';
@@ -55,6 +57,7 @@ export const DATA_SCHEMAS = {
   encounters: encountersFileSchema,
   locations: locationsFileSchema,
   quests: questsFileSchema,
+  worldEnemies: worldEnemiesFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -83,6 +86,8 @@ export interface GameData {
   readonly locations: readonly LocationDef[];
   readonly factions: readonly FactionDef[];
   readonly quests: readonly QuestDef[];
+  /** Ennemis visibles du monde ouvert (jalon M3). */
+  readonly worldFoes: readonly WorldFoeDef[];
 }
 
 export type ValidationResult =
@@ -220,6 +225,8 @@ function crossCheck(data: GameData): string[] {
 
   checkEncounters(data, issues);
   checkTowns(data, issues);
+  checkZoneContent(data, issues);
+  checkWorldFoes(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -340,6 +347,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     encounters: z.infer<typeof encountersFileSchema>;
     locations: z.infer<typeof locationsFileSchema>;
     quests: z.infer<typeof questsFileSchema>;
+    worldEnemies: z.infer<typeof worldEnemiesFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -357,6 +365,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     locations: files.locations.locations,
     factions: files.locations.factions,
     quests: files.quests.quests,
+    worldFoes: files.worldEnemies.foes,
   };
 
   const crossIssues = crossCheck(data);
@@ -485,4 +494,70 @@ function checkTowns(data: GameData, issues: string[]): void {
     for (const it of q.reward.items ?? []) if (!itemIds.has(it.item)) issues.push(`${at}.reward : objet inconnu « ${it.item} »`);
     if (q.refusalPenalty && !repTargets.has(q.refusalPenalty.target)) issues.push(`${at}.refusalPenalty : réputation inconnue « ${q.refusalPenalty.target} »`);
   }
+}
+
+/** Zones : butin, tables de rencontres, drapeaux d'accès (jalon M3). */
+function checkZoneContent(data: GameData, issues: string[]): void {
+  const encounters = new Map(data.encounters.encounters.map((e) => [e.id, e]));
+  const itemIds = new Set<string>([...data.weapons.map((w) => w.id), ...data.consumables.map((c) => c.id), ...data.accessories.map((a) => a.id), ...data.keyItems.map((k) => k.id)]);
+  const consumableIds = new Set(data.consumables.map((c) => c.id));
+  const sellable = new Set<string>([...data.weapons.filter((w) => w.price !== undefined).map((w) => w.id), ...data.accessories.map((a) => a.id)]);
+  for (const zone of data.zones) {
+    const at = `zones.json › « ${zone.id} »`;
+    if (zone.goldPerEnemy.min > zone.goldPerEnemy.max) issues.push(`${at}.goldPerEnemy : min > max`);
+    for (const item of zone.loot.consumables) if (!consumableIds.has(item)) issues.push(`${at}.loot.consumables : « ${item} » n'est pas un consommable`);
+    for (const item of zone.loot.equipment) if (!sellable.has(item)) issues.push(`${at}.loot.equipment : « ${item} » n'est ni une arme vendable ni un accessoire`);
+    for (const entry of zone.encounterTable) {
+      const enc = encounters.get(entry.encounter);
+      if (!enc) issues.push(`${at}.encounterTable : rencontre inconnue « ${entry.encounter} »`);
+      else if (enc.objective.type === 'boss') issues.push(`${at}.encounterTable : « ${enc.id} » est une rencontre de boss, elle n'a pas sa place dans une table`);
+    }
+    if ((zone.access === undefined || zone.access.length === 0) !== (zone.accessMessage === undefined)) issues.push(`${at} : access et accessMessage vont ensemble`);
+    if (zone.access !== undefined && zone.unlockFlag === null) issues.push(`${at}.access : une zone toujours ouverte n'a pas de passage à conditionner`);
+  }
+  for (const enc of data.encounters.encounters) {
+    for (const item of enc.rewards?.items ?? []) if (!itemIds.has(item.item)) issues.push(`encounters.json › « ${enc.id} ».rewards : objet inconnu « ${item.item} »`);
+  }
+}
+
+/** Ennemis du monde : références, forme propre à chaque type, couverture des tables (la carte est vérifiée par `checkFoesOnMap`). */
+function checkWorldFoes(data: GameData, issues: string[]): void {
+  const file = 'worldEnemies.json';
+  checkUniqueIds(file, 'ennemi du monde', data.worldFoes, issues);
+  const zones = new Map(data.zones.map((z) => [z.id, z]));
+  const encounters = new Map(data.encounters.encounters.map((e) => [e.id, e]));
+  const towns = new Map(data.locations.map((l) => [l.id, l]));
+  const bossFlags = new Set<string>();
+  for (const foe of data.worldFoes) {
+    const at = `${file} › « ${foe.id} »`;
+    const zone = zones.get(foe.zone);
+    if (!zone) {
+      issues.push(`${at}.zone référence une zone inconnue : « ${foe.zone} »`);
+      continue;
+    }
+    const enc = foe.encounter === undefined ? undefined : encounters.get(foe.encounter);
+    if (foe.encounter !== undefined && !enc) issues.push(`${at}.encounter référence une rencontre inconnue : « ${foe.encounter} »`);
+    if (enc && enc.zone !== foe.zone) issues.push(`${at} : la rencontre « ${enc.id} » appartient à la zone « ${enc.zone} »`);
+    if (foe.kind === 'boss') {
+      if (!enc) issues.push(`${at} : un boss a une rencontre fixe (encounter)`);
+      else if (enc.objective.type !== 'boss') issues.push(`${at} : la rencontre « ${enc.id} » d'un boss doit avoir l'objectif « boss »`);
+      else for (const flag of enc.victoryFlags) bossFlags.add(flag);
+    } else if (enc?.objective.type === 'boss') issues.push(`${at} : seul un boss peut engager une rencontre de boss`);
+    if (foe.kind === 'patrouille' && foe.path === undefined) issues.push(`${at} : une patrouille a un trajet (path)`);
+    if (foe.kind !== 'patrouille' && foe.path !== undefined) issues.push(`${at} : path n'a de sens que pour une patrouille`);
+    if (foe.path !== undefined && (foe.path[0]?.[0] !== foe.at[0] || foe.path[0]?.[1] !== foe.at[1])) issues.push(`${at} : le trajet doit commencer à la case d'attache (at)`);
+    if ((foe.kind === 'errant' || foe.kind === 'garde') !== (foe.roam !== undefined)) issues.push(`${at} : roam est réservé aux errants et aux gardes (et obligatoire pour eux)`);
+    if ((foe.kind === 'sentinelle') !== (foe.facing !== undefined)) issues.push(`${at} : facing est réservé aux sentinelles (et obligatoire pour elles)`);
+    if (foe.kind === 'garde') {
+      const town = foe.town === undefined ? undefined : towns.get(foe.town);
+      if (!town || town.reputation === null) issues.push(`${at}.town doit désigner un lieu habité (avec réputation)`);
+    } else if (foe.town !== undefined) issues.push(`${at}.town n'a de sens que pour un garde`);
+    if (foe.encounter === undefined && foe.kind !== 'boss' && !zone.encounterTable.some((t) => t.for.includes(foe.kind))) {
+      issues.push(`${at} : aucune rencontre de « ${foe.kind} » dans la table de la zone « ${zone.id} »`);
+    }
+  }
+  // Tout boss de quête (drapeaux boss_* des lieux et quêtes) a son ennemi dans le monde.
+  const needed = new Set<string>();
+  for (const q of data.quests) for (const step of q.steps) if (step.kind === 'flag' && step.flag.startsWith('boss_')) needed.add(step.flag);
+  for (const flag of needed) if (!bossFlags.has(flag)) issues.push(`${file} : aucun boss du monde ne lève le drapeau « ${flag} » (attendu par une quête)`);
 }

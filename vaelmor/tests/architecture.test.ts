@@ -4,7 +4,7 @@
  * vérifiée à la compilation par tsconfig.pure.json.)
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(import.meta.dirname, '..', 'src');
@@ -22,14 +22,24 @@ function imports(file: string): string[] {
   return [...source.matchAll(/(?:import|export)[^'"]*?from\s*['"]([^'"]+)['"]/g)].map((m) => m[1] as string);
 }
 
-const FORBIDDEN_FROM_PURE = /^phaser$|\/(core|render|scenes|ui|world|audio|debug)\//;
+/** Couches de rendu et d'entrées-sorties, interdites à la logique et aux données. `src/logic/world` est de la logique, pas `src/world`. */
+const FORBIDDEN_LAYERS = new Set(['core', 'render', 'scenes', 'ui', 'world', 'audio', 'debug']);
+
+/** Vrai si l'import vise Phaser ou une couche interdite (le chemin relatif est résolu : `../world/x` depuis `logic/game` est `logic/world`, autorisé). */
+function isForbiddenImport(file: string, spec: string): boolean {
+  if (spec === 'phaser') return true;
+  if (!spec.startsWith('.')) return false;
+  const target = relative(SRC, resolve(dirname(file), spec));
+  const layer = target.split(/[\\/]/)[0] ?? '';
+  return FORBIDDEN_LAYERS.has(layer);
+}
 
 describe('architecture en couches', () => {
   for (const layer of ['logic', 'data']) {
     it(`src/${layer} n'importe ni Phaser ni les couches de rendu`, () => {
       const offenders = tsFiles(join(SRC, layer)).flatMap((file) =>
         imports(file)
-          .filter((spec) => FORBIDDEN_FROM_PURE.test(spec))
+          .filter((spec) => isForbiddenImport(file, spec))
           .map((spec) => `${relative(SRC, file)} → ${spec}`),
       );
       expect(offenders).toEqual([]);

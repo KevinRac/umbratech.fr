@@ -605,7 +605,7 @@ export class BattleHudScene extends Phaser.Scene {
   /* ---------- Fin du combat (GDD §13.7) ---------- */
 
   /** `opensWorld` : la victoire lève des drapeaux dans une partie en cours (un passage s'ouvre). */
-  showResult(summary: BattleSummary, opensWorld: boolean, onContinue: () => void): void {
+  showResult(summary: BattleSummary, opensWorld: boolean, onContinue: () => void, rewards: readonly string[] = [], note: string | null = null): void {
     this.run(() => {
       this.closeMenuNow();
       this.clear(this.resultParts);
@@ -633,8 +633,11 @@ export class BattleHudScene extends Phaser.Scene {
       if (victory) {
         lines.push(summary.fallen.length > 0 ? [`Blessés (1 PV, jusqu'au prochain repos) : ${summary.fallen.join(', ')}`, PALETTE.braise] : ['Aucun blessé', 0x7fcf6a]);
         if (opensWorld && summary.flags.length > 0) lines.push(['Un passage s’ouvre dans le monde…', PALETTE.cyanEclat]);
+        if (rewards.length > 0) lines.push([`Butin : ${rewards.join(' · ')}`, PALETTE.lumiereDoree]);
       } else {
         lines.push(['La compagnie se replie.', PALETTE.metalClair]);
+        if (rewards.length > 0) lines.push([rewards.join(' · '), PALETTE.braise]);
+        if (note) lines.push([note, PALETTE.metalClair]);
       }
       lines.forEach(([text, color], i) => {
         parts.push(addText(this, width / 2, y + 74 * S + i * 22 * S, text, { scale: S, color, align: 'center', maxWidth: w - 40 * S }).setDepth(DEPTH.result + 2));

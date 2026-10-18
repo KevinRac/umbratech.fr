@@ -16,6 +16,11 @@ export interface WorldState {
   readonly discoveredLocations: string[];
   /** Or, sac, réputations, quêtes, recrues (jalon M2). */
   readonly progress: Progress;
+  /**
+   * Niveau imposé à la compagnie d'essai (debug `?lvl=`), tant que l'effectif
+   * jouable n'existe pas (jalons M5-M6). Absent : niveaux de `testParty`.
+   */
+  testLevel?: number;
 }
 
 /** Centre en pixels d'un objet de carte (le pied d'un point d'apparition est sa position). */

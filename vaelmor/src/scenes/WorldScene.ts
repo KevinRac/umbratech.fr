@@ -16,14 +16,39 @@ import { GameDataError, loadGameData, type GameData } from '../data';
 import type { ZoneDef } from '../data/schemas';
 import { COLLISION, WorldMapError, loadWorldMap, type WorldMap } from '../data/worldMap';
 import { centerOn, followTarget, type CameraConfig, type Vec2 } from '../logic/world/camera';
-import { CollisionGrid } from '../logic/world/collision';
+import { CollisionGrid, gateRequirements, isGateOpen } from '../logic/world/collision';
+import { createFoe, detectionScale, feetCell, surpriseTarget, updateFoe, type FoeEvent, type FoeSim } from '../logic/world/foes';
 import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '../logic/world/movement';
 import { nearestFreeCell } from '../logic/world/pathfinding';
-import { ZoneTracker } from '../logic/world/zones';
+import { ZoneTracker, terrainAtCell } from '../logic/world/zones';
 import { DEFAULT_WANDER, Wanderer } from '../logic/game/wander';
 import { Rng } from '../logic/rng';
 import { getGameCtx } from '../core/townContext';
-import { collectFlagRewards, enterLocation, newProgress, newlyReady, npcPresent, questStatus, questTierOk, reputationOf, tierIdOf, type GameCtx, type Notice } from '../logic/game';
+import {
+  chooseEncounter,
+  classDetectionScale,
+  collectFlagRewards,
+  difficultyOf,
+  enterLocation,
+  foeFlees,
+  foePresent,
+  meanEnemyLevel,
+  newProgress,
+  newlyReady,
+  npcPresent,
+  partyLevel,
+  questStatus,
+  questTierOk,
+  reputationOf,
+  tierAt,
+  tierIdOf,
+  type BattleEnd,
+  type GameCtx,
+  type Notice,
+} from '../logic/game';
+import { findEncounter } from '../logic/tactics/encounter';
+import { FoeActor } from '../render/foeActors';
+import { ensureFoeTextures } from '../render/foeTextures';
 import type { NpcDef } from '../data/townSchemas';
 import { formatNotices } from '../ui/notices';
 import { facingPose, facingToward } from '../render/npcSprites';
@@ -84,9 +109,28 @@ interface NpcActor {
   facing: NpcDef['facing'];
 }
 
+/** Ce que le combat qui vient de finir laisse derrière lui (jalon M3). */
+export interface BattleReturn {
+  readonly end: BattleEnd;
+  /** Défaite : village où la compagnie se réveille (null : point de départ). */
+  readonly wakeAt?: string | null;
+  /** Or, butin, récompenses : à annoncer. */
+  readonly notices: readonly Notice[];
+}
+
 export interface WorldSceneData {
   /** Vrai pour une nouvelle partie : l'état du monde repart du point de départ. */
   readonly newGame?: boolean;
+  /** Retour d'un combat. */
+  readonly battleReturn?: BattleReturn;
+}
+
+/** Options d'un combat engagé par un ennemi du monde. */
+interface EngageOptions {
+  readonly initiative?: boolean;
+  readonly ambush?: boolean;
+  readonly foeId?: string;
+  readonly extraEnemies?: readonly { enemy: string; level: number }[];
 }
 
 export class WorldScene extends Phaser.Scene {
@@ -145,6 +189,17 @@ export class WorldScene extends Phaser.Scene {
   private lastGold = -1;
   private lastRepKey = '';
 
+  /* Ennemis du monde (jalon M3) */
+  private foeActors = new Map<string, FoeActor>();
+  private foeRng!: Rng;
+  private gateReq: ReadonlyMap<string, readonly string[]> = new Map();
+  private graceMs = 0;
+  private classScale = 1;
+  private partyLvl = 3;
+  private nearFoe: FoeSim | null = null;
+  private presenceTimer = 0;
+  private foesDebugOff = false;
+
   constructor() {
     super(SCENES.world);
   }
@@ -159,6 +214,10 @@ export class WorldScene extends Phaser.Scene {
     this.village = null;
     this.lastGold = -1;
     this.lastRepKey = '';
+    this.foeActors = new Map();
+    this.nearFoe = null;
+    this.presenceTimer = 0;
+    if (data.newGame) this.registry.set('world.atApplied', false);
     this.view = worldView(this, worldZoomFor(this.scale.height));
     try {
       this.data_ = loadGameData();
@@ -181,6 +240,9 @@ export class WorldScene extends Phaser.Scene {
     this.gameCtx = getGameCtx() as GameCtx;
     this.applyTownDebug(data.newGame === true);
     this.grid = CollisionGrid.fromMap(this.map, this.state.openFlags);
+    this.gateReq = gateRequirements(this.data_.zones);
+    this.grid.setGateRequirements(this.gateReq);
+    this.applyBattleReturn(data.battleReturn);
     this.tracker = new ZoneTracker(this.map, this.data_.zones);
 
     const exploration = this.data_.balance.exploration;
@@ -197,6 +259,7 @@ export class WorldScene extends Phaser.Scene {
     this.buildAmbientDecor();
     this.buildHero();
     this.buildNpcs();
+    this.buildFoes();
     this.buildGateFog();
     this.debugOverlay = this.add.graphics().setDepth(DEPTH.debug);
 
@@ -216,6 +279,7 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.fadeIn(600, 0, 0, 0);
     this.syncTownHud();
     this.checkProgress(true);
+    this.announceBattleReturn(data.battleReturn);
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
@@ -294,7 +358,9 @@ export class WorldScene extends Phaser.Scene {
     this.body_ = createBody(player.x, player.y, player.facing);
     // Outil de debug : `?debug&at=31,58` pose le héros sur la case indiquée.
     const params = new URLSearchParams(window.location.search);
-    const at = params.has('debug') ? /^(\d+),(\d+)$/.exec(params.get('at') ?? '') : null;
+    // Une seule fois par partie : au retour d'un combat, le héros reste là où l'état du jeu le met.
+    const at = params.has('debug') && this.registry.get('world.atApplied') !== true ? /^(\d+),(\d+)$/.exec(params.get('at') ?? '') : null;
+    if (at) this.registry.set('world.atApplied', true);
     if (at) placeBodyAt(this.body_, Number(at[1]) * this.map.tileSize + this.map.tileSize / 2, (Number(at[2]) + 1) * this.map.tileSize - 1);
     // Le point d'apparition peut tomber dans un décor (carte modifiée) : on cherche la case libre voisine.
     this.snapToFree(this.body_);
@@ -370,6 +436,7 @@ export class WorldScene extends Phaser.Scene {
       dy: (this.actions.isDown('down') ? 1 : 0) - (this.actions.isDown('up') ? 1 : 0),
       sprint: this.actions.isDown('sprint'),
     };
+    this.state.progress.clock += delta;
     stepBody(this.body_, input, dt, this.grid, this.data_.balance.exploration);
     if (this.body_.bumpedGate) this.onGateBump(this.body_.bumpedGate, time);
 
@@ -378,6 +445,7 @@ export class WorldScene extends Phaser.Scene {
     this.syncHero();
     this.updateZones();
     this.updateNpcs(time, delta);
+    this.updateFoes(time, delta);
     this.updateInteraction(time);
     this.pollTownHud();
     this.updateAtmosphere(dt);
@@ -443,6 +511,7 @@ export class WorldScene extends Phaser.Scene {
       const [target, value] = entry.split(':');
       if (target && value !== undefined && Number.isFinite(Number(value)) && progress.reputation[target] !== undefined) progress.reputation[target] = Math.max(-100, Math.min(100, Number(value)));
     }
+    if (params.has('lvl')) this.state.testLevel = Math.max(1, Math.min(30, Math.floor(Number(params.get('lvl')) || 1)));
     if (params.has('gold')) progress.gold = Math.max(0, Math.floor(Number(params.get('gold')) || 0));
     for (const flag of (params.get('flags') ?? '').split(',')) if (flag) addUnique(this.state.openFlags, flag);
   }
@@ -588,11 +657,14 @@ export class WorldScene extends Phaser.Scene {
 
   private updateInteraction(time: number): void {
     const near = this.findNearNpc();
-    if (near !== this.nearNpc) {
+    const surprise = near ? null : surpriseTarget([...this.foeActors.values()].map((a) => a.sim), this.body_, this.data_.balance.foes.surpriseRange);
+    if (near !== this.nearNpc || surprise !== this.nearFoe) {
       this.nearNpc = near;
-      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : null);
+      this.nearFoe = surprise;
+      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : surprise ? 'Attaquer par surprise' : null);
     }
     if (near && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startDialogue(near);
+    else if (surprise && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.engageFoe(surprise, { initiative: true });
     if (time > this.modalCooldownUntil && this.actions.justPressed('menu')) this.openMenu('inventaire');
     else if (time > this.modalCooldownUntil && this.actions.justPressed('journal')) this.openMenu('quetes');
   }
@@ -604,6 +676,7 @@ export class WorldScene extends Phaser.Scene {
     this.body_.vx = 0;
     this.body_.vy = 0;
     this.nearNpc = null;
+    this.nearFoe = null;
     this.hud.setPrompt(null);
     this.syncHero();
   }
@@ -614,6 +687,7 @@ export class WorldScene extends Phaser.Scene {
     this.grid.setOpenFlags(this.state.openFlags);
     this.refreshGates();
     this.refreshMarkers();
+    this.syncFoePresence();
     this.checkProgress(false);
   }
 
@@ -699,7 +773,11 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     enterLocation(this.gameCtx.progress, id, this.gameCtx.data.reputation);
+    this.gameCtx.progress.lastVillage = id;
     this.village = id;
+    if (tierAt(this.gameCtx, id) === 'hostile' && this.data_.worldFoes.some((f) => f.kind === 'garde' && f.town === id)) {
+      this.hud.toast(`Les gardes de ${this.gameCtx.index.locations.get(id)?.name ?? id} te reconnaissent. Ils te traquent !`);
+    }
     this.lastRepKey = `${id}:${reputationOf(this.gameCtx.progress, id)}`;
     this.hud.setReputation(this.reputationView(), true);
   }
@@ -741,6 +819,10 @@ export class WorldScene extends Phaser.Scene {
 
   private onZoneEntered(zone: ZoneDef, announce: boolean): void {
     const isNew = addUnique(this.state.discoveredZones, zone.id);
+    if (announce) {
+      this.state.progress.zoneVisits += 1;
+      this.syncFoePresence();
+    }
     this.hud.setZone(`${zone.name}  Niv. ${zone.levelMin}-${zone.levelMax}`);
     this.hud.setTint(Phaser.Display.Color.HexStringToColor(zone.ambient.color).color, zone.ambient.alpha);
     this.hud.setAmbience(zone.ambience);
@@ -755,12 +837,14 @@ export class WorldScene extends Phaser.Scene {
     if (time - this.lastGateMessage < GATE_MESSAGE_COOLDOWN_MS) return;
     this.lastGateMessage = time;
     const zone = this.data_.zones.find((z) => z.unlockFlag === flag);
-    this.hud.toast(zone?.gateMessage ?? 'Le passage est bloqué.');
+    // Le boss est tombé mais l'accès manque encore (Citadelle : confiance de Pierre-Haute, barque de Dorn).
+    const accessMissing = this.state.openFlags.includes(flag) && zone?.accessMessage !== undefined;
+    this.hud.toast((accessMissing ? zone?.accessMessage : zone?.gateMessage) ?? 'Le passage est bloqué.');
   }
 
   private refreshGates(): void {
     for (const [flag, sprites] of this.fog) {
-      const open = this.state.openFlags.includes(flag);
+      const open = isGateOpen(flag, new Set(this.state.openFlags), this.gateReq);
       for (const sprite of sprites) sprite.setVisible(!open);
     }
   }
@@ -800,7 +884,7 @@ export class WorldScene extends Phaser.Scene {
       if (!this.debugCollisionOn) this.debugOverlay.clear();
     }
     if (this.actions.justPressed('debugGates')) {
-      const allOpen = this.data_.zones.flatMap((z) => (z.unlockFlag === null ? [] : [z.unlockFlag]));
+      const allOpen = this.data_.zones.flatMap((z) => (z.unlockFlag === null ? [] : [z.unlockFlag, ...(z.access ?? [])]));
       const open = this.state.openFlags.length === 0;
       this.setFlags(open ? allOpen : []);
       this.hud.toast(open ? 'Debug : tous les passages ouverts' : 'Debug : passages refermés');
@@ -887,14 +971,161 @@ export class WorldScene extends Phaser.Scene {
    * était (l'état vit dans la session). En attendant les ennemis du monde (M3),
    * seul le debug déclenche un combat (F7, F8).
    */
-  private startBattle(encounterId: string, site?: { x: number; y: number }): void {
+  private startBattle(encounterId: string, site?: { x: number; y: number }, options: EngageOptions = {}): void {
     if (this.paused || this.leaving) return;
     this.leaving = true;
+    this.hud.setPrompt(null);
     const camera = this.cameras.main;
     camera.flash(150, 255, 255, 255);
     this.tweens.add({ targets: camera, zoom: camera.zoom * 1.5, duration: 400, ease: 'Cubic.easeIn' });
     camera.fadeOut(400, 255, 255, 255);
-    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, { encounterId, returnTo: 'world', ...(site ? { site } : {}) }));
+    const data = {
+      encounterId,
+      returnTo: 'world',
+      ...(site ? { site } : {}),
+      ...(options.initiative ? { initiative: true } : {}),
+      ...(options.ambush ? { ambush: true } : {}),
+      ...(options.foeId ? { foeId: options.foeId } : {}),
+      ...(options.extraEnemies && options.extraEnemies.length > 0 ? { extraEnemies: options.extraEnemies } : {}),
+    };
+    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, data));
+  }
+
+  /* ---------- Ennemis du monde (jalon M3, GDD §7) ---------- */
+
+  private buildFoes(): void {
+    ensureFoeTextures(this);
+    const params = new URLSearchParams(window.location.search);
+    this.foesDebugOff = params.has('debug') && params.get('foes') === 'off';
+    this.foeRng = Rng.fromSeed(`foes:${Date.now()}`);
+    this.classScale = classDetectionScale(this.data_);
+    this.partyLvl = partyLevel(this.data_, this.state.testLevel);
+    this.graceMs = this.data_.balance.foes.graceMs;
+    this.syncFoePresence();
+  }
+
+  /** Crée les ennemis présents et retire les absents (repos, changement de zone, réputation, boss vaincu). */
+  private syncFoePresence(): void {
+    if (this.foesDebugOff) return;
+    const ctx = this.gameCtx;
+    const foesCfg = this.data_.balance.foes;
+    const tile = this.map.tileSize;
+    for (const def of this.data_.worldFoes) {
+      const present = foePresent(ctx, def);
+      const actor = this.foeActors.get(def.id);
+      if (present && !actor) {
+        const encounter = chooseEncounter(this.data_, def, `${def.id}:${ctx.progress.day}:${ctx.progress.zoneVisits}`);
+        const level = meanEnemyLevel(encounter);
+        const boss = def.kind === 'boss';
+        const sim = createFoe(def, { encounterId: encounter.id, level, weak: foeFlees(foesCfg, def, level, this.partyLvl) }, tile);
+        const color = Phaser.Display.Color.HexStringToColor(difficultyOf(foesCfg, level, this.partyLvl, boss).color).color;
+        this.foeActors.set(def.id, new FoeActor(this, sim, def.sprite, { color, boss }, { entities: DEPTH.entities, marker: DEPTH.marker, shadow: DEPTH.shadow }));
+      } else if (!present && actor) {
+        actor.destroy();
+        this.foeActors.delete(def.id);
+      }
+    }
+  }
+
+  private updateFoes(time: number, delta: number): void {
+    // Les errants reviennent avec le temps : on revérifie la présence de temps en temps.
+    this.presenceTimer += delta;
+    if (this.presenceTimer > 2000) {
+      this.presenceTimer = 0;
+      this.syncFoePresence();
+    }
+    if (this.foeActors.size === 0) return;
+    const cfg = this.data_.balance.foes;
+    const exploration = this.data_.balance.exploration;
+    const tile = this.map.tileSize;
+    const dtMs = Math.min(delta, 100);
+    this.graceMs = Math.max(0, this.graceMs - dtMs);
+    const body = this.body_;
+    const heroCell = feetCell(body.x, body.y, tile);
+    const scale = detectionScale({
+      sprinting: body.sprinting && body.moved,
+      inForest: terrainAtCell(this.map, heroCell.x, heroCell.y) === 'foret',
+      sprintMultiplier: exploration.sprintDetectionMultiplier,
+      forestMultiplier: exploration.forestDetectionMultiplier,
+      classScale: this.classScale,
+    });
+    const env = { grid: this.grid, cfg, tile, hero: { x: body.x, y: body.y }, scale, grace: this.graceMs > 0, rng: this.foeRng };
+    const simulated = 40 * tile;
+    for (const actor of this.foeActors.values()) {
+      const sim = actor.sim;
+      const distance = Math.hypot(body.x - sim.x, body.y - sim.y);
+      if (distance > simulated) continue;
+      const events = updateFoe(sim, dtMs, env);
+      actor.sync(time, distance <= cfg.indicatorRange * tile && sim.mode !== 'dormant');
+      if (this.handleFoeEvents(actor, events, time)) return;
+    }
+  }
+
+  /** Renvoie vrai quand un combat s'engage. */
+  private handleFoeEvents(actor: FoeActor, events: readonly FoeEvent[], time: number): boolean {
+    for (const event of events) {
+      switch (event.type) {
+        case 'alert':
+        case 'flee':
+          actor.showBubble('bang', time);
+          break;
+        case 'lost':
+          actor.showBubble('question', time, 1200);
+          break;
+        case 'reinforce':
+          this.hud.toast('Une vigie sonne l’alerte : des renforts accourent !');
+          break;
+        case 'contact':
+          this.engageFoe(actor.sim, { ambush: event.ambush });
+          return true;
+      }
+    }
+    return false;
+  }
+
+  /** Un ennemi du monde engage la compagnie : rencontre, renforts éventuels, terrain du point de contact. */
+  private engageFoe(sim: FoeSim, options: Pick<EngageOptions, 'initiative' | 'ambush'>): void {
+    if (this.leaving || this.modal) return;
+    const encounter = findEncounter(this.data_, sim.encounterId);
+    const rng = Rng.fromSeed(`${sim.def.id}:${Math.round(this.state.progress.clock)}:renforts`);
+    const extra: { enemy: string; level: number }[] = [];
+    if (sim.reinforced) {
+      const pool = encounter.enemies.filter((e) => e.boss !== true);
+      const { min, max } = this.data_.balance.foes.reinforcements;
+      const count = pool.length === 0 ? 0 : rng.int(min, Math.max(min, max));
+      for (let i = 0; i < count; i++) {
+        const pick = rng.pick(pool);
+        extra.push({ enemy: pick.enemy, level: Math.max(1, pick.level - 1) });
+      }
+    }
+    const tile = this.map.tileSize;
+    // Une rencontre de repaire se joue autour du boss ; les autres, là où le héros se tient.
+    const site = encounter.sampled?.anchor === 'enemy' ? feetCell(sim.x, sim.y, tile) : feetCell(this.body_.x, this.body_.y, tile);
+    this.startBattle(encounter.id, site, { ...options, foeId: sim.def.id, extraEnemies: extra });
+  }
+
+  /** Défaite : la compagnie se réveille au dernier village (ou au départ) ; la position du héros est posée avant sa construction. */
+  private applyBattleReturn(ret: BattleReturn | undefined): void {
+    if (!ret || ret.end !== 'defeat') return;
+    const place = ret.wakeAt ? this.map.locations.find((l) => String(l.props['id']) === ret.wakeAt) : undefined;
+    const spot = place ? objectCenter(place) : this.map.spawns.find((o) => o.props['id'] === 'start');
+    if (spot) {
+      this.state.player.x = spot.x;
+      this.state.player.y = spot.y;
+      this.state.player.facing = 's';
+    }
+  }
+
+  private announceBattleReturn(ret: BattleReturn | undefined): void {
+    if (!ret) return;
+    const lines = formatNotices(this.gameCtx, ret.notices);
+    if (ret.end === 'defeat') {
+      const where = ret.wakeAt ? this.gameCtx.index.locations.get(ret.wakeAt)?.name ?? ret.wakeAt : 'au point de départ';
+      this.time.delayedCall(700, () => this.hud.toast(`La compagnie se réveille ${ret.wakeAt ? `à ${where}` : where}.`));
+    } else if (ret.end === 'retreat') {
+      this.time.delayedCall(700, () => this.hud.toast('La compagnie a battu en retraite.'));
+    }
+    if (lines.length > 0) this.time.delayedCall(ret.end === 'victory' ? 700 : 2200, () => this.hud.notify(lines));
   }
 
   /* ---------- Pause ---------- */
@@ -937,6 +1168,7 @@ export class WorldScene extends Phaser.Scene {
     this.atmosphere = null;
     this.registry.remove('debug.info');
     this.fog.clear();
+    this.foeActors.clear();
     this.chimneys = [];
     this.scene.stop(SCENES.worldHud);
     this.time.paused = false;

@@ -16,6 +16,9 @@ import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, loadAnimSpeed, nextAnimSpeed, save
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getWorldState } from '../core/session';
+import { getGameCtx } from '../core/townContext';
+import { settleBattle, testPartyAt, type BattleEnd, type Settlement } from '../logic/game';
+import { formatNotices } from '../ui/notices';
 import { uiScaleFor, zoomOrigin } from '../core/viewport';
 import { loadGameData, type GameData } from '../data';
 import { planEnemyAction } from '../logic/ai/enemyAi';
@@ -24,7 +27,6 @@ import { attackUnit, endPhase, livingUnits, moveUnit, phaseComplete, readyUnits,
 import { battleRules, buildBattle, findEncounter } from '../logic/tactics/encounter';
 import { cellIndex, cellsInRange, getUnit, inBounds, inWeaponRange, reachable, targetsFrom, terrainAt, threatCells, unitAt, type Reach } from '../logic/tactics/grid';
 import type { BattleEvent, BattleRules, BattleState, BattleUnit, Cell, Strike } from '../logic/tactics/types';
-import { addUnique } from '../logic/world/worldState';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES } from '../render/battlefield';
 import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureMapSprite } from '../render/battleTextures';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureWorldTextures } from '../render/worldTextures';
@@ -51,6 +53,12 @@ export interface BattleSceneData {
   readonly initiative?: boolean;
   /** Point de contact dans le monde, en cases (la carte de combat est tirée du terrain autour). */
   readonly site?: Cell;
+  /** Embuscade subie : les ennemis démarrent tout près et ouvrent le combat (GDD §7.4). */
+  readonly ambush?: boolean;
+  /** Ennemi du monde engagé : il est vaincu pour de bon si la compagnie gagne (jalon M3). */
+  readonly foeId?: string;
+  /** Renforts d'une vigie, ajoutés aux ennemis de la rencontre. */
+  readonly extraEnemies?: readonly { readonly enemy: string; readonly level: number }[];
 }
 
 /** Zoom du combat : chaque case fait 32 pixels à l'écran, comme une carte GBA agrandie (décision n°58). */
@@ -91,6 +99,10 @@ export class BattleScene extends Phaser.Scene {
   private rules!: BattleRules;
   private state!: BattleState;
   private params!: BattleSceneData;
+  private seed = '';
+  /** Bilan appliqué à la partie à la fin du combat (or, butin, drapeaux, défaite). */
+  private settlement: Settlement | null = null;
+  private ended: BattleEnd | null = null;
   private hud!: BattleHudScene;
   private actions!: ActionInput;
   private alive = false;
@@ -152,9 +164,12 @@ export class BattleScene extends Phaser.Scene {
       // `?debug&seed=…` rejoue un combat à l'identique (placement et dés).
       const url = new URLSearchParams(window.location.search);
       const seed = params.seed ?? (url.has('debug') && url.get('seed') ? `${url.get('seed')}` : `${params.encounterId}:${Date.now()}`);
-      this.state = buildBattle(encounter, this.gameData.encounters.testParty, this.gameData, {
+      this.seed = String(seed);
+      this.state = buildBattle(encounter, testPartyAt(this.gameData, getWorldState()?.testLevel), this.gameData, {
         seed,
         initiative: params.initiative === true,
+        ambush: params.ambush === true,
+        ...(params.extraEnemies ? { extraEnemies: params.extraEnemies } : {}),
         world: this.worldSource(),
         ...(params.site ? { site: params.site } : {}),
       });
@@ -196,7 +211,7 @@ export class BattleScene extends Phaser.Scene {
     const encounterName = this.state.name;
     const boss = this.state.units.find((u) => u.isBoss);
     this.hud.setHeader(encounterName, this.state.objective === 'boss' && boss ? `Objectif : vaincre ${boss.name}` : 'Objectif : vaincre tous les ennemis');
-    this.hud.setPhase('player', 1);
+    this.hud.setPhase(this.state.phase, 1);
     const hero = this.state.units.find((u) => u.isHero) ?? this.state.units[0];
     if (hero) {
       this.setCursor(hero);
@@ -937,7 +952,8 @@ export class BattleScene extends Phaser.Scene {
     this.hud.closeMenu();
     this.setMode('end');
     this.hud.toast('La compagnie se retire du combat.');
-    this.leave(false);
+    this.settle('retreat');
+    this.leave();
   }
 
   /* ---------- Phases ---------- */
@@ -945,6 +961,14 @@ export class BattleScene extends Phaser.Scene {
   private async openingSequence(): Promise<void> {
     this.setMode('busy');
     await this.wait(350);
+    if (this.state.ambush) {
+      // Embuscade subie (GDD §7.4) : les ennemis frappent les premiers.
+      await this.hud.phaseBanner('enemy', this.state.turn, this.dur(MS.banner, 400));
+      this.hud.toast('Embuscade ! La compagnie est prise au dépourvu.');
+      if (!this.alive) return;
+      await this.runEnemyPhase();
+      return;
+    }
     await this.hud.phaseBanner('player', this.state.turn, this.dur(MS.banner, 400));
     if (this.state.initiative) this.hud.toast('Embuscade réussie : l’ennemi est pris de court !');
     if (!this.alive) return;
@@ -1200,20 +1224,51 @@ export class BattleScene extends Phaser.Scene {
     if (!this.alive) return;
     const summary = summarize(this.state);
     const opensWorld = this.params.returnTo === 'world' && getWorldState() !== null;
-    this.hud.showResult(summary, opensWorld, () => {
-      this.hud.lockResult();
-      this.leave(summary.outcome === 'victory');
-    });
+    const settlement = this.settle(summary.outcome === 'victory' ? 'victory' : 'defeat');
+    const ctx = getGameCtx();
+    const rewards = ctx && settlement ? formatNotices(ctx, settlement.notices) : [];
+    this.hud.showResult(
+      summary,
+      opensWorld,
+      () => {
+        this.hud.lockResult();
+        this.leave();
+      },
+      rewards,
+      settlement?.wakeAt ? `La compagnie se réveillera ${settlement.wakeAt.location ? `à ${ctx?.index.locations.get(settlement.wakeAt.location)?.name ?? settlement.wakeAt.location}` : 'au point de départ'}.` : null,
+    );
   }
 
-  /** Retour à la scène d'origine ; une victoire lève les drapeaux de la rencontre (passages du monde). */
-  private leave(victory: boolean): void {
+  /**
+   * Applique la fin du combat à la partie (une seule fois) : or et butin,
+   * drapeaux de victoire, ennemi du monde vaincu, perte d'or en cas de défaite.
+   */
+  private settle(end: BattleEnd): Settlement | null {
+    if (this.ended !== null) return this.settlement;
+    this.ended = end;
+    const ctx = getGameCtx();
+    if (!ctx || this.params.returnTo !== 'world') return null;
+    const enemies = this.state.units.filter((u) => u.team === 'enemy');
+    this.settlement = settleBattle(ctx, {
+      end,
+      encounter: findEncounter(this.gameData, this.params.encounterId),
+      foeId: this.params.foeId ?? null,
+      enemiesDefeated: enemies.filter((u) => u.hp <= 0).length,
+      bossDown: enemies.some((u) => u.isBoss && u.hp <= 0),
+      seed: `${this.seed}:butin`,
+    });
+    return this.settlement;
+  }
+
+  /** Retour à la scène d'origine ; le monde reçoit le bilan du combat. */
+  private leave(): void {
     const world = getWorldState();
-    if (victory && world) for (const flag of this.state.victoryFlags) addUnique(world.openFlags, flag);
+    const end = this.ended ?? 'retreat';
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      if (this.params.returnTo === 'world' && world) this.scene.start(SCENES.world);
-      else this.scene.start(SCENES.title);
+      if (this.params.returnTo === 'world' && world) {
+        this.scene.start(SCENES.world, { battleReturn: { end, wakeAt: this.settlement?.wakeAt?.location ?? null, notices: this.settlement?.notices ?? [] } });
+      } else this.scene.start(SCENES.title);
     });
   }
 

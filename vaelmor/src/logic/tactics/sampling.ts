@@ -203,17 +203,21 @@ export interface Placement {
  * « player » (le héros a croisé des ennemis, embuscade) ou « enemy » (le
  * héros attaque un repaire : le boss tient le point de contact).
  */
-export function placeUnits(map: BattleMap, site: Cell, anchor: 'player' | 'enemy', partySize: number, enemies: readonly { readonly boss?: boolean }[], rng: Rng): Placement {
+export function placeUnits(map: BattleMap, site: Cell, anchor: 'player' | 'enemy', partySize: number, enemies: readonly { readonly boss?: boolean }[], rng: Rng, ambush = false): Placement {
+  // Embuscade : l'autre camp est tout près (3 à 7 de coût, cases à 2 de distance) au lieu de 8 à 15.
+  const [nearCost, farCost, idealCost] = ambush ? [3, 7, 5] : [8, 15, 11];
+  const minFromPlayer = ambush ? 2 : 5;
+  const minGap = ambush ? 2 : 4;
   const home = nearestPassable(map, site);
   const fromHome = terrainDistances(map, home);
   // L'autre camp : à 9-14 de coût de déplacement, dans un endroit ouvert, de préférence sur une route.
   let other: Cell | null = null;
   let otherScore = -Infinity;
   for (const [i, cost] of fromHome) {
-    if (cost < 8 || cost > 15) continue;
+    if (cost < nearCost || cost > farCost) continue;
     const c = cellOfIndex(map, i);
     const t = terrainAt(map, c.x, c.y);
-    const score = openness(map, c) + (t.tags.includes('route') ? 4 : 0) - Math.abs(cost - 11) + rng.next() * 3;
+    const score = openness(map, c) + (t.tags.includes('route') ? 4 : 0) - Math.abs(cost - idealCost) + rng.next() * 3;
     if (score > otherScore) {
       otherScore = score;
       other = c;
@@ -244,10 +248,10 @@ export function placeUnits(map: BattleMap, site: Cell, anchor: 'player' | 'enemy
   // Ennemis : le boss au point du camp ennemi, les autres autour, espacés, à distance de la compagnie.
   const candidates = [...fromEnemy.entries()]
     .filter(([i]) => {
-      if (taken.has(i) || (fromPlayer.get(i) ?? Infinity) < 5) return false;
+      if (taken.has(i) || (fromPlayer.get(i) ?? Infinity) < minFromPlayer) return false;
       // Pas d'ennemi collé à la compagnie de l'autre côté d'un obstacle (rivière, mur) : 4 cases au moins à vol d'oiseau.
       const c = cellOfIndex(map, i);
-      return deploy.every((d) => distance(d, c) >= 4);
+      return deploy.every((d) => distance(d, c) >= minGap);
     })
     .map(([i, cost]) => ({ i, key: cost + rng.next() * 3 }))
     .sort((a, b) => a.key - b.key);

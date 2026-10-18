@@ -31,6 +31,21 @@ export interface Progress {
   rewarded: string[];
   /** Sujets « à écouter une seule fois » déjà entendus (`pnj#option`). */
   heard: string[];
+  /** Ennemis du monde vaincus (jalon M3, décision n°74) : de quoi décider de leur réapparition. */
+  foes: Record<string, FoeDefeat>;
+  /** Temps de jeu en exploration (ms) : sert à la réapparition des errants. */
+  clock: number;
+  /** Nombre de changements de zone (les errants réapparaissent quand il augmente). */
+  zoneVisits: number;
+  /** Dernier village visité : on y revient après une défaite (décision n°56). */
+  lastVillage: string | null;
+}
+
+/** Quand un ennemi du monde a été vaincu : jour de repos, temps de jeu et compteur de zones à ce moment-là. */
+export interface FoeDefeat {
+  day: number;
+  clock: number;
+  visits: number;
 }
 
 export interface RepChange {
@@ -62,6 +77,10 @@ export function newProgress(seed: ProgressSeed): Progress {
     recruited: [],
     rewarded: [],
     heard: [],
+    foes: {},
+    clock: 0,
+    zoneVisits: 0,
+    lastVillage: null,
   };
   for (const s of seed.balance.economy.startingItems) addItem(progress, s.item, s.qty, seed.balance);
   return progress;

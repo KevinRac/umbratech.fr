@@ -85,6 +85,8 @@ export interface BattleState {
   outcome: Outcome;
   /** Avantage de position (GDD §4.7) : la première phase ennemie est sautée. */
   initiative: boolean;
+  /** Embuscade subie : la phase ennemie qui ouvre le combat n'est pas encore jouée (le tour reste le tour 1). */
+  ambush: boolean;
 }
 
 /** Règles chiffrées du combat, tirées des données (balance.json, elements.json). */

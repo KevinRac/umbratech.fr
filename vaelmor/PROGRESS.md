@@ -6,8 +6,8 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M3 : ennemis visibles du monde** (GDD §7, §17) — le contact lance le combat avec `this.scene.start(SCENES.battle, { encounterId, returnTo: 'world', site: { x, y }, initiative })` (voir `WorldScene.startBattle`, branché pour l'instant sur F7). Les ennemis de la rencontre viennent des tables de la zone. À brancher en M3 : réaction hostile des gardes (embuscade), défaite → retour au dernier village avec perte d'or (n°56), drapeaux d'accès `acces_citadelle` / `barque_de_dorn` sur les portes de zone.
-Ensuite, dans l'ordre du GDD §17 : M5 (préparation, objets, compétences, boss à 2 phases, renforts), M6, M9, M7, M8, M10.
+**M5 : préparation, objets, compétences, boss à 2 phases, renforts** (GDD §17). Le combat reçoit déjà `ambush`, `extraEnemies` (renforts de sentinelle) et `initiative` ; la compagnie reste la compagnie d'essai (n°55) jusqu'à l'écran de préparation.
+Ensuite, dans l'ordre du GDD §17 : M6, M9, M7, M8, M10.
 
 ## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)
 Ce chantier est une **mise à jour du jalon M1** (exploration), pas un nouveau jalon : il ne touche ni aux PNJ ni aux villages jouables (M2).
@@ -27,7 +27,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
 - [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
 - [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°71 validées le 18/10/2026 (n°63 révisée : les PNJ se promènent)
-- [ ] M3, M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
+- [x] **M3 : ennemis visibles du monde** (18/10/2026) — voir « Livré en M3 » ; décisions n°72 à n°78 à valider
+- [ ] M5, M6, M9, M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -214,10 +215,26 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **n°62 — Port-Brume démarre à -10**, soit « Neutre » sur l'échelle §6.2 (le GDD dit « Méfiant »).
 - **n°63 — PNJ qui se promènent** (révisée à la demande de l'auteur, 18/10/2026) : chaque PNJ marche case par case, avec animation, dans une zone de rayon `roam` (3 à 10 cases, `locations.json`) autour de son poste, évite portes, eau et obstacles, ne se superpose jamais à un autre PNJ ni au héros, et s'arrête pendant une conversation. Logique pure dans `src/logic/game/wander.ts`.
 - **n°64 — Quêtes liées aux boss** (`boss_*`) attendent leurs drapeaux jusqu'en M3/M5.
-- **n°65 — Gardes hostiles / embuscade** reportés en M3.
+- **n°65 — Gardes hostiles / embuscade** : livrés en M3.
 - **n°66 — Recrues** seulement enregistrées (le PNJ quitte le village) ; l'effectif jouable arrive en M5/M6.
-- **n°67 — Accès** : implémenté par refus de boutique, repos gratuit, conditions de quête/recrutement ; `acces_citadelle` et `barque_de_dorn` existent mais ne ferment pas encore de portes.
+- **n°67 — Accès** : implémenté par refus de boutique, repos gratuit, conditions de quête/recrutement ; `acces_citadelle` et `barque_de_dorn` ferment les portes de la zone 5 depuis M3.
 - **n°68 — Valcendre compte 12 PNJ** ; la quête d'arène attend un jalon ultérieur.
 - **n°69 — Paramètres de débogage** `rep`, `gold`, `flags` conservés en mode `?debug`.
 - **n°70 — Portraits de dialogue peints en haute définition** (demande de l'auteur, 18/10/2026) : style anime, peints au canevas 2D (`src/render/portraitPainter.ts`) à partir des couleurs, de la coiffure, de la tenue et de l'accessoire du PNJ, plus des traits propres au portrait dans `locations.json` (`portrait` : genre, âge, barbe, couleur des yeux, cicatrice / taches de rousseur). Quatre expressions. Seule exception assumée au pixel art ; le portrait (108 × échelle) dépasse du haut de la boîte, elle-même réduite à 112 de haut.
 - **n°71 — Emblèmes de quête** : « ! » doré et « ? » argent-cyan en pixel art biseauté, avec étincelle et halo au sol sous le PNJ.
+
+## Livré en M3
+- **Données** : `data/worldEnemies.json` (42 ennemis du monde), +20 ennemis, +27 rencontres (dont 4 boss de zone), +13 armes d'ennemis, `balance.foes`, champs de zone `goldPerEnemy`, `encounterTable`, `loot`, `access`. Validation croisée (`checkWorldFoes`) et contre la carte (`src/data/foeMap.ts`).
+- **Logique pure** : `src/logic/world/foes.ts` (modes dormant/idle/patrol/wander/alert/chase/return/flee ; détection cercle + cône + ligne de vue) et `src/logic/game/foeRules.ts` (choix de rencontre, difficulté, fuite, `settleBattle`). Portes d'accès `isGateOpen`.
+- **Rendu** : `foeActors.ts` (silhouettes au gabarit 16×28, crâne de difficulté, bulles « ! » / « ? »).
+- **Scènes** : contact → combat sur le terrain du contact ; attaque par surprise (E) ; embuscades (phase ennemie d'abord) ; renforts ; butin, drapeaux de victoire (quêtes `boss_*`), défaite → dernier village avec perte d'or (n°56), gardes hostiles (n°65), portes `acces_citadelle` / `barque_de_dorn` (n°67).
+- **Débogage** : `?debug&at=X,Y` (appliqué une fois), `lvl=N`, `foes=off`.
+
+### Décisions n°72 à n°78 (jalon M3) — à valider
+- **n°72 — Types et détection** : sentinelle, patrouille, errant, embuscade, boss, garde ; détection selon le type (portée, cône), ×2 en sprint, ×0,6 en forêt, ×0,8 pour le Chasseur de Serpents de Mer ; alerte 600 ms, poursuite à 88 px/s (entre marche 80 et sprint 120), abandon après 6 s sans vue ou à plus de 8 cases.
+- **n°73 — Boss de zone** : Brakk (z1), Roi-Cerf corrompu (Bosquet), Sœur Merrow (Plage des Épaves), Mère-Harpie (Aiguille Brisée), Gardien de Cendre (Menhir de Cendre) ; ils posent les drapeaux `boss_*` en victoire.
+- **n°74 — Réapparition** : sentinelle, embuscade, boss jamais ; patrouille et garde après un repos à l'auberge ; errant après 10 min de jeu ou changement de zone.
+- **n°75 — Tables de rencontre** par zone et par type, pondérées et filtrées par type d'ennemi.
+- **n°76 — Initiative et embuscade** : attaque par surprise = initiative ; contact d'embuscade/garde = phase ennemie d'abord, ennemis placés à 3-7 cases ; la sentinelle appelle 1 à 2 renforts ; les ennemis trop faibles (écart de niveau ≥ 5) fuient.
+- **n°77 — Règlement** : or par ennemi (boss ×5), butin 20 % consommable / 5 % équipement, défaite −10 % d'or et réveil au dernier village, retraite sans changement, 4 s de grâce après un combat.
+- **n°78 — Débogage** : `lvl` et `foes=off` ajoutés ; `at` appliqué une seule fois par partie.

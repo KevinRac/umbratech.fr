@@ -12,7 +12,16 @@
       "ambient": { "color": "#ffe2a0", "alpha": 0.0 },
       "ambience": "pollen",
       "grade": { "shadow": "#3d3658", "shadowAmount": 0.12, "light": "#ffd9a0", "lightAmount": 0.12, "saturation": -0.06, "contrast": 0.06, "brightness": 0.0 },
-      "light": { "rays": 0.7, "dust": 0.6, "bloom": 0.8 }
+      "light": { "rays": 0.7, "dust": 0.6, "bloom": 0.8 },
+      "goldPerEnemy": { "min": 10, "max": 20 },
+      "encounterTable": [
+        { "encounter": "rodeurs_aubemer", "weight": 3, "for": ["errant"] },
+        { "encounter": "patrouille_ecumeurs", "weight": 3, "for": ["patrouille"] },
+        { "encounter": "sentinelles_ecumeurs", "weight": 1, "for": ["sentinelle"] },
+        { "encounter": "embuscade_roseaux", "weight": 1, "for": ["embuscade"] },
+        { "encounter": "milice_aubemer", "weight": 1, "for": ["garde"] }
+      ],
+      "loot": { "consumables": ["pain_dore", "herbe_apaisante", "potion"], "equipment": ["hachette", "arc_court", "javeline"] }
     },
     {
       "id": "z2",
@@ -25,7 +34,16 @@
       "ambient": { "color": "#1f4a35", "alpha": 0.07 },
       "ambience": "feuilles",
       "grade": { "shadow": "#2f3652", "shadowAmount": 0.14, "light": "#ffe2a8", "lightAmount": 0.09, "saturation": -0.1, "contrast": 0.08, "brightness": -0.02 },
-      "light": { "rays": 1.0, "dust": 0.9, "bloom": 0.7 }
+      "light": { "rays": 1.0, "dust": 0.9, "bloom": 0.7 },
+      "goldPerEnemy": { "min": 15, "max": 30 },
+      "encounterTable": [
+        { "encounter": "betes_de_la_foret", "weight": 3, "for": ["errant"] },
+        { "encounter": "chasseurs_de_ronces", "weight": 2, "for": ["errant", "patrouille"] },
+        { "encounter": "sentinelles_de_ronces", "weight": 1, "for": ["sentinelle"] },
+        { "encounter": "embuscade_sous_bois", "weight": 1, "for": ["embuscade"] },
+        { "encounter": "milice_racine", "weight": 1, "for": ["garde"] }
+      ],
+      "loot": { "consumables": ["potion", "herbe_apaisante", "antidote"], "equipment": ["arc_court", "dagues_jumelles", "lance_d_estoc"] }
     },
     {
       "id": "z3",
@@ -38,7 +56,16 @@
       "ambient": { "color": "#5d7b96", "alpha": 0.1 },
       "ambience": "brume",
       "grade": { "shadow": "#3a4766", "shadowAmount": 0.16, "light": "#f4dcbc", "lightAmount": 0.07, "saturation": -0.18, "contrast": 0.03, "brightness": 0.0 },
-      "light": { "rays": 0.35, "dust": 0.3, "bloom": 0.6 }
+      "light": { "rays": 0.35, "dust": 0.3, "bloom": 0.6 },
+      "goldPerEnemy": { "min": 25, "max": 45 },
+      "encounterTable": [
+        { "encounter": "marees_mortes", "weight": 3, "for": ["errant"] },
+        { "encounter": "pillards_de_greve", "weight": 2, "for": ["errant", "patrouille"] },
+        { "encounter": "sentinelles_du_noye", "weight": 1, "for": ["sentinelle"] },
+        { "encounter": "embuscade_noyes", "weight": 1, "for": ["embuscade"] },
+        { "encounter": "milice_brume", "weight": 1, "for": ["garde"] }
+      ],
+      "loot": { "consumables": ["soupe_du_gue", "potion", "antidote"], "equipment": ["epee_de_fer", "harpon_lourd", "collier_d_ecume"] }
     },
     {
       "id": "z4",
@@ -51,7 +78,16 @@
       "ambient": { "color": "#7a4a3a", "alpha": 0.06 },
       "ambience": "braises",
       "grade": { "shadow": "#3d3050", "shadowAmount": 0.14, "light": "#ffc890", "lightAmount": 0.14, "saturation": -0.12, "contrast": 0.08, "brightness": -0.02 },
-      "light": { "rays": 0.55, "dust": 0.5, "bloom": 0.9 }
+      "light": { "rays": 0.55, "dust": 0.5, "bloom": 0.9 },
+      "goldPerEnemy": { "min": 40, "max": 60 },
+      "encounterTable": [
+        { "encounter": "eboulis_vivants", "weight": 3, "for": ["errant"] },
+        { "encounter": "mercenaires_de_cendre", "weight": 2, "for": ["errant", "patrouille"] },
+        { "encounter": "sentinelles_de_cendre", "weight": 1, "for": ["sentinelle"] },
+        { "encounter": "embuscade_harpies", "weight": 1, "for": ["embuscade"] },
+        { "encounter": "milice_cendre", "weight": 1, "for": ["garde"] }
+      ],
+      "loot": { "consumables": ["hyper_potion", "antidote", "potion"], "equipment": ["arbalete_a_verin", "bague_de_cendre", "amulette_de_pierre"] }
     },
     {
       "id": "z5",
@@ -64,7 +100,16 @@
       "ambient": { "color": "#2c3550", "alpha": 0.14 },
       "ambience": "cendres",
       "grade": { "shadow": "#2a2a52", "shadowAmount": 0.2, "light": "#c8d0e8", "lightAmount": 0.05, "saturation": -0.25, "contrast": 0.1, "brightness": -0.04 },
-      "light": { "rays": 0.2, "dust": 0.25, "bloom": 1.0 }
+      "light": { "rays": 0.2, "dust": 0.25, "bloom": 1.0 },
+      "goldPerEnemy": { "min": 60, "max": 100 },
+      "encounterTable": [
+        { "encounter": "revenants_de_la_citadelle", "weight": 3, "for": ["errant", "patrouille"] },
+        { "encounter": "gardes_engloutis", "weight": 1, "for": ["sentinelle"] },
+        { "encounter": "embuscade_abysses", "weight": 1, "for": ["embuscade"] }
+      ],
+      "loot": { "consumables": ["hyper_potion", "eclat_de_lanterne"], "equipment": ["tome_des_cendres", "broche_des_racines", "bague_de_cendre"] },
+      "access": ["acces_citadelle", "barque_de_dorn"],
+      "accessMessage": "Les marins refusent d’appareiller : il faut la confiance de Pierre-Haute et la barque de Dorn pour rejoindre la Citadelle."
     }
   ]
 }

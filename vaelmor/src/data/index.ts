@@ -16,10 +16,11 @@ import locations from '../../data/locations.json';
 import quests from '../../data/quests.json';
 import reputation from '../../data/reputation.json';
 import terrains from '../../data/terrains.json';
+import worldEnemies from '../../data/worldEnemies.json';
 import zones from '../../data/zones.json';
 import { GameDataError, validateGameData, type GameData, type RawGameData } from './validate';
 
-export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests };
+export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies };
 
 let cache: GameData | null = null;
 

@@ -73,7 +73,433 @@
         { "enemy": "ecumeur_sabreur", "level": 2 },
         { "enemy": "ecumeur_incendiaire", "level": 3 }
       ],
-      "victoryFlags": ["boss_brakk"]
+      "victoryFlags": ["boss_brakk"],
+      "rewards": { "gold": 80, "items": [{ "item": "hyper_potion", "qty": 2 }, { "item": "amulette_de_pierre", "qty": 1 }] }
+    },
+    {
+      "id": "rodeurs_aubemer",
+      "name": "Rôdeurs des plaines",
+      "zone": "z1",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [56, 80], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "rodeur_timide", "level": 2 },
+        { "enemy": "rodeur_timide", "level": 2 },
+        { "enemy": "rodeur_timide", "level": 1 },
+        { "enemy": "ecumeur_sabreur", "level": 2 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "patrouille_ecumeurs",
+      "name": "Patrouille écumeuse",
+      "zone": "z1",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [88, 78], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "ecumeur_sabreur", "level": 3 },
+        { "enemy": "ecumeur_sabreur", "level": 2 },
+        { "enemy": "ecumeur_archer", "level": 3 },
+        { "enemy": "ecumeur_lancier", "level": 3 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "sentinelles_ecumeurs",
+      "name": "Sentinelles du camp",
+      "zone": "z1",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [94, 72], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "ecumeur_lancier", "level": 3 },
+        { "enemy": "ecumeur_archer", "level": 3 },
+        { "enemy": "ecumeur_sabreur", "level": 3 },
+        { "enemy": "ecumeur_sabreur", "level": 2 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "embuscade_roseaux",
+      "name": "Embuscade dans les roseaux",
+      "zone": "z1",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [56, 84], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "ecumeur_sabreur", "level": 3 },
+        { "enemy": "ecumeur_sabreur", "level": 3 },
+        { "enemy": "ecumeur_sabreur", "level": 2 },
+        { "enemy": "ecumeur_archer", "level": 2 },
+        { "enemy": "ecumeur_incendiaire", "level": 2 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "milice_aubemer",
+      "name": "Milice de Haut-Gué",
+      "zone": "z1",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [62, 74], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "milicien", "level": 3 },
+        { "enemy": "milicien", "level": 3 },
+        { "enemy": "milicien", "level": 4 },
+        { "enemy": "ecumeur_archer", "level": 3 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "chasseurs_de_ronces",
+      "name": "Chasseurs de ronces",
+      "zone": "z2",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [48, 44], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "chasseur_de_ronces", "level": 5 },
+        { "enemy": "chasseur_de_ronces", "level": 5 },
+        { "enemy": "chasseur_de_ronces", "level": 4 },
+        { "enemy": "bucheron_corrompu", "level": 5 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "betes_de_la_foret",
+      "name": "Corrompus de la forêt",
+      "zone": "z2",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [45, 44], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "bucheron_corrompu", "level": 5 },
+        { "enemy": "esprit_des_ronces", "level": 5 },
+        { "enemy": "chasseur_de_ronces", "level": 4 },
+        { "enemy": "esprit_des_ronces", "level": 4 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "sentinelles_de_ronces",
+      "name": "Sentinelles des ronces",
+      "zone": "z2",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [28, 56], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "ecumeur_lancier", "level": 5 },
+        { "enemy": "ecumeur_archer", "level": 5 },
+        { "enemy": "chasseur_de_ronces", "level": 5 },
+        { "enemy": "ecumeur_sabreur", "level": 5 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "embuscade_sous_bois",
+      "name": "Embuscade sous les frondaisons",
+      "zone": "z2",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [47, 36], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "chasseur_de_ronces", "level": 5 },
+        { "enemy": "chasseur_de_ronces", "level": 5 },
+        { "enemy": "esprit_des_ronces", "level": 5 },
+        { "enemy": "bucheron_corrompu", "level": 6 },
+        { "enemy": "bucheron_corrompu", "level": 5 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "milice_racine",
+      "name": "Milice de la Forêt-Racine",
+      "zone": "z2",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [21, 41], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "milicien", "level": 6 },
+        { "enemy": "milicien", "level": 6 },
+        { "enemy": "milicien", "level": 5 },
+        { "enemy": "chasseur_de_ronces", "level": 5 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "roi_cerf_corrompu",
+      "name": "Le Roi-Cerf corrompu",
+      "zone": "z2",
+      "objective": { "type": "boss" },
+      "sampled": { "width": 30, "height": 20, "site": [16, 22], "anchor": "enemy" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "roi_cerf", "level": 8, "boss": true },
+        { "enemy": "esprit_des_ronces", "level": 6 },
+        { "enemy": "esprit_des_ronces", "level": 6 },
+        { "enemy": "chasseur_de_ronces", "level": 6 },
+        { "enemy": "chasseur_de_ronces", "level": 6 },
+        { "enemy": "bucheron_corrompu", "level": 6 }
+      ],
+      "victoryFlags": ["boss_roi_cerf"],
+      "rewards": {"gold": 120, "items": [{"item": "hyper_potion", "qty": 2}, {"item": "broche_des_racines", "qty": 1}]}
+    },
+    {
+      "id": "pillards_de_greve",
+      "name": "Pillards de la grève",
+      "zone": "z3",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [55, 100], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "pillard_des_epaves", "level": 9 },
+        { "enemy": "pillard_des_epaves", "level": 9 },
+        { "enemy": "pillard_des_epaves", "level": 8 },
+        { "enemy": "harponneur", "level": 9 },
+        { "enemy": "voilee_de_brume", "level": 9 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "marees_mortes",
+      "name": "Marées mortes",
+      "zone": "z3",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [70, 100], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "noye", "level": 9 },
+        { "enemy": "noye", "level": 9 },
+        { "enemy": "noye", "level": 10 },
+        { "enemy": "voilee_de_brume", "level": 9 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "sentinelles_du_noye",
+      "name": "Sentinelles de la tour",
+      "zone": "z3",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [42, 96], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "harponneur", "level": 10 },
+        { "enemy": "pillard_des_epaves", "level": 10 },
+        { "enemy": "voilee_de_brume", "level": 10 },
+        { "enemy": "noye", "level": 9 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "embuscade_noyes",
+      "name": "Les noyés se lèvent",
+      "zone": "z3",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [112, 84], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "noye", "level": 10 },
+        { "enemy": "noye", "level": 10 },
+        { "enemy": "noye", "level": 10 },
+        { "enemy": "noye", "level": 9 },
+        { "enemy": "voilee_de_brume", "level": 10 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "milice_brume",
+      "name": "Milice de Port-Brume",
+      "zone": "z3",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [97, 94], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "milicien", "level": 10 },
+        { "enemy": "milicien", "level": 10 },
+        { "enemy": "milicien", "level": 9 },
+        { "enemy": "harponneur", "level": 9 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "soeur_merrow",
+      "name": "Sœur Mérrow, la Noyée",
+      "zone": "z3",
+      "objective": { "type": "boss" },
+      "sampled": { "width": 30, "height": 20, "site": [64, 105], "anchor": "enemy" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "soeur_merrow", "level": 12, "boss": true },
+        { "enemy": "noye", "level": 10 },
+        { "enemy": "noye", "level": 10 },
+        { "enemy": "voilee_de_brume", "level": 10 },
+        { "enemy": "voilee_de_brume", "level": 10 },
+        { "enemy": "harponneur", "level": 10 }
+      ],
+      "victoryFlags": ["boss_merrow"],
+      "rewards": {"gold": 200, "items": [{"item": "collier_d_ecume", "qty": 1}, {"item": "hyper_potion", "qty": 2}]}
+    },
+    {
+      "id": "mercenaires_de_cendre",
+      "name": "Mercenaires de Cendre",
+      "zone": "z4",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [82, 15], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "mercenaire_de_cendre", "level": 13 },
+        { "enemy": "mercenaire_de_cendre", "level": 13 },
+        { "enemy": "mercenaire_de_cendre", "level": 12 },
+        { "enemy": "arbaletrier_de_cendre", "level": 13 },
+        { "enemy": "golem_de_cendre", "level": 13 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "eboulis_vivants",
+      "name": "Éboulis vivants",
+      "zone": "z4",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [46, 22], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "golem_de_cendre", "level": 13 },
+        { "enemy": "harpie", "level": 13 },
+        { "enemy": "harpie", "level": 13 },
+        { "enemy": "arbaletrier_de_cendre", "level": 13 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "sentinelles_de_cendre",
+      "name": "Sentinelles de Cendre",
+      "zone": "z4",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [100, 14], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "golem_de_cendre", "level": 14 },
+        { "enemy": "mercenaire_de_cendre", "level": 14 },
+        { "enemy": "arbaletrier_de_cendre", "level": 14 },
+        { "enemy": "arbaletrier_de_cendre", "level": 13 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "embuscade_harpies",
+      "name": "Nuée de harpies",
+      "zone": "z4",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [95, 20], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "harpie", "level": 14 },
+        { "enemy": "harpie", "level": 14 },
+        { "enemy": "harpie", "level": 14 },
+        { "enemy": "harpie", "level": 13 },
+        { "enemy": "arbaletrier_de_cendre", "level": 14 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "milice_cendre",
+      "name": "Milice de Pierre-Haute",
+      "zone": "z4",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [52, 16], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "milicien", "level": 14 },
+        { "enemy": "milicien", "level": 14 },
+        { "enemy": "milicien", "level": 13 },
+        { "enemy": "arbaletrier_de_cendre", "level": 13 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "mere_harpie",
+      "name": "La Mère-Harpie",
+      "zone": "z4",
+      "objective": { "type": "boss" },
+      "sampled": { "width": 30, "height": 20, "site": [118, 12], "anchor": "enemy" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "mere_harpie", "level": 16, "boss": true },
+        { "enemy": "harpie", "level": 14 },
+        { "enemy": "harpie", "level": 14 },
+        { "enemy": "harpie", "level": 14 },
+        { "enemy": "harpie", "level": 14 },
+        { "enemy": "arbaletrier_de_cendre", "level": 14 }
+      ],
+      "victoryFlags": ["boss_aiguille"],
+      "rewards": {"gold": 300, "items": [{"item": "bague_de_cendre", "qty": 1}, {"item": "hyper_potion", "qty": 3}]}
+    },
+    {
+      "id": "gardien_de_cendre",
+      "name": "Le Gardien de Cendre",
+      "zone": "z4",
+      "objective": { "type": "boss" },
+      "sampled": { "width": 30, "height": 20, "site": [108, 27], "anchor": "enemy" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "gardien_de_cendre", "level": 17, "boss": true },
+        { "enemy": "golem_de_cendre", "level": 15 },
+        { "enemy": "golem_de_cendre", "level": 15 },
+        { "enemy": "mercenaire_de_cendre", "level": 15 },
+        { "enemy": "mercenaire_de_cendre", "level": 15 },
+        { "enemy": "arbaletrier_de_cendre", "level": 15 }
+      ],
+      "victoryFlags": ["boss_gardien_cendre"],
+      "rewards": {"gold": 400, "items": [{"item": "amulette_de_pierre", "qty": 1}, {"item": "hyper_potion", "qty": 3}]}
+    },
+    {
+      "id": "revenants_de_la_citadelle",
+      "name": "Revenants de la Citadelle",
+      "zone": "z5",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [13, 96], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "revenant", "level": 17 },
+        { "enemy": "revenant", "level": 17 },
+        { "enemy": "revenant", "level": 16 },
+        { "enemy": "abyssal", "level": 17 },
+        { "enemy": "garde_englouti", "level": 17 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "gardes_engloutis",
+      "name": "Gardes engloutis",
+      "zone": "z5",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [8, 96], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "garde_englouti", "level": 18 },
+        { "enemy": "garde_englouti", "level": 18 },
+        { "enemy": "abyssal", "level": 18 },
+        { "enemy": "revenant", "level": 18 }
+      ],
+      "victoryFlags": []
+    },
+    {
+      "id": "embuscade_abysses",
+      "name": "Surgie des abysses",
+      "zone": "z5",
+      "objective": { "type": "rout" },
+      "sampled": { "width": 30, "height": 20, "site": [18, 92], "anchor": "player" },
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "abyssal", "level": 18 },
+        { "enemy": "abyssal", "level": 18 },
+        { "enemy": "abyssal", "level": 18 },
+        { "enemy": "revenant", "level": 18 },
+        { "enemy": "revenant", "level": 17 }
+      ],
+      "victoryFlags": []
     }
   ]
 }

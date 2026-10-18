@@ -139,6 +139,93 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
     look: look({ skin: SKIN_DARK, hair: r(mixColor(P.rougeCendre, P.orangeForge, 0.3)), tunic: r(mixColor(P.terreSeche, P.grisRoux, 0.3)), accent: r(P.jauneBle), pants: r(mixColor(P.terreSombre, P.ombreProfonde, 0.2)), head: 'long', outfit: 'cloak' }),
     gear: { headgear: 'horned', weapon: 'greataxe', build: 'brute', cape: true },
   },
+
+  /* ---------- Ennemis du monde ouvert (jalon M3) : une silhouette reconnaissable de loin par zone ---------- */
+  // Plaines d'Aubemer
+  rodeur_timide: {
+    look: look({ tunic: r(mixColor(P.sable, P.terreSeche, 0.4)), accent: r(P.terreSombre), head: 'hood', outfit: 'cloak' }),
+    gear: { headgear: 'none', weapon: 'daggers' },
+  },
+  milicien: {
+    look: look({ skin: SKIN_DARK, tunic: r(mixColor(P.ardoise, P.metalClair, 0.3)), accent: r(P.jauneBle), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'helmet', weapon: 'sword', shield: true, cape: true },
+  },
+  // Forêt-Racine
+  chasseur_de_ronces: {
+    look: look({ tunic: r(mixColor(P.mousse, P.oliveSombre, 0.4)), accent: r(P.vertDore), head: 'hood', outfit: 'cloak' }),
+    gear: { headgear: 'leaves', weapon: 'bow', quiver: true },
+  },
+  bucheron_corrompu: {
+    look: look({ skin: SKIN_PALE, hair: r(P.grisRoux), tunic: r(mixColor(P.terreSombre, P.oliveSombre, 0.4)), accent: r(P.vertDore), head: 'long', outfit: 'tunic' }),
+    gear: { headgear: 'none', weapon: 'greataxe', build: 'brute' },
+  },
+  esprit_des_ronces: {
+    look: look({ skin: SKIN_PALE, hair: r(P.mousse), tunic: r(mixColor(P.oliveSombre, P.vertProfond, 0.5)), accent: r(P.vertDore), head: 'long', outfit: 'dress' }),
+    gear: { headgear: 'leaves', weapon: 'staff_branch', glow: P.vertDore, build: 'robed' },
+  },
+  roi_cerf: {
+    look: look({ skin: SKIN_DARK, hair: r(P.terreSeche), tunic: r(mixColor(P.vertProfond, P.oliveSombre, 0.4)), accent: r(P.jauneBle), head: 'long', outfit: 'cloak' }),
+    gear: { headgear: 'horned', weapon: 'staff_branch', glow: P.vertDore, build: 'armored', cape: true },
+  },
+  // Côte des Brumes
+  noye: {
+    look: look({ skin: SKIN_PALE, hair: r(P.mousse), tunic: r(mixColor(P.ardoiseSombre, P.bleuGris, 0.4)), accent: r(P.cyanEclat), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'none', weapon: 'harpoon', build: 'brute' },
+  },
+  pillard_des_epaves: {
+    look: look({ tunic: r(mixColor(P.sable, P.bleuGris, 0.4)), accent: r(P.ardoise), head: 'bun', outfit: 'tunic' }),
+    gear: { headgear: 'bandana', weapon: 'sword', scarf: true },
+  },
+  harponneur: {
+    look: look({ skin: SKIN_DARK, tunic: r(mixColor(P.ardoise, P.terreSombre, 0.4)), accent: r(P.ecume), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'helmet', weapon: 'harpoon', shield: true, build: 'armored' },
+  },
+  voilee_de_brume: {
+    look: look({ skin: SKIN_PALE, hair: r(P.ecume), tunic: r(mixColor(P.violetPale, P.ardoise, 0.4)), accent: r(P.cyanEclat), head: 'hood', outfit: 'dress' }),
+    gear: { headgear: 'cowl', weapon: 'tome', glow: P.cyanEclat, build: 'robed' },
+  },
+  soeur_merrow: {
+    look: look({ skin: SKIN_PALE, hair: r(P.ecume), tunic: r(mixColor(P.ardoiseSombre, P.violetBrume, 0.4)), accent: r(P.cyanEclat), head: 'long', outfit: 'dress' }),
+    gear: { headgear: 'circlet', weapon: 'staff_lantern', glow: P.cyanEclat, build: 'robed', cape: true },
+  },
+  // Monts de Cendre
+  golem_de_cendre: {
+    look: look({ skin: SKIN_DARK, tunic: r(mixColor(P.grisRoux, P.pierre, 0.3)), accent: r(P.orangeForge), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'greathelm', weapon: 'axe', glow: P.braise, build: 'armored' },
+  },
+  mercenaire_de_cendre: {
+    look: look({ tunic: r(mixColor(P.brique, P.metalClair, 0.4)), accent: r(P.orangeForge), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'helmet', weapon: 'sword', shield: true, build: 'armored' },
+  },
+  harpie: {
+    look: look({ skin: SKIN_PALE, hair: r(P.violetPale), tunic: r(mixColor(P.violetBrume, P.ombreViolette, 0.3)), accent: r(P.braise), head: 'long', outfit: 'tunic' }),
+    gear: { headgear: 'bandana', weapon: 'daggers', scarf: true },
+  },
+  arbaletrier_de_cendre: {
+    look: look({ tunic: r(mixColor(P.terreSombre, P.grisRoux, 0.4)), accent: r(P.orangeForge), head: 'short', outfit: 'cloak' }),
+    gear: { headgear: 'goggles', weapon: 'crossbow', quiver: true },
+  },
+  mere_harpie: {
+    look: look({ skin: SKIN_PALE, hair: r(mixColor(P.violetPale, P.parchemin, 0.4)), tunic: r(mixColor(P.violetBrume, P.rougeCendre, 0.3)), accent: r(P.braise), head: 'long', outfit: 'cloak' }),
+    gear: { headgear: 'circlet', weapon: 'daggers', scarf: true, cape: true, glow: P.braise },
+  },
+  gardien_de_cendre: {
+    look: look({ skin: SKIN_DARK, tunic: r(mixColor(P.ardoiseSombre, P.grisRoux, 0.3)), accent: r(P.orangeForge), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'greathelm', weapon: 'greataxe', glow: P.orangeForge, build: 'armored', cape: true },
+  },
+  // Citadelle Engloutie
+  revenant: {
+    look: look({ skin: SKIN_PALE, hair: r(P.ardoise), tunic: r(mixColor(P.ardoiseSombre, P.violetPale, 0.4)), accent: r(P.cyanEclat), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'cowl', weapon: 'sword', glow: P.cyanEclat },
+  },
+  abyssal: {
+    look: look({ skin: SKIN_PALE, hair: r(P.bleuNuit), tunic: r(mixColor(P.bleuNuit, P.violetBrume, 0.5)), accent: r(P.violetPale), head: 'hood', outfit: 'dress' }),
+    gear: { headgear: 'cowl', weapon: 'tome', glow: P.violetPale, build: 'robed' },
+  },
+  garde_englouti: {
+    look: look({ skin: SKIN_DARK, tunic: r(mixColor(P.mousse, P.ardoiseSombre, 0.5)), accent: r(P.cyanEclat), head: 'short', outfit: 'tunic' }),
+    gear: { headgear: 'greathelm', weapon: 'spear', shield: true, build: 'armored' },
+  },
 };
 
 /** Fiche d'un sprite ; une fiche inconnue retombe sur l'Écumeur (le test le signale). */

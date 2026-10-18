@@ -156,6 +156,10 @@ export function endPhase(state: BattleState): BattleEvent[] {
       return events;
     }
     state.phase = 'enemy';
+  } else if (state.ambush) {
+    // Fin de la phase d'embuscade : la compagnie joue enfin son tour 1.
+    state.ambush = false;
+    state.phase = 'player';
   } else {
     state.phase = 'player';
     state.turn += 1;

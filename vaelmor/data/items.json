@@ -18,7 +18,20 @@
     { "id": "arc_court", "name": "Arc court", "type": "arc", "range": [2, 2], "damage": "physique", "power": 4, "hit": 85, "crit": 0, "element": null, "effective": [], "price": 80 },
     { "id": "javeline", "name": "Javeline", "type": "lance_courte", "range": [1, 2], "damage": "physique", "power": 5, "hit": 75, "crit": 0, "element": null, "effective": [], "price": 85 },
     { "id": "brandon_de_poix", "name": "Brandon de poix", "type": "tome", "range": [1, 2], "damage": "magique", "power": 4, "hit": 80, "crit": 0, "element": "cendre", "effective": [], "price": 100 },
-    { "id": "hache_de_brakk", "name": "Fendeuse de Brakk", "type": "hache", "range": [1, 1], "damage": "physique", "power": 8, "hit": 75, "crit": 5, "element": null, "effective": [] }
+    { "id": "hache_de_brakk", "name": "Fendeuse de Brakk", "type": "hache", "range": [1, 1], "damage": "physique", "power": 8, "hit": 75, "crit": 5, "element": null, "effective": [] },
+    { "id": "cognee_rouillee", "name": "Cognée rouillée", "type": "hache", "range": [1, 1], "damage": "physique", "power": 7, "hit": 70, "crit": 0, "element": null, "effective": [] },
+    { "id": "griffes_de_ronce", "name": "Griffes de ronce", "type": "tome", "range": [1, 2], "damage": "magique", "power": 5, "hit": 80, "crit": 0, "element": "racine", "effective": [] },
+    { "id": "ramure_du_roi", "name": "Ramure du Roi-Cerf", "type": "ramure", "range": [1, 2], "damage": "physique", "power": 10, "hit": 75, "crit": 5, "element": "racine", "effective": [] },
+    { "id": "crochet_de_noye", "name": "Crochet de noyé", "type": "harpon", "range": [1, 1], "damage": "physique", "power": 8, "hit": 75, "crit": 0, "element": "maree", "effective": [] },
+    { "id": "chant_de_brume", "name": "Chant de brume", "type": "tome", "range": [1, 2], "damage": "magique", "power": 7, "hit": 80, "crit": 0, "element": "maree", "effective": [] },
+    { "id": "crosse_de_merrow", "name": "Crosse de Sœur Mérrow", "type": "baton", "range": [1, 2], "damage": "magique", "power": 11, "hit": 80, "crit": 5, "element": "maree", "effective": [] },
+    { "id": "poings_de_pierre", "name": "Poings de pierre", "type": "poings", "range": [1, 1], "damage": "physique", "power": 10, "hit": 70, "crit": 0, "element": "pierre", "effective": [] },
+    { "id": "serres_de_harpie", "name": "Serres de harpie", "type": "griffes", "range": [1, 1], "damage": "physique", "power": 8, "hit": 85, "crit": 10, "element": null, "effective": [] },
+    { "id": "serres_de_la_mere", "name": "Serres de la Mère-Harpie", "type": "griffes", "range": [1, 1], "damage": "physique", "power": 12, "hit": 85, "crit": 10, "element": null, "effective": [] },
+    { "id": "poing_du_gardien", "name": "Poing du Gardien", "type": "poings", "range": [1, 1], "damage": "physique", "power": 14, "hit": 70, "crit": 5, "element": "pierre", "effective": [] },
+    { "id": "lame_de_revenant", "name": "Lame de revenant", "type": "epee", "range": [1, 1], "damage": "physique", "power": 11, "hit": 80, "crit": 0, "element": "maree", "effective": [] },
+    { "id": "murmure_des_abysses", "name": "Murmure des abysses", "type": "tome", "range": [1, 2], "damage": "magique", "power": 11, "hit": 80, "crit": 0, "element": "maree", "effective": [] },
+    { "id": "lance_engloutie", "name": "Lance engloutie", "type": "lance_courte", "range": [1, 2], "damage": "physique", "power": 11, "hit": 75, "crit": 0, "element": null, "effective": [] }
   ],
   "consumables": [
     { "id": "pain_dore", "name": "Pain doré", "description": "Le pain croustillant de Haut-Gué. Rend 8 PV.", "price": 12, "effect": { "kind": "ration", "amount": 8 } },

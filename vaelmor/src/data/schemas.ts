@@ -84,6 +84,62 @@ const clampedGain = z.strictObject({
 const unit01 = z.number().min(0).max(1);
 const haloKind = z.strictObject({ radius: z.number().positive(), alpha: unit01 });
 
+const detectionShape = z.strictObject({
+  /** Cercle de détection autour de l'ennemi (cases) ; 0 = aucun. */
+  radius: z.number().min(0),
+  /** Portée du cône de vision (cases) ; 0 = aucun. */
+  coneRange: z.number().min(0),
+  /** Ouverture totale du cône (degrés). */
+  coneAngle: z.number().min(0).max(360),
+});
+
+const foesBalanceSchema = z.strictObject({
+  /** Détection par type d'ennemi (GDD §7.1). */
+  detection: z.strictObject({
+    sentinelle: detectionShape,
+    patrouille: detectionShape,
+    errant: detectionShape,
+    embuscade: detectionShape,
+    boss: detectionShape,
+    garde: detectionShape,
+  }),
+  /** Multiplicateur de détection d'une classe de la compagnie (ex. Chasseur de Serpents de Mer : 0,8) ; le plus faible s'applique. */
+  classDetection: z.record(idSchema, z.number().positive()),
+  /** Durée du « ! » avant la poursuite (GDD §7.2). */
+  alertMs: z.number().int().min(0),
+  /** Poursuite abandonnée après tant de ms hors de vue… */
+  loseSightMs: z.number().int().positive(),
+  /** … ou au-delà de cette distance (cases). */
+  loseDistance: z.number().positive(),
+  /** Distance (px, pied à pied) à laquelle un ennemi en poursuite touche le héros. */
+  contactRadius: z.number().positive(),
+  /** Un ennemi cache son indicateur de difficulté au-delà de cette distance (cases, GDD §7.5). */
+  indicatorRange: z.number().positive(),
+  /** Pause d'une patrouille à chaque point (ms). */
+  pauseMs: z.number().int().min(0),
+  /** Vitesses (px/s) : le héros marche à 80 et court à 120, donc la poursuite se gagne en courant. */
+  speeds: z.strictObject({ patrol: z.number().positive(), wander: z.number().positive(), chase: z.number().positive(), return: z.number().positive(), flee: z.number().positive() }),
+  /** Écart de niveau (héros − ennemi) à partir duquel un ennemi non-boss s'enfuit au lieu de combattre. */
+  fleeLevelGap: z.number().int().min(1),
+  /** Appel de renforts d'une vigie : nombre d'ennemis ajoutés au combat. */
+  reinforcements: z.strictObject({ min: z.number().int().min(0), max: z.number().int().min(0) }),
+  /** Répit après un combat (ms) : aucun ennemi ne déclenche pendant ce temps. */
+  graceMs: z.number().int().min(0),
+  /** Réapparition d'un errant (temps de jeu, ms). Il revient aussi au changement de zone. */
+  wanderRespawnMs: z.number().int().positive(),
+  /** Un coup de E sur un ennemi non alerté, à cette portée (px), donne l'avantage de position. */
+  surpriseRange: z.number().positive(),
+  /** Or : multiplicateur d'un boss (GDD §7.6). */
+  bossGoldMultiplier: z.number().positive(),
+  /** Butin : probabilité par ennemi vaincu d'un consommable puis d'une arme/accessoire (GDD §7.6). */
+  lootChance: z.strictObject({ consumable: unit01, equipment: unit01 }),
+  /** Écart de niveau moyen (ennemis − compagnie) → libellé et couleur de l'indicateur (GDD §7.5), du plus faible au plus fort. */
+  difficulty: z
+    .array(z.strictObject({ maxGap: z.number().int().nullable(), id: idSchema, label: z.string().min(1), color: hexColor }))
+    .min(2),
+  bossIndicator: z.strictObject({ label: z.string().min(1), color: hexColor }),
+});
+
 export const balanceFileSchema = z.strictObject({
   $comment: comment,
   exploration: z.strictObject({
@@ -137,6 +193,8 @@ export const balanceFileSchema = z.strictObject({
     promotionMinLevel: z.number().int().positive(),
   }),
   defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1) }),
+  /** Ennemis visibles du monde (jalon M3, GDD §7). Distances en cases, durées en ms, vitesses en px/s. */
+  foes: foesBalanceSchema,
   /** Économie de départ (jalon M2) : or, capacité du sac (nombre de lignes), pile maximale. */
   economy: z.strictObject({
     startingGold: z.number().int().min(0),
@@ -170,6 +228,10 @@ export const balanceFileSchema = z.strictObject({
 });
 
 /* ---------- Zones de niveau (GDD §3.4, §8) ---------- */
+
+/** Types d'ennemis du monde (GDD §7.1). */
+export const FOE_KINDS = ['sentinelle', 'patrouille', 'errant', 'embuscade', 'boss', 'garde'] as const;
+export type FoeKind = (typeof FOE_KINDS)[number];
 
 export const AMBIENCE_KINDS = ['pollen', 'feuilles', 'brume', 'braises', 'cendres'] as const;
 
@@ -208,6 +270,21 @@ export const zoneSchema = z.strictObject({
    * rayons obliques, poussière en suspension, intensité du bloom.
    */
   light: z.strictObject({ rays: unit01, dust: unit01, bloom: unit01 }),
+  /** Or par ennemi vaincu dans la zone (tirage entre min et max, GDD §7.6). */
+  goldPerEnemy: z.strictObject({ min: z.number().int().min(0), max: z.number().int().min(0) }),
+  /**
+   * Rencontres tirables dans la zone (décision n°75) : un ennemi du monde sans rencontre
+   * fixe en tire une au poids, parmi celles prévues pour son type (`for`).
+   */
+  encounterTable: z.array(z.strictObject({ encounter: idSchema, weight: z.number().int().min(1), for: z.array(z.enum(FOE_KINDS)).min(1) })),
+  /** Butin de la zone : consommables et équipements (objets vendables) que ses ennemis laissent. */
+  loot: z.strictObject({ consumables: z.array(idSchema), equipment: z.array(idSchema) }),
+  /**
+   * Drapeaux d'accès supplémentaires (décision n°67) : les passages de la zone ne s'ouvrent que si
+   * `unlockFlag` ET tous ces drapeaux sont levés. `accessMessage` explique ce qui manque.
+   */
+  access: z.array(idSchema).optional(),
+  accessMessage: z.string().min(1).optional(),
 });
 
 export const zonesFileSchema = z.strictObject({
@@ -444,6 +521,8 @@ export const encounterSchema = z.strictObject({
     )
     .min(1),
   victoryFlags: z.array(idSchema),
+  /** Récompense garantie en plus de l'or et du butin (boss : objet assuré, GDD §7.6). */
+  rewards: z.strictObject({ gold: z.number().int().min(0).optional(), items: z.array(z.strictObject({ item: idSchema, qty: z.number().int().positive() })).optional() }).optional(),
 });
 
 export const encountersFileSchema = z.strictObject({
@@ -453,7 +532,40 @@ export const encountersFileSchema = z.strictObject({
   encounters: z.array(encounterSchema).min(1),
 });
 
+/* ---------- Ennemis visibles du monde (jalon M3, GDD §7) ---------- */
+
+export const FOE_FACINGS = ['n', 'e', 's', 'w'] as const;
+
+export const worldFoeSchema = z.strictObject({
+  id: idSchema,
+  kind: z.enum(FOE_KINDS),
+  /** Zone où l'ennemi se tient (la carte confirme que sa case y est). */
+  zone: idSchema,
+  /** Case d'attache (x, y) : poste de la vigie, point de départ de la patrouille, centre de l'errance, cachette, repaire. */
+  at: cellSchema,
+  /** Apparence dans le monde (sprite d'unité de `render/unitSprites.ts`). */
+  sprite: idSchema,
+  /** Rencontre fixe ; absente, elle est tirée dans la table de la zone au chargement. */
+  encounter: idSchema.optional(),
+  /** Vigie : direction du regard. */
+  facing: z.enum(FOE_FACINGS).optional(),
+  /** Patrouille : 2 à 6 points, parcourus en boucle (`at` est le premier). */
+  path: z.array(cellSchema).min(2).max(6).optional(),
+  /** Errant : rayon de la zone d'errance (cases). */
+  roam: z.number().int().min(1).max(12).optional(),
+  /** Garde : village dont la réputation hostile le fait apparaître (décision n°65). */
+  town: idSchema.optional(),
+});
+
+export const worldEnemiesFileSchema = z.strictObject({
+  $comment: comment,
+  foes: z.array(worldFoeSchema).min(1),
+});
+
 /* ---------- Types dérivés ---------- */
+export type WorldFoeDef = z.infer<typeof worldFoeSchema>;
+export type WorldEnemiesFile = z.infer<typeof worldEnemiesFileSchema>;
+export type FoesBalance = z.infer<typeof foesBalanceSchema>;
 
 export type ElementDef = z.infer<typeof elementSchema>;
 export type ZoneDef = z.infer<typeof zoneSchema>;

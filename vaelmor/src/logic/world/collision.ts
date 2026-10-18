@@ -7,10 +7,26 @@
  */
 import { COLLISION, type WorldMap } from '../../data/worldMap';
 
+/**
+ * Un passage s'ouvre quand son drapeau est levé et, s'il a des exigences
+ * supplémentaires (décision n°67 : accès à la Citadelle), quand elles le sont toutes.
+ */
+export function isGateOpen(flag: string, openFlags: ReadonlySet<string>, requirements: ReadonlyMap<string, readonly string[]>): boolean {
+  return openFlags.has(flag) && (requirements.get(flag) ?? []).every((f) => openFlags.has(f));
+}
+
+/** Exigences supplémentaires par drapeau de passage, tirées des zones (`access`). */
+export function gateRequirements(zones: readonly { readonly unlockFlag: string | null; readonly access?: readonly string[] | undefined }[]): Map<string, readonly string[]> {
+  const out = new Map<string, readonly string[]>();
+  for (const z of zones) if (z.unlockFlag !== null && z.access !== undefined && z.access.length > 0) out.set(z.unlockFlag, z.access);
+  return out;
+}
+
 export class CollisionGrid {
   /** 1 = solide pour le héros. Recalculé quand les drapeaux changent. */
   private readonly solid: Uint8Array;
   private openFlags: ReadonlySet<string> = new Set();
+  private requirements: ReadonlyMap<string, readonly string[]> = new Map();
   /** Cases rendues solides par des occupants (PNJ), en plus de la carte. */
   private extraSolid: ReadonlySet<number> = new Set();
 
@@ -37,6 +53,12 @@ export class CollisionGrid {
     this.refresh();
   }
 
+  /** Exigences supplémentaires des passages (voir `isGateOpen`). */
+  setGateRequirements(requirements: ReadonlyMap<string, readonly string[]>): void {
+    this.requirements = requirements;
+    this.refresh();
+  }
+
   /** Cases occupées par des PNJ : solides tant qu'ils sont là (indices `ty * largeur + tx`). Mise à jour incrémentale. */
   setExtraSolid(cells: Iterable<number>): void {
     const next = new Set(cells);
@@ -50,7 +72,7 @@ export class CollisionGrid {
     const v = this.values[i] as number;
     if (v === COLLISION.gate) {
       const flag = this.gateFlagByCell.get(i);
-      return flag === undefined || !this.openFlags.has(flag);
+      return flag === undefined || !isGateOpen(flag, this.openFlags, this.requirements);
     }
     return v === COLLISION.blocked || v === COLLISION.water;
   }
