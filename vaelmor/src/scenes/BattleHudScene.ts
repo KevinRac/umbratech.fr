@@ -619,11 +619,12 @@ export class BattleHudScene extends Phaser.Scene {
       const parts = this.resultParts;
       parts.push(this.add.rectangle(0, 0, width, height, PALETTE.nuit, 0.6).setOrigin(0, 0).setDepth(DEPTH.result).setInteractive());
       parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.result + 1 }));
-      const title = addText(this, width / 2, y + 16 * S, victory ? 'Victoire' : 'Compagnie dispersée', {
-        font: 'title',
-        scale: 3 * S,
+      const title = addText(this, width / 2, y + 16 * S, victory ? 'VICTOIRE' : 'DÉFAITE', {
+        font: 'body',
+        scale: 2 * S,
         color: victory ? PALETTE.lumiereDoree : PALETTE.braise,
         align: 'center',
+        shadowOffset: 2 * S,
       }).setDepth(DEPTH.result + 2);
       parts.push(title);
       const lines: [string, number][] = [

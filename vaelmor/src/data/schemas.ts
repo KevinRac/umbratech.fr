@@ -125,6 +125,8 @@ const foesBalanceSchema = z.strictObject({
   reinforcements: z.strictObject({ min: z.number().int().min(0), max: z.number().int().min(0) }),
   /** Répit après un combat (ms) : aucun ennemi ne déclenche pendant ce temps. */
   graceMs: z.number().int().min(0),
+  /** Marge (cases) autour d'un village où les ennemis n'entrent ni ne détectent : les villages sont sûrs. */
+  townSafeMargin: z.number().int().min(0),
   /** Réapparition d'un errant (temps de jeu, ms). Il revient aussi au changement de zone. */
   wanderRespawnMs: z.number().int().positive(),
   /** Un coup de E sur un ennemi non alerté, à cette portée (px), donne l'avantage de position. */

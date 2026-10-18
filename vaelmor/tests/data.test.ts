@@ -158,7 +158,7 @@ describe('détection des erreurs de données', () => {
     raw2.encounters.encounters[0].sampled.width = 40;
     const text = issuesOf(raw2).join('\n');
     expect(text).toMatch(/pas de position sur une carte tirée du monde/);
-    expect(text).toMatch(/40×20 cases/);
+    expect(text).toMatch(/40×\d+ cases/);
   });
 
   it('exige un boss unique pour l’objectif « boss » et un seul héros dans la compagnie d’essai', () => {

@@ -17,7 +17,7 @@ import type { ZoneDef } from '../data/schemas';
 import { COLLISION, WorldMapError, loadWorldMap, type WorldMap } from '../data/worldMap';
 import { centerOn, followTarget, type CameraConfig, type Vec2 } from '../logic/world/camera';
 import { CollisionGrid, gateRequirements, isGateOpen } from '../logic/world/collision';
-import { createFoe, detectionScale, feetCell, surpriseTarget, updateFoe, type FoeEvent, type FoeSim } from '../logic/world/foes';
+import { buildSafeGrid, createFoe, detectionScale, feetCell, surpriseTarget, updateFoe, type FoeEvent, type FoeSim, type SafeGrid } from '../logic/world/foes';
 import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '../logic/world/movement';
 import { nearestFreeCell } from '../logic/world/pathfinding';
 import { ZoneTracker, terrainAtCell } from '../logic/world/zones';
@@ -192,6 +192,7 @@ export class WorldScene extends Phaser.Scene {
   /* Ennemis du monde (jalon M3) */
   private foeActors = new Map<string, FoeActor>();
   private foeRng!: Rng;
+  private safeGrid: SafeGrid | null = null;
   private gateReq: ReadonlyMap<string, readonly string[]> = new Map();
   private graceMs = 0;
   private classScale = 1;
@@ -998,6 +999,13 @@ export class WorldScene extends Phaser.Scene {
     const params = new URLSearchParams(window.location.search);
     this.foesDebugOff = params.has('debug') && params.get('foes') === 'off';
     this.foeRng = Rng.fromSeed(`foes:${Date.now()}`);
+    this.safeGrid = buildSafeGrid(
+      this.map.width,
+      this.map.height,
+      this.map.tileSize,
+      this.map.locations.filter((l) => l.kind === 'village' || l.kind === 'ville'),
+      this.data_.balance.foes.townSafeMargin,
+    );
     this.classScale = classDetectionScale(this.data_);
     this.partyLvl = partyLevel(this.data_, this.state.testLevel);
     this.graceMs = this.data_.balance.foes.graceMs;
@@ -1049,7 +1057,7 @@ export class WorldScene extends Phaser.Scene {
       forestMultiplier: exploration.forestDetectionMultiplier,
       classScale: this.classScale,
     });
-    const env = { grid: this.grid, cfg, tile, hero: { x: body.x, y: body.y }, scale, grace: this.graceMs > 0, rng: this.foeRng };
+    const env = { grid: this.grid, cfg, tile, hero: { x: body.x, y: body.y }, scale, grace: this.graceMs > 0, rng: this.foeRng, safe: this.safeGrid };
     const simulated = 40 * tile;
     for (const actor of this.foeActors.values()) {
       const sim = actor.sim;

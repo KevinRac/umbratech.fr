@@ -67,7 +67,36 @@ export interface FoeEnv {
   /** Répit après un combat : personne ne détecte ni ne touche. */
   readonly grace: boolean;
   readonly rng: Rng;
+  /** Cases des villages et de leur marge (1 = lieu sûr) : les ennemis n'y entrent pas et n'y voient personne. */
+  readonly safe?: SafeGrid | null;
 }
+
+export interface SafeGrid {
+  readonly width: number;
+  readonly height: number;
+  readonly cells: Uint8Array;
+}
+
+/** Rectangles de villages (en pixels) agrandis de `margin` cases. */
+export function buildSafeGrid(width: number, height: number, tile: number, rects: readonly { x: number; y: number; width: number; height: number }[], margin: number): SafeGrid {
+  const cells = new Uint8Array(width * height);
+  for (const r of rects) {
+    const x0 = Math.max(0, Math.floor(r.x / tile) - margin);
+    const x1 = Math.min(width - 1, Math.ceil((r.x + r.width) / tile) - 1 + margin);
+    const y0 = Math.max(0, Math.floor(r.y / tile) - margin);
+    const y1 = Math.min(height - 1, Math.ceil((r.y + r.height) / tile) - 1 + margin);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) cells[y * width + x] = 1;
+  }
+  return { width, height, cells };
+}
+
+function isSafeCell(env: FoeEnv, cx: number, cy: number): boolean {
+  const s = env.safe;
+  if (!s || cx < 0 || cy < 0 || cx >= s.width || cy >= s.height) return false;
+  return s.cells[cy * s.width + cx] === 1;
+}
+
+const isSafeAt = (env: FoeEnv, x: number, y: number): boolean => isSafeCell(env, Math.floor(x / env.tile), Math.floor((y - 1) / env.tile));
 
 const AIM = { n: -Math.PI / 2, e: 0, s: Math.PI / 2, w: Math.PI } as const;
 const REPATH_MS = 350;
@@ -197,6 +226,8 @@ function stepToward(foe: FoeSim, tx: number, ty: number, speed: number, dtMs: nu
   const nx = foe.x + (dx / d) * step;
   const ny = foe.y + (dy / d) * step;
   if (env.grid.isSolidCell(Math.floor(nx / env.tile), Math.floor((ny - 1) / env.tile))) return false;
+  // Les villages sont sûrs : on n'y entre pas (les gardes, eux, y vivent).
+  if (foe.def.kind !== 'garde' && isSafeAt(env, nx, ny) && !isSafeAt(env, foe.x, foe.y)) return false;
   foe.x = nx;
   foe.y = ny;
   foe.aim = Math.atan2(dy, dx);
@@ -208,7 +239,8 @@ function planRoute(foe: FoeSim, to: Cell, env: FoeEnv): boolean {
   const from = feetCell(foe.x, foe.y, env.tile);
   const path = findPath(env.grid, from, to);
   if (!path) return false;
-  foe.route = path.slice(1);
+  const blocked = foe.def.kind === 'garde' ? -1 : path.findIndex((c, i) => i > 0 && isSafeCell(env, c.x, c.y));
+  foe.route = (blocked >= 0 ? path.slice(0, blocked) : path).slice(1);
   return true;
 }
 
@@ -218,6 +250,22 @@ export function updateFoe(foe: FoeSim, dtMs: number, env: FoeEnv): FoeEvent[] {
   foe.moving = false;
   foe.modeMs += dtMs;
   const dist = Math.hypot(hero.x - foe.x, hero.y - foe.y);
+
+  // Village : lieu sûr. Le héros y est à l'abri (sauf face aux gardes hostiles) ; l'ennemi qui le poursuivait rentre chez lui.
+  if (foe.def.kind !== 'garde' && isSafeAt(env, hero.x, hero.y)) {
+    if (foe.mode === 'alert' || foe.mode === 'chase') {
+      setMode(foe, 'return');
+      events.push({ type: 'lost' });
+    }
+    if (foe.mode === 'dormant') return events;
+    if (foe.mode === 'flee') {
+      setMode(foe, 'return');
+    }
+    if (foe.mode === 'return') returnHome(foe, dtMs, env);
+    else if (foe.mode === 'patrol') patrol(foe, dtMs, env);
+    else if (foe.mode === 'wander') wander(foe, dtMs, env);
+    return events;
+  }
 
   // Embuscade : invisible tant que le héros n'est pas tout près, puis elle se referme d'un coup.
   if (foe.mode === 'dormant') {

@@ -204,10 +204,11 @@ export interface Placement {
  * héros attaque un repaire : le boss tient le point de contact).
  */
 export function placeUnits(map: BattleMap, site: Cell, anchor: 'player' | 'enemy', partySize: number, enemies: readonly { readonly boss?: boolean }[], rng: Rng, ambush = false): Placement {
-  // Embuscade : l'autre camp est tout près (3 à 7 de coût, cases à 2 de distance) au lieu de 8 à 15.
-  const [nearCost, farCost, idealCost] = ambush ? [3, 7, 5] : [8, 15, 11];
-  const minFromPlayer = ambush ? 2 : 5;
-  const minGap = ambush ? 2 : 4;
+  // Le premier tour (ou deux) se passe en approche : personne ne peut frapper avant d'avoir marché.
+  // Embuscade : l'autre camp est plus près (9 à 14 de coût) mais encore hors de portée d'un premier mouvement ; sinon 13 à 21.
+  const [nearCost, farCost, idealCost] = ambush ? [10, 15, 12] : [13, 21, 17];
+  const minFromPlayer = ambush ? 8 : 11;
+  const wantedGap = ambush ? 9 : 10;
   const home = nearestPassable(map, site);
   const fromHome = terrainDistances(map, home);
   // L'autre camp : à 9-14 de coût de déplacement, dans un endroit ouvert, de préférence sur une route.
@@ -246,15 +247,19 @@ export function placeUnits(map: BattleMap, site: Cell, anchor: 'player' | 'enemy
     });
 
   // Ennemis : le boss au point du camp ennemi, les autres autour, espacés, à distance de la compagnie.
-  const candidates = [...fromEnemy.entries()]
-    .filter(([i]) => {
-      if (taken.has(i) || (fromPlayer.get(i) ?? Infinity) < minFromPlayer) return false;
-      // Pas d'ennemi collé à la compagnie de l'autre côté d'un obstacle (rivière, mur) : 4 cases au moins à vol d'oiseau.
-      const c = cellOfIndex(map, i);
-      return deploy.every((d) => distance(d, c) >= minGap);
-    })
-    .map(([i, cost]) => ({ i, key: cost + rng.next() * 3 }))
-    .sort((a, b) => a.key - b.key);
+  // Si la carte est étroite, on relâche l'écart minimal plutôt que d'échouer.
+  const pickCandidates = (minGap: number): { i: number; key: number }[] =>
+    [...fromEnemy.entries()]
+      .filter(([i]) => {
+        if (taken.has(i) || (fromPlayer.get(i) ?? Infinity) < Math.min(minFromPlayer, minGap + 2)) return false;
+        // Pas d'ennemi collé à la compagnie de l'autre côté d'un obstacle (rivière, mur) : `minGap` cases au moins à vol d'oiseau.
+        const c = cellOfIndex(map, i);
+        return deploy.every((d) => distance(d, c) >= minGap);
+      })
+      .map(([i, cost]) => ({ i, key: cost + rng.next() * 3 }))
+      .sort((a, b) => a.key - b.key);
+  let candidates = pickCandidates(wantedGap);
+  for (let gap = wantedGap - 1; candidates.length < enemies.length + 2 && gap >= 2; gap--) candidates = pickCandidates(gap);
   const placed: Cell[] = [];
   const enemyCells: Cell[] = enemies.map(() => ({ x: -1, y: -1 }));
   const bossIndex = enemies.findIndex((e) => e.boss);

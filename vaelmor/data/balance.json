@@ -45,6 +45,7 @@
     "goldLossRatio": 0.1
   },
   "foes": {
+    "townSafeMargin": 5,
     "detection": {
       "sentinelle": { "radius": 0, "coneRange": 5, "coneAngle": 90 },
       "patrouille": { "radius": 4, "coneRange": 6, "coneAngle": 90 },

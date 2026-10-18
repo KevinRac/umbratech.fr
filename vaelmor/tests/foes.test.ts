@@ -23,7 +23,7 @@ import { Rng } from '../src/logic/rng';
 import { endPhase } from '../src/logic/tactics/battle';
 import { buildBattle, findEncounter } from '../src/logic/tactics/encounter';
 import { CollisionGrid, gateRequirements, isGateOpen } from '../src/logic/world/collision';
-import { cellFeet, createFoe, detectionScale, detects, feetCell, isSurprisable, surpriseTarget, updateFoe, type FoeEnv, type FoeSim } from '../src/logic/world/foes';
+import { buildSafeGrid, cellFeet, createFoe, detectionScale, detects, feetCell, isSurprisable, surpriseTarget, updateFoe, type FoeEnv, type FoeSim } from '../src/logic/world/foes';
 import { findPath } from '../src/logic/world/pathfinding';
 import { gridFromRows, TILE } from './helpers/fixtures';
 import { testWorld } from './helpers/world';
@@ -371,7 +371,8 @@ describe('embuscade et renforts dans le combat', () => {
     expect(ambushed.phase).toBe('enemy');
     const nearest = (s: typeof calm) => Math.min(...s.units.filter((u) => u.team === 'enemy').flatMap((e) => s.units.filter((u) => u.team === 'player').map((p) => Math.abs(p.x - e.x) + Math.abs(p.y - e.y))));
     expect(nearest(ambushed)).toBeLessThan(nearest(calm));
-    expect(nearest(ambushed)).toBeGreaterThanOrEqual(2);
+    expect(nearest(ambushed)).toBeGreaterThanOrEqual(7);
+    expect(nearest(calm)).toBeGreaterThanOrEqual(11);
     endPhase(ambushed);
     expect(ambushed.phase).toBe('player');
     expect(ambushed.turn).toBe(1);
@@ -415,5 +416,30 @@ describe('passages d\'accès (décision n°67)', () => {
     expect(grid.isSolidCell(cx, cy)).toBe(true);
     grid.setOpenFlags(['boss_gardien_cendre', 'acces_citadelle', 'barque_de_dorn']);
     expect(grid.isSolidCell(cx, cy)).toBe(false);
+  });
+});
+
+describe('villages sûrs', () => {
+  const safe = buildSafeGrid(40, 30, TILE, [{ x: 20 * TILE, y: 10 * TILE, width: 8 * TILE, height: 6 * TILE }], 3);
+
+  it('la marge entoure le village', () => {
+    expect(safe.cells[12 * 40 + 18]).toBe(1);
+    expect(safe.cells[12 * 40 + 16]).toBe(0);
+  });
+
+  it('un ennemi qui poursuit ne franchit pas la lisière', () => {
+    const foe = sim(def({ kind: 'patrouille', at: [10, 12], path: [[10, 12], [12, 12]] }));
+    foe.mode = 'chase';
+    const grid = open();
+    run(foe, 6000, env(grid, at(24, 12), { safe }));
+    expect(foe.x / TILE).toBeLessThan(17);
+  });
+
+  it('le héros au village est invisible et intouchable : la poursuite cesse', () => {
+    const foe = sim(def({ kind: 'sentinelle', at: [14, 12], facing: 'e' }));
+    const grid = open();
+    const events = run(foe, 3000, env(grid, at(18, 12), { safe }));
+    expect(events.find((e) => e.type === 'contact')).toBeUndefined();
+    expect(foe.mode).not.toBe('chase');
   });
 });

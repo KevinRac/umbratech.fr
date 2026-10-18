@@ -238,3 +238,8 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **n°76 — Initiative et embuscade** : attaque par surprise = initiative ; contact d'embuscade/garde = phase ennemie d'abord, ennemis placés à 3-7 cases ; la sentinelle appelle 1 à 2 renforts ; les ennemis trop faibles (écart de niveau ≥ 5) fuient.
 - **n°77 — Règlement** : or par ennemi (boss ×5), butin 20 % consommable / 5 % équipement, défaite −10 % d'or et réveil au dernier village, retraite sans changement, 4 s de grâce après un combat.
 - **n°78 — Débogage** : `lvl` et `foes=off` ajoutés ; `at` appliqué une seule fois par partie.
+
+### Retours de l'auteur sur M3 (18/10/2026) — décisions n°79 à n°81, à valider
+- **n°79 — Villages sûrs** : marge de 5 cases autour de chaque village et ville (`balance.foes.townSafeMargin`). Les ennemis n'y entrent pas, ne détectent ni ne touchent le héros qui s'y trouve, et abandonnent la poursuite. Seuls les gardes hostiles (n°65) y font exception. La validation des données refuse tout ennemi posé dans la marge ; 17 positions ont été déplacées.
+- **n°80 — Plus d'espace à l'engagement** : cartes tirées du monde de 32×24 (maximum du schéma) ; combat normal : ennemis à 13-21 de coût de déplacement et au moins 10 cases à vol d'oiseau ; embuscade : 10-15 et au moins 9. Le premier tour se joue en approche. L'écart est relâché si la carte est trop étroite (tanière de la Mère-Harpie, 6 cases ; embuscade du Gardien de Cendre, 5).
+- **n°81 — Écran de fin** : titre en police `body` (lisible) « VICTOIRE » / « DÉFAITE » à la place du gothique.

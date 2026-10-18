@@ -13,6 +13,7 @@ const GUARD_RANGE = 6;
 
 export function checkFoesOnMap(data: GameData, map: WorldMap): string[] {
   const issues: string[] = [];
+  const margin = data.balance.foes.townSafeMargin;
   const file = 'worldEnemies.json';
   const zoneValue = new Map(data.zones.map((z) => [z.id, z.value]));
   const placed = new Map<string, string>();
@@ -38,7 +39,7 @@ export function checkFoesOnMap(data: GameData, map: WorldMap): string[] {
       if (zone !== zoneValue.get(foe.zone)) issues.push(`${at} : cette case n'est pas dans la zone « ${foe.zone} »`);
       for (const village of villages) {
         const own = foe.kind === 'garde' && foe.town === String(village.props['id']);
-        if (!own && insideRect(village, x, y, 0)) issues.push(`${at} : dans ${village.name} (un village est un lieu sûr)`);
+        if (!own && insideRect(village, x, y, margin)) issues.push(`${at} : à moins de ${margin} cases de ${village.name} (un village est un lieu sûr)`);
       }
     });
     const [x, y] = foe.at;
