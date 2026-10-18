@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.22',
+ actuelle:'v16.23',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.23',t:'Le rire du Brumeux est refait : un vrai « ha ha ha HAAA » démoniaque (souffle puis voyelle grave et saturée, descendante, le dernier « ha » est tenu), à la place de la série de bruits.'},
   {d:'2026-10-18',h:'v16.22',t:'Son : la musique démarre par défaut au cran bas du curseur (15 %), le réglage de la pause reste libre.'},
   {d:'2026-10-18',h:'v16.21',t:'Son : le volume de base baisse (musique de 55 % à 30 %, bruitages d’environ 20 %). Le curseur de musique de la pause reste réglable et garde ton réglage s’il est déjà enregistré.'},
   {d:'2026-10-18',h:'v16.20',t:'Héraut du Glas : les tics du métronome sont nettement plus forts et plus secs (le tock du premier temps est plus grave), et la musique baisse d’environ 40 % quand on joue le Héraut en partie, pour que le rythme se distingue.'},
