@@ -636,7 +636,7 @@ footer a{color:var(--muted)}
   </section>
 
   <footer>
-    Données : <a href="https://www.gwiki.fr/" target="_blank" rel="noopener">GWiki</a> (GFDL), extraites de sa base sémantique. Communauté hébergée sur Supabase.
+    Données : <a href="https://www.gwiki.fr/" target="_blank" rel="noopener">GWiki</a> (GFDL), extraites de sa base sémantique. Communauté hébergée sur umbratech.fr.
     Icônes © ArenaNet, affichées depuis GWiki ; un dessin de remplacement apparaît si l'image ne peut pas être chargée.
   </footer>
 </div>
@@ -644,8 +644,6 @@ footer a{color:var(--muted)}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
-<script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js"></script>
 <script>
 const DATA_ATTRS=["Tactique", "Force", "Titre d'Ami des Kurzicks", "Titre d'Ami des Luxons", "Maîtrise de l'épée", "Maîtrise du marteau", "Titre de Lancier du Soleil", "Maîtrise de la hache", "Expertise", "Domptage", "Adresse au tir", "Survie", "Prières de protection", "Prières de guérison", "Prières de châtiment", "Faveur divine", "Malédictions", "Magie de la mort", "Magie du sang", "Moisson des âmes", "Magie de domination", "Magie de l'illusion", "Incantation rapide", "Magie de l'inspiration", "Magie de l'eau", "Magie de l'air", "Magie de la terre", "Conservation d'énergie", "Magie du feu", "Maîtrise de la dague", "Attaques critiques", "Arts létaux", "Arts des ombres", "Magie de la canalisation", "Communion", "Magie de restauration", "Puissance de l'Invocation", "Commandement", "Motivation", "Charisme", "Maîtrise du javelot", "Prières de la Terre", "Maîtrise de la faux", "Prières du Vent", "Mysticisme"];
 const DATA_TYPES=["Cri", "Compétence", "Attaque à l'épée", "Attaque au corps à corps", "Attaque au marteau", "Pose de combat", "Attaque à la hache", "Sceau", "Attaque à l'arc", "Préparation", "Attaque de familier", "Piège", "Rituel de la nature", "Enchantement", "Maléfice", "Sort", "Compétence de contact", "Sort de puits", "Sort de protection", "Glyphe", "Attaque main gauche", "Attaque ambidextre", "Attaque main droite", "Rituel d'asservissement", "Sort d'altération d'arme", "Sort d'altération d'objet", "Chant", "Attaque au javelot", "Echo", "Attaque à la faux", "Enchantement instantané", "Transformation"];
@@ -2577,7 +2575,7 @@ function showTab(v){
   $("#builderView").hidden=v!=="builder";$("#buildsView").hidden=v!=="builds";$("#commView").hidden=v!=="community";
   $("#tabBuilder").setAttribute("aria-selected",v==="builder");$("#tabBuilds").setAttribute("aria-selected",v==="builds");$("#tabComm").setAttribute("aria-selected",v==="community");
   if(v==="builds")renderBuilds();
-  if(v==="community"){renderCommunity();if(sb&&!commLoading)fetchCommunity(true)}
+  if(v==="community"){renderCommunity();if(commOn&&!commLoading)fetchCommunity(true)}
   window.scrollTo(0,0);
 }
 $("#tabBuilder").addEventListener("click",()=>showTab("builder"));
@@ -2593,8 +2591,8 @@ function fmtDate(ts){try{return new Date(ts).toLocaleDateString("fr-FR",{day:"nu
 function renderBuilds(){
   const grid=$("#buildsGrid"),q=norm(bq.trim()),bn=$("#buildsNote");
   if(online()){bn.className="comm-note";bn.textContent="Vos builds sont enregistrés en ligne et publiés automatiquement dans la communauté. Vous les retrouvez sur tous vos appareils."}
-  else if(sb&&meId&&writeFailed){bn.className="comm-note warn";bn.textContent="La synchronisation en ligne a échoué : vos builds restent dans ce navigateur. Rechargez la page pour réessayer."}
-  else if(sb){bn.className="comm-note warn";bn.textContent="Vous n'êtes pas connecté : vos builds restent dans ce navigateur. Connectez-vous (en haut à droite) pour les enregistrer en ligne et les publier dans la communauté."}
+  else if(commOn&&meId&&writeFailed){bn.className="comm-note warn";bn.textContent="La synchronisation en ligne a échoué : vos builds restent dans ce navigateur. Rechargez la page pour réessayer."}
+  else if(commOn){bn.className="comm-note warn";bn.textContent="Vous n'êtes pas connecté : vos builds restent dans ce navigateur. Connectez-vous (en haut à droite) pour les enregistrer en ligne et les publier dans la communauté."}
   else{bn.className="comm-note warn";bn.textContent="Mode local : la communauté n'est pas configurée sur cette page, vos builds restent dans ce navigateur."}
   $("#buildsSub").textContent=builds.length?`· ${builds.length}`:"";
   if(!builds.length){
@@ -2661,10 +2659,20 @@ $("#buildsGrid").addEventListener("keydown",e=>{
   if(e.key==="Enter"){e.preventDefault();finishRename(id,true)}else if(e.key==="Escape"){e.stopPropagation();finishRename(id,false)}
 });
 $("#bq").addEventListener("input",e=>{bq=e.target.value;renderBuilds()});
-/* ---------- Comptes et communauté (Supabase) ---------- */
-const CFG=window.GW_CONFIG||{};
+/* ---------- Comptes et communauté (API PHP/MySQL sur umbratech.fr) ---------- */
+async function api(route,o){
+  o=o||{};const method=o.method||"GET";
+  const u=new URL("api/",location.href);u.searchParams.set("r",route);
+  if(o.params)for(const[k,v]of Object.entries(o.params))if(v!==""&&v!==null&&v!==undefined)u.searchParams.set(k,v);
+  let res;
+  try{res=await fetch(u,{method,credentials:"same-origin",headers:method==="GET"?{}:{"Content-Type":"application/json","X-GW1":"1"},body:o.body===undefined?undefined:JSON.stringify(o.body)})}
+  catch(e){return {error:{status:0,code:"network",message:"Serveur injoignable."}}}
+  let j=null;try{j=await res.json()}catch(e){}
+  if(!res.ok||!j)return {error:{status:res.status,code:j&&j.error||"",message:j&&j.message||("Erreur "+res.status)}};
+  return {data:j};
+}
 const PAGE=30;
-let sb=null,meId=null,profile=null,writeFailed=false,commState="off",community=[],commTotal=0,commLoading=false,commMore=false,commPage=0,commReq=0;
+let commOn=false,meId=null,profile=null,writeFailed=false,commState="off",community=[],commTotal=0,commLoading=false,commMore=false,commPage=0,commReq=0;
 let lastSig=new Map(),remoteIds=new Set(),pushChain=Promise.resolve(),lastUid;
 function newId(){
   if(window.crypto&&crypto.randomUUID)return crypto.randomUUID();
@@ -2673,7 +2681,7 @@ function newId(){
   return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
 }
 function isUuid(s){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s))}
-function online(){return !!sb&&!!meId&&!writeFailed}
+function online(){return commOn&&!!meId&&!writeFailed}
 function descForm(b){
   return `<div class="share-form"><label for="shdesc-${b.id}">Description${online()?" (visible dans la communauté)":""}</label>
     <textarea id="shdesc-${b.id}" maxlength="280" placeholder="Usage, variantes, runes conseillées…">${esc(b.desc||"")}</textarea>
@@ -2705,29 +2713,24 @@ async function doPush(list){
   const rows=list.map(toRow),ids=new Set(rows.map(r=>r.id));
   const changed=rows.filter(r=>lastSig.get(r.id)!==sigRow(r));
   const removed=[...remoteIds].filter(id=>!ids.has(id));
-  if(changed.length){
-    const {error}=await sb.from("builds").upsert(changed);
-    if(error)return pushError(error);
-    changed.forEach(r=>{lastSig.set(r.id,sigRow(r));remoteIds.add(r.id)});
-  }
-  if(removed.length){
-    const {error}=await sb.from("builds").delete().in("id",removed);
-    if(error)return pushError(error);
-    removed.forEach(id=>{remoteIds.delete(id);lastSig.delete(id)});
-  }
-  if((changed.length||removed.length)&&tab==="community")fetchCommunity(true);
+  if(!changed.length&&!removed.length)return;
+  const {error}=await api("builds/sync",{method:"POST",body:{upsert:changed,remove:removed}});
+  if(error)return pushError(error);
+  changed.forEach(r=>{lastSig.set(r.id,sigRow(r));remoteIds.add(r.id)});
+  removed.forEach(id=>{remoteIds.delete(id);lastSig.delete(id)});
+  if(tab==="community")fetchCommunity(true);
 }
 function pushError(e){
   const msg=String(e&&e.message||"");
   if(/Limite de 200/.test(msg))toast("Vous avez atteint la limite de 200 builds en ligne : supprimez-en avant d'en ajouter.");
-  else if(e&&(e.code==="42501"||/row-level security|permission/i.test(msg))){writeFailed=true;toast("Synchronisation refusée par le serveur : vos builds restent dans ce navigateur.");}
+  else if(e&&(e.status===401||e.status===403)){writeFailed=true;toast("Synchronisation refusée par le serveur : vos builds restent dans ce navigateur.");}
   else toast("Synchronisation impossible pour le moment. Vos builds sont gardés dans ce navigateur.");
   if(tab==="builds")renderBuilds();
 }
 async function loadMine(){
-  const {data,error}=await sb.from("builds").select("id,name,description,bar,p1,p2,ranks,code,created_at,updated_at").eq("user_id",meId).order("updated_at",{ascending:false});
+  const {data,error}=await api("builds/mine");
   if(error){toast("Impossible de charger vos builds en ligne. Vos builds locaux restent disponibles.");return}
-  const remote=data.map(fromRow);
+  const remote=data.builds.map(fromRow);
   remoteIds=new Set(remote.map(b=>b.id));
   lastSig=new Map(remote.map(b=>[b.id,sigRow(toRow(b))]));
   const flag="gw1-sync-"+meId;let synced=false;try{synced=localStorage.getItem(flag)==="1"}catch(e){}
@@ -2747,24 +2750,19 @@ async function loadMine(){
 }
 
 /* connexion */
-async function initSupabase(){
-  if(!CFG.supabaseUrl||!CFG.supabaseAnonKey||!window.supabase||typeof window.supabase.createClient!=="function"){commState="off";renderAccount();return}
-  try{
-    sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce"}});
-  }catch(e){sb=null;commState="off";renderAccount();return}
-  commState="ready";renderAccount();
-  sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>onSession(session),0)});
-  try{const {data}=await sb.auth.getSession();await onSession(data&&data.session)}catch(e){}
-  if(/[?&]code=/.test(location.search)){try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}
+async function initComm(){
+  const {data,error}=await api("auth/me");
+  if(error){commOn=false;commState="off";renderAccount();return}
+  commOn=true;commState="ready";renderAccount();
+  await onSession(data.user);
   fetchCommunity(true);
 }
-async function onSession(session){
-  const uid=session&&session.user?session.user.id:null;
+async function onSession(user){
+  const uid=user?user.id:null;
   if(uid===lastUid)return;lastUid=uid;meId=uid;writeFailed=false;profile=null;
   renderAccount();
   if(uid){
-    const {data}=await sb.from("profiles").select("display_name,is_admin").eq("id",uid).maybeSingle();
-    profile=data||{display_name:"Joueur",is_admin:false};renderAccount();
+    profile={display_name:user.display_name||"Joueur",is_admin:!!user.is_admin};renderAccount();
     await loadMine();
   }
   if(tab==="builds")renderBuilds();
@@ -2773,20 +2771,26 @@ async function onSession(session){
 const apop=$("#apop");
 function renderAccount(){
   const el=$("#acct");
-  if(!sb){el.innerHTML='<span class="acct-local" title="La communauté n\'est pas configurée : vos builds restent dans ce navigateur.">Mode local</span>';return}
+  if(!commOn){el.innerHTML='<span class="acct-local" title="La communauté est indisponible pour le moment : vos builds restent dans ce navigateur.">Mode local</span>';return}
   if(!meId){el.innerHTML='<button type="button" class="btn save" id="acctBtn" aria-haspopup="dialog" aria-expanded="false">Se connecter</button>';return}
   const n=profile&&profile.display_name||"…";
   el.innerHTML=`<button type="button" class="acct-chip" id="acctBtn" aria-haspopup="dialog" aria-expanded="false" title="Mon compte"><span class="ava">${esc(n.slice(0,1).toUpperCase())}</span><span class="nm">${esc(n)}</span></button>`;
 }
+let loginPending="";
 function openAccount(){
-  if(!sb)return;
+  if(!commOn)return;
   if(!meId){
-    apop.innerHTML=`<div class="ppop-h"><span>Connexion</span></div>
-      <p class="apop-txt">Connectez-vous pour enregistrer vos builds en ligne et les publier dans la communauté.</p>
-      ${CFG.discordLogin?'<button type="button" class="btn discord" id="loginDiscord">Continuer avec Discord</button><div class="apop-or">ou</div>':""}
+    if(!loginPending)apop.innerHTML=`<div class="ppop-h"><span>Connexion</span></div>
+      <p class="apop-txt">Connectez-vous pour enregistrer vos builds en ligne et les publier dans la communauté. Un code à 6 chiffres vous est envoyé par e-mail : pas de mot de passe à retenir.</p>
       <label class="slabel" for="loginEmail">Adresse e-mail</label>
       <input type="email" id="loginEmail" autocomplete="email" placeholder="vous@exemple.fr">
-      <button type="button" class="btn primary" id="loginSend">Recevoir un lien de connexion</button>
+      <button type="button" class="btn primary" id="loginSend">Recevoir un code de connexion</button>
+      <p class="apop-msg" id="loginMsg" aria-live="polite"></p>`;
+    else apop.innerHTML=`<div class="ppop-h"><span>Entrez votre code</span></div>
+      <p class="apop-txt">Un code à 6 chiffres a été envoyé à <b>${esc(loginPending)}</b>. Il est valable 10 minutes (pensez à vérifier les courriers indésirables).</p>
+      <label class="slabel" for="loginCode">Code de connexion</label>
+      <input type="text" id="loginCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="123456">
+      <div class="spop-actions"><button type="button" class="btn primary" id="loginVerify">Se connecter</button><button type="button" class="btn" id="loginBack">Changer d'adresse</button></div>
       <p class="apop-msg" id="loginMsg" aria-live="polite"></p>`;
   }else{
     apop.innerHTML=`<div class="ppop-h"><span>Mon compte</span></div>
@@ -2801,27 +2805,41 @@ function openAccount(){
 function closeAccount(){if(apop.hidden)return;apop.hidden=true;const b=$("#acctBtn");if(b)b.setAttribute("aria-expanded","false")}
 $("#acct").addEventListener("click",e=>{if(e.target.closest("#acctBtn")){apop.hidden?openAccount():closeAccount()}});
 document.addEventListener("pointerdown",e=>{if(!apop.hidden&&!e.target.closest("#apop,#acctBtn"))closeAccount()});
-apop.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();closeAccount();const b=$("#acctBtn");if(b)b.focus()}else if(e.key==="Enter"&&e.target.id==="loginEmail"){e.preventDefault();sendLink()}else if(e.key==="Enter"&&e.target.id==="nickIn"){e.preventDefault();saveNick()}});
+apop.addEventListener("input",e=>{if(e.target.id==="loginCode"){e.target.value=e.target.value.replace(/\D/g,"").slice(0,6);if(e.target.value.length===6)verifyCode()}});
+apop.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();closeAccount();const b=$("#acctBtn");if(b)b.focus()}else if(e.key==="Enter"&&e.target.id==="loginEmail"){e.preventDefault();sendCode()}else if(e.key==="Enter"&&e.target.id==="loginCode"){e.preventDefault();verifyCode()}else if(e.key==="Enter"&&e.target.id==="nickIn"){e.preventDefault();saveNick()}});
 apop.addEventListener("click",e=>{
   const id=e.target.id;
-  if(id==="loginSend")sendLink();
-  else if(id==="loginDiscord")sb.auth.signInWithOAuth({provider:"discord",options:{redirectTo:location.origin+location.pathname}});
+  if(id==="loginSend")sendCode();
+  else if(id==="loginVerify")verifyCode();
+  else if(id==="loginBack"){loginPending="";openAccount()}
   else if(id==="nickSave")saveNick();
-  else if(id==="logout"){closeAccount();sb.auth.signOut().then(()=>{onSession(null);toast("Vous êtes déconnecté. Vos builds restent visibles dans ce navigateur.")})}
+  else if(id==="logout"){closeAccount();api("auth/logout",{method:"POST",body:{}}).then(()=>{onSession(null);toast("Vous êtes déconnecté. Vos builds restent visibles dans ce navigateur.")})}
 });
-async function sendLink(){
-  const inp=$("#loginEmail"),msg=$("#loginMsg"),email=(inp&&inp.value||"").trim();
+let loginBusy=false;
+async function sendCode(){
+  const inp=$("#loginEmail"),msg=$("#loginMsg"),email=(inp&&inp.value||"").trim().toLowerCase();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){msg.textContent="Saisissez une adresse e-mail valide.";return}
-  msg.textContent="Envoi du lien…";
-  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
-  if(error)msg.textContent=/rate|limit|seconds/i.test(error.message)?"Trop de demandes pour le moment. Réessayez dans quelques minutes.":"L'envoi a échoué : "+error.message;
-  else msg.textContent=`Lien envoyé à ${email}. Ouvrez-le dans ce navigateur pour vous connecter.`;
+  if(loginBusy)return;loginBusy=true;msg.textContent="Envoi du code…";
+  const {error}=await api("auth/request",{method:"POST",body:{email}});
+  loginBusy=false;
+  if(error){msg.textContent=error.status===0?"Serveur injoignable. Réessayez dans un instant.":error.message;return}
+  loginPending=email;openAccount();
+}
+async function verifyCode(){
+  const inp=$("#loginCode"),msg=$("#loginMsg"),code=(inp&&inp.value||"").replace(/\D/g,"");
+  if(code.length!==6){msg.textContent="Saisissez le code à 6 chiffres.";return}
+  if(loginBusy)return;loginBusy=true;msg.textContent="Vérification…";
+  const {data,error}=await api("auth/verify",{method:"POST",body:{email:loginPending,code}});
+  loginBusy=false;
+  if(error){msg.textContent=error.status===0?"Serveur injoignable. Réessayez dans un instant.":error.message;if(inp){inp.value="";inp.focus()}return}
+  loginPending="";closeAccount();toast("Vous êtes connecté.");
+  await onSession(data.user);
 }
 async function saveNick(){
   const v=($("#nickIn").value||"").trim(),msg=$("#loginMsg");
   if(v.length<2){msg.textContent="Le pseudo doit faire au moins 2 caractères.";return}
-  const {error}=await sb.from("profiles").update({display_name:v}).eq("id",meId);
-  if(error){msg.textContent="Impossible d'enregistrer ce pseudo.";return}
+  const {error}=await api("profile",{method:"POST",body:{display_name:v}});
+  if(error){msg.textContent=error.message||"Impossible d'enregistrer ce pseudo.";return}
   profile={...(profile||{}),display_name:v};renderAccount();closeAccount();toast("Pseudo enregistré.");
   if(tab==="community")fetchCommunity(true);
 }
@@ -2834,32 +2852,27 @@ $("#cProf").addEventListener("change",e=>{cProf=e.target.value;fetchCommunity(tr
 $("#cSort").addEventListener("change",e=>{cSort=e.target.value;fetchCommunity(true)});
 $("#commMore").addEventListener("click",()=>fetchCommunity(false));
 async function fetchCommunity(reset){
-  if(!sb){renderCommunity();return}
+  if(!commOn){renderCommunity();return}
   if(reset){commPage=0;community=[]}
   const my=++commReq;commLoading=true;renderCommunity();
-  let q=sb.from("builds").select("id,user_id,name,description,bar,p1,p2,ranks,code,created_at,updated_at,profiles(display_name)",{count:"exact"});
-  if(cProf!=="")q=q.or(`p1.eq.${+cProf},p2.eq.${+cProf}`);
   const nq=norm(cq.trim()).replace(/[%_\\,()]/g," ").trim();
-  if(nq)q=q.ilike("search_text",`%${nq}%`);
-  if(cSort==="mine"){if(!meId){commLoading=false;community=[];commTotal=0;commMore=false;renderCommunity();return}q=q.eq("user_id",meId)}
-  q=cSort==="name"?q.order("name",{ascending:true}):q.order("updated_at",{ascending:false});
-  q=q.range(commPage*PAGE,commPage*PAGE+PAGE-1);
-  let res;try{res=await q}catch(e){res={error:e}}
+  if(cSort==="mine"&&!meId){commLoading=false;community=[];commTotal=0;commMore=false;renderCommunity();return}
+  const res=await api("builds/list",{params:{p:cProf,q:nq,sort:cSort,page:commPage}});
   if(my!==commReq)return;
   commLoading=false;
   if(res.error){commState="error";renderCommunity();return}
   commState="ready";
-  community=community.concat((res.data||[]).map(r=>({...fromRow(r),author:r.user_id,authorName:r.profiles&&r.profiles.display_name||""})));
-  commTotal=typeof res.count==="number"?res.count:community.length;commMore=community.length<commTotal;commPage++;
+  community=community.concat((res.data.builds||[]).map(r=>({...fromRow(r),author:r.user_id,authorName:r.author_name||""})));
+  commTotal=typeof res.data.count==="number"?res.data.count:community.length;commMore=community.length<commTotal;commPage++;
   if(!nq&&cProf===""&&cSort!=="mine")$("#commCount").textContent=commTotal;
   renderCommunity();
 }
 function renderCommunity(){
   const grid=$("#commGrid"),note=$("#commNote"),more=$("#commMore");
   note.className="comm-note";note.textContent="";more.hidden=true;
-  if(!sb){
+  if(!commOn){
     note.className="comm-note warn";
-    note.textContent="La communauté n'est pas encore configurée sur cette page : renseignez votre projet Supabase dans config.js (voir le guide). En attendant, vos builds restent dans ce navigateur.";
+    note.textContent="La communauté est indisponible pour le moment (serveur injoignable). En attendant, vos builds restent dans ce navigateur.";
     grid.innerHTML="";$("#commSub").textContent="";return;
   }
   if(commState==="error"&&!commLoading){grid.innerHTML='<p class="empty">La communauté est momentanément indisponible. Réessayez dans un instant.</p>';return}
@@ -2911,7 +2924,7 @@ $("#commGrid").addEventListener("click",async e=>{
     if(storeBuilds()){renderBuildCount();toast(`« ${b.name} » ajouté à vos builds.`,{label:"Voir mes builds",fn:()=>showTab("builds")})}
   }else if(act==="mod"){
     btn.disabled=true;
-    const {error}=await sb.from("builds").delete().eq("id",b.id);
+    const {error}=await api("builds/delete",{method:"POST",body:{id:b.id}});
     if(error){btn.disabled=false;toast("Suppression refusée par le serveur.");return}
     toast(`« ${b.name} » supprimé de la communauté.`);fetchCommunity(true);
   }
@@ -3060,7 +3073,7 @@ document.addEventListener("pointercancel",e=>endDrag(e,true));
 document.addEventListener("dragstart",e=>{if(e.target.closest&&e.target.closest(".tile,.slot"))e.preventDefault()});
 
 /* ---------- Démarrage ---------- */
-syncProfSelects();renderAttrs();refreshFilters();renderBar();renderBuildCount();initSupabase();
+syncProfSelects();renderAttrs();refreshFilters();renderBar();renderBuildCount();initComm();
 })();
 </script>
 </body>
