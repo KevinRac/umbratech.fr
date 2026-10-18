@@ -17,14 +17,14 @@ if (!m) { console.error('Bloc /*asm:pur*/ introuvable'); process.exit(1); }
 const ctx = { window: {}, Math, console };
 vm.createContext(ctx);
 for (const f of ['bestiaire.js', 'masque.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(m[1] + '\nthis.F={asmRng,asmEligible,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmFin,asmNom};', ctx);
+vm.runInContext(m[1] + '\nthis.F={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmFin,asmNom};', ctx);
 const F = ctx.F, A = ctx.window.BRUME_DATA.bestiaire.assemble;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; console.error('ÉCHEC : ' + msg); } };
 const zones = new Set([...Object.keys(A.capacites), ...Object.keys(A.signatures)]);
 
 // 1. Combinaisons
-for (const [act, salle] of [[2, 9], [2, 13], [2, 14], [3, 16], [3, 20]]) {
+for (const [act, salle] of [[1, 3], [1, 6], [2, 9], [2, 13], [2, 14], [3, 16], [3, 20]]) {
   const L = F.asmCombos(A, { act, salle });
   const bases = new Set(L.map(c => c.base));
   console.log(`acte ${act}, salle ${salle} : ${bases.size} combinaisons (${L.length} avec la capacité d'éveil) — ${[...bases].join(', ')}`);
@@ -40,7 +40,7 @@ for (const [act, salle] of [[2, 9], [2, 13], [2, 14], [3, 16], [3, 20]]) {
   }
 }
 // 2. Tirage : jamais deux fois la même combinaison de suite (10 000 apparitions par contexte)
-for (const [act, salle] of [[2, 10], [3, 18]]) {
+for (const [act, salle] of [[1, 4], [2, 10], [3, 18]]) {
   let last = null, seen = {};
   for (let i = 0; i < 10000; i++) {
     const rnd = F.asmRng((i * 2654435761) >>> 0), co = F.asmTirage(A, { act, salle }, last, rnd, null);
@@ -95,15 +95,24 @@ for (const act of [2, 3, 4, 6]) { for (const k of Object.keys(A.signatures)) ok(
   for (const k of Object.keys(A.capacites)) ok(F.asmDuree(A, k, act) >= A.chargeMinS, `capacité ${k} acte ${act}`); }
 { const B = JSON.parse(JSON.stringify(A)); for (const s of Object.values(B.signatures)) s.chargeS = 0.2; for (const k of Object.keys(B.signatures)) ok(F.asmDuree(B, k, 3) >= B.signatureMinS, 'plancher de la signature même si sa durée propre est plus courte'); }
 
-// 4. Éligibilité des salles
-const R = (o) => Object.assign({ type: 'elite', act: 2, roomIdx: 2, actRooms: 6, breche: false, demo: false, hub: false }, o);
-ok(F.asmEligible(A, R({})), 'élite d\'acte II éligible');
-ok(!F.asmEligible(A, R({ act: 1 })), 'jamais à l\'acte I');
-ok(!F.asmEligible(A, R({ type: 'combat' })), 'seulement en salle d\'élite');
-ok(!F.asmEligible(A, R({ breche: true })), 'jamais en Brèche');
-ok(!F.asmEligible(A, R({ demo: true })), 'jamais en ?demo=');
-ok(!F.asmEligible(A, R({ roomIdx: 4 })) && !F.asmEligible(A, R({ roomIdx: 5 })) && !F.asmEligible(A, R({ roomIdx: 6 })), 'ni au gardien ni dans les deux salles d\'avant');
-ok(F.asmEligible(A, R({ roomIdx: 3 })), 'trois salles avant le gardien : possible');
+// 4. Éligibilité des salles : toute salle de combat (combat, élite, Brèche), jamais au gardien ni en ?demo=
+const R = (o) => Object.assign({ type: 'combat', act: 1, roomIdx: A.premiereSalle, actRooms: 7, breche: false, demo: false, hub: false, depuis: 9 }, o);
+ok(F.asmEligible(A, R({})), 'salle de combat éligible');
+ok(F.asmEligible(A, R({ type: 'elite', act: 2 })), 'salle d\'élite éligible');
+ok(F.asmEligible(A, R({ breche: true })) === !!A.dansBreche, 'Brèche selon dansBreche');
+ok(!F.asmEligible(A, R({ type: 'boss', roomIdx: 7 })), 'jamais au gardien');
+for (const t of ['autel', 'halte', 'marchand', 'sanctuaire']) ok(!F.asmEligible(A, R({ type: t })), `jamais en salle ${t}`);
+ok(!F.asmEligible(A, R({ demo: true })) && !F.asmEligible(A, R({ hub: true })), 'jamais en ?demo= ni au Sanctuaire');
+ok(!F.asmEligible(A, R({ roomIdx: A.premiereSalle - 1 })), 'pas avant la première salle prévue');
+ok(F.asmEligible(A, R({ depuis: 0 })) === (A.ecartSalles <= 0), 'écart entre deux apparitions');
+// 5. Appel : vite OU intact, puis une chance sur deux
+const V = A.vite, I = A.intact;
+ok(F.asmAppel(A, { salles: V.sallesMin, tempsS: V.sallesMin * V.salleMaxS, sansDegatsS: 0 }).ok, 'rapide : il vient');
+ok(!F.asmAppel(A, { salles: V.sallesMin - 1, tempsS: 1, sansDegatsS: 0 }).ok, 'pas assez de salles pour juger la vitesse');
+ok(!F.asmAppel(A, { salles: 4, tempsS: 4 * (V.salleMaxS + 5), sansDegatsS: I.sansDegatsS - 1 }).ok, 'lent et blessé : il ne vient pas');
+ok(F.asmAppel(A, { salles: 4, tempsS: 4 * (V.salleMaxS + 5), sansDegatsS: I.sansDegatsS }).ok, 'lent mais intact : il vient');
+{ let n = 0; const N = 20000; for (let i = 0; i < N; i++) if (F.asmAppel(A, { salles: 3, tempsS: 30, sansDegatsS: 0 }).ok && Math.random() * 100 < A.chance) n++;
+  console.log(`appel rempli : il vient ${(n / N * 100).toFixed(1)} % du temps (réglé à ${A.chance} %)`); ok(Math.abs(n / N * 100 - A.chance) < 2, 'fréquence'); }
 
 console.log(fails ? `${fails} échec(s) sur ${checks} contrôles` : `${checks} contrôles : tout est bon.`);
 process.exit(fails ? 1 : 0);

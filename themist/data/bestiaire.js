@@ -79,11 +79,16 @@
  // v16.24 · Le Masqué : un élite « assemblé » pour qui va vite. Un corps (ennemi existant : silhouette, déplacement, PV)
  // + deux capacités empruntées à d'autres ennemis + un sort signature propre au corps ; une troisième capacité s'éveille à mi-vie.
  // Une forme = une capacité, toujours (zones rouges). Il porte un masque, toujours le même (dessin : data/masque.js).
- // desActe : premier acte où il peut remplacer un élite ordinaire ; chance : % des salles d'élite remplacées.
- //   Jamais dans une salle de gardien ni dans les gardeAvantGardien salles qui la précèdent, jamais en Brèche ni en aperçu ?demo=.
- // recompense : ce qu'il donne EN PLUS d'un élite ordinaire (or, relique, chance d'équipement).
+ // v16.25 · Il vient chercher le joueur qui domine : dans toute salle de combat (combat, élite, Brèche ; jamais au gardien),
+ //   il apparaît chance % du temps SI tu vas vite OU si tu n'as pas perdu de PV depuis longtemps ; sinon jamais.
+ //   desActe / premiereSalle : premier acte et première salle de l'acte où il peut venir ;
+ //   vite : tu as purgé au moins sallesMin salles de combat dans la run en salleMaxS secondes en moyenne ou moins ;
+ //   intact : tu n'as perdu aucun PV depuis sansDegatsS secondes de jeu ; ecartSalles : salles sans lui après une apparition ;
+ //   gardeAvantGardien : salles juste avant le gardien où il ne vient pas ; dansBreche : il peut tenir une Brèche. Jamais en ?demo=.
+ //   En salle de combat ou en Brèche, il entre en dernière vague ; en salle d'élite, il prend la place du champion.
+ // recompense : ce qu'il donne en plus (reliques) ; hors salle d'élite, il donne aussi l'or et les éclats d'un champion.
  // stats : pv et degats de base (avant la montée par salle et les paliers), multipliés par le corps ; xp ; contact : part des dégâts au toucher.
- // escorte : nombre de Rampants qui entrent avec lui, par acte (il n'entre qu'une fois la première vague tombée).
+ // escorte : nombre de Rampants qui entrent avec lui, par acte (il n'entre qu'une fois les vagues d'avant tombées).
  // annonceS : il apparaît, montre son masque et ses icônes, et ne frappe pas pendant ce temps.
  // pauseS : pause fixe entre la fin d'un sort de zone et le chargement du suivant (jamais deux zones à la fois).
  // apresSignatureS : souffle en plus après le sort signature. signatureMinS : durée minimale du chargement de la signature
@@ -96,13 +101,13 @@
  //   La Brute ne prend pas la Charge : son Fracas en est déjà une, dans quatre directions.
  // poidsProfil : pondération du tirage selon ton profil (profile()) ; désactivée tant que actif est faux.
  //   Pour chaque capacité : ax (axe du profil), hi (vrai : plus probable si l'axe est haut), force (poids × (1 + force × écart)).
- assemble:{n:'Masqué',desActe:2,chance:25,gardeAvantGardien:2,
+ assemble:{n:'Masqué',desActe:1,premiereSalle:3,chance:50,vite:{sallesMin:2,salleMaxS:25},intact:{sansDegatsS:60},ecartSalles:0,gardeAvantGardien:0,dansBreche:true,
   recompense:{reliques:1,titre:'Le masque se brise',texte:'Sous ses éclats, une relique de plus. Choisis-en une.'},
   stats:{pv:460,degats:13,xp:30,contact:0.8},
-  escorte:{2:3,3:4},
+  escorte:{1:2,2:3,3:4},
   annonceS:1.4,pauseS:0.4,apresSignatureS:1.1,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
   eveilPV:50,eveilS:0.7,etourdissement:0.5,attenteS:1.2,
-  budgetMenace:{2:11,3:13},
+  budgetMenace:{1:11,2:11,3:13},
   incompatibles:[['explosion','onde']],
   poidsProfil:{actif:false,regles:{
    explosion:{ax:'portee',hi:false,force:0.8},tirs:{ax:'portee',hi:true,force:0.8},

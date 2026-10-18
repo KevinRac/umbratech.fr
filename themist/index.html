@@ -7939,9 +7939,13 @@ function demoBoot(cls){
  /*asm:pur*/
  function asmRng(seed){let a=seed>>>0;return function(){a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
  // Peut-il apparaître dans cette salle ? r : {type, act, roomIdx, actRooms, breche, demo, hub}
+ // r : {type, act, roomIdx, actRooms, breche, demo, hub, depuis (salles depuis sa dernière apparition)}
  function asmEligible(A,r){
-  if(r.demo||r.hub||r.breche||r.type!=='elite'||r.act<A.desActe)return false;
-  return r.roomIdx<r.actRooms-A.gardeAvantGardien;}                 // salle de gardien = actRooms : ni elle, ni les deux d'avant
+  if(r.demo||r.hub||(r.type!=='combat'&&r.type!=='elite')||(r.breche&&!A.dansBreche)||r.act<A.desActe||r.roomIdx<(A.premiereSalle||1))return false;
+  if(r.depuis!=null&&r.depuis<A.ecartSalles)return false;   // depuis = 0 : la salle juste après sa dernière apparition
+  return r.roomIdx<r.actRooms-A.gardeAvantGardien;}                 // salle de gardien = actRooms : jamais
+ // Vient-il te chercher ? m : {salles (salles de combat purgées dans la run), tempsS (leur temps total), sansDegatsS}
+ function asmAppel(A,m){const vite=m.salles>=A.vite.sallesMin&&m.tempsS/Math.max(1,m.salles)<=A.vite.salleMaxS,intact=m.sansDegatsS>=A.intact.sansDegatsS;return{vite,intact,ok:vite||intact};}
  function asmIncomp(A,a,b){return A.incompatibles.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a));}
  // Toutes les combinaisons permises : {corps, depart:[a,b], eveil:c, menace, base (corps + paire de départ), cle}
  function asmCombos(A,ctx){
@@ -7991,7 +7995,7 @@ function demoBoot(cls){
  // Nom composé court : le corps et l'adjectif de ses deux capacités de départ (« Brute hurlante et tranchante »)
  function asmNom(A,co){const C=A.corps[co.corps],g=C.g==='f'?'f':'m',adj=co.depart.map(k=>A.capacites[k].adj[g]);return `${C.n} ${adj[0]} et ${adj[1]}`;}
  /*/asm:pur*/
- window.__asm={asmRng,asmEligible,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,forcer:0};
+ window.__asm={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,forcer:0};
 
  // ── Couleurs et dessin du masque (Path2D tirés des données, à l'échelle de l'ennemi)
  const COL=A.masque.couleurs,rgb=h=>{const n=parseInt(h.slice(1),16);return `${n>>16&255},${n>>8&255},${n&255}`;};
@@ -8014,11 +8018,11 @@ function demoBoot(cls){
  window.__asm.drawMask=drawMask;
  // Pour essayer en jeu, depuis la console : __asm.essai() ; __asm.essai('voile:onde+cone>charge', 3) ; troisième argument vrai : sans la première vague
  window.__asm.essai=function(cle,acte,direct){try{if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
-  RUN.act=Math.max(A.desActe,acte||2);RUN.g=Math.max(RUN.g,RUN.act>=3?18:10);RUN.roomIdx=1;window.__asm.forcer=1;window.__asm.combo=cle||null;
+  RUN.act=Math.max(A.desActe,acte||2);RUN.g=Math.max(RUN.g,RUN.act>=3?18:10);RUN.roomIdx=Math.max(1,(A.premiereSalle||1)-1);window.__asm.forcer=1;window.__asm.combo=cle||null;
   closeOverlay();queue.length=0;trans=null;fade=0;doEnter('elite');window.__asm.combo=null;window.__asm.forcer=0;
   if(direct&&room.asm&&room.waves.length>1)room.waves.shift();
   return room.asm?room.asm.nom:'(pas de Masqué ici)';}catch(err){console.error(err);return String(err);}};
- window.__asm.dbg=()=>({P,RUN,room,enemies,state,kill:killEnemy});
+ window.__asm.dbg=()=>({P,RUN,room,enemies,state,kill:killEnemy,entrer:t=>{trans=null;fade=0;doEnter(t);},lancer:()=>{chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}});
 
  // ── Zones : géométrie figée au début du chargement (sauf le suivi de la charge, de la lame et de la salve)
  const FO='255,58,52',EDGE='255,96,84';
@@ -8053,22 +8057,28 @@ function demoBoot(cls){
   void card.offsetWidth;card.classList.add('show');cardHide=RUN.time+(eveil?2:2.8);}
  function hideCard(){if(card)card.classList.remove('show');cardHide=0;}
 
- // ── Salle : il remplace l'élite ordinaire (graine par apparition), n'entre qu'une fois la première vague tombée
+ // ── Salle : il vient quand tu domines (vite ou intact), dans toute salle de combat ; graine par apparition
  const _pr=planRoom;
  planRoom=function(type){const w=_pr.apply(this,arguments);
-  try{if(type==='elite'&&RUN&&!RUN.hub&&room&&w.length>1){
-   const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTS[RUN.act].rooms,breche:!!(room.breche||RUN.brecheNow),demo:DEMO,hub:!!RUN.hub};
-   if(asmEligible(A,r)&&(window.__asm.forcer>0||Math.random()*100<A.chance)){
-    if(window.__asm.forcer>0)window.__asm.forcer--;
+  try{if((type==='combat'||type==='elite')&&RUN&&!RUN.hub&&room&&w.length){
+   const M=RUN.asm=RUN.asm||{dernier:null,vaincus:[],salle:-99},R=PR();
+   const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTS[RUN.act].rooms,breche:!!(room.breche||RUN.brecheNow),demo:DEMO,hub:!!RUN.hub,depuis:RUN.g-M.salle-1};
+   const ap=asmAppel(A,{salles:R.rooms||0,tempsS:R.clearT||0,sansDegatsS:RUN.time-(RUN.asmHit||0)});
+   const force=window.__asm.forcer>0;
+   if(force||(asmEligible(A,r)&&ap.ok&&Math.random()*100<A.chance)){
+    if(force)window.__asm.forcer--;
     const seed=(Math.random()*4294967296)>>>0,rnd=asmRng(seed),mem=SAVE.asm18||{};
-    const dernier=(RUN.asm&&RUN.asm.dernier)||mem.dernier||null;
-    const co=window.__asm.combo?asmCombos(A,{act:RUN.act,salle:G()}).find(c=>c.cle===window.__asm.combo)||null:asmTirage(A,{act:RUN.act,salle:G()},dernier,rnd,A.poidsProfil.actif?profile():null);
-    if(co){const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3;
-     w[1]=[{type:co.corps,elite:true},...row('rampant',n,'rand')];RUN.seen.add(co.corps);
-     room.asm={seed,rnd,co,nom:asmNom(A,co),e:null,vaincu:false};
-     RUN.asm=RUN.asm||{dernier:null,vaincus:[]};RUN.asm.dernier=co.base;SAVE.asm18=Object.assign({},mem,{dernier:co.base});persist();}}}}
+    const dernier=M.dernier||mem.dernier||null;
+    const co=window.__asm.combo?asmCombos(A,{act:Math.max(1,RUN.act),salle:G()}).find(c=>c.cle===window.__asm.combo)||null:asmTirage(A,{act:RUN.act,salle:G()},dernier,rnd,A.poidsProfil.actif?profile():null);
+    if(co){const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3,vague=[{type:co.corps,elite:true,asm:true},...row('rampant',n,'rand')];
+     if(type==='elite'&&w.length>1)w[w.length-1]=vague;else w.push(vague);  // élite : à la place du champion ; combat : vague de plus
+     RUN.seen.add(co.corps);
+     room.asm={seed,rnd,co,nom:asmNom(A,co),e:null,vaincu:false,wi:w.length-1,appel:ap};
+     M.dernier=co.base;M.salle=RUN.g;SAVE.asm18=Object.assign({},mem,{dernier:co.base});persist();}}}}
   catch(err){console.error(err);}
   return w;};
+ // il ne compte pas les PV perdus pendant les pauses : RUN.time n'avance qu'en jeu
+ const _lh=loseHp;loseHp=function(n){if(RUN&&!RUN.hub&&P&&!P.dead&&n>0)RUN.asmHit=RUN.time;return _lh.apply(this,arguments);};
  const _ce=createEnemy;
  createEnemy=function(type,x,y,elite){const e=_ce.apply(this,arguments);
   try{const R=room&&room.asm;if(R&&!R.e&&elite&&e&&type===R.co.corps){R.e=e;
@@ -8080,7 +8090,7 @@ function demoBoot(cls){
   return e;};
  const _upr=updateRoom;
  updateRoom=function(dt){
-  if(room&&room.asm&&!room.cleared&&room.waveI===1){const alive=enemies.reduce((n,o)=>n+(o.dead||o.puppet>0?0:1),0)+room.spawning.length;if(alive>0)room.sinceWave=0;}
+  if(room&&room.asm&&!room.cleared&&room.waveI===room.asm.wi&&room.waveI>0){const alive=enemies.reduce((n,o)=>n+(o.dead||o.puppet>0?0:1),0)+room.spawning.length;if(alive>0)room.sinceWave=0;}
   _upr(dt);};
  // pas de contre-mesure, pas de règle de salle, et la salle ne compte pas dans la moyenne qui sert à juger les contre-mesures
  const _bp=brumeuxPlan;brumeuxPlan=function(){if(room&&room.asm)return;return _bp.apply(this,arguments);};
@@ -8088,7 +8098,12 @@ function demoBoot(cls){
  const _mp=makePuppet;makePuppet=function(e){if(e&&e.asm)return;return _mp.apply(this,arguments);};
  let ZR=[],ZB=[];
  const _er=enterRoom;
- enterRoom=function(type){hideCard();ZR=[];ZB=[];_er.apply(this,arguments);try{if(room&&room.asm)delete room.dmg161;}catch(err){console.error(err);}};
+ enterRoom=function(type){hideCard();ZR=[];ZB=[];_er.apply(this,arguments);
+  try{if(room&&room.asm){delete room.dmg161;
+   // Brèche : son champion part, le Masqué tient la dernière vague (une seule source de zones dans la salle)
+   const mv=room.waves.find(v=>v.some(x=>x.asm));
+   if(mv){room.waves=room.waves.filter(v=>v!==mv&&!v.some(x=>x.elite));room.waves.push(mv);room.asm.wi=room.waves.length-1;}}}
+  catch(err){console.error(err);}};
 
  // ── Comportement
  function zoneAutre(e){if(rings.length)return true;
@@ -8196,8 +8211,8 @@ function demoBoot(cls){
    SAVE.asm18=Object.assign({},SAVE.asm18,{vaincus:((SAVE.asm18&&SAVE.asm18.vaincus)||0)+1});persist();
    chron('asm',{n:e.asm.nom});}}catch(err){console.error(err);}};
  const _orc=onRoomCleared;
- onRoomCleared=function(){const R=room&&room.asm;_orc.apply(this,arguments);ZR=[];
-  try{if(R&&R.vaincu&&RUN&&!RUN.hub)for(let i=0;i<(A.recompense.reliques||0);i++)enqueue(()=>openRelics(A.recompense.titre,A.recompense.texte));}catch(err){console.error(err);}};
+ onRoomCleared=function(){const R=room&&room.asm,t=room&&room.type;_orc.apply(this,arguments);ZR=[];
+  try{if(R&&R.vaincu&&RUN&&!RUN.hub){if(t!=='elite'){RUN.sh.elites+=6;addGold(18+2*G(),true);}for(let i=0;i<(A.recompense.reliques||0);i++)enqueue(()=>openRelics(A.recompense.titre,A.recompense.texte));}}catch(err){console.error(err);}};
  const _st=step;
  step=function(dt){_st(dt);
   try{if(!(state==='play'&&RUN&&!RUN.hub&&P))return;
