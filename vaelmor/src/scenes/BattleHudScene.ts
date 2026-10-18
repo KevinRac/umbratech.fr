@@ -120,8 +120,6 @@ export interface PrepCallbacks {
   readonly onAuto: () => void;
   /** Clic droit sur un membre : sa fiche, son équipement et son sac. */
   readonly onSheet: (member: number) => void;
-  readonly onEquip: () => void;
-  readonly onItems: () => void;
   readonly onPlace: () => void;
   readonly onBack: (() => void) | null;
 }
@@ -1088,8 +1086,6 @@ export class BattleHudScene extends Phaser.Scene {
     const items: MenuItem[] = [
       { label: 'Formation Auto', enabled: !view.locked, onSelect: () => cb.onAuto() },
       { label: 'Placer les unités', enabled: !view.locked, onSelect: () => cb.onPlace() },
-      { label: 'Équipement', enabled: view.unit !== null, onSelect: () => cb.onEquip() },
-      { label: 'Objets', enabled: view.unit !== null, onSelect: () => cb.onItems() },
       { label: 'Combattre !', onSelect: () => cb.onFight() },
       ...(cb.onBack && view.canRetreat ? [{ label: 'Retour', onSelect: () => cb.onBack?.() }] : []),
     ];

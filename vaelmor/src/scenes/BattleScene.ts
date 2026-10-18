@@ -902,8 +902,6 @@ export class BattleScene extends Phaser.Scene {
         this.hud.toast('Formation : les unités de front devant, les soigneurs derrière.');
       },
       onSheet: (m) => this.openSheet(m),
-      onEquip: () => this.openSheet(this.prepCursor),
-      onItems: () => this.openSheet(this.prepCursor),
       onPlace: () => this.startPlace(),
       onBack: this.state.ambush ? null : () => this.retreatFromPrep(),
     });
