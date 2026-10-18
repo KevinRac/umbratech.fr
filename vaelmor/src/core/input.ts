@@ -42,11 +42,20 @@ export type Action = keyof typeof ACTION_BINDINGS;
 
 /** Actions qui se répètent quand la touche reste enfoncée (navigation dans les menus). */
 const REPEATABLE: ReadonlySet<Action> = new Set<Action>(['up', 'down', 'left', 'right']);
+/**
+ * Répétition maison, identique sur tous les systèmes (la répétition du clavier
+ * dépend de l'OS : long délai, et elle s'arrête quand on appuie sur une autre
+ * touche) : premier pas tout de suite, puis un pas toutes les 70 ms au bout de 200 ms.
+ */
+export const REPEAT_DELAY_MS = 200;
+export const REPEAT_INTERVAL_MS = 70;
 
 export class ActionInput {
   private readonly actionsByCode = new Map<number, Action[]>();
   private readonly keys = new Map<Action, Phaser.Input.Keyboard.Key[]>();
   private readonly pressed = new Set<Action>();
+  /** Heure du prochain pas pour chaque direction maintenue. */
+  private readonly nextRepeat = new Map<Action, number>();
 
   constructor(scene: Phaser.Scene) {
     const keyboard = scene.input.keyboard;
@@ -60,7 +69,22 @@ export class ActionInput {
 
     const onKeyDown = (event: KeyboardEvent): void => {
       for (const action of this.actionsByCode.get(event.keyCode) ?? []) {
-        if (!event.repeat || REPEATABLE.has(action)) this.pressed.add(action);
+        if (event.repeat) continue; // les directions se répètent par `onPreUpdate`, les autres actions une seule fois
+        this.pressed.add(action);
+        if (REPEATABLE.has(action)) this.nextRepeat.set(action, performance.now() + REPEAT_DELAY_MS);
+      }
+    };
+    const onPreUpdate = (): void => {
+      const now = performance.now();
+      for (const action of REPEATABLE) {
+        const due = this.nextRepeat.get(action);
+        if (due === undefined) continue;
+        if (!this.isDown(action)) {
+          this.nextRepeat.delete(action);
+        } else if (now >= due) {
+          this.pressed.add(action);
+          this.nextRepeat.set(action, now + REPEAT_INTERVAL_MS);
+        }
       }
     };
     // Les événements clavier sont traités avant `update` ; on oublie les appuis non lus après.
@@ -68,8 +92,10 @@ export class ActionInput {
 
     keyboard.on('keydown', onKeyDown);
     scene.events.on(Phaser.Scenes.Events.POST_UPDATE, onPostUpdate);
+    scene.events.on(Phaser.Scenes.Events.PRE_UPDATE, onPreUpdate);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       keyboard.off('keydown', onKeyDown);
+      scene.events.off(Phaser.Scenes.Events.PRE_UPDATE, onPreUpdate);
       scene.events.off(Phaser.Scenes.Events.POST_UPDATE, onPostUpdate);
     });
   }
