@@ -226,6 +226,7 @@ function crossCheck(data: GameData): string[] {
   checkEncounters(data, issues);
   checkTowns(data, issues);
   checkZoneContent(data, issues);
+  if (!data.locations.some((l) => l.id === data.balance.defeat.fallbackVillage)) issues.push(`balance.json › defeat.fallbackVillage : lieu inconnu « ${data.balance.defeat.fallbackVillage} »`);
   checkWorldFoes(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));

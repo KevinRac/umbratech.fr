@@ -136,7 +136,7 @@ export function settleBattle(ctx: GameCtx, report: BattleReport): Settlement {
   if (report.end === 'defeat') {
     const lost = Math.floor(progress.gold * data.balance.defeat.goldLossRatio);
     if (lost > 0) giveGold(ctx, -lost, notices);
-    return { notices, wakeAt: { location: progress.lastVillage }, goldWon: 0, goldLost: lost };
+    return { notices, wakeAt: { location: progress.lastVillage ?? data.balance.defeat.fallbackVillage }, goldWon: 0, goldLost: lost };
   }
 
   const rng = Rng.fromSeed(report.seed);

@@ -344,6 +344,14 @@ describe('rencontres, difficulté, récompenses', () => {
     expect(a.goldWon).toBeLessThanOrEqual(4 * (zone?.goldPerEnemy.max ?? 0));
   });
 
+  it('défaite sans village visité : réveil au village de repli, jamais « au départ »', () => {
+    const c = ctx();
+    const encounter = findEncounter(data, 'patrouille_ecumeurs');
+    const lost = settleBattle(c, { end: 'defeat', encounter, foeId: 'z1_patrouille_gue', enemiesDefeated: 0, bossDown: false, seed: 'x' });
+    expect(lost.wakeAt).toEqual({ location: data.balance.defeat.fallbackVillage });
+    expect(data.locations.some((l) => l.id === data.balance.defeat.fallbackVillage)).toBe(true);
+  });
+
   it('défaite : 10 % de l\'or perdu, retour au dernier village ; retraite : rien ne change (décision n°56)', () => {
     const c = ctx();
     c.progress.gold = 205;

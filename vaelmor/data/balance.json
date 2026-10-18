@@ -42,6 +42,7 @@
     "promotionMinLevel": 10
   },
   "defeat": {
+    "fallbackVillage": "haut_gue",
     "goldLossRatio": 0.1
   },
   "foes": {

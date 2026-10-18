@@ -1116,12 +1116,35 @@ export class WorldScene extends Phaser.Scene {
   private applyBattleReturn(ret: BattleReturn | undefined): void {
     if (!ret || ret.end !== 'defeat') return;
     const place = ret.wakeAt ? this.map.locations.find((l) => String(l.props['id']) === ret.wakeAt) : undefined;
-    const spot = place ? objectCenter(place) : this.map.spawns.find((o) => o.props['id'] === 'start');
+    const spot = place ? this.freeSpotNear(objectCenter(place)) : this.map.spawns.find((o) => o.props['id'] === 'start');
     if (spot) {
       this.state.player.x = spot.x;
       this.state.player.y = spot.y;
       this.state.player.facing = 's';
     }
+  }
+
+  /** Case libre la plus proche (en pixels, pieds au bas de la case) : le centre d'un village peut tomber sous un toit. */
+  private freeSpotNear(p: { x: number; y: number }): { x: number; y: number } {
+    const t = this.map.tileSize;
+    const cx = Math.floor(p.x / t);
+    const cy = Math.floor(p.y / t);
+    let best: { x: number; y: number } | null = null;
+    let bestD = Infinity;
+    for (let dy = -12; dy <= 12; dy++) {
+      for (let dx = -12; dx <= 12; dx++) {
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) continue;
+        if (this.map.collision[y * this.map.width + x] !== COLLISION.free) continue;
+        const d = dx * dx + dy * dy;
+        if (d < bestD) {
+          bestD = d;
+          best = { x: x * t + t / 2, y: (y + 1) * t - 1 };
+        }
+      }
+    }
+    return best ?? p;
   }
 
   private announceBattleReturn(ret: BattleReturn | undefined): void {

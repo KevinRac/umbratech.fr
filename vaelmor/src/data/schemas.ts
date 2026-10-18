@@ -194,7 +194,7 @@ export const balanceFileSchema = z.strictObject({
     advancedClassCap: z.number().int().positive(),
     promotionMinLevel: z.number().int().positive(),
   }),
-  defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1) }),
+  defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1), /** Village où l'on se réveille si aucun village n'a encore été visité. */ fallbackVillage: z.string().min(1) }),
   /** Ennemis visibles du monde (jalon M3, GDD §7). Distances en cases, durées en ms, vitesses en px/s. */
   foes: foesBalanceSchema,
   /** Économie de départ (jalon M2) : or, capacité du sac (nombre de lignes), pile maximale. */
