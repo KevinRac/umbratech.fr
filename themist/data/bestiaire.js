@@ -85,12 +85,14 @@
  //   vite : tu as purgé au moins sallesMin salles de combat dans la run en salleMaxS secondes en moyenne ou moins ;
  //   intact : tu n'as perdu aucun PV depuis sansDegatsS secondes de jeu ; ecartSalles : salles sans lui après une apparition ;
  //   gardeAvantGardien : salles juste avant le gardien où il ne vient pas ; dansBreche : il peut tenir une Brèche. Jamais en ?demo=.
- //   En salle de combat ou en Brèche, il entre en dernière vague ; en salle d'élite, il prend la place du champion.
+ //   Il arrive avec la deuxième vague (en salle d'élite, à la place du champion ; en Brèche, son champion s'efface).
+ //   Pendant ses sorts, les autres ennemis ne lancent pas les leurs, et il attend la fin des leurs : jamais deux zones à la fois.
  // recompense : ce qu'il donne en plus (reliques) ; hors salle d'élite, il donne aussi l'or et les éclats d'un champion.
  // stats : pv et degats de base (avant la montée par salle et les paliers), multipliés par le corps ; xp ; contact : part des dégâts au toucher.
- // escorte : nombre de Rampants qui entrent avec lui, par acte (il n'entre qu'une fois les vagues d'avant tombées).
+ // escorte : nombre de Rampants qui entrent avec lui, par acte, seulement si sa vague n'a pas d'autres ennemis.
  // annonceS : il apparaît, montre son masque et ses icônes, et ne frappe pas pendant ce temps.
  // pauseS : pause fixe entre la fin d'un sort de zone et le chargement du suivant (jamais deux zones à la fois).
+ // prioriteS : s'il attend depuis ce temps que les zones des autres ennemis finissent, les autres n'en lancent plus de nouvelles avant lui.
  // apresSignatureS : souffle en plus après le sort signature. signatureMinS : durée minimale du chargement de la signature
  //   (aucune combinaison ni aucun acte ne la raccourcit). chargeMinS : plancher pour les autres capacités.
  // accelerationActe : chargement des capacités (pas de la signature) multiplié par ce facteur par acte au-delà de desActe.
@@ -105,7 +107,7 @@
   recompense:{reliques:1,titre:'Le masque se brise',texte:'Sous ses éclats, une relique de plus. Choisis-en une.'},
   stats:{pv:460,degats:13,xp:30,contact:0.8},
   escorte:{1:2,2:3,3:4},
-  annonceS:1.4,pauseS:0.4,apresSignatureS:1.1,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
+  annonceS:1.4,pauseS:0.4,prioriteS:0.6,apresSignatureS:1.1,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
   eveilPV:50,eveilS:0.7,etourdissement:0.5,attenteS:1.2,
   budgetMenace:{1:11,2:11,3:13},
   incompatibles:[['explosion','onde']],

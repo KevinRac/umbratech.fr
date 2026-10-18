@@ -7983,11 +7983,12 @@ function demoBoot(cls){
    if(!st.file.length){st.file=asmCycle(st.caps,st.sig,st.dernier,rnd);st.file.splice(st.file.indexOf(st.reserve),1);}st.file.unshift(st.reserve); // la nouvelle capacité passe en tête, une seule fois par cycle
    if(st.ph==='pause'||st.ph==='intro')st.t=Math.max(st.t,0)+A.eveilS;else st.eveilDu=true;ev.push(['eveil',st.reserve]);}
   if(st.ph==='intro'){if(!env.fige)st.t-=dt;if(st.t<=0){st.ph='pause';st.t=0;}return ev;}
-  if(st.ph==='pause'){st.t-=dt;if(st.t>0||env.autre||env.fige)return ev;
+  if(st.ph==='pause'){st.t-=dt;if(st.t>0||env.fige)return ev;
+   if(env.autre){st.bloque=(st.bloque||0)+dt;return ev;}   // une autre zone est active : il attend (et réclame la suivante, voir prioriteS)
    if(!st.file.length)st.file=asmCycle(st.caps,st.sig,st.dernier,rnd);
    const k=st.file[0],X=A.capacites[k];
    if(X&&X.portee&&env.dist>X.portee&&st.att<A.attenteS){st.att+=dt;return ev;}
-   st.file.shift();st.att=0;st.k=k;st.ph='charge';st.t=st.tot=asmDuree(A,k,env.act);ev.push(['charge',k]);return ev;}
+   st.file.shift();st.att=0;st.bloque=0;st.k=k;st.ph='charge';st.t=st.tot=asmDuree(A,k,env.act);ev.push(['charge',k]);return ev;}
   if(st.ph==='charge'){if(!env.fige)st.t-=dt;if(st.t<=0){st.ph='effet';st.t=asmEffet(A,st.k);ev.push(['lache',st.k]);}return ev;}
   if(st.ph==='effet'){st.t-=dt;if(st.t<=0)asmFin(A,st,ev);return ev;}
   return ev;}
@@ -8022,7 +8023,7 @@ function demoBoot(cls){
   closeOverlay();queue.length=0;trans=null;fade=0;doEnter('elite');window.__asm.combo=null;window.__asm.forcer=0;
   if(direct&&room.asm&&room.waves.length>1)room.waves.shift();
   return room.asm?room.asm.nom:'(pas de Masqué ici)';}catch(err){console.error(err);return String(err);}};
- window.__asm.dbg=()=>({P,RUN,room,enemies,state,kill:killEnemy,entrer:t=>{trans=null;fade=0;doEnter(t);},lancer:()=>{chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}});
+ window.__asm.dbg=()=>({P,RUN,room,enemies,state,rings,kill:killEnemy,entrer:t=>{trans=null;fade=0;doEnter(t);},lancer:()=>{chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}});
 
  // ── Zones : géométrie figée au début du chargement (sauf le suivi de la charge, de la lame et de la salve)
  const FO='255,58,52',EDGE='255,96,84';
@@ -8070,10 +8071,12 @@ function demoBoot(cls){
     const seed=(Math.random()*4294967296)>>>0,rnd=asmRng(seed),mem=SAVE.asm18||{};
     const dernier=M.dernier||mem.dernier||null;
     const co=window.__asm.combo?asmCombos(A,{act:Math.max(1,RUN.act),salle:G()}).find(c=>c.cle===window.__asm.combo)||null:asmTirage(A,{act:RUN.act,salle:G()},dernier,rnd,A.poidsProfil.actif?profile():null);
-    if(co){const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3,vague=[{type:co.corps,elite:true,asm:true},...row('rampant',n,'rand')];
-     if(type==='elite'&&w.length>1)w[w.length-1]=vague;else w.push(vague);  // élite : à la place du champion ; combat : vague de plus
+    if(co){const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3;
+     // il arrive avec la deuxième vague : il prend la place du champion s'il y en a un, la vague garde ses autres ennemis
+     const v=(w[1]||[]).filter(x=>!x.elite);if(!v.length)v.push(...row('rampant',n,'rand'));v.unshift({type:co.corps,elite:true,asm:true});
+     if(w.length>1)w[1]=v;else w.push(v);
      RUN.seen.add(co.corps);
-     room.asm={seed,rnd,co,nom:asmNom(A,co),e:null,vaincu:false,wi:w.length-1,appel:ap};
+     room.asm={seed,rnd,co,nom:asmNom(A,co),e:null,vaincu:false,wi:1,appel:ap};
      M.dernier=co.base;M.salle=RUN.g;SAVE.asm18=Object.assign({},mem,{dernier:co.base});persist();}}}}
   catch(err){console.error(err);}
   return w;};
@@ -8088,10 +8091,6 @@ function demoBoot(cls){
    e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co),z:null,flash:null,dash:null};
    showCard(e,false);sfx('asm_in');}}catch(err){console.error(err);}
   return e;};
- const _upr=updateRoom;
- updateRoom=function(dt){
-  if(room&&room.asm&&!room.cleared&&room.waveI===room.asm.wi&&room.waveI>0){const alive=enemies.reduce((n,o)=>n+(o.dead||o.puppet>0?0:1),0)+room.spawning.length;if(alive>0)room.sinceWave=0;}
-  _upr(dt);};
  // pas de contre-mesure, pas de règle de salle, et la salle ne compte pas dans la moyenne qui sert à juger les contre-mesures
  const _bp=brumeuxPlan;brumeuxPlan=function(){if(room&&room.asm)return;return _bp.apply(this,arguments);};
  const _sr=setRule;setRule=function(){if(room&&room.asm)return;return _sr.apply(this,arguments);};
@@ -8100,15 +8099,20 @@ function demoBoot(cls){
  const _er=enterRoom;
  enterRoom=function(type){hideCard();ZR=[];ZB=[];_er.apply(this,arguments);
   try{if(room&&room.asm){delete room.dmg161;
-   // Brèche : son champion part, le Masqué tient la dernière vague (une seule source de zones dans la salle)
-   const mv=room.waves.find(v=>v.some(x=>x.asm));
-   if(mv){room.waves=room.waves.filter(v=>v!==mv&&!v.some(x=>x.elite));room.waves.push(mv);room.asm.wi=room.waves.length-1;}}}
+   // Brèche : son champion s'efface (vague retirée), le Masqué garde sa place dans la deuxième vague
+   room.waves=room.waves.filter(v=>v.some(x=>x.asm)||!v.some(x=>x.elite));room.asm.wi=room.waves.findIndex(v=>v.some(x=>x.asm));}}
   catch(err){console.error(err);}};
 
  // ── Comportement
  function zoneAutre(e){if(rings.length)return true;
-  for(const o of enemies){if(o===e||o.dead||o.asm)continue;if((o.type==='bouffi'&&o.state==='fuse')||(o.type==='brute'&&(o.state==='wind'||o.state==='charge'))||(o.type==='hurleur'&&o.state==='sing')||(o.type==='voile'&&o.state==='wind'))return true;}
+  for(const o of enemies){if(o===e||o.dead||o.asm)continue;if((o.type==='bouffi'&&o.state==='fuse')||(o.type==='brute'&&(o.state==='wind'||o.state==='charge'))||(o.type==='hurleur'&&o.state==='sing')||(o.type==='voile'&&(o.state==='blink'||o.state==='wind')))return true;}  // le clignement du Voilé précède toujours son cône
   return false;}
+ // Tant que le Masqué charge ou lance un sort (ou que son onde court), les autres ennemis n'en lancent pas : ils attendent.
+ // Lui attend de son côté que leurs zones soient finies (zoneAutre). Jamais deux zones ennemies à la fois.
+ function asmZone(){if(ZR.length)return true;for(const e of enemies)if(e.asm&&!e.dead&&(e.asm.st.ph==='charge'||e.asm.st.ph==='effet'||(e.asm.st.bloque||0)>=A.prioriteS))return true;return false;}  // après prioriteS d'attente, la prochaine zone est à lui
+ const ZT=new Set(['brute','hurleur','voile']),_tt=tryTok;
+ tryTok=function(e,k){if(e&&!e.asm&&ZT.has(e.type)&&e.tok!==k&&room&&room.asm&&asmZone())return false;return _tt.apply(this,arguments);};
+ window.__asm.zone=asmZone;
  function annule(e){const S=e.asm,st=S.st;if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;}
  function onEvent(e,x){const S=e.asm,[t,k]=x;
   if(t==='eveil'){showCard(e,true);sfx('asm_eveil');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'violet'});if(!RM)shake(4,0.15);S.fis=true;return;}
@@ -8145,7 +8149,9 @@ function demoBoot(cls){
   else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'))move(e,dt,sp,tg,dP,st.att>0);
   if(!S.dash&&!P.dead&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);}
  const _pre=v6EnemyPre;
- v6EnemyPre=function(e,dt){const r=_pre(e,dt);if(!e||!e.asm||e.dead)return r;
+ v6EnemyPre=function(e,dt){const r=_pre(e,dt);
+  if(!r&&e&&!e.asm&&!e.dead&&e.type==='bouffi'&&e.state!=='fuse'&&e.stun<=0&&room&&room.asm&&asmZone()){const tg=enemyTarget(e);moveTo(e,tg.x,tg.y,e.spd*v6Slow(e),dt);return true;} // le Bouffi ne s'amorce pas pendant un sort du Masqué
+  if(!e||!e.asm||e.dead)return r;
   try{if(r){if(e.yank||e.orbitT>0||e.puppet>0)annule(e);else update(e,dt,true);return true;}update(e,dt,false);}catch(err){console.error(err);}
   return true;};
 

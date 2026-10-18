@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v16.25',
+ actuelle:'v16.26',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-18',h:'v16.26',t:'Le Masqué arrive avec la deuxième vague, au milieu des autres ennemis, au lieu d’attendre la fin de la salle. Jamais deux zones à la fois : pendant ses sorts, les autres ennemis retiennent les leurs, et s’il attend trop longtemps, la prochaine zone est pour lui.'},
   {d:'2026-10-18',h:'v16.25',t:'Le Masqué vient chercher le joueur qui domine : dès la 3e salle de l’acte I, dans toute salle de combat (combat, élite, Brèche ; jamais face au gardien), il apparaît une fois sur deux si tu vas vite (25 s par salle ou moins en moyenne) ou si tu n’as pas perdu de PV depuis 60 s. Il entre en dernière vague ; hors salle d’élite, il donne aussi l’or et les éclats d’un champion.'},
   {d:'2026-10-18',h:'v16.24',t:'Le Masqué : dès l’acte II, une salle d’élite sur quatre est tenue par un élite assemblé (corps de Brute, Spectre ou Voilé, deux capacités empruntées à d’autres ennemis, un sort signature : croix, losanges ou damier). Il porte toujours le même masque, montre ses icônes à son arrivée, charge chaque sort à vue (barre, zone rouge, son qui monte), n’en lance qu’un à la fois et éveille une troisième capacité à mi-vie. Brisé, il donne une relique de plus qu’un champion.'},
   {d:'2026-10-18',h:'v16.23',t:'Le rire du Brumeux est refait : un vrai « ha ha ha HAAA » démoniaque (souffle puis voyelle grave et saturée, descendante, le dernier « ha » est tenu), à la place de la série de bruits.'},
