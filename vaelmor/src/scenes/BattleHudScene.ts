@@ -221,16 +221,27 @@ export class BattleHudScene extends Phaser.Scene {
     });
   }
 
+  /** Largeur de la fenêtre d'unité (élargie pour un nom long) ; la fiche détaillée l'imite. */
+  private unitWidth = 0;
+
   private drawUnit(): void {
     this.clear(this.unitParts);
     const unit = this.lastUnit;
     if (!unit || this.lastForecast) return;
     const S = this.S;
-    const w = WIN_W * S;
     const h = 66 * S;
-    const x = this.winX(w);
     const y = (TOP_BAR + 6) * S;
     const parts = this.unitParts;
+    // La fenêtre s'élargit quand le nom, la classe ou le niveau ne tiennent pas dans la largeur de base.
+    const kind = unit.kindName !== unit.name ? unit.kindName : unit.weapon.name;
+    const nameText = addText(this, 0, y + 6 * S, unit.name, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.panel + 2);
+    const levelText = addText(this, 0, y + 6 * S, `Niv ${unit.level}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH.panel + 2);
+    const kindText = addText(this, 0, y + 21 * S, kind, { scale: S, color: unit.team === 'player' ? PALETTE.cyanEclat : PALETTE.braise }).setDepth(DEPTH.panel + 2);
+    const needed = 56 * S + Math.max(nameText.width + 10 * S + levelText.width, kindText.width) + 10 * S;
+    const w = Math.min(Math.max(WIN_W * S, Math.ceil(needed)), this.scale.width - 12 * S);
+    this.unitWidth = w;
+    const x = this.winX(w);
+    parts.push(nameText, levelText, kindText);
     parts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.panel }));
     // Portrait : le sprite de carte agrandi ×2 sur un fond aux couleurs du camp.
     parts.push(this.add.rectangle(x + 8 * S, y + 8 * S, 40 * S, 50 * S, TEAM_COLOR[unit.team], 0.22).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
@@ -244,10 +255,9 @@ export class BattleHudScene extends Phaser.Scene {
     if (unit.isBoss) parts.push(this.add.image(x + 44 * S, y + 12 * S, BATTLE_TEX.crown).setScale(2 * S).setDepth(DEPTH.panel + 3));
     if (unit.isHero) parts.push(this.add.image(x + 44 * S, y + 12 * S, BATTLE_TEX.heroMark).setScale(2 * S).setDepth(DEPTH.panel + 3));
     const tx = x + 56 * S;
-    parts.push(addText(this, tx, y + 6 * S, unit.name, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.panel + 2));
-    parts.push(addText(this, x + w - 10 * S, y + 6 * S, `Niv ${unit.level}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH.panel + 2));
-    const kind = unit.kindName !== unit.name ? unit.kindName : unit.weapon.name;
-    parts.push(addText(this, tx, y + 21 * S, kind, { scale: S, color: unit.team === 'player' ? PALETTE.cyanEclat : PALETTE.braise, maxWidth: w - 64 * S }).setDepth(DEPTH.panel + 2));
+    nameText.setPosition(tx, nameText.y);
+    kindText.setPosition(tx, kindText.y);
+    levelText.setPosition(x + w - 10 * S - levelText.width, levelText.y);
     // Barre de PV.
     const barW = w - 66 * S - 46 * S;
     const by = y + 44 * S;
@@ -271,7 +281,7 @@ export class BattleHudScene extends Phaser.Scene {
     const unit = this.lastDetails;
     if (!unit || this.lastForecast) return;
     const S = this.S;
-    const w = WIN_W * S;
+    const w = this.lastUnit ? Math.max(WIN_W * S, this.unitWidth) : WIN_W * S;
     const h = 90 * S;
     const x = this.winX(w);
     const y = (TOP_BAR + 6 + (this.lastUnit ? 72 : 0)) * S;
