@@ -55,6 +55,8 @@ export interface MenuRequest {
   readonly onCancel: (() => void) | null;
   /** Grand menu (menu d'action après un déplacement) : texte doublé, lignes hautes. */
   readonly large?: boolean;
+  /** Menu au centre de l'écran (menu de combat, ouvert par Échap). */
+  readonly centered?: boolean;
 }
 
 export interface ExchangeView {
@@ -463,9 +465,10 @@ export class BattleHudScene extends Phaser.Scene {
       const titleH = request.title ? (big ? 34 : 22) * S : 0;
       const w = (big ? 228 : 172) * S;
       const h = request.items.length * lineHeight + titleH + (big ? 18 : 14) * S;
-      const x = this.winX(w);
+      const centered = request.centered === true;
+      const x = centered ? Math.round((this.scale.width - w) / 2) : this.winX(w);
       // Le menu d'action laisse la place de la prévision, qui s'affiche au survol d'un ennemi.
-      const y = big ? Math.max(this.stackTop(), (TOP_BAR + 6 + FORECAST_MAX_H + 8) * S) : this.stackTop();
+      const y = centered ? Math.round((this.scale.height - h) / 2) : big ? Math.max(this.stackTop(), (TOP_BAR + 6 + FORECAST_MAX_H + 8) * S) : this.stackTop();
       this.menuParts.push(drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH.menu }));
       this.menuRect = { x, y, w, h };
       if (request.title) this.menuParts.push(addText(this, x + w / 2, y + (big ? 7 : 7) * S, request.title, { scale: (big ? 1.5 : 1) * S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.menu + 1));

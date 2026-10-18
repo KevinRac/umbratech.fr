@@ -622,7 +622,7 @@ export class BattleScene extends Phaser.Scene {
         ['Entrée', 'choisir'],
         ['R', 'menaces'],
         ['F', 'unité suiv.'],
-        ['Tab', 'menu'],
+        ['Échap', 'menu'],
       ],
       move: [
         ['Entrée', 'aller ici'],
@@ -671,6 +671,9 @@ export class BattleScene extends Phaser.Scene {
       if (this.marked.size > 0) {
         this.marked.clear();
         this.refreshThreat();
+      } else {
+        // Échap sans rien à annuler : le menu de combat (fin du tour, menaces, vitesse, retraite).
+        this.openMapMenu();
       }
       return;
     }
@@ -684,8 +687,6 @@ export class BattleScene extends Phaser.Scene {
       if (this.marked.has(unit.id)) this.marked.delete(unit.id);
       else this.marked.add(unit.id);
       this.refreshThreat();
-    } else {
-      this.openMapMenu();
     }
   }
 
@@ -945,7 +946,7 @@ export class BattleScene extends Phaser.Scene {
       },
       { label: 'Retraite', onSelect: () => this.retreat() },
     ];
-    this.hud.openMenu({ title: 'Menu', items, onCancel: close });
+    this.hud.openMenu({ title: 'Menu', items, onCancel: close, centered: true });
   }
 
   private retreat(): void {
