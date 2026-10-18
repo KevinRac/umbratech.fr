@@ -169,7 +169,7 @@ function backLayer(ctx: Ctx, spec: PortraitSpec, g: Geo): void {
 }
 
 function swordHilt(ctx: Ctx, look: CharacterLook, g: Geo): void {
-  const x = g.cx + 30 * g.shoulders;
+  const x = g.cx + 22 * g.shoulders;
   ctx.save();
   ctx.translate(x, 70);
   ctx.rotate(0.38);
@@ -210,9 +210,9 @@ function swordHilt(ctx: Ctx, look: CharacterLook, g: Geo): void {
 /** Silhouette des épaules. */
 function shouldersPath(ctx: Ctx, g: Geo): void {
   const { cx } = g;
-  const s = g.shoulders;
+  const s = g.shoulders * 0.62;
   const X = (dx: number): number => cx + dx * s;
-  const y0 = 74 + (s < 1 ? 4 : 0);
+  const y0 = g.chin + 4;
   ctx.beginPath();
   ctx.moveTo(X(-60), 101);
   ctx.lineTo(X(-52), 93);
@@ -236,8 +236,8 @@ function clothGradient(ctx: Ctx, ramp: Ramp3): CanvasGradient {
 function body(ctx: Ctx, spec: PortraitSpec, g: Geo): void {
   const { look } = spec;
   const { cx } = g;
-  const s = g.shoulders;
-  const y0 = 74 + (s < 1 ? 4 : 0);
+  const s = g.shoulders * 0.62;
+  const y0 = g.chin + 4;
   const outline = css(dark(look.tunic.dark, 0.55));
 
   // Cou (derrière le col).
