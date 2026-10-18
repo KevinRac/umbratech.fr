@@ -70,6 +70,7 @@ interface NpcActor {
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly shadow: Phaser.GameObjects.Image;
   readonly marker: Phaser.GameObjects.Image;
+  readonly glow: Phaser.GameObjects.Image;
   readonly phase: number;
   facing: NpcDef['facing'];
   /** Instant où le PNJ reprend son regard d'origine après une conversation. */
@@ -451,8 +452,9 @@ export class WorldScene extends Phaser.Scene {
       const { pose, flipX } = facingPose(npc.facing);
       const sprite = this.add.sprite(x, footY, texture, TOWN_TEX.npcFrame(pose, 0)).setOrigin(0.5, 1).setFlipX(flipX).setDepth(DEPTH.entities + (footY - 1) / 100000);
       const shadow = this.add.image(x, footY - 1, WORLD_TEX.shadow).setDepth(DEPTH.shadow);
-      const marker = this.add.image(x, footY - 34, TOWN_TEX.markerAvailable).setDepth(DEPTH.marker).setVisible(false);
-      this.npcs.set(npc.id, { def: npc, locationId: location.id, x, footY, sprite, shadow, marker, phase: (tx * 37 + ty * 91) % 700, facing: npc.facing, resetAt: 0 });
+      const marker = this.add.image(x, footY - 38, TOWN_TEX.markerAvailable).setDepth(DEPTH.marker).setVisible(false);
+      const glow = this.add.image(x, footY - 2, TOWN_TEX.questGlow).setDepth(DEPTH.shadow - 0.01).setVisible(false);
+      this.npcs.set(npc.id, { def: npc, locationId: location.id, x, footY, sprite, shadow, marker, glow, phase: (tx * 37 + ty * 91) % 700, facing: npc.facing, resetAt: 0 });
     }
     this.refreshNpcSolids();
     // Le point d'apparition ou la case de départ ne doit pas tomber dans un PNJ.
@@ -479,8 +481,13 @@ export class WorldScene extends Phaser.Scene {
         else if (status === 'available' && quest && questTierOk(ctx, quest) && texture === null) texture = TOWN_TEX.markerAvailable;
       }
       const hostile = ctx.progress.reputation[actor.locationId] !== undefined && tierIdOf(reputationOf(ctx.progress, actor.locationId), ctx.data.reputation) === 'hostile' && actor.def.refusesWhenHostile === true;
-      if (texture === null || hostile) actor.marker.setVisible(false);
-      else actor.marker.setTexture(texture).setVisible(true);
+      if (texture === null || hostile) {
+        actor.marker.setVisible(false);
+        actor.glow.setVisible(false);
+      } else {
+        actor.marker.setTexture(texture).setVisible(true);
+        actor.glow.setVisible(true).setTint(texture === TOWN_TEX.markerReady ? 0x9ee8f0 : 0xffffff);
+      }
     }
   }
 
@@ -494,7 +501,10 @@ export class WorldScene extends Phaser.Scene {
       }
       const { pose, flipX } = facingPose(actor.facing);
       actor.sprite.setFlipX(flipX).setFrame(TOWN_TEX.npcFrame(pose, frame(actor)));
-      if (actor.marker.visible) actor.marker.setY(actor.footY - 34 + Math.round(Math.sin(time / 260 + actor.phase)));
+      if (actor.marker.visible) {
+        actor.marker.setY(actor.footY - 38 + Math.round(Math.sin(time / 260 + actor.phase) * 1.5));
+        actor.glow.setAlpha(0.7 + 0.3 * Math.sin(time / 420 + actor.phase));
+      }
     }
   }
 
@@ -566,6 +576,7 @@ export class WorldScene extends Phaser.Scene {
     actor.sprite.destroy();
     actor.shadow.destroy();
     actor.marker.destroy();
+    actor.glow.destroy();
     this.npcs.delete(actor.def.id);
     this.refreshNpcSolids();
   }
