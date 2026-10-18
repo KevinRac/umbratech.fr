@@ -811,7 +811,7 @@ export class BattleScene extends Phaser.Scene {
     const lines: Record<Mode, readonly (readonly [string, string])[]> = {
       prep: [
         ['Flèches', 'compagnie / boutons'],
-        ['Entrée', 'déployer, retirer'],
+        ['Entrée ou 2e clic', 'déployer, retirer'],
         ['Clic sur la carte', 'prendre, poser, échanger'],
       ],
       place: [
@@ -1105,6 +1105,10 @@ export class BattleScene extends Phaser.Scene {
       ];
       this.hud.openMenu({ title: `Équipement de ${member.name}`, items, onCancel: () => this.hud.closeMenu(), centered: true, initialIndex: index });
     };
+    if (weaponChoices(this.gameData, cls, this.convoy, this.loadouts, m).length <= 1 && accessoryChoices(this.gameData, this.convoy, this.loadouts, m).length <= 1 && loadout.accessory === null) {
+      this.hud.toast(`${member.name} n'a rien d'autre à équiper : le sac ne contient ni arme du même type ni accessoire libre.`);
+      return;
+    }
     reopen();
   }
 

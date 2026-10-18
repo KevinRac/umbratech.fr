@@ -1003,6 +1003,7 @@ export class BattleHudScene extends Phaser.Scene {
       onCursor: (i) => {
         if (this.prepView && this.prepView.cursor !== i) cb.onCursor(i);
       },
+      clickSelects: true,
       onActivate: (i) => cb.onToggle(i),
     });
     this.prepRoster.reset(view.roster, cursor);
@@ -1018,25 +1019,35 @@ export class BattleHudScene extends Phaser.Scene {
       lines.push([`Accessoire : ${extra?.accessory ?? '—'}`, PALETTE.parchemin]);
       lines.push([`Objets : ${extra && extra.items.length > 0 ? extra.items.join(', ') : '—'}`, PALETTE.parchemin]);
       if (extra?.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}`, PALETTE.lumiereDoree]);
-      const fh = Math.min(height - (BOTTOM_BAR + 6) * S - fy, (52 + lines.length * 16) * S);
+      const fh = Math.min(height - (BOTTOM_BAR + 6) * S - fy, (58 + lines.length * 16) * S);
       parts.push(drawPanel(this, lx, fy, colW, fh, { scale: 2 * S, depth: DEPTH.prep }));
       this.prepRects.push({ x: lx, y: fy, w: colW, h: fh });
       parts.push(this.add.rectangle(lx + 8 * S, fy + 8 * S, 30 * S, 36 * S, TEAM_COLOR.player, 0.22).setOrigin(0, 0).setDepth(DEPTH.prep + 1));
       parts.push(this.add.image(lx + 23 * S, fy + 44 * S, BATTLE_TEX.ms(unit.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(S).setDepth(DEPTH.prep + 2));
-      parts.push(addText(this, lx + 46 * S, fy + 7 * S, `${unit.name}  Niv ${unit.level}`, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.prep + 2));
-      parts.push(addText(this, lx + 46 * S, fy + 23 * S, `${unit.kindName} · PV ${unit.stats.pv}`, { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 2));
-      lines.forEach(([t, c], i) => parts.push(addText(this, lx + 10 * S, fy + (50 + i * 16) * S, t, { scale: S, color: c, maxWidth: colW - 20 * S }).setDepth(DEPTH.prep + 2)));
+      const textW = colW - 46 * S - 10 * S;
+      parts.push(addText(this, lx + 46 * S, fy + 7 * S, `${unit.name}  Niv ${unit.level}`, { scale: S, color: PALETTE.parchemin, maxWidth: textW }).setDepth(DEPTH.prep + 2));
+      parts.push(addText(this, lx + 46 * S, fy + 21 * S, unit.kindName, { scale: S, color: PALETTE.cyanEclat, maxWidth: textW }).setDepth(DEPTH.prep + 2));
+      parts.push(addText(this, lx + 46 * S, fy + 35 * S, `PV ${unit.stats.pv}`, { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.prep + 2));
+      lines.forEach(([t, c], i) => parts.push(addText(this, lx + 10 * S, fy + (54 + i * 16) * S, t, { scale: S, color: c, maxWidth: colW - 20 * S }).setDepth(DEPTH.prep + 2)));
     }
 
     // Colonne de droite : objectif, ennemis, renforts, puis les boutons.
     const rx = width - colW - 6 * S;
     const info: [string, number][] = [[view.objective, PALETTE.jauneBle], ...view.enemies.map((e) => [e.text, e.color] as [string, number]), ...view.warnings.map((w) => [w.text, w.color] as [string, number])];
     if (view.locked) info.push(['Embuscade : positions imposées', PALETTE.braise]);
-    const infoH = (34 + info.length * 17 + 4) * S;
+    // Chaque ligne prend la hauteur de son texte (une ligne trop longue passe à la suivante sans chevaucher).
+    const infoTexts: Phaser.GameObjects.GameObject[] = [];
+    let iy = top + 30 * S;
+    for (const [t, c] of info) {
+      const txt = addText(this, rx + 10 * S, iy, t, { scale: S, color: c, maxWidth: colW - 20 * S }).setDepth(DEPTH.prep + 1);
+      infoTexts.push(txt);
+      iy += Math.max(17 * S, Math.ceil((txt as unknown as { height: number }).height) + 4 * S);
+    }
+    const infoH = iy - top + 4 * S;
     parts.push(drawPanel(this, rx, top, colW, infoH, { scale: 2 * S, depth: DEPTH.prep }));
     this.prepRects.push({ x: rx, y: top, w: colW, h: infoH });
     parts.push(addText(this, rx + 10 * S, top + 7 * S, 'Ennemis en vue', { scale: S, color: PALETTE.braise }).setDepth(DEPTH.prep + 1));
-    info.forEach(([t, c], i) => parts.push(addText(this, rx + 10 * S, top + (30 + i * 17) * S, t, { scale: S, color: c, maxWidth: colW - 20 * S }).setDepth(DEPTH.prep + 1)));
+    parts.push(...infoTexts);
 
     const items: MenuItem[] = [
       { label: 'Combattre', onSelect: () => cb.onFight() },

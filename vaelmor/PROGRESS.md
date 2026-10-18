@@ -28,7 +28,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
 - [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°71 validées le 18/10/2026 (n°63 révisée : les PNJ se promènent)
 - [x] **M3 : ennemis visibles du monde** (18/10/2026) — voir « Livré en M3 » ; décisions n°72 à n°78 à valider
-- [x] **M5 : préparation, objets, compétences, boss à 2 phases, renforts, alliés verts** (18/10/2026) — voir « Livré en M5 » ; décisions n°85 à n°104 à valider
+- [x] **M5 : préparation, objets, compétences, boss à 2 phases, renforts, alliés verts** (18/10/2026) — voir « Livré en M5 » ; décisions n°85 à n°104 validées le 18/10/2026
   - [x] Écran de préparation (§9.3, §13.4) — remplace le déploiement automatique (n°55)
   - [x] Objets en combat et accessoires (§9.8)
   - [x] Compétences signature et jauge de Résonance (§9.9, §10.5) — passives 5 / 15 proposées (n°93), pas codées
@@ -281,7 +281,8 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **Équilibrage de Brakk** (IA contre IA, la compagnie jouée par l'IA, ce qui la dessert : elle lance le héros dans la mêlée) : ~40 % de victoires en ~5,4 tours, phase 2 atteinte 3 fois sur 4, et gagnée un peu moins d'une fois sur deux une fois atteinte. Un joueur qui protège le héros et garde la Résonance pour la phase 2 gagne nettement plus souvent. Embuscade au gué ~75 %, Brigands de la Forêt-Racine ~52 %.
 - **Vérifié dans Chromium** (SwiftShader, 960×540) : préparation (déploiement, échange, Auto, équipement, objets), phase alliée, compétence de zone, potion, phase 2 de Brakk, errant abordé dans le monde ; aucune erreur console.
 
-### Décisions n°85 à n°104 (jalon M5) — à valider
+### Décisions n°85 à n°104 (jalon M5) — validées par l'auteur le 18/10/2026
+- **Corrections du soir (retours de l'auteur)** : la fiche d'unité de la préparation ne déborde plus (nom, classe et PV sur trois lignes) ; la colonne « Ennemis en vue » laisse la place aux lignes qui passent à la ligne ; à la souris, un clic sur la compagnie **choisit** l'unité (le survol ne reconstruit plus l'écran, ce qui faisait perdre des clics), un second clic ou Entrée la déploie / la retire ; « Équipement » annonce quand l'unité n'a rien à équiper (sac sans arme du même type ni accessoire).
 - **n°85 — Cases bleues** : le déploiement maximal de la carte + 3 cases de choix (`balance.prep.extraSlots`). Par défaut : le dernier déploiement du joueur (mémorisé pour la session), sinon le héros puis la compagnie dans l'ordre. Le héros est toujours déployé. En **embuscade**, les positions sont imposées : ni échange, ni Auto, seul l'équipement change.
 - **n°86 — Formation Auto** : les cases les plus proches de l'ennemi reçoivent d'abord les tanks, puis la mêlée, le tueur de boss, la distance, le contrôle et le soutien, et les soigneurs vont au plus loin ; le héros n'est jamais en première ligne.
 - **n°87 — Compagnie d'essai de 12** (une unité par classe, niveau 3 ou niveau de test `?lvl`) en attendant le recrutement (M6). Remplace la n°55 : le déploiement automatique n'existe plus que pour `?debug&prep=off`.
