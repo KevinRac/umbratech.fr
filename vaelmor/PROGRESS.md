@@ -7,6 +7,7 @@ Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). 
 
 ## Prochain jalon
 **M5 : préparation, objets, compétences, boss à 2 phases, renforts** (GDD §17). Le combat reçoit déjà `ambush`, `extraEnemies` (renforts de sentinelle) et `initiative` ; la compagnie reste la compagnie d'essai (n°55) jusqu'à l'écran de préparation.
+**Alliés verts (spécification validée par l'auteur le 18/10/2026, voir GDD §7.8)** : toujours gérés par une **IA** (jamais par le joueur), phase alliée dédiée ; **gardes de village** fixes et garantis près de leur village à partir d'« Amical » ; **alliés de passage** tirés au hasard selon la réputation (0 / 10 / 20 / 35 %) ; **alliés errants** spontanés qui se promènent partout dans l'île, abordables, qui rejoignent les combats proches. Rien n'est codé : à implémenter en M5 (renforts), avec décisions numérotées à partir de n°85.
 Ensuite, dans l'ordre du GDD §17 : M6, M9, M7, M8, M10.
 
 ## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)

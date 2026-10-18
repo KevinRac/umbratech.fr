@@ -549,7 +549,21 @@ Au-dessus de l'ennemi (visible à l'approche, ~10 tuiles) : icône de crâne + c
 ### 7.7 Réapparition
 
 | Type | Règle |
-|---|---|
+|### 7.8 Alliés verts (spécification pour M5)
+
+Les alliés rejoignent un combat en **renforts verts** (liseré et teinte verts, jamais confondus avec le bleu de la compagnie ni le rouge des ennemis). **Règle absolue : ils sont toujours gérés par une IA** ; le joueur ne les commande jamais. Ils ne comptent ni dans le déploiement ni dans la condition de défaite, mais gagnent de l'XP s'ils frappent (réservé à M6).
+
+| Source | Apparition | Règle |
+|---|---|---|
+| **Garde de village** | **Fixe, non aléatoire** | Si le combat se déroule à proximité d'un village (zone sûre de 5 cases et au-delà jusqu'à 10 cases), 1 à 2 gardes de ce village arrivent au tour 1 ou 2. Garantis à partir de « Amical », absents à « Hostile » (ce sont alors eux qui tendent l'embuscade). Niveau lié à la zone. |
+| **Allié de passage** | **Aléatoire** | Au lancement d'un combat, tirage selon la réputation du village de la zone : Neutre 0 %, Amical 10 %, Allié 20 %, Héros local 35 %. 1 unité (PNJ du village : milicien, chasseur, apprenti…), qui entre à un bord de la carte au tour 2 ou 3 avec une bannière « Renfort ! ». |
+| **Allié errant** | **Spontané, se promène partout** | Quelques PNJ verts (voyageur armé, chasseur, ermite…) parcourent l'île sur de longues routes, villages compris. Visibles dans le monde (silhouette verte, sans crâne), ils peuvent être abordés (dialogue court, conseil ou rumeur, petit objet). S'ils sont à moins de 6 cases d'un combat, ils le rejoignent d'office ; sinon un combat qu'ils ont vu les attire avec une chance de 50 %. Ils ne disparaissent pas ; un allié mort au combat est « Blessé » et réapparaît après un repos à l'auberge. |
+
+**IA des alliés** (logique pure, mêmes règles que l'IA ennemie, `src/logic/tactics`) : priorité 1 protéger le héros et les blessés, 2 attaquer l'ennemi le plus menaçant à portée, 3 s'avancer vers l'ennemi le plus proche sans quitter la compagnie de plus de 4 cases. Phase propre « Phase alliée » jouée entre le joueur et l'ennemi.
+
+**Données** : `data/allies.json` (modèles d'alliés : classe, niveau selon zone, apparence, dialogues) et, dans `data/worldEnemies.json`, de nouveaux types `allie_errant` (trajet long, `roam` large) ; chances de renfort dans `balance.json › allies`. Tout est tirable au sort avec une graine pour des tests reproductibles.
+
+---|---|
 | Fixe de camp | **Ne réapparaît pas** une fois le camp nettoyé (persistant). |
 | Patrouille | Réapparaît après un **repos à l'auberge** (équivaut à un « jour »). |
 | Aléatoire | Réapparaît après 10 minutes de jeu ou changement de zone. |
