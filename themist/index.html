@@ -8147,7 +8147,12 @@ function demoBoot(cls){
    if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);S.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');if(st.ph==='effet')asmFin(A,st,null);S.z=null;}
    else if(D.left<=0){S.dash=null;if(st.ph==='effet')asmFin(A,st,null);}}
   else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'))move(e,dt,sp,tg,dP,st.att>0);
-  if(!S.dash&&!P.dead&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);}
+  if(!S.dash&&!P.dead&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);
+  // attaque passive : un trait vers toi à intervalle régulier, en plus de ses sorts (pas pendant son apparition)
+  const PS=A.passive;if(PS&&st.ph!=='intro'){if(S.pas==null)S.pas=PS.intervalleS;
+   if(!fige&&tg.pl&&!P.dead&&dP<=PS.portee&&!S.dash)S.pas-=dt;
+   if(S.pas<=0){S.pas=PS.intervalleS;const fp=facePos(e),a=Math.atan2(P.y-fp[1],P.x-fp[0]),v=PS.vitesse*spdMul();
+    eproj.push({x:fp[0]+Math.cos(a)*8,y:fp[1]+Math.sin(a)*8,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:6,dmg:e.dmg*PS.degats,life:4,from:e});sfx('shoot');}}}
  const _pre=v6EnemyPre;
  v6EnemyPre=function(e,dt){const r=_pre(e,dt);
   if(!r&&e&&!e.asm&&!e.dead&&e.type==='bouffi'&&e.state!=='fuse'&&e.stun<=0&&room&&room.asm&&asmZone()){const tg=enemyTarget(e);moveTo(e,tg.x,tg.y,e.spd*v6Slow(e),dt);return true;} // le Bouffi ne s'amorce pas pendant un sort du Masqué
@@ -8183,14 +8188,18 @@ function demoBoot(cls){
  drawRings=function(){_drg();if(!ZR.length)return;const c=ctx;c.save();c.globalCompositeOperation='lighter';
   for(const g of ZR){const k=1-g.r/g.max,g0=g.ga+g.gw/2,g1=g.ga-g.gw/2+TAU;c.strokeStyle=`rgba(${FO},${0.3*k+0.15})`;c.lineWidth=16;c.beginPath();c.arc(g.x,g.y,g.r,g0,g1);c.stroke();c.strokeStyle=`rgba(255,226,216,${0.7*k+0.2})`;c.lineWidth=3;c.beginPath();c.arc(g.x,g.y,g.r,g0,g1);c.stroke();}
   c.restore();};
- function faceY(e){const r=e.r;if(e.type==='spectre')return e.y-r*0.55+Math.sin(e.wob*1.5)*3-4;if(e.type==='voile')return e.y-r*1.1+Math.sin(e.wob*1.2)*2-6;return e.y-r*0.15;}
+ // position de la tête : la Brute (vue de dessus) a la tête devant elle, dans le sens où elle regarde ; Spectre et Voilé l'ont en haut
+ function facePos(e){const r=e.r;if(e.type==='spectre')return[e.x,e.y-r*0.55+Math.sin(e.wob*1.5)*3-4];if(e.type==='voile')return[e.x,e.y-r*1.25+Math.sin(e.wob*1.2)*2-6];
+  const a=e.ang||0,st=e.asm&&e.asm.st,lean=st&&st.ph==='charge'&&st.k==='charge'?-4:e.asm&&e.asm.dash?5:0,d=r*0.72+lean;return[e.x+Math.cos(a)*d,e.y+Math.sin(a)*d];}
+ function faceY(e){return facePos(e)[1];}
  function topY(e){return e.type==='spectre'?e.y-e.r*1.5:e.type==='voile'?e.y-e.r*1.9:e.y-e.r*1.1;}
  const _dep=drawEnemyPost;
  drawEnemyPost=function(e){if(!e.asm){_dep(e);return;}
-  const S=e.asm,st=S.st,hp=e.hp,el=e.elite;e.hp=e.maxHp;e.elite=false;try{_dep(e);}finally{e.hp=hp;e.elite=el;}
+  const S=e.asm,st=S.st,hp=e.hp,el=e.elite,ty=e.type;e.hp=e.maxHp;e.elite=false;e.type='masque';try{_dep(e);}finally{e.hp=hp;e.elite=el;e.type=ty;}  // le masque remplace ses yeux : pas d'yeux d'origine ni de marque de champion
   try{const c=ctx,lit=st.ph==='charge',h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max),fis=e.hp/e.maxHp*100<=A.masque.fissurePV;
    let jx=0,jy=0;if(lit&&!RM&&A.signatures[st.k]){jx=rand(-0.7,0.7);jy=rand(-0.7,0.7);}
-   drawMask(c,e.x+jx,faceY(e)+jy,h,fis?'fissure':'calme',{lit});
+   const [fx_,fy_]=facePos(e);drawMask(c,fx_+jx,fy_+jy,h,fis?'fissure':'calme',{lit});
+   const PS=A.passive;if(PS&&S.pas!=null&&S.pas>0&&S.pas<=PS.preavisS){const k=1-S.pas/PS.preavisS;c.save();c.globalCompositeOperation='lighter';glow(c,fx_,fy_+h*0.42,4+10*k,'255,110,100',0.5+0.4*k);c.restore();}
    const top=Math.min(topY(e),faceY(e)-h*0.5)-6;
    // PV (violet), barre de chargement, icônes
    const w=Math.max(46,e.r*2);c.fillStyle='rgba(0,0,0,.7)';c.fillRect(e.x-w/2-1,top-4,w+2,5);c.fillStyle='#b892ff';c.fillRect(e.x-w/2,top-3,w*Math.max(0,e.hp/e.maxHp),3);
@@ -8211,7 +8220,7 @@ function demoBoot(cls){
  const _ke=killEnemy;
  killEnemy=function(e){const was=e&&e.dead;_ke(e);
   try{if(!was&&e&&e.dead&&e.asm){const h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max);
-   ZB.push({x:e.x,y:faceY(e),h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;sfx('asm_brise');hideCard();
+   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;sfx('asm_brise');hideCard();
    if(room&&room.asm){room.asm.vaincu=true;}
    RUN.asm=RUN.asm||{dernier:null,vaincus:[]};RUN.asm.vaincus.push(e.asm.nom);
    SAVE.asm18=Object.assign({},SAVE.asm18,{vaincus:((SAVE.asm18&&SAVE.asm18.vaincus)||0)+1});persist();

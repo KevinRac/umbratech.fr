@@ -174,7 +174,8 @@ function bestiaire(B, I, MQ) {
 <p class="k">Jamais ensemble : ${AS.incompatibles.map(([a, b]) => `${esc(AS.capacites[a].n)} et ${esc(AS.capacites[b].n)}`).join(' ; ')}.</p>
 <h4 class="sub">Sorts signature</h4>
 <div class="grid g3">${sigs}</div>
-<h3 class="sub">Règles de salle</h3>
+${AS.passive ? `<p><b>${ico(AS.passive.ic)}Attaque passive · ${esc(AS.passive.n)}</b> : en plus de ses sorts, il te tire un trait toutes les ${sec(AS.passive.intervalleS)} (jusqu’à ${AS.passive.portee} px). Son menton s’allume juste avant. Ce n’est pas une zone : un projectile au liseré rouge, comme ceux des Spectres, qui peut se perdre dans les autres ennemis.</p>
+` : ''}<h3 class="sub">Règles de salle</h3>
 <div class="grid g4">${regles}</div>
 <p>À partir de la ${RS.desLaSalle}e salle, une salle de combat ou d’élite reçoit parfois une règle (${chance(RS.chanceActeI)} à l’acte I, ${chance(RS.chanceEnsuite, true)} ensuite). La règle est choisie selon tes PV : sous ${RS.seuilBrume} %, seulement la brume ; sous ${RS.seuilBrumeSol} %, la brume ou le sol ; au-dessus, les quatre. <b>La règle mute une fois</b> en plein combat, entre ${RS.mutationMinS} et ${RS.mutationMaxS} secondes après son apparition : elle est remplacée par une autre règle possible à ton niveau de PV. Purifier une salle à règle rapporte <b>une relance de talents</b> et de l’or (${RS.orBase} + ${RS.orParActe} par acte).</p>
 <h3 class="sub">La Brèche</h3>

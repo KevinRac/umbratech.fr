@@ -107,8 +107,8 @@
   recompense:{reliques:1,titre:'Le masque se brise',texte:'Sous ses éclats, une relique de plus. Choisis-en une.'},
   stats:{pv:460,degats:13,xp:30,contact:0.8},
   escorte:{1:2,2:3,3:4},
-  annonceS:1.4,pauseS:0.4,prioriteS:0.6,apresSignatureS:1.1,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
-  eveilPV:50,eveilS:0.7,etourdissement:0.5,attenteS:1.2,
+  annonceS:1,pauseS:0.25,prioriteS:0.5,apresSignatureS:0.6,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
+  eveilPV:50,eveilS:0.5,etourdissement:0.5,attenteS:1.2,
   budgetMenace:{1:11,2:11,3:13},
   incompatibles:[['explosion','onde']],
   poidsProfil:{actif:false,regles:{
@@ -118,27 +118,30 @@
   // salle : première salle de la run où ce corps peut servir ; exclut : capacités qu'il ne prend jamais ; signature : son sort.
   // adj : forme de l'adjectif (m : masculin, f : féminin) pour le nom composé.
   corps:{
-   brute:{n:'Brute',g:'f',pv:1.1,taille:1.45,vitesse:1.05,mouvement:'approche',menace:2,signature:'fracas',exclut:['charge']},
-   spectre:{n:'Spectre',g:'m',pv:0.85,taille:1.6,vitesse:1,mouvement:'distance',distance:[210,300],menace:1,signature:'eclats',exclut:['explosion','cone']},
-   voile:{n:'Voilé',g:'m',salle:14,pv:0.95,taille:1.6,vitesse:1.1,mouvement:'rodeur',distance:[110,170],menace:2,signature:'damier',exclut:['tirs']}},
+   brute:{n:'Brute',g:'f',pv:1.1,taille:1.45,vitesse:1.45,mouvement:'approche',menace:2,signature:'fracas',exclut:['charge']},
+   spectre:{n:'Spectre',g:'m',pv:0.85,taille:1.6,vitesse:1.35,mouvement:'distance',distance:[210,300],menace:1,signature:'eclats',exclut:['explosion','cone']},
+   voile:{n:'Voilé',g:'m',salle:14,pv:0.95,taille:1.6,vitesse:1.45,mouvement:'rodeur',distance:[110,170],menace:2,signature:'damier',exclut:['tirs']}},
   // Capacités empruntées. de : l'ennemi qui la prête ; ic : icône (data/icones.js) ; forme : sa zone (toujours la même) ;
   // chargeS : durée du chargement ; effetS : durée de la zone après le chargement ; degats : × ses dégâts de base ;
   // portee : il s'approche à cette distance avant un sort court (au plus attenteS secondes).
   capacites:{
-   explosion:{n:'Explosion',de:'bouffi',ic:'u_burst',forme:'disque',adj:{m:'explosif',f:'explosive'},menace:2,chargeS:0.8,effetS:0.25,rayon:100,degats:1.6,portee:150},
-   onde:{n:'Onde',de:'hurleur',ic:'u_wave',forme:'anneau',adj:{m:'hurlant',f:'hurlante'},menace:2,chargeS:0.75,rayonMax:340,vitesse:240,breche:70,degats:1.2},
-   charge:{n:'Charge',de:'brute',ic:'u_charge',forme:'couloir',adj:{m:'furieux',f:'furieuse'},menace:3,chargeS:0.8,suivi:0.45,longueur:380,vitesse:620,degats:1.9,sonne:0.6},
-   cone:{n:'Lame',de:'voile',ic:'u_blade',forme:'cone',adj:{m:'tranchant',f:'tranchante'},menace:2,chargeS:0.6,effetS:0.2,rayon:95,arc:2.2,degats:1.8,portee:120},
-   tirs:{n:'Salve',de:'spectre',ic:'u_volley',forme:'rayons',adj:{m:'tireur',f:'tireuse'},menace:2,chargeS:0.7,effetS:0.15,nombre:5,ecart:0.2,vitesse:250,longueur:420,degats:0.9}},
+   explosion:{n:'Explosion',de:'bouffi',ic:'u_burst',forme:'disque',adj:{m:'explosif',f:'explosive'},menace:2,chargeS:0.7,effetS:0.25,rayon:100,degats:1.6,portee:150},
+   onde:{n:'Onde',de:'hurleur',ic:'u_wave',forme:'anneau',adj:{m:'hurlant',f:'hurlante'},menace:2,chargeS:0.65,rayonMax:340,vitesse:300,breche:70,degats:1.2},
+   charge:{n:'Charge',de:'brute',ic:'u_charge',forme:'couloir',adj:{m:'furieux',f:'furieuse'},menace:3,chargeS:0.7,suivi:0.45,longueur:380,vitesse:720,degats:1.9,sonne:0.6},
+   cone:{n:'Lame',de:'voile',ic:'u_blade',forme:'cone',adj:{m:'tranchant',f:'tranchante'},menace:2,chargeS:0.55,effetS:0.2,rayon:95,arc:2.2,degats:1.8,portee:120},
+   tirs:{n:'Salve',de:'spectre',ic:'u_volley',forme:'rayons',adj:{m:'tireur',f:'tireuse'},menace:2,chargeS:0.6,effetS:0.15,nombre:5,ecart:0.2,vitesse:250,longueur:420,degats:0.9}},
+  // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
+  // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
+  passive:{n:'Trait',ic:'u_arrow',intervalleS:1.4,preavisS:0.25,degats:0.6,vitesse:320,portee:560},
   // Sorts signature (un par corps), chacun avec une forme qu'aucun autre sort n'utilise.
   signatures:{
-   fracas:{n:'Fracas',ic:'u_cross4',forme:'croix',menace:3,chargeS:1.1,effetS:0.3,longueur:420,largeur:60,degats:2.4},
-   eclats:{n:'Éclats',ic:'u_diamonds',forme:'losanges',menace:3,chargeS:1.0,effetS:0.25,nombre:5,ecart:118,taille:46,degats:2},
-   damier:{n:'Damier',ic:'u_grid',forme:'damier',menace:3,chargeS:1.0,effetS:0.25,cote:74,degats:2.2}},
+   fracas:{n:'Fracas',ic:'u_cross4',forme:'croix',menace:3,chargeS:0.9,effetS:0.3,longueur:420,largeur:60,degats:2.4},
+   eclats:{n:'Éclats',ic:'u_diamonds',forme:'losanges',menace:3,chargeS:0.85,effetS:0.25,nombre:5,ecart:118,taille:46,degats:2},
+   damier:{n:'Damier',ic:'u_grid',forme:'damier',menace:3,chargeS:0.85,effetS:0.25,cote:74,degats:2.2}},
   // Le masque. couleurs : jamais de rouge (les zones le sont) ; taille : hauteur du masque en rayons du corps, bornée en px.
   // Ses états : calme, yeux allumés pendant un chargement, fissures sous fissurePV % de PV, brisé à la mort (brisureS secondes).
   masque:{couleurs:{haut:'#e4dcf4',bas:'#8f7fb8',trait:'#120c20',creux:'#160f28',oeil:'#b892ff',oeilVif:'#f1e6ff',fissure:'#c9a8ff'},
-   taille:1.55,min:36,max:56,fissurePV:50,brisureS:0.7}},
+   taille:1.3,min:36,max:50,fissurePV:50,brisureS:0.7}},
  // Mutations du talent Mutation Instable (Gouffre)
  mutationsInstables:[{id:'griffes',n:'Griffes',d:'+40 % de dégâts'},{id:'membres',n:'Membres allongés',d:'+35 % de portée'},{id:'pierre',n:'Peau de pierre',d:'−40 % de dégâts subis'},{id:'fievre',n:'Fièvre',d:'+30 % de vitesse'}]
 };})(window.BRUME_DATA=window.BRUME_DATA||{});
