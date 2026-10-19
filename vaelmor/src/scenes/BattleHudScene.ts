@@ -122,6 +122,8 @@ export interface PrepCallbacks {
   readonly onSheet: (member: number) => void;
   readonly onPlace: () => void;
   readonly onBack: (() => void) | null;
+  /** Échap : l'interface est masquée (true) ou rendue (false), pour voir toute la carte. */
+  readonly onUiHidden?: (hidden: boolean) => void;
 }
 
 export interface ExchangeView {
@@ -208,6 +210,7 @@ export class BattleHudScene extends Phaser.Scene {
       this.prepFrames = null;
       this.prepRects = [];
       this.prepPaused = false;
+      this.uiHidden = false;
     });
     this.ready = true;
     const queued = this.pending;
@@ -943,6 +946,7 @@ export class BattleHudScene extends Phaser.Scene {
 
   closePrep(): void {
     this.run(() => {
+      if (this.uiHidden) this.toggleUiHidden();
       this.sheet?.close();
       this.prepRoster?.destroy();
       this.prepRoster = null;
@@ -1114,15 +1118,34 @@ export class BattleHudScene extends Phaser.Scene {
 
   /** Un clic sur un panneau de préparation n'est pas un clic sur la carte. */
   isOverPrep(x: number, y: number): boolean {
+    if (this.uiHidden) return true;
     return this.prepRects.some((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
   }
 
+  private uiHidden = false;
+
+  /** Échap à la préparation : masque (ou rend) toute l'interface, pour voir les ennemis sous les tuiles. */
+  private toggleUiHidden(): void {
+    this.uiHidden = !this.uiHidden;
+    this.scene.setVisible(!this.uiHidden);
+    this.input.enabled = !this.uiHidden;
+    this.prepCallbacks?.onUiHidden?.(this.uiHidden);
+  }
+
   private updatePrepInput(): void {
+    if (this.uiHidden) {
+      if (this.actions.justPressed('cancel') || this.actions.justPressed('confirm')) this.toggleUiHidden();
+      return;
+    }
     if (this.sheet?.isOpen) {
       if (this.actions.justPressed('cancel')) this.sheetCallbacks?.onClose();
       return;
     }
     if (this.prepPaused || !this.prepView) return;
+    if (this.actions.justPressed('cancel')) {
+      this.toggleUiHidden();
+      return;
+    }
     if (this.actions.justPressed('left') && this.prepFocus === 'menu') {
       this.prepFocus = 'roster';
       this.refreshPrepFocus();

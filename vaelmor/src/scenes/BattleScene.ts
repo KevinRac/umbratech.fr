@@ -814,6 +814,7 @@ export class BattleScene extends Phaser.Scene {
         ['Clic gauche', 'déployer, retirer'],
         ['Clic droit', 'fiche, équipement, sac'],
         ['Clic sur la carte', 'prendre, poser, échanger'],
+        ['Échap', 'masquer l’interface'],
       ],
       place: [
         ['Entrée', 'prendre, poser'],
@@ -902,6 +903,9 @@ export class BattleScene extends Phaser.Scene {
         this.hud.toast('Formation : les unités de front devant, les soigneurs derrière.');
       },
       onSheet: (m) => this.openSheet(m),
+      onUiHidden: (hidden) => {
+        for (const t of this.slotTiles) t.setVisible(!hidden);
+      },
       onPlace: () => this.startPlace(),
       onBack: this.state.ambush ? null : () => this.retreatFromPrep(),
     });
