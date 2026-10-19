@@ -5464,17 +5464,17 @@ function brumeuxPlan(){
  if(add&&add.length){for(const s of add)s.cm=true;const wi=Math.min(1,room.waves.length-1);room.waves[wi].push(...add);}
  room.cmAnnT=room.wtheme?3.8:1.0;}
 let murEl=null,murTimer=0;
-function murWho(title){return /Mère|Premier Murmure/.test(title)?'mere':'brumeux';}
+function murWho(title){return /^Pacte scellé/.test(title)?'joueur':/Mère|Premier Murmure/.test(title)?'mere':'brumeux';}   // v16.45 : sceller un pacte est ton choix, pas une action du Brumeux : pas de cri
 function showMur(title,text,d,pause,who){
  if(!murEl){murEl=document.createElement('div');murEl.id='murmur';murEl.setAttribute('role','status');murEl.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(murEl);}
  murEl.innerHTML=`<svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12c3-5 7-7 10-7s7 2 10 7c-3 5-7 7-10 7s-7-2-10-7z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg><div><b>${esc(title)}</b><span>${esc(text)}</span>${pause?'<em class="sub">Espace · Entrée · clic pour continuer</em>':''}</div>`;
  stackBelow(murEl,toastEl);murEl.classList.toggle('pause',!!pause);murEl.classList.add('show');clearTimeout(murTimer);if(!pause)murTimer=setTimeout(()=>murEl.classList.remove('show'),(d||4.5)*1000);
- sfx('scream_'+(who||'brumeux'));tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}
+ if(who!=='joueur'){sfx('scream_'+(who||'brumeux'));tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}}
 // le texte violet fige le jeu le temps de lire et s’accompagne d’un cri propre au PNJ qui parle
 let lastScream=-9;
 function murmur(title,text,d,who){who=who||murWho(title);
  // v16.3 · palier 0 : plus de texte violet, le Brumeux pousse seulement un cri démoniaque (au plus un toutes les 1,2 s)
- if(RUN&&!RUN.hub&&PAL()===0){if(state==='play'&&RUN.time-lastScream>1.2){lastScream=RUN.time;sfx('scream_'+who);tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}return;}
+ if(RUN&&!RUN.hub&&PAL()===0){if(state==='play'&&who!=='joueur'&&RUN.time-lastScream>1.2){lastScream=RUN.time;sfx('scream_'+who);tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}return;}
  if(!P||!RUN||RUN.hub||state!=='play'){showMur(title,text,d||4.5,false,who);return;}
  msgPush({k:'m',title,text,who,secs:clamp(1.8+text.length*0.04,3,6.5)});}
 function announceCm(){
@@ -6884,10 +6884,63 @@ openCodex=function(back){
    g.connect(AC.master);o.start(t);o2.start(t);o.stop(t+dur+0.05);o2.stop(t+dur+0.05);};
   ha(delay,150,0.17,0.42);ha(delay+0.2,135,0.17,0.42);ha(delay+0.4,120,0.17,0.45);ha(delay+0.62,100,0.55,0.5);}
  window.__rire=rire;
+
+ // v16.45 · rire théâtral du Masqué (≈ 3 s) : « ha ha ha » étouffé qui monte, rire grave et grotesque qui se dérègle, grand « HAHAHA ! », puis un petit ricanement
+ function rireMasque(){if(!AC||muted)return;if(!throttle('rireMasque',2500))return;
+  const t0=AC.currentTime+0.02,bus=AC.createGain(),dly=AC.createDelay(0.5),fb=AC.createGain(),wet=AC.createGain(),lp=AC.createBiquadFilter();
+  dly.delayTime.value=0.19;fb.gain.value=0.38;wet.gain.value=0.4;lp.type='lowpass';lp.frequency.value=1800;
+  bus.connect(AC.master);bus.connect(dly);dly.connect(lp);lp.connect(fb);fb.connect(dly);lp.connect(wet);wet.connect(AC.master);   // écho qui se perd dans la salle
+  setTimeout(()=>{try{bus.disconnect();dly.disconnect();lp.disconnect();fb.disconnect();wet.disconnect();}catch(e){}},4500);
+  const FM={a:[[760,7,1],[1250,9,.7],[2600,10,.25]],o:[[480,7,1],[820,8,.6],[2500,10,.15]],u:[[330,6,1],[700,7,.5]]};
+  const nz=(d,dur,vol,fr,type)=>{const t=t0+d,sr=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();sr.buffer=getNoise();fl.type=type||'bandpass';fl.frequency.value=fr;
+   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol),t+dur*0.3);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);sr.connect(fl);fl.connect(g);g.connect(bus);sr.start(t);sr.stop(t+dur+0.03);};
+  // une syllabe : deux scies (voix + octave grave) saturées, filtrées par des formants (voyelle a / o / ou), vibrato
+  const ha=(d,f,dur,vol,o={})=>{const t=t0+d,f1=o.f1||f*0.75,fm=FM[o.v||'a'],k=o.k||1;
+   const A=AC.createOscillator(),B=AC.createOscillator(),mB=AC.createGain(),sh=AC.createWaveShaper(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
+   A.type='sawtooth';B.type='sawtooth';mB.gain.value=o.sub==null?0.7:o.sub;
+   A.frequency.setValueAtTime(f,t);A.frequency.exponentialRampToValueAtTime(Math.max(30,f1),t+dur);
+   B.frequency.setValueAtTime(f*0.5,t);B.frequency.exponentialRampToValueAtTime(Math.max(20,f1*0.5*(o.det||1)),t+dur);
+   l.frequency.value=o.vib||8;lg.gain.value=f*(o.vd||0.02);l.connect(lg);lg.connect(A.frequency);lg.connect(B.frequency);
+   sh.curve=curve(o.dist||2.5);A.connect(sh);B.connect(mB);mB.connect(sh);
+   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+Math.min(0.07,dur*0.4));g.gain.setValueAtTime(vol,t+dur*0.5);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+   for(const [fr,q,a] of fm){const b=AC.createBiquadFilter(),ga=AC.createGain();b.type='bandpass';b.frequency.value=fr*k;b.Q.value=Math.min(q,2.5);ga.gain.value=a;sh.connect(b);b.connect(ga);ga.connect(g);}
+   g.connect(bus);l.start(t);A.start(t);B.start(t);l.stop(t+dur+0.05);A.stop(t+dur+0.05);B.stop(t+dur+0.05);
+   if(!o.nobreath)nz(d,0.06,vol*0.3,o.nf||1700,'bandpass');};
+  // grincement (porte qui geint) et vibration grave
+  const grin=(d,dur,f0,f1,vol)=>{const t=t0+d,O=AC.createOscillator(),b=AC.createBiquadFilter(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
+   O.type='sawtooth';O.frequency.setValueAtTime(f0,t);O.frequency.exponentialRampToValueAtTime(f1,t+dur);l.frequency.value=34;lg.gain.value=f0*0.05;l.connect(lg);lg.connect(O.frequency);
+   b.type='bandpass';b.frequency.value=1500;b.Q.value=7;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*0.3);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+   O.connect(b);b.connect(g);g.connect(bus);l.start(t);O.start(t);l.stop(t+dur+0.05);O.stop(t+dur+0.05);};
+  const rum=(d,dur,f0,f1,vol)=>{const t=t0+d,O=AC.createOscillator(),lo=AC.createBiquadFilter(),g=AC.createGain(),am=AC.createOscillator(),ag=AC.createGain();
+   O.type='sawtooth';O.frequency.setValueAtTime(f0,t);O.frequency.exponentialRampToValueAtTime(f1,t+dur);lo.type='lowpass';lo.frequency.value=220;
+   am.frequency.value=15;ag.gain.value=vol*0.6;am.connect(ag);ag.connect(g.gain);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+   O.connect(lo);lo.connect(g);g.connect(bus);am.start(t);O.start(t);am.stop(t+dur+0.05);O.stop(t+dur+0.05);};
+  nz(0,0.22,0.03,900,'bandpass');                                              // inspiration
+  ha(0.12,150,0.15,0.10,{k:0.75,f1:130,dist:1.5,nobreath:true});               // 1. « ha… ha… ha… » étouffé, de plus en plus fort
+  ha(0.30,160,0.15,0.17,{k:0.85,f1:135});
+  ha(0.47,172,0.16,0.27,{k:0.95,f1:140});
+  rum(0.55,1.5,58,40,0.12);
+  ha(0.66,112,0.2,0.4,{v:'o',f1:84,sub:1,dist:3.5,vd:0.04,vib:7});             // 2. rire profond, surnaturel, grotesque
+  ha(0.86,102,0.2,0.42,{v:'o',f1:76,sub:1,dist:3.8,vd:0.05,vib:6,det:0.94});
+  ha(1.06,92,0.22,0.44,{v:'u',f1:66,sub:1.1,dist:4,vd:0.07,vib:5,det:0.9});
+  grin(0.72,0.5,1900,850,0.022);grin(1.2,0.3,700,1700,0.02);
+  ha(1.26,150,0.09,0.3,{f1:210,vd:0.12,vib:19,dist:4});                        // 3. il se dérègle
+  ha(1.35,70,0.1,0.34,{v:'u',f1:120,vd:0.15,vib:23,dist:5});
+  ha(1.45,190,0.08,0.26,{f1:90,vd:0.2,vib:27,dist:5});
+  ha(1.62,205,0.14,0.5,{f1:170,dist:5,vd:0.03});                               // 4. « HA-HA-HAAA ! »
+  ha(1.78,190,0.14,0.54,{f1:150,dist:5.5,vd:0.03});
+  ha(1.94,170,0.5,0.6,{f1:78,dist:6,vd:0.045,vib:10,sub:1});nz(1.94,0.4,0.1,2600,'bandpass');
+  ha(2.66,330,0.1,0.1,{k:1.15,f1:300,vd:0.03,vib:13,dist:1.2});                // silence, puis « hé-hé »
+  ha(2.8,360,0.1,0.09,{k:1.2,f1:310,vd:0.03,vib:13,dist:1.2});}
+ window.__rireMasque=rireMasque;
  function demon(who){if(!AC||muted)return;if(!throttle('demon',900))return;
   if(who==='mere'){voice({type:'sawtooth',f0:760,f1:240,dur:1.3,vol:0.13,vib:9,vibD:46,lp0:3400,lp1:900,dist:5,att:0.04});voice({type:'sawtooth',f0:140,f1:58,dur:1.5,vol:0.16,vib:6,vibD:8,lp0:900,lp1:160,dist:6});noise(1.1,0.12,1900,'bandpass',0.05);tone(52,1.4,'sine',0.14,34);}
   else if(who==='chroniqueur'){noise(1.4,0.09,2600,'bandpass');tone(440,1.2,'sine',0.05,310);tone(466,1.2,'sine',0.04,330,0.08);}
-  else{voice({type:'sawtooth',f0:96,f1:40,dur:0.8,vol:0.25,vib:7,vibD:10,lp0:950,lp1:200,dist:7,att:0.05});voice({type:'square',f0:200,f1:80,dur:0.6,vol:0.07,vib:11,vibD:16,lp0:1500,lp1:320,dist:4,delay:0.03});noise(0.5,0.13,300,'lowpass');tone(64,0.7,'sawtooth',0.06,38,0.1);rire(0.42);}}
+  else if(who==='joueur')return;
+  else{   // v16.45 · le Brumeux : une voix sans visage, grave, qui enfle puis s’éteint, sur un souffle et deux chuchotements
+   voice({type:'sawtooth',f0:78,f1:44,dur:1.05,vol:0.2,vib:4.5,vibD:6,lp0:620,lp1:170,dist:6,att:0.18});
+   voice({type:'sawtooth',f0:117,f1:66,dur:0.95,vol:0.05,vib:6,vibD:9,lp0:1000,lp1:240,dist:3,att:0.26,delay:0.1});
+   noise(0.9,0.07,420,'bandpass');noise(0.28,0.05,2300,'bandpass',0.12);noise(0.3,0.045,1500,'bandpass',0.46);tone(38,1.1,'sine',0.17,30);}}
  const _sfx15=sfx;sfx=function(k){if(typeof k==='string'&&k.startsWith('scream_')){demon(k.slice(7));return;}_sfx15(k);};
 
  // --- cercles de boss : bande lumineuse, runes, étincelles
@@ -8954,7 +9007,7 @@ function demoBoot(cls){
   if(k==='asm_ch'){if(!AC||muted)return;d=d||0.7;tone(240,d,'sawtooth',0.035,620);tone(120,d,'triangle',0.04,300);return;}
   if(k==='asm_sig'){if(!AC||muted)return;d=d||1;tone(150,d,'sawtooth',0.05,520);tone(75,d,'square',0.03,260);noise(d,0.05,400,'lowpass');tone(880,0.12,'sine',0.04,null,d-0.12);return;}
   // cri d'invocation du Brumeux, puis les bruits du montage (le corps touche le sol, le masque claque, chaque point, les fils coupés)
-  if(k==='asm_in'){if(!AC||muted)return;_sfx('scream_brumeux');tone(92,1.2,'sawtooth',0.06,58);noise(0.8,0.05,700,'lowpass');return;}
+  if(k==='asm_in'){if(!AC||muted)return;if(window.__rireMasque)window.__rireMasque();tone(92,1.4,'sawtooth',0.05,52);return;}   // v16.45 : rire théâtral, distinct du cri du Brumeux
   if(k==='asm_sol'){if(!AC||muted)return;tone(70,0.25,'sine',0.12,40);noise(0.18,0.07,400,'lowpass');return;}
   if(k==='asm_pose'){if(!AC||muted)return;tone(110,0.16,'square',0.07,60);noise(0.1,0.09,1800,'bandpass');return;}
   if(k==='asm_point'){if(!AC||muted)return;tone(1500,0.035,'square',0.025,1100);noise(0.04,0.05,4200,'highpass');return;}
