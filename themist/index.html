@@ -809,7 +809,7 @@ let enemies=[],eproj=[],pproj=[],parts=[],fx=[],nums=[],tlights=[],spectrals=[],
 const keys=new Set(),mouse={x:W/2,y:H/2,l:false,r:false};
 
 function baseStats(cls){const s={cls,maxHp:100,speed:220,atkDmg:14,atkCd:0.42,atkSpeed:1,atkRange:90,atkArc:2.0,crit:0.06,critMult:1.8,dmg:1,dashCd:0.85,dashCharges:1,exposedBonus:0.25,exposeSlow:0.3,lifesteal:0,burnMult:1,dmgTaken:1,
- aura:140,groundLight:170,lueurGain:1,lueurRegen:3,lueurPerHit:5,beamDps:44,beamCost:24,beamLen:390,obscurCrit:0.2,obscurSpeed:0.2,obscurDmg:0,lanternDmg:24,throwRange:420,lightDmg:1,regenGround:0,
+ aura:140,groundLight:170,lueurGain:1,lueurRegen:3,lueurPerHit:5,beamDps:44,beamCost:24,beamLen:390,obscurCrit:0.2,obscurSpeed:0.35,obscurDmg:0,lanternDmg:24,throwRange:420,lightDmg:1,regenGround:0,
  aube:0,nova:0,prism:0,coeur:0,surcharge:0,pasOmbre:0,lame:0,silhouette:0,enfant:0,crepuscule:0,ricochet:0,gardienne:0,rappel:0,vivante:0,constellation:0,sub:'',jumeaux:0,couronne:0,zenith:0,danse:0,jumelles:0,nuit:0,
  corGain:1,devourDps:20,devourRange:190,devourArc:1.05,devourPull:140,spitDmg:1,spitRange:270,spitStun:0.2,spitCd:0.8,corDmg:1,regenKill:0,dashDmg:1,ruptureSelf:0.15,
  gueule:0,festin:0,sucs:0,faim:0,estomac:0,bras:0,carapace:0,frenesie:0,colosse:0,mutInst:0,bile:0,gerbe:0,crachats:0,maitrise:0,canon:0,halo:0,communion:0,tentacules:0,oeil:0,thorns:0,tierBonus:0,absolution:0,metamorph:0,
@@ -989,6 +989,7 @@ function updatePlayer(dt){
   if(P.cls==='gou'||s.pasOmbre||P.macDash){for(const e of enemies){if(e.dead||P.dashHit.has(e))continue;if(hyp(e.x-P.x,e.y-P.y)<e.r+P.r+6){P.dashHit.add(e);if(P.cls==='gou')hitEnemy(e,14*s.dashDmg,{kb:300*Math.min(2,s.dashDmg),sx:P.x-P.dashVx,sy:P.y-P.dashVy,color:'#c8f08a'});else if(P.macDash)hitEnemy(e,14+3*P.cad,{kb:120,sx:P.x,sy:P.y,color:'#bcd8ff'});else hitEnemy(e,18,{mark:4,kb:80,sx:P.x,sy:P.y,color:'#c9b4ff'});}}}
  }else{
   let sp=s.speed*(1+0.15*P.elan/100);
+  if(P.cls==='her'&&herTranse())sp*=1.2;
   if(P.cls==='lum'){sp*=obs?1+s.obscurSpeed:1;if(P.beam&&P.lan.state==='held')sp*=0.55;}
   else if(P.cls==='gou'){sp*=[1,0.94,0.9][gouTier()];if(P.mut&&P.mut.id==='fievre')sp*=1.3;if(P.devour)sp*=0.6;if(P.absT>0)sp*=0.3;}
   const l=hyp(mx,my);const tvx=l?mx/l*sp:0,tvy=l?my/l*sp:0;const k=Math.min(1,dt*16);
@@ -2659,6 +2660,8 @@ function v6EnemyPre(e,dt){
 
 // ───────────────────────── Héraut du Glas : métronome
 const herPeriod=()=>60/P.s.bpm;
+// Transe (v16.44) : Cadence au maximum
+function herTranse(){return !!(P&&P.cls==='her'&&P.s&&P.cad>0&&P.cad>=P.s.cadMax);}
 function resCap(){return P.s.tocsin?200:100;}
 function judge(){const p=herPeriod(),late=P.beatPh*p,early=(1-P.beatPh)*p,off=Math.min(late,early),idx=late<=early?P.beatN:P.beatN+1,strong=idx%4===0;
  if(P.orgueN>0)return{on:true,perfect:true,idx,strong,off:0};const on=off<=P.s.beatWin&&idx>(P.missLock||-1);return{on,perfect:on&&off<=0.045,idx,strong,off};}
@@ -8233,6 +8236,58 @@ details.fold>.chips{margin-top:8px}
  // nouvelle salle : on range la scène
  let lastRoom=null;const _st2=step;step=function(dt){_st2(dt);if(room!==lastRoom){lastRoom=room;C.slams=[];C.notes=[];C.web=null;C.curt=null;C.flare=null;C.rays=null;C.tint=null;C.trail=[];C.bellIn=0;}};
  window.__ult=C;
+})();
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v16.44 · Transe du Héraut (Cadence pleine) · Gouffre : les ennemis aspirés morts sont avalés
+(function(){
+ // ── Héraut : Transe, tant que la Cadence est au maximum
+ // +20 % de vitesse (dans updatePlayer), +30 % de dégâts du Coup de cloche, deux ondes de plus en éventail sur un coup correct.
+ const TR={on:false,trail:[],trailT:0,beat:-1};
+ const _hs=herStrike;
+ herStrike=function(){const s=P.s,tr=herTranse(),j=tr?judge():null;if(tr)s.atkDmg*=1.3;
+  try{_hs();}finally{if(tr)s.atkDmg/=1.3;}
+  if(tr&&j&&j.on){const a=P.face;for(const k of[-0.34,0.34])emitWave(P.x,P.y,a+k,8*s.waveDmg,{col:'255,214,140'});
+   for(let i=0;i<6;i++){const an=a+rand(-0.6,0.6),v=rand(160,300);parts.push({shape:'streak',x:P.x+Math.cos(an)*24,y:P.y+Math.sin(an)*24,vx:Math.cos(an)*v,vy:Math.sin(an)*v,life:0.3,max:0.3,size:2,col:'#ffd98a',layer:'post',drag:3});}}};
+ const _vs=v6State;
+ v6State=function(){const r=_vs();if(P.cls==='her'&&herTranse()&&P.orgueN<=0&&P.funN<=0)return[`Transe · Cadence ${P.cad} / ${P.s.cadMax}`,'h2'];return r;};
+ function tickHer(dt){const on=herTranse();
+  if(on&&!TR.on){addNum(P.x,P.y-52,'Transe','crit');sfx('bellstrong');shake(4,0.12);if(window.__ult)window.__ult.flash={rgb:'255,214,140',t:0.25,max:0.25,a:0.22};
+   fx.push({k:'ring',x:P.x,y:P.y,r0:16,r1:130,w:6,t:0.35,max:0.35,col:'rgba(255,214,140,'});sparks(P.x,P.y,16,'#ffe2a0');}
+  else if(!on&&TR.on&&!P.dead)addNum(P.x,P.y-52,'Transe rompue','miss');
+  TR.on=on;if(!on){TR.trail.length=0;return;}
+  TR.trailT-=dt;if(TR.trailT<=0&&hyp(P.vx,P.vy)>40){TR.trailT=0.05;TR.trail.push({x:P.x,y:P.y,t:0.35});}
+  for(const q of TR.trail)q.t-=dt;TR.trail=TR.trail.filter(q=>q.t>0);
+  if(Math.random()<dt*24)parts.push({shape:Math.random()<0.4?'star':undefined,x:P.x+rand(-14,14),y:P.y+rand(-6,10),vx:rand(-12,12),vy:rand(-90,-50),life:0.8,max:0.8,size:rand(1.2,2.4),col:'#ffd98a',layer:'post',drag:0.8});
+  if(TR.beat!==P.beatN){TR.beat=P.beatN;sparks(P.x,P.y-6,5,'#ffe2a0');}}
+ // ── Gouffre : un ennemi qui meurt aspiré est avalé
+ const GULP=[];
+ const _ke=killEnemy;
+ killEnemy=function(e){const was=e&&!e.dead;_ke(e);
+  if(was&&P&&P.cls==='gou'&&P.devour&&e.devT>0&&e.type!=='boss'&&!e.fixed&&GULP.length<8){const g=Object.assign({},e);g.dead=false;g.flash=0;GULP.push({g,x0:e.x,y0:e.y,t:0,max:0.24,spin:rand(-6,6)});}};
+ function mouth(){const sc=gouScale();return{x:P.x+Math.cos(P.face)*12*sc,y:P.y-2+Math.sin(P.face)*9*sc};}
+ function tickGou(dt){for(const q of GULP){q.t+=dt;if(q.t>=q.max&&!q.done){q.done=true;const m=mouth();P.swingT=Math.max(P.swingT,0.16);sfx('chomp');
+   for(let i=0;i<8;i++){const a=P.face+rand(-0.9,0.9),v=rand(60,180);parts.push({x:m.x,y:m.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:0.3,max:0.3,size:rand(1.6,3),col:i%2?'#a6e27c':'#5c1a20',layer:'post',drag:4});}
+   fx.push({k:'bite',x:P.x,y:P.y,a:P.face,r:28*gouScale(),t:0.14,max:0.14,col:'166,226,124'});}}
+  for(let i=GULP.length-1;i>=0;i--)if(GULP[i].done)GULP.splice(i,1);}
+ // ── boucle et dessin
+ const _st=step;
+ step=function(dt){_st(dt);try{if(state!=='play'||!P||P.dead)return;if(P.cls==='her')tickHer(dt);else{TR.on=false;}if(P.cls==='gou')tickGou(dt);else GULP.length=0;}catch(err){console.error(err);}};
+ const _dfx=drawFx;
+ drawFx=function(){_dfx();if(!P||state!=='play')return;const c=ctx;
+  try{
+  // avalés : le corps file vers la gueule en rapetissant
+  for(const q of GULP){const u=Math.min(1,q.t/q.max),e2=u*u,m=mouth(),x=q.x0+(m.x-q.x0)*e2,y=q.y0+(m.y-q.y0)*e2-Math.sin(u*Math.PI)*16,sc=1-0.85*e2;
+   c.save();c.translate(x,y);c.rotate(q.spin*u*0.3);c.scale(sc,sc*(1+0.25*u));c.translate(-q.g.x,-q.g.y);try{drawEnemyBody(q.g);}catch(err){}c.restore();
+   c.save();c.globalCompositeOperation='lighter';c.strokeStyle=`rgba(166,226,124,${0.5*(1-u)})`;c.lineWidth=2;c.beginPath();c.moveTo(q.x0,q.y0);c.lineTo(x,y);c.stroke();c.restore();}
+  // Transe : halo doré, cloche au-dessus de la tête, traînée
+  if(P.cls==='her'&&TR.on){c.save();c.globalCompositeOperation='lighter';const f=Math.max(0,P.beatFlash||0)/0.12,pul=0.5+0.5*Math.sin(T*6);
+   for(const q of TR.trail){const a=q.t/0.35;glow(c,q.x,q.y-4,16,'255,214,140',0.3*a);}
+   glow(c,P.x,P.y-4,58+16*f,'255,200,120',0.22+0.25*f);glow(c,P.x,P.y-4,24,'255,240,200',0.35+0.2*pul);
+   glow(c,P.x,P.y-40,22,'255,220,150',0.4+0.4*f);c.restore();
+   bellShape(c,P.x,P.y-40-2*Math.sin(T*3),1.0,Math.sin(T*2.4)*0.25);
+   const g=c.createRadialGradient(W/2,H/2,H*0.36,W/2,H/2,W*0.66);g.addColorStop(0,'rgba(255,200,120,0)');g.addColorStop(1,`rgba(255,200,120,${0.1+0.08*f})`);c.save();c.globalCompositeOperation='lighter';c.fillStyle=g;c.fillRect(0,0,W,H);c.restore();}
+  }catch(err){console.error(err);}};
 })();
 
 // Appliqué en dernier, après toutes les reconstructions de l'arbre (v10, v15.2…).
