@@ -8059,6 +8059,182 @@ details.fold>.chips{margin-top:8px}
   for(const p of pproj){if(!p.soul)continue;glow(c,p.x,p.y,16,'255,215,120',0.55);const a=Math.atan2(p.vy,p.vx);star4(c,p.x,p.y,6,'255,245,220',0.9,a);}c.restore();};
 })();
 
+// ═════════════════════════════════════════════════════════════════════════════
+// v16.43 · Ultimes spectaculaires : annonce de cast commune aux douze ultimes [F]
+// (titre, éclair, arrêt sur image, teinte des bords) et une mise en scène propre à chacun
+// des huit ultimes historiques. Purement visuel : aucune règle ni aucun chiffre ne change.
+// Pas de cercle au sol (v16.15) : les effets vivent dans le ciel, sur les bords de l'écran et sur les ennemis.
+(function(){
+ const INFO={zenith:['Zénith','255,170,90'],nuit:['Nuit Éternelle','150,110,255'],absolution:['Absolution','255,238,196'],metamorph:['Métamorphose','255,90,80'],
+  glasFun:['Glas Funèbre','255,143,107'],requiem:['Requiem','159,230,224'],gtoile:['Grande Toile','255,158,192'],guignol:['Grand Guignol','214,170,100'],
+  phare:['Phare Tournant','255,227,154'],gmonde:['Gueule du Monde','63,200,168'],bal:['Bal des Morts','242,154,216'],suspend:['Temps Suspendu','255,211,110']};
+ const ORDER=Object.keys(INFO),NAMES=new Set(ORDER.map(k=>INFO[k][0]));
+ const ultId=()=>ORDER.find(k=>P&&P.s&&P.s[k]);
+ const C={flash:null,tint:null,stars:null,trail:[],trailT:0,slams:[],notes:[],noteT:0,dew:null,web:null,curt:null,flare:null,rays:null,beatT:0,crackT:0,prev:{}};
+
+ // ── titre de cast (DOM, police d'affichage du jeu)
+ const st=document.createElement('style');st.textContent=`
+#ultSplash{position:absolute;left:50%;top:29%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;width:calc(100% - 32px);z-index:6}
+#ultSplash .ul-line{display:block;height:2px;width:min(560px,80%);margin:0 auto;background:linear-gradient(90deg,transparent,rgb(var(--c)),#fff,rgb(var(--c)),transparent);transform:scaleX(0);animation:ulLine 1.5s cubic-bezier(.2,.8,.2,1) forwards}
+#ultSplash p{margin:10px 0 0;font-size:13px;letter-spacing:.42em;text-transform:uppercase;color:rgb(var(--c));opacity:0;animation:ulFade 1.5s ease forwards;text-shadow:0 2px 8px #000}
+#ultSplash h2{font-family:var(--f-display);font-weight:500;font-size:clamp(40px,6.2vw,80px);line-height:1;margin:4px 0 8px;color:#fff6e6;opacity:0;
+ text-shadow:0 0 28px rgba(var(--c),.85),0 0 70px rgba(var(--c),.55),0 4px 16px #000;animation:ulTitle 1.5s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes ulLine{0%{transform:scaleX(0);opacity:1}25%{transform:scaleX(1);opacity:1}75%{opacity:1}100%{transform:scaleX(1.08);opacity:0}}
+@keyframes ulTitle{0%{opacity:0;letter-spacing:.5em;filter:blur(6px)}22%{opacity:1;letter-spacing:.06em;filter:blur(0)}72%{opacity:1}100%{opacity:0;letter-spacing:.1em}}
+@keyframes ulFade{0%,15%{opacity:0}30%,72%{opacity:.95}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#ultSplash .ul-line,#ultSplash h2,#ultSplash p{animation-duration:1.2s}}
+`;document.head.appendChild(st);
+ function splash(name,sub,rgb){const bn=document.getElementById('banner'),host=(bn||{}).parentNode;if(!host)return;bn.classList.remove('show');let el=document.getElementById('ultSplash');if(el)el.remove();
+  el=document.createElement('div');el.id='ultSplash';el.style.setProperty('--c',rgb);el.innerHTML=`<span class="ul-line"></span><p>Ultime${sub?' · '+esc(sub):''}</p><h2>${esc(name)}</h2><span class="ul-line"></span>`;host.appendChild(el);
+  setTimeout(()=>{if(el.isConnected)el.remove();},1600);}
+ // les toasts au nom de l'ultime font doublon avec le titre
+ const _toast=toast;toast=function(t){if(typeof t==='string'&&NAMES.has(t))return 0;return _toast.apply(this,arguments);};
+
+ // ── déclenchement
+ const _ult=ult;
+ ult=function(){const before=P?P.ultCd:0;_ult();if(!P||!(P.ultCd>before+1))return;const id=ultId();if(!id)return;cast(id);};
+ function cast(id){const [name,rgb]=INFO[id],sub=P.s.sub&&BR[P.s.sub]?BR[P.s.sub].voie:'';
+  splash(name,sub,rgb);C.flash={rgb,t:0.32,max:0.32,a:0.38};C.tint={id,rgb};
+  if(!RM)freezeT=Math.max(freezeT,0.09);shake(7,0.28);
+  fx.push({k:'star',x:P.x,y:P.y-6,s:90,t:0.28,max:0.28,col:rgb,rot:rand(0,TAU)});tlights.push({x:P.x,y:P.y,r:700,t:0.5,max:0.5,c:'none'});
+  for(let i=0;i<26;i++){const a=rand(0,TAU),v=rand(160,420);parts.push({shape:'streak',x:P.x,y:P.y-4,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rand(0.35,0.7),max:0.7,size:rand(1.4,2.6),col:`rgb(${rgb})`,layer:'post',drag:3});}
+  if(id==='nuit'&&!C.stars){C.stars=[];for(let i=0;i<110;i++)C.stars.push({x:rand(AR.x0,AR.x1),y:rand(AR.y0,AR.y1),s:rand(1.2,3.4),p:rand(0,TAU)});}
+  if(id==='nuit')C.trail=[];
+  if(id==='metamorph'){for(let i=0;i<40;i++){const a=rand(0,TAU),v=rand(140,420);parts.push({shape:i%3?'glob':undefined,x:P.x,y:P.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rand(0.5,1),max:1,size:rand(2.5,5.5),col:i%2?'#c8323a':'#8fd46e',layer:'post',drag:2.5});}C.beatT=0;}
+  if(id==='gtoile'){const n=22;C.web={t:0,a:[...Array(n)].map((_,i)=>i/n*TAU+rand(-0.08,0.08)),x:P.x,y:P.y};C.dew=[...Array(70)].map(()=>({x:rand(AR.x0+20,AR.x1-20),y:rand(AR.y0+20,AR.y1-20),p:rand(0,TAU)}));}
+  if(id==='guignol')C.curt={t:0};
+  if(id==='requiem'){C.noteT=0;fx.push({k:'ring',x:P.x,y:P.y,r0:20,r1:300,w:6,t:0.6,max:0.6,col:'rgba(159,230,224,'});}
+  if(id==='glasFun')C.bellIn=0;
+ }
+ // Glas Funèbre : chaque cloche tombée laisse son empreinte visuelle
+ const _sky=skyStrike;
+ skyStrike=function(){let t=null,hp=-1;for(const e of enemies){if(e.dead||e.puppet>0)continue;if(e.hp>hp){hp=e.hp;t=e;}}
+  const x=t?t.x:0,y=t?t.y:0;_sky();if(!t)return;C.slams.push({x,y,t:0.6,max:0.6});shake(5,0.14);
+  for(let i=0;i<14;i++){const a=rand(Math.PI*0.9,Math.PI*2.1),v=rand(80,220);parts.push({x:x+rand(-20,20),y:y+10,vx:Math.cos(a)*v,vy:Math.sin(a)*v*0.4,life:rand(0.4,0.8),max:0.8,size:rand(2,4),col:'#c9a07a',layer:'pre',drag:3});}};
+
+ // ── états actifs
+ const active=()=>({zenith:P.zenithT>0,nuit:P.nightT>0,absolution:P.absT>0,metamorph:P.metaT>0,glasFun:P.funN>0,requiem:chorus.some(c=>c.req),gtoile:P.gtoileT>0,
+  guignol:enemies.some(e=>!e.dead&&e.puppet>0&&e.pupMode==='revert'),phare:!!P.phare,gmonde:!!P.gm,bal:P.balN>0,suspend:P.stopT>0});
+ let A={};
+ function tick(dt){A=active();const pv=C.prev;
+  if(C.flash){C.flash.t-=dt;if(C.flash.t<=0)C.flash=null;}
+  for(const s of C.slams)s.t-=dt;C.slams=C.slams.filter(s=>s.t>0);
+  if(C.flare){C.flare.t-=dt;if(C.flare.t<=0)C.flare=null;}
+  if(C.rays){C.rays.t-=dt;if(C.rays.t<=0)C.rays=null;}
+  // Zénith : chaleur qui monte, puis le soleil éclate
+  if(A.zenith&&Math.random()<dt*30)parts.push({x:rand(AR.x0,AR.x1),y:rand(AR.y0+40,AR.y1),vx:rand(-8,8),vy:rand(-70,-30),life:1.2,max:1.2,size:rand(1.2,2.4),col:'#ffcf8a',layer:'post',drag:0.4});
+  if(pv.zenith&&!A.zenith){const x=P.x,y=P.y-70;C.flare={x,y,t:0.8,max:0.8};C.flash={rgb:'255,214,150',t:0.35,max:0.35,a:0.42};shake(10,0.3);sfx('nova');
+   fx.push({k:'ring',x,y,r0:30,r1:900,w:14,t:0.7,max:0.7,col:'rgba(255,190,110,'});tlights.push({x,y,r:900,t:0.6,max:0.6,c:'warm'});sparks(x,y,30,'#ffd9a0');}
+  // Nuit Éternelle : traînée d'ombre, aube à la fin
+  if(A.nuit){C.trailT-=dt;if(C.trailT<=0){C.trailT=0.045;C.trail.push({x:P.x,y:P.y,t:0.5});}}
+  for(const q of C.trail)q.t-=dt;C.trail=C.trail.filter(q=>q.t>0);
+  if(pv.nuit&&!A.nuit)C.flash={rgb:'255,232,196',t:0.5,max:0.5,a:0.35};
+  // Absolution : plumes de lumière, puis rayons divins
+  if(A.absolution&&Math.random()<dt*40)parts.push({shape:'star',x:P.x+rand(-120,120),y:P.y-rand(140,260),vx:rand(-20,20),vy:rand(40,90),life:1,max:1,size:rand(1.6,3),col:'#fff3d0',layer:'post',drag:0.6});
+  if(pv.absolution&&!A.absolution){C.rays={x:P.x,y:P.y,t:0.9,max:0.9,rgb:'255,244,214',n:28,len:1000};C.flash={rgb:'255,250,236',t:0.4,max:0.4,a:0.5};
+   fx.push({k:'ring',x:P.x,y:P.y,r0:40,r1:1000,w:18,t:0.8,max:0.8,col:'rgba(255,240,200,'});}
+  // Métamorphose : battement de cœur, sol qui se fend
+  if(A.metamorph){C.beatT-=dt;if(C.beatT<=0){C.beatT=0.8;C.pulse={t:0.35,max:0.35};sfx('heart');shake(3,0.1);}
+   C.crackT-=dt;if(C.crackT<=0&&hyp(P.vx,P.vy)>40){C.crackT=0.2;decals.push({x:P.x+rand(-6,6),y:P.y+P.r*0.8,r:rand(12,20),t:3,max:3,col:'48,14,16',seed:Math.random()*10});}}
+  if(C.pulse){C.pulse.t-=dt;if(C.pulse.t<=0)C.pulse=null;}
+  if(pv.metamorph&&!A.metamorph){for(let i=0;i<24;i++){const a=rand(0,TAU),v=rand(80,260);parts.push({shape:'glob',x:P.x,y:P.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:0.8,max:0.8,size:rand(2,4),col:'#5c1a20',layer:'post',drag:3});}}
+  // Glas Funèbre : la grande cloche apparaît
+  C.bellIn=Math.max(0,Math.min(1,(C.bellIn||0)+(A.glasFun?dt*2.5:-dt*1.5)));
+  if(pv.glasFun&&!A.glasFun){C.flash={rgb:'255,170,130',t:0.3,max:0.3,a:0.3};sfx('bigbell');shake(8,0.25);}
+  // Requiem : notes qui montent des choristes
+  if(A.requiem){C.noteT-=dt;if(C.noteT<=0){C.noteT=0.18;const ch=pick(chorus.filter(c=>c.req));if(ch)C.notes.push({x:ch.x+rand(-6,6),y:ch.y-20,vx:rand(-14,14),t:1.4,max:1.4,g:pick(['♪','♫','♩','♬'])});}}
+  for(const n of C.notes){n.t-=dt;n.y-=dt*48;n.x+=n.vx*dt+Math.sin(T*4+n.max*7)*0.3;}C.notes=C.notes.filter(n=>n.t>0);
+  if(pv.requiem&&!A.requiem){C.flash={rgb:'159,230,224',t:0.35,max:0.35,a:0.32};fx.push({k:'ring',x:P.x,y:P.y,r0:30,r1:520,w:10,t:0.6,max:0.6,col:'rgba(159,230,224,'});}
+  // Grande Toile : fils lancés vers les murs
+  if(C.web){C.web.t+=dt;if(!A.gtoile&&C.web.t>1)C.web=null;}
+  // Grand Guignol : rideau
+  if(C.curt){C.curt.t+=dt;if(!A.guignol&&C.curt.t>1.6){if(!C.curt.end){C.curt.end=C.curt.t;}if(C.curt.t-C.curt.end>0.9)C.curt=null;}}
+  C.prev=A;
+  if(C.tint&&!A[C.tint.id]&&!C.flash)C.tint=null;
+ }
+ const _st=step;
+ step=function(dt){_st(dt);try{if(state==='play'&&P&&RUN&&!P.dead)tick(dt);}catch(err){console.error(err);}};
+
+ // ── dessins
+ function bell(c,x,y,s){c.beginPath();c.moveTo(x-0.16*s,y-0.5*s);c.quadraticCurveTo(x,y-0.64*s,x+0.16*s,y-0.5*s);c.bezierCurveTo(x+0.3*s,y-0.42*s,x+0.27*s,y+0.08*s,x+0.5*s,y+0.42*s);
+  c.lineTo(x-0.5*s,y+0.42*s);c.bezierCurveTo(x-0.27*s,y+0.08*s,x-0.3*s,y-0.42*s,x-0.16*s,y-0.5*s);c.closePath();}
+ function spider(c,x,y,s,al,t){c.save();c.translate(x,y);c.scale(s,s);c.fillStyle=`rgba(4,2,8,${al})`;c.strokeStyle=`rgba(4,2,8,${al})`;c.lineCap='round';
+  for(const sd of[-1,1])for(let i=0;i<4;i++){const ph=Math.sin(t*6+i*1.3+(sd>0?1:0))*0.18,a0=(-0.9+i*0.55)+ph;c.lineWidth=3.2-i*0.3;c.beginPath();c.moveTo(0,0);
+   const kx=sd*Math.cos(a0)*34,ky=Math.sin(a0)*30-14;c.quadraticCurveTo(kx*0.6,ky-12,kx,ky);c.lineTo(kx*1.35,ky+26);c.stroke();}
+  c.beginPath();c.ellipse(0,-4,12,10,0,0,TAU);c.fill();c.beginPath();c.ellipse(0,18,17,22,0,0,TAU);c.fill();c.restore();}
+ // sous les ennemis
+ const _dd=drawDecals;
+ drawDecals=function(){_dd();if(!P||state!=='play')return;const c=ctx;
+  if(A.gtoile){const k=Math.min(1,P.gtoileT/0.6,(6-P.gtoileT)/0.6),u=1-P.gtoileT/6;spider(c,AR.x0-120+(AR.x1-AR.x0+240)*u,AR.y0+(AR.y1-AR.y0)*(0.35+0.15*Math.sin(u*5)),3.2,0.32*k,T);}
+  if(A.guignol){c.save();c.globalCompositeOperation='lighter';const g=c.createRadialGradient(P.x,P.y+8,0,P.x,P.y+8,90);g.addColorStop(0,'rgba(255,236,190,.35)');g.addColorStop(1,'rgba(255,236,190,0)');c.fillStyle=g;c.beginPath();c.ellipse(P.x,P.y+8,90,40,0,0,TAU);c.fill();c.restore();}
+ };
+ // au-dessus du brouillard
+ const _dfx=drawFx;
+ drawFx=function(){_dfx();if(!P||state!=='play'||!room)return;const c=ctx;
+  try{
+  // Nuit Éternelle : voile indigo, ciel étoilé, yeux dans le noir, traînée d'ombre
+  if(A.nuit){const k=Math.min(1,P.nightT/0.6,(6-P.nightT)/0.4);c.save();c.fillStyle=`rgba(8,5,26,${0.42*k})`;c.fillRect(AR.x0,AR.y0,AR.x1-AR.x0,AR.y1-AR.y0);
+   c.globalCompositeOperation='lighter';for(const s of C.stars||[]){const tw=0.35+0.65*Math.max(0,Math.sin(T*2.2+s.p));star4(c,s.x,s.y,s.s,'220,205,255',0.75*tw*k,s.p);}
+   for(const e of enemies){if(e.dead)continue;const ey=e.y-e.r*0.35;glow(c,e.x-4,ey,6,'190,150,255',0.9*k);glow(c,e.x+4,ey,6,'190,150,255',0.9*k);}
+   for(const q of C.trail){const a=q.t/0.5;glow(c,q.x,q.y-4,18,'130,90,255',0.28*a*k);star4(c,q.x,q.y-4,4*a,'210,190,255',0.6*a*k,T);}
+   c.restore();}
+  c.save();c.globalCompositeOperation='lighter';c.lineCap='round';
+  // Zénith : ciel de feu
+  if(A.zenith){const k=Math.min(1,P.zenithT/0.5,(5-P.zenithT)/0.4);const g=c.createLinearGradient(0,AR.y0,0,AR.y1);g.addColorStop(0,`rgba(255,160,80,${0.2*k})`);g.addColorStop(0.6,`rgba(255,120,60,${0.05*k})`);g.addColorStop(1,'rgba(255,120,60,0)');c.fillStyle=g;c.fillRect(AR.x0,AR.y0,AR.x1-AR.x0,AR.y1-AR.y0);
+   const hx=P.x,hy=P.y-70;for(let i=0;i<10;i++){const a=T*0.25+i/10*TAU,L=220+60*Math.sin(T*1.7+i);const g2=c.createLinearGradient(hx,hy,hx+Math.cos(a)*L,hy+Math.sin(a)*L);g2.addColorStop(0,`rgba(255,214,140,${0.22*k})`);g2.addColorStop(1,'rgba(255,214,140,0)');
+    c.fillStyle=g2;c.beginPath();c.moveTo(hx,hy);c.lineTo(hx+Math.cos(a-0.05)*L,hy+Math.sin(a-0.05)*L);c.lineTo(hx+Math.cos(a+0.05)*L,hy+Math.sin(a+0.05)*L);c.closePath();c.fill();}}
+  // rayons : éruption solaire / rayons divins
+  for(const R of [C.flare&&{x:C.flare.x,y:C.flare.y,t:C.flare.t,max:C.flare.max,rgb:'255,200,120',n:24,len:1000},C.rays]){if(!R)continue;const k=R.t/R.max;
+   for(let i=0;i<R.n;i++){const a=i/R.n*TAU+(1-k)*0.25,L=R.len*(0.35+0.65*(1-k)),w=0.035;const g=c.createLinearGradient(R.x,R.y,R.x+Math.cos(a)*L,R.y+Math.sin(a)*L);g.addColorStop(0,`rgba(${R.rgb},${0.55*k})`);g.addColorStop(1,`rgba(${R.rgb},0)`);
+    c.fillStyle=g;c.beginPath();c.moveTo(R.x,R.y);c.lineTo(R.x+Math.cos(a-w)*L,R.y+Math.sin(a-w)*L);c.lineTo(R.x+Math.cos(a+w)*L,R.y+Math.sin(a+w)*L);c.closePath();c.fill();}
+   glow(c,R.x,R.y,160*k+40,R.rgb,0.6*k);}
+  // Absolution : colonne de lumière céleste
+  if(A.absolution){const u=1-P.absT/1.2,w=36+u*40;const g=c.createLinearGradient(0,0,0,P.y);g.addColorStop(0,'rgba(255,248,226,0)');g.addColorStop(0.5,'rgba(255,246,220,.28)');g.addColorStop(1,'rgba(255,250,236,.55)');
+   c.fillStyle=g;c.beginPath();c.moveTo(P.x-w*0.5,0);c.lineTo(P.x+w*0.5,0);c.lineTo(P.x+w,P.y);c.lineTo(P.x-w,P.y);c.closePath();c.fill();glow(c,P.x,P.y,120,'255,246,220',0.35);
+   c.strokeStyle='rgba(255,246,220,.6)';c.lineWidth=2;c.beginPath();c.ellipse(P.x,P.y-36,16,5,0,0,TAU);c.stroke();}
+  // Glas Funèbre : crépuscule et grande cloche spectrale au-dessus de la salle
+  if(C.bellIn>0){const k=C.bellIn;const g=c.createLinearGradient(0,AR.y0,0,AR.y1);g.addColorStop(0,`rgba(255,120,80,${0.14*k})`);g.addColorStop(1,`rgba(120,60,160,${0.06*k})`);c.fillStyle=g;c.fillRect(AR.x0,AR.y0,AR.x1-AR.x0,AR.y1-AR.y0);
+   const bx=W/2,by=AR.y0+70,sw=Math.sin(T*2.4)*0.22;c.save();c.translate(bx,by-80);c.rotate(sw);c.translate(-bx,-(by-80));
+   c.strokeStyle=`rgba(255,190,150,${0.55*k})`;c.lineWidth=2;c.beginPath();c.moveTo(bx,by-140);c.lineTo(bx,by-76);c.stroke();
+   const gb=c.createLinearGradient(bx-60,0,bx+60,0);gb.addColorStop(0,`rgba(255,143,107,${0.1*k})`);gb.addColorStop(0.5,`rgba(255,210,170,${0.3*k})`);gb.addColorStop(1,`rgba(255,143,107,${0.1*k})`);
+   c.fillStyle=gb;bell(c,bx,by,150);c.fill();c.strokeStyle=`rgba(255,200,160,${0.6*k})`;c.lineWidth=2;bell(c,bx,by,150);c.stroke();glow(c,bx,by+70,26,'255,200,160',0.6*k);c.restore();}
+  for(const s of C.slams){const u=1-s.t/s.max,drop=Math.min(1,u/0.12),y=s.y-120*(1-drop)-10,sc=1+0.25*Math.max(0,1-u*4),al=Math.min(1,s.t/0.3);
+   c.fillStyle=`rgba(255,170,120,${0.28*al})`;bell(c,s.x,y,58*sc);c.fill();c.strokeStyle=`rgba(255,220,190,${0.8*al})`;c.lineWidth=2.5;bell(c,s.x,y,58*sc);c.stroke();
+   if(drop>=1){c.strokeStyle=`rgba(255,190,150,${0.6*al})`;c.lineWidth=3;c.beginPath();c.ellipse(s.x,s.y+14,30+u*90,10+u*28,0,0,TAU);c.stroke();}}
+  // Requiem : portées qui tournent autour du chœur, notes qui montent
+  if(A.requiem){const R0=96;c.strokeStyle='rgba(159,230,224,.32)';c.lineWidth=1.2;for(let i=0;i<5;i++){const r=R0+i*7;c.beginPath();c.ellipse(P.x,P.y-6,r,r*0.62,0,T*0.6+i*0.08,T*0.6+i*0.08+Math.PI*1.4);c.stroke();}
+   for(const ch of chorus){if(!ch.req)continue;const g=c.createLinearGradient(0,ch.y-160,0,ch.y);g.addColorStop(0,'rgba(159,230,224,0)');g.addColorStop(1,`rgba(159,230,224,${0.18+0.25*Math.max(0,ch.sing)})`);c.fillStyle=g;c.fillRect(ch.x-9,ch.y-160,18,160);}}
+  if(C.notes.length){c.textAlign='center';c.font='600 22px Georgia, serif';for(const n of C.notes){const al=Math.min(1,n.t/0.5,(n.max-n.t)/0.2);c.fillStyle=`rgba(190,245,238,${0.9*al})`;c.fillText(n.g,n.x,n.y);glow(c,n.x,n.y-7,12,'159,230,224',0.3*al);}}
+  // Grande Toile : fils jetés jusqu'aux murs, rosée qui scintille
+  if(C.web){const W0=C.web,u=Math.min(1,W0.t/0.35),k=A.gtoile?1:Math.max(0,1-(W0.t-0.6));
+   if(W0.t<0.9){for(const a of W0.a){const ux=Math.cos(a),uy=Math.sin(a);let L=1e4;if(ux>0)L=Math.min(L,(AR.x1-W0.x)/ux);if(ux<0)L=Math.min(L,(AR.x0-W0.x)/ux);if(uy>0)L=Math.min(L,(AR.y1-W0.y)/uy);if(uy<0)L=Math.min(L,(AR.y0-W0.y)/uy);
+     const l=L*u,al=Math.max(0,1-Math.max(0,W0.t-0.4)/0.5);c.strokeStyle=`rgba(255,220,235,${0.75*al})`;c.lineWidth=1.6;c.beginPath();c.moveTo(W0.x,W0.y);c.lineTo(W0.x+ux*l,W0.y+uy*l);c.stroke();if(u<1)glow(c,W0.x+ux*l,W0.y+uy*l,10,'255,200,225',0.9);}}
+   if(A.gtoile)for(const d of C.dew||[]){const tw=Math.max(0,Math.sin(T*3+d.p));if(tw>0.2)star4(c,d.x,d.y,2.6*tw,'255,235,245',0.85*tw*k,d.p);}}
+  // Grand Guignol : fils de marionnettiste depuis le cintre
+  if(A.guignol){for(const e of enemies){if(e.dead||!(e.puppet>0)||e.pupMode!=='revert')continue;const sw=Math.sin(T*2+e.x*0.02)*8,bx=e.x+sw,by=e.y-e.r-70;
+    c.strokeStyle='rgba(235,205,150,.55)';c.lineWidth=1;c.beginPath();c.moveTo(bx,0);c.lineTo(bx,by);c.moveTo(bx-16,by);c.lineTo(e.x-e.r*0.6,e.y-e.r*0.4);c.moveTo(bx+16,by);c.lineTo(e.x+e.r*0.6,e.y-e.r*0.4);c.moveTo(bx,by);c.lineTo(e.x,e.y-e.r);c.stroke();
+    c.strokeStyle='rgba(214,170,100,.85)';c.lineWidth=3;c.beginPath();c.moveTo(bx-18,by);c.lineTo(bx+18,by);c.moveTo(bx,by-8);c.lineTo(bx,by+8);c.stroke();}
+   const g=c.createLinearGradient(0,0,0,P.y);g.addColorStop(0,'rgba(255,236,190,0)');g.addColorStop(1,'rgba(255,236,190,.16)');c.fillStyle=g;c.beginPath();c.moveTo(P.x-20,0);c.lineTo(P.x+20,0);c.lineTo(P.x+90,P.y+8);c.lineTo(P.x-90,P.y+8);c.closePath();c.fill();}
+  c.restore();
+  }catch(err){console.error(err);}};
+ // premier plan : éclair, teinte des bords, battement, rideaux
+ const _dv=drawVignette;
+ drawVignette=function(){_dv();if(!P||state!=='play')return;const c=ctx;
+  if(C.tint&&A[C.tint.id]){const pul=0.8+0.2*Math.sin(T*3);const g=c.createRadialGradient(W/2,H/2,H*0.32,W/2,H/2,W*0.66);g.addColorStop(0,`rgba(${C.tint.rgb},0)`);g.addColorStop(1,`rgba(${C.tint.rgb},${0.2*pul})`);
+   c.save();c.globalCompositeOperation='lighter';c.fillStyle=g;c.fillRect(0,0,W,H);c.restore();}
+  if(C.pulse){const k=C.pulse.t/C.pulse.max;const g=c.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,W*0.62);g.addColorStop(0,'rgba(160,10,20,0)');g.addColorStop(1,`rgba(160,10,20,${0.28*k})`);c.fillStyle=g;c.fillRect(0,0,W,H);}
+  if(C.curt){const t=C.curt.t,end=C.curt.end;let cov;if(end!=null){const u=Math.min(1,(t-end)/0.9);cov=0.07*(1-u);}else cov=t<0.3?0.44*(t/0.3):t<0.55?0.44:t<1.25?0.44-(0.44-0.07)*((t-0.55)/0.7):0.07;
+   const val=end!=null?Math.max(0,1-(t-end)/0.9):Math.min(1,t/0.4);
+   for(const sd of[-1,1]){const w=W*cov,x0=sd<0?0:W-w;if(w<1)continue;c.save();const g=c.createLinearGradient(x0,0,x0+w,0);const n=Math.max(2,Math.round(w/38));for(let i=0;i<=n;i++)g.addColorStop(i/n,i%2?'#3a070d':'#7a1420');
+    c.fillStyle=g;c.fillRect(x0,0,w,H);const ex=sd<0?w:W-w;c.fillStyle='rgba(0,0,0,.45)';c.fillRect(sd<0?ex-6:ex,0,6,H);c.strokeStyle='#d6aa64';c.lineWidth=3;c.beginPath();c.moveTo(ex,0);c.lineTo(ex,H);c.stroke();c.restore();}
+   if(val>0){c.save();c.globalAlpha=val;c.fillStyle='#6a111b';c.beginPath();c.moveTo(0,0);c.lineTo(W,0);c.lineTo(W,34);for(let x=W;x>=0;x-=60){c.quadraticCurveTo(x-30,58,x-60,34);}c.closePath();c.fill();c.strokeStyle='#d6aa64';c.lineWidth=2;c.beginPath();c.moveTo(W,34);for(let x=W;x>=0;x-=60)c.quadraticCurveTo(x-30,58,x-60,34);c.stroke();c.restore();}}
+  if(C.flash){const k=C.flash.t/C.flash.max;c.save();c.globalCompositeOperation='lighter';c.fillStyle=`rgba(${C.flash.rgb},${C.flash.a*k})`;c.fillRect(0,0,W,H);c.restore();}
+ };
+ // nouvelle salle : on range la scène
+ let lastRoom=null;const _st2=step;step=function(dt){_st2(dt);if(room!==lastRoom){lastRoom=room;C.slams=[];C.notes=[];C.web=null;C.curt=null;C.flare=null;C.rays=null;C.tint=null;C.trail=[];C.bellIn=0;}};
+ window.__ult=C;
+})();
+
 // Appliqué en dernier, après toutes les reconstructions de l'arbre (v10, v15.2…).
 (function(){const T=T_D.noeuds;
  for(const id in T){const n=NODES[id],d=T[id];if(!n){console.warn('Talent inconnu dans les données :',id);continue;}
