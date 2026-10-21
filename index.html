@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Umbratech · Guides &amp; builds</title>
-  <meta name="description" content="Configurations, builds et guides en français pour Guild Wars 1 et Diablo IV, ainsi que La Brume, mon jeu indépendant." />
+  <meta name="description" content="Configurations, builds et guides en français pour Guild Wars 1 et Diablo IV, ainsi que La Brume et Vaelmor, mes jeux indépendants." />
   <meta name="theme-color" content="#07080c" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -194,10 +194,44 @@
 
     .subtitle strong { color: var(--text); font-weight: 600; }
 
+    /* ---------- Catégories ---------- */
+    .category { scroll-margin-top: 24px; }
+    .category + .category { margin-top: clamp(52px, 7vw, 88px); }
+
+    .category-head {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 6px 18px;
+      margin-bottom: 26px;
+    }
+
+    .category-head h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-weight: 700;
+      font-size: clamp(1.55rem, 2.6vw, 2rem);
+      letter-spacing: -0.02em;
+    }
+
+    .category-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .category-head::after {
+      content: "";
+      flex: 1 1 60px;
+      align-self: center;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), transparent);
+    }
+
     /* ---------- Tuiles ---------- */
     .tiles {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 24px;
     }
 
@@ -305,7 +339,7 @@
       box-shadow: 0 0 10px currentColor;
     }
 
-    .tile h2 {
+    .tile h3 {
       margin: 18px 0 12px;
       font-family: var(--serif);
       font-weight: 700;
@@ -352,9 +386,10 @@
       box-shadow: 0 8px 26px color-mix(in srgb, var(--tile-color) 50%, transparent);
     }
 
-    .gw    { --tile-color: #f0b94a; }
-    .brume { --tile-color: #4fe3d0; }
-    .d4    { --tile-color: #ff5a4f; }
+    .gw      { --tile-color: #f0b94a; }
+    .brume   { --tile-color: #4fe3d0; }
+    .d4      { --tile-color: #ff5a4f; }
+    .vaelmor { --tile-color: #b48cff; }
 
     /* ---------- Pied de page ---------- */
     footer {
@@ -371,7 +406,8 @@
 
     /* ---------- Responsive ---------- */
     @media (max-width: 1020px) {
-      .tiles { grid-template-columns: 1fr; max-width: 640px; margin: 0 auto; }
+      .category { max-width: 640px; margin-left: auto; margin-right: auto; }
+      .tiles { grid-template-columns: 1fr; }
       .tile { min-height: 460px; }
     }
 
@@ -405,7 +441,8 @@
         Umbratech
       </a>
       <div class="nav-links">
-        <a href="#projets">Projets</a>
+        <a href="#guides">Builds &amp; guides</a>
+        <a href="#jeux">Jeux</a>
       </div>
     </nav>
 
@@ -414,18 +451,24 @@
       <h1>Mes <em>projets</em> du moment</h1>
       <p class="subtitle">
         Retrouve mes configurations, conseils et guides pour <strong>Guild Wars 1</strong> et <strong>Diablo IV</strong>
-        en français, ainsi que mon jeu <strong>« La Brume »</strong>.
+        en français, ainsi que mes jeux <strong>« La Brume »</strong> et <strong>« Vaelmor »</strong>.
       </p>
     </header>
 
-    <section class="tiles" id="projets">
+    <section class="category" id="guides" aria-labelledby="titre-guides">
+      <div class="category-head">
+        <h2 id="titre-guides">Builds &amp; guides</h2>
+        <p>Builds, compétences et conseils en français.</p>
+      </div>
+
+      <div class="tiles">
       <a class="tile gw" href="/gw1">
         <div class="tile-bg" style="background-image: url('img/guild-wars-1.svg');" role="img" aria-label="Illustration d’un crépuscule doré sur des montagnes et une arche en ruine"></div>
         <span class="tile-index">01</span>
 
         <div class="tile-content">
           <span class="game-tag">Guild Wars 1</span>
-          <h2>Builds Guild Wars 1</h2>
+          <h3>Builds Guild Wars 1</h3>
           <p>Builds PvP et PvE, compétences, attributs, équipement et synergies d’équipe pour optimiser ton personnage.</p>
 
           <div class="tile-footer">
@@ -438,13 +481,41 @@
         </div>
       </a>
 
-      <a class="tile brume" href="/themist">
-        <div class="tile-bg" style="background-image: url('img/la-brume.jpg'); background-position: 92% center;" role="img" aria-label="Cover de La Brume : un voyageur encapuchonné avec une lanterne sous la pleine lune"></div>
+      <a class="tile d4" href="/d4/">
+        <div class="tile-bg" style="background-image: url('img/diablo-4.svg');" role="img" aria-label="Illustration de flèches gothiques sous un ciel écarlate, entourées de braises"></div>
         <span class="tile-index">02</span>
 
         <div class="tile-content">
+          <span class="game-tag">Diablo IV</span>
+          <h3>Builds Diablo 4</h3>
+          <p>Builds de saison, compétences, aspects, Paragon et optimisation de farm pour progresser efficacement.</p>
+
+          <div class="tile-footer">
+            <span class="build-meta">Saison · Endgame · Farm</span>
+            <span class="open-build">
+              Voir les builds
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+            </span>
+          </div>
+        </div>
+      </a>
+      </div>
+    </section>
+
+    <section class="category" id="jeux" aria-labelledby="titre-jeux">
+      <div class="category-head">
+        <h2 id="titre-jeux">Mes jeux</h2>
+        <p>Des jeux indépendants à découvrir dans le navigateur.</p>
+      </div>
+
+      <div class="tiles">
+      <a class="tile brume" href="/themist">
+        <div class="tile-bg" style="background-image: url('img/la-brume.jpg'); background-position: 92% center;" role="img" aria-label="Cover de La Brume : un voyageur encapuchonné avec une lanterne sous la pleine lune"></div>
+        <span class="tile-index">01</span>
+
+        <div class="tile-content">
           <span class="game-tag">Jeu indé</span>
-          <h2>La Brume</h2>
+          <h3>La Brume</h3>
           <p>Mon jeu indépendant : un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume.</p>
 
           <div class="tile-footer">
@@ -457,24 +528,25 @@
         </div>
       </a>
 
-      <a class="tile d4" href="/d4/">
-        <div class="tile-bg" style="background-image: url('img/diablo-4.svg');" role="img" aria-label="Illustration de flèches gothiques sous un ciel écarlate, entourées de braises"></div>
-        <span class="tile-index">03</span>
+      <a class="tile vaelmor" href="/vaelmor/">
+        <div class="tile-bg" style="background-image: url('img/vaelmor.svg');" role="img" aria-label="Illustration d’une citadelle engloutie sous un ciel violet, devant une grille de combat tactique où un héros fait face à un monstre"></div>
+        <span class="tile-index">02</span>
 
         <div class="tile-content">
-          <span class="game-tag">Diablo IV</span>
-          <h2>Builds Diablo 4</h2>
-          <p>Builds de saison, compétences, aspects, Paragon et optimisation de farm pour progresser efficacement.</p>
+          <span class="game-tag">Jeu indé</span>
+          <h3>Vaelmor</h3>
+          <p>RPG tactique au tour par tour en monde ouvert : explore l’île de Vaelmor, combats sur grille et affronte le Roi-Marée Brisé.</p>
 
           <div class="tile-footer">
-            <span class="build-meta">Saison · Endgame · Farm</span>
+            <span class="build-meta">Tour par tour · Monde ouvert · Prototype</span>
             <span class="open-build">
-              Voir les builds
+              Découvrir le jeu
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
             </span>
           </div>
         </div>
       </a>
+      </div>
     </section>
 
     <footer>
