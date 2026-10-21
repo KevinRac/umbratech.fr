@@ -614,6 +614,8 @@ Les alliés verts sans nom (gardes, miliciens) restent muets.
 - Un ennemi recruté rejoint le roster avec sa fiche complète ; il passe par les mêmes données et la même progression que les autres unités (M6).
 - Un allié vert nommé mort avant sa scène : la scène est perdue pour ce combat ; une **citation de deuil** d'une réplique la remplace.
 
+**Apparition aléatoire des nommés (décision n°115).** Un nommé non boss peut apparaître **au hasard dans un combat ordinaire**, avec un faible taux : tirage de **4 %** au lancement du combat, **+1 point par combat sans apparition**, plafond **12 %**, remis à 4 % après une apparition (`balance.namedPop`). Candidats : les nommés de la zone du combat (ou de la zone voisine) non vaincus, recrutés ni perdus, dont **une unité liée au moins est dans le roster** ; poids ×3 si elle est déployée. Le nommé rejoint le camp ennemi (niveau de zone +1) et la préparation l'annonce. Les nommés liés à une quête n'apparaissent qu'une fois la quête terminée. Les boss et les combats de village sont exclus.
+
 **Données.** Champs `named`, `skinOf`, `portrait`, `recruit` sur les ennemis ; nouveau fichier `data/battleQuotes.json` (une entrée par scène : ennemi, unité, statut, genre, direction, conditions, répliques, effets). Détail dans la bible narrative §9.
 
 **Impact sur le plan.** Un lot « moteur de dialogues de combat » (déclencheurs, action Parler, recrutement d'ennemi, journal) vient **entre M6 et M7** ; l'écriture des scènes et des portraits se fait **en M7**. La sauvegarde (M9) retient les scènes vues et les recrues obtenues ou perdues.

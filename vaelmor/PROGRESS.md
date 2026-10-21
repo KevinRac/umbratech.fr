@@ -13,11 +13,11 @@ Ensuite, dans l'ordre du GDD §17 : M9, **lot « dialogues de combat » (moteur,
 
 Livré : **`docs/STORY_BIBLE.md`** (ton, chronologie, héros, intrigue en 3 actes, 12 recrues, boss, 6 nommés recrutables, 6 nommés non recrutables, table des liens, scènes d'exemple, schéma de données) et **GDD §7.9** (règles). Aucun code. Modèle : citations de combat et « Parler » de *Fire Emblem : The Sacred Stones*. **Pas de dialogues ni de bonus entre alliés** (décision de l'auteur) : seuls comptent les ennemis nommés et les boss.
 
-- [ ] **Lot « dialogues de combat » (moteur)**, à faire entre M6 et M7 : déclencheurs (attaque, riposte, compétence ciblée, mort, phase 2), action **Parler** (adjacence, interlocuteurs, prérequis, délai), recrutement d'un ennemi, journal des rencontres, indicateur dans la préparation, scènes d'allié vert nommé scriptées, limite de 3 scènes par combat. Données : `battleQuotes.json`, champs `named` / `skinOf` / `portrait` / `recruit`.
+- [ ] **Lot « dialogues de combat » (moteur)**, à faire entre M6 et M7 (inclut l'apparition aléatoire des nommés, n°115) : déclencheurs (attaque, riposte, compétence ciblée, mort, phase 2), action **Parler** (adjacence, interlocuteurs, prérequis, délai), recrutement d'un ennemi, journal des rencontres, indicateur dans la préparation, scènes d'allié vert nommé scriptées, limite de 3 scènes par combat. Données : `battleQuotes.json`, champs `named` / `skinOf` / `portrait` / `recruit`.
 - [ ] **M7 (contenu)** : écrire environ 50 scènes, portraits des nommés, promouvoir en alliés verts nommés une vingtaine de figures de village (n°109, bible §7.4), ajouter Orvane et les 3 fins, relire les dialogues de village pour qu'ils suivent l'arc de chaque recrue.
 - [ ] **M9 (sauvegarde)** : retenir scènes vues, recrues obtenues ou perdues, nommés vaincus.
 
-### Décisions n°105 à n°114 — n°113 validée le 21/10/2026, n°109 et n°111 révisées à la demande de l'auteur, les autres à valider
+### Décisions n°105 à n°115 — validées par l'auteur le 22/10/2026 (n°109 et n°111 révisées le 21/10 : plus nombreuses)
 - **n°105 — Trois catégories d'ennemis** : commun (muet), nommé (nom, portrait, liens), boss (nommé, jamais recrutable). Un **Écho** est un nommé dont le skin dérive d'un modèle existant (`skinOf`).
 - **n°106 — Citations de combat** : jouées **avant l'échange**, une fois par paire (unité, ennemi), dans les deux sens (attaque, riposte, compétence ciblée). Chaque unité liée a sa scène ; une unité peut être liée à plusieurs ennemis. Les alliés verts nommés comptent comme unités liées, leurs scènes sont **scriptées**.
 - **n°107 — Parler** : action de la compagnie, unité adjacente à un nommé recrutable, uniquement si elle est dans sa liste d'interlocuteurs et si les prérequis sont remplis ; consomme l'action ; l'unité n'est pas attaquée par l'ennemi pendant ce tour.
@@ -27,6 +27,11 @@ Livré : **`docs/STORY_BIBLE.md`** (ton, chronologie, héros, intrigue en 3 acte
 - **n°111 — Taille du roster (révisée le 21/10/2026 : plus large)** : le roster passe de 12 à **30 unités** (13 compagnons d'histoire, 6 ennemis recrutés et de la marge pour d'autres recrues en M7) ; le déploiement par carte reste de 4 à 8 (n°85). La préparation doit proposer un tri et un filtre par classe.
 - **n°112 — Ton** : mélancolique avec une lueur d'espoir ; thèmes : lumière offerte, dette, mémoire, ceux qu'on laisse derrière.
 - **n°113 — Intrigue (validée par l'auteur le 21/10/2026)** : la lanterne éteinte du héros est la **dernière lanterne-offrande**, clé de la Citadelle ; **Rhyel** est le petit-fils d'Orvane (fils de sa fille Elwen) ; Orvane a refusé l'offrande le jour où la mer réclamait sa fille (« la Nuit Basse », il y a 41 ans). Le héros n'est pas l'héritier par le sang : la lanterne l'a choisi.
+- **n°115 — Apparition aléatoire des ennemis nommés (22/10/2026, demande de l'auteur)** : un nommé non boss peut **apparaître au hasard dans un combat ordinaire**, avec un **faible taux**, en plus de ses rencontres prévues.
+  - **Tirage** au lancement de chaque combat normal (pas les combats de boss ni de village) : base **4 %** ; **+1 point par combat sans apparition** (garantie anti-malchance), plafond **12 %**, remis à 4 % après une apparition. Réglages dans `balance.namedPop`.
+  - **Choix du nommé** : parmi les nommés **de la zone du combat** (et de la zone voisine) non encore vaincus, recrutés ou perdus, dont **au moins une unité liée est dans le roster** (sinon la scène n'aurait pas de sens). Poids ×3 si une unité liée est **déployée** dans ce combat.
+  - **Effet** : il rejoint le camp ennemi comme unité supplémentaire (niveau de la zone +1), avec son nom et son portrait ; la **préparation l'annonce** (« Ennemi nommé en vue », icône de lien, et « à recruter » s'il l'est). Ses prérequis de recrutement restent vérifiés (n°107).
+  - **Persistance** : s'il apparaît et que la compagnie se retire ou est vaincue, il reste disponible pour un tirage futur. Vaincu, recruté ou perdu, il ne revient plus. Les Échos de quête (Rik, Ilse, Aldéric) ne peuvent pas apparaître avant la fin de leur quête.
 - **n°114 — Trois fins** : « La lanterne » (pacte renouvelé sans sacrifice), « La digue » (Couronne, amère), « La nuit basse » (Orvane tué sans Rhyel). Conditions dans la bible §4, à affiner en M7.
 
 ## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)
@@ -38,7 +43,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] Étape 3 : végétation — décision n°45 (validée le 17/10/2026)
 - [x] Étape 4 : petits décors et accessoires — décision n°46 (validée le 17/10/2026)
 - [x] Étape 5 : post-effets HD-2D — décision n°47 (validée le 17/10/2026, soir assombri)
-- [x] Étape 6 : héros — décision n°48 (en attente de validation)
+- [x] Étape 6 : héros — décision n°48 (validée le 22/10/2026 : le gabarit 16×28 a été repris pour les classes, les ennemis et les PNJ par les n°60 et n°61)
 
 ## État
 - [x] M0a : GDD v0.1 rédigé, validé le 16/10/2026 (v0.2, 28 décisions)
@@ -47,7 +52,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M1 : exploration** (16/10/2026) — voir « Livré en M1 » ; mise à jour graphique en cours (décisions n°43+, section « M1 — mise à jour graphique »)
 - [x] **M4 : combat de base** (17/10/2026) — voir « Livré en M4 » ; décisions n°51 à n°61 validées (n°57 à n°61 le 18/10/2026)
 - [x] **M2 : villages, PNJ, réputation** (18/10/2026) — voir « Livré en M2 » ; décisions n°62 à n°71 validées le 18/10/2026 (n°63 révisée : les PNJ se promènent)
-- [x] **M3 : ennemis visibles du monde** (18/10/2026) — voir « Livré en M3 » ; décisions n°72 à n°78 à valider
+- [x] **M3 : ennemis visibles du monde** (18/10/2026) — voir « Livré en M3 » ; décisions n°72 à n°84 validées le 22/10/2026
 - [x] **M5 : préparation, objets, compétences, boss à 2 phases, renforts, alliés verts** (18/10/2026) — voir « Livré en M5 » ; décisions n°85 à n°104 validées le 18/10/2026
   - [x] Écran de préparation (§9.3, §13.4) — remplace le déploiement automatique (n°55)
   - [x] Objets en combat et accessoires (§9.8)
@@ -262,7 +267,7 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **Scènes** : contact → combat sur le terrain du contact ; attaque par surprise (E) ; embuscades (phase ennemie d'abord) ; renforts ; butin, drapeaux de victoire (quêtes `boss_*`), défaite → dernier village avec perte d'or (n°56), gardes hostiles (n°65), portes `acces_citadelle` / `barque_de_dorn` (n°67).
 - **Débogage** : `?debug&at=X,Y` (appliqué une fois), `lvl=N`, `foes=off`.
 
-### Décisions n°72 à n°78 (jalon M3) — à valider
+### Décisions n°72 à n°78 (jalon M3) — validées par l'auteur le 22/10/2026
 - **n°72 — Types et détection** : sentinelle, patrouille, errant, embuscade, boss, garde ; détection selon le type (portée, cône), ×2 en sprint, ×0,6 en forêt, ×0,8 pour le Chasseur de Serpents de Mer ; alerte 600 ms, poursuite à 88 px/s (entre marche 80 et sprint 120), abandon après 6 s sans vue ou à plus de 8 cases.
 - **n°73 — Boss de zone** : Brakk (z1), Roi-Cerf corrompu (Bosquet), Sœur Merrow (Plage des Épaves), Mère-Harpie (Aiguille Brisée), Gardien de Cendre (Menhir de Cendre) ; ils posent les drapeaux `boss_*` en victoire.
 - **n°74 — Réapparition** : sentinelle, embuscade, boss jamais ; patrouille et garde après un repos à l'auberge ; errant après 10 min de jeu ou changement de zone.
@@ -271,7 +276,7 @@ Demande de l'auteur après validation de M4 (captures de référence : carte GBA
 - **n°77 — Règlement** : or par ennemi (boss ×5), butin 20 % consommable / 5 % équipement, défaite −10 % d'or et réveil au dernier village, retraite sans changement, 4 s de grâce après un combat.
 - **n°78 — Débogage** : `lvl` et `foes=off` ajoutés ; `at` appliqué une seule fois par partie.
 
-### Retours de l'auteur sur M3 (18/10/2026) — décisions n°79 à n°81, à valider
+### Retours de l'auteur sur M3 (18/10/2026) — décisions n°79 à n°84, validées par l'auteur le 22/10/2026
 - **n°79 — Villages sûrs** : marge de 5 cases autour de chaque village et ville (`balance.foes.townSafeMargin`). Les ennemis n'y entrent pas, ne détectent ni ne touchent le héros qui s'y trouve, et abandonnent la poursuite. Seuls les gardes hostiles (n°65) y font exception. La validation des données refuse tout ennemi posé dans la marge ; 17 positions ont été déplacées.
 - **n°80 — Plus d'espace à l'engagement** : cartes tirées du monde de 32×24 (maximum du schéma) ; combat normal : ennemis à 13-21 de coût de déplacement et au moins 10 cases à vol d'oiseau ; embuscade : 10-15 et au moins 9. Le premier tour se joue en approche. L'écart est relâché si la carte est trop étroite (tanière de la Mère-Harpie, 6 cases ; embuscade du Gardien de Cendre, 5).
 - **n°81 — Écran de fin et bandeaux de phase** : titres en police `body` (lisible) « VICTOIRE » / « DÉFAITE » et « PHASE DU JOUEUR » / « PHASE ENNEMIE » à la place du gothique.

@@ -120,6 +120,8 @@ Ce sont des **Échos** : un modèle d'ennemi existant (`enemies.json`), avec un 
 | **Maître Orsen** | `mercenaire_de_cendre` | Z4 | Ancien maître de Zéphyrin, a vendu ses formules à la Couronne | Zéphyrin | 300 or de rançon **ou** réputation Couronne < Neutre | Alchimiste des Saisons |
 | **Aldéric Vance** | `mercenaire_de_cendre` | Z4 | Capitaine d'un régiment de la Couronne, ancien frère d'armes d'Alden | Alden | Quête `serment_brise` terminée | Gardien des Marées |
 
+> **Apparition en dehors des rencontres prévues** : les nommés de §6.2 et §6.3 peuvent aussi surgir **au hasard** dans un combat ordinaire de leur zone, avec un faible taux (4 % de base, voir GDD §7.9 et décision n°115). Cela rend chaque combat un peu imprévisible et récompense d'avoir recruté les bonnes unités.
+
 ### 6.3 Ennemis nommés **non recrutables** (6)
 
 | Nom | Modèle | Zone | Histoire | Unités liées |
