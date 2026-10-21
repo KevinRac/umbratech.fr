@@ -575,6 +575,51 @@ Les alliés rejoignent un combat en **renforts verts** (liseré et teinte verts,
 
 ---
 
+### 7.9 Ennemis nommés et dialogues de combat (spécification, 21/10/2026)
+
+> **Spécification, pas encore codée** (décisions n°105 à n°111 dans PROGRESS.md, à valider). L'histoire, les personnages, la table des liens et les scènes d'exemple sont dans `docs/STORY_BIBLE.md`. Inspiration : les citations de combat et l'action « Parler » de *Fire Emblem : The Sacred Stones*. **Il n'y a ni conversation de camp, ni soutien, ni bonus entre alliés** : les dialogues naissent uniquement de la rencontre avec un ennemi nommé.
+
+**Catégories d'ennemis**
+
+| Catégorie | Caractéristiques | Dialogues |
+|---|---|---|
+| **Commun** | Sans nom ni portrait | Aucun |
+| **Nommé** | Nom, portrait, histoire ; peut être un **Écho** (skin alternatif d'un modèle existant, champ `skinOf`) | Selon ses liens |
+| **Boss** | Nommé, jamais recrutable | Citations de combat, de phase et de mort |
+
+**Qui peut parler.** Toute unité alliée **nommée** présente sur la carte :
+- une unité de la **compagnie** (contrôlée par le joueur) ;
+- un **allié vert nommé** (IA, jamais commandé par le joueur, §7.8). Ses scènes sont **scriptées** et se jouent seules ; il n'a pas d'action « Parler » libre.
+Les alliés verts sans nom (gardes, miliciens) restent muets.
+
+**Les trois mécanismes**
+
+| Mécanisme | Déclencheur | Détail |
+|---|---|---|
+| **Citation de combat** | Une unité liée attaque l'ennemi nommé, ou est attaquée par lui | Joué **avant l'échange de coups**, une seule fois par paire (unité, ennemi). Vaut pour l'attaque normale, la riposte, une compétence qui le prend pour cible. |
+| **Parler** | Action du menu d'une unité de la compagnie **adjacente** à un nommé **recrutable**, si elle figure dans sa liste d'interlocuteurs et si les prérequis sont remplis | Consomme l'action de l'unité. Succès : l'ennemi change de camp. Refus : il reste hostile. L'unité qui parle n'est pas attaquée par lui pendant ce tour. |
+| **Citation de mort / de phase** | Mort du nommé ; passage d'un boss sous 50 % PV (phase 2) | La réplique **varie selon l'unité qui porte le coup**, si elle est liée. |
+
+**Groupes d'unités liées.** Un ennemi a une **liste** d'unités liées, pas une seule. **Chaque unité liée a sa propre scène**, indépendante des autres ; une même unité peut être liée à plusieurs ennemis.
+
+**Priorité et limites**
+1. **Maximum 3 scènes par combat.** Au-delà, les scènes restantes attendent un combat ultérieur.
+2. Ordre : boss et histoire principale > compagnie > allié vert nommé.
+3. **Chaque scène ne se joue qu'une fois** (par paire et par partie), sauf mention `once: false`.
+4. Un **journal des rencontres** (menu Quêtes) permet de relire les scènes jouées. Les scènes se passent avec Échap.
+
+**Recrutement d'un ennemi nommé**
+- Données par ennemi : liste des interlocuteurs, prérequis (quête, réputation, objet, or), délai (tour maximal ou PV), classe et niveau à l'arrivée.
+- Si le nommé est **tué avant d'avoir été contacté**, il est **perdu définitivement** (règle de *Sacred Stones*). La préparation l'**annonce** : icône de lien et ligne « Ennemi à recruter » dans la colonne des ennemis en vue.
+- Un ennemi recruté rejoint le roster avec sa fiche complète ; il passe par les mêmes données et la même progression que les autres unités (M6).
+- Un allié vert nommé mort avant sa scène : la scène est perdue pour ce combat ; une **citation de deuil** d'une réplique la remplace.
+
+**Données.** Champs `named`, `skinOf`, `portrait`, `recruit` sur les ennemis ; nouveau fichier `data/battleQuotes.json` (une entrée par scène : ennemi, unité, statut, genre, direction, conditions, répliques, effets). Détail dans la bible narrative §9.
+
+**Impact sur le plan.** Un lot « moteur de dialogues de combat » (déclencheurs, action Parler, recrutement d'ennemi, journal) vient **entre M6 et M7** ; l'écriture des scènes et des portraits se fait **en M7**. La sauvegarde (M9) retient les scènes vues et les recrues obtenues ou perdues.
+
+---
+
 ## 8. Zones de niveau
 
 ### 8.1 Tableau général

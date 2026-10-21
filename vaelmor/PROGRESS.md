@@ -7,7 +7,27 @@ Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). 
 
 ## Prochain jalon
 **M6 : XP, niveaux, classes** (GDD §17, §9.12, §10) : XP par action et bonus de victoire, montée de niveau tirée au sort (croissances, une stat garantie), niveau max 20 / 30, évolutions (Sceau de Maîtrise + condition de branche ; 6 d'abord, puis 24), recrutement réel (n°66) à la place de la compagnie d'essai, **passives des niveaux 5 et 15** (proposition n°93, à valider avant de coder) et **mécaniques de classe** différées (Serment, hauteur, Saisons, Fil d'eau, Fanfare : n°92). L'XP des alliés verts (§7.8) arrive avec M6.
-Ensuite, dans l'ordre du GDD §17 : M9, M7, M8, M10.
+Ensuite, dans l'ordre du GDD §17 : M9, **lot « dialogues de combat » (moteur, voir ci-dessous)**, M7, M8, M10.
+
+## Spécification narrative : ennemis nommés et dialogues de combat (21/10/2026)
+
+Livré : **`docs/STORY_BIBLE.md`** (ton, chronologie, héros, intrigue en 3 actes, 12 recrues, boss, 6 nommés recrutables, 6 nommés non recrutables, table des liens, scènes d'exemple, schéma de données) et **GDD §7.9** (règles). Aucun code. Modèle : citations de combat et « Parler » de *Fire Emblem : The Sacred Stones*. **Pas de dialogues ni de bonus entre alliés** (décision de l'auteur) : seuls comptent les ennemis nommés et les boss.
+
+- [ ] **Lot « dialogues de combat » (moteur)**, à faire entre M6 et M7 : déclencheurs (attaque, riposte, compétence ciblée, mort, phase 2), action **Parler** (adjacence, interlocuteurs, prérequis, délai), recrutement d'un ennemi, journal des rencontres, indicateur dans la préparation, scènes d'allié vert nommé scriptées, limite de 3 scènes par combat. Données : `battleQuotes.json`, champs `named` / `skinOf` / `portrait` / `recruit`.
+- [ ] **M7 (contenu)** : écrire environ 50 scènes, portraits des nommés, promouvoir en alliés verts nommés Ilar, Sylve, Dorn, Odo et Yrsa, ajouter Orvane et les 3 fins, relire les dialogues de village pour qu'ils suivent l'arc de chaque recrue.
+- [ ] **M9 (sauvegarde)** : retenir scènes vues, recrues obtenues ou perdues, nommés vaincus.
+
+### Décisions n°105 à n°114 — à valider
+- **n°105 — Trois catégories d'ennemis** : commun (muet), nommé (nom, portrait, liens), boss (nommé, jamais recrutable). Un **Écho** est un nommé dont le skin dérive d'un modèle existant (`skinOf`).
+- **n°106 — Citations de combat** : jouées **avant l'échange**, une fois par paire (unité, ennemi), dans les deux sens (attaque, riposte, compétence ciblée). Chaque unité liée a sa scène ; une unité peut être liée à plusieurs ennemis. Les alliés verts nommés comptent comme unités liées, leurs scènes sont **scriptées**.
+- **n°107 — Parler** : action de la compagnie, unité adjacente à un nommé recrutable, uniquement si elle est dans sa liste d'interlocuteurs et si les prérequis sont remplis ; consomme l'action ; l'unité n'est pas attaquée par l'ennemi pendant ce tour.
+- **n°108 — Recrutables : environ 6 (Rik, Oswin, Hobb, Ilse, Orsen, Aldéric)** ; un recrutable tué avant d'avoir été contacté est **perdu définitivement**, avec avertissement dans la préparation.
+- **n°109 — Alliés verts nommés** : promotion de Capitaine Ilar, Sylve, Amiral Dorn, Frère Odo et Garde-Cime Yrsa en alliés nommés (M7) ; mort avant leur scène = citation de deuil d'une réplique.
+- **n°110 — Priorité et limites** : boss et histoire principale > compagnie > allié vert nommé ; **3 scènes au plus par combat** ; une seule fois par paire ; journal des rencontres consultable ; scènes passables avec Échap.
+- **n°111 — Taille du roster** : la décision n°9 fixe un roster de 12 (hors 4 à 8 déployés). Avec 12 recrues, le héros et 6 ennemis recrutables, il faut **relever le plafond à 19** (ou accepter que certains recrutables en remplacent d'autres). Proposition : plafond du roster à 20, déploiement inchangé.
+- **n°112 — Ton** : mélancolique avec une lueur d'espoir ; thèmes : lumière offerte, dette, mémoire, ceux qu'on laisse derrière.
+- **n°113 — Intrigue** : la lanterne éteinte du héros est la **dernière lanterne-offrande**, clé de la Citadelle ; **Rhyel** est le petit-fils d'Orvane (fils de sa fille Elwen) ; Orvane a refusé l'offrande le jour où la mer réclamait sa fille (« la Nuit Basse », il y a 41 ans). Le héros n'est pas l'héritier par le sang : la lanterne l'a choisi.
+- **n°114 — Trois fins** : « La lanterne » (pacte renouvelé sans sacrifice), « La digue » (Couronne, amère), « La nuit basse » (Orvane tué sans Rhyel). Conditions dans la bible §4, à affiner en M7.
 
 ## M1 — mise à jour graphique : refonte du monde ouvert (en cours, 17/10/2026)
 Ce chantier est une **mise à jour du jalon M1** (exploration), pas un nouveau jalon : il ne touche ni aux PNJ ni aux villages jouables (M2).
@@ -36,7 +56,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
   - [x] Renforts des cartes de boss (tours 3 et 6)
   - [x] IA à score : agressif, opportuniste, défensif, soutien, chasseur de héros, boss (§9.15)
   - [x] Alliés verts : gardes, alliés de passage, alliés errants, phase alliée (§7.8)
-- [ ] M6, M9, M7, M8, M10 (ordre du GDD §17)
+- [ ] M6, M9, lot « dialogues de combat », M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
