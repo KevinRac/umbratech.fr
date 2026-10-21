@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 const SESSION_COOKIE = 'gw1_session';
-const SESSION_DAYS   = 90;
+const SESSION_DAYS   = 365;  // durée glissante : prolongée à chaque visite
 const CODE_TTL       = 600;   // validité du code : 10 minutes
 const MAX_BUILDS     = 200;
 
@@ -115,11 +115,17 @@ function current_user(): ?array
     $t = (string) ($_COOKIE[SESSION_COOKIE] ?? '');
     if (!preg_match('/^[a-f0-9]{64}$/', $t)) return null;
     $st = db()->prepare(
-        'SELECT u.id, u.display_name, u.is_admin FROM sessions s JOIN users u ON u.id = s.user_id
+        'SELECT u.id, u.display_name, u.is_admin, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id
          WHERE s.token_hash = ? AND s.expires_at > ?'
     );
     $st->execute([hash('sha256', $t), time()]);
     $u = $st->fetch();
+    if ($u && (int) $u['expires_at'] < time() + (SESSION_DAYS - 1) * 86400) {
+        // session glissante : au plus une prolongation par jour (évite une écriture à chaque requête)
+        $exp = time() + SESSION_DAYS * 86400;
+        db()->prepare('UPDATE sessions SET expires_at = ? WHERE token_hash = ?')->execute([$exp, hash('sha256', $t)]);
+        set_session_cookie($t, $exp);
+    }
     return $u ? ['id' => $u['id'], 'display_name' => $u['display_name'], 'is_admin' => (bool) (int) $u['is_admin']] : null;
 }
 

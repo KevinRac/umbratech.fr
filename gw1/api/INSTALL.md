@@ -49,6 +49,6 @@ Dans phpMyAdmin, après votre première connexion :
 
 ## Notes
 - Si `smtp.ionos.fr` pose problème, `'mail_driver' => 'mail'` utilise la fonction `mail()` de PHP.
-- Les builds sont limités à 200 par joueur ; les sessions durent 90 jours (cookie HttpOnly).
+- Les builds sont limités à 200 par joueur ; les sessions durent 1 an et sont prolongées à chaque visite (cookie HttpOnly) : un joueur actif reste connecté.
 - Anciennes données Supabase : non migrées (les builds restent aussi dans le navigateur des
   joueurs et se resynchronisent à leur première connexion).
