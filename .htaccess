@@ -1,0 +1,15 @@
+# Sécurité : ne jamais servir le dépôt Git du serveur (.git, .github, .gitignore)
+<IfModule mod_alias.c>
+  RedirectMatch 404 /\.git
+</IfModule>
+
+# Cache navigateur pour les images (les pages HTML, scripts et données du jeu ne sont pas concernés)
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpeg "access plus 1 week"
+  ExpiresByType image/png "access plus 1 week"
+  ExpiresByType image/svg+xml "access plus 1 week"
+  ExpiresByType image/webp "access plus 1 week"
+  ExpiresByType image/x-icon "access plus 1 week"
+  ExpiresByType image/vnd.microsoft.icon "access plus 1 week"
+</IfModule>
