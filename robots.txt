@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /gw1/api/
+
+Sitemap: https://umbratech.fr/sitemap.xml
