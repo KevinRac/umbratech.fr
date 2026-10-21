@@ -176,7 +176,30 @@ Chaque ligne = une ou plusieurs **scènes** : **B** = citation de combat, **P** 
 
 ### 7.4 Alliés verts nommés à prévoir (M7)
 
-Aujourd'hui `allies.json` contient des modèles **sans nom** (gardes, miliciens) et 5 errants nommés (Aldric, Brune, Sire Gauvain, Frère Anselme, Garance). Pour les scènes ci-dessus, il faut **promouvoir en alliés nommés** quelques figures déjà présentes comme PNJ : **Capitaine Ilar** (Haut-Gué), **Sylve** (Ronceval), **Amiral Dorn** et **Frère Odo** (Port-Brume), **Garde-Cime Yrsa** (Pierre-Haute). Ils apparaissent comme renforts verts selon les règles de §7.8 du GDD, avec leur nom et leur portrait. Les errants existants peuvent servir de liens secondaires.
+Aujourd'hui `allies.json` contient des modèles **sans nom** (gardes, miliciens) et 5 errants nommés (Aldric, Brune, Sire Gauvain, Frère Anselme, Garance). Pour les scènes de la bible, on **promeut en alliés verts nommés toutes les figures combattantes des villages** (décision n°109 révisée). Ils apparaissent comme renforts selon le §7.8 du GDD, avec leur nom et leur portrait ; leurs scènes sont **scriptées**.
+
+| Lieu | Allié vert nommé | Lien prévu (ennemi : idée de scène) |
+|---|---|---|
+| Haut-Gué | **Capitaine Ilar** | Brakk (ses hommes tués), Gorm, Rik (le fils du charron) |
+| Haut-Gué | **Bran** (forgeron) | Gorm : a forgé les haches des Écumeurs sans le savoir |
+| Haut-Gué | **Vieux Garrec** | Brakk : l'a connu soldat de la garnison |
+| Ronceval | **Sylve** | Roi-Cerf (mort et phase), Hakon, Oswin |
+| Ronceval | **Orin** (herboriste) | Hakon, Oswin : il soignait les deux avant la Brume |
+| Ronceval | **Kael** (déserteur) | Drak : ancien camarade de la Couronne, Aldéric |
+| Port-Brume | **Amiral Dorn** | Mérrow, Aldo Vessyr (son frère), Hobb, Orvane |
+| Port-Brume | **Frère Odo** | Mérrow (sa mentore), Ilse |
+| Port-Brume | **Marthe** (tisseuse de filets) | Hobb : c'est son mari, qu'elle croit mort |
+| Port-Brume | **Lia** (cartographe) | Aldo Vessyr : elle a cartographié la côte avec lui |
+| Pierre-Haute | **Garde-Cime Yrsa** | Mère-Harpie, Gardien de Cendre, Veilleur de Pierre |
+| Pierre-Haute | **Maître Halvar** | Gardien de Cendre : il en a forgé les plaques |
+| Pierre-Haute | **Hild** | Ilse (elle a veillé avec elle) |
+| Valcendre | **Capitaine Voss** | Drak, Aldéric (ses anciens officiers) |
+| Valcendre | **Maître d'arène Dax** | Aldéric, Orsen (anciens combattants de l'arène) |
+| Valcendre | **Mère Yvonne** | Orsen (elle a soigné ses victimes), Ilse |
+| Valcendre | **Maître Lorn** (marchand) | Orsen : lui a acheté les formules volées |
+| Errants | **Aldric, Brune, Sire Gauvain, Frère Anselme, Garance** | Liens secondaires, un nommé chacun selon leur trajet |
+
+Ceux qui sont déjà recrues (Nessa, Ysolde, Mousse, Corbin, Tiphaine, Ilmëa, Tobias, Alden, Cendrine, Zéphyrin, Gérard) ne sont pas alliés verts : ils sont de la compagnie. La Régente Ysmène reste hors combat. Toute unité nommée qui n'a pas de lien dans cette table peut en recevoir un en M7 sans changer le moteur.
 
 ---
 
