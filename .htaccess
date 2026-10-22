@@ -1,6 +1,8 @@
 # Sécurité : ne jamais servir le dépôt Git du serveur (.git, .github, .gitignore)
 <IfModule mod_alias.c>
   RedirectMatch 404 /\.git
+  # Notes de travail internes (dossiers _dev/, par exemple themist/_dev/) : jamais servies par le site
+  RedirectMatch 404 /_dev/
 </IfModule>
 
 # Cache navigateur pour les images (les pages HTML, scripts et données du jeu ne sont pas concernés)

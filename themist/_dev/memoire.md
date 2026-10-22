@@ -14,7 +14,25 @@ Rédigé le 22 octobre 2026.
 
 ### Où vit ce document
 
-Le site n’est pas servi par GitHub Pages : le workflow `deploy.yml` fait un `git pull` de tout le dépôt sur IONOS. Il n’y a pas de `.nojekyll` dans le dépôt, mais le préfixe `_` ne protège rien sur IONOS : `themist/_dev/memoire.md` sera lisible à l’adresse `umbratech.fr/themist/_dev/memoire.md`. Le `.htaccess` racine ne bloque que `/.git`. Le dépôt étant public, le contenu est de toute façon lisible sur GitHub. Si on veut qu’il ne soit pas servi par le site, il suffit d’une ligne dans `.htaccess` (`RedirectMatch 404 /_dev/`) : voir la décision D0. `outils/wiki.mjs` ne lit que `data/`, le document n’entre donc pas dans le wiki.
+Le site n’est pas servi par GitHub Pages : le workflow `deploy.yml` fait un `git pull` de tout le dépôt sur IONOS. Il n’y a pas de `.nojekyll` dans le dépôt, et le préfixe `_` ne protège rien sur IONOS. Depuis la décision D0, le `.htaccess` racine renvoie une 404 pour tout chemin en `/_dev/` : le document n’est plus servi par le site. Le dépôt étant public, il reste lisible sur GitHub. `outils/wiki.mjs` ne lit que `data/`, le document n’entre donc pas dans le wiki.
+
+### Décisions retenues (22 octobre 2026)
+
+Toutes les recommandations du § 3 sont adoptées :
+
+| # | Décision retenue |
+|---|---|
+| D0 | `.htaccess` : `RedirectMatch 404 /_dev/` (fait). |
+| D1 | Mémoire commune de 6 (talents et reliques) ; équipement à part (4 emplacements) ; toute relique offerte peut être refusée contre un soin ou de l’or. |
+| D2 | La racine de la voie doit rester en mémoire ; le chemin vers l’ultime ne compte qu’à l’acquisition ; oublier la racine éteint la voie (avertissement fort). |
+| D3 | Un talent = un souvenir ; un rang de plus le renforce sans oubli ; le rang part avec lui dans la réserve. |
+| D4 | Pas de cascade ; voisinage et seuils des majeurs comptés sur les traces de la run ; un talent sans sa compétence liée s’éteint ; exclusions lues sur la mémoire ; une paire A/B déjà prise ne se rouvre pas. |
+| D5 | Accoutumance inchangée ; mesure avant/après ; dégâts sur un Masqué porteur de souvenir non comptés. |
+| D6 | Boussole brisée consommable (hors mémoire et réserve) ; Mèche de Phénix se consume quand elle sert et libère sa place. |
+| D7 | Écran d’oubli : gain d’abord, puis oublier / renoncer / plus tard ; icône, rang et version ennemie affichés. |
+| D8 | Contre-mesures liées au profil de jeu seulement ; références remises à zéro à la mise en service. |
+| D9 | Au palier Masqué : sa mort propose de reprendre le souvenir qu’il porte, à la place de la relique. |
+| D10 | Réserve par run pour commencer. |
 
 ---
 
