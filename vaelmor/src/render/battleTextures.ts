@@ -8,8 +8,8 @@ import { BF_WATER_FRAMES, paintBattlefield } from './battlefield';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas } from './pixelCanvas';
 import { CHAR_POSES, type CharPose } from './characterSprite';
-import { SKINS, SKIN_CELL, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
-import { hasSkin, skinKey } from './skins';
+import { BATTLE_CELL, SKINS, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
+import { hasSkin, skinCombatKey } from './skins';
 import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitFrameKind, type UnitTeam } from './unitSprites';
 
 export const BATTLE_TEX = {
@@ -116,13 +116,13 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
   const def = SKINS.find((k) => k.id === id);
   if (!def) return;
   if (!scene.textures.exists(key)) {
-    const source = scene.textures.get(skinKey(id)).getSourceImage() as HTMLImageElement;
+    const source = scene.textures.get(skinCombatKey(id)).getSourceImage() as HTMLImageElement;
     const texture = scene.textures.addImage(key, source);
     if (!texture) return;
-    const at = (row: number, col: number): [number, number] => [col * SKIN_CELL, row * SKIN_CELL];
+    const at = (row: number, col: number): [number, number] => [col * BATTLE_CELL, row * BATTLE_CELL];
     const add = (name: string, row: number, col: number): void => {
       const [x, y] = at(row, col);
-      texture.add(name, 0, x, y, SKIN_CELL, SKIN_CELL);
+      texture.add(name, 0, x, y, BATTLE_CELL, BATTLE_CELL);
     };
     SKIN_ROWS.forEach((pose, row) => {
       for (let f = 0; f < def.frames; f++) add(BATTLE_TEX.msFrame(pose, f), row, f);

@@ -5,12 +5,14 @@ import { SKINS, SKIN_CELL, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
 import { skinFrameIndex, skinWalkFrames } from '../logic/skinFrames';
 
 export const skinKey = (id: string): string => `skin:${id}`;
+export const skinCombatKey = (id: string): string => `skin:combat:${id}`;
 export const skinWalkKey = (id: string, pose: string): string => `skin:${id}:walk:${pose}`;
 
 /** À appeler dans `preload()`. */
 export function preloadSkins(scene: Phaser.Scene): void {
   for (const skin of SKINS) {
     scene.load.spritesheet(skinKey(skin.id), assetUrl(`assets/personnages/${skin.id}.png`), { frameWidth: SKIN_CELL, frameHeight: SKIN_CELL });
+    scene.load.image(skinCombatKey(skin.id), assetUrl(`assets/personnages/combat/${skin.id}.png`));
   }
 }
 
