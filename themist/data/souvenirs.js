@@ -11,6 +11,50 @@
  // texte : comment écrire chaque clé de gr (le jeu et le wiki composent la phrase).
  gravure:{max:2,part:0.4,poids:{m:1,s:1.5,x:1.5,k:2,c:2,u:2},
   texte:{dmg:['+',100,' % de dégâts'],critMult:['+',100,' % de dégâts critiques'],crit:['+',100,' % de chances de critique'],maxHp:['+',1,' PV max'],dmgTaken:['',100,' % de dégâts subis'],dashCd:['',1,' s de recharge d’esquive'],speed:['+',1,' de vitesse']}},
+ // Éveils (v17.4) : la Gravure II d’un nœud clé ou d’un ultime change son comportement (texte ici, effet dans index.html, bloc v17).
+ // Un talent qui a un éveil reçoit le bonus de sa famille à la Gravure I, puis l’éveil (et ce bonus) à la Gravure II.
+ eveils:{
+  // Lumenarque
+  sol_sk:{n:'Midi',d:'À la fin de Zénith, le soleil tombe : une explosion de lumière (rayon 260, 90 dégâts) marque tous les ennemis touchés.'},
+  omb_sk:{n:'Nuit sans fin',d:'Chaque ennemi tué pendant la Nuit Éternelle la prolonge d’une seconde.'},
+  ray_k1:{n:'Couronne solaire',d:'Ton aura brûle deux fois plus, et les ennemis qui y meurent explosent (40 dégâts).'},
+  ray_k2:{n:'Surtension',d:'Ta lumière ne s’éteint plus après la Surcharge.'},
+  pen_k1:{n:'Fils de l’ombre',d:'Chaque critique dans l’Obscur te rend 2 PV.'},
+  pen_k2:{n:'Crépuscule partout',d:'Les ennemis tués explosent et marquent leurs voisins même hors de l’Obscur.'},
+  fan_k1:{n:'Astre errant',d:'Ta lanterne vivante tourne 50 % plus vite et marque les ennemis qu’elle frappe.'},
+  fan_k2:{n:'Ciel étoilé',d:'Jusqu’à 5 lanternes spectrales, qui durent 20 s.'},
+  pha_sk:{n:'Phare errant',d:'Le phare te suit pendant qu’il tourne.'},
+  // Gouffre
+  sai_sk:{n:'Grâce',d:'L’explosion d’Absolution te soigne aussi de 25 % de tes PV max.'},
+  abe_sk:{n:'Bête sans fin',d:'Chaque ennemi tué pendant la Métamorphose la prolonge d’une seconde.'},
+  vor_k1:{n:'Festin sans fin',d:'En changeant de salle, le bonus de dégâts de la Faim garde la moitié de sa valeur au lieu de retomber à zéro.'},
+  vor_k2:{n:'Gouffre',d:'À 200 de Corruption, tout se vide d’un coup en une Rupture maîtrisée : double dégâts, sans te blesser.'},
+  dif_k1:{n:'Titan',d:'Le Piétinement repart une seconde fois, plus large (60 % des dégâts).'},
+  dif_k2:{n:'Chimère',d:'Deux mutations à la fois.'},
+  reg_k1:{n:'Rupture en chaîne',d:'La Rupture te laisse 35 de Corruption et te soigne de 8 % de tes PV max.'},
+  reg_k2:{n:'Gueule à trois',d:'Le rayon du Ventre-Canon se divise en trois.'},
+  aby_sk:{n:'Seconde bouchée',d:'Quand la gueule se referme, elle claque une seconde fois : 120 dégâts dans le même rayon.'},
+  // Héraut
+  dgl_sk:{n:'Glas des morts',d:'Les cloches exécutent tout ce qui passe sous 40 % de PV, dans un rayon plus large.'},
+  chd_sk:{n:'Dernier chant',d:'À la fin du Requiem, chaque choriste éclate en une onde (rayon 100, 40 dégâts).'},
+  car_k1:{n:'Bourdon grave',d:'Chaque onde du Bourdon étourdit 0,5 s.'},
+  car_k2:{n:'Tocsin d’alarme',d:'Au-delà de 150 de Résonance, le Grand Glas sonne trois fois.'},
+  cad_k1:{n:'Con fuoco',d:'Le second coup frappe à 100 %, et une action incorrecte ne coûte plus que 2 % de tes PV.'},
+  cad_k2:{n:'Danse de mort',d:'Chaque Pas de danse correct fait aussi partir une onde (rayon 110, 20 dégâts).'},
+  req_k1:{n:'Ossuaire',d:'Le Grand Glas garde la moitié de tes âmes après les avoir libérées, et chaque âme libérée te soigne de 2 PV.'},
+  req_k2:{n:'Pacte scellé',d:'Le pacte ne te coûte plus de PV max.'},
+  val_sk:{n:'Grand bal',d:'Le bal dure 12 temps, et tes Pas de danse ne coûtent aucune charge pendant le bal.'},
+  // Tisse-Destin
+  gts_sk:{n:'Toile vivante',d:'La Grande Toile attache aussi les ennemis à tes fils, dans la limite de tes fils.'},
+  mdp_sk:{n:'Rideau',d:'À la fin du Grand Guignol, les pantins sous 50 % de PV ne se réveillent pas.'},
+  trm_k1:{n:'Destin commun',d:'Quand un ennemi attaché meurt, son fil saute sur l’ennemi le plus proche.'},
+  trm_k2:{n:'Fil de sang',d:'Quand l’ennemi au Fil Rouge meurt, le fil saute sur l’ennemi le plus robuste de la salle.'},
+  aig_k1:{n:'Pluie d’acier',d:'Chaque aiguille qui touche rend 1 Bobine, que l’ennemi soit attaché ou non.'},
+  aig_k2:{n:'Éventail du destin',d:'L’Aiguille du Destin part en éventail de trois.'},
+  pnt_k1:{n:'Chute des pendus',d:'Les pendus tournoient 3,5 s, puis s’écrasent : 40 dégâts autour d’eux.'},
+  pnt_k2:{n:'Main de fer',d:'Les ennemis arrachés restent étourdis 1 s de plus.'},
+  bro_sk:{n:'Éternité',d:'Le temps reste figé 4 s.'}
+ },
  // Familles : nom, icône (data/icones.js), ce qu’elles regroupent ; t : talents
  // r : reliques de la même famille (classement gardé pour les paliers suivants ; elles ne comptent pas dans la mémoire)
  familles:{

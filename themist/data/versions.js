@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v17.3',
+ actuelle:'v17.4',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+  {d:'2026-10-23',h:'v17.4',t:'Les éveils : graver deux fois un nœud clé ou un ultime l’éveille et change son comportement (36 éveils, neuf par forme : Midi, Nuit sans fin, Chimère, Gueule à trois, Tocsin d’alarme, Éternité…). La carte d’éveil a une bordure de braise. À la Gravure I, ces talents reçoivent le bonus de leur famille. Wiki : « Les éveils », et l’éveil dans la fiche de chaque talent.'},
   {d:'2026-10-23',h:'v17.3',t:'La gravure : mémoire pleine, l’écran de niveau propose en plus de graver un talent que tu portes au rang maximum (deux fois au plus, sans prendre de place). Talent à effets chiffrés : +40 % par gravure. Sinon : le bonus de sa famille (par exemple +5 % de dégâts, +12 PV max), plus fort pour les compétences, majeurs, nœuds clés et ultimes. Si l’arbre n’a plus rien à offrir, jusqu’à trois gravures. Tuile gravée : liseré doré et losanges. Wiki : « Graver un souvenir ».'},
   {d:'2026-10-23',h:'v17.2',t:'Écran « Prendre ou oublier » : les deux cadres (gain et oublié) ont désormais une taille fixe, le texte ne saute plus quand tu passes d’un souvenir à l’autre.'},
   {d:'2026-10-22',h:'v17.1',t:'La Mémoire allégée : les reliques sortent de la mémoire (tu les gardes toutes, comme avant ; plus de refus contre soin ou or, plus d’oubli de relique chez le Colporteur) et tu portes désormais dix talents au lieu de six souvenirs. L’écran « Prendre ou oublier » arrive donc bien plus tard dans la descente et bien plus rarement. Au clavier : 1 à 9 puis 0 pour le dixième talent, Entrée pour confirmer, R pour renoncer, Échap pour plus tard. Les tuiles du HUD passent sur deux rangées de cinq. Les reliques retrouvent leurs valeurs de la v16.47 (le renfort de la v17.0 compensait la place qu’elles prenaient) ; les mineurs des voies gardent leur renfort.'},

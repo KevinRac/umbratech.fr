@@ -808,7 +808,12 @@ Question du joueur : au début de l’acte III, le build est presque fait. Avec 
 
 **Bonus de famille par gravure** (avant le poids) : Projectile, Faisceau, Onde, Sol, Fil, Cloche, Dévoration, Lumière, Fureur : +5 % de dégâts. Lame : +4 % de dégâts, +10 % de dégâts critiques. Ruée : −0,06 s de recharge d’esquive, +6 de vitesse. Ombre : +3 % de critique. Soin : +12 PV max. Garde : +10 PV max, −3 % de dégâts subis.
 
-**Reste à faire : l’éveil.** La deuxième gravure devait changer le comportement du talent (le Rayon se divise, le Fanal pulse en mourant). Ça demande une ligne par talent (`eveil` dans `data/talents.js`) et son code ; en v17.3, la gravure II ne fait que doubler la gravure I. Commencer par les ultimes et les nœuds clés (les plus visibles), puis les compétences. Le cas 2 deviendra rare à mesure qu’on écrit des éveils.
+**Éveil (livré en v17.4).** Les 36 nœuds clés et ultimes ont un éveil (`eveils` dans `souvenirs.js` pour le texte ; effet dans index.html). Pour eux, la Gravure I donne le bonus de famille (pas d’intensification : leurs chiffres sont souvent des contreparties, comme les PV du Pacte ou les dégâts de Mille Points), et la Gravure II pose `P.s.ev[id]=1`, lu par le jeu avec `EVL(id)`. Trois façons de brancher un éveil :
+- une ligne du jeu qui lit `EVL(id)` (Surtension, Couronne solaire, Fils de l’ombre, Crépuscule partout, Astre errant, Ciel étoilé, Festin sans fin, Chimère avec `mutHas`, Gueule à trois, Glas des morts, Bourdon grave, Tocsin d’alarme, Con fuoco, Danse de mort, Ossuaire, Pluie d’acier, Éventail du destin, Chute des pendus, Main de fer) ;
+- une enveloppe dans le bloc v17 : lancement d’ultime (`ult` : Grand bal, Éternité, Toile vivante, Rideau), fin d’effet suivie image par image (`updatePlayer` : Midi, Grâce, Seconde bouchée, Dernier chant, Phare errant, Gouffre, Chute des pendus), mort d’un ennemi (`killEnemy` : Nuit sans fin, Bête sans fin, Couronne solaire, Destin commun, Fil de sang), `stomp` (Titan), `rupture` (Rupture en chaîne) ;
+- un effet de statistique (`EVA` : Pacte scellé rend les 20 % de PV max).
+
+Les mineurs, compétences et majeurs n’ont pas encore d’éveil : leur Gravure II double la Gravure I. Prochaine étape possible : des éveils de compétences.
 
 ### D11b. La mue d’acte (palier Masqué)
 

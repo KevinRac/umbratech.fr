@@ -142,6 +142,12 @@ function memoire(D) {
   const ROMG = ['', 'I', 'II', 'III', 'IV'];
   const pct = Math.round(GV.part * 100);
   const poidsTxt = [['m', 'mineur'], ['s', 'compétence'], ['x', 'majeur'], ['k', 'nœud clé'], ['c', 'racine de voie'], ['u', 'ultime']].map(([k, n]) => `${n} ×${nfr(GV.poids[k] || 1)}`).join(', ');
+  const EVS = S.eveils || {};
+  const eveils = `<div class="grid g2">${Object.keys(FO).map(c => {
+    const ids = Object.keys(EVS).filter(id => N[id] && BRs[id.split('_')[0]] && BRs[id.split('_')[0]].cls === c);
+    if (!ids.length) return '';
+    return `<article class="ent mev"><h4 style="color:${FO[c].color}">${esc(FO[c].short)}</h4><dl>${ids.map(id => `<dt><span style="color:${BRs[id.split('_')[0]].color}">${esc(N[id].name)}</span> → <b>${esc(EVS[id].n)}</b></dt><dd>${esc(EVS[id].d)}</dd>`).join('')}</dl></article>`;
+  }).join('')}</div>`;
   const fams = Object.entries(S.familles).map(([k, f]) => {
     if (!(f.t || []).length) return '';
     const parForme = Object.keys(FO).map(c => {
@@ -157,6 +163,7 @@ function memoire(D) {
 .mtw{position:relative;width:30px;height:30px;display:inline-grid;place-items:center;color:var(--c);border:1.6px solid var(--c);border-radius:50%;background:#0e111a;box-sizing:border-box}.mtw .mic{width:16px;height:16px;color:var(--c)}
 .mtw.k-s{border-radius:7px}.mtw.k-x{border-radius:4px;transform:rotate(45deg);width:26px;height:26px;margin:2px}.mtw.k-x .mic{transform:rotate(-45deg)}
 .mtw.k-k{border-radius:9px;box-shadow:inset 0 0 0 2px #0e111a,inset 0 0 0 3.5px var(--c)}.mtw.k-u{border-width:3px;border-style:double}.mtw.k-c{box-shadow:0 0 0 2px #0e111a,0 0 0 3.5px var(--c)}.mtw.k-r{border-radius:6px}
+.mev dl{margin:6px 0 0}.mev dt{margin-top:8px;font-size:15px}.mev dd{margin:2px 0 0;font-size:14px;color:var(--mute)}
 .mleg{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}.mleg li{display:inline-flex;gap:8px;align-items:center}
 </style><header class="sh"><p class="eyebrow">Progression</p><h2>La Mémoire</h2><div class="lede"><p>Depuis la version 17, tu ne portes que <b>${S.plafond} talents</b> à la fois. Quand un talent nouveau arrive mémoire pleine, tu choisis celui qui part. Les reliques et l’équipement ne comptent pas.</p></div></header>
 <div class="grid g3">${regles}</div>
@@ -171,9 +178,13 @@ function memoire(D) {
 <ul>
 <li>Un talent peut être gravé <b>${GV.max} fois</b> (Gravure ${ROMG[1]}${GV.max > 1 ? ', puis ' + ROMG.slice(2, GV.max + 1).join(', ') : ''}). Sur sa tuile, un liseré doré et un losange par gravure.</li>
 <li>Talent à effets chiffrés (dégâts, rayon, PV, recharge…) : chaque gravure les intensifie de <b>${pct} %</b> (+${pct * GV.max} % à ${GV.max} gravures). Les niveaux de compétence, les compteurs et les interrupteurs ne bougent pas.</li>
-<li>Talent sans effet chiffré (la plupart des compétences, majeurs et nœuds clés) : chaque gravure donne le <b>bonus de sa famille</b> (ci-dessous), multiplié selon le genre du nœud : ${esc(poidsTxt)}.</li>
+<li>Talent sans effet chiffré (la plupart des mineurs de branche, des compétences et des majeurs) : chaque gravure donne le <b>bonus de sa famille</b> (ci-dessous), multiplié selon le genre du nœud : ${esc(poidsTxt)}.</li>
+<li>Nœuds clés et ultimes : la Gravure II est un <b>éveil</b> (voir plus bas).</li>
 <li>Oublier un talent gravé : ses gravures partent avec lui.</li>
 </ul>
+<h3 class="sub" id="eveils">Les éveils</h3>
+<p>Les <b>nœuds clés et les ultimes</b> ne s’intensifient pas : à la Gravure ${ROMG[1]}, ils reçoivent le bonus de leur famille ; à la Gravure ${ROMG[2]}, ils <b>s’éveillent</b> et changent de comportement. La carte d’éveil a une bordure de braise et dit ce qui change.</p>
+${eveils}
 <h3 class="sub">Les familles de souvenirs</h3>
 <p>Chaque talent appartient à une famille, rangée selon ce qu’il <b>fait</b> (pas selon ce qui le déclenche). Elle donne son icône à la tuile.</p>
 <div class="grid g2">${fams}</div>
@@ -361,6 +372,7 @@ function talents(T, A, S) {
     if (n.k === 'x') { f.x = id.endsWith('a') ? 'A' : 'B'; if (n.syn) f.y = n.syn; }
     const ex = excl(id); if (ex.length) f.e = ex.map(k => N[k].name);
     if (FA['t:' + id] && S.familles[FA['t:' + id]]) f.f = S.familles[FA['t:' + id]].n;
+    if (S.eveils && S.eveils[id]) f.v = S.eveils[id].n + ' : ' + S.eveils[id].d;
     fiches[id] = f;
   }
   const cadres = {}; for (const c of Object.keys(T.formes)) Object.assign(cadres, Object.fromEntries(Object.entries(A.vues(c)).filter(([k]) => k !== 'tout').map(([k, v]) => [k, v])));
