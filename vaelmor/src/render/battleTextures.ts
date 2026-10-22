@@ -16,8 +16,8 @@ export const BATTLE_TEX = {
   field: (key: string, frame: number): string => `battle:field:${key}:${frame}`,
   /** Unités : gabarit 16×28 équipé selon la classe, aux couleurs du camp (décision n°60). */
   ms: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}`,
-  /** Pose de combat peinte (attack, slash, skill, hit, ko…), tournée vers l'est. */
-  pose: (name: string): string => `pose_${name}`,
+  /** Pose de combat peinte (attack, slash, skill, hit, ko…) selon la direction de la cible : profil (est, retourné pour l'ouest), face, dos. */
+  pose: (name: string, view: CharPose = 'side'): string => `pose_${name}_${view}`,
   msFrame: (kind: UnitFrameKind, frame: number): string => `${kind}_${frame}`,
   msIdle: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}:idle`,
   /** Unité survolée ou choisie : elle brandit son arme. */
@@ -129,7 +129,7 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
     SKIN_ROWS.forEach((pose, row) => {
       for (let f = 0; f < def.frames; f++) add(BATTLE_TEX.msFrame(pose, f), row, f);
     });
-    (SKIN_POSES[id] ?? []).forEach((pose, col) => add(BATTLE_TEX.pose(pose), 3, col));
+    (SKIN_POSES[id] ?? []).forEach((pose, col) => SKIN_ROWS.forEach((view, r) => add(BATTLE_TEX.pose(pose, view), 3 + ((r + 1) % 3), col)));
     for (let f = 0; f < UNIT_IDLE_FRAMES; f++) add(BATTLE_TEX.msFrame('idle', f), 0, 0);
     for (let f = 0; f < UNIT_READY_FRAMES; f++) add(BATTLE_TEX.msFrame('ready', f), 0, 0);
   }
@@ -142,7 +142,7 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
     scene.anims.create({ key: idleKey, frames: [{ key, frame: BATTLE_TEX.msFrame('idle', 0) }, { key, frame: BATTLE_TEX.msFrame('idle', 1) }], frameRate: 2, repeat: -1 });
   }
   const poses = SKIN_POSES[id] ?? [];
-  if (poses.includes('ready')) make(BATTLE_TEX.msReady(id, 'player'), [{ key, frame: BATTLE_TEX.pose('ready') }], 1000);
+  if (poses.includes('ready')) make(BATTLE_TEX.msReady(id, 'player'), [{ key, frame: BATTLE_TEX.pose('ready', 'down') }], 1000);
   else make(BATTLE_TEX.msReady(id, 'player'), frames('down'), SKIN_FRAME_MS * 1.6);
   for (const view of CHAR_POSES) make(BATTLE_TEX.msWalk(id, 'player', view), frames(view), SKIN_FRAME_MS);
 }

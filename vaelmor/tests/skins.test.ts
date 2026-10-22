@@ -23,7 +23,7 @@ describe('apparences', () => {
       const c = readFileSync(resolve(__dirname, `../assets/personnages/combat/${s.id}.png`));
       const poses = SKIN_POSES[s.id]?.length ?? 0;
       expect(c.readUInt32BE(16), s.id).toBe(30 * Math.max(s.frames, poses));
-      expect(c.readUInt32BE(20), s.id).toBe(30 * (poses ? 4 : 3));
+      expect(c.readUInt32BE(20), s.id).toBe(30 * (poses ? 6 : 3));
     }
   });
 });
