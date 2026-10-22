@@ -6892,78 +6892,88 @@ openCodex=function(back){
   fl.type='lowpass';fl.Q.value=o.q||5;fl.frequency.setValueAtTime(o.lp0,t);fl.frequency.exponentialRampToValueAtTime(Math.max(40,o.lp1),t+o.dur);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(o.vol,t+(o.att||0.06));g.gain.setValueAtTime(o.vol,t+o.dur*0.5);g.gain.exponentialRampToValueAtTime(0.0001,t+o.dur);
   osc.connect(fl);let out=fl;if(o.dist){if(!dc)dc=curve(1);const ws=AC.createWaveShaper();ws.curve=curve(o.dist);fl.connect(ws);out=ws;}out.connect(g);g.connect(AC.master);osc.start(t);osc.stop(t+o.dur+0.05);}
- // v16.23 · rire démoniaque : un vrai « ha ha ha HAAA » (souffle « h » + voyelle « a » aux formants, voix grave et saturée)
- function rire(delay){if(!AC||muted)return;delay=delay||0;
-  const ha=(d,f,dur,vol)=>{const t=AC.currentTime+d;
-   noise(0.07,vol*0.35,1700,'bandpass',d);
-   const o=AC.createOscillator(),o2=AC.createOscillator(),m2=AC.createGain(),sh=AC.createWaveShaper(),g=AC.createGain();
-   o.type='sawtooth';o2.type='sawtooth';m2.gain.value=0.7;
-   o.frequency.setValueAtTime(f*1.15,t);o.frequency.exponentialRampToValueAtTime(f*0.78,t+dur);
-   o2.frequency.setValueAtTime(f*0.57,t);o2.frequency.exponentialRampToValueAtTime(f*0.39,t+dur);
-   const l=AC.createOscillator(),lg=AC.createGain();l.frequency.value=9;lg.gain.value=f*0.025;l.connect(lg);lg.connect(o.frequency);lg.connect(o2.frequency);l.start(t);l.stop(t+dur+0.05);
-   sh.curve=curve(2.5);o.connect(sh);o2.connect(m2);m2.connect(sh);
-   g.gain.setValueAtTime(0.0001,t+0.03);g.gain.exponentialRampToValueAtTime(vol,t+0.08);g.gain.setValueAtTime(vol,t+dur*0.45);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-   for(const [fr,q,a] of [[760,7,1],[1250,9,0.7],[2600,10,0.25]]){const b=AC.createBiquadFilter(),ga=AC.createGain();b.type='bandpass';b.frequency.value=fr;b.Q.value=q;ga.gain.value=a;sh.connect(b);b.connect(ga);ga.connect(g);}
-   g.connect(AC.master);o.start(t);o2.start(t);o.stop(t+dur+0.05);o2.stop(t+dur+0.05);};
-  ha(delay,150,0.17,0.42);ha(delay+0.2,135,0.17,0.42);ha(delay+0.4,120,0.17,0.45);ha(delay+0.62,100,0.55,0.5);}
+ // v16.46 · moteur de voix (remplace les synthés « 8 bits ») : source glottale (onde riche + gigue + souffle) → formants qui glissent → compresseur → réverbération de salle
+ const VW={a:[730,1090,2440,3400],A:[880,1250,2800,3500],o:[500,900,2500,3300],u:[350,700,2400,3300],e:[550,1800,2500,3400],i:[320,2200,2900,3500]};
+ let VC=null;
+ function vctx(){if(VC&&VC.ac===AC)return VC;const sr=AC.sampleRate,n=40,im=new Float32Array(n+1),re=new Float32Array(n+1);for(let k=1;k<=n;k++)im[k]=Math.pow(k,-1.35);
+  const wave=AC.createPeriodicWave(re,im);
+  const jb=AC.createBuffer(1,sr*2,sr),jd=jb.getChannelData(0);let lp=0,mx=0.0001;for(let i=0;i<jd.length;i++){lp+=((Math.random()*2-1)-lp)*0.004;jd[i]=lp;mx=Math.max(mx,Math.abs(lp));}for(let i=0;i<jd.length;i++)jd[i]/=mx;
+  const rn=Math.floor(sr*1.5),ir=AC.createBuffer(2,rn,sr);for(let c=0;c<2;c++){const d=ir.getChannelData(c);let l2=0;for(let i=0;i<rn;i++){l2+=((Math.random()*2-1)-l2)*0.4;d[i]=l2*Math.exp(-i/(sr*0.3))*Math.min(1,i/90);}}
+  VC={ac:AC,wave,jb,ir};return VC;}
+ function vbus(len,wetv){const C=vctx(),bus=AC.createGain(),pk=AC.createBiquadFilter(),comp=AC.createDynamicsCompressor(),dry=AC.createGain(),rv=AC.createConvolver(),wet=AC.createGain();
+  pk.type='peaking';pk.frequency.value=2800;pk.Q.value=0.8;pk.gain.value=7;
+  comp.threshold.value=-22;comp.ratio.value=5;comp.attack.value=0.004;comp.release.value=0.14;dry.gain.value=0.8;rv.buffer=C.ir;wet.gain.value=wetv==null?0.3:wetv;
+  bus.connect(pk);pk.connect(comp);comp.connect(dry);dry.connect(AC.master);comp.connect(rv);rv.connect(wet);wet.connect(AC.master);
+  setTimeout(()=>{try{[bus,pk,comp,dry,rv,wet].forEach(x=>x.disconnect());}catch(e){}},len*1000);return bus;}
+ function vform(inp,V0,V1,t,dur){const sum=AC.createGain(),G=[1,0.8,0.6,0.4],Q=[5,6,7,8];
+  for(let i=0;i<4;i++){const b=AC.createBiquadFilter(),g=AC.createGain();b.type='bandpass';b.Q.value=Q[i];b.frequency.setValueAtTime(V0[i],t);b.frequency.linearRampToValueAtTime(V1[i],t+dur*0.7);g.gain.value=G[i];inp.connect(b);b.connect(g);g.connect(sum);}
+  return sum;}
+ // une syllabe : souffle « h » puis voyelle voisée. f0→f1 : hauteur · v→v1 : voyelle · fry : grondement (Hz) · jit : gigue · vib : vibrato · dist : saturation
+ function voc(bus,t0,o){const C=vctx(),hd=o.h==null?0.05:o.h,t=t0+hd,dur=o.dur,f0=o.f0,f1=o.f1||f0*0.8,vol=o.vol,att=o.att||0.03,V0=VW[o.v||'a'],V1=VW[o.v1||o.v||'a'],ex=[];
+  const src=AC.createOscillator();src.setPeriodicWave(C.wave);src.frequency.setValueAtTime(f0,t);src.frequency.exponentialRampToValueAtTime(Math.max(28,f1),t+dur);ex.push(src);
+  const jb=AC.createBufferSource(),jg=AC.createGain();jb.buffer=C.jb;jb.loop=true;jg.gain.value=f0*(o.jit==null?0.03:o.jit);jb.connect(jg);jg.connect(src.frequency);ex.push(jb);
+  if(o.vib){const vl=AC.createOscillator(),vg=AC.createGain();vl.frequency.value=o.vib;vg.gain.value=f0*(o.vd||0.02);vl.connect(vg);vg.connect(src.frequency);ex.push(vl);}
+  const sh=AC.createWaveShaper();sh.curve=curve(o.dist||1.6);src.connect(sh);
+  const body=AC.createBiquadFilter(),bg=AC.createGain();body.type='lowpass';body.frequency.value=600;bg.gain.value=o.body==null?0.2:o.body;sh.connect(body);body.connect(bg);
+  const fs=vform(sh,V0,V1,t,dur);bg.connect(fs);
+  const env=AC.createGain(),am=AC.createGain();
+  env.gain.setValueAtTime(0.0001,t);env.gain.exponentialRampToValueAtTime(vol,t+att);env.gain.setValueAtTime(vol,t+Math.max(att,dur*(o.hold==null?0.5:o.hold)));env.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  const fd=o.fry?(o.fryD||0.5):0;am.gain.value=1-fd/2;
+  if(fd){const fl=AC.createOscillator(),fg=AC.createGain();fl.frequency.value=o.fry;fg.gain.value=fd/2;fl.connect(fg);fg.connect(am.gain);ex.push(fl);}
+  fs.connect(env);env.connect(am);am.connect(bus);
+  // souffle : une rafale au début (le « h »), puis un filet d’air sous la voix
+  const ns=AC.createBufferSource(),ng=AC.createGain(),nf=vform(ng,V0,V1,t0,dur+hd),no=AC.createGain(),br=o.breath==null?0.2:o.breath;
+  ns.buffer=getNoise();ns.loop=true;ng.gain.value=2.5;ns.connect(ng);nf.connect(no);no.connect(bus);
+  no.gain.setValueAtTime(0.0001,t0);
+  if(hd>0){no.gain.exponentialRampToValueAtTime(vol*0.9,t0+Math.min(0.015,hd));no.gain.setValueAtTime(vol*0.9,t0+hd);no.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol*br*0.4),t0+hd+0.05);}
+  else no.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol*br*0.4),t0+0.03);
+  no.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  ns.start(t0);ns.stop(t+dur+0.05);
+  for(const x of ex){x.start(t);x.stop(t+dur+0.05);}}
+ // rire court (Brumeux : escalade, Masqué : montage fini ou éveillé)
+ function rire(delay){if(!AC||muted)return;const t0=AC.currentTime+(delay||0)+0.02,bus=vbus(2.4,0.28);
+  [[0,150,0.16,0.35],[0.2,138,0.16,0.4],[0.4,126,0.17,0.46]].forEach(([d,f,du,v])=>voc(bus,t0+d,{f0:f,f1:f*0.8,dur:du,vol:v,v:'a',dist:2}));
+  voc(bus,t0+0.62,{f0:112,f1:62,dur:0.6,vol:0.6,v:'A',v1:'o',dist:3,vib:6,vd:0.03});}
  window.__rire=rire;
-
- // v16.45 · rire théâtral du Masqué (≈ 3 s) : « ha ha ha » étouffé qui monte, rire grave et grotesque qui se dérègle, grand « HAHAHA ! », puis un petit ricanement
+ // v16.45/46 · rire théâtral du Masqué (≈ 3 s) : « ha ha ha » grave qui monte, rire profond et grotesque qui se dérègle (voix qui casse), grand « HAHAHA ! », silence, petit ricanement
  function rireMasque(){if(!AC||muted)return;if(!throttle('rireMasque',2500))return;
-  const t0=AC.currentTime+0.02,bus=AC.createGain(),dly=AC.createDelay(0.5),fb=AC.createGain(),wet=AC.createGain(),lp=AC.createBiquadFilter();
-  dly.delayTime.value=0.19;fb.gain.value=0.38;wet.gain.value=0.4;lp.type='lowpass';lp.frequency.value=1800;
-  bus.connect(AC.master);bus.connect(dly);dly.connect(lp);lp.connect(fb);fb.connect(dly);lp.connect(wet);wet.connect(AC.master);   // écho qui se perd dans la salle
-  setTimeout(()=>{try{bus.disconnect();dly.disconnect();lp.disconnect();fb.disconnect();wet.disconnect();}catch(e){}},4500);
-  const FM={a:[[760,7,1],[1250,9,.7],[2600,10,.25]],o:[[480,7,1],[820,8,.6],[2500,10,.15]],u:[[330,6,1],[700,7,.5]]};
-  const nz=(d,dur,vol,fr,type)=>{const t=t0+d,sr=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();sr.buffer=getNoise();fl.type=type||'bandpass';fl.frequency.value=fr;
-   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol),t+dur*0.3);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);sr.connect(fl);fl.connect(g);g.connect(bus);sr.start(t);sr.stop(t+dur+0.03);};
-  // une syllabe : deux scies (voix + octave grave) saturées, filtrées par des formants (voyelle a / o / ou), vibrato
-  const ha=(d,f,dur,vol,o={})=>{const t=t0+d,f1=o.f1||f*0.75,fm=FM[o.v||'a'],k=o.k||1;
-   const A=AC.createOscillator(),B=AC.createOscillator(),mB=AC.createGain(),sh=AC.createWaveShaper(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
-   A.type='sawtooth';B.type='sawtooth';mB.gain.value=o.sub==null?0.7:o.sub;
-   A.frequency.setValueAtTime(f,t);A.frequency.exponentialRampToValueAtTime(Math.max(30,f1),t+dur);
-   B.frequency.setValueAtTime(f*0.5,t);B.frequency.exponentialRampToValueAtTime(Math.max(20,f1*0.5*(o.det||1)),t+dur);
-   l.frequency.value=o.vib||8;lg.gain.value=f*(o.vd||0.02);l.connect(lg);lg.connect(A.frequency);lg.connect(B.frequency);
-   sh.curve=curve(o.dist||2.5);A.connect(sh);B.connect(mB);mB.connect(sh);
-   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+Math.min(0.07,dur*0.4));g.gain.setValueAtTime(vol,t+dur*0.5);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-   for(const [fr,q,a] of fm){const b=AC.createBiquadFilter(),ga=AC.createGain();b.type='bandpass';b.frequency.value=fr*k;b.Q.value=Math.min(q,2.5);ga.gain.value=a;sh.connect(b);b.connect(ga);ga.connect(g);}
-   g.connect(bus);l.start(t);A.start(t);B.start(t);l.stop(t+dur+0.05);A.stop(t+dur+0.05);B.stop(t+dur+0.05);
-   if(!o.nobreath)nz(d,0.06,vol*0.3,o.nf||1700,'bandpass');};
-  // grincement (porte qui geint) et vibration grave
-  const grin=(d,dur,f0,f1,vol)=>{const t=t0+d,O=AC.createOscillator(),b=AC.createBiquadFilter(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
-   O.type='sawtooth';O.frequency.setValueAtTime(f0,t);O.frequency.exponentialRampToValueAtTime(f1,t+dur);l.frequency.value=34;lg.gain.value=f0*0.05;l.connect(lg);lg.connect(O.frequency);
-   b.type='bandpass';b.frequency.value=1500;b.Q.value=7;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*0.3);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-   O.connect(b);b.connect(g);g.connect(bus);l.start(t);O.start(t);l.stop(t+dur+0.05);O.stop(t+dur+0.05);};
-  const rum=(d,dur,f0,f1,vol)=>{const t=t0+d,O=AC.createOscillator(),lo=AC.createBiquadFilter(),g=AC.createGain(),am=AC.createOscillator(),ag=AC.createGain();
-   O.type='sawtooth';O.frequency.setValueAtTime(f0,t);O.frequency.exponentialRampToValueAtTime(f1,t+dur);lo.type='lowpass';lo.frequency.value=220;
-   am.frequency.value=15;ag.gain.value=vol*0.6;am.connect(ag);ag.connect(g.gain);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-   O.connect(lo);lo.connect(g);g.connect(bus);am.start(t);O.start(t);am.stop(t+dur+0.05);O.stop(t+dur+0.05);};
-  nz(0,0.22,0.03,900,'bandpass');                                              // inspiration
-  ha(0.12,150,0.15,0.10,{k:0.75,f1:130,dist:1.5,nobreath:true});               // 1. « ha… ha… ha… » étouffé, de plus en plus fort
-  ha(0.30,160,0.15,0.17,{k:0.85,f1:135});
-  ha(0.47,172,0.16,0.27,{k:0.95,f1:140});
-  rum(0.55,1.5,58,40,0.12);
-  ha(0.66,112,0.2,0.4,{v:'o',f1:84,sub:1,dist:3.5,vd:0.04,vib:7});             // 2. rire profond, surnaturel, grotesque
-  ha(0.86,102,0.2,0.42,{v:'o',f1:76,sub:1,dist:3.8,vd:0.05,vib:6,det:0.94});
-  ha(1.06,92,0.22,0.44,{v:'u',f1:66,sub:1.1,dist:4,vd:0.07,vib:5,det:0.9});
-  grin(0.72,0.5,1900,850,0.022);grin(1.2,0.3,700,1700,0.02);
-  ha(1.26,150,0.09,0.3,{f1:210,vd:0.12,vib:19,dist:4});                        // 3. il se dérègle
-  ha(1.35,70,0.1,0.34,{v:'u',f1:120,vd:0.15,vib:23,dist:5});
-  ha(1.45,190,0.08,0.26,{f1:90,vd:0.2,vib:27,dist:5});
-  ha(1.62,205,0.14,0.5,{f1:170,dist:5,vd:0.03});                               // 4. « HA-HA-HAAA ! »
-  ha(1.78,190,0.14,0.54,{f1:150,dist:5.5,vd:0.03});
-  ha(1.94,170,0.5,0.6,{f1:78,dist:6,vd:0.045,vib:10,sub:1});nz(1.94,0.4,0.1,2600,'bandpass');
-  ha(2.66,330,0.1,0.1,{k:1.15,f1:300,vd:0.03,vib:13,dist:1.2});                // silence, puis « hé-hé »
-  ha(2.8,360,0.1,0.09,{k:1.2,f1:310,vd:0.03,vib:13,dist:1.2});}
+  const S=0.9,t0=AC.currentTime+0.03,bus=vbus(4.2,0.32);
+  const V=(d,o)=>voc(bus,t0+d*S,Object.assign({},o,{dur:o.dur*S}));
+  const air=(d,dur,vol,fr)=>{const t=t0+d*S,sr=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();sr.buffer=getNoise();fl.type='bandpass';fl.frequency.value=fr;fl.Q.value=0.7;
+   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*0.6);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);sr.connect(fl);fl.connect(g);g.connect(bus);sr.start(t);sr.stop(t+dur+0.03);};
+  const rum=(d,dur,f0,f1,vol)=>{const t=t0+d*S,O=AC.createOscillator(),g=AC.createGain(),am=AC.createOscillator(),ag=AC.createGain();
+   O.frequency.setValueAtTime(f0,t);O.frequency.exponentialRampToValueAtTime(f1,t+dur);am.frequency.value=14;ag.gain.value=vol*0.5;am.connect(ag);ag.connect(g.gain);
+   g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);O.connect(g);g.connect(bus);am.start(t);O.start(t);am.stop(t+dur+0.05);O.stop(t+dur+0.05);};
+  air(0,0.24,0.1,1100);                                                                         // inspiration
+  V(0.05,{f0:118,f1:96,dur:0.15,vol:0.18,v:'a',jit:0.035});                                       // 1. « ha… ha… ha… » grave, de plus en plus fort
+  V(0.24,{f0:124,f1:98,dur:0.16,vol:0.28,v:'a',jit:0.035});
+  V(0.43,{f0:132,f1:100,dur:0.17,vol:0.42,v:'a',jit:0.035,dist:2});
+  rum(0.55,1.5,52,38,0.1);
+  V(0.66,{f0:92,f1:70,dur:0.22,vol:0.6,v:'o',fry:30,fryD:0.5,dist:2.5,jit:0.045,h:0.04});      // 2. « HOO… HOO… HOO… » profond, grotesque
+  V(0.90,{f0:86,f1:64,dur:0.22,vol:0.65,v:'o',fry:32,fryD:0.55,dist:2.6,jit:0.05,h:0.04});
+  V(1.14,{f0:80,f1:54,dur:0.24,vol:0.7,v:'u',fry:34,fryD:0.6,dist:2.8,jit:0.055,h:0.04});
+  V(0.75,{f0:1100,f1:480,dur:0.45,vol:0.05,v:'i',fry:55,fryD:0.9,jit:0.04,breath:0.1,h:0,att:0.12});   // grincement
+  V(1.42,{f0:230,f1:340,dur:0.12,vol:0.4,v:'e',jit:0.09,h:0.02,dist:2});                       // 3. la voix casse
+  V(1.54,{f0:90,f1:58,dur:0.12,vol:0.6,v:'u',fry:40,fryD:0.7,jit:0.07,dist:3,h:0.02});
+  V(1.66,{f0:270,f1:180,dur:0.1,vol:0.38,v:'a',jit:0.11,h:0.02,dist:2});
+  V(1.80,{f0:165,f1:135,dur:0.15,vol:0.85,v:'A',dist:3});                                         // 4. « HA-HA-HAAA ! »
+  V(1.97,{f0:175,f1:140,dur:0.15,vol:0.9,v:'A',dist:3});
+  V(2.14,{f0:190,f1:70,dur:0.62,vol:1,v:'A',v1:'o',hold:0.6,vib:6.5,vd:0.03,dist:3.5,jit:0.03});
+  V(2.14,{f0:95,f1:35,dur:0.62,vol:0.5,v:'o',hold:0.6,vib:6,vd:0.03,dist:2,h:0,breath:0});
+  air(2.14,0.4,0.12,2600);
+  V(3.0,{f0:310,f1:270,dur:0.09,vol:0.22,v:'i',breath:0.5,h:0.03,jit:0.04,vib:12,vd:0.03});   // silence, puis « hé-hé »
+  V(3.14,{f0:330,f1:280,dur:0.09,vol:0.2,v:'i',breath:0.5,h:0.03,jit:0.04,vib:12,vd:0.03});}
  window.__rireMasque=rireMasque;
  function demon(who){if(!AC||muted)return;if(!throttle('demon',900))return;
   if(who==='mere'){voice({type:'sawtooth',f0:760,f1:240,dur:1.3,vol:0.13,vib:9,vibD:46,lp0:3400,lp1:900,dist:5,att:0.04});voice({type:'sawtooth',f0:140,f1:58,dur:1.5,vol:0.16,vib:6,vibD:8,lp0:900,lp1:160,dist:6});noise(1.1,0.12,1900,'bandpass',0.05);tone(52,1.4,'sine',0.14,34);}
   else if(who==='chroniqueur'){noise(1.4,0.09,2600,'bandpass');tone(440,1.2,'sine',0.05,310);tone(466,1.2,'sine',0.04,330,0.08);}
   else if(who==='joueur')return;
   else{   // v16.45 · le Brumeux : une voix sans visage, grave, qui enfle puis s’éteint, sur un souffle et deux chuchotements
-   voice({type:'sawtooth',f0:78,f1:44,dur:1.05,vol:0.2,vib:4.5,vibD:6,lp0:620,lp1:170,dist:6,att:0.18});
-   voice({type:'sawtooth',f0:117,f1:66,dur:0.95,vol:0.05,vib:6,vibD:9,lp0:1000,lp1:240,dist:3,att:0.26,delay:0.1});
-   noise(0.9,0.07,420,'bandpass');noise(0.28,0.05,2300,'bandpass',0.12);noise(0.3,0.045,1500,'bandpass',0.46);tone(38,1.1,'sine',0.17,30);}}
+   const bus=vbus(2.6,0.36),t=AC.currentTime+0.02;
+   voc(bus,t,{f0:104,f1:62,dur:1.05,vol:0.9,body:0.04,v:'A',v1:'o',att:0.14,hold:0.5,fry:30,fryD:0.45,dist:4,breath:0.7,h:0.16,vib:5,vd:0.025,jit:0.05});
+   voc(bus,t+0.05,{f0:208,f1:124,dur:0.9,vol:0.28,v:'e',v1:'a',body:0.04,att:0.2,dist:3,breath:0.5,h:0,jit:0.07});
+   voc(bus,t+0.1,{f0:50,f1:34,dur:0.95,vol:0.12,v:'o',att:0.25,dist:1.4,h:0,breath:0});
+   noise(0.28,0.05,2300,'bandpass',0.12);noise(0.3,0.045,1500,'bandpass',0.5);}}
  const _sfx15=sfx;sfx=function(k){if(typeof k==='string'&&k.startsWith('scream_')){demon(k.slice(7));return;}_sfx15(k);};
 
  // --- cercles de boss : bande lumineuse, runes, étincelles
@@ -9030,7 +9040,7 @@ function demoBoot(cls){
   if(k==='asm_ch'){if(!AC||muted)return;d=d||0.7;tone(240,d,'sawtooth',0.035,620);tone(120,d,'triangle',0.04,300);return;}
   if(k==='asm_sig'){if(!AC||muted)return;d=d||1;tone(150,d,'sawtooth',0.05,520);tone(75,d,'square',0.03,260);noise(d,0.05,400,'lowpass');tone(880,0.12,'sine',0.04,null,d-0.12);return;}
   // cri d'invocation du Brumeux, puis les bruits du montage (le corps touche le sol, le masque claque, chaque point, les fils coupés)
-  if(k==='asm_in'){if(!AC||muted)return;if(window.__rireMasque)window.__rireMasque();tone(92,1.4,'sawtooth',0.05,52);return;}   // v16.45 : rire théâtral, distinct du cri du Brumeux
+  if(k==='asm_in'){if(!AC||muted)return;if(window.__rireMasque)window.__rireMasque();tone(70,1.4,'sine',0.08,45);return;}   // v16.45 : rire théâtral, distinct du cri du Brumeux
   if(k==='asm_sol'){if(!AC||muted)return;tone(70,0.25,'sine',0.12,40);noise(0.18,0.07,400,'lowpass');return;}
   if(k==='asm_pose'){if(!AC||muted)return;tone(110,0.16,'square',0.07,60);noise(0.1,0.09,1800,'bandpass');return;}
   if(k==='asm_point'){if(!AC||muted)return;tone(1500,0.035,'square',0.025,1100);noise(0.04,0.05,4200,'highpass');return;}
