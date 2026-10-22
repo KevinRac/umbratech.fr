@@ -1,17 +1,12 @@
 // La Brume · La Mémoire : ce que tu portes, ce que tu oublies
 // Source unique : le jeu (index.html, bloc « v17 · La Mémoire ») ET le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
-// Un souvenir = un talent ou une relique. Les effets restent dans index.html ; ce fichier dit combien on en porte et à quelle famille chacun appartient.
-// Les familles décident de l’icône d’un talent dans le HUD et l’écran d’oubli (les reliques gardent leur propre icône).
+// Un souvenir = un talent porté. Les effets restent dans index.html ; ce fichier dit combien on en porte et à quelle famille chacun appartient.
+// Les familles décident de l’icône d’un talent dans le HUD et l’écran d’oubli.
 (function(D){D.souvenirs={
- // Souvenirs actifs en même temps (talents et reliques ; l’équipement garde ses 4 emplacements à part)
- plafond:6,
- // Reliques hors mémoire : leur effet s’applique tout de suite, elles ne prennent aucune place
- consommables:['boussole'],
- // Reliques qui se consument quand elles servent : elles libèrent leur place
- seConsume:['phoenix'],
- // Refuser une relique (autel, champion, gardien, Brèche…) : un soin (part des PV max) ou de l’or
- refus:{soin:0.2,or:20},
- // Familles : nom, icône (data/icones.js), ce qu’elles regroupent ; t : talents, r : reliques
+ // Talents actifs en même temps (v17.1 : les reliques et l’équipement sont hors mémoire)
+ plafond:10,
+ // Familles : nom, icône (data/icones.js), ce qu’elles regroupent ; t : talents
+ // r : reliques de la même famille (classement gardé pour les paliers suivants ; elles ne comptent pas dans la mémoire)
  familles:{
   projectile:{n:'Projectile',ic:'u_volley',d:'Ce qui part de toi et voyage : aiguilles, éclats, lancers de lanterne, crachats.',
    t:['ray_x3a','pen_x1b','fan_n1','fan_n3','fan_n4','fan_n5','fan_n6','fan_x1a','fan_x2a','pha_s4','reg_n1','reg_n2','reg_n4','reg_n6','reg_x1a','reg_x3a','reg_x3b','sai_s2','cad_x1b','aig_n1','aig_n2','aig_n3','aig_n4','aig_n5','aig_n6','aig_x1a','aig_x1b','aig_x2a','aig_x2b','aig_x3a','aig_x3b','aig_k1','aig_k2','bro_s1','bro_s2','bro_s3','bro_s4','bro_s5','bro_sk'],

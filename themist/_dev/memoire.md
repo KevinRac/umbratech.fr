@@ -782,3 +782,13 @@ Choix de ce palier non tranchés par D0–D10 :
 | Chaîne de glas `chaineg` | +25 % sur étourdis | +35 % |
 
 Non touchés : mineurs des branches principales (effets de jeu, à rangs), compétences, majeurs, nœuds clés, ultimes, reliques de forme, montée des ennemis.
+
+## 9. Retour de jeu : v17.1 (22 octobre 2026)
+
+Retour du joueur : la mémoire à 6 bridait trop la diversité, et l’écran d’oubli revenait à presque chaque talent.
+
+- **D1 révisée** : les reliques sortent de la mémoire. Plus de refus contre soin ou or, plus d’écran d’oubli pour une relique (autel, champion, Colporteur, Bagage), plus de cas Boussole / Phénix. Les reliques ne vont jamais dans la réserve ; leur classement en familles reste dans `souvenirs.js` pour les paliers suivants.
+- **Plafond** : 10 talents (`souvenirs.js`, `plafond`). Repère : un run complet compte environ 13 talents distincts à la fin de l’acte II et 17 à la fin de l’acte III ; l’oubli commence donc vers le milieu de l’acte II.
+- **Clavier** : 1 à 9, puis 0 pour le dixième ; R (ou Retour arrière) renonce ; Échap garde le niveau.
+- **HUD** : deux rangées de cinq tuiles ; les reliques retrouvent leurs icônes à côté de l’équipement.
+- **Équilibrage** : les 15 reliques renforcées en v17.0 reviennent à leurs valeurs de la v16.47 (le renfort compensait la place qu’elles prenaient). Les 22 mineurs des voies gardent leur renfort du § 8.

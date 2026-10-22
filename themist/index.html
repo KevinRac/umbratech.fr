@@ -744,21 +744,21 @@ function relFx(F){for(const k in F){const r=RELICS.find(x=>x.id===k);if(r)r.appl
 relFx({
  phoenix:s=>{s.phoenix=1;},
  bell:s=>{s.bell=1;},
- eye:s=>{s.crit+=0.15;s.critMult+=0.4;},
- wax:s=>{s.maxHp+=40;},
+ eye:s=>{s.crit+=0.1;s.critMult+=0.25;},
+ wax:s=>{s.maxHp+=25;},
  sand:s=>{s.dashCharges+=1;},
- feather:s=>{s.speed*=1.18;},
+ feather:s=>{s.speed*=1.12;},
  prismg:s=>{s.prismGuard=1;},
- calice:s=>{s.lifesteal+=0.05;},
+ calice:s=>{s.lifesteal+=0.03;},
  ember:s=>{s.burnMult*=1.5;},
  oil:s=>{s.oil=1;},
  ash:s=>{s.ash=1;},
  chain:s=>{s.chain=1;},
  dent:s=>{s.spitDmg*=1.25;},
  cercle:s=>{s.ruptureSelf*=0.5;},
- moelle:s=>{s.regenKill+=5;},
- crane:s=>{s.extraGold+=3;},
- epine:s=>{s.dmg+=0.28;s.maxHp-=15;},
+ moelle:s=>{s.regenKill+=3;},
+ crane:s=>{s.extraGold+=2;},
+ epine:s=>{s.dmg+=0.2;s.maxHp-=15;},
  clef:s=>{s.clef=1;},
  bourse:s=>{s.bourse=1;}});
 const MUTS=window.BRUME_DATA.bestiaire.mutationsInstables;
@@ -5187,15 +5187,15 @@ Object.assign(ICONS,{
  boussole:ci(12,12,9)+'M15 9l-2 4-4 2 2-4z',
  lacry:'M12 3c3 5 5 7.5 5 10.5a5 5 0 0 1-10 0C7 10.5 9 8 12 3zM10 14a2 2 0 0 0 2 2'});
 relFx({
- gant:s=>{s.atkSpeed+=0.22;},
- fiole:s=>{s.regenKill+=4;},
- ancre:s=>{s.dmgTaken*=0.82;},
- pendule:s=>{s.dashCd*=0.65;},
- os:s=>{s.maxHp+=20;s.speed*=1.12;},
- lacry:s=>{s.healMul=(s.healMul||1)*1.4;},
+ gant:s=>{s.atkSpeed+=0.15;},
+ fiole:s=>{s.regenKill+=2;},
+ ancre:s=>{s.dmgTaken*=0.88;},
+ pendule:s=>{s.dashCd*=0.75;},
+ os:s=>{s.maxHp+=10;s.speed*=1.08;},
+ lacry:s=>{s.healMul=(s.healMul||1)*1.25;},
  boussole:s=>{if(RUN)RUN.rerolls+=2;},
- cierge:s=>{s.bossDmg=(s.bossDmg||0)+0.25;},
- chaineg:s=>{s.stunDmg=(s.stunDmg||0)+0.35;}});
+ cierge:s=>{s.bossDmg=(s.bossDmg||0)+0.15;},
+ chaineg:s=>{s.stunDmg=(s.stunDmg||0)+0.25;}});
 const _heal11=heal;
 heal=function(n,src){if(P&&P.s&&P.s.healMul)n*=P.s.healMul;_heal11(n,src);};
 
@@ -9066,7 +9066,7 @@ function demoBoot(cls){
 
 // ═════════════════════════════════════════════════════════════════════════════
 // v17 · La Mémoire : « ce que tu oublies, la Brume s’en souvient »
-// Six souvenirs actifs (talents et reliques). Un gain, mémoire pleine : on choisit ce qu’on oublie.
+// Dix talents actifs (v17.1 : les reliques sont hors mémoire). Un talent nouveau, mémoire pleine : on choisit ce qu’on oublie.
 // Réglages et familles : data/souvenirs.js. Décisions de cadrage : _dev/memoire.md (D1 à D10).
 //  · RUN.memoire.actifs : les souvenirs portés, dans l’ordre d’acquisition (le rang voyage avec eux, D3)
 //  · RUN.memoire.traces : tout ce qui a été pris pendant la run (voisinage et seuils des majeurs, D4)
@@ -9076,11 +9076,9 @@ function demoBoot(cls){
 // et « la nouvelle mémoire rejouée » (équipement et sets ôtés le temps du calcul).
 // ═════════════════════════════════════════════════════════════════════════════
 (function(){
- const SV=(window.BRUME_DATA&&window.BRUME_DATA.souvenirs)||{plafond:6,consommables:['boussole'],seConsume:['phoenix'],refus:{soin:0.2,or:20},familles:{}};
- const CAP=()=>SV.plafond||6;
+ const SV=(window.BRUME_DATA&&window.BRUME_DATA.souvenirs)||{plafond:10,familles:{}};
+ const CAP=()=>SV.plafond||10;
  const FAM={};for(const k in SV.familles){const f=SV.familles[k];(f.t||[]).forEach(id=>{FAM['t:'+id]=k;});(f.r||[]).forEach(id=>{FAM['r:'+id]=k;});}
- const isCons=id=>(SV.consommables||[]).includes(id);
- const seConsume=id=>(SV.seConsume||[]).includes(id);
  const AIN=Array.prototype.includes;
  const on=()=>!!(RUN&&!RUN.hub&&RUN.memoire&&P);
  const MEM=()=>RUN&&RUN.memoire;
@@ -9142,7 +9140,6 @@ function demoBoot(cls){
  function memInit(){if(!RUN||RUN.hub||!P)return;
   RUN.memoire={actifs:[],traces:{},eff:[],base:clone(P.s),renonces:0,oublis:0,consumes:[],pending:null,forgetOpen:false,gains:0};
   RUN.reserveBrume=[];
-  if(!P.relics.__g){Object.defineProperty(P.relics,'includes',{value:function(id){return AIN.call(this,id)||(on()&&(inRes('r',id)||MEM().consumes.includes(id)));},enumerable:false,configurable:true});Object.defineProperty(P.relics,'__g',{value:1,enumerable:false});}
  }
  const _sr=startRun;
  startRun=function(){_sr();memInit();renderMem();};
@@ -9158,23 +9155,11 @@ function demoBoot(cls){
   const e=M.eff.find(x=>x.src==='t'&&x.id===id);if(e)e.rang=r;else M.eff.push({id,src:'t',rang:r});
   resync();renderMem();
  }
- function afterRelic(id){
-  const M=MEM();if(isCons(id)){renderMem();return;}
-  if(!inMem('r',id))M.actifs.push({id,src:'r',rang:1,depuis:{acte:RUN.act,salle:RUN.roomIdx}});
-  if(!M.eff.some(x=>x.src==='r'&&x.id===id))M.eff.push({id,src:'r',rang:1});M.gains++;
-  resync();renderMem();
- }
  const _tk=takeNode;
  takeNode=function(id){
   if(!on()){_tk(id);return;}
   if(inMem('t',id)||!full()){_tk(id);afterTalent(id);return;}
   MEM().pending={src:'t',id,ctx:'lv'};kick();
- };
- const _ar=applyRelic;
- applyRelic=function(r){
-  if(!on()||!r){_ar(r);return;}
-  if(isCons(r.id)||inMem('r',r.id)||!full()){_ar(r);afterRelic(r.id);return;}
-  MEM().pending={src:'r',id:r.id,ctx:'rel'};kick();
  };
  // l’écran d’oubli s’ouvre quand l’écran du gain se ferme (ou tout de suite si aucun écran n’est ouvert)
  function kick(){queueMicrotask(()=>{const M=MEM();if(M&&M.pending&&!M.forgetOpen&&overlayEl.hidden)openForget();});}
@@ -9183,14 +9168,6 @@ function demoBoot(cls){
   const M=on()&&MEM();
   if(M&&M.pending&&!M.forgetOpen){M.resumeTal=M.resumeTal||!!RUN.talOpen;RUN.talOpen=false;_co();openForget();return;}
   _co();
- };
- // Colporteur : on ne paie qu’une fois l’échange accepté
- const _buy=buyItem;
- buyItem=function(key){
-  if(!on()||!key||!key.startsWith('r:')){_buy(key);return;}
-  const id=key.slice(2),sh=room&&room.shop,it=sh&&sh.items.find(i=>i.key===key);
-  if(!it||sh.sold[key]||gold()<it.price||isCons(id)||!full()){_buy(key);return;}
-  MEM().pending={src:'r',id,ctx:'shop',key,price:it.price};openForget();
  };
  // Rituel d’Ascension : la racine de la voie est un souvenir (D2). Mémoire pleine : un oubli obligatoire.
  function doAsc(br){
@@ -9208,16 +9185,6 @@ function demoBoot(cls){
   overlayKeys=c=>{const m=NUMKEY[c];if(m!==undefined&&subs[m])choose(subs[m]);};
   if(full()){const sub=overlayEl.querySelector('.sub');if(sub)sub.insertAdjacentHTML('beforeend',` <span class="mfnote">${icon('u_swap')} Ta mémoire est pleine : la voie prendra la place d’un souvenir.</span>`);}
  };
- // D6 · la Mèche de Phénix se consume quand elle sert et libère sa place (elle ne part pas dans la réserve)
- const _pd=playerDown;
- playerDown=function(){
-  const u0=P&&P.phoenixUsed;_pd.apply(this,arguments);
-  if(!on()||u0||!P.phoenixUsed)return;
-  for(const id of SV.seConsume||[]){const a=MEM().actifs.find(x=>x.src==='r'&&x.id===id);if(!a)continue;
-   MEM().actifs.splice(MEM().actifs.indexOf(a),1);const i=AIN.call(P.relics,id)?P.relics.indexOf(id):-1;if(i>=0)P.relics.splice(i,1);
-   MEM().consumes.push(id);resync();renderMem();}
- };
-
  // ── Oublier
  function forget(a){
   const M=MEM();const i=M.actifs.indexOf(a);if(i<0)return;
@@ -9297,16 +9264,14 @@ function demoBoot(cls){
   return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}</span>`;}
  function tipOf(a){const rk=a.rang,mx=maxOf(a);return `${nameOf(a)} · ${kindOf(a)}${branchOf(a)?' · '+branchOf(a):''}${mx>1?` · rang ${rk}/${mx}`:''}${isOff(a)?' · éteint : '+offWhy(a):''} — ${descOf(a,rk)}`;}
 
- // HUD : les six souvenirs, en haut à droite (les reliques n’y figurent plus à part)
+ // HUD : les talents portés, en haut à droite (les reliques gardent leurs icônes à part)
  function renderMem(){
   const box=$('#hRelics');if(!box)return;let row=$('#hMem');
   if(!row){row=document.createElement('div');row.id='hMem';row.setAttribute('aria-label','Mémoire');box.insertAdjacentElement('afterend',row);}
   if(!on()){row.hidden=true;return;}row.hidden=false;
-  box.querySelectorAll('.relic:not(.eq)').forEach(x=>x.remove());
   const M=MEM(),cells=[];
   for(let i=0;i<CAP();i++){const a=M.actifs[i];cells.push(a?`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`:`<span class="mcell"><span class="mt empty"></span></span>`);}
-  const cons=P.relics.filter(id=>isCons(id));
-  row.innerHTML=cells.join('')+cons.map(id=>`<span class="mcell cons" title="${esc(relic(id).name+' : '+relic(id).desc)}">${icon(id)}</span>`).join('');
+  row.innerHTML=cells.join('');
   row.classList.toggle('full',full());
   row.querySelectorAll('.mcell').forEach(c=>c.addEventListener('click',()=>{if(state==='play'&&overlayEl.hidden)openPause();}));
  }
@@ -9317,25 +9282,11 @@ function demoBoot(cls){
  const badge=(kind)=>`<i class="mbadge ${kind}" title="${kind==='swap'?'Mémoire pleine : un souvenir partira':kind==='up'?'Renforce un souvenir déjà porté':'Une place libre'}">${icon(kind==='swap'?'u_swap':kind==='up'?'u_up':'u_check')}</i>`;
  const _ch=cardHTML;
  cardHTML=function(id,i){const h=_ch(id,i);if(!on())return h;const k=inMem('t',id)?'up':full()?'swap':'';return k?h.replace(/<\/button>\s*$/,badge(k)+'</button>'):h;};
- const _or=openRelics;
- openRelics=function(title,sub){
-  _or(title,sub);if(!on()||overlayEl.hidden)return;
-  const four=overlayEl.querySelector('.four');if(!four)return;
-  if(full())four.querySelectorAll('.card[data-id]').forEach(b=>{if(!isCons(b.dataset.id))b.insertAdjacentHTML('beforeend',badge('swap'));});
-  const hp=Math.round(P.s.maxHp*SV.refus.soin*healF()),or=SV.refus.or;
-  const row=overlayEl.querySelector('.panel .row');
-  const html=`<div class="mfref" role="group" aria-label="Refuser la relique"><button type="button" class="mref" id="mrefh" title="Refuser la relique : +${hp} PV">${icon('u_heart')}<b>+${hp}</b><kbd>5</kbd></button><button type="button" class="mref" id="mrefg" title="Refuser la relique : +${or} or">${icon('u_coin')}<b>+${or}</b><kbd>6</kbd></button></div>`;
-  if(row)row.insertAdjacentHTML('afterbegin',html);else four.insertAdjacentHTML('afterend',html);
-  const refuse=k=>{if(!armed())return;if(k==='h'){heal(P.s.maxHp*SV.refus.soin*healF(),'halte');toast(`Relique refusée · +${hp} PV`,2);}else{addGold(or,true);toast(`Relique refusée · +${or} or`,2);}MEM().renonces++;sfx('pick');closeOverlay();};
-  $('#mrefh').addEventListener('click',()=>refuse('h'));$('#mrefg').addEventListener('click',()=>refuse('g'));
-  const k=overlayKeys;overlayKeys=(c,e)=>{if(c==='Digit5'||c==='Numpad5'){refuse('h');return;}if(c==='Digit6'||c==='Numpad6'){refuse('g');return;}if(k)k(c,e);};
- };
-
  // ── L’écran « prendre / oublier »
- //   gauche : le gain ; droite : le souvenir survolé ou choisi ; dessous : les six souvenirs (touches 1 à 6)
- //   souris : survoler compare, cliquer oublie ; clavier : 1-6 choisit, la même touche ou Entrée confirme
- //   0 : renoncer au gain ; Échap : plus tard (niveau) ou renoncer (relique) ; la racine d’une voie demande une confirmation de plus
- const KEY6={Digit1:0,Digit2:1,Digit3:2,Digit4:3,Digit5:4,Digit6:5,Numpad1:0,Numpad2:1,Numpad3:2,Numpad4:3,Numpad5:4,Numpad6:5};
+ //   gauche : le gain ; droite : le souvenir survolé ou choisi ; dessous : les talents portés (touches 1 à 9, puis 0)
+ //   souris : survoler compare, cliquer oublie ; clavier : un chiffre choisit, le même chiffre ou Entrée confirme
+ //   R : renoncer au gain ; Échap : plus tard ; la racine d’une voie demande une confirmation de plus
+ const KEY6={};for(let i=0;i<10;i++){KEY6['Digit'+((i+1)%10)]=i;KEY6['Numpad'+((i+1)%10)]=i;}
  function consequences(drop,gain){
   const M=MEM(),list=M.actifs.filter(a=>a!==drop);if(gain)list.push(gain);
   const ne=effOf(list),now=M.eff;
@@ -9345,24 +9296,24 @@ function demoBoot(cls){
   return `<div class="mfd"><p class="h-sec">${lbl}</p><div class="mfd-h">${tile(a,{big:true,rang:rk,off:false})}<div><h3>${esc(nameOf(a))}</h3><p class="mfd-m">${esc(kindOf(a))}${branchOf(a)?' · '+esc(branchOf(a)):''}${famOf(a)?' · '+esc(famOf(a)):''}${maxOf(a)>1?` · rang ${rk}/${maxOf(a)}`:''}</p></div></div><p class="mfd-d">${esc(descOf(a,rk))}</p>${extra||''}</div>`;
  }
  // Principe (palier 0, une seule fois) : la première fois que la mémoire déborde
- try{const BF=window.__brief;if(BF&&BF.BRIEF)BF.BRIEF.memoire={t:'La Mémoire : six souvenirs',l:'Talents et reliques partagent six places. Quand un gain arrive mémoire pleine, quelque chose doit partir.',c:[
-  ['Six souvenirs','#f3b94d','Ils sont affichés en haut à droite. L’équipement garde ses quatre emplacements à part.'],
+ try{const BF=window.__brief;if(BF&&BF.BRIEF)BF.BRIEF.memoire={t:'La Mémoire : dix talents',l:'Tu portes dix talents à la fois. Quand un talent nouveau arrive mémoire pleine, l’un d’eux doit partir. Les reliques ne comptent pas.',c:[
+  ['Dix talents','#f3b94d','Ils sont affichés en haut à droite. Reliques et équipement restent à part, sans limite nouvelle.'],
   ['Renforcer','#8fd46e','Un rang de plus (↑) ne prend pas de place. Un gain nouveau (⇄) en demande une.'],
-  ['Oublier','#dc4a55','Survole pour comparer, puis clic, ou touche 1 à 6 et Entrée. Un souvenir oublié ne revient plus dans tes choix.'],
+  ['Oublier','#dc4a55','Survole pour comparer, puis clic, ou un chiffre et Entrée. Un talent oublié ne revient plus dans tes choix.'],
   ['Éteint','#a387ec','Sans sa compétence liée ou sa racine de voie, un talent reste en mémoire mais ne fait plus rien.']]};}catch(err){}
  function openForget(){
   const M=MEM(),g=M.pending;if(!g)return;
-  if(g.ctx!=='shop'&&overlayEl.hidden&&window.__brief&&window.__brief.brief('memoire'))return;
+  if(overlayEl.hidden&&window.__brief&&window.__brief.brief('memoire'))return;
   M.forgetOpen=true;
   const gain={id:g.id,src:g.src,rang:g.src==='t'?(P.ranks[g.id]||0)+1:1};
   const ctx=g.ctx,canLater=ctx==='lv',canNo=ctx!=='asc';
   const opts=M.actifs.slice(0,CAP());
   let sel=-1,armedRoot=-1;
   const pre=opts.findIndex(a=>isOff(a));if(pre>=0)sel=pre;
-  const eyebrow=ctx==='asc'?'Rituel d’Ascension · mémoire pleine':ctx==='shop'?'Colporteur · mémoire pleine':ctx==='rel'?'Relique · mémoire pleine':'Talent · mémoire pleine';
+  const eyebrow=ctx==='asc'?'Rituel d’Ascension · mémoire pleine':'Talent · mémoire pleine';
   const h2=ctx==='asc'?'Ta nature change : quelque chose doit partir':'Prendre ou oublier';
   const lostHTML=i=>{
-   if(i<0)return `<div class="mfd mfd-empty"><p class="h-sec">Oublié</p><div class="mfd-h"><span class="mt big empty"></span><div><h3 class="muted">?</h3><p class="mfd-m"><kbd>1</kbd>–<kbd>6</kbd></p></div></div></div>`;
+   if(i<0)return `<div class="mfd mfd-empty"><p class="h-sec">Oublié</p><div class="mfd-h"><span class="mt big empty"></span><div><h3 class="muted">?</h3><p class="mfd-m"><kbd>1</kbd>–<kbd>${CAP()%10}</kbd></p></div></div></div>`;
    const a=opts[i],cq=consequences(a,gain);
    let ex='';
    if(isOff(a))ex+=`<p class="mfw off">${icon('u_off')} Éteint : ${esc(offWhy(a))}</p>`;
@@ -9370,28 +9321,26 @@ function demoBoot(cls){
    if(cq.length)ex+=`<div class="mfw bad"><span>${icon('u_off')}</span><span class="mfw-t">${cq.map(c=>`<span class="mcell" title="${esc(nameOf(c))}">${tile(c,{off:true})}</span>`).join('')}</span><span>s’éteindr${cq.length>1?'ont':'a'}</span></div>`;
    if(armedRoot===i)ex+=`<p class="mfw bad strong">${icon('u_warn')} Confirme : même touche, Entrée ou clic.</p>`;
    return detail(a,a.rang,'Oublié',ex);};
-  const gainHTML=detail(gain,gain.rang,ctx==='asc'?'Ta voie':'Gain',g.ctx==='shop'?`<p class="mfd-m">${g.price} or</p>`:'');
+  const gainHTML=detail(gain,gain.rang,ctx==='asc'?'Ta voie':'Gain','');
   openOverlay(`<div class="panel narrow mf"><p class="eyebrow">${eyebrow} · ${count()} / ${CAP()}</p><h2>${h2}</h2>
    <div class="mfcmp"><div class="mfg">${gainHTML}</div><div class="mfarr" aria-hidden="true">${icon('u_swap')}</div><div class="mfl" id="mfl">${lostHTML(sel)}</div></div>
    <div class="mfrow" role="group" aria-label="Souvenirs">${opts.map((a,i)=>`<button type="button" class="mf-opt${i===sel?' sel':''}${ROOT(a.id)?' root':''}" data-i="${i}" aria-label="Oublier ${esc(nameOf(a))}">${tile(a)}<kbd>${i+1}</kbd></button>`).join('')}</div>
-   <div class="row">${canNo?`<button type="button" class="btn" id="mfno">${icon('u_cross')} Renoncer${ctx==='rel'?` (+${Math.round(P.s.maxHp*SV.refus.soin*healF())} PV)`:''} · 0</button>`:''}${canLater?'<button type="button" class="btn" id="mflater">Plus tard · Échap</button>':''}<span class="k">Survole pour comparer · clic ou touche pour oublier</span></div></div>`,'mfo');
+   <div class="row">${canNo?`<button type="button" class="btn" id="mfno">${icon('u_cross')} Renoncer · R</button>`:''}${canLater?'<button type="button" class="btn" id="mflater">Plus tard · Échap</button>':''}<span class="k">Survole pour comparer · clic ou touche pour oublier</span></div></div>`,'mfo');
   const L=$('#mfl'),btns=[...overlayEl.querySelectorAll('.mf-opt')];
   const show=i=>{L.innerHTML=lostHTML(i);};
   const mark=()=>btns.forEach((b,j)=>b.classList.toggle('sel',j===sel));
   const finish=()=>{M.pending=null;M.forgetOpen=false;};
-  const after=()=>{renderMem();if(ctx==='shop'){openOverlay('');renderShop();return;}RUN.talOpen=ctx==='lv'&&M.resumeTal;M.resumeTal=false;closeOverlay();};
+  const after=()=>{renderMem();RUN.talOpen=ctx==='lv'&&M.resumeTal;M.resumeTal=false;closeOverlay();};
   const confirm=i=>{if(!armed()||i<0||!opts[i])return;
    if(ROOT(opts[i].id)&&armedRoot!==i){armedRoot=i;sel=i;mark();show(i);sfx('door');return;}
    const a=opts[i];finish();
    L.classList.add('gone');
    forget(a);
-   if(g.src==='t'){if(ctx==='asc')doAsc(g.br);else{_tk(g.id);afterTalent(g.id);}}
-   else{if(ctx==='shop'){const sh=room.shop;RUN.goldF-=g.price;_ar(relic(g.id));afterRelic(g.id);sh.sold[g.key]=1;sfx('buy');}else{_ar(relic(g.id));afterRelic(g.id);}}
+   if(ctx==='asc')doAsc(g.br);else{_tk(g.id);afterTalent(g.id);}
    toast(`Oublié : ${nameOf(a)}`,1.8);
    after();};
   const renounce=()=>{if(!armed()||!canNo)return;finish();M.renonces++;
-   if(ctx==='rel'){heal(P.s.maxHp*SV.refus.soin*healF(),'halte');toast(`Relique refusée · +${Math.round(P.s.maxHp*SV.refus.soin*healF())} PV`,2);}
-   else toast('Tu renonces',1.4);
+   toast('Tu renonces',1.4);
    after();};
   const later=()=>{if(!armed()||!canLater)return;finish();P.pendingLv++;M.resumeTal=false;RUN.talOpen=false;closeOverlay();};
   btns.forEach((b,i)=>{b.addEventListener('mouseenter',()=>{if(armedRoot!==i&&armedRoot>=0)armedRoot=-1;show(i);});b.addEventListener('focus',()=>show(i));b.addEventListener('mouseleave',()=>show(sel));b.addEventListener('click',()=>{if(sel!==i&&!ROOT(opts[i].id)){sel=i;mark();}confirm(i);});});
@@ -9401,7 +9350,7 @@ function demoBoot(cls){
    const m=KEY6[c];
    if(m!==undefined){if(!opts[m])return;if(sel===m||armedRoot===m)confirm(m);else{sel=m;if(armedRoot!==m)armedRoot=-1;mark();show(m);}return;}
    if(c==='Enter'||c==='NumpadEnter'||c==='Space'){if(e)e.preventDefault();if(sel>=0)confirm(sel);return;}
-   if(c==='Digit0'||c==='Numpad0'||c==='Backspace'){renounce();return;}
+   if(c==='KeyR'||c==='Backspace'||c==='Delete'){renounce();return;}
    if(c==='Escape'){if(canLater)later();else if(canNo)renounce();return;}
   };
  }
@@ -9420,7 +9369,7 @@ function demoBoot(cls){
 
  // ── Styles
  const st=document.createElement('style');st.id='v17mem';st.textContent=`
-#hMem{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;pointer-events:auto;padding:4px 5px;border-radius:6px;background:rgba(8,10,16,.55);border:1px solid var(--line)}
+#hMem{display:grid;grid-template-columns:repeat(5,32px);gap:6px 5px;justify-content:end;pointer-events:auto;padding:5px 6px 7px;border-radius:6px;background:rgba(8,10,16,.55);border:1px solid var(--line)}
 #hMem.full{border-color:#5b4a2a}
 #hMem .mcell{cursor:pointer;display:grid;place-items:center}
 #hMem .mcell.cons{width:22px;height:32px;color:var(--ash)}#hMem .mcell.cons .ic{width:16px;height:16px}
@@ -9468,7 +9417,7 @@ function demoBoot(cls){
 .mfw.bad{color:#ff9aa4}.mfw.off{color:#b9b3c6}.mfw.strong{font-weight:700}
 .mfw-t{display:flex;gap:4px}
 .mfrow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 14px}
-.mf-opt{font:inherit;position:relative;display:grid;justify-items:center;gap:8px;padding:12px 10px 8px;min-width:78px;border-radius:6px;border:1px solid var(--line);background:#11141e;color:var(--bone);cursor:pointer;transition:border-color .12s,transform .12s,background .12s}
+.mf-opt{font:inherit;position:relative;display:grid;justify-items:center;gap:8px;padding:10px 8px 8px;min-width:68px;border-radius:6px;border:1px solid var(--line);background:#11141e;color:var(--bone);cursor:pointer;transition:border-color .12s,transform .12s,background .12s}
 .mf-opt .mt{width:46px;height:46px}.mf-opt .mt .ic{width:26px;height:26px}.mf-opt .mt.k-x{width:40px;height:40px;margin:3px}
 .mf-opt:hover,.mf-opt:focus-visible{border-color:#a24a58;background:#1a1220;transform:translateY(-2px)}
 .mf-opt.sel{border-color:#ff8f98;background:#21121a;box-shadow:0 0 0 1px #ff8f98}
