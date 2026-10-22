@@ -8,6 +8,8 @@ import { BF_WATER_FRAMES, paintBattlefield } from './battlefield';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas } from './pixelCanvas';
 import { CHAR_POSES, type CharPose } from './characterSprite';
+import { SKINS, SKIN_CELL, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
+import { hasSkin, skinKey } from './skins';
 import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitFrameKind, type UnitTeam } from './unitSprites';
 
 export const BATTLE_TEX = {
@@ -55,6 +57,10 @@ export function ensureBattlefield(scene: Phaser.Scene, key: string, rows: readon
  */
 export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitTeam): void {
   const key = BATTLE_TEX.ms(sprite, team);
+  if (team === 'player' && hasSkin(scene, sprite)) {
+    ensureSkinMapSprite(scene, sprite, key);
+    return;
+  }
   if (!scene.textures.exists(key)) {
     const rows: [UnitFrameKind, number][] = [['idle', UNIT_IDLE_FRAMES], ['ready', UNIT_READY_FRAMES], ...CHAR_POSES.map((v) => [v, UNIT_WALK_FRAMES] as [CharPose, number])];
     const sheet = new PixelCanvas(UNIT_W * Math.max(UNIT_WALK_FRAMES, UNIT_READY_FRAMES), UNIT_H * rows.length);
@@ -98,6 +104,42 @@ export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitT
       repeat: -1,
     });
   }
+}
+
+/**
+ * Unité de la compagnie peinte (feuille `assets/personnages/<id>.png`) : on garde les mêmes noms d'images
+ * et d'animations que les sprites générés (`idle_0`, `ready_2`, `down_3`…), donc le reste du combat,
+ * de la préparation et des panneaux n'a rien à savoir. Attente = pose de face ; « prêt » et marche = marche
+ * sur place / déplacement (la feuille compte 4 ou 8 images par direction).
+ */
+function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void {
+  const def = SKINS.find((k) => k.id === id);
+  if (!def) return;
+  if (!scene.textures.exists(key)) {
+    const source = scene.textures.get(skinKey(id)).getSourceImage() as HTMLImageElement;
+    const texture = scene.textures.addImage(key, source);
+    if (!texture) return;
+    const at = (row: number, col: number): [number, number] => [col * SKIN_CELL, row * SKIN_CELL];
+    const add = (name: string, row: number, col: number): void => {
+      const [x, y] = at(row, col);
+      texture.add(name, 0, x, y, SKIN_CELL, SKIN_CELL);
+    };
+    SKIN_ROWS.forEach((pose, row) => {
+      for (let f = 0; f < def.frames; f++) add(BATTLE_TEX.msFrame(pose, f), row, f);
+    });
+    for (let f = 0; f < UNIT_IDLE_FRAMES; f++) add(BATTLE_TEX.msFrame('idle', f), 0, 0);
+    for (let f = 0; f < UNIT_READY_FRAMES; f++) add(BATTLE_TEX.msFrame('ready', f), 0, 0);
+  }
+  const frames = (pose: string): { key: string; frame: string }[] => Array.from({ length: def.frames }, (_, f) => ({ key, frame: BATTLE_TEX.msFrame(pose as UnitFrameKind, f) }));
+  const make = (animKey: string, list: { key: string; frame: string }[], frameMs: number): void => {
+    if (!scene.anims.exists(animKey)) scene.anims.create({ key: animKey, frames: list, frameRate: 1000 / frameMs, repeat: -1 });
+  };
+  const idleKey = BATTLE_TEX.msIdle(id, 'player');
+  if (!scene.anims.exists(idleKey)) {
+    scene.anims.create({ key: idleKey, frames: [{ key, frame: BATTLE_TEX.msFrame('idle', 0) }, { key, frame: BATTLE_TEX.msFrame('idle', 1) }], frameRate: 2, repeat: -1 });
+  }
+  make(BATTLE_TEX.msReady(id, 'player'), frames('down'), SKIN_FRAME_MS * 1.6);
+  for (const view of CHAR_POSES) make(BATTLE_TEX.msWalk(id, 'player', view), frames(view), SKIN_FRAME_MS);
 }
 
 /** Curseur, cases colorées, couronne du boss, étoile du héros, étincelle. */
