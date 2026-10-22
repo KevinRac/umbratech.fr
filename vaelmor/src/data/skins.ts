@@ -36,3 +36,12 @@ export const SKIN_FRAME_MS = 170;
 
 /** Versions réduites (×0,88, cellules de 30 px) pour le combat et la préparation : les silhouettes se chevauchent un peu moins. */
 export const BATTLE_CELL = 30;
+
+/**
+ * Poses de combat (images fixes, tournées vers l'est) ajoutées sous les rangées de marche de la version
+ * réduite : une rangée de cellules `BATTLE_CELL` à la hauteur `3 × BATTLE_CELL`, dans l'ordre donné.
+ * `ready` attente, `attack` estoc, `slash` coup tranchant, `skill` compétence, `hit` coup reçu, `ko` à terre.
+ */
+export const SKIN_POSES: Readonly<Record<string, readonly string[]>> = {
+  heros: ['ready', 'attack', 'slash', 'skill', 'hit', 'ko'],
+};

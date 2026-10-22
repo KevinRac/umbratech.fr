@@ -8,7 +8,7 @@ import { BF_WATER_FRAMES, paintBattlefield } from './battlefield';
 import { PALETTE as P, mixColor } from './palette';
 import { PixelCanvas } from './pixelCanvas';
 import { CHAR_POSES, type CharPose } from './characterSprite';
-import { BATTLE_CELL, SKINS, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
+import { BATTLE_CELL, SKINS, SKIN_POSES, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
 import { hasSkin, skinCombatKey } from './skins';
 import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitFrameKind, type UnitTeam } from './unitSprites';
 
@@ -16,6 +16,8 @@ export const BATTLE_TEX = {
   field: (key: string, frame: number): string => `battle:field:${key}:${frame}`,
   /** Unités : gabarit 16×28 équipé selon la classe, aux couleurs du camp (décision n°60). */
   ms: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}`,
+  /** Pose de combat peinte (attack, slash, skill, hit, ko…), tournée vers l'est. */
+  pose: (name: string): string => `pose_${name}`,
   msFrame: (kind: UnitFrameKind, frame: number): string => `${kind}_${frame}`,
   msIdle: (sprite: string, team: UnitTeam): string => `battle:unit:${sprite}:${team}:idle`,
   /** Unité survolée ou choisie : elle brandit son arme. */
@@ -127,6 +129,7 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
     SKIN_ROWS.forEach((pose, row) => {
       for (let f = 0; f < def.frames; f++) add(BATTLE_TEX.msFrame(pose, f), row, f);
     });
+    (SKIN_POSES[id] ?? []).forEach((pose, col) => add(BATTLE_TEX.pose(pose), 3, col));
     for (let f = 0; f < UNIT_IDLE_FRAMES; f++) add(BATTLE_TEX.msFrame('idle', f), 0, 0);
     for (let f = 0; f < UNIT_READY_FRAMES; f++) add(BATTLE_TEX.msFrame('ready', f), 0, 0);
   }
@@ -138,7 +141,9 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
   if (!scene.anims.exists(idleKey)) {
     scene.anims.create({ key: idleKey, frames: [{ key, frame: BATTLE_TEX.msFrame('idle', 0) }, { key, frame: BATTLE_TEX.msFrame('idle', 1) }], frameRate: 2, repeat: -1 });
   }
-  make(BATTLE_TEX.msReady(id, 'player'), frames('down'), SKIN_FRAME_MS * 1.6);
+  const poses = SKIN_POSES[id] ?? [];
+  if (poses.includes('ready')) make(BATTLE_TEX.msReady(id, 'player'), [{ key, frame: BATTLE_TEX.pose('ready') }], 1000);
+  else make(BATTLE_TEX.msReady(id, 'player'), frames('down'), SKIN_FRAME_MS * 1.6);
   for (const view of CHAR_POSES) make(BATTLE_TEX.msWalk(id, 'player', view), frames(view), SKIN_FRAME_MS);
 }
 

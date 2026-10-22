@@ -62,6 +62,7 @@ import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureWorldTextures } from
 import { WATER_FRAMES } from '../render/waterTile';
 import { fixGpuTileAnimations } from '../render/tileAnimations';
 import { WorldAtmosphere } from '../render/worldAtmosphere';
+import { SKIN_POSES } from '../data/skins';
 import { ALLY_OUTLINE, UNIT_IDLE_FRAMES } from '../render/unitSprites';
 import { loadQuality } from '../core/settings';
 import { loadWorldMap, type WorldMap } from '../data/worldMap';
@@ -1971,6 +1972,7 @@ export class BattleScene extends Phaser.Scene {
     await this.hud.skillCutIn(unit, skill.name, this.dur(MS.cutIn, 300));
     if (!this.alive) return;
     if (skill.effects.some((e) => e.kind === 'frappe')) return;
+    this.posed(unit, 'skill', false);
     const color = this.elementColor(skill.element, unit.team === 'enemy' ? PALETTE.braise : PALETTE.lumiereDoree);
     // Cercle runique sous le lanceur, puis la zone s'embrase un instant.
     const sx = this.px(unit.x) + T / 2;
@@ -1986,6 +1988,7 @@ export class BattleScene extends Phaser.Scene {
     if (unit.isBoss) this.cameras.main.shake(this.dur(260, 100), 0.005);
     await this.tween({ targets: flash, alpha: 0, duration: this.dur(420, 120) });
     for (const f of flash) f.destroy();
+    this.unpose(unit);
   }
 
   /** Effets d'une compétence ou d'un objet : chiffres, statuts posés, immunités, purges. */
@@ -2152,6 +2155,7 @@ export class BattleScene extends Phaser.Scene {
       await this.tween({ targets: sv.container, x: home.x, y: home.y, duration: this.dur(50) });
       await this.projectile(striker, target);
     } else {
+      this.posed(striker, strike.crit ? 'slash' : 'attack', target.x < striker.x);
       await this.tween({ targets: sv.container, x: home.x + dx * 6, y: home.y + dy * 6, duration: this.dur(MS.lunge), ease: 'Quad.easeIn' });
     }
 
@@ -2160,6 +2164,7 @@ export class BattleScene extends Phaser.Scene {
     if (strike.hit) {
       // Impact : flash blanc, étincelles, secousse, chiffre.
       flashWhite(tv.sprite, true);
+      this.posed(target, 'hit', striker.x < target.x);
       const color = weapon.element ? (this.gameData.elements.find((e) => e.id === weapon.element)?.color ?? '#ffffff') : '#ffe6b0';
       this.sparks.setParticleTint(Phaser.Display.Color.HexStringToColor(color).color);
       this.sparks.explode(strike.crit ? 22 : 10, tx, ty - 10);
@@ -2180,6 +2185,8 @@ export class BattleScene extends Phaser.Scene {
       await this.tween({ targets: tv.container, x: tx + (dy !== 0 ? 4 : 0), y: ty + (dx !== 0 ? -3 : 0), duration: this.dur(80), yoyo: true });
     }
     await this.tween({ targets: sv.container, x: home.x, y: home.y, duration: this.dur(MS.back), ease: 'Quad.easeOut' });
+    this.unpose(striker);
+    this.unpose(target);
     tv.container.setPosition(tx, ty);
     this.syncUnit(target);
   }
@@ -2205,6 +2212,23 @@ export class BattleScene extends Phaser.Scene {
     shot.destroy();
   }
 
+  /** Pose de combat peinte (image fixe tournée vers l'est) si l'unité en a une ; renvoie vrai si elle est posée. */
+  private posed(unit: BattleUnit, pose: string, flip: boolean): boolean {
+    const view = this.views.get(unit.id);
+    if (!view || unit.team !== 'player' || !SKIN_POSES[unit.sprite]?.includes(pose)) return false;
+    view.sprite.anims.stop();
+    view.sprite.setFlipX(flip).setFrame(BATTLE_TEX.pose(pose));
+    return true;
+  }
+
+  /** Retour à l'attente après une pose. */
+  private unpose(unit: BattleUnit): void {
+    const view = this.views.get(unit.id);
+    if (!view || unit.team !== 'player' || !SKIN_POSES[unit.sprite]) return;
+    view.sprite.setFlipX(false);
+    this.syncUnit(unit);
+  }
+
   private async animateKo(unitId: string): Promise<void> {
     const unit = getUnit(this.state, unitId);
     const view = this.views.get(unitId);
@@ -2212,6 +2236,7 @@ export class BattleScene extends Phaser.Scene {
     const fallen = unit.team === 'player' ? `${unit.name} est hors de combat.` : unit.team === 'ally' ? `${unit.name}, notre allié, est tombé.` : `${unit.name} est vaincu${unit.isBoss ? ' !' : '.'}`;
     this.hud.toast(fallen);
     flashWhite(view.sprite, true);
+    if (this.posed(unit, 'ko', false)) await this.wait(this.dur(380, 60));
     await this.tween({ targets: view.container, alpha: 0, duration: this.dur(MS.ko, 120), ease: 'Stepped', easeParams: [5] });
     view.container.setVisible(false).setAlpha(1);
     flashWhite(view.sprite, false);

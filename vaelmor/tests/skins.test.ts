@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SKINS, SKIN_ROWS } from '../src/data/skins';
+import { SKINS, SKIN_POSES, SKIN_ROWS } from '../src/data/skins';
 import { skinFrameIndex, skinWalkFrames } from '../src/logic/skinFrames';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -21,8 +21,9 @@ describe('apparences', () => {
       expect(b.readUInt32BE(16), s.id).toBe(34 * s.frames);
       expect(b.readUInt32BE(20), s.id).toBe(34 * 3);
       const c = readFileSync(resolve(__dirname, `../assets/personnages/combat/${s.id}.png`));
-      expect(c.readUInt32BE(16), s.id).toBe(30 * s.frames);
-      expect(c.readUInt32BE(20), s.id).toBe(30 * 3);
+      const poses = SKIN_POSES[s.id]?.length ?? 0;
+      expect(c.readUInt32BE(16), s.id).toBe(30 * Math.max(s.frames, poses));
+      expect(c.readUInt32BE(20), s.id).toBe(30 * (poses ? 4 : 3));
     }
   });
 });
