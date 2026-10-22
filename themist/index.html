@@ -449,6 +449,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/formes.js"></script>
 <script src="data/sanctuaire.js"></script>
 <script src="data/memoire.js"></script>
+<script src="data/souvenirs.js"></script>
 <script src="data/histoire.js"></script>
 <script src="data/versions.js"></script>
 <script>
@@ -582,14 +583,14 @@ N('fan','n8','m','Mèche longue',3,'+3 Lueur par seconde tant que ta lanterne es
 N('fan','k1','k','Lanterne Vivante',1,'Ta lanterne gravite autour de toi et frappe seule. [R] la projette, puis elle revient. Tu perds ton aura et restes dans l’Obscur.',s=>{s.vivante=1;});
 N('fan','k2','k','Constellation',1,'Chaque lancer laisse une lanterne spectrale (3 max, 14 s). Elles sont reliées par des rayons qui brûlent (30/s).',s=>{s.constellation=1;});
 N('sol','s1','c','Soleil Noir',1,'Les ennemis exposés brûlent (10/s). +10 % de dégâts de lumière.',s=>{s.sub='sol';s.lightDmg+=0.1;});
-N('sol','s2','m','Feu sombre',3,'+20 % de dégâts de lumière.',s=>{s.lightDmg+=0.2;});
-N('sol','s3','m','Solstice',3,'+12 % de rayon pour toutes tes lumières.',s=>{s.aura*=1.12;s.groundLight*=1.12;});
+N('sol','s2','m','Feu sombre',3,'+20 % de dégâts de lumière.',s=>{s.lightDmg+=0.3;});
+N('sol','s3','m','Solstice',3,'+12 % de rayon pour toutes tes lumières.',s=>{s.aura*=1.15;s.groundLight*=1.15;});
 N('sol','s4','s','Rayons Jumeaux',2,'Ton attaque de base projette un rayon de lumière perçant (16).',(s,r)=>{s.jumeaux=r;},'Deux rayons, +30 % de dégâts.');
 N('sol','s5','s','Couronne Solaire',2,'3 orbes de lumière gravitent autour de toi (20 par contact).',(s,r)=>{s.couronne=r;},'5 orbes.');
 N('sol','sk','k','Zénith',1,'Débloque Zénith [F] : ta lanterne s’élève et bombarde la salle de rayons pendant 5 s. Tous les ennemis sont exposés. Recharge 24 s.',s=>{s.zenith=1;});
 N('omb','s1','c','Ombrelame',1,'+15 % de critique dans l’Obscur. Ton esquive te rend invisible 1 s.',s=>{s.sub='omb';s.obscurCrit+=0.15;});
-N('omb','s2','m','Lame fantôme',3,'+20 % de dégâts critiques, +4 % de critique.',s=>{s.critMult+=0.2;s.crit+=0.04;});
-N('omb','s3','m','Voile',3,'+10 % de vitesse dans l’Obscur.',s=>{s.obscurSpeed+=0.1;});
+N('omb','s2','m','Lame fantôme',3,'+20 % de dégâts critiques, +4 % de critique.',s=>{s.critMult+=0.3;s.crit+=0.06;});
+N('omb','s3','m','Voile',3,'+10 % de vitesse dans l’Obscur.',s=>{s.obscurSpeed+=0.15;});
 N('omb','s4','s','Danse des Ombres',2,'Chaque critique réduit de 0,3 s les recharges de l’esquive et de tes compétences.',(s,r)=>{s.danse=r;},'Réduction portée à 0,5 s.');
 N('omb','s5','s','Ombres Jumelles',2,'Dans l’Obscur, un double d’ombre répète tes attaques de base (50 %).',(s,r)=>{s.jumelles=r;},'Le double frappe à 80 %.');
 N('omb','sk','k','Nuit Éternelle',1,'Débloque Nuit Éternelle [F] : la salle s’éteint 6 s. Ennemis aveuglés et ralentis, tu es invisible et tes critiques sont garantis. Recharge 26 s.',s=>{s.nuit=1;});
@@ -625,14 +626,14 @@ N('reg','n8','m','Spasme',3,'Recracher se recharge 15 % plus vite.',s=>{s.spitCd
 N('reg','k1','k','Rupture Maîtrisée',1,'La Rupture ne te blesse plus et inflige double dégâts. Tu la cherches au lieu de la craindre.',s=>{s.maitrise=1;});
 N('reg','k2','k','Ventre-Canon',1,'Maintiens [R] : Recracher devient un rayon continu (55 par seconde) tant qu’il te reste de la Corruption.',s=>{s.canon=1;});
 N('sai','s1','c','Saint Dévorant',1,'La Brume recrachée est purifiée : chaque Recracher te donne un bouclier égal à 30 % de la Corruption expulsée.',s=>{s.sub='sai';});
-N('sai','s2','m','Sainte Bile',3,'+15 % de dégâts de Recracher.',s=>{s.spitDmg*=1.15;});
-N('sai','s3','m','Jeûne',3,'+10 PV max et −5 % de dégâts subis.',s=>{s.maxHp+=10;s.dmgTaken*=0.95;});
+N('sai','s2','m','Sainte Bile',3,'+22 % de dégâts de Recracher.',s=>{s.spitDmg*=1.22;});
+N('sai','s3','m','Jeûne',3,'+10 PV max et −5 % de dégâts subis.',s=>{s.maxHp+=15;s.dmgTaken*=0.93;});
 N('sai','s4','s','Halo de Purification',2,'Tant que tu as un bouclier, les ennemis proches brûlent (15 par seconde).',(s,r)=>{s.halo=r;},'Brûlure portée à 25 par seconde.');
 N('sai','s5','s','Communion',2,'Dévorer te soigne de 4 PV par seconde et par ennemi.',(s,r)=>{s.communion=r;},'Soin porté à 7 PV par seconde.');
 N('sai','sk','k','Absolution',1,'Débloque Absolution [F] : tu aspires toute la salle vers toi, puis une explosion sacrée (120) te donne un bouclier. Recharge 25 s.',s=>{s.absolution=1;});
 N('abe','s1','c','Aberration',1,'Chaque Rupture, ou chaque Recracher de 80 Corruption ou plus, te donne une mutation pour la salle : +6 % de dégâts et un peu plus de masse (6 max).',s=>{s.sub='abe';});
-N('abe','s2','m','Chair malléable',3,'+8 % de dégâts par palier de Corruption atteint.',s=>{s.tierBonus+=0.08;});
-N('abe','s3','m','Os saillants',3,'Les ennemis qui te touchent subissent 8 dégâts.',s=>{s.thorns+=8;});
+N('abe','s2','m','Chair malléable',3,'+8 % de dégâts par palier de Corruption atteint.',s=>{s.tierBonus+=0.12;});
+N('abe','s3','m','Os saillants',3,'Les ennemis qui te touchent subissent 8 dégâts.',s=>{s.thorns+=12;});
 N('abe','s4','s','Tentacules',2,'Un tentacule répète chaque Mâchoire à 60 % de dégâts.',(s,r)=>{s.tentacules=r;},'Le tentacule frappe à 90 %.');
 N('abe','s5','s','Yeux multiples',2,'+8 % de critique par mutation de salle.',(s,r)=>{s.oeil=r;},'+12 % par mutation.');
 N('abe','sk','k','Métamorphose',1,'Débloque Métamorphose [F] : 8 s en forme monstrueuse. Taille ×1,5, dégâts ×1,5, Mâchoire à 360°, dégâts subis −30 %. Recharge 26 s.',s=>{s.metamorph=1;});
@@ -673,13 +674,13 @@ N('req','k1','k','Glas des Âmes',1,'Chaque ennemi vaincu te confie une âme (10
 N('req','k2','k','Pacte du Sonneur',1,'−20 % de PV max. En échange, tes coups corrects infligent +20 % de dégâts et chaque action correcte te soigne de 2 PV.',s=>{s.pacte=1;s.maxHp*=0.8;});
 // ── Héraut : sous-classes
 N('dgl','s1','c','Dernier Glas',1,'Un Coup de cloche correct exécute les ennemis sous 12 % de PV (sauf le gardien). +10 % de dégâts du Grand Glas.',s=>{s.sub='dgl';s.exec=1;s.glasDmg*=1.1;});
-N('dgl','s2','m','Glas sourd',3,'+15 % de dégâts du Grand Glas.',s=>{s.glasDmg*=1.15;});
-N('dgl','s3','m','Main lourde',3,'+10 % de dégâts du Coup de cloche.',s=>{s.atkDmg*=1.1;});
+N('dgl','s2','m','Glas sourd',3,'+15 % de dégâts du Grand Glas.',s=>{s.glasDmg*=1.22;});
+N('dgl','s3','m','Main lourde',3,'+15 % de dégâts du Coup de cloche.',s=>{s.atkDmg*=1.15;});
 N('dgl','s4','s','Coup de Grâce',2,'Seuil d’exécution porté à 18 %. Chaque exécution te rend 15 Résonance.',(s,r)=>{s.coupGrace=r;},'Seuil porté à 24 %.');
 N('dgl','s5','s','Temps Fort',2,'Sur le temps fort (1 temps sur 4), ton Coup de cloche inflige ×2 et étourdit 0,5 s.',(s,r)=>{s.tempsFort=r;},'Coup du temps fort ×2,6.');
 N('dgl','sk','k','Glas Funèbre',1,'Débloque Glas Funèbre [F] : pendant 8 temps, une cloche tombe du ciel à chaque temps sur l’ennemi le plus robuste (30 dégâts) et exécute tout ce qui passe sous 25 %. Recharge 24 s.',s=>{s.glasFun=1;});
 N('chd','s1','c','Chœur des Damnés',1,'Chaque action parfaite invoque un choriste spectral à ta place (3 max). Pendant 4 temps, il chante une onde vers l’ennemi le plus proche.',s=>{s.sub='chd';});
-N('chd','s2','m','Voix d’outre-tombe',3,'+15 % de dégâts des choristes.',s=>{s.chorDmg*=1.15;});
+N('chd','s2','m','Voix d’outre-tombe',3,'+15 % de dégâts des choristes.',s=>{s.chorDmg*=1.22;});
 N('chd','s3','m','Chœur nombreux',3,'Les choristes chantent un temps de plus.',s=>{s.chorLife+=1;});
 N('chd','s4','s','Unisson',2,'Quand au moins 3 choristes chantent ensemble, leurs ondes infligent +50 % de dégâts.',(s,r)=>{s.unisson=r;},'Jusqu’à 5 choristes à la fois.');
 N('chd','s5','s','Contre-chant',2,'À chaque temps, les choristes dissipent les projectiles ennemis proches.',(s,r)=>{s.contre=r;},'Chaque projectile dissipé te rend 4 Résonance.');
@@ -719,14 +720,14 @@ N('pnt','k1','k','Danse des Pendus',1,'Les ennemis arrachés tournoient 2 s auto
 N('pnt','k2','k','Contrôle Total',1,'Arracher ne coupe plus les fils : tu peux tirer encore et encore. Recharge d’Arracher portée à 2,5 s.',s=>{s.controle=1;});
 // ── Tisse-Destin : sous-classes
 N('gts','s1','c','Grande Tisseuse',1,'Là où Arracher fait atterrir les ennemis, une toile se tisse (rayon 80, 4 s). +20 % de dégâts contre les ennemis pris dans une toile.',s=>{s.sub='gts';s.webBonus=0.2;});
-N('gts','s2','m','Soie durable',3,'Tes toiles durent 1,5 s de plus.',s=>{s.webDur+=1.5;});
-N('gts','s3','m','Soie collante',3,'Tes toiles immobilisent 0,25 s de plus.',s=>{s.webRoot+=0.25;});
+N('gts','s2','m','Soie durable',3,'Tes toiles durent 1,5 s de plus.',s=>{s.webDur+=2;});
+N('gts','s3','m','Soie collante',3,'Tes toiles immobilisent 0,25 s de plus.',s=>{s.webRoot+=0.35;});
 N('gts','s4','s','Toile Piégée',2,'Tes toiles exposent les ennemis et leur infligent 12 dégâts par seconde.',(s,r)=>{s.toilePiege=r;},'22 dégâts par seconde.');
 N('gts','s5','s','Araignée',2,'Toutes les 4 s, un fil se noue seul sur l’ennemi le plus proche, sans coût.',(s,r)=>{s.araignee=r;},'Toutes les 2,5 s.');
 N('gts','sk','k','Grande Toile',1,'Débloque Grande Toile [F] : toute la salle se couvre de soie pendant 6 s. Les ennemis sont ralentis de 70 % et exposés. Recharge 22 s.',s=>{s.gtoile=1;});
 N('mdp','s1','c','Maître des Pantins',1,'Arracher transforme l’ennemi tiré le plus faible en pantin pendant 8 s.',s=>{s.sub='mdp';});
-N('mdp','s2','m','Cordes neuves',3,'+15 % de dégâts de tes pantins.',s=>{s.pupDmg*=1.15;});
-N('mdp','s3','m','Troupe',3,'Tes pantins sont 10 % plus rapides et frappent 10 % plus fort.',s=>{s.troupe+=0.1;s.pupDmg*=1.1;});
+N('mdp','s2','m','Cordes neuves',3,'+15 % de dégâts de tes pantins.',s=>{s.pupDmg*=1.22;});
+N('mdp','s3','m','Troupe',3,'Tes pantins sont 10 % plus rapides et frappent 10 % plus fort.',s=>{s.troupe+=0.15;s.pupDmg*=1.15;});
 N('mdp','s4','s','Fils de Commande',2,'Arracher convertit les 2 ennemis tirés les plus faibles.',(s,r)=>{s.commande=r;},'Les 3 plus faibles.');
 N('mdp','s5','s','Sacrifice',2,'À la fin de son temps, un pantin explose (rayon 100, 50 dégâts).',(s,r)=>{s.sacrifice=r;},'Explosion à 90 dégâts.');
 N('mdp','sk','k','Grand Guignol',1,'Débloque Grand Guignol [F] : tous les ennemis de la salle, sauf le gardien, deviennent tes pantins pendant 5 s, puis reprennent leurs esprits. Recharge 28 s.',s=>{s.guignol=1;});
@@ -743,21 +744,21 @@ function relFx(F){for(const k in F){const r=RELICS.find(x=>x.id===k);if(r)r.appl
 relFx({
  phoenix:s=>{s.phoenix=1;},
  bell:s=>{s.bell=1;},
- eye:s=>{s.crit+=0.1;s.critMult+=0.25;},
- wax:s=>{s.maxHp+=25;},
+ eye:s=>{s.crit+=0.15;s.critMult+=0.4;},
+ wax:s=>{s.maxHp+=40;},
  sand:s=>{s.dashCharges+=1;},
- feather:s=>{s.speed*=1.12;},
+ feather:s=>{s.speed*=1.18;},
  prismg:s=>{s.prismGuard=1;},
- calice:s=>{s.lifesteal+=0.03;},
+ calice:s=>{s.lifesteal+=0.05;},
  ember:s=>{s.burnMult*=1.5;},
  oil:s=>{s.oil=1;},
  ash:s=>{s.ash=1;},
  chain:s=>{s.chain=1;},
  dent:s=>{s.spitDmg*=1.25;},
  cercle:s=>{s.ruptureSelf*=0.5;},
- moelle:s=>{s.regenKill+=3;},
- crane:s=>{s.extraGold+=2;},
- epine:s=>{s.dmg+=0.2;s.maxHp-=15;},
+ moelle:s=>{s.regenKill+=5;},
+ crane:s=>{s.extraGold+=3;},
+ epine:s=>{s.dmg+=0.28;s.maxHp-=15;},
  clef:s=>{s.clef=1;},
  bourse:s=>{s.bourse=1;}});
 const MUTS=window.BRUME_DATA.bestiaire.mutationsInstables;
@@ -5186,15 +5187,15 @@ Object.assign(ICONS,{
  boussole:ci(12,12,9)+'M15 9l-2 4-4 2 2-4z',
  lacry:'M12 3c3 5 5 7.5 5 10.5a5 5 0 0 1-10 0C7 10.5 9 8 12 3zM10 14a2 2 0 0 0 2 2'});
 relFx({
- gant:s=>{s.atkSpeed+=0.15;},
- fiole:s=>{s.regenKill+=2;},
- ancre:s=>{s.dmgTaken*=0.88;},
- pendule:s=>{s.dashCd*=0.75;},
- os:s=>{s.maxHp+=10;s.speed*=1.08;},
- lacry:s=>{s.healMul=(s.healMul||1)*1.25;},
+ gant:s=>{s.atkSpeed+=0.22;},
+ fiole:s=>{s.regenKill+=4;},
+ ancre:s=>{s.dmgTaken*=0.82;},
+ pendule:s=>{s.dashCd*=0.65;},
+ os:s=>{s.maxHp+=20;s.speed*=1.12;},
+ lacry:s=>{s.healMul=(s.healMul||1)*1.4;},
  boussole:s=>{if(RUN)RUN.rerolls+=2;},
- cierge:s=>{s.bossDmg=(s.bossDmg||0)+0.15;},
- chaineg:s=>{s.stunDmg=(s.stunDmg||0)+0.25;}});
+ cierge:s=>{s.bossDmg=(s.bossDmg||0)+0.25;},
+ chaineg:s=>{s.stunDmg=(s.stunDmg||0)+0.35;}});
 const _heal11=heal;
 heal=function(n,src){if(P&&P.s&&P.s.healMul)n*=P.s.healMul;_heal11(n,src);};
 
@@ -6850,7 +6851,7 @@ openCodex=function(back){
  // Cloche majeure = une seule cloche : incompatible avec « Timbre clair » (+1 cloche max)
  if(typeof EXCL!=='undefined'){EXCL.car_x2b=(EXCL.car_x2b||[]).concat('car_n5');EXCL.car_n5=(EXCL.car_n5||[]).concat('car_x2b');}
  // Solstice agrandit aussi la lumière de la lanterne vivante
- if(NODES.sol_s3){const ap=NODES.sol_s3.apply;NODES.sol_s3.apply=(st,r)=>{ap(st,r);st.orbitR=(st.orbitR||1)*1.12;};NODES.sol_s3.desc='+12 % de rayon pour toutes tes lumières (aura, lanterne posée, lanterne vivante).';}
+ if(NODES.sol_s3){const ap=NODES.sol_s3.apply;NODES.sol_s3.apply=(st,r)=>{ap(st,r);st.orbitR=(st.orbitR||1)*1.15;};NODES.sol_s3.desc='+15 % de rayon pour toutes tes lumières (aura, lanterne posée, lanterne vivante).';}
  // précisions dans les descriptions
  const note=(id,t)=>{const n=NODES[id];if(n&&!n.desc.includes(t))n.desc+=' '+t;};
  note('fan_k1','Incompatible avec les talents de lanterne posée et d’aura.');
@@ -7908,25 +7909,25 @@ details.fold>.chips{margin-top:8px}
  const mul=(s,k,v)=>{s[k]=(s[k]||1)*v;};
  // ── nœuds
  N('pha','s1','c','Gardien du Phare',1,'',s=>{s.sub='pha';});
- N('pha','s2','m','Huile de baleine',3,'',s=>{s.lanternDmg*=1.15;mul(s,'phaDmg',1.15);});
- N('pha','s3','m','Lentille de Fresnel',3,'',s=>{s.groundLight*=1.1;mul(s,'phaR',1.1);});
+ N('pha','s2','m','Huile de baleine',3,'',s=>{s.lanternDmg*=1.22;mul(s,'phaDmg',1.22);});
+ N('pha','s3','m','Lentille de Fresnel',3,'',s=>{s.groundLight*=1.14;mul(s,'phaR',1.14);});
  N('pha','s4','s','Feu de position',2,'',(s,r)=>{s.phaFeu=r;},'');
  N('pha','s5','s','Corne de brume',2,'',(s,r)=>{s.phaCorne=r;},'');
  N('pha','sk','k','Phare Tournant',1,'',s=>{s.phare=1;});
  N('aby','s1','c','Gueule-Abîme',1,'',s=>{s.sub='aby';s.devourPull*=1.3;});
- N('aby','s2','m','Estomac sans fond',3,'',s=>{s.devourDps*=1.1;});
- N('aby','s3','m','Mâchoires larges',3,'',s=>{s.devourRange*=1.08;});
+ N('aby','s2','m','Estomac sans fond',3,'',s=>{s.devourDps*=1.15;});
+ N('aby','s3','m','Mâchoires larges',3,'',s=>{s.devourRange*=1.12;});
  N('aby','s4','s','Avaleur de Brume',2,'',(s,r)=>{s.abyAvale=r;},'');
  N('aby','s5','s','Engloutir',2,'',(s,r)=>{s.abyEngl=r;},'');
  N('aby','sk','k','Gueule du Monde',1,'',s=>{s.gmonde=1;});
  N('val','s1','c','Valseur Funèbre',1,'',s=>{s.sub='val';});
- N('val','s2','m','Talons ferrés',3,'',s=>{mul(s,'pisteDmg',1.15);});
- N('val','s3','m','Grand salon',3,'',s=>{mul(s,'pisteR',1.12);});
+ N('val','s2','m','Talons ferrés',3,'',s=>{mul(s,'pisteDmg',1.22);});
+ N('val','s3','m','Grand salon',3,'',s=>{mul(s,'pisteR',1.15);});
  N('val','s4','s','Ronde',2,'',(s,r)=>{s.ronde=r;},'');
  N('val','s5','s','Révérence',2,'',(s,r)=>{s.reverence=r;},'');
  N('val','sk','k','Bal des Morts',1,'',s=>{s.bal=1;});
  N('bro','s1','c','Brodeuse d’Âmes',1,'',s=>{s.sub='bro';s.soulN=6;});
- N('bro','s2','m','Acier fin',3,'',s=>{s.atkDmg*=1.08;});
+ N('bro','s2','m','Acier fin',3,'',s=>{s.atkDmg*=1.12;});
  N('bro','s3','m','Point serré',3,'',s=>{s.soulN=Math.max(3,(s.soulN||6)-1);});
  N('bro','s4','s','Dé à coudre',2,'',(s,r)=>{s.deCoudre=r;},'');
  N('bro','s5','s','Faufilage',2,'',(s,r)=>{s.faufil=r;},'');
@@ -9061,6 +9062,425 @@ function demoBoot(cls){
 .asmEnd .mq{flex:none;width:40px;height:50px}.asmEnd .mq svg{width:100%;height:100%;display:block}
 .asmEnd b{display:block;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:#c9a8ff}.asmEnd span{font-size:15px}
 .demo #asmCard{display:none!important}`;document.head.appendChild(st);
+})();
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v17 · La Mémoire : « ce que tu oublies, la Brume s’en souvient »
+// Six souvenirs actifs (talents et reliques). Un gain, mémoire pleine : on choisit ce qu’on oublie.
+// Réglages et familles : data/souvenirs.js. Décisions de cadrage : _dev/memoire.md (D1 à D10).
+//  · RUN.memoire.actifs : les souvenirs portés, dans l’ordre d’acquisition (le rang voyage avec eux, D3)
+//  · RUN.memoire.traces : tout ce qui a été pris pendant la run (voisinage et seuils des majeurs, D4)
+//  · RUN.reserveBrume  : ce que tu as oublié (rien n’est visible à ce palier, D10 : vidée à la fin de la run)
+//  · P.ranks / P.relics : la mémoire (un talent éteint y reste, sans effet)
+// Oublier ne rejoue rien et ne soigne pas : P.s reçoit la différence entre « l’ancienne mémoire rejouée »
+// et « la nouvelle mémoire rejouée » (équipement et sets ôtés le temps du calcul).
+// ═════════════════════════════════════════════════════════════════════════════
+(function(){
+ const SV=(window.BRUME_DATA&&window.BRUME_DATA.souvenirs)||{plafond:6,consommables:['boussole'],seConsume:['phoenix'],refus:{soin:0.2,or:20},familles:{}};
+ const CAP=()=>SV.plafond||6;
+ const FAM={};for(const k in SV.familles){const f=SV.familles[k];(f.t||[]).forEach(id=>{FAM['t:'+id]=k;});(f.r||[]).forEach(id=>{FAM['r:'+id]=k;});}
+ const isCons=id=>(SV.consommables||[]).includes(id);
+ const seConsume=id=>(SV.seConsume||[]).includes(id);
+ const AIN=Array.prototype.includes;
+ const on=()=>!!(RUN&&!RUN.hub&&RUN.memoire&&P);
+ const MEM=()=>RUN&&RUN.memoire;
+ const relic=id=>RELICS.find(r=>r.id===id);
+ const isUlt=id=>/_sk$/.test(id);
+ const ROOT=id=>{const n=NODES[id];return !!(n&&n.kind==='c');};
+
+ // ── Copie profonde (objets simples et tableaux)
+ const isO=v=>v!==null&&typeof v==='object'&&!(v instanceof Set)&&!(v instanceof Map);
+ function clone(v){if(Array.isArray(v))return v.map(clone);if(isO(v)){const o={};for(const k in v)o[k]=clone(v[k]);return o;}return v;}
+
+ // ── Rejouer une liste de souvenirs sur la base de la run (P.s est prêté le temps du calcul : F10() et les effets qui lisent P.s visent la copie)
+ function applyItem(s,a){
+  if(a.src==='t'){const n=NODES[a.id];if(n)for(let r=1;r<=a.rang;r++)n.apply(s,r);}
+  else{const R=relic(a.id);if(R&&R.apply)R.apply(s);}
+ }
+ function replay(list){const M=MEM(),real=P.s,s=clone(M.base);P.s=s;try{for(const a of list)applyItem(s,a);}catch(err){console.error(err);}finally{P.s=real;}return s;}
+ // ── Souvenirs qui agissent vraiment : une voie sans sa racine s’éteint (D2) ; un talent sans sa compétence liée s’éteint (D4)
+ function voieOk(id,list){const n=NODES[id];if(!n||!BR[n.br]||!BR[n.br].sub||n.kind==='c')return true;return list.some(a=>a.src==='t'&&a.id===n.br+'_s1');}
+ function effOf(list){
+  let eff=list.filter(a=>a.src!=='t'||voieOk(a.id,list));
+  for(let k=0;k<8;k++){const st=replay(eff);const bad=eff.filter(a=>a.src==='t'&&NODES[a.id]&&NODES[a.id].reqS&&!st[NODES[a.id].reqS]);if(!bad.length)break;eff=eff.filter(a=>!bad.includes(a));}
+  return eff.map(a=>({id:a.id,src:a.src,rang:a.rang}));
+ }
+ const sameEff=(a,b)=>a.length===b.length&&a.every((x,i)=>x.id===b[i].id&&x.src===b[i].src&&x.rang===b[i].rang);
+ // cur += B − A, clé par clé (récursif sur les sous-objets, comme s.v10)
+ function applyDiff(cur,A,B){
+  const ks=new Set([...Object.keys(A||{}),...Object.keys(B||{})]);
+  for(const k of ks){const a=A?A[k]:undefined,b=B?B[k]:undefined;if(a===b)continue;
+   if(isO(a)||isO(b)){if(!isO(cur[k]))cur[k]={};applyDiff(cur[k],isO(a)?a:{},isO(b)?b:{});continue;}
+   const na=typeof a==='number',nb=typeof b==='number',nc=typeof cur[k]==='number';
+   if((na||a===undefined)&&(nb||b===undefined)&&(nc||cur[k]===undefined)){
+    const v=(nc?cur[k]:0)+(nb?b:0)-(na?a:0),r=Math.round(v*1e9)/1e9;
+    if(b===undefined&&Math.abs(r)<1e-9)delete cur[k];else cur[k]=r;}
+   else if(b===undefined)delete cur[k];
+   else cur[k]=b;}
+ }
+ // Recalcul : de l’ancienne mémoire efficace à la nouvelle. Aucun soin, aucun effet de départ rejoué.
+ function recalc(ne){
+  const M=MEM(),s=P.s;
+  const sets=Object.keys(typeof SETS!=='undefined'?SETS:{}).filter(k=>P.sets&&P.sets[k]);
+  const eqs=EQK.map(q=>P[q]).filter(Boolean);
+  try{sets.forEach(k=>SETS[k].off(s));eqs.slice().reverse().forEach(id=>{if(EQS[id]&&EQS[id].off)EQS[id].off(s);});
+   applyDiff(s,replay(M.eff),replay(ne));}
+  finally{eqs.forEach(id=>{if(EQS[id]&&EQS[id].on)EQS[id].on(s);});sets.forEach(k=>SETS[k].on(s));}
+  M.eff=ne;
+  if(P.hp>s.maxHp)P.hp=s.maxHp;if(P.dashCh>s.dashCharges)P.dashCh=s.dashCharges;
+  if(P.cls==='lum'&&P.lan){if(!s.vivante&&P.lan.state==='orbit')P.lan.state='held';}
+ }
+ function resync(){const M=MEM();const ne=effOf(M.actifs);if(!sameEff(ne,M.eff))recalc(ne);}
+ const count=()=>MEM().actifs.length;
+ const full=()=>count()>=CAP();
+ const inMem=(src,id)=>MEM().actifs.some(a=>a.src===src&&a.id===id);
+ const inRes=(src,id)=>(RUN.reserveBrume||[]).some(x=>x.source===(src==='t'?'talent':'relique')&&x.id===id);
+ const TR=id=>id==='root'||(P.ranks[id]||0)>0||((MEM()&&MEM().traces[id])||0)>0;
+ const isOff=a=>on()&&!MEM().eff.some(x=>x.src===a.src&&x.id===a.id);
+
+ // ── Début de run
+ function memInit(){if(!RUN||RUN.hub||!P)return;
+  RUN.memoire={actifs:[],traces:{},eff:[],base:clone(P.s),renonces:0,oublis:0,consumes:[],pending:null,forgetOpen:false,gains:0};
+  RUN.reserveBrume=[];
+  if(!P.relics.__g){Object.defineProperty(P.relics,'includes',{value:function(id){return AIN.call(this,id)||(on()&&(inRes('r',id)||MEM().consumes.includes(id)));},enumerable:false,configurable:true});Object.defineProperty(P.relics,'__g',{value:1,enumerable:false});}
+ }
+ const _sr=startRun;
+ startRun=function(){_sr();memInit();renderMem();};
+ // D8 · références du Brumeux remises à zéro à la mise en service de la mémoire (builds plus comparables)
+ try{if(!SAVE.flags.mem17){const S=profStore();S.eff={};delete S.base;SAVE.flags.mem17=1;persist();}}catch(err){}
+
+ // ── Gains
+ function afterTalent(id){
+  const M=MEM(),r=P.ranks[id]||1;
+  const a=M.actifs.find(x=>x.src==='t'&&x.id===id);
+  if(a)a.rang=r;else M.actifs.push({id,src:'t',rang:r,depuis:{acte:RUN.act,salle:RUN.roomIdx}});
+  M.traces[id]=Math.max(M.traces[id]||0,r);M.gains++;
+  const e=M.eff.find(x=>x.src==='t'&&x.id===id);if(e)e.rang=r;else M.eff.push({id,src:'t',rang:r});
+  resync();renderMem();
+ }
+ function afterRelic(id){
+  const M=MEM();if(isCons(id)){renderMem();return;}
+  if(!inMem('r',id))M.actifs.push({id,src:'r',rang:1,depuis:{acte:RUN.act,salle:RUN.roomIdx}});
+  if(!M.eff.some(x=>x.src==='r'&&x.id===id))M.eff.push({id,src:'r',rang:1});M.gains++;
+  resync();renderMem();
+ }
+ const _tk=takeNode;
+ takeNode=function(id){
+  if(!on()){_tk(id);return;}
+  if(inMem('t',id)||!full()){_tk(id);afterTalent(id);return;}
+  MEM().pending={src:'t',id,ctx:'lv'};kick();
+ };
+ const _ar=applyRelic;
+ applyRelic=function(r){
+  if(!on()||!r){_ar(r);return;}
+  if(isCons(r.id)||inMem('r',r.id)||!full()){_ar(r);afterRelic(r.id);return;}
+  MEM().pending={src:'r',id:r.id,ctx:'rel'};kick();
+ };
+ // l’écran d’oubli s’ouvre quand l’écran du gain se ferme (ou tout de suite si aucun écran n’est ouvert)
+ function kick(){queueMicrotask(()=>{const M=MEM();if(M&&M.pending&&!M.forgetOpen&&overlayEl.hidden)openForget();});}
+ const _co=closeOverlay;
+ closeOverlay=function(){
+  const M=on()&&MEM();
+  if(M&&M.pending&&!M.forgetOpen){M.resumeTal=M.resumeTal||!!RUN.talOpen;RUN.talOpen=false;_co();openForget();return;}
+  _co();
+ };
+ // Colporteur : on ne paie qu’une fois l’échange accepté
+ const _buy=buyItem;
+ buyItem=function(key){
+  if(!on()||!key||!key.startsWith('r:')){_buy(key);return;}
+  const id=key.slice(2),sh=room&&room.shop,it=sh&&sh.items.find(i=>i.key===key);
+  if(!it||sh.sold[key]||gold()<it.price||isCons(id)||!full()){_buy(key);return;}
+  MEM().pending={src:'r',id,ctx:'shop',key,price:it.price};openForget();
+ };
+ // Rituel d’Ascension : la racine de la voie est un souvenir (D2). Mémoire pleine : un oubli obligatoire.
+ function doAsc(br){
+  SAVE.flags.asc=1;persist();P.ranks[br+'_s1']=1;NODES[br+'_s1'].apply(P.s,1);toast(`Tu deviens ${BR[br].name}`,2.4);sfx('level');
+  afterTalent(br+'_s1');
+ }
+ const _oa=openAscension;
+ openAscension=function(){
+  _oa();if(!on())return;
+  const subs=CLS[P.cls].subs;
+  const choose=br=>{if(!armed())return;const why=window.subBlocked?window.subBlocked(br):'';if(why){toast(why,3);return;}
+   if(full()){MEM().pending={src:'t',id:br+'_s1',ctx:'asc',br};closeOverlay();return;}
+   doAsc(br);closeOverlay();};
+  overlayEl.querySelectorAll('.card.asc').forEach(b=>{const c=b.cloneNode(true);b.replaceWith(c);c.addEventListener('click',()=>choose(c.dataset.br));});
+  overlayKeys=c=>{const m=NUMKEY[c];if(m!==undefined&&subs[m])choose(subs[m]);};
+  if(full()){const sub=overlayEl.querySelector('.sub');if(sub)sub.insertAdjacentHTML('beforeend',` <span class="mfnote">${icon('u_swap')} Ta mémoire est pleine : la voie prendra la place d’un souvenir.</span>`);}
+ };
+ // D6 · la Mèche de Phénix se consume quand elle sert et libère sa place (elle ne part pas dans la réserve)
+ const _pd=playerDown;
+ playerDown=function(){
+  const u0=P&&P.phoenixUsed;_pd.apply(this,arguments);
+  if(!on()||u0||!P.phoenixUsed)return;
+  for(const id of SV.seConsume||[]){const a=MEM().actifs.find(x=>x.src==='r'&&x.id===id);if(!a)continue;
+   MEM().actifs.splice(MEM().actifs.indexOf(a),1);const i=AIN.call(P.relics,id)?P.relics.indexOf(id):-1;if(i>=0)P.relics.splice(i,1);
+   MEM().consumes.push(id);resync();renderMem();}
+ };
+
+ // ── Oublier
+ function forget(a){
+  const M=MEM();const i=M.actifs.indexOf(a);if(i<0)return;
+  M.actifs.splice(i,1);
+  if(a.src==='t')delete P.ranks[a.id];else{const j=P.relics.indexOf(a.id);if(j>=0)P.relics.splice(j,1);}
+  RUN.reserveBrume.push({id:a.id,source:a.src==='t'?'talent':'relique',rang:a.rang,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0});
+  M.oublis++;resync();
+  try{ensure14();const nm=nameOf(a);RUN.ch.notes.push({a:RUN.act,k:'oubli',t:`Acte ${ROM[RUN.act]||'I'} : tu as oublié ${nm}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}
+ }
+
+ // ── Accès à l’arbre (D4) : voisinage et seuils sur les traces ; exclusions sur la mémoire ; une paire A/B tracée reste close ;
+ //    un souvenir oublié ne se reprend pas en montant de niveau (il appartient à la Brume)
+ const _om=ownedMin10,_mc=majCount10;
+ ownedMin10=function(br){if(!on())return _om(br);let c=0;for(const id in NODES){const n=NODES[id];if(n.br===br&&n.minor&&TR(id))c++;}return c;};
+ majCount10=function(br){if(!on())return _mc(br);let c=0;for(const id in NODES){const n=NODES[id];if(n.br===br&&n.kind==='x'&&TR(id))c++;}return c;};
+ const _na=nodeAvailable;
+ nodeAvailable=function(id){
+  if(!on())return _na(id);
+  const n=NODES[id];if(!n)return false;
+  if(inRes('t',id))return false;
+  if(n.cls!==P.cls||isSealed(n)||n.kind==='c')return false;
+  const r=P.ranks[id]||0;
+  if(n.kind==='x'){
+   if(r>=1||TR(n.alt))return false;
+   if(excluded(id)||depBlocked(id))return false;
+   if(n.reqS&&!P.s[n.reqS])return false;
+   if(ownedMin10(n.br)<NEED10[n.idx-1])return false;
+   if(n.idx>1&&!(TR(n.br+'_x'+(n.idx-1)+'a')||TR(n.br+'_x'+(n.idx-1)+'b')))return false;
+   return true;}
+  if(n.keyMaj&&!r&&majCount10(n.br)<1)return false;
+  if(r>=n.max)return false;
+  if(excluded(id)||depBlocked(id))return false;
+  if(r>0)return true;
+  return (ADJ[id]||[]).some(TR);
+ };
+ // D3 · mémoire pleine : au moins une carte « nouveau » quand il en existe une (renforcer ne doit pas devenir le seul choix)
+ const _ro=rollOffers;
+ rollOffers=function(avoid){
+  const o=_ro(avoid);if(!on()||!full())return o;
+  const nw=id=>!inMem('t',id);if(o.some(nw))return o;
+  const cand=Object.keys(NODES).filter(id=>NODES[id].kind!=='x'&&!o.includes(id)&&nw(id)&&nodeAvailable(id));
+  const idx=o.map((id,i)=>i).filter(i=>NODES[o[i]].kind!=='x');
+  if(cand.length&&idx.length)o[pick(idx)]=pick(cand);
+  return o;
+ };
+ // l’arbre montre ce qui a été oublié (trace en pointillé) et ce qui est éteint (en gris)
+ const _ts=treeState;
+ treeState=function(id,offers){const o=_ts(id,offers);if(!on())return o;
+  if(!o.r&&MEM().traces[id]){o.t=1;o.av=false;o.excl=false;o.rk='';}
+  if(o.r&&isOff({src:'t',id}))o.off=1;
+  return o;};
+ const _nc=nodeCaption;
+ nodeCaption=function(id){const t=_nc(id);if(!on()||id==='root')return t;
+  if(!P.ranks[id]&&MEM().traces[id])return t.replace(/<em>[^<]*<\/em>/,'<em>Oublié</em>');
+  if(P.ranks[id]&&isOff({src:'t',id}))return t.replace(/<em>[^<]*<\/em>/,'<em>Éteint : '+esc(offWhy({src:'t',id}))+'</em>');
+  return t;};
+
+ // ── Présentation : une tuile = un souvenir (forme du genre de nœud, couleur de la branche, icône de la famille, rangs en points)
+ function genre(a){if(a.src==='r')return 'r';const n=NODES[a.id];if(!n)return 'm';if(isUlt(a.id))return 'u';return n.kind;}
+ function nameOf(a){if(a.src==='r'){const R=relic(a.id);return R?R.name:a.id;}const n=NODES[a.id];return n?n.name:a.id;}
+ function colOf(a){if(a.src==='r')return 'var(--flame)';const n=NODES[a.id];return n&&BR[n.br]?BR[n.br].color:'#cfc7b3';}
+ function icOf(a){if(a.src==='r')return a.id;const f=SV.familles[FAM['t:'+a.id]];return f?f.ic:'u_star';}
+ function famOf(a){const f=SV.familles[FAM[(a.src==='r'?'r:':'t:')+a.id]];return f?f.n:'';}
+ function maxOf(a){if(a.src==='r')return 1;const n=NODES[a.id];return n?n.max:1;}
+ function kindOf(a){if(a.src==='r')return 'Relique';const n=NODES[a.id];if(!n)return '';if(isUlt(a.id))return 'Ultime [F]';if(n.kind==='c')return 'Racine de voie';return n.kind==='x'?`Majeur ${n.letter}`:(KIND[n.kind]||'');}
+ function branchOf(a){if(a.src==='r'){const R=relic(a.id);return R&&R.cls?CLS[R.cls].short:'';}const n=NODES[a.id];return n&&BR[n.br]?BR[n.br].name:'';}
+ function descOf(a,rk){if(a.src==='r'){const R=relic(a.id);return R?R.desc:'';}const n=NODES[a.id];if(!n)return '';
+  if(n.kind==='x')return n.mod+' Synergie : '+n.syn;
+  if(rk>1&&n.kind==='s'&&n.up)return n.desc+' Rang 2 : '+n.up;
+  return n.desc;}
+ function offWhy(a){if(a.src!=='t')return '';const n=NODES[a.id];if(!n)return '';
+  if(BR[n.br]&&BR[n.br].sub&&n.kind!=='c'&&!inMem('t',n.br+'_s1'))return `sa voie (${BR[n.br].name}) a été oubliée`;
+  if(n.reqS){const sk=Object.keys(NODES).find(k=>NODES[k].br===n.br&&NODES[k].kind==='s'&&NODES[k].cls===n.cls&&String(NODES[k].apply).includes(n.reqS));return sk?`demande ${NODES[sk].name}`:'sa compétence liée manque';}
+  return '';}
+ function pips(a,rk){const mx=maxOf(a);if(mx<=1)return '';let h='<i class="pp">';for(let i=1;i<=mx;i++)h+=`<b${i<=rk?' class="on"':''}></b>`;return h+'</i>';}
+ function tile(a,o){o=o||{};const g=genre(a),rk=o.rang!=null?o.rang:a.rang,off=o.off!=null?o.off:isOff(a);
+  return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}</span>`;}
+ function tipOf(a){const rk=a.rang,mx=maxOf(a);return `${nameOf(a)} · ${kindOf(a)}${branchOf(a)?' · '+branchOf(a):''}${mx>1?` · rang ${rk}/${mx}`:''}${isOff(a)?' · éteint : '+offWhy(a):''} — ${descOf(a,rk)}`;}
+
+ // HUD : les six souvenirs, en haut à droite (les reliques n’y figurent plus à part)
+ function renderMem(){
+  const box=$('#hRelics');if(!box)return;let row=$('#hMem');
+  if(!row){row=document.createElement('div');row.id='hMem';row.setAttribute('aria-label','Mémoire');box.insertAdjacentElement('afterend',row);}
+  if(!on()){row.hidden=true;return;}row.hidden=false;
+  box.querySelectorAll('.relic:not(.eq)').forEach(x=>x.remove());
+  const M=MEM(),cells=[];
+  for(let i=0;i<CAP();i++){const a=M.actifs[i];cells.push(a?`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`:`<span class="mcell"><span class="mt empty"></span></span>`);}
+  const cons=P.relics.filter(id=>isCons(id));
+  row.innerHTML=cells.join('')+cons.map(id=>`<span class="mcell cons" title="${esc(relic(id).name+' : '+relic(id).desc)}">${icon(id)}</span>`).join('');
+  row.classList.toggle('full',full());
+  row.querySelectorAll('.mcell').forEach(c=>c.addEventListener('click',()=>{if(state==='play'&&overlayEl.hidden)openPause();}));
+ }
+ const _rr=renderRelics;
+ renderRelics=function(){_rr();try{renderMem();}catch(err){console.error(err);}};
+
+ // Cartes de gain : un badge dit d’un coup d’œil si le gain prend une place (⇄) ou renforce un souvenir (↑)
+ const badge=(kind)=>`<i class="mbadge ${kind}" title="${kind==='swap'?'Mémoire pleine : un souvenir partira':kind==='up'?'Renforce un souvenir déjà porté':'Une place libre'}">${icon(kind==='swap'?'u_swap':kind==='up'?'u_up':'u_check')}</i>`;
+ const _ch=cardHTML;
+ cardHTML=function(id,i){const h=_ch(id,i);if(!on())return h;const k=inMem('t',id)?'up':full()?'swap':'';return k?h.replace(/<\/button>\s*$/,badge(k)+'</button>'):h;};
+ const _or=openRelics;
+ openRelics=function(title,sub){
+  _or(title,sub);if(!on()||overlayEl.hidden)return;
+  const four=overlayEl.querySelector('.four');if(!four)return;
+  if(full())four.querySelectorAll('.card[data-id]').forEach(b=>{if(!isCons(b.dataset.id))b.insertAdjacentHTML('beforeend',badge('swap'));});
+  const hp=Math.round(P.s.maxHp*SV.refus.soin*healF()),or=SV.refus.or;
+  const row=overlayEl.querySelector('.panel .row');
+  const html=`<div class="mfref" role="group" aria-label="Refuser la relique"><button type="button" class="mref" id="mrefh" title="Refuser la relique : +${hp} PV">${icon('u_heart')}<b>+${hp}</b><kbd>5</kbd></button><button type="button" class="mref" id="mrefg" title="Refuser la relique : +${or} or">${icon('u_coin')}<b>+${or}</b><kbd>6</kbd></button></div>`;
+  if(row)row.insertAdjacentHTML('afterbegin',html);else four.insertAdjacentHTML('afterend',html);
+  const refuse=k=>{if(!armed())return;if(k==='h'){heal(P.s.maxHp*SV.refus.soin*healF(),'halte');toast(`Relique refusée · +${hp} PV`,2);}else{addGold(or,true);toast(`Relique refusée · +${or} or`,2);}MEM().renonces++;sfx('pick');closeOverlay();};
+  $('#mrefh').addEventListener('click',()=>refuse('h'));$('#mrefg').addEventListener('click',()=>refuse('g'));
+  const k=overlayKeys;overlayKeys=(c,e)=>{if(c==='Digit5'||c==='Numpad5'){refuse('h');return;}if(c==='Digit6'||c==='Numpad6'){refuse('g');return;}if(k)k(c,e);};
+ };
+
+ // ── L’écran « prendre / oublier »
+ //   gauche : le gain ; droite : le souvenir survolé ou choisi ; dessous : les six souvenirs (touches 1 à 6)
+ //   souris : survoler compare, cliquer oublie ; clavier : 1-6 choisit, la même touche ou Entrée confirme
+ //   0 : renoncer au gain ; Échap : plus tard (niveau) ou renoncer (relique) ; la racine d’une voie demande une confirmation de plus
+ const KEY6={Digit1:0,Digit2:1,Digit3:2,Digit4:3,Digit5:4,Digit6:5,Numpad1:0,Numpad2:1,Numpad3:2,Numpad4:3,Numpad5:4,Numpad6:5};
+ function consequences(drop,gain){
+  const M=MEM(),list=M.actifs.filter(a=>a!==drop);if(gain)list.push(gain);
+  const ne=effOf(list),now=M.eff;
+  return list.filter(a=>!ne.some(x=>x.src===a.src&&x.id===a.id)&&(a===gain||now.some(x=>x.src===a.src&&x.id===a.id)));
+ }
+ function detail(a,rk,lbl,extra){
+  return `<div class="mfd"><p class="h-sec">${lbl}</p><div class="mfd-h">${tile(a,{big:true,rang:rk,off:false})}<div><h3>${esc(nameOf(a))}</h3><p class="mfd-m">${esc(kindOf(a))}${branchOf(a)?' · '+esc(branchOf(a)):''}${famOf(a)?' · '+esc(famOf(a)):''}${maxOf(a)>1?` · rang ${rk}/${maxOf(a)}`:''}</p></div></div><p class="mfd-d">${esc(descOf(a,rk))}</p>${extra||''}</div>`;
+ }
+ // Principe (palier 0, une seule fois) : la première fois que la mémoire déborde
+ try{const BF=window.__brief;if(BF&&BF.BRIEF)BF.BRIEF.memoire={t:'La Mémoire : six souvenirs',l:'Talents et reliques partagent six places. Quand un gain arrive mémoire pleine, quelque chose doit partir.',c:[
+  ['Six souvenirs','#f3b94d','Ils sont affichés en haut à droite. L’équipement garde ses quatre emplacements à part.'],
+  ['Renforcer','#8fd46e','Un rang de plus (↑) ne prend pas de place. Un gain nouveau (⇄) en demande une.'],
+  ['Oublier','#dc4a55','Survole pour comparer, puis clic, ou touche 1 à 6 et Entrée. Un souvenir oublié ne revient plus dans tes choix.'],
+  ['Éteint','#a387ec','Sans sa compétence liée ou sa racine de voie, un talent reste en mémoire mais ne fait plus rien.']]};}catch(err){}
+ function openForget(){
+  const M=MEM(),g=M.pending;if(!g)return;
+  if(g.ctx!=='shop'&&overlayEl.hidden&&window.__brief&&window.__brief.brief('memoire'))return;
+  M.forgetOpen=true;
+  const gain={id:g.id,src:g.src,rang:g.src==='t'?(P.ranks[g.id]||0)+1:1};
+  const ctx=g.ctx,canLater=ctx==='lv',canNo=ctx!=='asc';
+  const opts=M.actifs.slice(0,CAP());
+  let sel=-1,armedRoot=-1;
+  const pre=opts.findIndex(a=>isOff(a));if(pre>=0)sel=pre;
+  const eyebrow=ctx==='asc'?'Rituel d’Ascension · mémoire pleine':ctx==='shop'?'Colporteur · mémoire pleine':ctx==='rel'?'Relique · mémoire pleine':'Talent · mémoire pleine';
+  const h2=ctx==='asc'?'Ta nature change : quelque chose doit partir':'Prendre ou oublier';
+  const lostHTML=i=>{
+   if(i<0)return `<div class="mfd mfd-empty"><p class="h-sec">Oublié</p><div class="mfd-h"><span class="mt big empty"></span><div><h3 class="muted">?</h3><p class="mfd-m"><kbd>1</kbd>–<kbd>6</kbd></p></div></div></div>`;
+   const a=opts[i],cq=consequences(a,gain);
+   let ex='';
+   if(isOff(a))ex+=`<p class="mfw off">${icon('u_off')} Éteint : ${esc(offWhy(a))}</p>`;
+   if(ROOT(a.id))ex+=`<p class="mfw bad">${icon('u_warn')} Toute ta voie s’éteint, et le Rituel ne se rejoue pas.</p>`;
+   if(cq.length)ex+=`<div class="mfw bad"><span>${icon('u_off')}</span><span class="mfw-t">${cq.map(c=>`<span class="mcell" title="${esc(nameOf(c))}">${tile(c,{off:true})}</span>`).join('')}</span><span>s’éteindr${cq.length>1?'ont':'a'}</span></div>`;
+   if(armedRoot===i)ex+=`<p class="mfw bad strong">${icon('u_warn')} Confirme : même touche, Entrée ou clic.</p>`;
+   return detail(a,a.rang,'Oublié',ex);};
+  const gainHTML=detail(gain,gain.rang,ctx==='asc'?'Ta voie':'Gain',g.ctx==='shop'?`<p class="mfd-m">${g.price} or</p>`:'');
+  openOverlay(`<div class="panel narrow mf"><p class="eyebrow">${eyebrow} · ${count()} / ${CAP()}</p><h2>${h2}</h2>
+   <div class="mfcmp"><div class="mfg">${gainHTML}</div><div class="mfarr" aria-hidden="true">${icon('u_swap')}</div><div class="mfl" id="mfl">${lostHTML(sel)}</div></div>
+   <div class="mfrow" role="group" aria-label="Souvenirs">${opts.map((a,i)=>`<button type="button" class="mf-opt${i===sel?' sel':''}${ROOT(a.id)?' root':''}" data-i="${i}" aria-label="Oublier ${esc(nameOf(a))}">${tile(a)}<kbd>${i+1}</kbd></button>`).join('')}</div>
+   <div class="row">${canNo?`<button type="button" class="btn" id="mfno">${icon('u_cross')} Renoncer${ctx==='rel'?` (+${Math.round(P.s.maxHp*SV.refus.soin*healF())} PV)`:''} · 0</button>`:''}${canLater?'<button type="button" class="btn" id="mflater">Plus tard · Échap</button>':''}<span class="k">Survole pour comparer · clic ou touche pour oublier</span></div></div>`,'mfo');
+  const L=$('#mfl'),btns=[...overlayEl.querySelectorAll('.mf-opt')];
+  const show=i=>{L.innerHTML=lostHTML(i);};
+  const mark=()=>btns.forEach((b,j)=>b.classList.toggle('sel',j===sel));
+  const finish=()=>{M.pending=null;M.forgetOpen=false;};
+  const after=()=>{renderMem();if(ctx==='shop'){openOverlay('');renderShop();return;}RUN.talOpen=ctx==='lv'&&M.resumeTal;M.resumeTal=false;closeOverlay();};
+  const confirm=i=>{if(!armed()||i<0||!opts[i])return;
+   if(ROOT(opts[i].id)&&armedRoot!==i){armedRoot=i;sel=i;mark();show(i);sfx('door');return;}
+   const a=opts[i];finish();
+   L.classList.add('gone');
+   forget(a);
+   if(g.src==='t'){if(ctx==='asc')doAsc(g.br);else{_tk(g.id);afterTalent(g.id);}}
+   else{if(ctx==='shop'){const sh=room.shop;RUN.goldF-=g.price;_ar(relic(g.id));afterRelic(g.id);sh.sold[g.key]=1;sfx('buy');}else{_ar(relic(g.id));afterRelic(g.id);}}
+   toast(`Oublié : ${nameOf(a)}`,1.8);
+   after();};
+  const renounce=()=>{if(!armed()||!canNo)return;finish();M.renonces++;
+   if(ctx==='rel'){heal(P.s.maxHp*SV.refus.soin*healF(),'halte');toast(`Relique refusée · +${Math.round(P.s.maxHp*SV.refus.soin*healF())} PV`,2);}
+   else toast('Tu renonces',1.4);
+   after();};
+  const later=()=>{if(!armed()||!canLater)return;finish();P.pendingLv++;M.resumeTal=false;RUN.talOpen=false;closeOverlay();};
+  btns.forEach((b,i)=>{b.addEventListener('mouseenter',()=>{if(armedRoot!==i&&armedRoot>=0)armedRoot=-1;show(i);});b.addEventListener('focus',()=>show(i));b.addEventListener('mouseleave',()=>show(sel));b.addEventListener('click',()=>{if(sel!==i&&!ROOT(opts[i].id)){sel=i;mark();}confirm(i);});});
+  const no=$('#mfno');if(no)no.addEventListener('click',renounce);
+  const lt=$('#mflater');if(lt)lt.addEventListener('click',later);
+  overlayKeys=(c,e)=>{
+   const m=KEY6[c];
+   if(m!==undefined){if(!opts[m])return;if(sel===m||armedRoot===m)confirm(m);else{sel=m;if(armedRoot!==m)armedRoot=-1;mark();show(m);}return;}
+   if(c==='Enter'||c==='NumpadEnter'||c==='Space'){if(e)e.preventDefault();if(sel>=0)confirm(sel);return;}
+   if(c==='Digit0'||c==='Numpad0'||c==='Backspace'){renounce();return;}
+   if(c==='Escape'){if(canLater)later();else if(canNo)renounce();return;}
+  };
+ }
+
+ // ── Pause : la mémoire en tête de la colonne de droite ; fin de run : la mémoire au moment de la chute
+ const _op=openPause;
+ openPause=function(){_op();if(!on())return;const hd=overlayEl.querySelector('.pzhead')||overlayEl.querySelector('.lv > div:last-child');if(!hd||overlayEl.querySelector('.pzmem'))return;
+  const M=MEM();hd.insertAdjacentHTML('beforeend',`<div class="pzmem" aria-label="Mémoire">${M.actifs.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}${Array.from({length:Math.max(0,CAP()-M.actifs.length)},()=>'<span class="mcell"><span class="mt empty"></span></span>').join('')}<span class="pzmem-n">${M.actifs.length} / ${CAP()}</span></div>`);};
+ const _oe=openEnd;
+ openEnd=function(win,abandon){const M=on()&&MEM();const r=_oe.apply(this,arguments);
+  try{if(M){M.fin={niveau:P.level,souvenirs:M.actifs.length,traces:Object.keys(M.traces).length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),reliques:M.actifs.filter(a=>a.src==='r').length,oublis:M.oublis,renonces:M.renonces,gains:M.gains};
+   const box=overlayEl.querySelector('.panel');
+   if(box&&!box.querySelector('.endmem')){const h=`<div class="endmem"><p class="h-sec">Mémoire</p><div class="pzmem">${M.actifs.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}</div></div>`;
+    const bp=box.querySelector('#ep1');if(bp)bp.insertAdjacentHTML('afterbegin',h);else box.insertAdjacentHTML('beforeend',h);}}}catch(err){console.error(err);}
+  return r;};
+
+ // ── Styles
+ const st=document.createElement('style');st.id='v17mem';st.textContent=`
+#hMem{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;pointer-events:auto;padding:4px 5px;border-radius:6px;background:rgba(8,10,16,.55);border:1px solid var(--line)}
+#hMem.full{border-color:#5b4a2a}
+#hMem .mcell{cursor:pointer;display:grid;place-items:center}
+#hMem .mcell.cons{width:22px;height:32px;color:var(--ash)}#hMem .mcell.cons .ic{width:16px;height:16px}
+.mt{position:relative;width:32px;height:32px;display:grid;place-items:center;flex:none;color:var(--c);background:rgba(14,17,26,.92);border:1.6px solid var(--c);border-radius:50%;box-sizing:border-box}
+.mt .mt-in{display:grid;place-items:center}
+.mt .ic{width:18px;height:18px}
+.mt.k-s{border-radius:8px}
+.mt.k-x{border-radius:4px;transform:rotate(45deg);width:28px;height:28px;margin:2px}.mt.k-x .mt-in,.mt.k-x .pp,.mt.k-x .mt-x{transform:rotate(-45deg)}
+.mt.k-k{border-radius:10px;box-shadow:inset 0 0 0 2px rgba(8,10,16,.9),inset 0 0 0 3.5px var(--c)}
+.mt.k-u{border-width:3px;border-style:double;box-shadow:0 0 10px -2px var(--c)}
+.mt.k-c{border-style:solid;box-shadow:0 0 0 2px rgba(8,10,16,.9),0 0 0 3.5px var(--c)}
+.mt.k-r{border-radius:6px;--c:var(--flame)}
+.mt.k-r .ic .f{fill:url(#icg);fill-opacity:.24}
+.mt.empty{border:1.4px dashed var(--line-hi);background:rgba(14,17,26,.5)}
+.mt .pp{position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:1px 3px;border-radius:5px;background:#0b0d14}
+.mt.k-x .pp{bottom:-6px}
+.mt .pp b{width:4px;height:4px;border-radius:50%;background:#3a3f55}.mt .pp b.on{background:var(--c)}
+.mt.off{filter:grayscale(1);opacity:.6}
+.mt .mt-x{position:absolute;inset:0;display:grid;place-items:center;color:#ff8f98}.mt .mt-x .ic{width:26px;height:26px;opacity:.85}
+.mt.big{width:58px;height:58px;border-width:2.2px}.mt.big .ic{width:32px;height:32px}.mt.big.k-x{width:50px;height:50px;margin:4px}
+.mt.big .pp{bottom:-5px;gap:3px}.mt.big .pp b{width:6px;height:6px}
+.mbadge{position:absolute;top:6px;right:6px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:#0b0d14;border:1px solid #5b4a2a;color:var(--flame)}
+.mbadge.up{border-color:#3c5b3a;color:#9fe08f}.mbadge .ic{width:15px;height:15px}
+.card{position:relative}
+.mfref{display:flex;gap:8px;align-items:center}
+.mref{font:inherit;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 10px;border-radius:4px;border:1px solid var(--line-hi);background:#1a1e2c;color:var(--bone);cursor:pointer}
+.mref:hover{border-color:var(--flame)}.mref .ic{width:20px;height:20px}#mrefh .ic{color:#ff8f98}#mrefg .ic{color:var(--flame)}
+.mref kbd{margin:0}
+.mfnote{display:inline-flex;gap:6px;align-items:center;color:var(--flame)}
+.mf h2{margin:2px 0 10px}
+.mfcmp{display:grid;grid-template-columns:1fr 34px 1fr;gap:10px;align-items:stretch;margin:6px 0 14px}
+.mfarr{display:grid;place-items:center;color:var(--flame)}.mfarr .ic{width:30px;height:30px}
+.mfd{padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--card);min-height:100%;box-sizing:border-box}
+.mfg .mfd{border-color:#5b4a2a}
+.mfl .mfd{border-color:#5a3340}
+.mfl.gone .mfd{animation:mfgone .35s ease-in forwards}
+@keyframes mfgone{to{opacity:0;filter:blur(6px);transform:translateY(-6px)}}
+.mfd .h-sec{margin:0 0 8px}
+.mfd-h{display:flex;gap:14px;align-items:center}
+.mfd-h h3{margin:0;font-size:21px}
+.mfd-m{margin:2px 0 0;color:var(--ash);font-size:13.5px}
+.mfd-d{margin:10px 0 0;font-size:15px}
+.mfw{display:flex;gap:8px;align-items:center;margin:10px 0 0;font-size:14px;color:#c9c3d6}
+.mfw .ic{width:18px;height:18px;flex:none}
+.mfw.bad{color:#ff9aa4}.mfw.off{color:#b9b3c6}.mfw.strong{font-weight:700}
+.mfw-t{display:flex;gap:4px}
+.mfrow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 14px}
+.mf-opt{font:inherit;position:relative;display:grid;justify-items:center;gap:8px;padding:12px 10px 8px;min-width:78px;border-radius:6px;border:1px solid var(--line);background:#11141e;color:var(--bone);cursor:pointer;transition:border-color .12s,transform .12s,background .12s}
+.mf-opt .mt{width:46px;height:46px}.mf-opt .mt .ic{width:26px;height:26px}.mf-opt .mt.k-x{width:40px;height:40px;margin:3px}
+.mf-opt:hover,.mf-opt:focus-visible{border-color:#a24a58;background:#1a1220;transform:translateY(-2px)}
+.mf-opt.sel{border-color:#ff8f98;background:#21121a;box-shadow:0 0 0 1px #ff8f98}
+.mf-opt.root{border-style:dashed}
+.mf-opt kbd{margin:0}
+.pzmem{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0 2px}.pzmem-n{color:var(--ash);font-size:13.5px;margin-left:4px;display:inline-flex;gap:4px;align-items:center}
+.endmem .h-sec{margin-bottom:6px}
+@media (max-width:760px){.mfcmp{grid-template-columns:1fr}.mfarr{transform:rotate(90deg)}.mf-opt{min-width:56px;padding:8px 6px 6px}}
+.demo #hMem{display:none!important}`;
+ document.head.appendChild(st);
+
+ window.__memoire={get M(){return MEM();},get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

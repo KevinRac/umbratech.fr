@@ -106,14 +106,77 @@ function formes(D) {
 const MOTS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix'];
 const mot = n => MOTS[n] || String(n);
 
+// ── Familles de souvenirs (data/souvenirs.js) : id → famille
+function familleDe(S) {
+  const out = {};
+  for (const [k, f] of Object.entries((S && S.familles) || {})) { (f.t || []).forEach(id => { out['t:' + id] = k; }); (f.r || []).forEach(id => { out['r:' + id] = k; }); }
+  return out;
+}
+
+// ── Section « La Mémoire » (v17)
+function memoire(D) {
+  const S = D.souvenirs, T = D.talents, I = D.icones, FA = familleDe(S);
+  const ico = (id, cls) => (I && I[id]) ? `<svg class="${cls || 'mic'}" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
+  const ref = S.refus || {};
+  // formes des tuiles : une par genre de souvenir
+  const forme = (k, c, t) => `<span class="mtw k-${k}" style="--c:${c}" title="${esc(t)}">${ico('u_star')}</span>`;
+  const formes = [['m', '#cfc7b3', 'Mineur'], ['s', '#cfc7b3', 'Compétence'], ['x', '#cfc7b3', 'Majeur A ou B'], ['k', '#cfc7b3', 'Nœud clé'], ['c', '#cfc7b3', 'Racine de voie'], ['u', '#cfc7b3', 'Ultime [F]'], ['r', '#f3b94d', 'Relique']]
+    .map(([k, c, t]) => `<li>${forme(k, c, t)}<span>${esc(t)}</span></li>`).join('');
+  const regles = [
+    ['u_star', `${MOTS[S.plafond] ? MOTS[S.plafond].replace(/^./, c => c.toUpperCase()) : S.plafond} souvenirs`, `Talents et reliques partagent ${S.plafond} places, affichées en haut à droite pendant la descente. L’équipement garde ses quatre emplacements à part.`],
+    ['u_up', 'Renforcer ne coûte rien', 'Un rang de plus sur un talent déjà porté ne prend pas de place : le rang voyage avec le souvenir. Sur les cartes, ↑ signale un renforcement, ⇄ un gain qui prendra une place.'],
+    ['u_swap', 'Prendre ou oublier', 'Mémoire pleine, un gain nouveau ouvre l’écran d’oubli : le gain à gauche, le souvenir survolé à droite, les six souvenirs dessous. Tu peux aussi renoncer au gain, ou garder le niveau pour plus tard.'],
+    ['u_fog', 'Ce qui est oublié', 'Un souvenir oublié perd tout effet, sans soin ni effet rejoué, avec son rang. Il ne revient plus dans tes choix de la descente.'],
+    ['u_book', 'L’arbre se souvient', 'Ce que tu as pris compte encore pour ouvrir l’arbre : voisins et seuils des majeurs se lisent sur tout ce que tu as traversé (nœuds en pointillé). Une paire de majeurs A/B déjà choisie reste close.'],
+    ['u_off', 'Éteint', 'Un talent qui modifie une compétence oubliée, ou un talent de voie dont la racine est oubliée, reste en mémoire mais ne fait plus rien (tuile grisée, barrée). Les incompatibilités se lisent sur ce que tu portes : oublier un nœud clé rouvre ce qu’il bloquait.'],
+    ['u_door', 'Voies et ultimes', 'La racine de ta voie est un souvenir. Le chemin vers l’ultime ne compte qu’en le traversant : une fois l’ultime pris, tu peux oublier ses marchepieds, pas la racine (oublier la racine éteint toute la voie, et le Rituel ne se rejoue pas ; l’écran demande une confirmation de plus). Au Rituel d’Ascension mémoire pleine, un oubli est obligatoire.'],
+    ['u_heart', 'Refuser une relique', `Toute relique offerte se refuse : +${Math.round((ref.soin || 0) * 100)} % de tes PV max ou +${ref.or || 0} or. Chez le Colporteur, tu ne paies qu’une fois l’échange accepté.`],
+    ['u_hourglass', 'Usage unique', `${(S.consommables || []).map(id => (D.reliques.find(r => r.id === id) || {}).name).filter(Boolean).join(', ')} : hors mémoire, son effet s’applique tout de suite. ${(S.seConsume || []).map(id => (D.reliques.find(r => r.id === id) || {}).name).filter(Boolean).join(', ')} : elle se consume en te relevant et libère sa place.`]
+  ].map(([i, h, t]) => `<article class="ent mrule">${ico(i, 'mic big')}<div><h4>${esc(h)}</h4><p>${esc(t)}</p></div></article>`).join('');
+  const touches = [['1 – 6', 'Choisir le souvenir à oublier (la même touche confirme)'], ['Entrée', 'Confirmer'], ['0', 'Renoncer au gain'], ['Échap', 'Plus tard (niveau) · renoncer (relique)'], ['5 · 6', 'Écran de relique : refuser contre un soin ou de l’or']]
+    .map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join('');
+  const N = T.noeuds, BRs = T.branches, FO = T.formes;
+  const fams = Object.entries(S.familles).map(([k, f]) => {
+    const parForme = Object.keys(FO).map(c => {
+      const ids = (f.t || []).filter(id => N[id] && BRs[id.split('_')[0]] && BRs[id.split('_')[0]].cls === c);
+      return ids.length ? `<p class="mfo"><b style="color:${FO[c].color}">${esc(FO[c].short)}</b> ${ids.map(id => `<span style="--cc:${BRs[id.split('_')[0]].color}">${esc(N[id].name)}</span>`).join(' · ')}</p>` : '';
+    }).join('');
+    const rel = (f.r || []).map(id => (D.reliques.find(r => r.id === id) || {}).name).filter(Boolean);
+    return `<article class="ent mfam" id="fam-${k}">${ico(f.ic, 'mic big')}<div><h4>${esc(f.n)} <small>${(f.t || []).length} talents · ${rel.length} reliques</small></h4><p class="k">${esc(f.d)}</p>${parForme}${rel.length ? `<p class="mfo"><b style="color:#f3b94d">Reliques</b> ${rel.map(esc).join(' · ')}</p>` : ''}</div></article>`;
+  }).join('');
+  return `<section class="sec" id="memoire" data-sec>${MARK('data/souvenirs.js, data/talents.js et data/reliques.js')}<style>
+.mic{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--flame,#f3b94d)}.mic.big{width:34px;height:34px}
+.mrule,.mfam{display:flex;gap:14px;align-items:flex-start}.mrule h4,.mfam h4{margin:0 0 4px}.mfam h4 small{font-weight:400;color:var(--mute);font-size:13px;margin-left:6px}
+.mfo{margin:6px 0 0;font-size:14px;line-height:1.5}.mfo span{color:var(--cc)}
+.mtw{position:relative;width:30px;height:30px;display:inline-grid;place-items:center;color:var(--c);border:1.6px solid var(--c);border-radius:50%;background:#0e111a;box-sizing:border-box}.mtw .mic{width:16px;height:16px;color:var(--c)}
+.mtw.k-s{border-radius:7px}.mtw.k-x{border-radius:4px;transform:rotate(45deg);width:26px;height:26px;margin:2px}.mtw.k-x .mic{transform:rotate(-45deg)}
+.mtw.k-k{border-radius:9px;box-shadow:inset 0 0 0 2px #0e111a,inset 0 0 0 3.5px var(--c)}.mtw.k-u{border-width:3px;border-style:double}.mtw.k-c{box-shadow:0 0 0 2px #0e111a,0 0 0 3.5px var(--c)}.mtw.k-r{border-radius:6px}
+.mleg{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}.mleg li{display:inline-flex;gap:8px;align-items:center}
+</style><header class="sh"><p class="eyebrow">Progression</p><h2>La Mémoire</h2><div class="lede"><p>Depuis la version 17, tu ne portes que <b>${S.plafond} souvenirs</b> à la fois : tes talents et tes reliques. Chaque gain nouveau, mémoire pleine, te demande d’oublier quelque chose : choisis ce qui part.</p></div></header>
+<div class="grid g3">${regles}</div>
+<h3 class="sub">Lire une tuile</h3>
+<p>Chaque souvenir est une tuile : sa forme dit son genre (celle du nœud de l’arbre), sa couleur sa branche (doré pour une relique), son icône sa famille. Les points dessous sont ses rangs.</p>
+<ul class="mleg">${formes}</ul>
+<h3 class="sub">L’écran d’oubli au clavier</h3>
+<dl class="kv">${touches}</dl>
+<p class="k">À la souris : survoler une tuile compare, cliquer oublie. Un souvenir éteint est présélectionné : <kbd>Entrée</kbd> suffit pour t’en défaire.</p>
+<h3 class="sub">Les familles de souvenirs</h3>
+<p>Chaque talent et chaque relique appartient à une famille, rangée selon ce qu’il <b>fait</b> (pas selon ce qui le déclenche). Elle donne son icône à la tuile.</p>
+<div class="grid g2">${fams}</div>
+</section>`;
+}
+
 // ── Section « Reliques »
-function reliques(list, F) {
+function reliques(list, F, S) {
+  const FA = familleDe(S), cons = (S && S.consommables) || [], brule = (S && S.seConsume) || [];
   const cards = list.map(r => {
     const forme = r.cls ? `<span class="tag" style="--t:${F[r.cls].col}">${esc(F[r.cls].n)}</span>` : '<span class="tag">Toutes formes</span>';
     const forge = r.lock ? `<span class="tag" style="--t:#f3b94d">Forge · ${r.lock} ✦</span>` : '';
-    return `<article class="ent relic"${r.cls ? ` data-cls="${r.cls}"` : ''}><div class="eh"><h4><span class="glyph">${r.g}</span>${esc(r.name)}</h4><div class="tags">${forme}${forge}</div></div><p>${esc(r.desc)}</p></article>`;
+    const fam = FA['r:' + r.id] && S.familles[FA['r:' + r.id]] ? `<span class="tag" style="--t:#b9a6ff">${esc(S.familles[FA['r:' + r.id]].n)}</span>` : '';
+    const mem = cons.includes(r.id) ? '<span class="tag" style="--t:#8fd46e">Hors mémoire</span>' : brule.includes(r.id) ? '<span class="tag" style="--t:#ea7a43">Se consume</span>' : '';
+    return `<article class="ent relic"${r.cls ? ` data-cls="${r.cls}"` : ''}><div class="eh"><h4><span class="glyph">${r.g}</span>${esc(r.name)}</h4><div class="tags">${forme}${forge}${fam}${mem}</div></div><p>${esc(r.desc)}</p></article>`;
   }).join('');
-  return `<section class="sec" id="reliques" data-sec>${MARK('data/reliques.js')}<header class="sh"><p class="eyebrow">Équipement de run</p><h2>Reliques</h2><div class="lede"><p>Les reliques se trouvent sur les autels, les champions, chez Tobiah et dans la forge de Corbin. Elles <b>disparaissent à la mort</b>. Certaines ne sont proposées qu’à une forme précise ; d’autres se débloquent à la forge contre des Éclats (le prix est indiqué).</p></div></header>
+  return `<section class="sec" id="reliques" data-sec>${MARK('data/reliques.js')}<header class="sh"><p class="eyebrow">Équipement de run</p><h2>Reliques</h2><div class="lede"><p>Les reliques se trouvent sur les autels, les champions, chez Tobiah et dans la forge de Corbin. Elles <b>disparaissent à la mort</b>. Certaines ne sont proposées qu’à une forme précise ; d’autres se débloquent à la forge contre des Éclats (le prix est indiqué).</p><p>Une relique est un <a href="#memoire">souvenir</a> : elle prend l’une des ${S && S.plafond || 6} places de ta mémoire, comme un talent. Chacune se refuse contre un soin ou de l’or. L’étiquette violette donne sa famille.</p></div></header>
 <div class="grid g3">${cards}</div></section>`;
 }
 
@@ -273,8 +336,8 @@ ${ponts}
 
 // ── Section « Arbres de talents »
 // L'arbre est dessiné par data/arbre.js, le même module que le jeu : le wiki montre l'arbre tel qu'on le voit en jeu.
-function talents(T, A) {
-  const N = T.noeuds, K = T.genres, X = T.exclusions;
+function talents(T, A, S) {
+  const N = T.noeuds, K = T.genres, X = T.exclusions, FA = familleDe(S);
   // incompatibilités symétriques : la liste du talent, puis ceux qui le listent
   const excl = id => { const out = [...(X[id] || [])]; for (const k in X) if (X[k].includes(id) && !out.includes(k)) out.push(k); return out.filter(k => N[k]); };
   // fiches lues par le script du wiki (panneau de détail et recherche)
@@ -285,6 +348,7 @@ function talents(T, A) {
     if (n.up) f.u = n.up;
     if (n.k === 'x') { f.x = id.endsWith('a') ? 'A' : 'B'; if (n.syn) f.y = n.syn; }
     const ex = excl(id); if (ex.length) f.e = ex.map(k => N[k].name);
+    if (FA['t:' + id] && S.familles[FA['t:' + id]]) f.f = S.familles[FA['t:' + id]].n;
     fiches[id] = f;
   }
   const cadres = {}; for (const c of Object.keys(T.formes)) Object.assign(cadres, Object.fromEntries(Object.entries(A.vues(c)).filter(([k]) => k !== 'tout').map(([k, v]) => [k, v])));
@@ -302,7 +366,7 @@ function talents(T, A) {
 ${A.legende()}</div></div>`;
   };
   const formes = Object.entries(T.formes);
-  return `<section class="sec" id="talents" data-sec>${MARK('data/talents.js et data/arbre.js')}<style>${A.css}</style><header class="sh"><p class="eyebrow">Progression</p><h2>Arbres de talents</h2><div class="lede"><p>Chaque niveau te propose <b>3 talents</b> à choisir (4 avec <i>Vision élargie</i>). Chaque forme possède trois branches mineures et trois voies de sous-classe, une par branche : tu en choisis une au Rituel d’Ascension. Les <b>Majeurs</b> (losanges A et B) arrivent par paires : tu prends A <i>ou</i> B. Les <b>nœuds clés</b> (carrés) changent le style de jeu, et certains s’excluent mutuellement.</p><p>Les arbres ci-dessous sont ceux du jeu, tels que tu les vois à chaque montée de niveau : tu démarres au centre et chaque talent ouvre ses voisins.</p></div></header>
+  return `<section class="sec" id="talents" data-sec>${MARK('data/talents.js et data/arbre.js')}<style>${A.css}</style><header class="sh"><p class="eyebrow">Progression</p><h2>Arbres de talents</h2><div class="lede"><p>Chaque niveau te propose <b>3 talents</b> à choisir (4 avec <i>Vision élargie</i>). Chaque forme possède trois branches mineures et trois voies de sous-classe, une par branche : tu en choisis une au Rituel d’Ascension. Les <b>Majeurs</b> (losanges A et B) arrivent par paires : tu prends A <i>ou</i> B. Les <b>nœuds clés</b> (carrés) changent le style de jeu, et certains s’excluent mutuellement.</p><p>Les arbres ci-dessous sont ceux du jeu, tels que tu les vois à chaque montée de niveau : tu démarres au centre et chaque talent ouvre ses voisins.</p><p>Tu ne portes que ${S && S.plafond || 6} souvenirs à la fois (talents et reliques, voir <a href="#memoire">La Mémoire</a>). Un rang de plus ne prend pas de place ; un talent nouveau, mémoire pleine, en fait oublier un. L’arbre garde la trace de ce que tu as traversé : un talent oublié (en pointillé) ouvre toujours ses voisins et compte pour les seuils des majeurs. Le détail de chaque talent donne sa famille de souvenir.</p></div></header>
 <div class="filters" id="clsfilter"><span>Afficher :</span>
 <button type="button" class="chip on" data-f="all">Toutes les formes</button>
 ${formes.map(([c, F]) => `<button type="button" class="chip" data-f="${c}" style="--cc:${F.color}">${esc(F.short)}</button>`).join('')}
@@ -392,12 +456,13 @@ function syncVersion(html, v) {
 export function build(html) {
   const D = loadData();
   let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D), D));
-  out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D)));
+  out = replaceSection(out, 'memoire', memoire(D));
+  out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D), D.souvenirs));
   out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
   out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque));
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
-  out = replaceSection(out, 'talents', talents(D.talents, D.arbre));
+  out = replaceSection(out, 'talents', talents(D.talents, D.arbre, D.souvenirs));
   for (const [name, content] of Object.entries(fragments(D))) out = replaceFragment(out, name, content);
   return syncVersion(out, gameVersion(D));
 }

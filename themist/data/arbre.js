@@ -91,7 +91,7 @@
   x:l=>`<rect class="halo" x="-26" y="-26" width="52" height="52" rx="6"/><rect class="sh xs" x="-17" y="-17" width="34" height="34" rx="4" transform="rotate(45)"/><text class="xl" text-anchor="middle" y="5">${l}</text>`
  };
  const RK={m:26,s:32,x:36,k:36,c:40};
- // o.cls : forme · o.etat(id) → {r,rk,av,sealed,excl,offer,sel,hl} (jeu) · o.statique : tout révélé (wiki)
+ // o.cls : forme · o.etat(id) → {r,rk,av,sealed,excl,offer,sel,hl,t,off} (jeu ; t : oublié, encore tracé ; off : en mémoire mais éteint) · o.statique : tout révélé (wiki)
  // o.scelle(br) : voie non choisie · o.pref : préfixe des id des nœuds
  // Les nœuds sont dans <g class="world"> (qui pivote pour déplier une branche) ; leur contenu, dans <g class="up">
  // (qui contre-pivote, pour que les noms restent droits). Voir vue().
@@ -102,7 +102,7 @@
   s+='<g class="world">';
   for(const [a,b,br] of aretes(cls)){
    const pa=pos(a),pb=pos(b),B=T.branches[br],sealed=!st&&B.sub&&o.scelle&&o.scelle(br);
-   const R=id=>id==='root'?1:(etat(id)||{}).r,onR=st||!!(R(a)&&R(b)),av=!onR&&!sealed&&!!(R(a)||R(b));
+   const R=id=>{if(id==='root')return 1;const e=etat(id)||{};return e.r||e.t;},onR=st||!!(R(a)&&R(b)),av=!onR&&!sealed&&!!(R(a)||R(b));
    s+=`<line class="ar-e${onR?' on':av?' av':''}${sealed?' sealed':''}" data-br="${br}" x1="${f1(pa[0])}" y1="${f1(pa[1])}" x2="${f1(pb[0])}" y2="${f1(pb[1])}" style="--c:${B.color}"/>`;
   }
   // titres de branche (cliquables pour zoomer). Les voies ont un titre de vue d'ensemble (près du centre, dans un
@@ -124,7 +124,7 @@
   for(const id of idsOf(cls)){
    const n=T.noeuds[id],br=brOf(id),B=T.branches[br],[x,y]=pos(id),e=etat(id)||{},lat=(B.sub?G.voie:G.principal).slots[slotOf(id)][1];
    const c=['ar-n'];
-   if(st)c.push('av');else{if(e.r)c.push('own');else if(e.av)c.push('av');if(e.sealed)c.push('sealed');if(e.excl)c.push('excl');}
+   if(st)c.push('av');else{if(e.r)c.push('own');else if(e.t)c.push('oub');else if(e.av)c.push('av');if(e.off)c.push('off');if(e.sealed)c.push('sealed');if(e.excl)c.push('excl');}
    if(e.offer)c.push('offer');if(e.sel)c.push('sel');if(e.hl)c.push('hl');
    const gl=n.k==='x'?GLY.x(id.endsWith('a')?'A':'B'):GLY[n.k]||GLY.c,rk=e.rk!=null?e.rk:'',ry=RK[n.k]||36,rr=RAY[n.k]||19;
    // nom : de côté, vers l'extérieur de la branche
@@ -148,7 +148,9 @@
    h+=`<li class="sep"></li><li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n own" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Acquis</span></li>`
     +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n av" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Accessible</span></li>`
     +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n offer" style="--c:#f3b94d" aria-hidden="true">${GLY.s}</svg><span>Proposé</span></li>`
-    +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n excl" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Incompatible</span></li>`;
+    +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n excl" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Incompatible</span></li>`
+    +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n oub" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Oublié</span></li>`
+    +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n own off" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Éteint</span></li>`;
   }
   return h+'</ul>';
  }
@@ -168,6 +170,10 @@
 .ar-n.own .sh{fill:var(--c);stroke:var(--c)}
 .ar-n.own .in{fill:#0c0e15;opacity:1}
 .ar-n.sealed{opacity:.28}
+.ar-n.oub .sh{fill:#161a27;stroke:var(--c);stroke-dasharray:2 3;opacity:.7}
+.ar-n.oub .in{fill:var(--c);opacity:.25}
+.ar-n.oub .xs{fill:#161a27;stroke-dasharray:2 3}
+.ar-n.off{filter:grayscale(1) brightness(.6)}
 .ar-n.excl .sh{stroke:#8a4452;stroke-dasharray:3 3}
 .ar-n .halo{fill:none;stroke:#fff;stroke-width:2;opacity:0}
 .ar-n.offer .halo{opacity:.9;stroke:var(--c);animation:arpulse 1.15s ease-in-out infinite}

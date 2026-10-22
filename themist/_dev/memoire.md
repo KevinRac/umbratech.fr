@@ -719,3 +719,66 @@ Lecture : Fil, Cloche, Dévoration, Lumière et Ombre n’existent que dans une 
 4. **Dernier Souvenir** : brûler un souvenir en combat pour un effet unique ; il est perdu (ni mémoire ni réserve).
 
 Chaque palier met à jour le wiki dans le même commit (`node themist/outils/wiki.mjs`, ou la section écrite à la main).
+
+---
+
+## 8. Palier 1 livré : v17.0 (22 octobre 2026)
+
+Code : bloc « v17 · La Mémoire » à la fin d’`index.html` (enveloppe extérieure de `takeNode`, `applyRelic`, `buyItem`, `openAscension`, `nodeAvailable`, `rollOffers`, `treeState`, `nodeCaption`, `closeOverlay`, `playerDown`, `renderRelics`, `openPause`, `openEnd`). Données : `data/souvenirs.js` (plafond, consommables, refus, 15 familles avec leurs 240 talents et 34 reliques, d’après le § 5). Icônes nouvelles : `u_beam`, `u_thread`, `u_bell`, `u_maw`, `u_off`, `u_swap`. Arbre : états `t` (oublié, pointillé) et `off` (éteint) dans `data/arbre.js`.
+
+État de run : `RUN.memoire` (`actifs`, `traces`, `eff` = souvenirs qui agissent, `base` = copie de `P.s` au départ, compteurs) et `RUN.reserveBrume` (`{id, source, rang, oublie:{acte,salle}, porte}`). Le jeu n’a pas d’objet `state` (c’est une chaîne : `'play'`, `'over'`…), d’où `RUN.reserveBrume`. Rien n’est affiché de la réserve, rien n’est persistant.
+
+Recalcul : à chaque changement des souvenirs efficaces, équipement et sets ôtés, `P.s += rejeu(nouveaux) − rejeu(anciens)` clé par clé, puis équipement remis ; aucun soin. Test : rejeu sans effet de bord sur `P` pour les 240 talents et 34 reliques ; oubli comparé à une reconstruction complète (48 essais, avec et sans équipement) : identique.
+
+Choix de ce palier non tranchés par D0–D10 :
+- un souvenir oublié ne revient pas dans les offres de niveau ni dans les tirages de reliques (il appartient à la réserve ; D9 le rendra par le Masqué) ;
+- renoncer à une relique sur l’écran d’oubli donne le soin du refus ; renoncer à un talent ne donne rien ;
+- au Rituel mémoire pleine : oubli obligatoire, pas de renoncement (§ 6.12) ;
+- mémoire pleine, chaque tirage de niveau contient au moins un talent nouveau quand il en existe (D3) ;
+- D7 : la « version ennemie » n’est pas affichée (consigne : rien de visible pour la réserve, le Brumeux garde ses secrets) ;
+- D8 : `SAVE.mem.prof.eff` et `base` remis à zéro une fois (`SAVE.flags.mem17`) ;
+- D5 : l’exclusion des dégâts sur un Masqué porteur de souvenir attend le palier Masqué (aucun Masqué ne porte encore de souvenir).
+
+Équilibrage, première passe (chaque chiffre changé ; effet par rang pour les mineurs) :
+
+| Souvenir | Avant | v17.0 |
+|---|---|---|
+| Feu sombre `sol_s2` | +20 % lumière | +30 % |
+| Solstice `sol_s3` | +12 % rayon | +15 % |
+| Lame fantôme `omb_s2` | +20 % crit. dmg, +4 % crit | +30 %, +6 % |
+| Voile `omb_s3` | +10 % vitesse Obscur | +15 % |
+| Sainte Bile `sai_s2` | +15 % Recracher | +22 % |
+| Jeûne `sai_s3` | +10 PV, −5 % subis | +15 PV, −7 % |
+| Chair malléable `abe_s2` | +8 % par palier | +12 % |
+| Os saillants `abe_s3` | 8 dégâts | 12 |
+| Glas sourd `dgl_s2` | +15 % | +22 % |
+| Main lourde `dgl_s3` | +10 % | +15 % |
+| Voix d’outre-tombe `chd_s2` | +15 % | +22 % |
+| Soie durable `gts_s2` | +1,5 s | +2 s |
+| Soie collante `gts_s3` | +0,25 s | +0,35 s |
+| Cordes neuves `mdp_s2` | +15 % | +22 % |
+| Troupe `mdp_s3` | +10 % / +10 % | +15 % / +15 % |
+| Huile de baleine `pha_s2` | +15 % | +22 % |
+| Lentille de Fresnel `pha_s3` | +10 % | +14 % |
+| Estomac sans fond `aby_s2` | +10 % | +15 % |
+| Mâchoires larges `aby_s3` | +8 % | +12 % |
+| Talons ferrés `val_s2` | +15 % | +22 % |
+| Grand salon `val_s3` | +12 % | +15 % |
+| Acier fin `bro_s2` | +8 % | +12 % |
+| Œil de verre `eye` | +10 % crit, +25 % crit. dmg | +15 %, +40 % |
+| Cœur de cire `wax` | +25 PV | +40 PV |
+| Plume de corbeau `feather` | +12 % vitesse | +18 % |
+| Calice de Brume `calice` | 3 % vol de vie | 5 % |
+| Moelle noire `moelle` | 3 PV par ennemi | 5 |
+| Fiole de sang tiède `fiole` | 2 PV par ennemi | 4 |
+| Crâne de rat `crane` | +2 or | +3 |
+| Couronne d’épines `epine` | +20 % dégâts | +28 % (−15 PV inchangé) |
+| Gantelet du sonneur `gant` | +15 % vitesse d’attaque | +22 % |
+| Ancre de brume `ancre` | −12 % subis | −18 % |
+| Pendule du beffroi `pendule` | recharge −25 % | −35 % |
+| Os creux `os` | +10 PV, +8 % vitesse | +20 PV, +12 % |
+| Lacrymatoire `lacry` | +25 % soins | +40 % |
+| Cierge votif `cierge` | +15 % sur gardiens | +25 % |
+| Chaîne de glas `chaineg` | +25 % sur étourdis | +35 % |
+
+Non touchés : mineurs des branches principales (effets de jeu, à rangs), compétences, majeurs, nœuds clés, ultimes, reliques de forme, montée des ennemis.

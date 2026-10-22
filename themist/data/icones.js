@@ -44,5 +44,13 @@
  u_cross4:'M9.5 3h5v6.5H21v5h-6.5V21h-5v-6.5H3v-5h6.5z',
  u_diamonds:'M12 2.5l3 4-3 4-3-4zM6 13l3 4-3 4-3-4zM18 13l3 4-3 4-3-4z',
  u_grid:'M3 3h5v5H3zM16 3h5v5h-5zM9.5 9.5h5v5h-5zM3 16h5v5H3zM16 16h5v5h-5z',
- u_sleep:'M3 11c3 4 6 5.5 9 5.5s6-1.5 9-5.5M6.5 14.5L5 17M12 16.5v3M17.5 14.5L19 17'
+ u_sleep:'M3 11c3 4 6 5.5 9 5.5s6-1.5 9-5.5M6.5 14.5L5 17M12 16.5v3M17.5 14.5L19 17',
+ // v17 · La Mémoire : familles de souvenirs (les autres familles reprennent u_volley, u_blade, u_charge, u_wave, u_grid, u_star, u_ghost, u_heart, u_shield, u_fist, u_coin)
+ u_beam:'M3 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M8.5 12H21M8 9.6l13-2.6M8 14.4l13 2.6',
+ u_thread:'M5 19L17.5 6.5M15.6 4.6l3.8 3.8M17.2 3.4a1.7 1.7 0 1 1 3.4 3.4M5 19c2.5-.6 3.5-3.2 6-2.6s3 3.4 6.5 2.6',
+ u_bell:'M6.5 16v-5a5.5 5.5 0 0 1 11 0v5l2 2.2H4.5zM10 20.5a2 2 0 0 0 4 0M12 3.2v2.3',
+ u_maw:'M3 7.5c4 4.8 14 4.8 18 0M3 16.5c4-4.8 14-4.8 18 0M7 9.9l1 2.3M12 10.9v2.2M17 9.9l-1 2.3M7 14.1l1-2.3M17 14.1l-1-2.3',
+ // v17 · écran d’oubli : un souvenir éteint, un souvenir qui part
+ u_off:'M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0M6.4 6.4l11.2 11.2',
+ u_swap:'M4 8h13M13.5 4.5L17 8l-3.5 3.5M20 16H7M10.5 12.5L7 16l3.5 3.5'
 };})(window.BRUME_DATA=window.BRUME_DATA||{});
