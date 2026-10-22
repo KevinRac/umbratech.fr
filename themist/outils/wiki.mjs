@@ -126,6 +126,7 @@ function memoire(D) {
     ['u_star', `${MOTS[S.plafond] ? MOTS[S.plafond].replace(/^./, c => c.toUpperCase()) : S.plafond} talents`, `Tu portes ${S.plafond} talents à la fois, affichés en haut à droite pendant la descente. Les reliques et l’équipement ne comptent pas : ils restent sans limite nouvelle.`],
     ['u_up', 'Renforcer ne coûte rien', 'Un rang de plus sur un talent déjà porté ne prend pas de place : le rang voyage avec le souvenir. Sur les cartes, ↑ signale un renforcement, ⇄ un gain qui prendra une place.'],
     ['u_swap', 'Prendre ou oublier', `Mémoire pleine, un talent nouveau ouvre l’écran d’oubli : le gain à gauche, le talent survolé à droite, tes ${S.plafond} talents dessous. Tu peux aussi renoncer au gain, ou garder le niveau pour plus tard.`],
+    ['u_up', 'Graver', `Mémoire pleine, un talent porté au rang maximum peut être gravé (${(S.gravure || {}).max || 2} fois au plus), sans prendre de place : il s’intensifie. Voir « Graver un souvenir » plus bas.`],
     ['u_fog', 'Ce qui est oublié', 'Un talent oublié perd tout effet, sans soin ni effet rejoué, avec son rang. Il ne revient plus dans tes choix de la descente.'],
     ['u_book', 'L’arbre se souvient', 'Ce que tu as pris compte encore pour ouvrir l’arbre : voisins et seuils des majeurs se lisent sur tout ce que tu as traversé (nœuds en pointillé). Une paire de majeurs A/B déjà choisie reste close.'],
     ['u_off', 'Éteint', 'Un talent qui modifie une compétence oubliée, ou un talent de voie dont la racine est oubliée, reste en mémoire mais ne fait plus rien (tuile grisée, barrée). Les incompatibilités se lisent sur ce que tu portes : oublier un nœud clé rouvre ce qu’il bloquait.'],
@@ -134,13 +135,20 @@ function memoire(D) {
   const touches = [['1 – 9 · 0', 'Choisir le talent à oublier (0 pour le dixième ; le même chiffre confirme)'], ['Entrée', 'Confirmer'], ['R', 'Renoncer au gain'], ['Échap', 'Garder le niveau pour plus tard']]
     .map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join('');
   const N = T.noeuds, BRs = T.branches, FO = T.formes;
+  // Gravure : même phrase que le jeu (data/souvenirs.js, gravure.texte)
+  const GV = Object.assign({ max: 2, part: 0.4, poids: {}, texte: {} }, S.gravure || {});
+  const nfr = v => String(Math.round(v * 100) / 100).replace('.', ',');
+  const grTexte = (gr, w) => Object.keys(gr || {}).map(k => { const t = GV.texte[k]; if (!t) return ''; const v = gr[k] * w * t[1]; return (v < 0 ? '−' : t[0]) + nfr(Math.abs(v)) + t[2]; }).filter(Boolean).join(', ');
+  const ROMG = ['', 'I', 'II', 'III', 'IV'];
+  const pct = Math.round(GV.part * 100);
+  const poidsTxt = [['m', 'mineur'], ['s', 'compétence'], ['x', 'majeur'], ['k', 'nœud clé'], ['c', 'racine de voie'], ['u', 'ultime']].map(([k, n]) => `${n} ×${nfr(GV.poids[k] || 1)}`).join(', ');
   const fams = Object.entries(S.familles).map(([k, f]) => {
     if (!(f.t || []).length) return '';
     const parForme = Object.keys(FO).map(c => {
       const ids = (f.t || []).filter(id => N[id] && BRs[id.split('_')[0]] && BRs[id.split('_')[0]].cls === c);
       return ids.length ? `<p class="mfo"><b style="color:${FO[c].color}">${esc(FO[c].short)}</b> ${ids.map(id => `<span style="--cc:${BRs[id.split('_')[0]].color}">${esc(N[id].name)}</span>`).join(' · ')}</p>` : '';
     }).join('');
-    return `<article class="ent mfam" id="fam-${k}">${ico(f.ic, 'mic big')}<div><h4>${esc(f.n)} <small>${(f.t || []).length} talents</small></h4><p class="k">${esc(f.d)}</p>${parForme}</div></article>`;
+    return `<article class="ent mfam" id="fam-${k}">${ico(f.ic, 'mic big')}<div><h4>${esc(f.n)} <small>${(f.t || []).length} talents</small></h4><p class="k">${esc(f.d)}</p>${f.gr ? `<p class="mfo"><b>Gravure</b> (talent sans effet chiffré) : ${esc(grTexte(f.gr, 1))} par gravure, avant le poids du genre.</p>` : ''}${parForme}</div></article>`;
   }).filter(Boolean).join('');
   return `<section class="sec" id="memoire" data-sec>${MARK('data/souvenirs.js et data/talents.js')}<style>
 .mic{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--flame,#f3b94d)}.mic.big{width:34px;height:34px}
@@ -158,6 +166,14 @@ function memoire(D) {
 <h3 class="sub">L’écran d’oubli au clavier</h3>
 <dl class="kv">${touches}</dl>
 <p class="k">À la souris : survoler une tuile compare, cliquer oublie. Un souvenir éteint est présélectionné : <kbd>Entrée</kbd> suffit pour t’en défaire.</p>
+<h3 class="sub" id="gravure">Graver un souvenir</h3>
+<p>Mémoire pleine, l’écran de niveau propose en plus une <b>carte de gravure</b> (bordure dorée, marquée « Gravure ${ROMG[1]} »). Elle vise un talent que tu portes déjà <b>au rang maximum</b>, et <b>ne prend aucune place</b> : c’est la façon de te renforcer quand ton build est fait. Si l’arbre n’a plus rien à t’offrir, jusqu’à trois cartes de gravure remplacent les talents.</p>
+<ul>
+<li>Un talent peut être gravé <b>${GV.max} fois</b> (Gravure ${ROMG[1]}${GV.max > 1 ? ', puis ' + ROMG.slice(2, GV.max + 1).join(', ') : ''}). Sur sa tuile, un liseré doré et un losange par gravure.</li>
+<li>Talent à effets chiffrés (dégâts, rayon, PV, recharge…) : chaque gravure les intensifie de <b>${pct} %</b> (+${pct * GV.max} % à ${GV.max} gravures). Les niveaux de compétence, les compteurs et les interrupteurs ne bougent pas.</li>
+<li>Talent sans effet chiffré (la plupart des compétences, majeurs et nœuds clés) : chaque gravure donne le <b>bonus de sa famille</b> (ci-dessous), multiplié selon le genre du nœud : ${esc(poidsTxt)}.</li>
+<li>Oublier un talent gravé : ses gravures partent avec lui.</li>
+</ul>
 <h3 class="sub">Les familles de souvenirs</h3>
 <p>Chaque talent appartient à une famille, rangée selon ce qu’il <b>fait</b> (pas selon ce qui le déclenche). Elle donne son icône à la tuile.</p>
 <div class="grid g2">${fams}</div>

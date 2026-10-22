@@ -792,3 +792,38 @@ Retour du joueur : la mémoire à 6 bridait trop la diversité, et l’écran d�
 - **Clavier** : 1 à 9, puis 0 pour le dixième ; R (ou Retour arrière) renonce ; Échap garde le niveau.
 - **HUD** : deux rangées de cinq tuiles ; les reliques retrouvent leurs icônes à côté de l’équipement.
 - **Équilibrage** : les 15 reliques renforcées en v17.0 reviennent à leurs valeurs de la v16.47 (le renfort compensait la place qu’elles prenaient). Les 22 mineurs des voies gardent leur renfort du § 8.
+
+## 10. D11 · Après le build : graver, muer, fusionner (v17.3, 23 octobre 2026)
+
+Question du joueur : au début de l’acte III, le build est presque fait. Avec une suite (acte IV et au-delà), les niveaux n’offriront plus que des talents d’arbres inutilisés. Principe retenu : **passé un certain niveau, monter approfondit le build au lieu de l’élargir.** Trois mécaniques, livrées dans cet ordre.
+
+### D11a. La gravure (livrée en v17.3)
+
+- Mémoire pleine, l’écran de niveau ajoute une carte de gravure (une seule ; jusqu’à trois si l’arbre n’offre plus rien). Elle vise un talent porté **au rang max** et non éteint. Elle ne prend pas de place.
+- Un talent se grave au plus `gravure.max` fois (2). Tuile : liseré doré, un losange par gravure.
+- **Effet, cas 1 : le talent a des effets chiffrés.** Chaque gravure intensifie de `gravure.part` (40 %) la différence qu’il apporte aux statistiques, au moment où il est rejoué (`amp` dans le bloc v17). Les entiers partis de 0 (niveau de compétence, compteur de rang `v10.*`, interrupteur, mode) ne bougent pas : beaucoup de codes de jeu lisent ces compteurs dans des tableaux indexés par rang, un rang 4 donnerait `undefined`. Un entier déjà non nul (PV max, charges d’esquive) gagne au moins 1.
+- **Effet, cas 2 : rien de chiffré** (environ 85 % des talents, car les mineurs v10 et les compétences passent par des compteurs) : le bonus `gr` de la famille, multiplié par le poids du genre (mineur 1, compétence et majeur 1,5, nœud clé, racine et ultime 2). Les phrases viennent de `gravure.texte` (jeu et wiki).
+- Les gravures voyagent avec le souvenir : oublié, il part dans la réserve avec `g`.
+- Recalcul : `g` fait partie de la mémoire efficace ; graver puis dégraver redonne exactement les statistiques d’avant (testé sur les quatre formes).
+
+**Bonus de famille par gravure** (avant le poids) : Projectile, Faisceau, Onde, Sol, Fil, Cloche, Dévoration, Lumière, Fureur : +5 % de dégâts. Lame : +4 % de dégâts, +10 % de dégâts critiques. Ruée : −0,06 s de recharge d’esquive, +6 de vitesse. Ombre : +3 % de critique. Soin : +12 PV max. Garde : +10 PV max, −3 % de dégâts subis.
+
+**Reste à faire : l’éveil.** La deuxième gravure devait changer le comportement du talent (le Rayon se divise, le Fanal pulse en mourant). Ça demande une ligne par talent (`eveil` dans `data/talents.js`) et son code ; en v17.3, la gravure II ne fait que doubler la gravure I. Commencer par les ultimes et les nœuds clés (les plus visibles), puis les compétences. Le cas 2 deviendra rare à mesure qu’on écrit des éveils.
+
+### D11b. La mue d’acte (palier Masqué)
+
+- En entrant dans un nouvel acte, la Brume prend un souvenir que le joueur choisit (jamais la racine de voie ni un ultime). Il part dans la réserve ; le Masqué et le Glas Originel s’en serviront.
+- En échange : une gravure gratuite ou un ultime d’une autre voie.
+- But : un rythme d’acte, un build qui bouge un peu, et une réserve nourrie sans forcer l’oubli à chaque niveau.
+- Risque : frustration ; à tester avec une option « garder tout, sans échange ».
+
+### D11c. La fusion (contenu de fin de run)
+
+- Certaines paires de talents portés, de familles différentes, fusionnent en un talent hybride qui n’occupe qu’une place (exemple : Lanterne-mine + Phare donnent une lanterne qui explose en lumière).
+- Proposée au Sanctuaire ou en carte rare à l’écran de niveau, mémoire pleine.
+- Coût : une quinzaine de fusions à écrire au départ, prises parmi les paires les plus jouées (instrumenter les fins de run d’abord).
+
+### À surveiller
+
+- La gravure ajoute de la puissance tardive alors que les ennemis montent déjà de 8,5 % de PV par salle : mesurer si elle rend l’acte III trop facile pour les builds rapides.
+- Les cartes de gravure viennent en plus des trois talents ; si l’écran devient trop long sur petit écran, remplacer un talent au lieu d’ajouter.

@@ -9092,7 +9092,7 @@ function demoBoot(cls){
 
  // ── Rejouer une liste de souvenirs sur la base de la run (P.s est prêté le temps du calcul : F10() et les effets qui lisent P.s visent la copie)
  function applyItem(s,a){
-  if(a.src==='t'){const n=NODES[a.id];if(n)for(let r=1;r<=a.rang;r++)n.apply(s,r);}
+  if(a.src==='t'){const n=NODES[a.id];if(!n)return;const g=a.g||0,s0=g?clone(s):null;for(let r=1;r<=a.rang;r++)n.apply(s,r);if(g)engrave(s0,s,a);}
   else{const R=relic(a.id);if(R&&R.apply)R.apply(s);}
  }
  function replay(list){const M=MEM(),real=P.s,s=clone(M.base);P.s=s;try{for(const a of list)applyItem(s,a);}catch(err){console.error(err);}finally{P.s=real;}return s;}
@@ -9101,9 +9101,30 @@ function demoBoot(cls){
  function effOf(list){
   let eff=list.filter(a=>a.src!=='t'||voieOk(a.id,list));
   for(let k=0;k<8;k++){const st=replay(eff);const bad=eff.filter(a=>a.src==='t'&&NODES[a.id]&&NODES[a.id].reqS&&!st[NODES[a.id].reqS]);if(!bad.length)break;eff=eff.filter(a=>!bad.includes(a));}
-  return eff.map(a=>({id:a.id,src:a.src,rang:a.rang}));
+  return eff.map(a=>({id:a.id,src:a.src,rang:a.rang,g:a.g||0}));
  }
- const sameEff=(a,b)=>a.length===b.length&&a.every((x,i)=>x.id===b[i].id&&x.src===b[i].src&&x.rang===b[i].rang);
+ const sameEff=(a,b)=>a.length===b.length&&a.every((x,i)=>x.id===b[i].id&&x.src===b[i].src&&x.rang===b[i].rang&&(x.g||0)===(b[i].g||0));
+ // ── Gravure (v17.3) : mémoire pleine, un talent porté au rang max peut être gravé (deux fois au plus), sans prendre de place.
+ //    Ses effets chiffrés s’intensifient (part × gravures). Les compteurs, niveaux et interrupteurs (entiers partis de 0) ne bougent pas.
+ //    Un talent sans effet chiffré reçoit le bonus de sa famille (data/souvenirs.js, gr).
+ const GV=()=>Object.assign({max:2,part:0.4},SV.gravure||{});
+ function amp(A,B,k){let n=0;
+  for(const key of Object.keys(B)){const x=A?A[key]:undefined,y=B[key];
+   if(isO(y)){n+=amp(isO(x)?x:null,y,k);continue;}
+   if(typeof y!=='number'||!isFinite(y))continue;
+   const x0=typeof x==='number'?x:0,d=y-x0;if(Math.abs(d)<1e-9)continue;
+   const ent=Number.isInteger(x0)&&Number.isInteger(y);if(ent&&!x0)continue;
+   const add=ent?Math.sign(d)*Math.max(1,Math.round(Math.abs(d)*k)):d*k;
+   let v=y+add;if(y>0&&v<y*0.25)v=y*0.25;
+   B[key]=Math.round(v*1e9)/1e9;n++;}
+  return n;}
+ function famGr(id){const f=SV.familles[FAM['t:'+id]];return (f&&f.gr)||{dmg:0.05};}
+ function poidsG(id){const n=NODES[id];if(!n)return 1;const W=GV().poids||{};return W[isUlt(id)?'u':n.kind]||1;}
+ function engrave(s0,s,a){const n=amp(s0,s,GV().part*a.g);if(n)return n;const gr=famGr(a.id),w=poidsG(a.id)*a.g;for(const k in gr)s[k]=Math.round(((s[k]||0)+gr[k]*w)*1e9)/1e9;return 0;}
+ const nfr=v=>String(Math.round(v*100)/100).replace('.',',');
+ function grTexte(gr,w){const X=GV().texte||{};return Object.keys(gr).map(k=>{const t=X[k];if(!t)return '';const v=gr[k]*w*t[1];return (v<0?'−':t[0])+nfr(Math.abs(v))+t[2];}).filter(Boolean).join(', ');}
+ // une gravure touche-t-elle les effets du talent (vrai) ou seulement sa famille (faux) ?
+ function gravePropre(a){const M=MEM(),real=P.s,s=clone(M.base);P.s=s;let n=0;try{const s0=clone(s);const n0=NODES[a.id];for(let r=1;r<=a.rang;r++)n0.apply(s,r);n=amp(s0,s,GV().part);}catch(err){}finally{P.s=real;}return n>0;}
  // cur += B − A, clé par clé (récursif sur les sous-objets, comme s.v10)
  function applyDiff(cur,A,B){
   const ks=new Set([...Object.keys(A||{}),...Object.keys(B||{})]);
@@ -9138,7 +9159,7 @@ function demoBoot(cls){
 
  // ── Début de run
  function memInit(){if(!RUN||RUN.hub||!P)return;
-  RUN.memoire={actifs:[],traces:{},eff:[],base:clone(P.s),renonces:0,oublis:0,consumes:[],pending:null,forgetOpen:false,gains:0};
+  RUN.memoire={actifs:[],traces:{},eff:[],base:clone(P.s),renonces:0,oublis:0,gravures:0,consumes:[],pending:null,forgetOpen:false,gains:0};
   RUN.reserveBrume=[];
  }
  const _sr=startRun;
@@ -9190,7 +9211,7 @@ function demoBoot(cls){
   const M=MEM();const i=M.actifs.indexOf(a);if(i<0)return;
   M.actifs.splice(i,1);
   if(a.src==='t')delete P.ranks[a.id];else{const j=P.relics.indexOf(a.id);if(j>=0)P.relics.splice(j,1);}
-  RUN.reserveBrume.push({id:a.id,source:a.src==='t'?'talent':'relique',rang:a.rang,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0});
+  RUN.reserveBrume.push({id:a.id,source:a.src==='t'?'talent':'relique',rang:a.rang,g:a.g||0,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0});
   M.oublis++;resync();
   try{ensure14();const nm=nameOf(a);RUN.ch.notes.push({a:RUN.act,k:'oubli',t:`Acte ${ROM[RUN.act]||'I'} : tu as oublié ${nm}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}
  }
@@ -9261,8 +9282,10 @@ function demoBoot(cls){
   return '';}
  function pips(a,rk){const mx=maxOf(a);if(mx<=1)return '';let h='<i class="pp">';for(let i=1;i<=mx;i++)h+=`<b${i<=rk?' class="on"':''}></b>`;return h+'</i>';}
  function tile(a,o){o=o||{};const g=genre(a),rk=o.rang!=null?o.rang:a.rang,off=o.off!=null?o.off:isOff(a);
-  return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}</span>`;}
- function tipOf(a){const rk=a.rang,mx=maxOf(a);return `${nameOf(a)} · ${kindOf(a)}${branchOf(a)?' · '+branchOf(a):''}${mx>1?` · rang ${rk}/${mx}`:''}${isOff(a)?' · éteint : '+offWhy(a):''} — ${descOf(a,rk)}`;}
+  const gv=o.g!=null?o.g:(a.g||0);
+  return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}${gv?' gr':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${gv?`<i class="gv">${'<b></b>'.repeat(gv)}</i>`:''}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}</span>`;}
+ const ROMG=['','I','II','III','IV'];
+ function tipOf(a){const rk=a.rang,mx=maxOf(a);return `${nameOf(a)} · ${kindOf(a)}${branchOf(a)?' · '+branchOf(a):''}${mx>1?` · rang ${rk}/${mx}`:''}${a.g?' · gravure '+ROMG[a.g]:''}${isOff(a)?' · éteint : '+offWhy(a):''} — ${descOf(a,rk)}`;}
 
  // HUD : les talents portés, en haut à droite (les reliques gardent leurs icônes à part)
  function renderMem(){
@@ -9293,7 +9316,7 @@ function demoBoot(cls){
   return list.filter(a=>!ne.some(x=>x.src===a.src&&x.id===a.id)&&(a===gain||now.some(x=>x.src===a.src&&x.id===a.id)));
  }
  function detail(a,rk,lbl,extra){
-  return `<div class="mfd"><p class="h-sec">${lbl}</p><div class="mfd-h">${tile(a,{big:true,rang:rk,off:false})}<div><h3>${esc(nameOf(a))}</h3><p class="mfd-m">${esc(kindOf(a))}${branchOf(a)?' · '+esc(branchOf(a)):''}${famOf(a)?' · '+esc(famOf(a)):''}${maxOf(a)>1?` · rang ${rk}/${maxOf(a)}`:''}</p></div></div><p class="mfd-d">${esc(descOf(a,rk))}</p>${extra||''}</div>`;
+  return `<div class="mfd"><p class="h-sec">${lbl}</p><div class="mfd-h">${tile(a,{big:true,rang:rk,off:false})}<div><h3>${esc(nameOf(a))}</h3><p class="mfd-m">${esc(kindOf(a))}${branchOf(a)?' · '+esc(branchOf(a)):''}${famOf(a)?' · '+esc(famOf(a)):''}${maxOf(a)>1?` · rang ${rk}/${maxOf(a)}`:''}${a.g?' · gravure '+ROMG[a.g]:''}</p></div></div><p class="mfd-d">${esc(descOf(a,rk))}</p>${extra||''}</div>`;
  }
  // Principe (palier 0, une seule fois) : la première fois que la mémoire déborde
  try{const BF=window.__brief;if(BF&&BF.BRIEF)BF.BRIEF.memoire={t:'La Mémoire : dix talents',l:'Tu portes dix talents à la fois. Quand un talent nouveau arrive mémoire pleine, l’un d’eux doit partir. Les reliques ne comptent pas.',c:[
@@ -9367,6 +9390,35 @@ function demoBoot(cls){
     const bp=box.querySelector('#ep1');if(bp)bp.insertAdjacentHTML('afterbegin',h);else box.insertAdjacentHTML('beforeend',h);}}}catch(err){console.error(err);}
   return r;};
 
+ // ── Gravure à l’écran de niveau : mémoire pleine, une carte de plus (trois si l’arbre n’a plus rien à offrir)
+ function gravables(){const M=MEM(),mx=GV().max;return M.actifs.filter(a=>a.src==='t'&&NODES[a.id]&&(a.g||0)<mx&&a.rang>=maxOf(a)&&!isOff(a));}
+ function graveTxt(a){const g=(a.g||0)+1;
+  if(gravePropre(a))return `Ses effets s’intensifient : +${Math.round(GV().part*g*100)} % au total.`;
+  const f=SV.familles[FAM['t:'+a.id]];return `${grTexte(famGr(a.id),poidsG(a.id))} (${f?f.n:'souvenir'}).`;}
+ function grave(id){const M=MEM(),a=M.actifs.find(x=>x.src==='t'&&x.id===id);if(!a)return;
+  const hp0=P.s.maxHp,dc0=P.s.dashCharges;a.g=(a.g||0)+1;M.gravures++;resync();
+  if(P.s.maxHp>hp0)P.hp+=P.s.maxHp-hp0;if(P.s.dashCharges>dc0)P.dashCh+=P.s.dashCharges-dc0;
+  toast(`${nameOf(a)} · gravure ${ROMG[a.g]}`);sfx('pick');renderMem();
+  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'gravure',t:`Acte ${ROM[RUN.act]||'I'} : tu as gravé ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
+ const GK={};for(let i=0;i<9;i++){GK['Digit'+(i+1)]=i;GK['Numpad'+(i+1)]=i;}
+ const _olu=openLevelUp;
+ openLevelUp=function(o){
+  _olu(o);
+  try{if(!on()||!full())return;
+   const box=overlayEl.querySelector('.lv .cards');if(!box||box.querySelector('.gcard'))return;
+   const cand=gravables();if(!cand.length)return;
+   const want=box.querySelector('.card[data-id]')?1:Math.min(3,cand.length);
+   const picks=shuffle(cand.slice()).slice(0,want),gmap={};let i=box.querySelectorAll('.card').length;
+   for(const a of picks){const g=(a.g||0)+1;gmap[i]=a.id;
+    box.insertAdjacentHTML('beforeend',`<button type="button" class="card gcard" data-gid="${a.id}" style="--c:${colOf(a)}"><span class="meta"><span class="br">● ${esc(branchOf(a))}</span><span>Gravure ${ROMG[g]}</span></span><div class="gc-h">${tile(a,{big:true,g})}<div><h3>${esc(nameOf(a))}</h3><p>${esc(graveTxt(a))}</p></div></div><span class="k">Sans place · touche ${i+1}</span>${badge('up')}</button>`);i++;}
+   const cap=$('#cap'),take=id=>{if(!armed())return;grave(id);closeOverlay();};
+   box.querySelectorAll('.gcard').forEach(b=>{const id=b.dataset.gid;b.addEventListener('click',()=>take(id));
+    b.addEventListener('mouseenter',()=>{const t=document.getElementById('tn-'+id);t&&t.classList.add('hl');if(cap)cap.innerHTML=capCard(id);});
+    b.addEventListener('mouseleave',()=>{const t=document.getElementById('tn-'+id);t&&t.classList.remove('hl');});});
+   const k0=overlayKeys;overlayKeys=(c,e)=>{const m=GK[c];if(m!==undefined&&gmap[m]){take(gmap[m]);return;}if(k0)k0(c,e);};
+  }catch(err){console.error(err);}
+ };
+
  // ── Styles
  const st=document.createElement('style');st.id='v17mem';st.textContent=`
 #hMem{display:grid;grid-template-columns:repeat(5,32px);gap:6px 5px;justify-content:end;pointer-events:auto;padding:5px 6px 7px;border-radius:6px;background:rgba(8,10,16,.55);border:1px solid var(--line)}
@@ -9388,6 +9440,13 @@ function demoBoot(cls){
 .mt.k-x .pp{bottom:-6px}
 .mt .pp b{width:4px;height:4px;border-radius:50%;background:#3a3f55}.mt .pp b.on{background:var(--c)}
 .mt.off{filter:grayscale(1);opacity:.6}
+.mt.gr{outline:1.5px solid rgba(243,185,77,.7);outline-offset:2px}
+.mt .gv{position:absolute;top:-6px;right:-6px;display:flex;gap:1px;padding:1px 2px;border-radius:4px;background:#0b0d14}
+.mt.k-x .gv{transform:rotate(-45deg)}
+.mt .gv b{width:5px;height:5px;background:var(--flame);transform:rotate(45deg)}
+.mt.big .gv b{width:7px;height:7px}
+.gcard{border-color:#5b4a2a}
+.gc-h{display:flex;gap:14px;align-items:center;margin-top:6px}.gc-h h3{margin:0}.gc-h p{margin:4px 0 0}
 .mt .mt-x{position:absolute;inset:0;display:grid;place-items:center;color:#ff8f98}.mt .mt-x .ic{width:26px;height:26px;opacity:.85}
 .mt.big{width:58px;height:58px;border-width:2.2px}.mt.big .ic{width:32px;height:32px}.mt.big.k-x{width:50px;height:50px;margin:4px}
 .mt.big .pp{bottom:-5px;gap:3px}.mt.big .pp b{width:6px;height:6px}
@@ -9430,7 +9489,7 @@ function demoBoot(cls){
 .demo #hMem{display:none!important}`;
  document.head.appendChild(st);
 
- window.__memoire={get M(){return MEM();},get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM};
+ window.__memoire={get M(){return MEM();},grave,gravables,__gp:gravePropre,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];
