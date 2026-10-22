@@ -46,3 +46,10 @@ export const BATTLE_CELL = 30;
 export const SKIN_POSES: Readonly<Record<string, readonly string[]>> = {
   heros: ['ready', 'attack', 'slash', 'skill', 'hit', 'ko'],
 };
+
+/**
+ * Révision des feuilles PNG : à incrémenter à chaque changement d'une image ou de sa taille.
+ * Elle est ajoutée à l'adresse des fichiers (`?v=`) pour que le navigateur ne garde pas une ancienne
+ * feuille avec un nouveau code (cellules décalées, unité invisible).
+ */
+export const SKIN_REV = 4;

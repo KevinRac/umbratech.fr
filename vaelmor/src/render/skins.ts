@@ -1,7 +1,7 @@
 /** Chargement des feuilles d'apparence (PNG) et de leurs animations de marche. */
 import Phaser from 'phaser';
 import { assetUrl } from '../core/config';
-import { SKINS, SKIN_CELL, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
+import { SKINS, SKIN_CELL, SKIN_REV, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
 import { skinFrameIndex, skinWalkFrames } from '../logic/skinFrames';
 
 export const skinKey = (id: string): string => `skin:${id}`;
@@ -11,8 +11,8 @@ export const skinWalkKey = (id: string, pose: string): string => `skin:${id}:wal
 /** À appeler dans `preload()`. */
 export function preloadSkins(scene: Phaser.Scene): void {
   for (const skin of SKINS) {
-    scene.load.spritesheet(skinKey(skin.id), assetUrl(`assets/personnages/${skin.id}.png`), { frameWidth: SKIN_CELL, frameHeight: SKIN_CELL });
-    scene.load.image(skinCombatKey(skin.id), assetUrl(`assets/personnages/combat/${skin.id}.png`));
+    scene.load.spritesheet(skinKey(skin.id), assetUrl(`assets/personnages/${skin.id}.png?v=${SKIN_REV}`), { frameWidth: SKIN_CELL, frameHeight: SKIN_CELL });
+    scene.load.image(skinCombatKey(skin.id), assetUrl(`assets/personnages/combat/${skin.id}.png?v=${SKIN_REV}`));
   }
 }
 
