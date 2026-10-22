@@ -40,6 +40,7 @@ export const BATTLE_CELL = 30;
 /**
  * Poses de combat (images fixes) ajoutées sous les rangées de marche de la version
  * réduite : trois rangées de cellules `BATTLE_CELL` (profil est, face sud, dos nord) à partir de la hauteur `3 × BATTLE_CELL`, dans l'ordre donné.
+ * Sur la carte tactique seules `ready`, `hit` et `ko` servent ; `attack`, `slash` et `skill` sont réservées aux futures animations de combat rapprochées (GDD §11).
  * `ready` attente, `attack` estoc, `slash` coup tranchant, `skill` compétence, `hit` coup reçu, `ko` à terre.
  */
 export const SKIN_POSES: Readonly<Record<string, readonly string[]>> = {

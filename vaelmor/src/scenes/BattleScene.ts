@@ -1972,7 +1972,6 @@ export class BattleScene extends Phaser.Scene {
     await this.hud.skillCutIn(unit, skill.name, this.dur(MS.cutIn, 300));
     if (!this.alive) return;
     if (skill.effects.some((e) => e.kind === 'frappe')) return;
-    this.posed(unit, 'skill', 0, 1);
     const color = this.elementColor(skill.element, unit.team === 'enemy' ? PALETTE.braise : PALETTE.lumiereDoree);
     // Cercle runique sous le lanceur, puis la zone s'embrase un instant.
     const sx = this.px(unit.x) + T / 2;
@@ -2155,7 +2154,6 @@ export class BattleScene extends Phaser.Scene {
       await this.tween({ targets: sv.container, x: home.x, y: home.y, duration: this.dur(50) });
       await this.projectile(striker, target);
     } else {
-      this.posed(striker, strike.crit ? 'slash' : 'attack', target.x - striker.x, target.y - striker.y);
       await this.tween({ targets: sv.container, x: home.x + dx * 6, y: home.y + dy * 6, duration: this.dur(MS.lunge), ease: 'Quad.easeIn' });
     }
 
