@@ -6930,50 +6930,43 @@ openCodex=function(back){
   no.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   ns.start(t0);ns.stop(t+dur+0.05);
   for(const x of ex){x.start(t);x.stop(t+dur+0.05);}}
- // rire court (Brumeux : escalade, Masqué : montage fini ou éveillé)
- function rire(delay){if(!AC||muted)return;const t0=AC.currentTime+(delay||0)+0.02,bus=vbus(2.4,0.28);
-  [[0,150,0.16,0.35],[0.2,138,0.16,0.4],[0.4,126,0.17,0.46]].forEach(([d,f,du,v])=>voc(bus,t0+d,{f0:f,f1:f*0.8,dur:du,vol:v,v:'a',dist:2}));
-  voc(bus,t0+0.62,{f0:112,f1:62,dur:0.6,vol:0.6,v:'A',v1:'o',dist:3,vib:6,vd:0.03});}
- window.__rire=rire;
- // v16.45/46 · rire théâtral du Masqué (≈ 3 s) : « ha ha ha » grave qui monte, rire profond et grotesque qui se dérègle (voix qui casse), grand « HAHAHA ! », silence, petit ricanement
- function rireMasque(){if(!AC||muted)return;if(!throttle('rireMasque',2500))return;
-  const S=0.9,t0=AC.currentTime+0.03,bus=vbus(4.2,0.32);
-  const V=(d,o)=>voc(bus,t0+d*S,Object.assign({},o,{dur:o.dur*S}));
-  const air=(d,dur,vol,fr)=>{const t=t0+d*S,sr=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();sr.buffer=getNoise();fl.type='bandpass';fl.frequency.value=fr;fl.Q.value=0.7;
-   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*0.6);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);sr.connect(fl);fl.connect(g);g.connect(bus);sr.start(t);sr.stop(t+dur+0.03);};
-  const rum=(d,dur,f0,f1,vol)=>{const t=t0+d*S,O=AC.createOscillator(),g=AC.createGain(),am=AC.createOscillator(),ag=AC.createGain();
-   O.frequency.setValueAtTime(f0,t);O.frequency.exponentialRampToValueAtTime(f1,t+dur);am.frequency.value=14;ag.gain.value=vol*0.5;am.connect(ag);ag.connect(g.gain);
-   g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);O.connect(g);g.connect(bus);am.start(t);O.start(t);am.stop(t+dur+0.05);O.stop(t+dur+0.05);};
-  air(0,0.24,0.1,1100);                                                                         // inspiration
-  V(0.05,{f0:118,f1:96,dur:0.15,vol:0.18,v:'a',jit:0.035});                                       // 1. « ha… ha… ha… » grave, de plus en plus fort
-  V(0.24,{f0:124,f1:98,dur:0.16,vol:0.28,v:'a',jit:0.035});
-  V(0.43,{f0:132,f1:100,dur:0.17,vol:0.42,v:'a',jit:0.035,dist:2});
-  rum(0.55,1.5,52,38,0.1);
-  V(0.66,{f0:92,f1:70,dur:0.22,vol:0.6,v:'o',fry:30,fryD:0.5,dist:2.5,jit:0.045,h:0.04});      // 2. « HOO… HOO… HOO… » profond, grotesque
-  V(0.90,{f0:86,f1:64,dur:0.22,vol:0.65,v:'o',fry:32,fryD:0.55,dist:2.6,jit:0.05,h:0.04});
-  V(1.14,{f0:80,f1:54,dur:0.24,vol:0.7,v:'u',fry:34,fryD:0.6,dist:2.8,jit:0.055,h:0.04});
-  V(0.75,{f0:1100,f1:480,dur:0.45,vol:0.05,v:'i',fry:55,fryD:0.9,jit:0.04,breath:0.1,h:0,att:0.12});   // grincement
-  V(1.42,{f0:230,f1:340,dur:0.12,vol:0.4,v:'e',jit:0.09,h:0.02,dist:2});                       // 3. la voix casse
-  V(1.54,{f0:90,f1:58,dur:0.12,vol:0.6,v:'u',fry:40,fryD:0.7,jit:0.07,dist:3,h:0.02});
-  V(1.66,{f0:270,f1:180,dur:0.1,vol:0.38,v:'a',jit:0.11,h:0.02,dist:2});
-  V(1.80,{f0:165,f1:135,dur:0.15,vol:0.85,v:'A',dist:3});                                         // 4. « HA-HA-HAAA ! »
-  V(1.97,{f0:175,f1:140,dur:0.15,vol:0.9,v:'A',dist:3});
-  V(2.14,{f0:190,f1:70,dur:0.62,vol:1,v:'A',v1:'o',hold:0.6,vib:6.5,vd:0.03,dist:3.5,jit:0.03});
-  V(2.14,{f0:95,f1:35,dur:0.62,vol:0.5,v:'o',hold:0.6,vib:6,vd:0.03,dist:2,h:0,breath:0});
-  air(2.14,0.4,0.12,2600);
-  V(3.0,{f0:310,f1:270,dur:0.09,vol:0.22,v:'i',breath:0.5,h:0.03,jit:0.04,vib:12,vd:0.03});   // silence, puis « hé-hé »
-  V(3.14,{f0:330,f1:280,dur:0.09,vol:0.2,v:'i',breath:0.5,h:0.03,jit:0.04,vib:12,vd:0.03});}
- window.__rireMasque=rireMasque;
+ // v16.47 · bruitages de brume (remplacent les cris) : souffle de brume qui balaie, voix chuchotée (souffle filtré par des voyelles), chœur désaccordé en triton, grondement
+ function brume(bus,t,dur,vol,f0,f1,f2){const sr=AC.createBufferSource(),fl=AC.createBiquadFilter(),fl2=AC.createBiquadFilter(),g=AC.createGain();sr.buffer=getNoise();sr.loop=true;
+  fl.type='bandpass';fl.Q.value=1.1;fl.frequency.setValueAtTime(f0,t);fl.frequency.exponentialRampToValueAtTime(f1,t+dur*0.6);fl.frequency.exponentialRampToValueAtTime(f2||f0,t+dur);
+  fl2.type='lowpass';fl2.frequency.value=2000;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*0.55);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  sr.connect(fl);fl.connect(fl2);fl2.connect(g);g.connect(bus);sr.start(t);sr.stop(t+dur+0.05);}
+ function chuchote(bus,t,dur,vol,v0,v1){const ns=AC.createBufferSource(),ng=AC.createGain(),nf=vform(ng,VW[v0],VW[v1||v0],t,dur),g=AC.createGain();ns.buffer=getNoise();ns.loop=true;ng.gain.value=3;ns.connect(ng);nf.connect(g);g.connect(bus);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*0.35);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);ns.start(t);ns.stop(t+dur+0.05);}
+ function sousSon(bus,t,dur,f0,f1,vol){const O=AC.createOscillator(),g=AC.createGain(),am=AC.createOscillator(),ag=AC.createGain();
+  O.frequency.setValueAtTime(f0,t);O.frequency.exponentialRampToValueAtTime(f1,t+dur);am.frequency.value=3.2;ag.gain.value=vol*0.35;am.connect(ag);ag.connect(g.gain);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*0.45);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);O.connect(g);g.connect(bus);am.start(t);O.start(t);am.stop(t+dur+0.05);O.stop(t+dur+0.05);}
+ function choeur(bus,t,dur,notes,vol,v0,v1){notes.forEach(([a,b],i)=>voc(bus,t,{f0:a,f1:b,dur,vol,v:v0,v1:v1||v0,att:dur*0.45,hold:0.55,jit:0.02,vib:4.2+i*0.7,vd:0.012,breath:0.45,h:0,dist:1.2,body:0.15}));}
+ // action du Brumeux (≈ 2 s) : la brume se lève, une voix chuchote « ouuaah » et deux voix désaccordées en triton montent dessous
+ function brumeAction(delay){if(!AC||muted)return;const t=AC.currentTime+(delay||0)+0.02,bus=vbus(3.2,0.42);
+  brume(bus,t,1.9,0.5,240,1000,380);chuchote(bus,t+0.2,1.3,0.9,'u','A');sousSon(bus,t,1.8,58,44,0.14);choeur(bus,t+0.1,1.7,[[110,104],[156,148]],0.2,'o','u');}
+ // ponctuation courte (≈ 1 s) : escalade du Brumeux, montage du Masqué prêt ou éveillé
+ function brumeSting(delay){if(!AC||muted)return;const t=AC.currentTime+(delay||0)+0.02,bus=vbus(2.2,0.4);
+  brume(bus,t,0.9,0.35,400,1800,600);chuchote(bus,t+0.1,0.6,0.7,'i','o');sousSon(bus,t,0.8,70,45,0.12);}
+ window.__rire=brumeSting;
+ // invocation de l’aberration (le Masqué, ≈ 3,5 s, le temps de sa descente) : la brume gonfle, un chœur en triton s’affaisse, des chuchotements passent, puis un coup sourd
+ function brumeAber(){if(!AC||muted)return;if(!throttle('brumeAber',2500))return;const t=AC.currentTime+0.03,bus=vbus(4.6,0.5);
+  brume(bus,t,3.4,0.6,200,1200,280);
+  choeur(bus,t,3.2,[[165,110],[233,156],[330,220]],0.24,'o','a');
+  [[0.3,'u','i'],[1.0,'a','o'],[1.55,'e','u'],[2.1,'i','a']].forEach(([d,a,b])=>chuchote(bus,t+d,0.4,0.8,a,b));
+  sousSon(bus,t,3.4,48,36,0.16);
+  for(const f of[1245,1760]){const O=AC.createOscillator(),g=AC.createGain(),am=AC.createOscillator(),ag=AC.createGain();O.frequency.value=f;am.frequency.value=5.5;ag.gain.value=0.01;am.connect(ag);ag.connect(g.gain);
+   g.gain.setValueAtTime(0.0001,t+0.6);g.gain.exponentialRampToValueAtTime(0.02,t+2.0);g.gain.exponentialRampToValueAtTime(0.0001,t+2.7);O.connect(g);g.connect(bus);am.start(t);O.start(t+0.6);am.stop(t+2.8);O.stop(t+2.8);}
+  { const T=t+2.65,O=AC.createOscillator(),g=AC.createGain(),nz=AC.createBufferSource(),nf=AC.createBiquadFilter(),ng=AC.createGain();
+   O.frequency.setValueAtTime(75,T);O.frequency.exponentialRampToValueAtTime(28,T+0.9);g.gain.setValueAtTime(0.0001,T);g.gain.exponentialRampToValueAtTime(0.4,T+0.02);g.gain.exponentialRampToValueAtTime(0.0001,T+0.9);O.connect(g);g.connect(bus);O.start(T);O.stop(T+0.95);
+   nz.buffer=getNoise();nf.type='lowpass';nf.frequency.value=320;ng.gain.setValueAtTime(0.0001,T);ng.gain.exponentialRampToValueAtTime(0.5,T+0.02);ng.gain.exponentialRampToValueAtTime(0.0001,T+0.5);nz.connect(nf);nf.connect(ng);ng.connect(bus);nz.start(T);nz.stop(T+0.55);}}
+ window.__brumeAber=brumeAber;
+ window.__brumeAction=brumeAction;
  function demon(who){if(!AC||muted)return;if(!throttle('demon',900))return;
   if(who==='mere'){voice({type:'sawtooth',f0:760,f1:240,dur:1.3,vol:0.13,vib:9,vibD:46,lp0:3400,lp1:900,dist:5,att:0.04});voice({type:'sawtooth',f0:140,f1:58,dur:1.5,vol:0.16,vib:6,vibD:8,lp0:900,lp1:160,dist:6});noise(1.1,0.12,1900,'bandpass',0.05);tone(52,1.4,'sine',0.14,34);}
   else if(who==='chroniqueur'){noise(1.4,0.09,2600,'bandpass');tone(440,1.2,'sine',0.05,310);tone(466,1.2,'sine',0.04,330,0.08);}
   else if(who==='joueur')return;
   else{   // v16.45 · le Brumeux : une voix sans visage, grave, qui enfle puis s’éteint, sur un souffle et deux chuchotements
-   const bus=vbus(2.6,0.36),t=AC.currentTime+0.02;
-   voc(bus,t,{f0:104,f1:62,dur:1.05,vol:0.9,body:0.04,v:'A',v1:'o',att:0.14,hold:0.5,fry:30,fryD:0.45,dist:4,breath:0.7,h:0.16,vib:5,vd:0.025,jit:0.05});
-   voc(bus,t+0.05,{f0:208,f1:124,dur:0.9,vol:0.28,v:'e',v1:'a',body:0.04,att:0.2,dist:3,breath:0.5,h:0,jit:0.07});
-   voc(bus,t+0.1,{f0:50,f1:34,dur:0.95,vol:0.12,v:'o',att:0.25,dist:1.4,h:0,breath:0});
-   noise(0.28,0.05,2300,'bandpass',0.12);noise(0.3,0.045,1500,'bandpass',0.5);}}
+   brumeAction();}}
  const _sfx15=sfx;sfx=function(k){if(typeof k==='string'&&k.startsWith('scream_')){demon(k.slice(7));return;}_sfx15(k);};
 
  // --- cercles de boss : bande lumineuse, runes, étincelles
@@ -9040,7 +9033,7 @@ function demoBoot(cls){
   if(k==='asm_ch'){if(!AC||muted)return;d=d||0.7;tone(240,d,'sawtooth',0.035,620);tone(120,d,'triangle',0.04,300);return;}
   if(k==='asm_sig'){if(!AC||muted)return;d=d||1;tone(150,d,'sawtooth',0.05,520);tone(75,d,'square',0.03,260);noise(d,0.05,400,'lowpass');tone(880,0.12,'sine',0.04,null,d-0.12);return;}
   // cri d'invocation du Brumeux, puis les bruits du montage (le corps touche le sol, le masque claque, chaque point, les fils coupés)
-  if(k==='asm_in'){if(!AC||muted)return;if(window.__rireMasque)window.__rireMasque();tone(70,1.4,'sine',0.08,45);return;}   // v16.45 : rire théâtral, distinct du cri du Brumeux
+  if(k==='asm_in'){if(!AC||muted)return;if(window.__brumeAber)window.__brumeAber();return;}   // v16.45 : rire théâtral, distinct du cri du Brumeux
   if(k==='asm_sol'){if(!AC||muted)return;tone(70,0.25,'sine',0.12,40);noise(0.18,0.07,400,'lowpass');return;}
   if(k==='asm_pose'){if(!AC||muted)return;tone(110,0.16,'square',0.07,60);noise(0.1,0.09,1800,'bandpass');return;}
   if(k==='asm_point'){if(!AC||muted)return;tone(1500,0.035,'square',0.025,1100);noise(0.04,0.05,4200,'highpass');return;}
