@@ -62,7 +62,6 @@ import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureWorldTextures } from
 import { WATER_FRAMES } from '../render/waterTile';
 import { fixGpuTileAnimations } from '../render/tileAnimations';
 import { WorldAtmosphere } from '../render/worldAtmosphere';
-import { SKIN_POSES } from '../data/skins';
 import { ALLY_OUTLINE, UNIT_IDLE_FRAMES } from '../render/unitSprites';
 import { loadQuality } from '../core/settings';
 import { loadWorldMap, type WorldMap } from '../data/worldMap';
@@ -2162,7 +2161,6 @@ export class BattleScene extends Phaser.Scene {
     if (strike.hit) {
       // Impact : flash blanc, étincelles, secousse, chiffre.
       flashWhite(tv.sprite, true);
-      this.posed(target, 'hit', striker.x - target.x, striker.y - target.y);
       const color = weapon.element ? (this.gameData.elements.find((e) => e.id === weapon.element)?.color ?? '#ffffff') : '#ffe6b0';
       this.sparks.setParticleTint(Phaser.Display.Color.HexStringToColor(color).color);
       this.sparks.explode(strike.crit ? 22 : 10, tx, ty - 10);
@@ -2183,8 +2181,6 @@ export class BattleScene extends Phaser.Scene {
       await this.tween({ targets: tv.container, x: tx + (dy !== 0 ? 4 : 0), y: ty + (dx !== 0 ? -3 : 0), duration: this.dur(80), yoyo: true });
     }
     await this.tween({ targets: sv.container, x: home.x, y: home.y, duration: this.dur(MS.back), ease: 'Quad.easeOut' });
-    this.unpose(striker);
-    this.unpose(target);
     tv.container.setPosition(tx, ty);
     this.syncUnit(target);
   }
@@ -2210,26 +2206,6 @@ export class BattleScene extends Phaser.Scene {
     shot.destroy();
   }
 
-  /** Pose de combat peinte (image fixe, selon la direction) si l'unité en a une ; renvoie vrai si elle est posée. */
-  private posed(unit: BattleUnit, pose: string, dx: number, dy: number): boolean {
-    const view = this.views.get(unit.id);
-    if (!view || unit.team !== 'player' || !SKIN_POSES[unit.sprite]?.includes(pose)) return false;
-    // Direction du regard : l'axe dominant ; est (profil) retourné pour l'ouest, face pour le sud, dos pour le nord.
-    const vertical = Math.abs(dy) > Math.abs(dx);
-    const facing = vertical ? (dy > 0 ? 'down' : 'up') : 'side';
-    view.sprite.anims.stop();
-    view.sprite.setFlipX(!vertical && dx < 0).setFrame(BATTLE_TEX.pose(pose, facing));
-    return true;
-  }
-
-  /** Retour à l'attente après une pose. */
-  private unpose(unit: BattleUnit): void {
-    const view = this.views.get(unit.id);
-    if (!view || unit.team !== 'player' || !SKIN_POSES[unit.sprite]) return;
-    view.sprite.setFlipX(false);
-    this.syncUnit(unit);
-  }
-
   private async animateKo(unitId: string): Promise<void> {
     const unit = getUnit(this.state, unitId);
     const view = this.views.get(unitId);
@@ -2237,7 +2213,6 @@ export class BattleScene extends Phaser.Scene {
     const fallen = unit.team === 'player' ? `${unit.name} est hors de combat.` : unit.team === 'ally' ? `${unit.name}, notre allié, est tombé.` : `${unit.name} est vaincu${unit.isBoss ? ' !' : '.'}`;
     this.hud.toast(fallen);
     flashWhite(view.sprite, true);
-    if (this.posed(unit, 'ko', 0, 0)) await this.wait(this.dur(380, 60));
     await this.tween({ targets: view.container, alpha: 0, duration: this.dur(MS.ko, 120), ease: 'Stepped', easeParams: [5] });
     view.container.setVisible(false).setAlpha(1);
     flashWhite(view.sprite, false);
