@@ -21,8 +21,8 @@ describe('apparences', () => {
       expect(b.readUInt32BE(16), s.id).toBe(34 * s.frames);
       expect(b.readUInt32BE(20), s.id).toBe(34 * 3);
       const c = readFileSync(resolve(__dirname, `../assets/personnages/combat/${s.id}.png`));
-      expect(c.readUInt32BE(16), s.id).toBe(24 * s.frames);
-      expect(c.readUInt32BE(20), s.id).toBe(24 * 3);
+      expect(c.readUInt32BE(16), s.id).toBe(30 * s.frames);
+      expect(c.readUInt32BE(20), s.id).toBe(30 * 3);
     }
   });
 });

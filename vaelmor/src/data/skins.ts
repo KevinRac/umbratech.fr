@@ -34,5 +34,5 @@ export const SKINS: readonly SkinDef[] = [
 /** Durée d'une image de marche, en ms (réglage du dessin d'origine). */
 export const SKIN_FRAME_MS = 170;
 
-/** Versions réduites (×0,7, cellules de 24 px) pour le combat et la préparation : les silhouettes tiennent dans une case de 16 px sans se chevaucher. */
-export const BATTLE_CELL = 24;
+/** Versions réduites (×0,88, cellules de 30 px) pour le combat et la préparation : les silhouettes se chevauchent un peu moins. */
+export const BATTLE_CELL = 30;
