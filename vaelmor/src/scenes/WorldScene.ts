@@ -67,12 +67,15 @@ import { parseQuality, type Quality } from '../render/atmosphere';
 import { WorldAtmosphere } from '../render/worldAtmosphere';
 import { loadQuality, saveQuality } from '../core/settings';
 import { PALETTE } from '../render/palette';
+import { ensureSkinAnimations, skinIdleFrame, skinKey, skinWalkKey } from '../render/skins';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
 import { WHEAT_FRONT_BELOW, WHEAT_FRONT_FRAMES, WHEAT_FRONT_H, WHEAT_FRONT_MS } from '../render/wheatFront';
 import { fixGpuTileAnimations } from '../render/tileAnimations';
 import { SCENES } from './keys';
 import type { ReputationView, WorldHudScene } from './WorldHudScene';
+
+const HERO_SKIN_ID = 'heros';
 
 const DEPTH = {
   water: -10,
@@ -164,6 +167,7 @@ export class WorldScene extends Phaser.Scene {
   private cameraConfig!: CameraConfig;
 
   private hero!: Phaser.GameObjects.Sprite;
+  private heroSkin = false;
   /**
    * Copie translucide du héros dessinée au-dessus de la couche `canopy`
    * (décision n°44) : posée sur le héros visible, elle ne change rien (même
@@ -390,8 +394,12 @@ export class WorldScene extends Phaser.Scene {
     this.snapToFree(this.body_);
 
     this.shadow = this.add.image(0, 0, WORLD_TEX.shadow).setOrigin(0.5, 0.5).setDepth(DEPTH.shadow);
-    this.hero = this.add.sprite(0, 0, WORLD_TEX.hero, WORLD_TEX.heroFrame('down', 0)).setOrigin(0.5, 1);
-    this.heroGhost = this.add.sprite(0, 0, WORLD_TEX.hero, WORLD_TEX.heroFrame('down', 0)).setOrigin(0.5, 1).setAlpha(0.5).setDepth(DEPTH.heroGhost);
+    // Apparence peinte (feuille PNG « heros ») si elle est chargée, sinon le héros dessiné par le code.
+    this.heroSkin = ensureSkinAnimations(this, HERO_SKIN_ID) > 0;
+    const tex = this.heroSkin ? skinKey(HERO_SKIN_ID) : WORLD_TEX.hero;
+    const f0 = this.heroSkin ? skinIdleFrame(HERO_SKIN_ID, 'down') : WORLD_TEX.heroFrame('down', 0);
+    this.hero = this.add.sprite(0, 0, tex, f0).setOrigin(0.5, 1);
+    this.heroGhost = this.add.sprite(0, 0, tex, f0).setOrigin(0.5, 1).setAlpha(0.5).setDepth(DEPTH.heroGhost);
     this.buildWheat();
     this.syncHero();
   }
@@ -490,11 +498,11 @@ export class WorldScene extends Phaser.Scene {
     this.hero.setPosition(x, y).setFlipX(flipX).setDepth(DEPTH.entities + body.y / 100000);
     this.shadow.setPosition(x, y - 1);
     if (body.moved) {
-      this.hero.anims.play(`hero:walk:${pose}`, true);
+      this.hero.anims.play(this.heroSkin ? skinWalkKey(HERO_SKIN_ID, pose) : `hero:walk:${pose}`, true);
       this.hero.anims.timeScale = body.sprinting ? 1.5 : 1;
     } else {
       this.hero.anims.stop();
-      this.hero.setFrame(WORLD_TEX.heroFrame(pose, 0));
+      this.hero.setFrame(this.heroSkin ? skinIdleFrame(HERO_SKIN_ID, pose) : WORLD_TEX.heroFrame(pose, 0));
     }
     this.heroGhost.setPosition(x, y).setFlipX(flipX).setFrame(this.hero.frame.name);
     // Dans le blé, les épis cachent le bas du héros (décision n°50).
