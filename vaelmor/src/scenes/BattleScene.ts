@@ -1986,7 +1986,6 @@ export class BattleScene extends Phaser.Scene {
     if (unit.isBoss) this.cameras.main.shake(this.dur(260, 100), 0.005);
     await this.tween({ targets: flash, alpha: 0, duration: this.dur(420, 120) });
     for (const f of flash) f.destroy();
-    this.unpose(unit);
   }
 
   /** Effets d'une compétence ou d'un objet : chiffres, statuts posés, immunités, purges. */
