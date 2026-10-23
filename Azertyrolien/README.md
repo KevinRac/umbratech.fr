@@ -55,4 +55,7 @@ Bibliothèques chargées depuis un CDN : [MQTT.js](https://github.com/mqttjs/MQT
 
 ## Mise en ligne
 
-Le site est publié avec **GitHub Pages** (Settings → Pages → branche `main`, dossier racine).
+Le jeu fait partie du site umbratech.fr : chaque push sur `main` le déploie automatiquement.
+
+- Grand écran : https://umbratech.fr/Azertyrolien/
+- Manette : https://umbratech.fr/Azertyrolien/manette.html?salle=CODE (le QR code de l'écran contient le bon lien)

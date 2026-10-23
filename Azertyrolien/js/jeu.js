@@ -184,10 +184,17 @@ function majJauge(){
   bar.classList.toggle("danger", reste <= cfg.points * .2);
   document.querySelectorAll("#mont .cap").forEach(c => c.classList.toggle("lit", +c.dataset.i < Math.floor(f + 1e-9)));
 }
+// image suivante : requestAnimationFrame, avec un minuteur de secours si le navigateur
+// suspend les animations (onglet réduit, écran en veille) pour que la partie ne se bloque jamais
+function imageSuivante(cb){
+  let fait = false;
+  const go = () => { if (!fait){ fait = true; cb(performance.now()); } };
+  requestAnimationFrame(go); setTimeout(go, 60);
+}
 function tween(ms, fn){
   if (reduce) ms = Math.min(ms, 40);
   return new Promise(res => { const t0 = performance.now();
-    (function f(now){ const t = Math.min(1, (now - t0) / ms); fn(t); t < 1 ? requestAnimationFrame(f) : res(); })(t0); });
+    (function f(now){ const t = Math.min(1, (now - t0) / ms); fn(t); t < 1 ? imageSuivante(f) : res(); })(t0); });
 }
 // la souris avance d'autant de points perdus ; à 0 point restant, elle chute
 async function avancer(pts){
