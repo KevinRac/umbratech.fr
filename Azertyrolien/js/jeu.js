@@ -3,18 +3,18 @@
 const W = 1000, H = 560, X0 = 150, X1 = 800, EDGE = X1 + 56, N = 20, KH = 21;
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const EXEMPLES = [
-  {nom:"Clé USB 3.2", detail:"128 Go", prix:14},
-  {nom:"Pâte thermique", detail:"Seringue de 4 g", prix:9},
-  {nom:"Câble réseau RJ45", detail:"Cat 6, 5 mètres", prix:8},
-  {nom:"Souris gaming sans fil", detail:"Capteur 26 000 DPI", prix:59},
+  {nom:"Canette de boisson énergisante", detail:"50 cl", prix:2},
+  {nom:"Pizza 4 fromages", detail:"Grande, à emporter", prix:12},
+  {nom:"Multiprise parafoudre", detail:"6 prises, câble 3 m", prix:15},
+  {nom:"Câble réseau RJ45", detail:"Cat 6, 10 mètres", prix:12},
+  {nom:"Switch réseau Gigabit", detail:"8 ports", prix:25},
   {nom:"Tapis de souris XXL", detail:"90 × 40 cm", prix:22},
-  {nom:"Ventilateur de boîtier", detail:"120 mm, éclairage RGB", prix:15},
-  {nom:"SSD NVMe M.2", detail:"1 To, PCIe 4.0", prix:75},
+  {nom:"Souris gaming filaire", detail:"Capteur 26 000 DPI", prix:30},
+  {nom:"Casque gaming", detail:"Micro détachable", prix:49},
   {nom:"Clavier mécanique AZERTY", detail:"Switches linéaires", prix:69},
-  {nom:"Casque gaming filaire", detail:"Micro détachable", prix:49},
-  {nom:"Webcam Full HD", detail:"1080p, 30 images/s", prix:35},
-  {nom:"Kit mémoire DDR5", detail:"2 × 8 Go", prix:89},
-  {nom:"Hub USB-C", detail:"7 ports", prix:29}
+  {nom:"Écran de PC 24 pouces", detail:"Full HD, 144 Hz", prix:150},
+  {nom:"Chaise gaming", detail:"Dossier inclinable, accoudoirs 4D", prix:160},
+  {nom:"Pack de 24 canettes de soda", detail:"33 cl", prix:15}
 ];
 const DEF = {points:200, coef:1, temps:60, lot:"Des points pour le classement général du tournoi", items:EXEMPLES};
 const $ = s => document.querySelector(s);
