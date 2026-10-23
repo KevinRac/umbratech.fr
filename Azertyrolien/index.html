@@ -24,7 +24,7 @@
     <div class="tools">
       <div class="field"><label for="joueur">Candidat</label><input id="joueur" placeholder="Pseudo" autocomplete="off"></div>
       <button class="btn" id="b-son" aria-pressed="true">Son activé</button>
-      <button class="btn" id="b-manette"><span class="pastille"></span><span id="b-manette-txt">Manette</span></button>
+      <button class="btn" id="b-manette"><span class="pastille"></span><span id="b-manette-txt">Participer</span></button>
       <button class="btn" id="b-reglages">Réglages</button>
     </div>
   </header>
@@ -54,10 +54,6 @@
         <p class="led-cap">Proposition du candidat</p>
         <div class="led" aria-live="polite"><span id="saisie">--- €</span></div>
       </div>
-      <div class="qr-pupitre" id="qr-pupitre">
-        <div class="qr-mini" id="qr-mini" aria-label="QR code de la manette"></div>
-        <div><b>Scanne pour jouer</b><span>Tape ton prix sur ton téléphone.</span><span class="code-mini">Salle <em id="code-mini">…</em></span></div>
-      </div>
       <div class="manuel" id="manuel" hidden>
       <div class="pad" id="pad">
         <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
@@ -77,21 +73,24 @@
 </div>
 
 <div class="sheet" id="sheet-man" hidden role="dialog" aria-modal="true" aria-labelledby="sm-titre">
-  <div class="sheet-in">
-    <h2 id="sm-titre">Manette téléphone</h2>
+  <div class="sheet-in sheet-qr">
+    <div class="qr-haut">
+      <h2 id="sm-titre">Participer</h2>
+      <p class="qr-invite">Scanne le QR code avec ton téléphone pour jouer</p>
+    </div>
     <div class="qr-zone">
       <div class="qr" id="qr" aria-label="QR code vers la manette"></div>
       <div class="qr-txt">
         <ol>
-          <li>Le joueur scanne le QR code, ou ouvre le lien ci-dessous sur son téléphone.</li>
-          <li>Aucun compte n'est nécessaire : le téléphone doit juste avoir accès à internet.</li>
-          <li>Il tape son prix sur le pavé du téléphone et appuie sur OK : la souris bouge ici.</li>
+          <li>Scanne le QR code (ou ouvre le lien ci-dessous).</li>
+          <li>Tape ton pseudo, puis ton prix, et appuie sur OK.</li>
+          <li>La souris bouge sur le grand écran !</li>
         </ol>
-        <div class="lien"><input id="lien-man" readonly aria-label="Lien de la manette"><button class="btn" id="b-copier">Copier</button></div>
         <div>Code de la salle : <span class="code-salle" id="code-salle">…</span></div>
         <div class="etat-lien" id="etat-lien" aria-live="polite">Aucune manette connectée.</div>
+        <div class="lien"><input id="lien-man" readonly aria-label="Lien de la manette"><button class="btn" id="b-copier">Copier</button></div>
         <div class="row"><button class="btn" id="b-code">Changer de code</button></div>
-        <p class="hint">Changer de code déconnecte les téléphones déjà reliés (utile si quelqu'un d'autre a gardé le lien).</p>
+        <p class="hint">Changer de code déconnecte les téléphones déjà reliés.</p>
       </div>
     </div>
     <div class="foot"><button class="btn primary" id="sm-fermer">Fermer</button></div>

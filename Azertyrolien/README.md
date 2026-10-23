@@ -14,13 +14,13 @@ La souris de l'Azerty Club grimpe une montagne de touches de clavier. Le candida
 ## Déroulé le jour J
 
 1. Ouvrir `index.html` sur le PC relié au grand écran, en plein écran (F11).
-2. Cliquer sur **Manette** en haut à droite : un QR code et un lien s'affichent, avec le code de la salle.
+2. Cliquer sur **Participer** en haut à droite : un très grand QR code (lisible à plusieurs mètres), un lien et le code de la salle s'affichent. Fermer la fenêtre pour jouer, la rouvrir pour le candidat suivant.
 3. Le candidat scanne le QR code avec son téléphone. Aucun compte n'est nécessaire, il suffit d'avoir internet.
 4. Il tape son pseudo, puis son prix, et valide avec **OK** : le prix s'affiche sur le grand écran et la souris bouge.
 5. Après le résultat, il passe à l'objet suivant depuis son téléphone (ou l'animateur depuis l'écran).
 6. Pour le candidat suivant : **Nouveau candidat** sur l'écran. Le même lien de manette reste valable.
 
-Le bouton de la manette passe au vert (« Manette connectée ») quand un téléphone est relié.
+Le bouton Participer passe au vert (« Manette connectée ») quand un téléphone est relié.
 L'animateur peut toujours saisir le prix lui-même sur le pavé de l'écran ou au clavier.
 
 ## Réglages (bouton « Réglages » sur l'écran)

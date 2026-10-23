@@ -204,13 +204,15 @@ h1::after{content:"";display:block;width:72px;height:5px;background:var(--coral)
 
 /* Pupitre : QR code par défaut, saisie manuelle de secours */
 .manuel{display:flex;flex-direction:column;gap:14px}
-.qr-pupitre{display:flex;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.qr-mini{background:#fff;color:#150d4a;padding:8px;border-radius:8px;width:140px;max-width:40%;aspect-ratio:1;display:grid;place-items:center;flex:none;font-family:var(--f-cond);font-size:13px;text-align:center}
-.qr-mini img,.qr-mini canvas{display:block;width:100%;height:auto}
-.qr-pupitre > div:last-child{display:flex;flex-direction:column;gap:4px;min-width:0}
-.qr-pupitre b{font-family:var(--f-cond);font-size:26px;font-weight:800;text-transform:uppercase;line-height:1}
-.qr-pupitre span{color:var(--muted)}
-.code-mini em{font-style:normal;font-family:var(--f-led);color:var(--gold);letter-spacing:.08em}
 .btn.discret{background:transparent;color:var(--muted);font-size:14px;align-self:flex-start}
 .btn.discret[aria-pressed="true"]{color:var(--snow);border-color:var(--muted)}
 
+
+/* Fenêtre « Participer » : grand QR code, lisible de loin sur un écran projeté */
+.sheet-qr{max-width:min(1400px,96vw)}
+.qr-haut{text-align:center}
+.qr-invite{margin:6px 0 0;font-family:var(--f-cond);font-size:clamp(22px,3vw,44px);font-weight:700;color:var(--gold);text-transform:uppercase}
+.sheet-qr .qr-zone{flex-wrap:wrap;justify-content:center;gap:clamp(16px,3vw,48px)}
+.sheet-qr .qr{--t:min(70vh,56vw);width:var(--t);height:var(--t);max-width:92vw;max-height:92vw;padding:clamp(10px,1.6vw,26px);border-radius:16px}
+.sheet-qr .qr-txt{flex:1 1 300px;max-width:420px}
+.sheet-qr .qr-txt ol{font-size:clamp(16px,1.6vw,22px)}

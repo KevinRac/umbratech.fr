@@ -449,7 +449,7 @@ function majLiaison(){
   for (const [k, t] of manettes) if (now - t > 15000) manettes.delete(k);
   const n = manettes.size;
   $("#b-manette").classList.toggle("lie", n > 0);
-  $("#b-manette-txt").textContent = n ? (n > 1 ? `${n} manettes` : "Manette connectée") : "Manette";
+  $("#b-manette-txt").textContent = n ? (n > 1 ? `${n} manettes` : "Manette connectée") : "Participer";
   let txt = n ? (n > 1 ? `${n} manettes connectées.` : "1 manette connectée.") : "Aucune manette connectée.";
   if (!lien) txt = "Liaison indisponible : vérifiez la connexion internet de cet écran.";
   else if (!lien.connecte()) txt = "Connexion au serveur de liaison…";
@@ -459,7 +459,6 @@ let manuel = false;
 try { manuel = localStorage.getItem("azertyrolien-manuel") === "1"; } catch(e){}
 function majManuel(){
   $("#manuel").hidden = !manuel;
-  $("#qr-pupitre").hidden = manuel;
   const b = $("#b-manuel");
   b.setAttribute("aria-pressed", manuel);
   b.textContent = manuel ? "Masquer la saisie manuelle" : "Saisie manuelle";
@@ -470,18 +469,12 @@ $("#b-manuel").addEventListener("click", () => {
   majManuel();
 });
 majManuel();
-$("#code-mini").textContent = SALLE;
-if (window.QRCode){
-  try { new QRCode($("#qr-mini"), {text: LIEN_MANETTE, width: 200, height: 200, colorDark: "#150d4a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M}); }
-  catch(e){ $("#qr-mini").textContent = "QR code indisponible"; }
-} else $("#qr-mini").textContent = "QR code indisponible : bouton Manette";
-
 let qrFait = false;
 function ouvrirManette(){
   $("#lien-man").value = LIEN_MANETTE;
   $("#code-salle").textContent = SALLE;
   if (!qrFait && window.QRCode){
-    try { new QRCode($("#qr"), {text: LIEN_MANETTE, width: 220, height: 220, colorDark: "#150d4a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M}); qrFait = true; } catch(e){}
+    try { new QRCode($("#qr"), {text: LIEN_MANETTE, width: 640, height: 640, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L}); qrFait = true; } catch(e){}
   }
   if (!qrFait) $("#qr").textContent = "QR code indisponible : utilisez le lien.";
   majLiaison();
