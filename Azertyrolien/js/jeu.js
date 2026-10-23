@@ -232,7 +232,7 @@ function construireSouris(force){
 function niveau(o, niv){
   if (!o.et || o.niv === niv) return;
   o.niv = niv;
-  const sc = o.sc, fs = o.fs, tete = -112 * sc, B = tete - 4 - niv * fs * 1.55, T = B - fs * 1.45, L = o.w / 2, r = 7;
+  const sc = o.sc, fs = o.fs, tete = 0, B = tete - 8 - niv * fs * 1.55, T = B - fs * 1.45, L = o.w / 2, r = 7;
   o.et.querySelector(".et-txt").setAttribute("y", ((T + B) / 2).toFixed(1));
   o.et.querySelector(".et-fond").setAttribute("d", `M${-L} ${T + r} Q${-L} ${T} ${-L + r} ${T} L${L - r} ${T} Q${L} ${T} ${L} ${T + r} L${L} ${B - r} Q${L} ${B} ${L - r} ${B} L6 ${B} L0 ${B + 7} L-6 ${B} L${-L + r} ${B} Q${-L} ${B} ${-L} ${B - r} Z`);
   const tige = o.et.querySelector(".et-tige");
@@ -254,8 +254,11 @@ function placer(o, x, y, rot=0, op=1, ang=0){
   o.gr.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
   o.corps.setAttribute("transform", `rotate(${rot.toFixed(1)} 0 -40)`);
   o.gr.setAttribute("opacity", op);
-  if (o.et){ o.et.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`); o.et.setAttribute("opacity", op < 1 ? 0 : 1); }
-  o.x = x; o.cache = op < 1;
+  // l'étiquette se pose pile au-dessus des oreilles : on suit l'inclinaison de la souris sur la pente
+  const a = ang * Math.PI / 180, lx = 0, ly = -86 * (o.sc || 1);
+  const ax = x + lx * Math.cos(a) - ly * Math.sin(a), ay = y + lx * Math.sin(a) + ly * Math.cos(a);
+  if (o.et){ o.et.setAttribute("transform", `translate(${ax.toFixed(1)} ${ay.toFixed(1)})`); o.et.setAttribute("opacity", op < 1 ? 0 : 1); }
+  o.x = ax; o.cache = op < 1;
 }
 const pos = (perdus, k) => stepPt(Math.min(N, marcheDe(perdus) + decal(k)));
 function placerTous(){
