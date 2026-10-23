@@ -397,3 +397,5 @@ body{padding-bottom:12px}
 .man.jeu .man-statut{font-size:15px;line-height:1.2}
 .d-qr-txt .btn{margin-top:14px;align-self:flex-start;font-size:clamp(15px,1.2vw,20px)}
 body:has(.man){padding-block:0}.man{box-sizing:border-box}.man.jeu{overflow:hidden}
+.btn.danger{background:linear-gradient(180deg,#f46f6f,#d93636);border-color:#ff8a8a;color:#fff;font-weight:700}
+.btn.danger:hover{background:linear-gradient(180deg,#ff8080,#e04a4a)}

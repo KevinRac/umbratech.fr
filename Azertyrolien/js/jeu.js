@@ -525,6 +525,7 @@ function rendre(){
   $("#b-lancer").hidden = ph !== "attente";
   $("#b-lancer").disabled = !n;
   $("#b-reveler").hidden = ph !== "saisie";
+  $("#b-fin").hidden = ph === "attente" || ph === "fin";
   $("#b-suivant").hidden = ph !== "revele";
   // saisie manuelle
   const sel = G.joueurs.find(j => j.pid === selPid);
@@ -639,6 +640,14 @@ $("#pad").addEventListener("click", e => { const k = e.target.closest(".key"); i
 $("#b-lancer").addEventListener("click", lancer);
 $("#b-reveler").addEventListener("click", () => { if (G.phase === "saisie") G.fin = Date.now(); });
 $("#b-suivant").addEventListener("click", suivant);
+let confFin = 0;
+$("#b-fin").addEventListener("click", e => {
+  const b = e.currentTarget;
+  if (G.phase === "anim" || G.phase === "attente" || G.phase === "fin") return;
+  if (Date.now() - confFin > 3000){ confFin = Date.now(); b.textContent = "Confirmer la fin ?"; setTimeout(() => { b.textContent = "Fin de partie"; confFin = 0; }, 3000); return; }
+  confFin = 0; b.textContent = "Fin de partie";
+  clearInterval(chrono); G.phase = "fin"; rendre(); resultat();
+});
 let confirmer = 0;
 $("#b-nouvelle").addEventListener("click", e => {
   if (G.phase === "anim") return;
