@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Azertyrolien</title>
+<meta name="theme-color" content="#150d4a">
+<link rel="icon" href="assets/logo-azertyclub.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <img id="logo-tete" class="logo-club" src="assets/logo-azertyclub.png" alt="Logo de l'Azerty Club">
+      <div>
+        <div class="eyebrow">Azerty Party 2026 · Tournoi fun</div>
+        <h1>Azertyrolien</h1>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="field"><label for="joueur">Candidat</label><input id="joueur" placeholder="Pseudo" autocomplete="off"></div>
+      <button class="btn" id="b-son" aria-pressed="true">Son activé</button>
+      <button class="btn" id="b-manette"><span class="pastille"></span><span id="b-manette-txt">Manette</span></button>
+      <button class="btn" id="b-reglages">Réglages</button>
+    </div>
+  </header>
+
+  <main class="show">
+    <section class="stage" aria-label="La montagne">
+      <svg id="mont" viewBox="0 0 1000 560" role="img" aria-label="Montagne de touches de clavier gravie par la souris Azerty"></svg>
+      <div class="gauge">
+        <span>Points <b id="g-pts">200</b> / <span id="g-max">200</span></span>
+        <div class="bar" id="g-bar"><i></i></div>
+        <small id="g-pas">1 € d'écart = 1 point perdu</small>
+      </div>
+      <div class="result" id="result" hidden>
+        <canvas id="confettis"></canvas>
+        <div class="result-in">
+          <h2 id="r-titre"></h2>
+          <p id="r-texte"></p>
+          <button class="btn primary" id="b-rejouer">Nouveau candidat</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="desk" aria-label="Pupitre">
+      <div class="prize"><span class="eyebrow">À gagner</span><strong id="lot-gagner"></strong></div>
+      <ol class="lots" id="lots"></ol>
+      <div>
+        <p class="led-cap">Proposition du candidat</p>
+        <div class="led" aria-live="polite"><span id="saisie">--- €</span></div>
+      </div>
+      <div class="pad" id="pad">
+        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+        <button class="key del" data-k="del" aria-label="Effacer">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">OK</button>
+      </div>
+      <div class="msg" id="msg" aria-live="polite"></div>
+      <div class="row">
+        <button class="btn primary" id="b-suivant" hidden>Objet suivant</button>
+        <button class="btn" id="b-nouvelle">Nouveau tirage</button>
+      </div>
+      <p class="hint">Clavier : chiffres pour saisir, Entrée pour valider, Retour arrière pour corriger.</p>
+    </aside>
+  </main>
+  <footer class="pied"><span>Azerty Party 2026</span><span>Hippodrome de Pau</span><span>24 &amp; 25 octobre</span><span>azertyparty.fr</span></footer>
+</div>
+
+<div class="sheet" id="sheet-man" hidden role="dialog" aria-modal="true" aria-labelledby="sm-titre">
+  <div class="sheet-in">
+    <h2 id="sm-titre">Manette téléphone</h2>
+    <div class="qr-zone">
+      <div class="qr" id="qr" aria-label="QR code vers la manette"></div>
+      <div class="qr-txt">
+        <ol>
+          <li>Le joueur scanne le QR code, ou ouvre le lien ci-dessous sur son téléphone.</li>
+          <li>Aucun compte n'est nécessaire : le téléphone doit juste avoir accès à internet.</li>
+          <li>Il tape son prix sur le pavé du téléphone et appuie sur OK : la souris bouge ici.</li>
+        </ol>
+        <div class="lien"><input id="lien-man" readonly aria-label="Lien de la manette"><button class="btn" id="b-copier">Copier</button></div>
+        <div>Code de la salle : <span class="code-salle" id="code-salle">…</span></div>
+        <div class="etat-lien" id="etat-lien" aria-live="polite">Aucune manette connectée.</div>
+        <div class="row"><button class="btn" id="b-code">Changer de code</button></div>
+        <p class="hint">Changer de code déconnecte les téléphones déjà reliés (utile si quelqu'un d'autre a gardé le lien).</p>
+      </div>
+    </div>
+    <div class="foot"><button class="btn primary" id="sm-fermer">Fermer</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="s-titre">
+  <div class="sheet-in">
+    <h2 id="s-titre">Réglages</h2>
+    <section>
+      <h3>Règle du jeu</h3>
+      <div class="grid2">
+        <label class="inp">Points de départ<input type="number" id="s-points" min="20" max="10000" step="10"></label>
+        <label class="inp">Points perdus par euro d'écart<input type="number" id="s-coef" min="1" max="20" step="1"></label>
+        <label class="inp" style="grid-column:1/-1">Texte « À gagner » affiché au pupitre<input id="s-lot"></label>
+      </div>
+    </section>
+    <section>
+      <h3>Les objets (3 tirés au sort par partie)</h3>
+      <div class="items" id="s-items"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="s-add">Ajouter un objet</button>
+        <button class="btn" id="s-exemples">Remettre les exemples</button>
+      </div>
+      <p class="hint" style="margin-top:8px">Les prix d'exemple sont indicatifs : vérifiez-les avant le tournoi. Prix entiers en euros.</p>
+    </section>
+    <div class="foot">
+      <button class="btn" id="s-annuler">Annuler</button>
+      <button class="btn primary" id="s-ok">Enregistrer et relancer</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/liaison.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/jeu.js"></script>
+</body>
+</html>

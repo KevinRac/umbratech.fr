@@ -15,4 +15,12 @@
 - Équipements : emplacements fixes (`emplacements` : un seul type d'objet par emplacement), objets et fiches (`plus` / `moins` : lignes courtes, `fl` : texte d'ambiance) dans `themist/data/equipements.js` ; icônes peintes dans `themist/data/icones-objets.js` (`BRUME_DATA.iconeObjet(id, {col, r})`, utilisé par le jeu et le wiki ; matières et halos = filtres communs `fx_*` ; le SVG doit rester du XML valide, car le HUD l’affiche en image). Un set doit toujours réunir deux emplacements différents.
 - Le Masqué (élite assemblé) : réglages dans `themist/data/bestiaire.js` (`assemble`), dessin du masque dans `themist/data/masque.js`. `node themist/outils/sim-masque.mjs` vérifie le tirage et la file de sorts ; en jeu, `__asm.essai()` dans la console ouvre une salle avec un Masqué.
 - La Mémoire (v17.1) : 10 talents actifs ; les reliques et l’équipement sont hors mémoire. Gravure (v17.3) : `gravure` et `gr` des familles dans `souvenirs.js` ; un talent porté au rang max se grave sans prendre de place (D11). Éveils (v17.4) : texte dans `souvenirs.js` (`eveils`), effet lu en jeu par `EVL(id)` ; un nouveau nœud clé ou ultime doit recevoir un éveil. Plafond et familles dans `themist/data/souvenirs.js` ; logique dans le bloc « v17 · La Mémoire » à la fin d’index.html (état `RUN.memoire`, réserve `RUN.reserveBrume`, rien d’affiché). Un nouveau talent doit recevoir une famille dans `souvenirs.js`. Décisions : `themist/_dev/memoire.md`. En console : `__memoire`.
-- Publication : push direct sur `main` (déploiement automatique sur IONOS).
+
+## Azertyrolien (`Azertyrolien/`)
+
+- Jeu de la Tyrolienne façon Juste Prix pour l'Azerty Party 2026 : `index.html` (grand écran), `manette.html?salle=CODE` (téléphone du candidat).
+- Le jeu est dans `js/jeu.js`, la manette dans `js/manette.js`, la liaison écran/téléphones (MQTT public, code de salle) dans `js/liaison.js`. Mode d'emploi : `Azertyrolien/README.md`.
+
+## Publication
+
+- Push direct sur `main` (déploiement automatique sur IONOS).
