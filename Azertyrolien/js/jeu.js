@@ -395,6 +395,7 @@ function majChrono(){
   const reste = Math.max(0, G.fin - Date.now()), s = Math.ceil(reste / 1000);
   $("#chrono-txt").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   $("#chrono").classList.toggle("urgent", s <= 10);
+  if (G.phase === "saisie") majMusique();
   $("#chrono-bar").querySelector("i").style.width = Math.min(100, reste / (cfg.temps * 1000) * 100) + "%";
   $("#chrono-bar").classList.toggle("danger", s <= 10);
 }
@@ -539,9 +540,18 @@ function rendre(){
   document.querySelectorAll("#pad .key").forEach(k => k.disabled = !(ph === "saisie" && sel && !sel.tombe));
   $("#m-ajout").disabled = $("#b-ajout").disabled = ph !== "attente";
   majJauge();
+  majMusique();
   sauverPartie();
   diffuser();
   ajusterScene();
+}
+// ambiance : calme en salle d'attente et au classement, rythmée pendant la partie, plus discrète pendant les révélations
+function majMusique(){
+  const ph = G.phase, tendu = ph === "saisie" && Math.ceil(Math.max(0, G.fin - Date.now()) / 1000) <= 10;
+  if (ph === "attente") Ambiance.jouer("attente", 1);
+  else if (ph === "saisie") Ambiance.jouer("partie", 1, tendu);
+  else if (ph === "anim" || ph === "revele") Ambiance.jouer("partie", .3);
+  else Ambiance.jouer("attente", .6);
 }
 function rendreTableau(){
   const ph = G.phase, res = G.res[G.idx];
@@ -662,6 +672,9 @@ $("#b-nouvelle").addEventListener("click", e => {
 });
 $("#b-rejouer").addEventListener("click", () => { nouvelleSalle(true); lancer(); });
 $("#b-salle").addEventListener("click", () => nouvelleSalle(false));
+function majBoutonMusique(){ const b = $("#b-musique"), on = Ambiance.est(); b.setAttribute("aria-pressed", on); b.textContent = on ? "Musique activée" : "Musique coupée"; }
+$("#b-musique").addEventListener("click", () => { Ambiance.activer(!Ambiance.est()); majBoutonMusique(); majMusique(); });
+majBoutonMusique();
 $("#b-son").addEventListener("click", e => { son = !son; e.currentTarget.setAttribute("aria-pressed", son); e.currentTarget.textContent = son ? "Son activé" : "Son coupé"; });
 $("#b-reglages").addEventListener("click", () => { if (G.phase !== "anim") ouvrirReglages(); });
 $("#s-annuler").addEventListener("click", fermerReglages);

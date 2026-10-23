@@ -23,6 +23,14 @@ Partie **à plusieurs, en simultané** : chaque joueur a sa souris (son pseudo a
 
 Si la page de l'écran est rechargée, la partie reprend où elle en était (le chrono de l'objet en cours repart de zéro).
 
+## Ambiance sonore
+
+Une musique d'ambiance est synthétisée directement dans le navigateur (aucun fichier audio, aucun droit d'auteur) :
+- **salle d'attente** et **classement** : piste calme (synthwave douce, la mineur) ;
+- **partie** : piste rythmée (ré mineur), qui devient plus tendue et plus rapide pendant les 10 dernières secondes du chrono, et baisse pendant les révélations pour laisser entendre les bruitages.
+
+Le bouton **Musique** (en haut à droite) la coupe ou la remet, indépendamment du bouton **Son** (bruitages). Le navigateur n'autorise le son qu'après un premier clic sur la page : cliquez une fois n'importe où au démarrage.
+
 ## Saisie manuelle (bouton en haut à droite)
 
 En secours, si un joueur n'a pas de téléphone ou si la liaison ne marche pas :
