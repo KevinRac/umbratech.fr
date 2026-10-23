@@ -264,19 +264,21 @@ function nouvellePartie(){
   for (let i=t.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [t[i], t[j]] = [t[j], t[i]]; }
   G = {id:nouvelId(), tirage: t.slice(0,3).map(o => ({nom:o.nom, detail:o.detail||"", prix:Math.round(+o.prix)})), idx:0, perdus:0, tombe:false, saisie:"", phase:"saisie", res:[], joueur};
   rendre(); placerPerdus(); majJauge();
-  message(`Objet 1 : ${G.tirage[0].nom}. Quel est son juste prix ?`);
+  message("À vous de jouer : annoncez votre prix !");
 }
 function message(t, ton=""){ const m = $("#msg"); m.textContent = t; m.className = "msg " + ton; diffuser(); }
 function rendre(){
-  const cur = Math.min(G.idx, G.tirage.length - 1);
-  $("#lots").innerHTML = G.tirage.map((it, i) => {
-    if (i !== cur) return "";
-    const r = G.res[i], etat = i === G.idx && G.phase !== "fin" ? "actif" : (r ? "fait" : "attente");
-    const essai = r ? `<span class="essai${r.ecart===0?" exact":""}">Proposé ${r.essai} € · ${r.ecart===0?"exact !":`écart ${r.ecart} € → −${r.pts} pt${r.pts>1?"s":""}`}</span>` : "";
-    return `<li class="lot is-${etat}"><span class="num">${i+1}</span>
-      <div class="lot-txt"><b>${esc(it.nom)}</b>${it.detail?`<small>${esc(it.detail)}</small>`:""}</div>
-      <div class="lot-prix"><span class="reel" id="reel-${i}">${r ? it.prix + " €" : "? €"}</span>${essai}</div></li>`;
-  }).join("");
+  const cur = Math.min(G.idx, G.tirage.length - 1), it = G.tirage[cur], r = G.res[cur];
+  const pts = G.tirage.map((_, i) => `<i class="${i < cur ? "fait" : i === cur ? "actif" : ""}"></i>`).join("");
+  $("#lots").innerHTML = `<div class="etapes">${pts}<span>Objet ${cur+1} sur ${G.tirage.length}</span></div>
+    <h2>${esc(it.nom)}</h2>${it.detail ? `<p class="detail">${esc(it.detail)}</p>` : ""}
+    <p class="question">Quel est son juste prix ?</p>`;
+  const box = $("#reel-box");
+  box.className = "aff-val" + (r ? "" : " vide");
+  box.innerHTML = `<span class="reel" id="reel-${cur}">${r ? it.prix + " €" : "? €"}</span>`;
+  const e = $("#essai");
+  e.className = "essai" + (r && r.ecart === 0 ? " exact" : "");
+  e.textContent = r ? `Proposé ${r.essai} € · ${r.ecart === 0 ? "exact !" : `écart ${r.ecart} € → −${r.pts} pt${r.pts > 1 ? "s" : ""}`}` : "";
   $("#saisie").textContent = (G.saisie || "---") + " €";
   const bloque = G.phase !== "saisie";
   document.querySelectorAll("#pad .key").forEach(k => k.disabled = bloque);
@@ -320,7 +322,7 @@ async function valider(){
 function suivant(){
   if (G.phase !== "revele") return;
   G.idx++; G.saisie = ""; G.phase = "saisie"; rendre();
-  message(`Objet ${G.idx+1} : ${G.tirage[G.idx].nom}. Quel est son juste prix ?`);
+  message("À vous de jouer : annoncez votre prix !");
 }
 function resultat(gagne, silencieux){
   const nom = G.joueur || $("#joueur").value.trim() || "Le candidat";
@@ -503,7 +505,7 @@ function start(data){
   const d = data && data.G;
   if (d && d.phase && d.phase !== "anim" && typeof d.perdus === "number"){
     G = d; rendre(); placerPerdus(); majJauge();
-    if (G.phase === "fin") resultat(G.gagne, true); else message(G.phase === "revele" ? "Passez à l'objet suivant." : `Objet ${G.idx+1} : quel est son juste prix ?`);
+    if (G.phase === "fin") resultat(G.gagne, true); else message(G.phase === "revele" ? "Passez à l'objet suivant." : "À vous de jouer : annoncez votre prix !");
   } else nouvellePartie();
 }
 start({});

@@ -216,58 +216,63 @@ h1::after{content:"";display:block;width:72px;height:5px;background:var(--coral)
 .sheet-qr .qr-txt{flex:1 1 300px;max-width:420px}
 .sheet-qr .qr-txt ol{font-size:clamp(16px,1.6vw,22px)}
 
-/* Grand écran : scène pleine largeur, pupitre dessous */
-.stage svg{max-height:56vh;margin:0 auto}
-.desk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
-.desk .lots{grid-column:1/-1;flex-direction:row;gap:16px}
-.desk .lot{flex:1 1 0;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;padding:16px 20px;gap:6px 16px;border-radius:14px}
-.desk .num{width:52px;height:52px;font-size:30px;grid-row:1/3;align-self:start}
-.desk .lot-txt b{font-size:clamp(24px,2.4vw,40px)}
-.desk .lot-txt small{font-size:clamp(14px,1.2vw,20px)}
-.desk .lot-prix{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:12px;text-align:left}
-.desk .reel{font-size:clamp(30px,3vw,52px)}
-.desk .essai{font-size:clamp(13px,1.1vw,19px);white-space:normal;text-align:right}
-.desk .prize{justify-content:center;padding:16px 20px}
-.desk .prize strong{font-size:clamp(22px,2vw,34px)}
-.desk .prop{display:flex;flex-direction:column;justify-content:center}
-.desk .led{font-size:clamp(56px,6vw,104px)}
-.desk .led-cap{font-size:clamp(13px,1vw,17px)}
-.suite{display:flex;flex-direction:column;justify-content:center;gap:10px}
-.desk .msg{font-size:clamp(22px,1.9vw,32px)}
-.desk .row .btn{font-size:clamp(16px,1.3vw,22px);padding-block:12px}
-.desk .manuel{grid-column:1/-1;display:grid;grid-template-columns:minmax(260px,420px) 1fr;gap:12px 20px;align-items:start}
-.desk .manuel[hidden]{display:none}
-.desk .manuel .hint{grid-column:2;align-self:start}
-@media (max-width:900px){.desk{grid-template-columns:minmax(0,1fr)}.desk .lots{flex-direction:column}.desk .manuel{grid-template-columns:1fr}.desk .manuel .hint{grid-column:1}}
-.desk .lots{order:1}.desk .prize{order:2}.desk .prop{order:3}.desk .suite{order:4}.desk .manuel{order:5}
-.desk .manuel .pad{grid-row:1/3}
+/* ===== Grand écran : scène pleine largeur + plateau de jeu ===== */
 .stage{background:linear-gradient(180deg,#0a053a,#241470 50%,#5a2480 85%,#7d2f80)}
-.stage svg{max-height:62vh;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.stage svg{display:block;margin:0 auto;width:auto;height:min(52vh,calc((100vw - 120px) * .56));aspect-ratio:1000/560;max-width:100%;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .gauge{background:var(--stage)}
-
-/* Ajustements : tout tenir sur un écran 16:9 */
-.stage svg{width:auto;height:50vh;aspect-ratio:1000/560;max-width:100%;max-height:none}
-.desk .lot{grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto;padding:12px 18px;align-items:center}
-.desk .num{grid-row:auto;align-self:center;width:46px;height:46px;font-size:26px}
-.desk .lot-prix{grid-column:auto;flex-direction:column;align-items:flex-end;gap:0}
-.desk .essai{text-align:right}
-.desk .led{font-size:clamp(50px,5.2vw,92px)}
-.stage svg{height:min(46vh,calc((100vw - 120px) * .56))}
 .pied{display:none}
-@media (max-width:900px){.pied{display:flex}}
+.desk{display:flex;flex-direction:column;gap:14px}
 
-/* Un seul objet à la fois : question, objet, proposition */
-.desk{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
-.desk .suite{order:1;grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;gap:20px}
-.desk .suite .msg{min-height:0;font-size:clamp(26px,2.6vw,46px);font-weight:600}
-.desk .suite .row{flex:none}
-.desk .lots{order:2;grid-column:1;display:block}
-.desk .lot{padding:20px 28px}
-.desk .lot-txt b{font-size:clamp(30px,3.2vw,56px)}
-.desk .lot-txt small{font-size:clamp(16px,1.5vw,26px)}
-.desk .reel{font-size:clamp(44px,4.4vw,80px)}
-.desk .num{width:60px;height:60px;font-size:34px}
-.desk .prop{order:3;grid-column:2}
-.desk .lot.is-attente{opacity:1}
-@media (max-width:900px){.desk{grid-template-columns:minmax(0,1fr)}.desk .lots,.desk .prop{grid-column:1}.desk .suite{flex-direction:column;align-items:flex-start}}
-.stage svg{height:min(55vh,calc((100vw - 120px) * .56))}
+.plateau{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:0;
+  background:linear-gradient(135deg,#2d2088,#1d1366);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.objet{padding:clamp(18px,2vw,34px);display:flex;flex-direction:column;justify-content:center;gap:10px;min-width:0;position:relative}
+.etapes{display:flex;align-items:center;gap:10px;font-family:var(--f-cond);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:clamp(14px,1.2vw,20px);color:var(--coral)}
+.etapes i{width:clamp(14px,1.3vw,22px);height:clamp(14px,1.3vw,22px);border-radius:50%;border:2px solid var(--muted);display:inline-block}
+.etapes i.fait{background:var(--muted);border-color:var(--muted)}
+.etapes i.actif{background:var(--gold);border-color:var(--gold);box-shadow:0 0 14px var(--gold)}
+.etapes span{margin-left:6px}
+.objet h2{margin:0;font-family:var(--f-display);font-weight:800;text-transform:none;line-height:1.02;font-size:clamp(34px,4.2vw,76px);color:#fff;text-wrap:balance}
+.objet .detail{margin:0;font-size:clamp(17px,1.7vw,30px);color:var(--muted)}
+.objet .question{margin:6px 0 0;font-family:var(--f-cond);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:clamp(22px,2.3vw,42px);color:var(--gold)}
+
+.afficheurs{padding:clamp(14px,1.6vw,26px);display:flex;flex-direction:column;gap:clamp(10px,1.2vw,18px);background:rgba(8,4,38,.45);border-left:1px solid var(--line);justify-content:center;min-width:0}
+.aff-cap{margin:0 0 6px;font-family:var(--f-cond);text-transform:uppercase;letter-spacing:.14em;font-size:clamp(13px,1.1vw,19px);color:var(--muted)}
+.aff-val,.led{position:relative;background:#0c0733;border:2px solid var(--line);border-radius:14px;padding:4px 20px;text-align:right;font-family:var(--f-led);line-height:1.12;font-variant-numeric:tabular-nums;color:var(--gold);text-shadow:0 0 18px rgba(240,153,34,.5);font-size:clamp(46px,5.4vw,98px)}
+.aff-val .reel{font-size:inherit}
+.aff-prop .led{border-color:var(--gold);box-shadow:0 0 0 1px rgba(240,153,34,.35),0 0 26px rgba(240,153,34,.18)}
+.aff-reel .aff-val{color:var(--coral);text-shadow:0 0 18px rgba(255,82,82,.45)}
+.aff-reel .aff-val.vide{color:#6a5fb0;text-shadow:none}
+.essai{display:block;min-height:1.4em;margin-top:6px;font-family:var(--f-cond);font-size:clamp(15px,1.4vw,24px);font-weight:600;color:var(--muted);text-align:right}
+.essai.exact{color:var(--green)}
+
+.suite{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:clamp(54px,5vw,80px);padding:0 6px}
+.suite .msg{min-height:0;font-size:clamp(22px,2.2vw,38px);font-weight:600;flex:1}
+.suite .row{flex:none}
+.suite .btn.primary{font-size:clamp(18px,1.7vw,28px);padding:clamp(12px,1.2vw,20px) clamp(24px,2.4vw,44px)}
+
+.desk .manuel{display:grid;grid-template-columns:minmax(260px,420px) 1fr;gap:12px 20px;align-items:start}
+.desk .manuel[hidden]{display:none}
+.desk .manuel .pad{grid-row:1/3}
+.desk .manuel .hint{align-self:start}
+@media (max-width:900px){
+  .pied{display:flex}
+  .plateau{grid-template-columns:minmax(0,1fr)}
+  .afficheurs{border-left:0;border-top:1px solid var(--line)}
+  .suite{flex-direction:column;align-items:flex-start;padding:0}
+  .desk .manuel{grid-template-columns:1fr}
+}
+/* compactage 16:9 */
+.stage svg{height:min(44vh,calc((100vw - 120px) * .56))}
+.aff-val,.led{font-size:clamp(40px,4.2vw,78px);padding:2px 18px}
+.afficheurs{gap:8px;padding:clamp(12px,1.2vw,20px) clamp(14px,1.6vw,26px)}
+.aff-cap{margin-bottom:4px}
+.essai{margin-top:2px;min-height:1.3em}
+.objet{padding:clamp(14px,1.6vw,28px) clamp(18px,2vw,34px);gap:6px}
+.objet h2{font-size:clamp(32px,3.8vw,68px)}
+.objet .question{margin-top:2px;font-size:clamp(20px,2vw,36px)}
+.suite{min-height:clamp(46px,4vw,64px)}
+body{padding-bottom:12px}
+.stage svg{height:min(41vh,calc((100vw - 120px) * .56))}
+.wrap{gap:12px}body{padding-top:8px}.desk{gap:10px}
+.suite .btn.primary{padding:10px 36px}.suite{padding-bottom:6px}
