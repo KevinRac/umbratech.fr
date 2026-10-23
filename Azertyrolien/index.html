@@ -25,6 +25,7 @@
       <div class="field"><label for="joueur">Candidat</label><input id="joueur" placeholder="Pseudo" autocomplete="off"></div>
       <button class="btn" id="b-son" aria-pressed="true">Son activé</button>
       <button class="btn" id="b-manette"><span class="pastille"></span><span id="b-manette-txt">Participer</span></button>
+      <button class="btn" id="b-manuel" aria-pressed="false" aria-controls="manuel">Saisie manuelle</button>
       <button class="btn" id="b-reglages">Réglages</button>
     </div>
   </header>
@@ -50,7 +51,7 @@
     <aside class="desk" aria-label="Pupitre">
       <div class="prize"><span class="eyebrow">À gagner</span><strong id="lot-gagner"></strong></div>
       <ol class="lots" id="lots"></ol>
-      <div>
+      <div class="prop">
         <p class="led-cap">Proposition du candidat</p>
         <div class="led" aria-live="polite"><span id="saisie">--- €</span></div>
       </div>
@@ -64,9 +65,10 @@
       <div class="row"><button class="btn" id="b-nouvelle">Nouveau tirage</button></div>
       <p class="hint">Clavier : chiffres pour saisir, Entrée pour valider, Retour arrière pour corriger.</p>
       </div>
-      <div class="msg" id="msg" aria-live="polite"></div>
-      <div class="row"><button class="btn primary" id="b-suivant" hidden>Objet suivant</button></div>
-      <button class="btn discret" id="b-manuel" aria-pressed="false" aria-controls="manuel">Saisie manuelle</button>
+      <div class="suite">
+        <div class="msg" id="msg" aria-live="polite"></div>
+        <div class="row"><button class="btn primary" id="b-suivant" hidden>Objet suivant</button></div>
+      </div>
     </aside>
   </main>
   <footer class="pied"><span>Azerty Party 2026</span><span>Hippodrome de Pau</span><span>24 &amp; 25 octobre</span><span>azertyparty.fr</span></footer>
