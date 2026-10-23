@@ -13,7 +13,7 @@
 </head>
 <body>
 <main class="man" id="manette">
-  <div class="man-top"><img class="logo-club" src="assets/logo-azertyclub.png" alt="Logo de l'Azerty Club"><div><div class="eyebrow" style="color:var(--coral)">Manette candidat</div><h1>Azertyrolien</h1></div></div>
+  <div class="man-top"><img class="logo-club" src="assets/logo-azertyclub.png" alt="Logo de l'Azerty Club"><div><div class="eyebrow" style="color:var(--coral)">Manette joueur</div><h1>Azertyrolien</h1></div></div>
   <div class="man-salle" id="m-salle-zone" hidden><input id="m-salle" placeholder="code de la salle" autocomplete="off" maxlength="12" aria-label="Code de la salle"><button class="btn primary" id="m-salle-ok">Rejoindre</button></div>
   <div class="man-pseudo" id="m-pseudo-zone">
     <p>Choisis ton pseudo pour participer</p>
@@ -21,9 +21,11 @@
     <button class="btn primary" id="m-nom-ok">C'est parti !</button>
   </div>
   <div class="man-moi" id="m-moi" hidden><div style="flex:1;min-width:0"><small>Tu joues avec</small><b id="m-moi-nom"></b></div><button class="btn" id="m-modifier">Modifier</button></div>
+  <div class="man-statut" id="m-statut" aria-live="polite">Connexion…</div>
   <div class="man-jeu" id="m-jeu" hidden>
+  <div class="man-chrono" id="m-chrono" hidden><span id="m-chrono-txt">1:00</span><div class="bar"><i id="m-chrono-bar"></i></div></div>
   <div class="man-objet"><span class="eyebrow" id="m-num">En attente</span><b id="m-objet">Le grand écran n'est pas encore détecté</b><small id="m-detail"></small></div>
-  <div class="man-pts"><span>Points restants</span><span><b id="m-pts">–</b> / <span id="m-max">–</span></span></div>
+  <div class="man-pts"><span>Tes points</span><span><b id="m-pts">–</b> / <span id="m-max">–</span></span></div>
   <div class="led" aria-live="polite"><span id="m-saisie">--- €</span></div>
   <div class="pad" id="m-pad">
     <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
@@ -32,8 +34,6 @@
     <button class="key del" data-k="del" aria-label="Effacer">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">OK</button>
   </div>
   </div>
-  <div class="man-statut" id="m-statut" aria-live="polite">Connexion…</div>
-  <button class="btn primary" id="m-suivant" hidden>Objet suivant</button>
 </main>
 <script src="js/liaison.js"></script>
 <script src="js/manette.js"></script>

@@ -16,7 +16,7 @@ const EXEMPLES = [
   {nom:"Kit mémoire DDR5", detail:"2 × 8 Go", prix:89},
   {nom:"Hub USB-C", detail:"7 ports", prix:29}
 ];
-const DEF = {points:200, coef:1, lot:"Des points pour le classement général du tournoi", items:EXEMPLES};
+const DEF = {points:200, coef:1, temps:60, lot:"Des points pour le classement général du tournoi", items:EXEMPLES};
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -24,14 +24,15 @@ const pause = ms => new Promise(r => setTimeout(r, reduce ? Math.min(ms, 150) : 
 
 function charger(){
   try { const s = JSON.parse(localStorage.getItem("azertyrolien-cfg") || "null");
-    if (s && Array.isArray(s.items)) return Object.assign(clone(DEF), {points:s.points, coef:s.coef, lot:/goodies/i.test(s.lot||"") ? DEF.lot : s.lot, items:s.items}); } catch(e){}
+    if (s && Array.isArray(s.items)) return Object.assign(clone(DEF), {points:s.points, coef:s.coef, temps:s.temps || DEF.temps, lot:/goodies/i.test(s.lot||"") ? DEF.lot : s.lot, items:s.items}); } catch(e){}
   return clone(DEF);
 }
 function sauver(){ try { localStorage.setItem("azertyrolien-cfg", JSON.stringify(cfg)); return true; } catch(e){ return false; } }
 let cfg = charger();
 if (!(cfg.points > 0)) cfg.points = 200;
 if (!(cfg.coef > 0)) cfg.coef = 1;
-let G = null, grimpeur, corps;
+if (!(cfg.temps >= 10)) cfg.temps = 60;
+let G = null;
 
 /* ---------- Son ---------- */
 let ac = null, son = true;
@@ -60,7 +61,6 @@ const BRAS = `<path class="PEAU" d="M-5 -6 C-3 8,3 16,12 20 C17 22,20 18,16 15 C
 function souris(){
   const piv = (cls, x, y, src) => `<g transform="translate(${x} ${y})"><g class="${cls}">${src}</g></g>`;
   return `<g transform="scale(.6)">
-    <defs><filter id="m-doux" filterUnits="userSpaceOnUse" x="-110" y="-200" width="190" height="230"><feGaussianBlur stdDeviation=".9" result="f"/><feDropShadow in="f" dx="0" dy="0" stdDeviation="3.2" flood-color="#ff7aa0" flood-opacity=".5"/></filter></defs>
     <g filter="url(#m-doux)"><g class="m-anim">
     ${piv("m-queue", -30, -8, `<path d="M0 0 C-16 7,-36 9,-50 3 C-60 -1,-64 -12,-57 -19" fill="none" stroke="var(--m-edge)" stroke-width="6" stroke-linecap="round"/>
       <path d="M0 0 C-16 7,-36 9,-50 3 C-60 -1,-64 -12,-57 -19" fill="none" stroke="var(--m-fill)" stroke-width="3.6" stroke-linecap="round"/>`)}
@@ -125,6 +125,7 @@ function dessiner(){
     <radialGradient id="lune" cx=".5" cy=".5" r=".5"><stop offset=".55" stop-color="#f4efff" stop-opacity=".35"/><stop offset="1" stop-color="#f4efff" stop-opacity="0"/></radialGradient>
     <linearGradient id="roche" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b5cc8"/><stop offset=".55" stop-color="#43379d"/><stop offset="1" stop-color="#271d78"/></linearGradient>
     <radialGradient id="vide" cx="1" cy="1" r=".6"><stop offset="0" stop-color="#020118" stop-opacity=".85"/><stop offset="1" stop-color="#020118" stop-opacity="0"/></radialGradient>
+    <filter id="m-doux" filterUnits="userSpaceOnUse" x="-110" y="-200" width="190" height="230"><feGaussianBlur stdDeviation=".9" result="f"/><feDropShadow in="f" dx="0" dy="0" stdDeviation="3.2" flood-color="#ff7aa0" flood-opacity=".5"/></filter>
     <clipPath id="mclip"><path d="${mont}"/></clipPath>
   </defs>
   <rect width="${W}" height="${H}" fill="url(#ciel)"/><rect width="${W}" height="${H}" fill="url(#halo)"/>`;
@@ -163,36 +164,9 @@ function dessiner(){
         <text x="0" y="-62" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="16" fill="#3a1f10" letter-spacing="1">DÉPART</text>
         <text x="0" y="-50" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="12" fill="#3a1f10">${cfg.points} PTS</text></g>`;
   s += drapeau(X1 + 34, ground(X1 + 34));
-  s += `<g id="etiquette" opacity="0"><g id="et-in"><path id="et-fond"/><text id="et-txt" x="0" y="-130" text-anchor="middle" dominant-baseline="central" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="19" letter-spacing=".4"></text></g></g>`;
-  s += `<g id="grimpeur"><g transform="translate(-6 0)"><ellipse cx="4" cy="1" rx="26" ry="4" fill="#000" opacity=".28"/><g id="corps">${souris()}</g></g></g>`;
+  s += `<g id="souris-zone"></g>`;
   $("#mont").innerHTML = s;
-  grimpeur = $("#grimpeur"); corps = $("#corps"); etiquette = $("#etiquette");
-  majJoueur();
-}
-// pseudo du candidat au-dessus de la souris, et sa couleur (étiquette + écharpe)
-let etiquette = null, nomAffiche = null;
-function majJoueur(){
-  if (!etiquette) return;
-  const nom = (G && G.joueur || "").trim();
-  const mont = $("#mont");
-  mont.classList.toggle("a-joueur", !!nom);
-  if (!nom){ etiquette.style.display = "none"; nomAffiche = ""; return; }
-  const c = Liaison.couleur(nom), ink = Liaison.encre(c);
-  mont.style.setProperty("--joueur", c);
-  etiquette.style.display = "";
-  const txt = $("#et-txt");
-  txt.textContent = nom.length > 16 ? nom.slice(0, 15) + "…" : nom;
-  txt.setAttribute("fill", ink);
-  let w = 0;
-  try { w = txt.getComputedTextLength(); } catch(e){}
-  if (!w) w = txt.textContent.length * 9;
-  const L = w / 2 + 12, T = -144, B = -116;
-  $("#et-fond").setAttribute("d", `M${-L} ${T + 8} Q${-L} ${T} ${-L + 8} ${T} L${L - 8} ${T} Q${L} ${T} ${L} ${T + 8} L${L} ${B - 8} Q${L} ${B} ${L - 8} ${B} L7 ${B} L0 ${B + 8} L-7 ${B} L${-L + 8} ${B} Q${-L} ${B} ${-L} ${B - 8} Z`);
-  $("#et-fond").setAttribute("fill", c);
-  if (nom !== nomAffiche && nomAffiche !== null){
-    const g = $("#et-in"); g.classList.remove("pop"); void g.getBBox(); g.classList.add("pop");
-  }
-  nomAffiche = nom;
+  construireSouris(true);
 }
 // drapeau Azerty qui flotte au vent : la toile ondule (images clés SVG), le texte suit la vague
 function drapeau(fx, fy){
@@ -217,25 +191,88 @@ function drapeau(fx, fy){
       <text x="${fx + FW / 2}" y="${haut + FH / 2}" text-anchor="middle" dominant-baseline="central" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="14" letter-spacing=".5" fill="#fff">AZERTY</text>
     </g>`;
 }
-function placer(x, y, rot=0, op=1, ang=0){
-  grimpeur.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
-  corps.setAttribute("transform", `rotate(${rot.toFixed(1)} 0 -40)`);
-  grimpeur.setAttribute("opacity", op);
-  if (etiquette){ etiquette.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`); etiquette.setAttribute("opacity", op < 1 ? 0 : 1); }
-}
+/* ---------- Les souris des joueurs ---------- */
+// une souris par joueur inscrit, avec son pseudo au-dessus et une écharpe à sa couleur
+const SOURIS = new Map();               // pid -> {g, gr, corps, et, k}
+const enScene = () => (G && G.joueurs.length) ? G.joueurs : [{pid: "_", nom: "", perdus: 0, tombe: false}];
+const echelle = n => n > 12 ? .66 : n > 6 ? .8 : 1;
+const nomCourt = n => n.length > 16 ? n.slice(0, 15) + "…" : n;
 const marcheDe = perdus => Math.min(N, perdus / cfg.points * N);
-function placerPerdus(){
-  if (G.tombe){ placer(EDGE+60, H+160, 180, 0); return; }
-  const p = stepPt(marcheDe(G.perdus)); placer(p.x, p.y, 0, 1, p.a * .8);
+// léger décalage pour que les souris d'un même palier ne se cachent pas toutes
+const decal = k => (k % 5) * .4;
+function construireSouris(force){
+  const zone = $("#souris-zone"); if (!zone) return;
+  const js = enScene(), sc = echelle(js.length);
+  const cle = js.map(j => j.pid + ":" + j.nom).join("|") + "@" + sc;
+  if (!force && zone.dataset.cle === cle){ placerTous(); return; }
+  const avant = new Set(SOURIS.keys());
+  zone.dataset.cle = cle;
+  zone.innerHTML = js.map(j => {
+    const c = j.nom ? Liaison.couleur(j.nom) : "";
+    return `<g class="joueur${j.nom ? " a-nom" : ""}" data-pid="${esc(j.pid)}"${c ? ` style="--joueur:${c}"` : ""}>
+      <g class="grimpeur"><g transform="scale(${sc}) translate(-6 0)"><ellipse cx="4" cy="1" rx="26" ry="4" fill="#000" opacity=".28"/><g class="corps">${souris()}</g></g></g>
+      ${j.nom ? `<g class="etiquette"><g class="et-in"><line class="et-tige"/><path class="et-fond" fill="${c}"/><text class="et-txt" x="0" text-anchor="middle" dominant-baseline="central" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="${(19 * Math.max(sc, .8)).toFixed(1)}" fill="${Liaison.encre(c)}">${esc(nomCourt(j.nom))}</text></g></g>` : ""}
+    </g>`;
+  }).join("");
+  SOURIS.clear();
+  zone.querySelectorAll(".joueur").forEach((g, k) => {
+    const o = {g, gr: g.querySelector(".grimpeur"), corps: g.querySelector(".corps"), et: g.querySelector(".etiquette"), k};
+    SOURIS.set(g.dataset.pid, o);
+    if (!o.et) return;
+    o.sc = sc; o.fs = 19 * Math.max(sc, .8); o.niv = -1;
+    const txt = o.et.querySelector(".et-txt");
+    let w = 0; try { w = txt.getComputedTextLength(); } catch(e){}
+    o.w = (w || txt.textContent.length * o.fs * .48) + o.fs * 1.2;
+    niveau(o, 0);
+    if (!avant.has(g.dataset.pid) && avant.size){ const e = o.et.querySelector(".et-in"); e.classList.add("pop"); }
+  });
+  placerTous();
 }
+// hauteur de l'étiquette : un cran plus haut quand elle chevaucherait celle d'une voisine
+function niveau(o, niv){
+  if (!o.et || o.niv === niv) return;
+  o.niv = niv;
+  const sc = o.sc, fs = o.fs, tete = -112 * sc, B = tete - 4 - niv * fs * 1.55, T = B - fs * 1.45, L = o.w / 2, r = 7;
+  o.et.querySelector(".et-txt").setAttribute("y", ((T + B) / 2).toFixed(1));
+  o.et.querySelector(".et-fond").setAttribute("d", `M${-L} ${T + r} Q${-L} ${T} ${-L + r} ${T} L${L - r} ${T} Q${L} ${T} ${L} ${T + r} L${L} ${B - r} Q${L} ${B} ${L - r} ${B} L6 ${B} L0 ${B + 7} L-6 ${B} L${-L + r} ${B} Q${-L} ${B} ${-L} ${B - r} Z`);
+  const tige = o.et.querySelector(".et-tige");
+  tige.setAttribute("x1", 0); tige.setAttribute("x2", 0); tige.setAttribute("y1", B + 6); tige.setAttribute("y2", tete);
+  tige.style.display = niv ? "" : "none";
+}
+function etager(){
+  const vis = [...SOURIS.values()].filter(o => o.et && o.x !== undefined && !o.cache).sort((a, b) => a.x - b.x);
+  const pris = [];   // par niveau : bords droits déjà occupés
+  vis.forEach(o => {
+    let n = 0;
+    while ((pris[n] ?? -1e9) > o.x - o.w / 2 - 4) n++;
+    pris[n] = o.x + o.w / 2;
+    niveau(o, Math.min(n, 4));
+  });
+}
+function placer(o, x, y, rot=0, op=1, ang=0){
+  if (!o) return;
+  o.gr.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+  o.corps.setAttribute("transform", `rotate(${rot.toFixed(1)} 0 -40)`);
+  o.gr.setAttribute("opacity", op);
+  if (o.et){ o.et.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`); o.et.setAttribute("opacity", op < 1 ? 0 : 1); }
+  o.x = x; o.cache = op < 1;
+}
+const pos = (perdus, k) => stepPt(Math.min(N, marcheDe(perdus) + decal(k)));
+function placerTous(){
+  enScene().forEach(j => {
+    const o = SOURIS.get(j.pid); if (!o) return;
+    if (j.tombe){ placer(o, EDGE + 60, H + 160, 180, 0); return; }
+    const p = pos(j.perdus, o.k); placer(o, p.x, p.y, 0, 1, p.a * .8);
+  });
+  etager();
+}
+const enLice = () => G.joueurs.filter(j => !j.tombe);
 function majJauge(){
-  const reste = Math.max(0, cfg.points - G.perdus), f = marcheDe(G.perdus);
-  $("#g-pts").textContent = reste;
-  $("#g-max").textContent = cfg.points;
+  const vivants = enLice(), tete = vivants.slice().sort((a, b) => a.perdus - b.perdus)[0];
+  $("#g-pts").textContent = vivants.length;
+  $("#g-max").textContent = G.joueurs.length;
+  $("#g-tete").innerHTML = tete && G.phase !== "attente" ? `En tête : <b style="color:${Liaison.couleur(tete.nom)}">${esc(tete.nom)}</b> · ${cfg.points - tete.perdus} pts` : "";
   $("#g-pas").textContent = cfg.coef === 1 ? "1 € d'écart = 1 point perdu" : `1 € d'écart = ${cfg.coef} points perdus`;
-  const bar = $("#g-bar"); bar.querySelector("i").style.width = (reste / cfg.points * 100) + "%";
-  bar.classList.toggle("danger", reste <= cfg.points * .2);
-  document.querySelectorAll("#mont .cap").forEach(c => c.classList.toggle("lit", +c.dataset.i < Math.floor(f + 1e-9)));
 }
 // image suivante : requestAnimationFrame, avec un minuteur de secours si le navigateur
 // suspend les animations (onglet réduit, écran en veille) pour que la partie ne se bloque jamais
@@ -249,124 +286,188 @@ function tween(ms, fn){
   return new Promise(res => { const t0 = performance.now();
     (function f(now){ const t = Math.min(1, (now - t0) / ms); fn(t); t < 1 ? imageSuivante(f) : res(); })(t0); });
 }
-// la souris avance d'autant de points perdus ; à 0 point restant, elle chute
-async function avancer(pts){
-  const de = G.perdus, vers = Math.min(de + pts, cfg.points), tombe = de + pts >= cfg.points;
-  const fa = marcheDe(de), fb = marcheDe(vers);
-  let cap = Math.floor(fa + 1e-9);
-  if (fb > fa){
-    grimpeur.classList.add("marche");
-    await tween(Math.min(4200, Math.max(700, (fb - fa) * 340)), t => {
-      const f = fa + (fb - fa) * t, p = stepPt(f);
-      placer(p.x, p.y, 0, 1, p.a * .8);
-      G.perdus = Math.round(de + (vers - de) * t);
-      if (Math.floor(f + 1e-9) > cap){ cap = Math.floor(f + 1e-9); tic(cap); }
-      majJauge();
+// toutes les souris avancent ensemble, chacune des points qu'elle a perdus ; à 0 point, elle chute
+async function animerTour(par){
+  const mv = enLice().map(j => {
+    const o = SOURIS.get(j.pid), pts = par[j.pid] ? par[j.pid].pts : 0;
+    const vers = Math.min(j.perdus + pts, cfg.points);
+    return {j, o, vers, tombe: j.perdus + pts >= cfg.points,
+      fa: Math.min(N, marcheDe(j.perdus) + decal(o.k)), fb: Math.min(N, marcheDe(vers) + decal(o.k))};
+  });
+  const dmax = Math.max(0, ...mv.map(m => m.fb - m.fa));
+  if (dmax > 0){
+    const bougent = mv.filter(m => m.fb > m.fa);
+    bougent.forEach(m => m.o.gr.classList.add("marche"));
+    let cap = Math.floor(Math.max(...bougent.map(m => m.fa)) + 1e-9);
+    await tween(Math.min(4200, Math.max(800, dmax * 340)), t => {
+      let tete = 0;
+      bougent.forEach(m => { const f = m.fa + (m.fb - m.fa) * t, p = stepPt(f); placer(m.o, p.x, p.y, 0, 1, p.a * .8); tete = Math.max(tete, f); });
+      if (Math.floor(tete + 1e-9) > cap){ cap = Math.floor(tete + 1e-9); tic(cap); }
+      etager();
     });
-    grimpeur.classList.remove("marche");
+    bougent.forEach(m => m.o.gr.classList.remove("marche"));
   }
-  G.perdus = vers; majJauge();
-  if (tombe){ await chute(); return true; }
-  return false;
+  mv.forEach(m => m.j.perdus = m.vers);
+  etager();
+  const chutent = mv.filter(m => m.tombe);
+  if (chutent.length){ glissade(900, 70, 1.3); await Promise.all(chutent.map(m => chute(m.o))); chutent.forEach(m => m.j.tombe = true); }
+  majJauge();
 }
-async function chute(){
+async function chute(o){
   const a = stepPt(N);
-  grimpeur.classList.add("marche");
-  await tween(420, t => placer(a.x + (EDGE + 16 - a.x)*t, a.y, 0, 1, a.a * .8 * (1 - t)));
-  grimpeur.classList.remove("marche");
-  await pause(380);
-  grimpeur.classList.add("chute");
-  glissade(900, 70, 1.3);
-  await tween(1300, t => placer(EDGE + 16 + 70*t, a.y - Math.sin(Math.min(t*3,1)*Math.PI)*18 + (H + 180 - a.y)*t*t, 200*t, 1 - t*.5));
-  grimpeur.classList.remove("chute");
-  G.tombe = true; majJauge();
+  o.gr.classList.add("marche");
+  await tween(420, t => placer(o, a.x + (EDGE + 16 - a.x)*t, a.y, 0, 1, a.a * .8 * (1 - t)));
+  o.gr.classList.remove("marche");
+  await pause(300);
+  o.gr.classList.add("chute");
+  const dx = 50 + Math.random() * 50;
+  await tween(1300, t => placer(o, EDGE + 16 + dx*t, a.y - Math.sin(Math.min(t*3,1)*Math.PI)*18 + (H + 180 - a.y)*t*t, 200*t, 1 - t*.5));
+  o.gr.classList.remove("chute");
 }
 
-/* ---------- Partie ---------- */
+/* ---------- Partie à plusieurs ---------- */
+// attente (salle d'attente) → saisie (chrono, chacun propose un prix) → anim → revele → … → fin (classement)
 const nouvelId = () => Math.random().toString(36).slice(2, 10);
-function nouvellePartie(){
-  cacherResultat();
+let chrono = null, selPid = null, saisieMan = "";
+function nouvelleSalle(garder){
+  cacherResultat(); clearInterval(chrono);
+  const joueurs = garder && G ? G.joueurs.map(j => ({pid: j.pid, nom: j.nom, perdus: 0, tombe: false})) : [];
+  G = {id: nouvelId(), phase: "attente", tirage: [], idx: 0, joueurs, res: [], rep: {}, fin: 0, exclus: garder && G ? G.exclus || [] : []};
+  selPid = null; saisieMan = "";
+  construireSouris(); rendre();
+  message(joueurs.length ? "Les joueurs sont prêts : lancez la partie quand vous voulez." : "Scannez le QR code pour rejoindre la partie !");
+}
+function inscrire(pid, nom, explicite){
+  if (G.phase !== "attente") return;
+  if (G.exclus.includes(pid)){ if (!explicite) return; G.exclus = G.exclus.filter(p => p !== pid); }
+  const j = G.joueurs.find(j => j.pid === pid);
+  if (j){ if (j.nom === nom) return; j.nom = nom; }
+  else { if (G.joueurs.length >= 40) return; G.joueurs.push({pid, nom, perdus: 0, tombe: false}); bip(880, .08, "triangle", .1); bip(1175, .12, "triangle", .1, .08); }
+  construireSouris(); rendre();
+  message(`${nom} rejoint la partie !`, "bon");
+}
+function retirer(pid){
+  if (G.phase !== "attente") return;
+  G.joueurs = G.joueurs.filter(j => j.pid !== pid);
+  if (!pid.startsWith("m-")) G.exclus.push(pid);
+  construireSouris(); rendre();
+}
+function lancer(){
+  if (G.phase !== "attente") return;
+  if (!G.joueurs.length){ message("Aucun joueur inscrit pour l'instant.", "mal"); return; }
   const pool = cfg.items.filter(i => String(i.nom||"").trim() && +i.prix > 0);
-  const joueur = $("#joueur").value.trim();
-  if (pool.length < 3){
-    G = {id:nouvelId(), tirage:[], idx:0, perdus:0, tombe:false, saisie:"", phase:"vide", res:[], joueur};
-    rendre(); placerPerdus(); majJauge();
-    message("Ajoutez au moins 3 objets avec un prix dans les réglages.", "mal"); return;
-  }
+  if (pool.length < 3){ message("Ajoutez au moins 3 objets avec un prix dans les réglages.", "mal"); return; }
   const t = pool.slice();
   for (let i=t.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [t[i], t[j]] = [t[j], t[i]]; }
-  G = {id:nouvelId(), tirage: t.slice(0,3).map(o => ({nom:o.nom, detail:o.detail||"", prix:Math.round(+o.prix)})), idx:0, perdus:0, tombe:false, saisie:"", phase:"saisie", res:[], joueur};
-  rendre(); placerPerdus(); majJauge();
-  message("À vous de jouer : annoncez votre prix !");
+  G.tirage = t.slice(0,3).map(o => ({nom:o.nom, detail:o.detail||"", prix:Math.round(+o.prix)}));
+  G.idx = 0; G.res = [];
+  G.joueurs.forEach(j => { j.perdus = 0; j.tombe = false; });
+  $("#sheet-man").hidden = true;
+  fanfareCourte();
+  ouvrirSaisie();
 }
-function message(t, ton=""){ const m = $("#msg"); m.textContent = t; m.className = "msg " + ton; diffuser(); }
-function rendre(){
-  majJoueur();
-  const cur = Math.min(G.idx, G.tirage.length - 1), it = G.tirage[cur], r = G.res[cur];
-  const pts = G.tirage.map((_, i) => `<i class="${i < cur ? "fait" : i === cur ? "actif" : ""}"></i>`).join("");
-  $("#lots").innerHTML = `<div class="etapes">${pts}<span>Objet ${cur+1} sur ${G.tirage.length}</span></div>
-    <h2>${esc(it.nom)}</h2>${it.detail ? `<p class="detail">${esc(it.detail)}</p>` : ""}
-    <p class="question">Quel est son juste prix ?</p>`;
-  const box = $("#reel-box");
-  box.className = "aff-val" + (r ? "" : " vide");
-  box.innerHTML = `<span class="reel" id="reel-${cur}">${r ? it.prix + " €" : "? €"}</span>`;
-  const e = $("#essai");
-  e.className = "essai" + (r && r.ecart === 0 ? " exact" : "");
-  e.textContent = r ? `Proposé ${r.essai} € · ${r.ecart === 0 ? "exact !" : `écart ${r.ecart} € → −${r.pts} pt${r.pts > 1 ? "s" : ""}`}` : "";
-  $("#saisie").textContent = (G.saisie || "---") + " €";
-  const bloque = G.phase !== "saisie";
-  document.querySelectorAll("#pad .key").forEach(k => k.disabled = bloque);
-  $("#b-suivant").hidden = G.phase !== "revele";
-  diffuser();
+function fanfareCourte(){ [523, 659, 784].forEach((f, i) => bip(f, .16, "triangle", .11, i * .11)); }
+function ouvrirSaisie(){
+  G.phase = "saisie"; G.rep = {}; G.fin = Date.now() + cfg.temps * 1000;
+  selPid = null; saisieMan = "";
+  rendre(); placerTous();
+  message(`À vos téléphones : ${cfg.temps} secondes pour donner votre prix !`);
+  bip(660, .12); bip(880, .14, "square", .07, .15);
+  minuteur();
 }
-function taper(k){
-  if (G.phase !== "saisie") return;
-  if (k === "del"){ G.saisie = G.saisie.slice(0, -1); bip(220, .05); }
-  else if (k === "ok"){ valider(); return; }
-  else if (G.saisie.length < 4){ G.saisie = (G.saisie + k).replace(/^0+(?=\d)/, ""); bip(700 + (+k)*30, .05); }
+let dernierBip = 0;
+function minuteur(){
+  clearInterval(chrono);
+  chrono = setInterval(() => {
+    if (G.phase !== "saisie"){ clearInterval(chrono); return; }
+    const reste = Math.max(0, G.fin - Date.now()), s = Math.ceil(reste / 1000);
+    majChrono();
+    if (s <= 5 && s > 0 && s !== dernierBip){ dernierBip = s; bip(s === 1 ? 990 : 740, .08, "square", .06); }
+    if (reste <= 0) reveler();
+  }, 200);
+}
+function majChrono(){
+  const reste = Math.max(0, G.fin - Date.now()), s = Math.ceil(reste / 1000);
+  $("#chrono-txt").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  $("#chrono").classList.toggle("urgent", s <= 10);
+  $("#chrono-bar").querySelector("i").style.width = Math.min(100, reste / (cfg.temps * 1000) * 100) + "%";
+  $("#chrono-bar").classList.toggle("danger", s <= 10);
+}
+function enregistrerPrix(pid, prix){
+  if (G.phase !== "saisie" || Date.now() > G.fin + 500) return false;
+  const j = G.joueurs.find(j => j.pid === pid);
+  if (!j || j.tombe || !Number.isFinite(prix) || prix < 0 || prix > 9999) return false;
+  const neuf = !(pid in G.rep);
+  G.rep[pid] = prix;
+  if (neuf) bip(1320, .06, "triangle", .08);
+  // tout le monde a répondu : il ne reste que 5 secondes pour changer d'avis
+  if (enLice().every(j => j.pid in G.rep)) G.fin = Math.min(G.fin, Date.now() + 5000);
   rendre();
+  return true;
 }
-async function compter(i, prix){
-  const el = $("#reel-" + i);
+async function compter(prix){
+  const el = $("#reel");
   let last = -1;
   await tween(1100, t => { const e = 1 - Math.pow(1 - t, 3), v = Math.round(prix * e);
     if (v !== last){ el.textContent = v + " €"; last = v; } });
   el.textContent = prix + " €";
 }
-async function valider(){
-  if (G.phase !== "saisie" || !G.saisie) { if (G.phase === "saisie") message("Tapez un prix avant de valider.", "mal"); return; }
-  const it = G.tirage[G.idx], essai = +G.saisie;
+async function reveler(){
+  if (G.phase !== "saisie") return;
+  clearInterval(chrono);
+  const it = G.tirage[G.idx];
   G.phase = "anim"; rendre();
-  message(`Le candidat annonce ${essai} €. Le juste prix est…`);
+  message("Temps écoulé ! Le juste prix est…");
   bip(660, .12); bip(880, .14, "square", .07, .15);
-  await pause(500);
-  await compter(G.idx, it.prix);
-  const ecart = Math.abs(essai - it.prix), pts = ecart * cfg.coef;
-  G.res[G.idx] = {essai, ecart, pts}; rendre();
-  if (ecart === 0){ message("Prix exact ! Aucun point perdu, la souris reste où elle est.", "bon"); bip(1047, .3, "triangle", .12); }
-  else message(`${it.prix} € ! Écart de ${ecart} € : le candidat perd ${pts} point${pts>1?"s":""}.`);
-  await pause(900);
-  const tombe = await avancer(pts);
-  if (tombe){ G.phase = "fin"; G.gagne = false; rendre(); resultat(false); return; }
-  const reste = cfg.points - G.perdus;
-  if (G.idx >= G.tirage.length - 1){ G.phase = "fin"; G.gagne = true; rendre(); resultat(true); return; }
+  await pause(700);
+  $("#reel-box").classList.remove("vide");
+  await compter(it.prix);
+  const par = {};
+  enLice().forEach(j => {
+    const essai = j.pid in G.rep ? G.rep[j.pid] : null;
+    const ecart = essai === null ? it.prix : Math.abs(essai - it.prix);   // sans réponse : comme s'il avait dit 0 €
+    par[j.pid] = {essai, ecart, pts: ecart * cfg.coef};
+  });
+  G.res[G.idx] = {prix: it.prix, par};
+  rendre();
+  const tri = Object.entries(par).sort((a, b) => a[1].ecart - b[1].ecart);
+  const exacts = tri.filter(([, r]) => r.ecart === 0).map(([p]) => nomDe(p));
+  if (exacts.length){ message(`${it.prix} € ! Prix exact pour ${exacts.join(", ")} !`, "bon"); bip(1047, .3, "triangle", .12); }
+  else if (tri.length) message(`${it.prix} € ! Le plus proche : ${nomDe(tri[0][0])} (${tri[0][1].ecart} € d'écart).`);
+  await pause(1200);
+  await animerTour(par);
+  rendre();
+  const vivants = enLice().length;
+  if (!vivants || G.idx >= G.tirage.length - 1){ G.phase = "fin"; rendre(); resultat(); return; }
   G.phase = "revele"; rendre();
-  message(`Il reste ${reste} point${reste>1?"s":""} avant la chute.`, reste <= cfg.points * .2 ? "mal" : "");
+  const tombes = Object.keys(par).filter(p => G.joueurs.find(j => j.pid === p).tombe).map(nomDe);
+  message(tombes.length ? `${tombes.join(", ")} ${tombes.length > 1 ? "tombent" : "tombe"} de la falaise ! ${vivants} joueur${vivants > 1 ? "s" : ""} encore en lice.` : `${vivants} joueur${vivants > 1 ? "s" : ""} encore en lice.`, tombes.length ? "mal" : "");
 }
+const nomDe = pid => { const j = G.joueurs.find(j => j.pid === pid); return j ? j.nom : "?"; };
 function suivant(){
   if (G.phase !== "revele") return;
-  G.idx++; G.saisie = ""; G.phase = "saisie"; rendre();
-  message("À vous de jouer : annoncez votre prix !");
+  G.idx++; ouvrirSaisie();
 }
-function resultat(gagne, silencieux){
-  const nom = G.joueur || $("#joueur").value.trim() || "Le candidat";
-  const box = $("#result"); box.hidden = false; box.className = "result " + (gagne ? "win" : "lose");
-  $("#r-titre").textContent = gagne ? "Au sommet !" : "La chute !";
-  $("#r-texte").textContent = gagne
-    ? `${nom} termine avec ${cfg.points - G.perdus} points sur ${cfg.points} et les ajoute au classement général du tournoi.`
-    : `${nom} n'a plus aucun point. La souris Azerty tombe de la falaise.`;
-  message(gagne ? "Gagné ! Bravo au candidat." : "Perdu… mais on applaudit quand même.", gagne ? "bon" : "mal");
-  if (!silencieux){ if (gagne){ fanfare(); confettis(); } else { bip(196, .4, "sawtooth", .08, .1); bip(147, .7, "sawtooth", .08, .5); } }
+function classement(){
+  return G.joueurs.map(j => ({...j, reste: j.tombe ? 0 : cfg.points - j.perdus}))
+    .sort((a, b) => b.reste - a.reste || a.nom.localeCompare(b.nom));
+}
+function resultat(silencieux){
+  const box = $("#result"); box.hidden = false;
+  const cl = classement();
+  let rang = 0, prec = null;
+  $("#r-titre").textContent = cl.some(j => j.reste > 0) ? "Classement" : "Tout le monde est tombé !";
+  $("#r-sur").textContent = "Azertyrolien · " + (cfg.lot || "fin de la partie");
+  $("#r-classement").classList.toggle("deux-col", cl.length > 8);
+  $("#r-classement").innerHTML = cl.map((j, i) => {
+    if (j.reste !== prec){ rang = i + 1; prec = j.reste; }
+    const c = Liaison.couleur(j.nom);
+    return `<li class="${rang <= 3 && j.reste > 0 ? "podium p" + rang : ""}${j.reste ? "" : " zero"}" style="--joueur:${c}">
+      <span class="rang">${rang}</span><span class="pt" style="background:${c}"></span><b>${esc(j.nom)}</b>
+      <span class="score">${j.reste ? j.reste + " pts" : "tombé"}</span></li>`;
+  }).join("");
+  message("Partie terminée ! Bravo à tous.", "bon");
+  if (!silencieux){ if (cl.some(j => j.reste > 0)){ fanfare(); confettis(); } else { bip(196, .4, "sawtooth", .08, .1); bip(147, .7, "sawtooth", .08, .5); } }
 }
 function cacherResultat(){ $("#result").hidden = true; }
 function confettis(){
@@ -374,21 +475,137 @@ function confettis(){
   const c = $("#confettis"), ctx = c.getContext("2d"), r = c.getBoundingClientRect(), dpr = devicePixelRatio || 1;
   c.width = r.width * dpr; c.height = r.height * dpr; ctx.scale(dpr, dpr);
   const cols = ["#f09922", "#ff5252", "#ffffff", "#b2b2c5"];
-  const ps = Array.from({length:140}, () => ({x: r.width/2 + (Math.random()-.5)*80, y: r.height*.35, vx:(Math.random()-.5)*9, vy:-Math.random()*9-3, s:Math.random()*6+4, c:cols[Math.random()*4|0], a:Math.random()*6}));
+  const ps = Array.from({length:180}, () => ({x: r.width/2 + (Math.random()-.5)*160, y: r.height*.3, vx:(Math.random()-.5)*12, vy:-Math.random()*11-3, s:Math.random()*7+4, c:cols[Math.random()*4|0], a:Math.random()*6}));
   const t0 = performance.now();
   (function f(now){
     const t = now - t0; ctx.clearRect(0, 0, r.width, r.height);
     ps.forEach(p => { p.vy += .22; p.x += p.vx; p.y += p.vy; p.a += .15; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.s/2, -p.s/4, p.s, p.s/2); ctx.restore(); });
-    if (t < 3200 && !$("#result").hidden) requestAnimationFrame(f); else ctx.clearRect(0, 0, r.width, r.height);
+    if (t < 3600 && !$("#result").hidden) requestAnimationFrame(f); else ctx.clearRect(0, 0, r.width, r.height);
   })(t0);
 }
+
+/* ---------- Affichage du pupitre ---------- */
+function message(t, ton=""){ const m = $("#msg"); m.textContent = t; m.className = "msg " + ton; diffuser(); }
+function rendre(){
+  const ph = G.phase, n = G.joueurs.length;
+  // gauche : salle d'attente ou objet en cours
+  if (ph === "attente"){
+    $("#lots").innerHTML = `<div class="etapes"><i class="actif"></i><span>Salle d'attente</span></div>
+      <h2>Rejoignez la partie !</h2>
+      <p class="detail">Scannez le QR code avec votre téléphone, choisissez un pseudo et attendez le lancement.</p>
+      <p class="question">${n ? `${n} joueur${n > 1 ? "s" : ""} inscrit${n > 1 ? "s" : ""}` : "En attente des joueurs…"}</p>`;
+  } else {
+    const cur = Math.min(G.idx, G.tirage.length - 1), it = G.tirage[cur];
+    const pts = G.tirage.map((_, i) => `<i class="${i < cur ? "fait" : i === cur ? "actif" : ""}"></i>`).join("");
+    $("#lots").innerHTML = `<div class="etapes">${pts}<span>Objet ${cur+1} sur ${G.tirage.length}</span></div>
+      <h2>${esc(it.nom)}</h2>${it.detail ? `<p class="detail">${esc(it.detail)}</p>` : ""}
+      <p class="question">Quel est son juste prix ?</p>`;
+  }
+  // droite : QR code, chrono ou juste prix
+  $("#d-qr").hidden = ph !== "attente";
+  $("#d-chrono").hidden = ph !== "saisie";
+  $("#d-prix").hidden = !["anim", "revele", "fin"].includes(ph);
+  const vivants = G.phase === "attente" ? [] : enLice();
+  if (ph === "saisie"){
+    const nb = vivants.filter(j => j.pid in G.rep).length;
+    $("#reponses").textContent = `${nb} / ${vivants.length} réponse${vivants.length > 1 ? "s" : ""}`;
+    majChrono();
+  }
+  const res = G.res[G.idx];
+  if (ph !== "anim"){
+    $("#reel-box").classList.toggle("vide", !res);
+    $("#reel").textContent = res ? res.prix + " €" : "? €";
+  }
+  if (res){
+    const tri = Object.entries(res.par).sort((a, b) => a[1].ecart - b[1].ecart);
+    $("#meilleur").innerHTML = tri.length ? `Le plus proche : <b>${esc(nomDe(tri[0][0]))}</b> · ${tri[0][1].essai === null ? "sans réponse" : tri[0][1].essai + " €"}` : "";
+  } else $("#meilleur").textContent = "";
+  // tableau des joueurs
+  rendreTableau();
+  $("#b-lancer").hidden = ph !== "attente";
+  $("#b-lancer").disabled = !n;
+  $("#b-reveler").hidden = ph !== "saisie";
+  $("#b-suivant").hidden = ph !== "revele";
+  // saisie manuelle
+  const sel = G.joueurs.find(j => j.pid === selPid);
+  $("#sel-nom").textContent = sel && ph === "saisie" ? sel.nom : (ph === "saisie" ? "clique sur un joueur" : "pendant le chrono");
+  $("#saisie").textContent = (saisieMan || "---") + " €";
+  document.querySelectorAll("#pad .key").forEach(k => k.disabled = !(ph === "saisie" && sel && !sel.tombe));
+  $("#m-ajout").disabled = $("#b-ajout").disabled = ph !== "attente";
+  majJauge();
+  sauverPartie();
+  diffuser();
+  ajusterScene();
+}
+function rendreTableau(){
+  const ph = G.phase, res = G.res[G.idx];
+  let js = G.joueurs.slice();
+  if ((ph === "revele" || ph === "fin") && res) js.sort((a, b) => (a.tombe - b.tombe) || ((res.par[a.pid] || {ecart: 1e9}).ecart - (res.par[b.pid] || {ecart: 1e9}).ecart));
+  else if (ph !== "attente") js.sort((a, b) => (a.tombe - b.tombe) || (a.perdus - b.perdus));
+  $("#tableau").hidden = !js.length;
+  $("#tableau").classList.toggle("serre", js.length > 10);
+  $("#tableau").innerHTML = js.map(j => {
+    const c = Liaison.couleur(j.nom), r = res && res.par[j.pid];
+    let etat = "", cls = j.tombe ? " tombe" : "";
+    if (ph === "attente") etat = "prêt";
+    else if (ph === "saisie"){
+      if (j.tombe) etat = "tombé";
+      else { const ok = j.pid in G.rep; etat = ok ? "✓ a répondu" : "réfléchit…"; cls = ok ? " ok" : " attend"; }
+    } else if (r) etat = r.essai === null ? `pas de réponse · −${r.pts}` : r.ecart === 0 ? `${r.essai} € · exact !` : `${r.essai} € · −${r.pts}`;
+    else if (j.tombe) etat = "tombé";
+    const pts = j.tombe ? 0 : cfg.points - j.perdus;
+    const choisi = selPid === j.pid ? " choisi" : "";
+    return `<div class="puce${cls}${choisi}" data-pid="${esc(j.pid)}" style="--joueur:${c}">
+      <span class="pt"></span><span class="nom">${esc(j.nom)}</span><span class="etat">${esc(etat)}</span>
+      ${ph === "attente" ? "" : `<b class="pts">${pts}</b>`}
+      ${ph === "attente" && manuel ? `<button class="x" data-retirer="${esc(j.pid)}" aria-label="Retirer ${esc(j.nom)}">✕</button>` : ""}</div>`;
+  }).join("");
+}
+// la scène prend toute la hauteur disponible : tout tient sur l'écran sans défiler
+function ajusterScene(){
+  const svg = $("#mont");
+  if (innerWidth < 900){ svg.style.height = ""; return; }
+  imageSuivante(() => {
+    const cur = svg.getBoundingClientRect().height;
+    const surplus = document.documentElement.scrollHeight - innerHeight;
+    const larg = svg.parentElement.clientWidth * .56;
+    const h = Math.max(innerHeight * .28, Math.min(cur - surplus, larg, innerHeight * .62));
+    if (Math.abs(h - cur) > 2) svg.style.height = h.toFixed(0) + "px";
+  });
+}
+addEventListener("resize", () => { $("#mont").style.height = ""; ajusterScene(); });
+function sauverPartie(){ try { localStorage.setItem("azertyrolien-partie", JSON.stringify(G)); } catch(e){} }
+
+/* ---------- Saisie manuelle (animateur) ---------- */
+function taper(k){
+  if (G.phase !== "saisie" || !selPid) return;
+  if (k === "del"){ saisieMan = saisieMan.slice(0, -1); bip(220, .05); }
+  else if (k === "ok"){
+    if (!saisieMan) return;
+    if (enregistrerPrix(selPid, +saisieMan)){ message(`Prix enregistré pour ${nomDe(selPid)}.`, "bon"); saisieMan = ""; selPid = null; }
+  }
+  else if (saisieMan.length < 4){ saisieMan = (saisieMan + k).replace(/^0+(?=\d)/, ""); bip(700 + (+k)*30, .05); }
+  rendre();
+}
+$("#tableau").addEventListener("click", e => {
+  const x = e.target.closest("[data-retirer]");
+  if (x){ retirer(x.dataset.retirer); return; }
+  const p = e.target.closest(".puce");
+  if (p && manuel && G.phase === "saisie"){ selPid = p.dataset.pid; saisieMan = ""; rendre(); }
+});
+$("#b-ajout").addEventListener("click", () => {
+  const v = propre($("#m-ajout").value).slice(0, 16);
+  if (v.length < 2) return;
+  inscrire("m-" + nouvelId(), v, true); $("#m-ajout").value = ""; $("#m-ajout").focus();
+});
+$("#m-ajout").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("#b-ajout").click(); } });
 
 /* ---------- Réglages ---------- */
 let brouillon = null;
 function ouvrirReglages(){
   brouillon = clone(cfg);
-  $("#s-points").value = brouillon.points; $("#s-coef").value = brouillon.coef; $("#s-lot").value = brouillon.lot;
-  rendreItems(); $("#sheet").hidden = false; $("#s-lot").focus();
+  $("#s-points").value = brouillon.points; $("#s-coef").value = brouillon.coef; $("#s-temps").value = brouillon.temps; $("#s-lot").value = brouillon.lot;
+  rendreItems(); $("#sheet").hidden = false; $("#s-points").focus();
 }
 function rendreItems(){
   $("#s-items").innerHTML = `<div class="item item-h"><span>Objet</span><span class="d">Précision</span><span>Prix €</span><span></span></div>` +
@@ -409,19 +626,27 @@ function enregistrer(){
   lireItems();
   brouillon.points = Math.min(10000, Math.max(20, Math.round(+$("#s-points").value || 200)));
   brouillon.coef = Math.min(20, Math.max(1, Math.round(+$("#s-coef").value || 1)));
+  brouillon.temps = Math.min(300, Math.max(10, Math.round(+$("#s-temps").value || 60)));
   brouillon.lot = $("#s-lot").value.trim() || DEF.lot;
   brouillon.items = brouillon.items.filter(i => String(i.nom).trim() || +i.prix > 0);
   cfg = brouillon; const ok = sauver(); fermerReglages();
-  dessiner(); nouvellePartie();
+  dessiner(); nouvelleSalle(true);
   if (!ok) message("Réglages appliqués, mais ce navigateur ne peut pas les garder après rechargement.", "mal");
 }
 
 /* ---------- Évènements ---------- */
 $("#pad").addEventListener("click", e => { const k = e.target.closest(".key"); if (k) taper(k.dataset.k); });
+$("#b-lancer").addEventListener("click", lancer);
+$("#b-reveler").addEventListener("click", () => { if (G.phase === "saisie") G.fin = Date.now(); });
 $("#b-suivant").addEventListener("click", suivant);
-$("#b-nouvelle").addEventListener("click", () => { if (G.phase !== "anim") nouvellePartie(); });
-$("#b-rejouer").addEventListener("click", () => { $("#joueur").value = ""; nouvellePartie(); $("#joueur").focus(); });
-$("#joueur").addEventListener("input", e => { if (G) G.joueur = e.target.value.trim(); majJoueur(); diffuser(); });
+let confirmer = 0;
+$("#b-nouvelle").addEventListener("click", e => {
+  if (G.phase === "anim") return;
+  if (Date.now() - confirmer > 3000){ confirmer = Date.now(); e.currentTarget.textContent = "Confirmer ? (vide la liste)"; setTimeout(() => $("#b-nouvelle").textContent = "Nouvelle salle d'attente", 3000); return; }
+  confirmer = 0; e.currentTarget.textContent = "Nouvelle salle d'attente"; nouvelleSalle(false);
+});
+$("#b-rejouer").addEventListener("click", () => { nouvelleSalle(true); lancer(); });
+$("#b-salle").addEventListener("click", () => nouvelleSalle(false));
 $("#b-son").addEventListener("click", e => { son = !son; e.currentTarget.setAttribute("aria-pressed", son); e.currentTarget.textContent = son ? "Son activé" : "Son coupé"; });
 $("#b-reglages").addEventListener("click", () => { if (G.phase !== "anim") ouvrirReglages(); });
 $("#s-annuler").addEventListener("click", fermerReglages);
@@ -432,53 +657,46 @@ $("#s-items").addEventListener("click", e => { const b = e.target.closest("[data
 document.addEventListener("keydown", e => {
   if (!$("#sheet").hidden){ if (e.key === "Escape") fermerReglages(); return; }
   if (!$("#sheet-man").hidden) return;
-  if (e.target.matches("input")) { if (e.key === "Enter") e.target.blur(); return; }
+  if (e.target.matches("input")) return;
   if (/^[0-9]$/.test(e.key)){ if (manuel) taper(e.key); }
   else if (e.key === "Backspace"){ e.preventDefault(); if (manuel) taper("del"); }
-  else if (e.key === "Enter"){ e.preventDefault(); G.phase === "revele" ? suivant() : G.phase === "fin" ? nouvellePartie() : (manuel && taper("ok")); }
+  else if (e.key === "Enter"){ e.preventDefault(); if (G.phase === "revele") suivant(); else if (manuel) taper("ok"); }
 });
 
-/* ---------- Liaison avec la manette téléphone (voir js/liaison.js) ---------- */
+/* ---------- Liaison avec les manettes (voir js/liaison.js) ---------- */
 const SALLE = Liaison.salleEcran();
 const LIEN_MANETTE = new URL("manette.html?salle=" + SALLE + (Liaison.brokerPerso() ? "&broker=" + encodeURIComponent(Liaison.brokerPerso()) : ""), location.href).href;
 let lien = null, dernierEtat = "";
 const manettes = new Map();     // cid -> dernier signe de vie
 const vus = new Set();          // identifiants de messages déjà traités
-const nomsManettes = new Map(); // cid -> dernier pseudo reçu
 const tourCourant = () => (G && G.id ? G.id : "x") + "-" + (G ? G.idx : 0);
 function etatCourant(){
-  const it = G.tirage[G.idx], r = G.res[G.idx];
+  const it = G.tirage[G.idx], res = G.res[G.idx];
   return {
     tour: tourCourant(), phase: G.phase, idx: G.idx, total: G.tirage.length,
-    objet: it ? {nom: String(it.nom).slice(0, 80), detail: String(it.detail || "").slice(0, 80)} : null,
-    reste: Math.max(0, cfg.points - G.perdus), max: cfg.points, gagne: !!G.gagne,
-    resultat: r ? {essai: r.essai, prix: it.prix, pts: r.pts} : null,
-    joueur: (G.joueur || "").slice(0, 24)
+    objet: it && G.phase !== "attente" ? {nom: String(it.nom).slice(0, 80), detail: String(it.detail || "").slice(0, 80)} : null,
+    max: cfg.points, duree: cfg.temps,
+    restant: G.phase === "saisie" ? Math.max(0, G.fin - Date.now()) : 0,
+    joueurs: G.joueurs.map(j => ({pid: j.pid, nom: j.nom, reste: j.tombe ? 0 : cfg.points - j.perdus, tombe: !!j.tombe, ok: G.phase === "saisie" && j.pid in G.rep})),
+    resultat: res && G.phase !== "anim" ? {prix: res.prix, par: Object.fromEntries(Object.entries(res.par).map(([p, r]) => [p, {essai: r.essai, pts: r.pts}]))} : null
   };
 }
 function diffuser(force){
   if (!lien || !G) return;
-  const e = JSON.stringify(etatCourant());
-  if (!force && e === dernierEtat) return;
-  dernierEtat = e;
-  lien.publierEtat(JSON.parse(e));
+  const e = etatCourant(), cle = JSON.stringify({...e, restant: 0});
+  if (!force && cle === dernierEtat) return;
+  dernierEtat = cle;
+  lien.publierEtat(e);
 }
-const propre = v => String(v ?? "").replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯]/g, "").trim().slice(0, 24);
+const propre = v => String(v ?? "").replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯]/g, "").replace(/\s+/g, " ").trim().slice(0, 24);
+const pidOk = v => typeof v === "string" && /^[a-z0-9-]{4,24}$/.test(v) ? v : "";
 function recevoir(m){
   if (!m || typeof m !== "object" || typeof m.cid !== "string") return;
   manettes.set(m.cid, Date.now());
-  // le pseudo tapé sur le téléphone remplace celui de l'écran, seulement quand il change
-  const nom = propre(m.nom);
-  if (nom && (nom !== nomsManettes.get(m.cid) || (m.type === "joueur" && nom !== (G && G.joueur)))){ nomsManettes.set(m.cid, nom); $("#joueur").value = nom; if (G) G.joueur = nom; majJoueur(); diffuser(); }
   if (m.id){ if (vus.has(m.id)) { majLiaison(); return; } vus.add(m.id); }
-  if (m.type === "prix"){
-    const prix = Math.round(+m.prix);
-    if (G && G.phase === "saisie" && m.tour === tourCourant() && Number.isFinite(prix) && prix >= 0 && prix <= 9999){
-      G.saisie = String(prix); rendre(); valider();
-    }
-  } else if (m.type === "suite"){
-    if (G && G.phase === "revele" && m.tour === tourCourant()) suivant();
-  }
+  const pid = pidOk(m.pid), nom = propre(m.nom).slice(0, 16);
+  if (pid && nom.length >= 2 && (m.type === "joueur" || m.type === "bonjour")) inscrire(pid, nom, m.type === "joueur");
+  if (pid && m.type === "prix" && m.tour === tourCourant()) enregistrerPrix(pid, Math.round(+m.prix));
   majLiaison();
 }
 function majLiaison(){
@@ -486,8 +704,8 @@ function majLiaison(){
   for (const [k, t] of manettes) if (now - t > 15000) manettes.delete(k);
   const n = manettes.size;
   $("#b-manette").classList.toggle("lie", n > 0);
-  $("#b-manette-txt").textContent = n ? (n > 1 ? `${n} manettes` : "Manette connectée") : "Participer";
-  let txt = n ? (n > 1 ? `${n} manettes connectées.` : "1 manette connectée.") : "Aucune manette connectée.";
+  $("#b-manette-txt").textContent = "Participer";
+  let txt = n ? (n > 1 ? `${n} téléphones connectés.` : "1 téléphone connecté.") : "Aucun téléphone connecté.";
   if (!lien) txt = "Liaison indisponible : vérifiez la connexion internet de cet écran.";
   else if (!lien.connecte()) txt = "Connexion au serveur de liaison…";
   $("#etat-lien").textContent = txt;
@@ -499,21 +717,26 @@ function majManuel(){
   const b = $("#b-manuel");
   b.setAttribute("aria-pressed", manuel);
   b.textContent = manuel ? "Masquer la saisie manuelle" : "Saisie manuelle";
+  $("#tableau").classList.toggle("manuel-actif", manuel);
 }
 $("#b-manuel").addEventListener("click", () => {
   manuel = !manuel;
   try { localStorage.setItem("azertyrolien-manuel", manuel ? "1" : "0"); } catch(e){}
-  majManuel();
+  majManuel(); if (!manuel){ selPid = null; saisieMan = ""; } rendre();
 });
 majManuel();
+function faireQR(el, taille){
+  if (!window.QRCode){ el.textContent = "QR code indisponible : utilisez le lien."; return false; }
+  try { new QRCode(el, {text: LIEN_MANETTE, width: taille, height: taille, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L}); return true; }
+  catch(e){ el.textContent = "QR code indisponible"; return false; }
+}
+$("#code-salle-mini").textContent = SALLE;
+faireQR($("#qr-salle"), 480);
 let qrFait = false;
 function ouvrirManette(){
   $("#lien-man").value = LIEN_MANETTE;
   $("#code-salle").textContent = SALLE;
-  if (!qrFait && window.QRCode){
-    try { new QRCode($("#qr"), {text: LIEN_MANETTE, width: 640, height: 640, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L}); qrFait = true; } catch(e){}
-  }
-  if (!qrFait) $("#qr").textContent = "QR code indisponible : utilisez le lien.";
+  if (!qrFait) qrFait = faireQR($("#qr"), 640);
   majLiaison();
   $("#sheet-man").hidden = false; $("#sm-fermer").focus();
 }
@@ -531,16 +754,21 @@ Liaison.connecter({
   onMessage: recevoir,
   onConnexion: () => { diffuser(true); majLiaison(); }
 }).then(l => { lien = l; diffuser(true); majLiaison(); }).catch(() => { lien = null; majLiaison(); });
-setInterval(() => { diffuser(true); majLiaison(); }, 8000); // signe de vie de l'écran
+// signe de vie de l'écran (plus fréquent pendant le chrono, pour que les téléphones restent synchronisés)
+setInterval(() => { diffuser(true); majLiaison(); }, 8000);
+setInterval(() => { if (G && G.phase === "saisie") diffuser(true); }, 3000);
 
 /* ---------- Démarrage ---------- */
-function start(data){
-  dessiner();
-  const d = data && data.G;
-  if (d && d.phase && d.phase !== "anim" && typeof d.perdus === "number"){
-    G = d; rendre(); placerPerdus(); majJauge();
-    if (G.phase === "fin") resultat(G.gagne, true); else message(G.phase === "revele" ? "Passez à l'objet suivant." : "À vous de jouer : annoncez votre prix !");
-  } else nouvellePartie();
+// une partie en cours est reprise après un rechargement de la page
+function start(){
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem("azertyrolien-partie") || "null"); } catch(e){}
+  if (d && Array.isArray(d.joueurs) && typeof d.phase === "string" && (d.phase === "attente" || (Array.isArray(d.tirage) && d.tirage.length))){
+    G = Object.assign({rep: {}, res: [], exclus: [], fin: 0}, d);
+    dessiner();
+    if (G.phase === "anim" || G.phase === "saisie"){ delete G.res[G.idx]; ouvrirSaisie(); }
+    else { rendre(); placerTous(); if (G.phase === "fin") resultat(true); else message(G.phase === "revele" ? "Passez à l'objet suivant." : "Scannez le QR code pour rejoindre la partie !"); }
+  } else { G = {id: nouvelId(), phase: "attente", tirage: [], idx: 0, joueurs: [], res: [], rep: {}, fin: 0, exclus: []}; dessiner(); nouvelleSalle(false); }
 }
-start({});
+start();
 })();

@@ -22,7 +22,6 @@
       </div>
     </div>
     <div class="tools">
-      <div class="field"><label for="joueur">Candidat</label><input id="joueur" placeholder="Pseudo" autocomplete="off"></div>
       <button class="btn" id="b-son" aria-pressed="true">Son activé</button>
       <button class="btn" id="b-manette"><span class="pastille"></span><span id="b-manette-txt">Participer</span></button>
       <button class="btn" id="b-manuel" aria-pressed="false" aria-controls="manuel">Saisie manuelle</button>
@@ -34,16 +33,20 @@
     <section class="stage" aria-label="La montagne">
       <svg id="mont" viewBox="0 0 1000 560" role="img" aria-label="Montagne de touches de clavier gravie par la souris Azerty"></svg>
       <div class="gauge">
-        <span>Points <b id="g-pts">200</b> / <span id="g-max">200</span></span>
-        <div class="bar" id="g-bar"><i></i></div>
+        <span>En lice <b id="g-pts">0</b> / <span id="g-max">0</span></span>
+        <span class="g-tete" id="g-tete"></span>
         <small id="g-pas">1 € d'écart = 1 point perdu</small>
       </div>
-      <div class="result" id="result" hidden>
+      <div class="result" id="result" hidden role="dialog" aria-labelledby="r-titre">
         <canvas id="confettis"></canvas>
         <div class="result-in">
-          <h2 id="r-titre"></h2>
-          <p id="r-texte"></p>
-          <button class="btn primary" id="b-rejouer">Nouveau candidat</button>
+          <p class="r-sur" id="r-sur">Azertyrolien · fin de la partie</p>
+          <h2 id="r-titre">Classement</h2>
+          <ol class="classement" id="r-classement"></ol>
+          <div class="row r-actions">
+            <button class="btn primary" id="b-rejouer">Rejouer avec les mêmes joueurs</button>
+            <button class="btn" id="b-salle">Nouvelle salle d'attente</button>
+          </div>
         </div>
       </div>
     </section>
@@ -52,30 +55,54 @@
       <div class="plateau">
         <div class="objet" id="lots"></div>
         <div class="afficheurs">
-          <div class="aff aff-reel">
-            <p class="aff-cap">Prix réel</p>
-            <div class="aff-val vide" id="reel-box">? €</div>
-            <span class="essai" id="essai"></span>
+          <div class="d-qr" id="d-qr">
+            <div class="qr qr-salle" id="qr-salle" aria-label="QR code pour rejoindre la partie"></div>
+            <div class="d-qr-txt"><b>Scanne pour jouer</b><span>Code de la salle</span><em id="code-salle-mini">…</em></div>
           </div>
-          <div class="aff aff-prop">
-            <p class="aff-cap">Proposition du candidat</p>
-            <div class="led" aria-live="polite"><span id="saisie">--- €</span></div>
+          <div class="d-chrono" id="d-chrono" hidden>
+            <p class="aff-cap">Temps restant</p>
+            <div class="led chrono" id="chrono"><span id="chrono-txt">1:00</span></div>
+            <div class="bar chrono-bar" id="chrono-bar"><i></i></div>
+            <p class="reponses" id="reponses"></p>
+          </div>
+          <div class="d-prix" id="d-prix" hidden>
+            <p class="aff-cap">Juste prix</p>
+            <div class="aff-val vide" id="reel-box"><span class="reel" id="reel">? €</span></div>
+            <p class="reponses" id="meilleur"></p>
           </div>
         </div>
       </div>
+      <div class="tableau" id="tableau" aria-live="polite"></div>
       <div class="suite">
         <div class="msg" id="msg" aria-live="polite"></div>
-        <div class="row"><button class="btn primary" id="b-suivant" hidden>Objet suivant</button></div>
+        <div class="row">
+          <button class="btn primary" id="b-lancer" hidden>Lancer la partie</button>
+          <button class="btn" id="b-reveler" hidden>Arrêter le chrono</button>
+          <button class="btn primary" id="b-suivant" hidden>Objet suivant</button>
+        </div>
       </div>
       <div class="manuel" id="manuel" hidden>
-      <div class="pad" id="pad">
-        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
-        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
-        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
-        <button class="key del" data-k="del" aria-label="Effacer">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">OK</button>
-      </div>
-      <div class="row"><button class="btn" id="b-nouvelle">Nouveau tirage</button></div>
-      <p class="hint">Clavier : chiffres pour saisir, Entrée pour valider, Retour arrière pour corriger.</p>
+        <div class="man-bloc">
+          <p class="aff-cap">Ajouter un joueur sans téléphone</p>
+          <div class="lien"><input id="m-ajout" placeholder="Pseudo" maxlength="16" autocomplete="off" aria-label="Pseudo du joueur à ajouter"><button class="btn" id="b-ajout">Ajouter</button></div>
+          <p class="hint">Pendant la salle d'attente. Cliquer sur ✕ retire un joueur.</p>
+        </div>
+        <div class="man-bloc">
+          <p class="aff-cap">Saisir un prix pour : <b id="sel-nom">clique sur un joueur</b></p>
+          <div class="led petit" aria-live="polite"><span id="saisie">--- €</span></div>
+          <div class="pad" id="pad">
+            <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+            <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+            <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+            <button class="key del" data-k="del" aria-label="Effacer">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">OK</button>
+          </div>
+          <p class="hint">Clavier : chiffres, Entrée pour valider, Retour arrière pour corriger.</p>
+        </div>
+        <div class="man-bloc">
+          <p class="aff-cap">Partie</p>
+          <div class="row"><button class="btn" id="b-nouvelle">Nouvelle salle d'attente</button></div>
+          <p class="hint">Vide la liste des joueurs et revient à la salle d'attente.</p>
+        </div>
       </div>
     </aside>
   </main>
@@ -115,7 +142,8 @@
       <div class="grid2">
         <label class="inp">Points de départ<input type="number" id="s-points" min="20" max="10000" step="10"></label>
         <label class="inp">Points perdus par euro d'écart<input type="number" id="s-coef" min="1" max="20" step="1"></label>
-        <label class="inp" style="grid-column:1/-1">Texte « À gagner » affiché au pupitre<input id="s-lot"></label>
+        <label class="inp">Temps pour répondre (secondes)<input type="number" id="s-temps" min="10" max="300" step="5"></label>
+        <label class="inp">Texte « À gagner » (classement)<input id="s-lot"></label>
       </div>
     </section>
     <section>

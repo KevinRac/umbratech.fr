@@ -19,6 +19,7 @@
 ## Azertyrolien (`Azertyrolien/`)
 
 - Jeu de la Tyrolienne façon Juste Prix pour l'Azerty Party 2026 : `index.html` (grand écran), `manette.html?salle=CODE` (téléphone du candidat).
+- Partie à plusieurs : salle d'attente → chrono par objet (tous les joueurs répondent) → révélation → classement. État `G` (joueurs, réponses `rep`, résultats `res`) sauvé dans le navigateur de l'écran ; chaque téléphone a un identifiant `pid` persistant.
 - Le jeu est dans `js/jeu.js`, la manette dans `js/manette.js`, la liaison écran/téléphones (MQTT public, code de salle) dans `js/liaison.js`. Mode d'emploi : `Azertyrolien/README.md`.
 
 ## Publication
