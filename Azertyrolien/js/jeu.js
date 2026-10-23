@@ -360,9 +360,11 @@ function lancer(){
   if (!G.joueurs.length){ message("Aucun joueur inscrit pour l'instant.", "mal"); return; }
   const pool = cfg.items.filter(i => String(i.nom||"").trim() && +i.prix > 0);
   if (pool.length < 3){ message("Ajoutez au moins 3 objets avec un prix dans les réglages.", "mal"); return; }
-  const t = pool.slice();
-  for (let i=t.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [t[i], t[j]] = [t[j], t[i]]; }
-  G.tirage = t.slice(0,3).map(o => ({nom:o.nom, detail:o.detail||"", prix:Math.round(+o.prix)}));
+  // les objets passent dans l'ordre de la liste, 3 par partie ; la partie suivante reprend à la suite
+  let debut = 0; try { debut = +localStorage.getItem("azertyrolien-suite") || 0; } catch(e){}
+  if (debut >= pool.length) debut = 0;
+  G.tirage = Array.from({length: 3}, (_, i) => pool[(debut + i) % pool.length]).map(o => ({nom:o.nom, detail:o.detail||"", prix:Math.round(+o.prix)}));
+  try { localStorage.setItem("azertyrolien-suite", String((debut + 3) % pool.length)); } catch(e){}
   G.idx = 0; G.res = [];
   G.joueurs.forEach(j => { j.perdus = 0; j.tombe = false; });
   $("#sheet-man").hidden = true;
@@ -634,6 +636,7 @@ function enregistrer(){
   brouillon.lot = $("#s-lot").value.trim() || DEF.lot;
   brouillon.items = brouillon.items.filter(i => String(i.nom).trim() || +i.prix > 0);
   cfg = brouillon; const ok = sauver(); fermerReglages();
+  try { localStorage.setItem("azertyrolien-suite", "0"); } catch(e){}
   dessiner(); nouvelleSalle(true);
   if (!ok) message("Réglages appliqués, mais ce navigateur ne peut pas les garder après rechargement.", "mal");
 }

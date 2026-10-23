@@ -34,7 +34,7 @@ En secours, si un joueur n'a pas de téléphone ou si la liaison ne marche pas :
 
 - Points de départ (200 par défaut), points perdus par euro d'écart (1 par défaut) et temps pour répondre (60 secondes par défaut).
 - Texte « À gagner » affiché au-dessus du classement.
-- Liste des objets et de leurs prix (12 exemples fournis : **prix indicatifs à vérifier**).
+- Liste des objets et de leurs prix (12 exemples fournis : **prix indicatifs à vérifier**). Les objets sont joués **dans l'ordre de la liste, 3 par partie** : la 1re partie prend les objets 1 à 3, la suivante 4 à 6, etc., puis on reboucle. Enregistrer les réglages repart du 1er objet.
 
 Les réglages sont gardés dans le navigateur de l'écran.
 
