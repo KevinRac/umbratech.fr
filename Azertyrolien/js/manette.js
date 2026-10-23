@@ -4,9 +4,11 @@ const $ = s => document.querySelector(s);
 const aleatoire = () => Math.random().toString(36).slice(2, 10);
 
 let lien = null, ecran = null, ecranVu = 0, saisie = "", envoyeTour = null, suiteTour = null;
+// pseudo obligatoire : tant qu'il n'est pas validé, le pavé reste caché
 let nom = "";
-try { nom = localStorage.getItem("azertyrolien-pseudo") || ""; } catch(e){}
+try { nom = (localStorage.getItem("azertyrolien-pseudo") || "").trim().slice(0, 16); } catch(e){}
 $("#m-nom").value = nom;
+let nomValide = false;
 
 const ecranPresent = () => ecran && Date.now() - ecranVu < 25000;
 
@@ -16,7 +18,13 @@ function rendre(){
   $("#m-saisie").textContent = (saisie || "---") + " €";
   let actif = false;
   $("#m-suivant").hidden = true;
-  if (!SALLE){
+  $("#m-pseudo-zone").hidden = nomValide;
+  $("#m-moi").hidden = !nomValide;
+  $("#m-jeu").hidden = !nomValide;
+  if (!nomValide){
+    statut(SALLE ? "" : "Scanne le QR code du grand écran, ou tape le code de la salle.");
+    if (!SALLE) $("#m-pseudo-zone").hidden = true, $("#m-moi").hidden = true;
+  } else if (!SALLE){
     statut("Scanne le QR code du grand écran, ou tape le code de la salle affiché dans « Manette ».");
   } else if (lien === false){
     statut("Liaison impossible : vérifie la connexion internet du téléphone.", "mal");
@@ -47,6 +55,7 @@ function rendre(){
 }
 
 function taper(k){
+  if (!nomValide) return;
   if (!ecranPresent() || ecran.phase !== "saisie" || envoyeTour === ecran.tour) return;
   if (k === "del") saisie = saisie.slice(0, -1);
   else if (k === "ok"){
@@ -66,12 +75,23 @@ $("#m-suivant").addEventListener("click", () => {
   lien.envoyer({type: "suite", id: aleatoire(), tour: ecran.tour, nom});
   rendre();
 });
-let tNom = 0;
-$("#m-nom").addEventListener("input", e => {
-  nom = e.target.value.trim().slice(0, 24);
+function validerNom(){
+  const v = $("#m-nom").value.trim().replace(/\s+/g, " ").slice(0, 16);
+  if (v.length < 2){ statut("Ton pseudo doit faire au moins 2 caractères.", "mal"); $("#m-nom").focus(); return; }
+  nom = v; nomValide = true;
   try { localStorage.setItem("azertyrolien-pseudo", nom); } catch(err){}
-  clearTimeout(tNom); tNom = setTimeout(() => lien && lien.envoyer({type: "bonjour", nom}), 500);
-});
+  const c = Liaison.couleur(nom);
+  document.documentElement.style.setProperty("--joueur", c);
+  document.documentElement.style.setProperty("--joueur-encre", Liaison.encre(c));
+  $("#m-moi-nom").textContent = nom;
+  if (lien && lien.connecte()) lien.envoyer({type: "joueur", id: aleatoire(), nom});
+  if (navigator.vibrate) try { navigator.vibrate(30); } catch(e){}
+  rendre();
+}
+$("#m-nom-ok").addEventListener("click", validerNom);
+$("#m-nom").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); validerNom(); } });
+$("#m-modifier").addEventListener("click", () => { nomValide = false; rendre(); $("#m-nom").focus(); $("#m-nom").select(); });
+const bonjour = () => lien && lien.connecte() && lien.envoyer({type: "bonjour", nom: nomValide ? nom : ""});
 
 // code de la salle : dans l'adresse (QR code), sinon à taper
 let SALLE = Liaison.salleManette();
@@ -97,10 +117,10 @@ if (SALLE){
       else if (typeof etat.ts === "number") ecranVu = Math.max(ecranVu, Math.min(Date.now(), etat.ts));
       rendre();
     },
-    onConnexion: c => { if (c && lien) lien.envoyer({type: "bonjour", nom}); rendre(); }
-  }).then(l => { lien = l; if (l.connecte()) l.envoyer({type: "bonjour", nom}); rendre(); })
+    onConnexion: c => { if (c) bonjour(); rendre(); }
+  }).then(l => { lien = l; bonjour(); rendre(); })
     .catch(() => { lien = false; rendre(); });
   // signe de vie : l'écran compte les manettes connectées
-  setInterval(() => { if (lien && lien.connecte()) lien.envoyer({type: "bonjour", nom}); rendre(); }, 6000);
+  setInterval(() => { bonjour(); rendre(); }, 6000);
 }
 })();

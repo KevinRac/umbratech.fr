@@ -103,5 +103,19 @@ window.Liaison = (() => {
   }
 
   const brokerPerso = () => params.get("broker");
-  return {salleEcran, nouvelleSalle, salleManette, connecter, brokerPerso};
+
+  // une couleur par pseudo, identique sur l'écran et sur le téléphone
+  const COULEURS = ["#ff5252", "#f09922", "#ffd23f", "#8ac926", "#2ec4b6", "#00bbf9", "#3a86ff", "#9b5de5", "#ff4fd8", "#ff7b00", "#06d6a0", "#ef476f"];
+  function couleur(nom){
+    const n = String(nom || "").trim().toLowerCase();
+    let h = 2166136261;
+    for (const c of n) h = Math.imul(h ^ c.codePointAt(0), 16777619);
+    return COULEURS[(h >>> 0) % COULEURS.length];
+  }
+  // texte lisible sur cette couleur
+  function encre(hex){
+    const v = parseInt(hex.slice(1), 16), r = v >> 16, g = v >> 8 & 255, b = v & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 165 ? "#150d4a" : "#ffffff";
+  }
+  return {salleEcran, nouvelleSalle, salleManette, connecter, brokerPerso, couleur, encre};
 })();

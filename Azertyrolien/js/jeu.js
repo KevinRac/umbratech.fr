@@ -72,6 +72,11 @@ function souris(){
     <path class="m-trait" d="M-12 -84 C-14 -72,-18 -62,-26 -54" stroke-width="1.4"/>
     <path class="m-line m-fill" d="M-14 -6 C-2 -8,16 -6,32 -4 C39 -3,40 2,33 2 L-12 2 C-19 2,-20 -4,-14 -6 Z"/>
     <path class="m-trait" d="M24 -4 L24 1 M30 -4 L30 1" stroke-width="1.3"/>
+    <g class="m-echarpe">
+      <path d="M-12 -80 C-20 -70,-28 -58,-36 -48 C-31 -44,-26 -43,-22 -44 C-16 -55,-9 -66,-3 -77 Z"/>
+      <path d="M-18 -95 C-6 -88,10 -88,23 -94 L25 -79 C12 -73,-6 -73,-19 -80 Z"/>
+      <path class="m-trait" d="M-17 -87 C-5 -81,10 -81,24 -86" stroke="rgba(0,0,0,.22)"/>
+    </g>
     ${piv("m-tete", 4, -98, `
       ${piv("m-oreille2", -3, -16, OREILLE.replace("PEAU","m-shade"))}
       ${piv("m-oreille", 9, -16, OREILLE.replace("PEAU","m-fill"))}
@@ -158,9 +163,36 @@ function dessiner(){
         <text x="0" y="-62" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="16" fill="#3a1f10" letter-spacing="1">DÉPART</text>
         <text x="0" y="-50" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="12" fill="#3a1f10">${cfg.points} PTS</text></g>`;
   s += drapeau(X1 + 34, ground(X1 + 34));
+  s += `<g id="etiquette" opacity="0"><g id="et-in"><path id="et-fond"/><text id="et-txt" x="0" y="-130" text-anchor="middle" dominant-baseline="central" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="19" letter-spacing=".4"></text></g></g>`;
   s += `<g id="grimpeur"><g transform="translate(-6 0)"><ellipse cx="4" cy="1" rx="26" ry="4" fill="#000" opacity=".28"/><g id="corps">${souris()}</g></g></g>`;
   $("#mont").innerHTML = s;
-  grimpeur = $("#grimpeur"); corps = $("#corps");
+  grimpeur = $("#grimpeur"); corps = $("#corps"); etiquette = $("#etiquette");
+  majJoueur();
+}
+// pseudo du candidat au-dessus de la souris, et sa couleur (étiquette + écharpe)
+let etiquette = null, nomAffiche = null;
+function majJoueur(){
+  if (!etiquette) return;
+  const nom = (G && G.joueur || "").trim();
+  const mont = $("#mont");
+  mont.classList.toggle("a-joueur", !!nom);
+  if (!nom){ etiquette.style.display = "none"; nomAffiche = ""; return; }
+  const c = Liaison.couleur(nom), ink = Liaison.encre(c);
+  mont.style.setProperty("--joueur", c);
+  etiquette.style.display = "";
+  const txt = $("#et-txt");
+  txt.textContent = nom.length > 16 ? nom.slice(0, 15) + "…" : nom;
+  txt.setAttribute("fill", ink);
+  let w = 0;
+  try { w = txt.getComputedTextLength(); } catch(e){}
+  if (!w) w = txt.textContent.length * 9;
+  const L = w / 2 + 12, T = -144, B = -116;
+  $("#et-fond").setAttribute("d", `M${-L} ${T + 8} Q${-L} ${T} ${-L + 8} ${T} L${L - 8} ${T} Q${L} ${T} ${L} ${T + 8} L${L} ${B - 8} Q${L} ${B} ${L - 8} ${B} L7 ${B} L0 ${B + 8} L-7 ${B} L${-L + 8} ${B} Q${-L} ${B} ${-L} ${B - 8} Z`);
+  $("#et-fond").setAttribute("fill", c);
+  if (nom !== nomAffiche && nomAffiche !== null){
+    const g = $("#et-in"); g.classList.remove("pop"); void g.getBBox(); g.classList.add("pop");
+  }
+  nomAffiche = nom;
 }
 // drapeau Azerty qui flotte au vent : la toile ondule (images clés SVG), le texte suit la vague
 function drapeau(fx, fy){
@@ -189,6 +221,7 @@ function placer(x, y, rot=0, op=1, ang=0){
   grimpeur.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
   corps.setAttribute("transform", `rotate(${rot.toFixed(1)} 0 -40)`);
   grimpeur.setAttribute("opacity", op);
+  if (etiquette){ etiquette.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`); etiquette.setAttribute("opacity", op < 1 ? 0 : 1); }
 }
 const marcheDe = perdus => Math.min(N, perdus / cfg.points * N);
 function placerPerdus(){
@@ -268,6 +301,7 @@ function nouvellePartie(){
 }
 function message(t, ton=""){ const m = $("#msg"); m.textContent = t; m.className = "msg " + ton; diffuser(); }
 function rendre(){
+  majJoueur();
   const cur = Math.min(G.idx, G.tirage.length - 1), it = G.tirage[cur], r = G.res[cur];
   const pts = G.tirage.map((_, i) => `<i class="${i < cur ? "fait" : i === cur ? "actif" : ""}"></i>`).join("");
   $("#lots").innerHTML = `<div class="etapes">${pts}<span>Objet ${cur+1} sur ${G.tirage.length}</span></div>
@@ -387,7 +421,7 @@ $("#pad").addEventListener("click", e => { const k = e.target.closest(".key"); i
 $("#b-suivant").addEventListener("click", suivant);
 $("#b-nouvelle").addEventListener("click", () => { if (G.phase !== "anim") nouvellePartie(); });
 $("#b-rejouer").addEventListener("click", () => { $("#joueur").value = ""; nouvellePartie(); $("#joueur").focus(); });
-$("#joueur").addEventListener("input", e => { if (G) G.joueur = e.target.value.trim(); });
+$("#joueur").addEventListener("input", e => { if (G) G.joueur = e.target.value.trim(); majJoueur(); diffuser(); });
 $("#b-son").addEventListener("click", e => { son = !son; e.currentTarget.setAttribute("aria-pressed", son); e.currentTarget.textContent = son ? "Son activé" : "Son coupé"; });
 $("#b-reglages").addEventListener("click", () => { if (G.phase !== "anim") ouvrirReglages(); });
 $("#s-annuler").addEventListener("click", fermerReglages);
@@ -435,7 +469,7 @@ function recevoir(m){
   manettes.set(m.cid, Date.now());
   // le pseudo tapé sur le téléphone remplace celui de l'écran, seulement quand il change
   const nom = propre(m.nom);
-  if (nom && nom !== nomsManettes.get(m.cid)){ nomsManettes.set(m.cid, nom); $("#joueur").value = nom; if (G) G.joueur = nom; diffuser(); }
+  if (nom && (nom !== nomsManettes.get(m.cid) || (m.type === "joueur" && nom !== (G && G.joueur)))){ nomsManettes.set(m.cid, nom); $("#joueur").value = nom; if (G) G.joueur = nom; majJoueur(); diffuser(); }
   if (m.id){ if (vus.has(m.id)) { majLiaison(); return; } vus.add(m.id); }
   if (m.type === "prix"){
     const prix = Math.round(+m.prix);

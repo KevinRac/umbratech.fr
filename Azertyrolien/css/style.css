@@ -276,3 +276,21 @@ body{padding-bottom:12px}
 .stage svg{height:min(41vh,calc((100vw - 120px) * .56))}
 .wrap{gap:12px}body{padding-top:8px}.desk{gap:10px}
 .suite .btn.primary{padding:10px 36px}.suite{padding-bottom:6px}
+
+/* Pseudo et couleur du candidat sur la scène */
+.m-echarpe{display:none}
+#mont.a-joueur .m-echarpe{display:inline}
+.m-echarpe path:not(.m-trait){fill:var(--joueur,#ff5252);stroke:rgba(0,0,0,.22);stroke-width:1}
+#etiquette{filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+#et-in{transform-box:fill-box;transform-origin:50% 100%}
+#et-in.pop{animation:et-pop .55s cubic-bezier(.3,1.6,.5,1)}
+@keyframes et-pop{0%{transform:scale(.2);opacity:0}60%{opacity:1}100%{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){#et-in.pop{animation:none}}
+/* Manette : pseudo obligatoire */
+.man-pseudo{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.man-pseudo p{margin:0;font-family:var(--f-cond);font-size:20px;font-weight:600}
+.man-pseudo .btn{font-size:18px;padding-block:12px}
+.man-moi{display:flex;align-items:center;gap:12px;border-radius:12px;padding:10px 14px;background:var(--joueur,#ff5252);color:var(--joueur-encre,#fff)}
+.man-moi b{flex:1;min-width:0;font-family:var(--f-cond);font-size:26px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.man-moi small{display:block;font-size:13px;opacity:.8;font-weight:600;text-transform:uppercase;letter-spacing:.1em}
+.man-moi .btn{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25);color:inherit;font-size:14px}
