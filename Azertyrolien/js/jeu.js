@@ -157,13 +157,33 @@ function dessiner(){
   s += `<g transform="translate(${sx} ${sy.toFixed(1)}) rotate(${angDe(sx).toFixed(1)})"><rect x="-3" y="-62" width="6" height="64" fill="#7a4a2c"/><rect x="-38" y="-78" width="76" height="32" rx="4" fill="#c98b4e" stroke="#6b3f24" stroke-width="2"/>
         <text x="0" y="-62" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="16" fill="#3a1f10" letter-spacing="1">DÉPART</text>
         <text x="0" y="-50" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="12" fill="#3a1f10">${cfg.points} PTS</text></g>`;
-  const fx = X1 + 34, fy = ground(fx);
-  s += `<line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy-84}" stroke="#fff" stroke-width="3"/>
-        <path d="M${fx} ${fy-84} L${fx+60} ${fy-72} L${fx} ${fy-58} Z" fill="#ff5252"/>
-        <text x="${fx+5}" y="${fy-68}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="11" fill="#fff">AZERTY</text>`;
+  s += drapeau(X1 + 34, ground(X1 + 34));
   s += `<g id="grimpeur"><g transform="translate(-6 0)"><ellipse cx="4" cy="1" rx="26" ry="4" fill="#000" opacity=".28"/><g id="corps">${souris()}</g></g></g>`;
   $("#mont").innerHTML = s;
   grimpeur = $("#grimpeur"); corps = $("#corps");
+}
+// drapeau Azerty qui flotte au vent : la toile ondule (images clés SVG), le texte suit la vague
+function drapeau(fx, fy){
+  const FW = 66, FH = 34, haut = fy - 90, A = 4.2, N = 12, IMG = 8;
+  const vague = (x, p) => A * (x / FW) * Math.sin(2 * Math.PI * (x / FW) * 1.15 - p);
+  const toile = p => {
+    let d = "", bas = [];
+    for (let i = 0; i <= N; i++){
+      const x = FW * i / N, w = vague(x, p);
+      d += (i ? " L" : "M") + (fx + x).toFixed(1) + " " + (haut + w).toFixed(1);
+      bas.unshift((fx + x - 1.2 * (x / FW)).toFixed(1) + " " + (haut + FH + w * .9).toFixed(1));
+    }
+    return d + " L" + bas.join(" L") + " Z";
+  };
+  const ph = [...Array(IMG + 1).keys()].map(k => 2 * Math.PI * k / IMG);
+  const anim = !reduce;
+  const dTxt = ph.map(p => `0 ${vague(FW / 2, p).toFixed(2)}`).join(";");
+  return `<line x1="${fx}" y1="${fy}" x2="${fx}" y2="${haut - 6}" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="${fx}" cy="${haut - 7}" r="3.6" fill="#f09922"/>
+    <path d="${toile(0)}" fill="#ff5252">${anim ? `<animate attributeName="d" dur="1.6s" repeatCount="indefinite" values="${ph.map(toile).join(";")}"/>` : ""}</path>
+    <g>${anim ? `<animateTransform attributeName="transform" type="translate" dur="1.6s" repeatCount="indefinite" values="${dTxt}"/>` : ""}
+      <text x="${fx + FW / 2}" y="${haut + FH / 2}" text-anchor="middle" dominant-baseline="central" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="14" letter-spacing=".5" fill="#fff">AZERTY</text>
+    </g>`;
 }
 function placer(x, y, rot=0, op=1, ang=0){
   grimpeur.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
@@ -376,9 +396,9 @@ document.addEventListener("keydown", e => {
   if (!$("#sheet").hidden){ if (e.key === "Escape") fermerReglages(); return; }
   if (!$("#sheet-man").hidden) return;
   if (e.target.matches("input")) { if (e.key === "Enter") e.target.blur(); return; }
-  if (/^[0-9]$/.test(e.key)) taper(e.key);
-  else if (e.key === "Backspace"){ e.preventDefault(); taper("del"); }
-  else if (e.key === "Enter"){ e.preventDefault(); G.phase === "revele" ? suivant() : G.phase === "fin" ? nouvellePartie() : taper("ok"); }
+  if (/^[0-9]$/.test(e.key)){ if (manuel) taper(e.key); }
+  else if (e.key === "Backspace"){ e.preventDefault(); if (manuel) taper("del"); }
+  else if (e.key === "Enter"){ e.preventDefault(); G.phase === "revele" ? suivant() : G.phase === "fin" ? nouvellePartie() : (manuel && taper("ok")); }
 });
 
 /* ---------- Liaison avec la manette téléphone (voir js/liaison.js) ---------- */
@@ -435,6 +455,27 @@ function majLiaison(){
   else if (!lien.connecte()) txt = "Connexion au serveur de liaison…";
   $("#etat-lien").textContent = txt;
 }
+let manuel = false;
+try { manuel = localStorage.getItem("azertyrolien-manuel") === "1"; } catch(e){}
+function majManuel(){
+  $("#manuel").hidden = !manuel;
+  $("#qr-pupitre").hidden = manuel;
+  const b = $("#b-manuel");
+  b.setAttribute("aria-pressed", manuel);
+  b.textContent = manuel ? "Masquer la saisie manuelle" : "Saisie manuelle";
+}
+$("#b-manuel").addEventListener("click", () => {
+  manuel = !manuel;
+  try { localStorage.setItem("azertyrolien-manuel", manuel ? "1" : "0"); } catch(e){}
+  majManuel();
+});
+majManuel();
+$("#code-mini").textContent = SALLE;
+if (window.QRCode){
+  try { new QRCode($("#qr-mini"), {text: LIEN_MANETTE, width: 200, height: 200, colorDark: "#150d4a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M}); }
+  catch(e){ $("#qr-mini").textContent = "QR code indisponible"; }
+} else $("#qr-mini").textContent = "QR code indisponible : bouton Manette";
+
 let qrFait = false;
 function ouvrirManette(){
   $("#lien-man").value = LIEN_MANETTE;

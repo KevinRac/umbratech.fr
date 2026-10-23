@@ -201,3 +201,16 @@ h1::after{content:"";display:block;width:72px;height:5px;background:var(--coral)
 .x:hover{color:var(--red);border-color:var(--red)}
 .foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}.m-anim,.m-queue,.m-tete,.m-oreille,.m-oreille2,.m-oeil,.m-bras,.m-bras2{animation:none!important}}
+
+/* Pupitre : QR code par défaut, saisie manuelle de secours */
+.manuel{display:flex;flex-direction:column;gap:14px}
+.qr-pupitre{display:flex;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.qr-mini{background:#fff;color:#150d4a;padding:8px;border-radius:8px;width:140px;max-width:40%;aspect-ratio:1;display:grid;place-items:center;flex:none;font-family:var(--f-cond);font-size:13px;text-align:center}
+.qr-mini img,.qr-mini canvas{display:block;width:100%;height:auto}
+.qr-pupitre > div:last-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.qr-pupitre b{font-family:var(--f-cond);font-size:26px;font-weight:800;text-transform:uppercase;line-height:1}
+.qr-pupitre span{color:var(--muted)}
+.code-mini em{font-style:normal;font-family:var(--f-led);color:var(--gold);letter-spacing:.08em}
+.btn.discret{background:transparent;color:var(--muted);font-size:14px;align-self:flex-start}
+.btn.discret[aria-pressed="true"]{color:var(--snow);border-color:var(--muted)}
+
