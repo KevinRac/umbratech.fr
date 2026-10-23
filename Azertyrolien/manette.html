@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <title>Azertyrolien · Manette</title>
 <meta name="theme-color" content="#150d4a">
 <link rel="icon" href="assets/logo-azertyclub.png">
@@ -20,19 +20,20 @@
     <div class="field"><label for="m-nom">Pseudo</label><input id="m-nom" placeholder="Ton pseudo" autocomplete="off" autocapitalize="off" maxlength="16" enterkeyhint="go"></div>
     <button class="btn primary" id="m-nom-ok">C'est parti !</button>
   </div>
-  <div class="man-moi" id="m-moi" hidden><div style="flex:1;min-width:0"><small>Tu joues avec</small><b id="m-moi-nom"></b></div><button class="btn" id="m-modifier">Modifier</button></div>
   <div class="man-statut" id="m-statut" aria-live="polite">Connexion…</div>
   <div class="man-jeu" id="m-jeu" hidden>
-  <div class="man-chrono" id="m-chrono" hidden><span id="m-chrono-txt">1:00</span><div class="bar"><i id="m-chrono-bar"></i></div></div>
-  <div class="man-objet"><span class="eyebrow" id="m-num">En attente</span><b id="m-objet">Le grand écran n'est pas encore détecté</b><small id="m-detail"></small></div>
-  <div class="man-pts"><span>Tes points</span><span><b id="m-pts">–</b> / <span id="m-max">–</span></span></div>
-  <div class="led" aria-live="polite"><span id="m-saisie">--- €</span></div>
-  <div class="pad" id="m-pad">
-    <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
-    <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
-    <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
-    <button class="key del" data-k="del" aria-label="Effacer">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">OK</button>
-  </div>
+    <div class="man-haut">
+      <div class="man-chrono" id="m-chrono" hidden><span id="m-chrono-txt">1:00</span><div class="bar"><i id="m-chrono-bar"></i></div></div>
+      <div class="man-pts"><span>Tes points</span><span><b id="m-pts">–</b> / <span id="m-max">–</span></span></div>
+    </div>
+    <div class="man-objet"><span class="eyebrow" id="m-num">En attente</span><b id="m-objet">…</b><small id="m-detail"></small></div>
+    <div class="led" aria-live="polite"><span id="m-saisie">--- €</span></div>
+    <div class="pad" id="m-pad">
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key del" data-k="del" aria-label="Effacer">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">OK</button>
+    </div>
   </div>
 </main>
 <script src="js/liaison.js"></script>

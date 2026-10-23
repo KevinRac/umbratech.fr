@@ -741,6 +741,9 @@ function ouvrirManette(){
   $("#sheet-man").hidden = false; $("#sm-fermer").focus();
 }
 $("#b-manette").addEventListener("click", ouvrirManette);
+$("#b-agrandir").addEventListener("click", ouvrirManette);
+$("#qr-salle").addEventListener("click", ouvrirManette);
+$("#qr-salle").style.cursor = "zoom-in";
 $("#sm-fermer").addEventListener("click", () => $("#sheet-man").hidden = true);
 $("#b-code").addEventListener("click", () => { Liaison.nouvelleSalle(); location.reload(); });
 $("#b-copier").addEventListener("click", () => {

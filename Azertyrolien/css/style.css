@@ -374,3 +374,26 @@ body{padding-bottom:12px}
 .man-chrono.urgent .bar i{background:var(--coral)}
 .man-chrono .bar{flex:none}
 .et-tige{stroke:var(--joueur);stroke-width:2;opacity:.8}
+
+/* Manette : tout tient sur un écran de téléphone (chrono, prix, clavier complet avec OK) */
+.man{min-height:100vh;min-height:100dvh;gap:10px;padding-block:6px 10px}
+.man.jeu{height:100vh;height:100dvh}
+.man.jeu .man-top{display:none}
+.man-jeu{flex:1 1 auto;min-height:0;gap:8px}
+.man-haut{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.man-haut .man-chrono{flex:1;flex-direction:row;align-items:center;gap:10px;font-size:40px;min-width:0}
+.man-haut .man-chrono .bar{flex:1;width:auto;height:10px}
+.man-haut .man-pts{flex:none;flex-direction:column;align-items:flex-end;gap:0;font-size:13px;line-height:1.1}
+.man-haut .man-pts b{font-size:22px}
+.man-objet{padding:6px 12px;gap:0}
+.man-objet b{font-size:21px}
+.man-objet small{display:none}
+.man-objet .eyebrow{font-size:11px}
+.man .led{font-size:clamp(44px,9vh,64px);padding:0 14px;flex:none}
+.man .pad{flex:1 1 0;min-height:0;grid-auto-rows:1fr;gap:7px}
+.man .key{font-size:clamp(24px,4.4vh,34px);padding:0;display:grid;place-items:center;min-height:0}
+.man-statut{font-size:17px;min-height:0;flex:none}
+.man-statut:empty{display:none}
+.man.jeu .man-statut{font-size:15px;line-height:1.2}
+.d-qr-txt .btn{margin-top:14px;align-self:flex-start;font-size:clamp(15px,1.2vw,20px)}
+body:has(.man){padding-block:0}.man{box-sizing:border-box}.man.jeu{overflow:hidden}

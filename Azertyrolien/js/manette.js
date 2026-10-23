@@ -38,8 +38,6 @@ function rendre(){
   $("#m-saisie").textContent = (saisie || "---") + " €";
   let pad = false, voirJeu = false, voirChrono = false;
   $("#m-pseudo-zone").hidden = !SALLE || nomValide;
-  $("#m-moi").hidden = !nomValide;
-  $("#m-modifier").hidden = !!(e && e.phase !== "attente" && j);
   if (!SALLE){
     statut("Scanne le QR code du grand écran, ou tape le code de la salle.");
   } else if (!nomValide){
@@ -80,6 +78,7 @@ function rendre(){
     }
   }
   $("#m-jeu").hidden = !voirJeu;
+  $("#manette").classList.toggle("jeu", voirJeu);
   $("#m-chrono").hidden = !voirChrono;
   majChrono();
   document.querySelectorAll("#m-pad .key").forEach(k => k.disabled = !pad);
@@ -107,14 +106,12 @@ function validerNom(){
   nom = v; nomValide = true;
   try { localStorage.setItem("azertyrolien-pseudo", nom); } catch(err){}
   couleurs();
-  $("#m-moi-nom").textContent = nom;
   if (lien && lien.connecte()) lien.envoyer({type: "joueur", id: aleatoire(), pid: PID, nom});
   if (navigator.vibrate) try { navigator.vibrate(30); } catch(e){}
   rendre();
 }
 $("#m-nom-ok").addEventListener("click", validerNom);
 $("#m-nom").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); validerNom(); } });
-$("#m-modifier").addEventListener("click", () => { nomValide = false; rendre(); $("#m-nom").focus(); $("#m-nom").select(); });
 const bonjour = () => lien && lien.connecte() && lien.envoyer({type: "bonjour", pid: PID, nom: nomValide ? nom : ""});
 
 // code de la salle : dans l'adresse (QR code), sinon à taper
