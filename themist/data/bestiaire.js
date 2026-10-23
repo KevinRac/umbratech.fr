@@ -20,10 +20,17 @@
   nourrice:{n:'Nourrice',un:'une Nourrice',salle:15,desc:'elle pond des Rampants sans fin. Abats-la en priorité.',stats:{r:24,hp:150,spd:38,dmg:12,xp:13,cost:4.5}}},
  // Rôles donnés à certains ennemis plus tard dans la descente (col : couleur r,g,b)
  roles:{
- rempart:{n:'Rempart',col:'140,190,255',d:'protège ses voisins : −30 % de dégâts pour les ennemis près de lui. Éloigne-les ou abats-le.'},
- harceleur:{n:'Harceleur',col:'255,200,90',d:'vise l’endroit où tu vas, pas celui où tu es.'},
- soutien:{n:'Soutien',col:'130,240,160',d:'soigne et accélère ses alliés. Abats-le en premier.'},
- chasseur:{n:'Chasseur',col:'255,96,96',d:'guette ton point faible et bondit dessus.'}},
+ // v17.5 : rôles bien plus marqués. k : ce que fait le rôle, en un mot. Valeurs lues par le jeu (index.html) et le wiki.
+ rempart:{n:'Rempart',k:'Tank',col:'140,190,255',pv:2,taille:1.15,subi:0.75,aura:170,reduc:0.5,
+  d:'a 2× PV et subit −25 %. Ses voisins (170) subissent −50 %. Abats-le ou éloigne-les.'},
+ harceleur:{n:'Harceleur',k:'Vitesse',col:'255,200,90',vitesse:1.5,bondCd:2.6,bondVise:0.3,bondT:0.28,bondVit:640,bondPortee:380,bondDeg:1.3,
+  d:'va 1,5× plus vite, vise où tu vas et bondit sur toi toutes les 2,6 s.'},
+ soutien:{n:'Soutien',k:'Soin',col:'130,240,160',pv:1.3,cd:2.5,rayon:260,soin:0.12,hate:2.5,
+  d:'soigne de 12 % tous ses alliés proches (260) toutes les 2,5 s et les accélère. Abats-le en premier.'},
+ chasseur:{n:'Chasseur',k:'Assassin',col:'255,96,96',bondCd:2.6,bondForce:5,bondDeg:1.6,
+  d:'bondit sur ton point faible, et au moins toutes les 5 s (×1,6 dégâts).'}},
+ // Tirage des rôles : dès la salle « salle », dans « chance » % des salles de combat ; un rôle pour « parEnnemis » ennemis de la plus grosse vague (max « max »)
+ rolesTirage:{salle:3,chance:85,parEnnemis:3,max:3},
  // Thèmes de vague. need : ennemis requis pour que le thème soit tiré
  themes:{
   meute:{n:'La Meute',h:'Une meute simple. Garde de l’espace et ne te laisse pas acculer.',need:['rampant']},

@@ -243,7 +243,8 @@ function bestiaire(B, I, MQ) {
   const ennemis = Object.values(E).filter(e => e.desc).map(e =>
     `<article class="ent enemy"><div class="eh"><h4>${esc(e.n)}</h4><span class="tag">${e.salle ? `Apparaît dès la salle ${e.salle}` : 'Dès le début'}</span></div><p>${esc(e.desc)}</p>\n`
     + `  <div class="stats"><span><b>${e.stats.hp}</b> PV</span><span><b>${e.stats.dmg}</b> dégâts</span><span><b>${e.stats.spd}</b> vitesse</span><span><b>${e.stats.xp}</b> XP</span></div></article>`).join('');
-  const roles = Object.values(B.roles).map(r => `<article class="ent"><h4 style="color:rgb(${r.col})">${esc(r.n)}</h4><p>Il ${esc(r.d)}</p></article>`).join('');
+  const roles = Object.values(B.roles).map(r => `<article class="ent"><div class="eh"><h4 style="color:rgb(${r.col})">${esc(r.n)}</h4>${r.k ? `<span class="tag" style="--t:rgb(${r.col})">${esc(r.k)}</span>` : ''}</div><p>Il ${esc(r.d)}</p></article>`).join('');
+  const RT = B.rolesTirage || { salle: 3, chance: 85, parEnnemis: 3, max: 3 };
   const themes = Object.values(B.themes).map(t => `<article class="ent"><h4>${esc(t.n)}</h4><p>${esc(t.h)}</p><p class="k">Ennemis : ${t.need.map(nom).map(esc).join(', ')}</p></article>`).join('');
   // v16.16 : icône de la contre-mesure (data/icones.js) et son escalade en pleine salle
   const ico = id => (I && I[id]) ? `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
@@ -267,7 +268,7 @@ function bestiaire(B, I, MQ) {
 <p>Toutes leurs attaques de zone sont annoncées en <b>rouge</b> : disque qui se remplit (Bouffi), onde pointillée (Hurleur), cône (Voilé), couloir (Brute). Un liseré rouge entoure les tirs des Spectres. Les zones des gardiens restent orange.</p>
 <div class="grid g3">${ennemis}</div>
 <h3 class="sub">Les rôles</h3>
-<p>Plus tard dans la descente, certains ennemis reçoivent un <b>rôle</b>, signalé par une couleur. Il faut le repérer.</p>
+<p>Dès la salle ${RT.salle}, ${RT.chance} % des salles de combat ont des ennemis à <b>rôle</b> : un pour ${RT.parEnnemis} ennemis de la plus grosse vague (${RT.max} au plus). Ils se repèrent d’un coup d’œil : <b>halo et anneau de leur couleur</b> par-dessus la brume, icône au-dessus de la tête. Le Rempart trace au sol le cercle qu’il protège, et ses protégés portent un <b>bouclier bleu</b> ; le Soutien lâche une onde verte à chaque soin (chiffres verts sur chaque allié soigné) ; le Harceleur laisse une traînée jaune et annonce son bond par un couloir rouge.</p>
 <div class="grid g4">${roles}</div>
 <h3 class="sub">Les thèmes de vague</h3>
 <p>Chaque salle de combat suit un thème qui définit les ennemis présents et la meilleure façon de les affronter.</p>

@@ -5500,8 +5500,8 @@ function showMur(title,text,d,pause,who){
 // le texte violet fige le jeu le temps de lire et s’accompagne d’un cri propre au PNJ qui parle
 let lastScream=-9;
 function murmur(title,text,d,who){who=who||murWho(title);
- // v16.3 · palier 0 : plus de texte violet, le Brumeux pousse seulement un cri démoniaque (au plus un toutes les 1,2 s)
- if(RUN&&!RUN.hub&&PAL()===0){if(state==='play'&&who!=='joueur'&&RUN.time-lastScream>1.2){lastScream=RUN.time;sfx('scream_'+who);tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}return;}
+ // v16.3 · palier 0, puis v17.5 · tous les paliers : plus de texte violet en descente, le Brumeux pousse seulement un cri (au plus un toutes les 1,2 s)
+ if(RUN&&!RUN.hub){if(state==='play'&&who!=='joueur'&&RUN.time-lastScream>1.2){lastScream=RUN.time;sfx('scream_'+who);tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}return;}
  if(!P||!RUN||RUN.hub||state!=='play'){showMur(title,text,d||4.5,false,who);return;}
  msgPush({k:'m',title,text,who,secs:clamp(1.8+text.length*0.04,3,6.5)});}
 function announceCm(){
@@ -5561,8 +5561,8 @@ function merePhase(e,ph){
  for(let i=0;i<3;i++)later(i*0.12,()=>{if(!e.dead)mist(e.x+rand(-30,30),e.y+rand(-20,40),e.r*1.3,ph===3?'#3a1220':'#2a2440');});
  sfx('phase');shake(10,0.4);tlights.push({x:e.x,y:e.y,r:420,t:0.5,max:0.5,c:'rage'});
  if(ph===2){e.copy=mereChooseCopy();if(RUN.prof)RUN.prof.copied=e.copy;const C=MERE_COPY[e.copy];
-  showBanner('Deuxième temps · Adaptation','Elle t’imite',true);later(1.0,()=>tuto(`Elle a copié ${C.what}. ${C.hint}`,3,true,bossArrow(e)));}
- else{showBanner('Troisième temps · Désespoir','La Brume se retire',true);later(1.0,()=>tuto('Son cœur est à nu : +25 % de dégâts. Elle frappe plus vite, tiens bon.',3,true,bossArrow(e)));}}
+  later(1.0,()=>tuto(`Elle a copié ${C.what}. ${C.hint}`,3,true,bossArrow(e)));}
+ else{later(1.0,()=>tuto('Son cœur est à nu : +25 % de dégâts. Elle frappe plus vite, tiens bon.',3,true,bossArrow(e)));}}
 function mereShot(e,a,v){eproj.push({x:e.x+Math.cos(a)*e.r*0.7,y:e.y-e.r*0.3+Math.sin(a)*e.r*0.7,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:8,dmg:e.dmg*0.7,life:7,boss:true,col:TELE.proj});}
 function mereSafePoint(x,y){x=clamp(x,AR.x0+60,AR.x1-60);y=clamp(y,AR.y0+60,AR.y1-60);for(const q of room.pillars){const d=hyp(x-q.x,y-q.y);if(d<q.r+60){x=q.x+(x-q.x)/(d||1)*(q.r+60);y=q.y+(y-q.y)/(d||1)*(q.r+60);}}return{x,y};}
 function merePattern(e){
@@ -5621,7 +5621,7 @@ function updateMere(e,dt,slow,dP,touching){
   e.patT-=dt;if(e.patT<=0)merePattern(e);}}
  if(touching&&e.state!=='mcharge'&&e.fade>0.5)contact(e,e.dmg);}
 const _cb12=createBoss;
-createBoss=function(){const e=_cb12();if(RUN.act===1&&!RUN.hub){mereInit(e);later(0.3,()=>{if(e.dead)return;showBanner('Premier temps · Observation','Elle t’étudie',true);tuto('Retiens ses schémas. Orange : zone · Violet : tirs · Cyan : saisie.',3,true,bossArrow(e));});}return e;};
+createBoss=function(){const e=_cb12();if(RUN.act===1&&!RUN.hub){mereInit(e);later(0.3,()=>{if(e.dead)return;tuto('Retiens ses schémas. Orange : zone · Violet : tirs · Cyan : saisie.',3,true,bossArrow(e));});}return e;};
 const _bd12=bossDefeated;
 bossDefeated=function(e){if(e&&e.m12){e.grabbing=false;if(P)P.grabT=0;EYE.boss='255,64,87';}_bd12(e);};
 
@@ -5813,9 +5813,9 @@ function roleSet(){const p=profile(),out=[];
  for(const k of shuffle(Object.keys(ROLES)))if(!out.includes(k))out.push(k);
  return out;}
 function assignRoles(waves){
- if(G()<4||Math.random()>0.7||!waves.length)return;
- let w=waves[0];for(const x of waves)if(x.length>w.length)w=x;if(w.length<4)return;
- const want=roleSet().slice(0,Math.min(3,Math.floor(w.length/3))),pref={rempart:['brute','nourrice','rampant'],soutien:['spectre','hurleur','rampant'],harceleur:['rampant','voile'],chasseur:['rampant','voile','brute']};
+ const RT=BE_D.rolesTirage||{salle:3,chance:85,parEnnemis:3,max:3};if(G()<RT.salle||Math.random()*100>RT.chance||!waves.length)return;
+ let w=waves[0];for(const x of waves)if(x.length>w.length)w=x;if(w.length<3)return;
+ const want=roleSet().slice(0,Math.min(RT.max,Math.max(1,Math.ceil(w.length/RT.parEnnemis)))),pref={rempart:['brute','nourrice','rampant'],soutien:['spectre','hurleur','rampant'],harceleur:['rampant','voile'],chasseur:['rampant','voile','brute']};
  for(const k of want){const free=w.filter(s=>!s.role&&!s.key&&!s.elite&&!s.siege&&!s.cm&&s.type!=='bouffi');if(!free.length)break;free.sort((a,b)=>(pref[k].indexOf(a.type)+9)%10-(pref[k].indexOf(b.type)+9)%10);free[0].role=k;}}
 const _pr13=planRoom;
 planRoom=function(type){const w=_pr13(type);if(!RUN||RUN.hub||!w||!w.length)return w;
@@ -5823,35 +5823,66 @@ planRoom=function(type){const w=_pr13(type);if(!RUN||RUN.hub||!w||!w.length)retu
  if(type==='combat'||type==='elite')assignRoles(w);return w;};
 const _sw13=spawnWave;
 spawnWave=function(w,last){const n0=room.spawning.length;_sw13(w,last);for(let i=0;i<w.length;i++){const sp=room.spawning[n0+i];if(sp&&w[i]&&w[i].role)sp.role=w[i].role;}};
+// v17.5 · rôles bien plus marqués (réglages : data/bestiaire.js, roles.*). Aucun texte en pleine salle : on les lit à l’œil.
+const RK=k=>ROLES[k]||{};
+function roleBuff(e){const R=RK(e.role);if(e.type==='boss')return;
+ if(R.pv){e.maxHp*=R.pv;e.hp=e.maxHp;}if(R.taille)e.r*=R.taille;if(R.vitesse)e.spd*=R.vitesse;}
 function rolesTick(dt){
- const weak=room.hunt||(room.hunt=hunterWeak());let fresh=[];
- for(const e of enemies){if(e.dead||!e.role)continue;
-  if(!e.roleT){e.roleT=1;fresh.push(e.role);}
+ const weak=room.hunt||(room.hunt=hunterWeak());
+ for(const e of enemies){if(e.dead||!e.role)continue;const R=RK(e.role);
+  if(!e.roleT){e.roleT=1;roleBuff(e);}
+  if(e.trail){for(const t of e.trail)t.t-=dt;e.trail=e.trail.filter(t=>t.t>0);}
   if(e.stun>0||e.puppet>0)continue;const dP=hyp(P.x-e.x,P.y-e.y);
-  if(e.role==='harceleur'&&dP>40){const ix=clamp(P.x+P.vx*0.7,AR.x0+20,AR.x1-20),iy=clamp(P.y+P.vy*0.7,AR.y0+20,AR.y1-20),d=hyp(ix-e.x,iy-e.y)||1;e.x+=(ix-e.x)/d*e.spd*0.45*dt;e.y+=(iy-e.y)/d*e.spd*0.45*dt;}
+  if(e.role==='harceleur'){
+   // il file vers l’endroit où tu vas, puis bondit dessus
+   if(!e.trail)e.trail=[];e.trT=(e.trT||0)-dt;if(e.trT<=0){e.trT=0.05;e.trail.push({x:e.x,y:e.y,t:0.3});}
+   if(e.hb&&e.hb.st==='aim'){e.hb.t-=dt;e.hb.ang=Math.atan2(P.y+P.vy*0.3-e.y,P.x+P.vx*0.3-e.x);if(e.hb.t<=0){e.hb.st='go';e.hb.t=R.bondT;e.hb.hit=false;sfx('dash');}}
+   else if(e.hb&&e.hb.st==='go'){e.hb.t-=dt;const v=R.bondVit;e.x+=Math.cos(e.hb.ang)*v*dt;e.y+=Math.sin(e.hb.ang)*v*dt;
+    if(!e.hb.hit&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){e.hb.hit=true;contact(e,e.dmg*R.bondDeg);}
+    if(e.hb.t<=0){e.hb=null;e.hbT=R.bondCd*rand(0.85,1.15);}}
+   else{e.hbT=(e.hbT==null?rand(0.8,1.6):e.hbT)-dt;
+    if(dP>40){const ix=clamp(P.x+P.vx*0.7,AR.x0+20,AR.x1-20),iy=clamp(P.y+P.vy*0.7,AR.y0+20,AR.y1-20);moveTo(e,ix,iy,e.spd*0.5,dt);}
+    if(e.hbT<=0&&dP<R.bondPortee&&dP>70){e.hb={st:'aim',t:R.bondVise,ang:Math.atan2(P.y-e.y,P.x-e.x)};}}}
   else if(e.role==='soutien'){
-   if(dP<230){e.x-=(P.x-e.x)/(dP||1)*e.spd*0.5*dt;e.y-=(P.y-e.y)/(dP||1)*e.spd*0.5*dt;e.x=clamp(e.x,AR.x0+e.r,AR.x1-e.r);e.y=clamp(e.y,AR.y0+e.r,AR.y1-e.r);}
-   e.supT=(e.supT==null?2.5:e.supT)-dt;
-   if(e.supT<=0.7&&!e.supTo){let best=null,bv=0.95;for(const o of enemies){if(o===e||o.dead||o.type==='boss'||o.fixed)continue;const v=o.hp/o.maxHp;if(v<bv&&hyp(o.x-e.x,o.y-e.y)<320){bv=v;best=o;}}if(best)e.supTo=best;else e.supT=1.2;}
-   if(e.supT<=0&&e.supTo){const o=e.supTo;if(!o.dead){o.hp=Math.min(o.maxHp,o.hp+o.maxHp*0.15);o.hasteT=3;addNum(o.x,o.y-o.r-14,'soigné','echo');fx.push({k:'line',x1:e.x,y1:e.y,x2:o.x,y2:o.y,w:5,t:0.35,max:0.35,col:'rgba(130,240,160,'});sparks(o.x,o.y,6,'#9ff0b8');}e.supTo=null;e.supT=4.5;}}
+   if(dP<220)moveTo(e,2*e.x-P.x,2*e.y-P.y,e.spd*0.6,dt);
+   e.supT=(e.supT==null?R.cd*0.5:e.supT)-dt;e.supK=clamp(1-e.supT/0.6,0,1);
+   if(e.supT<=0){e.supT=R.cd;let n=0;
+    for(const o of enemies){if(o.dead||o.type==='boss'||o.fixed||o.puppet>0)continue;if(hyp(o.x-e.x,o.y-e.y)>R.rayon)continue;
+     o.hasteT=Math.max(o.hasteT||0,R.hate);
+     if(o.hp<o.maxHp){const h=Math.min(o.maxHp-o.hp,o.maxHp*R.soin*(o===e?0.5:1));o.hp+=h;n++;addNum(o.x,o.y-o.r-14,'+'+Math.round(h),'echo');sparks(o.x,o.y,8,'#9ff0b8');
+      if(o!==e)fx.push({k:'line',x1:e.x,y1:e.y,x2:o.x,y2:o.y,w:4,t:0.4,max:0.4,col:'rgba(130,240,160,'});}}
+    fx.push({k:'ring',x:e.x,y:e.y,r0:e.r,r1:R.rayon,w:7,t:0.5,max:0.5,col:'rgba(130,240,160,',fill:true});
+    if(n)sfx('heart');}}
   else if(e.role==='chasseur'){
-   e.hcd=(e.hcd==null?2:e.hcd)-dt;
+   e.hcd=(e.hcd==null?2:e.hcd)-dt;e.hforce=(e.hforce||0)+dt;
    if(e.hst==='aim'){e.ht-=dt;if(e.ht<=0){e.hst='lunge';e.ht=0.32;e.hhit=false;sfx('dash');}}
-   else if(e.hst==='lunge'){e.ht-=dt;e.x+=Math.cos(e.hang)*620*dt;e.y+=Math.sin(e.hang)*620*dt;e.x=clamp(e.x,AR.x0+e.r,AR.x1-e.r);e.y=clamp(e.y,AR.y0+e.r,AR.y1-e.r);
-    if(!e.hhit&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){e.hhit=true;contact(e,e.dmg*1.4);}if(e.ht<=0){e.hst=null;e.hcd=3.5;}}
-   else if(e.hcd<=0&&dP<340){const cond=weak==='soin'?RUN.time-(P.lastHealT||-9)<1.5:weak==='esquive'?P.dashCh<=0:P.hp<P.s.maxHp*0.5;if(cond){e.hst='aim';e.ht=e.hT=0.45;e.hang=Math.atan2(P.y-e.y,P.x-e.x);}}}}
- if(fresh.length&&!room.roleSaid){room.roleSaid=true;const ks=[...new Set(room.waves.flat().filter(s=>s.role).map(s=>s.role).concat(fresh))],first=ks.filter(k=>!SAVE.flags['role_'+k]);
-  murmur('Le Brumeux coordonne',ks.map(k=>`${ROLES[k].n} : ${k==='chasseur'?HUNT_TXT[weak]+'.':ROLES[k].d}`).join(' · '),first.length?6.5:3.5);sfx('murmur');
-  for(const k of first)SAVE.flags['role_'+k]=1;if(first.length)persist();}}
-function rempartNear(e){if(e.role==='rempart'||e.type==='boss')return false;for(const o of enemies)if(!o.dead&&o.role==='rempart'&&o!==e&&hyp(o.x-e.x,o.y-e.y)<130)return true;return false;}
-function drawRolePost(e){const R=ROLES[e.role];if(!R)return;const c=ctx,x=e.x,y=e.y-e.r-(e.elite?50:16)-(e.cm?16:0)-Math.sin(T*4+e.wob)*2,col=R.col;
- c.save();c.globalCompositeOperation='lighter';glow(c,x,y,12,col,0.45);c.strokeStyle=`rgba(${col},.95)`;c.fillStyle=`rgba(${col},.95)`;c.lineWidth=1.8;c.lineCap='round';c.beginPath();
- if(e.role==='rempart'){c.moveTo(x-6,y-6);c.lineTo(x+6,y-6);c.lineTo(x+6,y);c.quadraticCurveTo(x+6,y+5,x,y+7);c.quadraticCurveTo(x-6,y+5,x-6,y);c.closePath();c.stroke();
-  c.strokeStyle=`rgba(${col},.22)`;c.setLineDash([5,7]);c.lineDashOffset=-T*12;c.beginPath();c.arc(e.x,e.y,130,0,TAU);c.stroke();c.setLineDash([]);}
- else if(e.role==='harceleur'){c.moveTo(x-7,y-5);c.lineTo(x-1,y);c.lineTo(x-7,y+5);c.moveTo(x,y-5);c.lineTo(x+6,y);c.lineTo(x,y+5);c.stroke();}
- else if(e.role==='soutien'){c.moveTo(x,y-6);c.lineTo(x,y+6);c.moveTo(x-6,y);c.lineTo(x+6,y);c.stroke();if(e.supTo&&!e.supTo.dead){const k=1-clamp(e.supT/0.7,0,1);c.strokeStyle=`rgba(${col},${0.25+0.5*k})`;c.lineWidth=2;c.setLineDash([4,5]);c.beginPath();c.moveTo(e.x,e.y);c.lineTo(e.supTo.x,e.supTo.y);c.stroke();c.setLineDash([]);glow(c,e.x,e.y,e.r*1.6,col,0.2+0.3*k);}}
- else{c.arc(x,y,5.5,0,TAU);c.moveTo(x-9,y);c.lineTo(x-3,y);c.moveTo(x+3,y);c.lineTo(x+9,y);c.moveTo(x,y-9);c.lineTo(x,y-3);c.moveTo(x,y+3);c.lineTo(x,y+9);c.stroke();
-  if(e.hst==='aim'){const k=1-e.ht/e.hT,w=e.r*2;c.save();c.translate(e.x,e.y);c.rotate(e.hang);c.fillStyle=`rgba(${TELE.zone},${0.12+0.2*k})`;c.fillRect(0,-w/2,200,w);c.strokeStyle=`rgba(${TELE.zone},.7)`;c.lineWidth=1.5;c.strokeRect(0,-w/2,200,w);c.restore();}}
+   else if(e.hst==='lunge'){e.ht-=dt;e.x+=Math.cos(e.hang)*660*dt;e.y+=Math.sin(e.hang)*660*dt;e.x=clamp(e.x,AR.x0+e.r,AR.x1-e.r);e.y=clamp(e.y,AR.y0+e.r,AR.y1-e.r);
+    if(!e.hhit&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){e.hhit=true;contact(e,e.dmg*R.bondDeg);}if(e.ht<=0){e.hst=null;e.hcd=R.bondCd;}}
+   else if(e.hcd<=0&&dP<360){const cond=weak==='soin'?RUN.time-(P.lastHealT||-9)<1.5:weak==='esquive'?P.dashCh<=0:P.hp<P.s.maxHp*0.5;
+    if(cond||e.hforce>=R.bondForce){e.hforce=0;e.hst='aim';e.ht=e.hT=0.45;e.hang=Math.atan2(P.y-e.y,P.x-e.x);}}}}}
+function rempartNear(e){if(e.role==='rempart'||e.type==='boss')return false;const a=RK('rempart').aura||150;for(const o of enemies)if(!o.dead&&o.role==='rempart'&&o!==e&&hyp(o.x-e.x,o.y-e.y)<a)return true;return false;}
+function roleDmgMul(e){const R=RK('rempart');if(e.role==='rempart')return R.subi==null?1:R.subi;return rempartNear(e)?1-(R.reduc||0.3):1;}
+// sous l’ennemi : un halo de sa couleur, bien plus lisible qu’une petite icône
+function drawRoleUnder(e){const R=RK(e.role);if(!R.col)return;const c=ctx,col=R.col,pu=0.5+0.5*Math.sin(T*5+e.wob);
+ c.save();
+ if(e.role==='rempart'){const a=R.aura||150;c.fillStyle=`rgba(${col},${0.05+0.03*pu})`;c.beginPath();c.arc(e.x,e.y,a,0,TAU);c.fill();
+  c.strokeStyle=`rgba(${col},.6)`;c.lineWidth=2.6;c.setLineDash([10,8]);c.lineDashOffset=-T*14;c.beginPath();c.arc(e.x,e.y,a,0,TAU);c.stroke();c.setLineDash([]);}
+ if(e.role==='soutien'){const a=R.rayon||250;c.strokeStyle=`rgba(${col},${0.18+0.35*(e.supK||0)})`;c.lineWidth=1.6+2*(e.supK||0);c.setLineDash([6,10]);c.lineDashOffset=T*10;c.beginPath();c.arc(e.x,e.y,a*(0.35+0.65*(1-(e.supK||0))),0,TAU);c.stroke();c.setLineDash([]);}
+ if(e.role==='harceleur'&&e.trail){for(const t of e.trail){c.fillStyle=`rgba(${col},${0.28*t.t/0.3})`;c.beginPath();c.arc(t.x,t.y,e.r*(0.6+t.t),0,TAU);c.fill();}
+  if(e.hb&&e.hb.st==='aim'){const w=e.r*2;c.save();c.translate(e.x,e.y);c.rotate(e.hb.ang);c.fillStyle=`rgba(${FOE},.2)`;c.fillRect(0,-w/2,R.bondVit*R.bondT,w);c.strokeStyle=`rgba(${FOE},.75)`;c.lineWidth=1.5;c.strokeRect(0,-w/2,R.bondVit*R.bondT,w);c.restore();}}
+ c.restore();}
+// un allié protégé par un Rempart porte un bouclier bleu
+function drawShielded(e){if(e.role||!rempartNear(e))return;const c=ctx,col=RK('rempart').col;c.save();c.strokeStyle=`rgba(${col},.85)`;c.lineWidth=2.4;c.beginPath();c.arc(e.x,e.y,e.r+6,-2.5,-0.64);c.stroke();c.fillStyle=`rgba(${col},.12)`;c.beginPath();c.arc(e.x,e.y,e.r+6,0,TAU);c.fill();c.restore();}
+function drawRolePost(e){const R=ROLES[e.role];if(!R)return;const c=ctx,x=e.x,y=e.y-e.r-(e.elite?50:18)-(e.cm?16:0)-Math.sin(T*4+e.wob)*2,col=R.col,pu=0.5+0.5*Math.sin(T*5+e.wob);
+ // halo et anneau par-dessus la brume : un ennemi à rôle se repère au premier coup d’œil
+ c.save();c.globalCompositeOperation='lighter';const g=c.createRadialGradient(e.x,e.y,e.r*0.5,e.x,e.y,e.r+18);g.addColorStop(0,`rgba(${col},${0.22+0.14*pu})`);g.addColorStop(1,`rgba(${col},0)`);c.fillStyle=g;c.beginPath();c.arc(e.x,e.y,e.r+18,0,TAU);c.fill();
+ c.globalCompositeOperation='source-over';c.strokeStyle=`rgba(${col},${0.75+0.25*pu})`;c.lineWidth=3;c.beginPath();c.arc(e.x,e.y,e.r+5,0,TAU);c.stroke();c.restore();
+ c.save();c.fillStyle='rgba(6,8,14,.82)';c.beginPath();c.arc(x,y,12,0,TAU);c.fill();c.globalCompositeOperation='lighter';glow(c,x,y,16,col,0.55);c.strokeStyle=`rgba(${col},1)`;c.fillStyle=`rgba(${col},1)`;c.lineWidth=2.4;c.lineCap='round';c.lineJoin='round';c.beginPath();
+ if(e.role==='rempart'){c.moveTo(x-7,y-7);c.lineTo(x+7,y-7);c.lineTo(x+7,y);c.quadraticCurveTo(x+7,y+6,x,y+8);c.quadraticCurveTo(x-7,y+6,x-7,y);c.closePath();c.stroke();}
+ else if(e.role==='harceleur'){c.moveTo(x-8,y-6);c.lineTo(x-1,y);c.lineTo(x-8,y+6);c.moveTo(x,y-6);c.lineTo(x+7,y);c.lineTo(x,y+6);c.stroke();}
+ else if(e.role==='soutien'){c.moveTo(x,y-7);c.lineTo(x,y+7);c.moveTo(x-7,y);c.lineTo(x+7,y);c.stroke();}
+ else{c.arc(x,y,6,0,TAU);c.moveTo(x-10,y);c.lineTo(x-3,y);c.moveTo(x+3,y);c.lineTo(x+10,y);c.moveTo(x,y-10);c.lineTo(x,y-3);c.moveTo(x,y+3);c.lineTo(x,y+10);c.stroke();
+  if(e.hst==='aim'){const k=1-e.ht/e.hT,w=e.r*2;c.globalCompositeOperation='source-over';c.save();c.translate(e.x,e.y);c.rotate(e.hang);c.fillStyle=`rgba(${TELE.zone},${0.12+0.2*k})`;c.fillRect(0,-w/2,210,w);c.strokeStyle=`rgba(${TELE.zone},.7)`;c.lineWidth=1.5;c.strokeRect(0,-w/2,210,w);c.restore();}}
  c.restore();}
 
 // ───────────────────────── Équipements
@@ -5963,7 +5994,7 @@ hitEnemy=function(e,base,o){
  if(eqIs('coeur'))m*=1+(P.eqS.st||0)/100;
  if(eqIs('anneau')&&room&&room.ring)m*=room.ring;
  if(eqIs('murmure'))m*=1+0.04*(P.eqS.rank||0);
- if(rempartNear(e))m*=0.7;
+ m*=roleDmgMul(e);
  if(e.type==='boss'&&e.c13&&e.phase===3)m*=1.25;
  const d=_hit13(e,base*m,o);
  if(pactOn('sangsue')&&d>0)heal(d*0.03,'pacte');
@@ -6010,20 +6041,22 @@ onRoomCleared=function(){
 const _ue13=updateEnemies;
 updateEnemies=function(dt){_ue13(dt);if(RUN&&!RUN.hub&&room)try{rolesTick(dt);}catch(err){console.error(err);}};
 const _dep13=drawEnemyPost;
-drawEnemyPost=function(e){_dep13(e);if(e.role&&!e.dead)drawRolePost(e);};
+drawEnemyPost=function(e){_dep13(e);if(e.dead)return;if(e.role)drawRolePost(e);else if(RUN&&!RUN.hub)try{drawShielded(e);}catch(x){}};
+const _deb175=drawEnemyBody;
+drawEnemyBody=function(e){if(RUN&&!RUN.hub&&!e.dead){try{if(e.role)drawRoleUnder(e);}catch(x){}}return _deb175.apply(this,arguments);};
 
 // ───────────────────────── Gardiens II et III : trois temps
 const B13=GA_D.failles;
 function b13Pal(e){const B=B13[RUN.act];if(e.phase===2)return(CRGB[P.cls]||'201,180,255').split(',').map(Number);return e.phase===3?B.p3:B.p1;}
 function b13Init(e){e.c13=1;e.mk=1;e.pal13=B13[RUN.act].p1.slice();e.fade=1;
  if(eqIs('larme')){e.knows=true;e.copy=mereChooseCopy();}
- later(0.3,()=>{if(e.dead)return;showBanner('Premier temps · Observation',B13[RUN.act].l1,true);tuto(e.knows?`Il t’a identifié : il copie déjà ${MERE_COPY[e.copy].what}. ${MERE_COPY[e.copy].hint}`:'Retiens ses schémas. Orange : zone · Violet : tirs · Cyan : saisie.',3,true,bossArrow(e));});}
+ later(0.3,()=>{if(e.dead)return;tuto(e.knows?`Il t’a identifié : il copie déjà ${MERE_COPY[e.copy].what}. ${MERE_COPY[e.copy].hint}`:'Retiens ses schémas. Orange : zone · Violet : tirs · Cyan : saisie.',3,true,bossArrow(e));});}
 function b13Phase(e,ph){
  e.phase=ph;e.queue=[];e.state='idle';e.patT=ph===3?0.2:0.8;e.immuneT=ph===3?1.3:0.6;e.stun=0;e.fade=1;e.beams=null;if(room)room.drainT=0;
  for(let i=0;i<3;i++)later(i*0.12,()=>{if(!e.dead)mist(e.x+rand(-30,30),e.y+rand(-20,40),e.r*1.3,ph===3?'#3a1220':'#1c2a30');});
  sfx('phase');shake(12,0.5);tlights.push({x:e.x,y:e.y,r:420,t:0.5,max:0.5,c:'rage'});
- if(ph===2){if(!e.copy)e.copy=mereChooseCopy();if(RUN.prof)RUN.prof.copied2=e.copy;const C=MERE_COPY[e.copy];showBanner('Deuxième temps · Adaptation','Il t’imite',true);later(1.0,()=>tuto(`Il a copié ${C.what}. ${C.hint}`,3,true,bossArrow(e)));if(RUN.act===3)RUN.fogBoost=0.05;}
- else{showBanner('Troisième temps · Désespoir',B13[RUN.act].l3,true);later(1.0,()=>tuto(B13[RUN.act].t3,3,true,bossArrow(e)));if(RUN.act===3)RUN.fogBoost=0;}}
+ if(ph===2){if(!e.copy)e.copy=mereChooseCopy();if(RUN.prof)RUN.prof.copied2=e.copy;const C=MERE_COPY[e.copy];later(1.0,()=>tuto(`Il a copié ${C.what}. ${C.hint}`,3,true,bossArrow(e)));if(RUN.act===3)RUN.fogBoost=0.05;}
+ else{later(1.0,()=>tuto(B13[RUN.act].t3,3,true,bossArrow(e)));if(RUN.act===3)RUN.fogBoost=0;}}
 function copyStart(e){const ph=e.phase;
  if(e.copy==='volee'){e.state='mvolley';e.vn=3;e.t=e.tt=0.6;}
  else if(e.copy==='balayage'){e.state='msweepIn';e.t=0.75;}
@@ -6695,23 +6728,6 @@ openCodex=function(back){
    ['− Le coût',R,'Une contrainte choisie d’après ton style de jeu. Si tu es inconnu, elle est tirée au hasard.'],
    ['Le prix caché',O,'Chaque pacte accepté rend les gardiens plus agressifs (jusqu’à trois fois).'],
    ['Refuser',Y,'Tu peux toujours refuser : tu descends sans rien devoir à la Brume.']]},
-  contre:{t:'Contre-mesure : observe, puis réponds',l:'Le Brumeux a vu ton style de jeu et envoie quelque chose contre lui, en poussant un cri. Chaque contre-mesure a sa parade.',c:[
-   ['Traque',V,'Tu frappes de loin : des traqueurs chargent. Reste dans la lumière et frappe-les au contact.'],
-   ['Pétards',O,'Tu frappes au contact : des Bouffis explosent près de toi. Abats-les à distance.'],
-   ['Tir de barrage',C,'Tu esquives tout ce qui charge : des Spectres tirent du fond de la salle. Avance et coupe leurs lignes.'],
-   ['Brume avide',G,'Tu te soignes beaucoup : −40 % de soins dans la salle. Joue sans compter dessus.'],
-   ['Renforts',R,'Tu purges les salles vite : une vague de plus arrive à la fin. Garde de la vie et tes compétences pour elle.'],
-   ['Béliers',Y,'Tu esquives rarement : des Brutes chargent en ligne. Esquive de côté, elles s’assomment contre les murs.']]},
-  regles:{t:'Salle à règle',l:'Certaines salles portent une règle, rappelée dans la pastille en haut de l’écran. Elle vaut pour tout le monde, toi compris : utilise-la.',c:[
-   ['Verre',R,'Tout est fragile : tes coups et les leurs font 40 % de dégâts en plus.'],
-   ['Sol qui se dérobe',O,'Des dalles cèdent et écrasent ce qu’elles couvrent. Attire-y les ennemis.'],
-   ['Brume plombée',V,'La moitié de la salle est voilée, mais tu frappes 25 % plus fort.'],
-   ['Braseros',Y,'Hors de la lumière des braseros, les ennemis ne subissent que 40 % des dégâts.']]},
-  boss:{t:'Les gardiens : trois temps',l:'Un gardien change de façon de se battre au fil du combat. Le premier temps sert à l’observer.',c:[
-   ['Premier temps',Y,'Observation. Retiens ses schémas : Orange = zone, Violet = tirs, Cyan = saisie.'],
-   ['Deuxième temps',V,'Adaptation. Il copie une partie de ton style de jeu : sa parade est rappelée à l’écran.'],
-   ['Troisième temps',R,'Désespoir. Son cœur est à nu (+25 % de dégâts pour toi), mais il frappe plus vite.'],
-   ['Sonné',C,'Quand il rate une attaque, il est étourdi et subit +50 % de dégâts : c’est ta fenêtre pour frapper fort.']]},
   talents:{t:'L’arbre de talents',l:'À chaque niveau, la Brume te propose quelques talents. Les nœuds proposés pulsent dans l’arbre.',c:[
    ['Choisir',Y,'Survole un nœud pour lire son effet, puis clique ou utilise les touches 1 à 4.'],
    ['Nœuds clés',O,'Ils changent ta façon de jouer (lanterne vivante, cœur de soleil…) et verrouillent les talents incompatibles.'],
@@ -6735,11 +6751,8 @@ openCodex=function(back){
  window.__brief={brief,BRIEF};
  const wrap=(name,key,get,set)=>{const f=get();set(function(){const a=arguments,self=this;if(brief(key,()=>f.apply(self,a)))return;return f.apply(self,a);});};
  wrap('openPacte','pacte',()=>openPacte,f=>{openPacte=f;});
- wrap('announceCm','contre',()=>announceCm,f=>{announceCm=f;});
- wrap('setRule','regles',()=>setRule,f=>{setRule=f;});
  wrap('openEquip','equip',()=>openEquip,f=>{openEquip=f;});
  wrap('openLevelUp','talents',()=>openLevelUp,f=>{openLevelUp=f;});
- const _cb=createBoss;createBoss=function(){const e=_cb.apply(this,arguments);try{brief('boss');}catch(x){}return e;};
  // v16.17 · avant le tout premier pacte (quel que soit le palier) : qui est le Brumeux, en image. Une seule fois.
  const BRX_SVG=`<svg viewBox="0 0 400 460" role="img" aria-label="Une silhouette encapuchonnée sans visage, deux yeux pâles, une main tendue qui porte une lueur violette" preserveAspectRatio="xMidYMid slice">
 <defs>
@@ -6854,16 +6867,16 @@ openCodex=function(back){
  // Cloche majeure = une seule cloche : incompatible avec « Timbre clair » (+1 cloche max)
  if(typeof EXCL!=='undefined'){EXCL.car_x2b=(EXCL.car_x2b||[]).concat('car_n5');EXCL.car_n5=(EXCL.car_n5||[]).concat('car_x2b');}
  // Solstice agrandit aussi la lumière de la lanterne vivante
- if(NODES.sol_s3){const ap=NODES.sol_s3.apply;NODES.sol_s3.apply=(st,r)=>{ap(st,r);st.orbitR=(st.orbitR||1)*1.15;};NODES.sol_s3.desc='+15 % de rayon pour toutes tes lumières (aura, lanterne posée, lanterne vivante).';}
+ if(NODES.sol_s3){const ap=NODES.sol_s3.apply;NODES.sol_s3.apply=(st,r)=>{ap(st,r);st.orbitR=(st.orbitR||1)*1.15;};NODES.sol_s3.desc='+15 % de rayon pour toutes tes lumières.';}
  // précisions dans les descriptions
  const note=(id,t)=>{const n=NODES[id];if(n&&!n.desc.includes(t))n.desc+=' '+t;};
- note('fan_k1','Incompatible avec les talents de lanterne posée et d’aura.');
- note('pen_k1','Incompatible avec les talents de rappel.');
- note('ray_k1','Incompatible avec les talents de lancer, de rappel et d’Obscur.');
- note('reg_k2','Incompatible avec les talents de Recracher et de flaques.');
- note('vor_k1','Incompatible avec les soins hors dévoration.');
- note('trm_k2','Incompatible avec les talents qui attachent plusieurs fils.');
- note('dif_k1','Incompatible avec les talents de Ruée.');
+ note('fan_k1','Exclut : lanterne posée, aura.');
+ note('pen_k1','Exclut : rappel.');
+ note('ray_k1','Exclut : lancer, rappel, Obscur.');
+ note('reg_k2','Exclut : Recracher, flaques.');
+ note('vor_k1','Exclut : autres soins.');
+ note('trm_k2','Exclut : fils multiples.');
+ note('dif_k1','Exclut : Ruée.');
 
  // verrouillage dans les deux sens
  const _db=depBlocked;
@@ -9551,6 +9564,87 @@ function demoBoot(cls){
  document.head.appendChild(st);
 
  window.__memoire={get M(){return MEM();},grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM};
+})();
+
+// ═════════════════════════ v17.5 · chaque ennemi blesse, plus d’ennemis coincés, plus rien qui arrête le joueur
+(function(){
+ // ── 1. Dégâts de contact cumulés : chaque ennemi qui te touche te blesse.
+ // L’invulnérabilité donnée par un coup (0,65 s) ne protège plus que contre CE même ennemi ; l’esquive et les
+ // invulnérabilités de compétence ou de relève protègent toujours de tout.
+ const _hp=hurtPlayer;
+ hurtPlayer=function(dmg,src){
+  const isE=src&&src!==P&&typeof src.hp==='number'&&!src.dead&&enemies.includes(src);
+  if(!isE||!RUN||RUN.hub||!P||P.dead||state!=='play')return _hp(dmg,src);
+  if((src.ctT||0)>0)return;
+  const iT0=P.iT,fromHit=iT0>0&&(P.hitIT||0)>0&&iT0<=P.hitIT+1e-6;
+  if(fromHit)P.iT=0;
+  const h0=P.hp,s0=P.shield||0;_hp(dmg,src);
+  const landed=P.hp<h0||(P.shield||0)<s0;
+  if(landed){src.ctT=0.65;P.hitIT=P.iT;}
+  if(fromHit)P.iT=Math.max(P.iT,landed?P.iT:iT0);};
+ const _hpAny=hurtPlayer;
+ hurtPlayer=function(dmg,src){const h0=P&&P.hp,b=P&&P.iT;_hpAny(dmg,src);if(P&&!(src&&enemies.includes(src))&&P.hp<h0&&P.iT>b)P.hitIT=P.iT;};
+
+ // ── 2. Plus de messages qui arrêtent le joueur en descente (tous paliers) : la file de lecture ne fige plus le jeu.
+ const _mp=msgPush;
+ msgPush=function(m){
+  if(RUN&&!RUN.hub&&P&&state==='play'){if(m.k==='t'&&!msgCur)showToast(m.t,Math.min(m.secs||3,4.5),false);return;}
+  return _mp(m);};
+
+ // ── 3. Ennemis coincés derrière le décor : carte de distances (pas de 20 px) recalculée autour du joueur,
+ // suivie dès qu’un obstacle coupe la ligne droite ; détection d’ennemi bloqué en dernier recours.
+ const CS=20,COLS=Math.ceil(W/CS),ROWS=Math.ceil(H/CS),INF=1e9,PAD=15;
+ const FF={room:null,n:-1,blk:new Uint8Array(COLS*ROWS),dist:new Float64Array(COLS*ROWS),t:0,ok:false};
+ const cellOf=(x,y)=>[clamp(Math.floor(x/CS),0,COLS-1),clamp(Math.floor(y/CS),0,ROWS-1)];
+ function ffBlk(){const P_=room.pillars||[];FF.blk.fill(0);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const x=(c+0.5)*CS,y=(r+0.5)*CS;let b=x<AR.x0+PAD||x>AR.x1-PAD||y<AR.y0+PAD||y>AR.y1-PAD;
+   if(!b)for(const p of P_)if(hyp(x-p.x,y-p.y)<p.r+PAD){b=true;break;}FF.blk[r*COLS+c]=b?1:0;}
+  FF.room=room;FF.n=P_.length;}
+ const NB=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
+ function ffBuild(){
+  if(FF.room!==room||FF.n!==(room.pillars||[]).length)ffBlk();
+  const D=FF.dist;D.fill(INF);let [c0,r0]=cellOf(P.x,P.y);
+  if(FF.blk[r0*COLS+c0]){let best=null,bd=INF;for(let dr=-3;dr<=3;dr++)for(let dc=-3;dc<=3;dc++){const c=c0+dc,r=r0+dr;if(c<0||r<0||c>=COLS||r>=ROWS||FF.blk[r*COLS+c])continue;const d=dc*dc+dr*dr;if(d<bd){bd=d;best=[c,r];}}if(!best)return;[c0,r0]=best;}
+  // Dijkstra sur une petite grille (≈ 2 300 cases) : un tas binaire suffit
+  const hp=[],push=(i,d)=>{hp.push([d,i]);let k=hp.length-1;while(k){const q=(k-1)>>1;if(hp[q][0]<=hp[k][0])break;[hp[q],hp[k]]=[hp[k],hp[q]];k=q;}},
+   pop=()=>{const top=hp[0],last=hp.pop();if(hp.length){hp[0]=last;let k=0;for(;;){const a=2*k+1,b=a+1;let m=k;if(a<hp.length&&hp[a][0]<hp[m][0])m=a;if(b<hp.length&&hp[b][0]<hp[m][0])m=b;if(m===k)break;[hp[m],hp[k]]=[hp[k],hp[m]];k=m;}}return top;};
+  const s0=r0*COLS+c0;D[s0]=0;push(s0,0);
+  while(hp.length){const [d,i]=pop();if(d>D[i])continue;const c=i%COLS,r=(i/COLS)|0;
+   for(const [dc,dr,w] of NB){const cc=c+dc,rr=r+dr;if(cc<0||rr<0||cc>=COLS||rr>=ROWS)continue;const j=rr*COLS+cc;if(FF.blk[j])continue;
+    if(dc&&dr&&(FF.blk[r*COLS+cc]||FF.blk[rr*COLS+c]))continue;const nd=d+w;if(nd<D[j]){D[j]=nd;push(j,nd);}}}
+  FF.ok=true;}
+ function losClear(x0,y0,x1,y1,r){for(const p of room.pillars||[])if(segDist(p.x,p.y,x0,y0,x1,y1)<p.r+r)return false;return true;}
+ // direction à suivre : la case la plus avancée du chemin encore visible en ligne droite
+ function ffDir(e){if(!FF.ok)return null;const D=FF.dist;let [c,r]=cellOf(e.x,e.y),i=r*COLS+c;
+  if(D[i]>=INF){let best=-1,bd=INF;for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){const cc=c+dc,rr=r+dr;if(cc<0||rr<0||cc>=COLS||rr>=ROWS)continue;const j=rr*COLS+cc;if(D[j]<bd){bd=D[j];best=j;}}if(best<0)return null;i=best;c=i%COLS;r=(i/COLS)|0;}
+  let tx=(c+0.5)*CS,ty=(r+0.5)*CS;
+  for(let step=0;step<7;step++){let bj=-1,bd=D[i];for(const [dc,dr] of NB){const cc=c+dc,rr=r+dr;if(cc<0||rr<0||cc>=COLS||rr>=ROWS)continue;const j=rr*COLS+cc;if(D[j]<bd){bd=D[j];bj=j;}}
+   if(bj<0)break;const nc=bj%COLS,nr=(bj/COLS)|0,nx=(nc+0.5)*CS,ny=(nr+0.5)*CS;
+   if(step>0&&!losClear(e.x,e.y,nx,ny,e.r*0.85))break;i=bj;c=nc;r=nr;tx=nx;ty=ny;}
+  const dx=tx-e.x,dy=ty-e.y,d=hyp(dx,dy);if(d<1)return null;return[dx/d,dy/d];}
+ const _mt=moveTo;
+ moveTo=function(e,tx,ty,sp,dt){
+  if(!RUN||RUN.hub||!room||!P||!room.pillars||!room.pillars.length||e.type==='boss')return _mt(e,tx,ty,sp,dt);
+  const dx=tx-e.x,dy=ty-e.y,d=hyp(dx,dy);if(d<2)return d;
+  // dernier recours : un ennemi qui n’avance plus se dégage en suivant le chemin
+  if(e.unT>0&&e.unV){e.unT-=dt;e.x+=e.unV[0]*sp*dt;e.y+=e.unV[1]*sp*dt;e.ang=Math.atan2(dy,dx);return d;}
+  e.mvT=(e.mvT||0)+dt;e.mvA=(e.mvA||0)+sp*dt;if(e.mvX==null){e.mvX=e.x;e.mvY=e.y;}
+  if(e.mvT>=0.9){const moved=hyp(e.x-e.mvX,e.y-e.mvY);if(e.mvA>40&&moved<e.mvA*0.18){const v=ffDir(e)||(()=>{const a=Math.atan2(dy,dx)+(Math.random()<0.5?1:-1)*Math.PI/2;return[Math.cos(a),Math.sin(a)];})();e.unT=0.7;e.unV=v;e.avSide=-(e.avSide||1);}e.mvT=0;e.mvA=0;e.mvX=e.x;e.mvY=e.y;}
+  const nearP=hyp(tx-P.x,ty-P.y)<150;
+  if(nearP&&!losClear(e.x,e.y,tx,ty,e.r*0.85)){const v=ffDir(e);if(v){e.x+=v[0]*sp*dt;e.y+=v[1]*sp*dt;e.ang=Math.atan2(dy,dx);return d;}}
+  return _mt(e,tx,ty,sp,dt);};
+ // les tireurs ne restent plus planqués derrière un obstacle : sans ligne de tir, ils viennent la chercher
+ const _kr=keepRange;
+ keepRange=function(e,tg,sp,dt,near,far){
+  if(RUN&&!RUN.hub&&room&&tg&&tg.pl&&room.pillars&&room.pillars.length&&!losClear(e.x,e.y,tg.x,tg.y,6)){e.losT=(e.losT||0)+dt;if(e.losT>0.6){moveTo(e,tg.x,tg.y,sp,dt);return;}}else e.losT=0;
+  return _kr(e,tg,sp,dt,near,far);};
+ // tick : chronos de contact, carte de distances (toutes les 0,15 s)
+ const _ue=updateEnemies;
+ updateEnemies=function(dt){
+  if(RUN&&!RUN.hub&&room&&P){P.hitIT=Math.max(0,(P.hitIT||0)-dt);for(const e of enemies)if(e.ctT>0)e.ctT-=dt;
+   if(room.pillars&&room.pillars.length){FF.t-=dt;if(FF.t<=0||FF.room!==room){FF.t=0.15;try{ffBuild();}catch(x){FF.ok=false;}}}else FF.ok=false;}
+  return _ue(dt);};
+ window.__v175={FF,ffDir,losClear};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];
