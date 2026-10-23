@@ -255,3 +255,19 @@ h1::after{content:"";display:block;width:72px;height:5px;background:var(--coral)
 .stage svg{height:min(46vh,calc((100vw - 120px) * .56))}
 .pied{display:none}
 @media (max-width:900px){.pied{display:flex}}
+
+/* Un seul objet à la fois : question, objet, proposition */
+.desk{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.desk .suite{order:1;grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;gap:20px}
+.desk .suite .msg{min-height:0;font-size:clamp(26px,2.6vw,46px);font-weight:600}
+.desk .suite .row{flex:none}
+.desk .lots{order:2;grid-column:1;display:block}
+.desk .lot{padding:20px 28px}
+.desk .lot-txt b{font-size:clamp(30px,3.2vw,56px)}
+.desk .lot-txt small{font-size:clamp(16px,1.5vw,26px)}
+.desk .reel{font-size:clamp(44px,4.4vw,80px)}
+.desk .num{width:60px;height:60px;font-size:34px}
+.desk .prop{order:3;grid-column:2}
+.desk .lot.is-attente{opacity:1}
+@media (max-width:900px){.desk{grid-template-columns:minmax(0,1fr)}.desk .lots,.desk .prop{grid-column:1}.desk .suite{flex-direction:column;align-items:flex-start}}
+.stage svg{height:min(55vh,calc((100vw - 120px) * .56))}

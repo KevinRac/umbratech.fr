@@ -268,8 +268,9 @@ function nouvellePartie(){
 }
 function message(t, ton=""){ const m = $("#msg"); m.textContent = t; m.className = "msg " + ton; diffuser(); }
 function rendre(){
-  $("#lot-gagner").textContent = cfg.lot;
+  const cur = Math.min(G.idx, G.tirage.length - 1);
   $("#lots").innerHTML = G.tirage.map((it, i) => {
+    if (i !== cur) return "";
     const r = G.res[i], etat = i === G.idx && G.phase !== "fin" ? "actif" : (r ? "fait" : "attente");
     const essai = r ? `<span class="essai${r.ecart===0?" exact":""}">Proposé ${r.essai} € · ${r.ecart===0?"exact !":`écart ${r.ecart} € → −${r.pts} pt${r.pts>1?"s":""}`}</span>` : "";
     return `<li class="lot is-${etat}"><span class="num">${i+1}</span>
