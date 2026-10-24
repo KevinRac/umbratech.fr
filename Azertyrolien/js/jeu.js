@@ -5,19 +5,21 @@ const W = 1000, H = 560, X0 = 150, X1 = 800, EDGE = X1 + 56, N = 20, KH = 21;
 // sauf si l'adresse contient ?calme=1 (animations raccourcies).
 const reduce = new URLSearchParams(location.search).get("calme") === "1";
 if (reduce) document.documentElement.classList.add("calme");
+// prix arrondis à l'euro (les joueurs tapent des prix entiers) ; indicatifs, à vérifier
 const EXEMPLES = [
-  {nom:"Canette de boisson énergisante", detail:"50 cl", prix:2},
-  {nom:"Pizza 4 fromages", detail:"Grande, à emporter", prix:12},
-  {nom:"Multiprise parafoudre", detail:"6 prises, câble 3 m", prix:15},
-  {nom:"Câble réseau RJ45", detail:"Cat 6, 10 mètres", prix:12},
-  {nom:"Switch réseau Gigabit", detail:"8 ports", prix:25},
-  {nom:"Tapis de souris XXL", detail:"90 × 40 cm", prix:22},
-  {nom:"Souris gaming filaire", detail:"Capteur 26 000 DPI", prix:30},
-  {nom:"Casque gaming", detail:"Micro détachable", prix:49},
-  {nom:"Clavier mécanique AZERTY", detail:"Switches linéaires", prix:69},
-  {nom:"Écran de PC 24 pouces", detail:"Full HD, 144 Hz", prix:150},
-  {nom:"Chaise gaming", detail:"Dossier inclinable, accoudoirs 4D", prix:160},
-  {nom:"Pack de 24 canettes de soda", detail:"33 cl", prix:15}
+  {nom:"Câble HDMI", detail:"2 mètres", prix:8},
+  {nom:"Clé USB", detail:"64 Go", prix:13},
+  {nom:"Ventilateur PC RGB", detail:"120 mm", prix:15},
+  {nom:"Bombe à air sec pour PC", detail:"Dépoussiérant", prix:10},
+  {nom:"Switch réseau Netgear", detail:"24 ports", prix:100},
+  {nom:"Souris Logitech G Pro X Superlight", detail:"Sans fil", prix:100},
+  {nom:"Manette Xbox One", detail:"Sans fil", prix:60},
+  {nom:"Casque HyperX Cloud II Wireless", detail:"Sans fil", prix:120},
+  {nom:"Clavier mécanique RGB", detail:"Rétroéclairé", prix:70},
+  {nom:"Alimentation PC", detail:"650 W", prix:90},
+  {nom:"SSD NVMe Samsung 990 Pro", detail:"1 To", prix:99},
+  {nom:"Écran gaming 24 pouces", detail:"180 Hz", prix:180},
+  {nom:"Multiprise électrique", detail:"5 prises, 1 m", prix:6}
 ];
 const DEF = {points:200, coef:1, temps:60, lot:"Des points pour le classement général du tournoi", items:EXEMPLES};
 const $ = s => document.querySelector(s);

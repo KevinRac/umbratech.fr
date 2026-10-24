@@ -400,3 +400,4 @@ body:has(.man){padding-block:0}.man{box-sizing:border-box}.man.jeu{overflow:hidd
 .btn.danger{background:linear-gradient(180deg,#f46f6f,#d93636);border-color:#ff8a8a;color:#fff;font-weight:700}
 .btn.danger:hover{background:linear-gradient(180deg,#ff8080,#e04a4a)}
 .et-tige{display:none!important}
+.man-objet small{display:block;font-size:13px;line-height:1.2}.man-objet small:empty{display:none}.man-objet b{font-size:19px}
