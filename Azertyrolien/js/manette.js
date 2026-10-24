@@ -56,7 +56,7 @@ function rendre(){
   } else {
     voirJeu = true;
     $("#m-pts").textContent = j.reste; $("#m-max").textContent = e.max;
-    if (e.objet){ $("#m-num").textContent = `Objet ${e.idx + 1} sur ${e.total}`; $("#m-objet").textContent = e.objet.nom; $("#m-detail").textContent = e.objet.detail || ""; }
+    if (e.objet){ $("#m-num").textContent = `Objet ${e.idx + 1}${e.total ? ` sur ${e.total}` : ""}`; $("#m-objet").textContent = e.objet.nom; $("#m-detail").textContent = e.objet.detail || ""; }
     const r = e.resultat && e.resultat.par ? e.resultat.par[PID] : null;
     if (e.phase === "fin"){
       const cl = e.joueurs.slice().sort((a, b) => b.reste - a.reste);

@@ -2,7 +2,7 @@
 
 Le jeu de la Tyrolienne, façon *Juste Prix*, adapté pour le tournoi fun de l'**Azerty Party 2026** (Hippodrome de Pau, 24 & 25 octobre).
 
-Partie **à plusieurs, en simultané** : chaque joueur a sa souris (son pseudo au-dessus, une écharpe à sa couleur) et part de **200 points**. Pour chacun des 3 objets informatiques, tous les joueurs donnent un prix sur leur téléphone pendant **1 minute**. Chaque euro d'écart retire 1 point et fait avancer la souris vers la falaise. À 0 point, elle tombe. À la fin, le classement donne les points restants de chacun, à reporter au classement général du tournoi.
+Partie **à plusieurs, en simultané** : chaque joueur a sa souris (son pseudo au-dessus, une écharpe à sa couleur) et part de **200 points**. Pour chaque objet, tous les joueurs donnent un prix sur leur téléphone pendant **1 minute**. Chaque euro d'écart retire 1 point et fait avancer la souris vers la falaise. À 0 point, elle tombe. À la fin, le classement donne les points restants de chacun, à reporter au classement général du tournoi.
 
 ## Les deux pages
 
@@ -18,7 +18,7 @@ Partie **à plusieurs, en simultané** : chaque joueur a sa souris (son pseudo a
 3. Quand tout le monde est inscrit, l'animateur clique sur **Lancer la partie**. Plus personne ne peut rejoindre.
 4. Pour chaque objet, un chrono de 60 secondes démarre. Chaque joueur tape son prix et appuie sur **OK** ; il peut le changer jusqu'à la fin du chrono. L'écran montre qui a répondu, sans dévoiler les prix. Quand tout le monde a répondu, le chrono passe à 5 secondes. **Arrêter le chrono** révèle tout de suite.
 5. Le juste prix s'affiche, puis toutes les souris avancent ensemble. Un joueur **sans réponse** perd autant de points que le prix de l'objet (comme s'il avait dit 0 €).
-6. **Objet suivant** pour continuer. Après le 3ᵉ objet (ou si tout le monde est tombé), le **classement** s'affiche en plein écran.
+6. **Objet suivant** pour continuer. La partie continue **jusqu'à ce qu'il ne reste qu'un seul joueur en lice** (il gagne) ; le **classement** s'affiche alors en plein écran. Les joueurs tombés sont classés dans l'ordre inverse de leur chute (le dernier tombé est le mieux classé). Seul, on joue 3 objets. Le bouton rouge **Fin de partie** arrête avant si besoin.
 7. **Rejouer avec les mêmes joueurs** relance directement une partie ; **Nouvelle salle d'attente** repart de zéro.
 
 Si la page de l'écran est rechargée, la partie reprend où elle en était (le chrono de l'objet en cours repart de zéro).
@@ -42,7 +42,7 @@ En secours, si un joueur n'a pas de téléphone ou si la liaison ne marche pas :
 
 - Points de départ (200 par défaut), points perdus par euro d'écart (1 par défaut) et temps pour répondre (60 secondes par défaut).
 - Texte « À gagner » affiché au-dessus du classement.
-- Liste des objets et de leurs prix (12 exemples fournis : **prix indicatifs à vérifier**). Les objets sont joués **dans l'ordre de la liste, 3 par partie** : la 1re partie prend les objets 1 à 3, la suivante 4 à 6, etc., puis on reboucle. Enregistrer les réglages repart du 1er objet.
+- Liste des objets et de leurs prix (12 exemples fournis : **prix indicatifs à vérifier**). Les objets sont joués **dans l'ordre de la liste** et on reboucle au début quand elle est épuisée ; la partie suivante reprend à la suite. Prévoyez assez d'objets pour une longue partie. Enregistrer les réglages repart du 1er objet.
 
 Les réglages sont gardés dans le navigateur de l'écran.
 

@@ -316,7 +316,7 @@ async function animerTour(par){
   mv.forEach(m => m.j.perdus = m.vers);
   etager();
   const chutent = mv.filter(m => m.tombe);
-  if (chutent.length){ glissade(900, 70, 1.3); await Promise.all(chutent.map(m => chute(m.o))); chutent.forEach(m => m.j.tombe = true); }
+  if (chutent.length){ glissade(900, 70, 1.3); await Promise.all(chutent.map(m => chute(m.o))); chutent.forEach(m => { m.j.tombe = true; m.j.tour = G.idx; }); }
   majJauge();
 }
 async function chute(o){
@@ -363,17 +363,27 @@ function lancer(){
   if (!G.joueurs.length){ message("Aucun joueur inscrit pour l'instant.", "mal"); return; }
   const pool = cfg.items.filter(i => String(i.nom||"").trim() && +i.prix > 0);
   if (pool.length < 3){ message("Ajoutez au moins 3 objets avec un prix dans les réglages.", "mal"); return; }
-  // les objets passent dans l'ordre de la liste, 3 par partie ; la partie suivante reprend à la suite
+  // les objets passent dans l'ordre de la liste ; la partie suivante reprend à la suite. On joue jusqu'à ce qu'il ne reste qu'un joueur.
   let debut = 0; try { debut = +localStorage.getItem("azertyrolien-suite") || 0; } catch(e){}
-  if (debut >= pool.length) debut = 0;
-  G.tirage = Array.from({length: 3}, (_, i) => pool[(debut + i) % pool.length]).map(o => ({nom:o.nom, detail:o.detail||"", prix:Math.round(+o.prix)}));
-  try { localStorage.setItem("azertyrolien-suite", String((debut + 3) % pool.length)); } catch(e){}
+  G.suite = debut >= pool.length ? 0 : debut;
+  G.depart = G.joueurs.length;
+  G.tirage = [prochainObjet()];
   G.idx = 0; G.res = [];
   G.joueurs.forEach(j => { j.perdus = 0; j.tombe = false; });
   $("#sheet-man").hidden = true;
   fanfareCourte();
   ouvrirSaisie();
 }
+// objet suivant de la liste (on reboucle au début si la liste est épuisée)
+function prochainObjet(){
+  const pool = cfg.items.filter(i => String(i.nom||"").trim() && +i.prix > 0);
+  const o = pool[(G.suite || 0) % pool.length];
+  G.suite = ((G.suite || 0) + 1) % pool.length;
+  try { localStorage.setItem("azertyrolien-suite", String(G.suite)); } catch(e){}
+  return {nom: o.nom, detail: o.detail || "", prix: Math.round(+o.prix)};
+}
+// fin de partie : il ne reste qu'un joueur (ou plus personne) ; seul, on joue 3 objets ; plafond de sécurité à 40 objets
+const partieFinie = vivants => vivants === 0 || (G.depart >= 2 ? vivants <= 1 : G.idx >= 2) || G.idx >= 39;
 function fanfareCourte(){ [523, 659, 784].forEach((f, i) => bip(f, .16, "triangle", .11, i * .11)); }
 function ouvrirSaisie(){
   G.phase = "saisie"; G.rep = {}; G.fin = Date.now() + cfg.temps * 1000;
@@ -447,7 +457,7 @@ async function reveler(){
   await animerTour(par);
   rendre();
   const vivants = enLice().length;
-  if (!vivants || G.idx >= G.tirage.length - 1){ G.phase = "fin"; rendre(); resultat(); return; }
+  if (partieFinie(vivants)){ G.phase = "fin"; rendre(); resultat(); return; }
   G.phase = "revele"; rendre();
   const tombes = Object.keys(par).filter(p => G.joueurs.find(j => j.pid === p).tombe).map(nomDe);
   message(tombes.length ? `${tombes.join(", ")} ${tombes.length > 1 ? "tombent" : "tombe"} de la falaise ! ${vivants} joueur${vivants > 1 ? "s" : ""} encore en lice.` : `${vivants} joueur${vivants > 1 ? "s" : ""} encore en lice.`, tombes.length ? "mal" : "");
@@ -455,11 +465,13 @@ async function reveler(){
 const nomDe = pid => { const j = G.joueurs.find(j => j.pid === pid); return j ? j.nom : "?"; };
 function suivant(){
   if (G.phase !== "revele") return;
-  G.idx++; ouvrirSaisie();
+  G.idx++;
+  if (!G.tirage[G.idx]) G.tirage.push(prochainObjet());
+  ouvrirSaisie();
 }
 function classement(){
   return G.joueurs.map(j => ({...j, reste: j.tombe ? 0 : cfg.points - j.perdus}))
-    .sort((a, b) => b.reste - a.reste || a.nom.localeCompare(b.nom));
+    .sort((a, b) => b.reste - a.reste || (b.tour ?? 0) - (a.tour ?? 0) || a.nom.localeCompare(b.nom));
 }
 function resultat(silencieux){
   const box = $("#result"); box.hidden = false;
@@ -469,13 +481,15 @@ function resultat(silencieux){
   $("#r-sur").textContent = "Azertyrolien · " + (cfg.lot || "fin de la partie");
   $("#r-classement").classList.toggle("deux-col", cl.length > 8);
   $("#r-classement").innerHTML = cl.map((j, i) => {
-    if (j.reste !== prec){ rang = i + 1; prec = j.reste; }
+    const cle = j.reste + "-" + (j.reste ? 0 : j.tour ?? 0);
+    if (cle !== prec){ rang = i + 1; prec = cle; }
     const c = Liaison.couleur(j.nom);
     return `<li class="${rang <= 3 && j.reste > 0 ? "podium p" + rang : ""}${j.reste ? "" : " zero"}" style="--joueur:${c}">
       <span class="rang">${rang}</span><span class="pt" style="background:${c}"></span><b>${esc(j.nom)}</b>
       <span class="score">${j.reste ? j.reste + " pts" : "tombé"}</span></li>`;
   }).join("");
-  message("Partie terminée ! Bravo à tous.", "bon");
+  const vivants = cl.filter(j => j.reste > 0);
+  message(G.depart >= 2 && vivants.length === 1 ? `${vivants[0].nom} est le dernier en lice : bravo !` : "Partie terminée ! Bravo à tous.", "bon");
   if (!silencieux){ if (cl.some(j => j.reste > 0)){ fanfare(); confettis(); } else { bip(196, .4, "sawtooth", .08, .1); bip(147, .7, "sawtooth", .08, .5); } }
 }
 function cacherResultat(){ $("#result").hidden = true; }
@@ -505,8 +519,9 @@ function rendre(){
       <p class="question">${n ? `${n} joueur${n > 1 ? "s" : ""} inscrit${n > 1 ? "s" : ""}` : "En attente des joueurs…"}</p>`;
   } else {
     const cur = Math.min(G.idx, G.tirage.length - 1), it = G.tirage[cur];
-    const pts = G.tirage.map((_, i) => `<i class="${i < cur ? "fait" : i === cur ? "actif" : ""}"></i>`).join("");
-    $("#lots").innerHTML = `<div class="etapes">${pts}<span>Objet ${cur+1} sur ${G.tirage.length}</span></div>
+    const nbV = enLice().length, multi = G.depart >= 2;
+    const pts = multi ? "" : [0, 1, 2].map(i => `<i class="${i < cur ? "fait" : i === cur ? "actif" : ""}"></i>`).join("");
+    $("#lots").innerHTML = `<div class="etapes">${pts}<span>Objet ${cur+1}${multi ? ` · ${nbV} joueur${nbV > 1 ? "s" : ""} en lice` : " sur 3"}</span></div>
       <h2>${esc(it.nom)}</h2>${it.detail ? `<p class="detail">${esc(it.detail)}</p>` : ""}
       <p class="question">Quel est son juste prix ?</p>`;
   }
@@ -704,7 +719,7 @@ const tourCourant = () => (G && G.id ? G.id : "x") + "-" + (G ? G.idx : 0);
 function etatCourant(){
   const it = G.tirage[G.idx], res = G.res[G.idx];
   return {
-    tour: tourCourant(), phase: G.phase, idx: G.idx, total: G.tirage.length,
+    tour: tourCourant(), phase: G.phase, idx: G.idx, total: G.depart >= 2 ? 0 : 3,
     objet: it && G.phase !== "attente" ? {nom: String(it.nom).slice(0, 80), detail: String(it.detail || "").slice(0, 80)} : null,
     max: cfg.points, duree: cfg.temps,
     restant: G.phase === "saisie" ? Math.max(0, G.fin - Date.now()) : 0,
