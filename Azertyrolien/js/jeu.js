@@ -364,10 +364,9 @@ function lancer(){
   if (G.phase !== "attente") return;
   if (!G.joueurs.length){ message("Aucun joueur inscrit pour l'instant.", "mal"); return; }
   const pool = cfg.items.filter(i => String(i.nom||"").trim() && +i.prix > 0);
-  if (pool.length < 3){ message("Ajoutez au moins 3 objets avec un prix dans les réglages.", "mal"); return; }
-  // les objets passent dans l'ordre de la liste ; la partie suivante reprend à la suite. On joue jusqu'à ce qu'il ne reste qu'un joueur.
-  let debut = 0; try { debut = +localStorage.getItem("azertyrolien-suite") || 0; } catch(e){}
-  G.suite = debut >= pool.length ? 0 : debut;
+  if (pool.length < 1){ message("Ajoutez au moins un objet avec un prix dans les réglages.", "mal"); return; }
+  // les objets passent dans l'ordre de la liste, depuis le premier, jusqu'au dernier ou jusqu'à ce qu'il ne reste qu'un joueur
+  G.suite = 0;
   G.depart = G.joueurs.length;
   G.tirage = [prochainObjet()];
   G.idx = 0; G.res = [];
@@ -376,16 +375,14 @@ function lancer(){
   fanfareCourte();
   ouvrirSaisie();
 }
-// objet suivant de la liste (on reboucle au début si la liste est épuisée)
+// objet suivant de la liste, dans l'ordre
+const poolObjets = () => cfg.items.filter(i => String(i.nom||"").trim() && +i.prix > 0);
 function prochainObjet(){
-  const pool = cfg.items.filter(i => String(i.nom||"").trim() && +i.prix > 0);
-  const o = pool[(G.suite || 0) % pool.length];
-  G.suite = ((G.suite || 0) + 1) % pool.length;
-  try { localStorage.setItem("azertyrolien-suite", String(G.suite)); } catch(e){}
+  const o = poolObjets()[G.tirage.length];
   return {nom: o.nom, detail: o.detail || "", prix: Math.round(+o.prix)};
 }
-// fin de partie : il ne reste qu'un joueur (ou plus personne) ; seul, on joue 3 objets ; plafond de sécurité à 40 objets
-const partieFinie = vivants => vivants === 0 || (G.depart >= 2 ? vivants <= 1 : G.idx >= 2) || G.idx >= 39;
+// fin de partie : il ne reste qu'un joueur en lice (plus personne si on joue seul), ou le dernier objet de la liste vient d'être joué
+const partieFinie = vivants => vivants === 0 || (G.depart >= 2 && vivants <= 1) || G.idx >= poolObjets().length - 1;
 function fanfareCourte(){ [523, 659, 784].forEach((f, i) => bip(f, .16, "triangle", .11, i * .11)); }
 function ouvrirSaisie(){
   G.phase = "saisie"; G.rep = {}; G.fin = Date.now() + cfg.temps * 1000;
@@ -521,9 +518,8 @@ function rendre(){
       <p class="question">${n ? `${n} joueur${n > 1 ? "s" : ""} inscrit${n > 1 ? "s" : ""}` : "En attente des joueurs…"}</p>`;
   } else {
     const cur = Math.min(G.idx, G.tirage.length - 1), it = G.tirage[cur];
-    const nbV = enLice().length, multi = G.depart >= 2;
-    const pts = multi ? "" : [0, 1, 2].map(i => `<i class="${i < cur ? "fait" : i === cur ? "actif" : ""}"></i>`).join("");
-    $("#lots").innerHTML = `<div class="etapes">${pts}<span>Objet ${cur+1}${multi ? ` · ${nbV} joueur${nbV > 1 ? "s" : ""} en lice` : " sur 3"}</span></div>
+    const nbV = enLice().length, multi = G.depart >= 2, total = poolObjets().length;
+    $("#lots").innerHTML = `<div class="etapes"><i class="actif"></i><span>Objet ${cur+1} sur ${total}${multi ? ` · ${nbV} joueur${nbV > 1 ? "s" : ""} en lice` : ""}</span></div>
       <h2>${esc(it.nom)}</h2>${it.detail ? `<p class="detail">${esc(it.detail)}</p>` : ""}
       <p class="question">Quel est son juste prix ?</p>`;
   }
@@ -721,7 +717,7 @@ const tourCourant = () => (G && G.id ? G.id : "x") + "-" + (G ? G.idx : 0);
 function etatCourant(){
   const it = G.tirage[G.idx], res = G.res[G.idx];
   return {
-    tour: tourCourant(), phase: G.phase, idx: G.idx, total: G.depart >= 2 ? 0 : 3,
+    tour: tourCourant(), phase: G.phase, idx: G.idx, total: poolObjets().length,
     objet: it && G.phase !== "attente" ? {nom: String(it.nom).slice(0, 80), detail: String(it.detail || "").slice(0, 80)} : null,
     max: cfg.points, duree: cfg.temps,
     restant: G.phase === "saisie" ? Math.max(0, G.fin - Date.now()) : 0,
