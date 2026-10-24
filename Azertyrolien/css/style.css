@@ -199,7 +199,7 @@ h1::after{content:"";display:block;width:72px;height:5px;background:var(--coral)
 .x{background:transparent;border:1px solid var(--line);border-radius:7px;height:38px;cursor:pointer;color:var(--muted)}
 .x:hover{color:var(--red);border-color:var(--red)}
 .foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}.m-anim,.m-queue,.m-tete,.m-oreille,.m-oreille2,.m-oeil,.m-bras,.m-bras2{animation:none!important}}
+.calme *{transition:none!important}.calme .m-anim,.calme .m-queue,.calme .m-tete,.calme .m-oreille,.calme .m-oreille2,.calme .m-oeil,.calme .m-bras,.calme .m-bras2{animation:none!important}
 
 /* Pupitre : QR code par défaut, saisie manuelle de secours */
 .manuel{display:flex;flex-direction:column;gap:14px}
@@ -285,7 +285,7 @@ body{padding-bottom:12px}
 .et-in{transform-box:fill-box;transform-origin:50% 100%}
 .et-in.pop{animation:et-pop .55s cubic-bezier(.3,1.6,.5,1)}
 @keyframes et-pop{0%{transform:scale(.2);opacity:0}60%{opacity:1}100%{transform:scale(1)}}
-@media (prefers-reduced-motion: reduce){.et-in.pop{animation:none}}
+.calme .et-in.pop{animation:none}
 /* Manette : pseudo obligatoire */
 .man-pseudo{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
 .man-pseudo p{margin:0;font-family:var(--f-cond);font-size:20px;font-weight:600}

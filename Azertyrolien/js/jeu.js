@@ -1,7 +1,10 @@
 /* Azertyrolien — grand écran : la montagne, la souris, le pupitre de l'animateur. */
 (() => {
 const W = 1000, H = 560, X0 = 150, X1 = 800, EDGE = X1 + 56, N = 20, KH = 21;
-const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Le spectacle doit être identique sur tous les PC : le réglage Windows « réduire les animations » est ignoré,
+// sauf si l'adresse contient ?calme=1 (animations raccourcies).
+const reduce = new URLSearchParams(location.search).get("calme") === "1";
+if (reduce) document.documentElement.classList.add("calme");
 const EXEMPLES = [
   {nom:"Canette de boisson énergisante", detail:"50 cl", prix:2},
   {nom:"Pizza 4 fromages", detail:"Grande, à emporter", prix:12},
