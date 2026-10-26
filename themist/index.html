@@ -6966,6 +6966,11 @@ openCodex=function(back){
  function brumeSting(delay){if(!AC||muted)return;const t=AC.currentTime+(delay||0)+0.02,bus=vbus(2.2,0.4);
   brume(bus,t,0.9,0.35,400,1800,600);chuchote(bus,t+0.1,0.6,0.7,'i','o');sousSon(bus,t,0.8,70,45,0.12);}
  window.__rire=brumeSting;
+ // oubli d’un souvenir (v17.8, ≈ 1 s) : un souffle léger qui s’éloigne et deux chuchotements qui s’assombrissent puis s’effacent, très réverbérés. Ni grondement, ni chœur, ni coup sourd (ceux du Brumeux et du Masqué)
+ function brumeOubli(delay){if(!AC||muted)return;if(!throttle('brumeOubli',200))return;const t=AC.currentTime+(delay||0)+0.02,bus=vbus(1.9,0.55);
+  brume(bus,t,1.0,0.2,520,1700,1100);
+  chuchote(bus,t+0.04,0.5,0.7,'o','u');
+  chuchote(bus,t+0.34,0.55,0.45,'e','i');}
  // invocation de l’aberration (le Masqué, ≈ 3,5 s, le temps de sa descente) : la brume gonfle, un chœur en triton s’affaisse, des chuchotements passent, puis un coup sourd
  function brumeAber(){if(!AC||muted)return;if(!throttle('brumeAber',2500))return;const t=AC.currentTime+0.03,bus=vbus(4.6,0.5);
   brume(bus,t,3.4,0.6,200,1200,280);
@@ -6979,6 +6984,7 @@ openCodex=function(back){
    nz.buffer=getNoise();nf.type='lowpass';nf.frequency.value=320;ng.gain.setValueAtTime(0.0001,T);ng.gain.exponentialRampToValueAtTime(0.5,T+0.02);ng.gain.exponentialRampToValueAtTime(0.0001,T+0.5);nz.connect(nf);nf.connect(ng);ng.connect(bus);nz.start(T);nz.stop(T+0.55);}}
  window.__brumeAber=brumeAber;
  window.__brumeAction=brumeAction;
+ window.__brumeOubli=brumeOubli;
  function demon(who){if(!AC||muted)return;if(!throttle('demon',900))return;
   if(who==='mere'){voice({type:'sawtooth',f0:760,f1:240,dur:1.3,vol:0.13,vib:9,vibD:46,lp0:3400,lp1:900,dist:5,att:0.04});voice({type:'sawtooth',f0:140,f1:58,dur:1.5,vol:0.16,vib:6,vibD:8,lp0:900,lp1:160,dist:6});noise(1.1,0.12,1900,'bandpass',0.05);tone(52,1.4,'sine',0.14,34);}
   else if(who==='chroniqueur'){noise(1.4,0.09,2600,'bandpass');tone(440,1.2,'sine',0.05,310);tone(466,1.2,'sine',0.04,330,0.08);}
@@ -9233,8 +9239,65 @@ function demoBoot(cls){
   if(full()){const sub=overlayEl.querySelector('.sub');if(sub)sub.insertAdjacentHTML('beforeend',` <span class="mfnote">${icon('u_swap')} Ta mémoire est pleine : la voie prendra la place d’un souvenir.</span>`);}
  };
  // ── Oublier
+ // ── L’oubli se voit et s’entend (v17.8). L’icône quitte son emplacement du HUD, se défait en volute de brume, file vers le bord
+ //    de l’écran ou le brouillard le plus proche (le plus près des deux), puis disparaît : ≈ 1 s, dans le DOM, sans rien bloquer.
+ //    « Mouvements réduits » : un simple fondu, sur place. Le bruitage (souffle et voix chuchotée) vit dans le moteur de voix (__brumeOubli).
+ const _sfx17=sfx;
+ sfx=function(k){if(k==='oubli'){if(!AC||muted)return;if(window.__brumeOubli)window.__brumeOubli();return;}return _sfx17.apply(this,arguments);};
+ const OUBLI_MS=1000,FONDU_MS=700;
+ const reduit=()=>RM||!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+ // le plus proche : un bord de l’écran, ou un banc de brume de la salle (mêmes positions que drawMists) ; renvoie la direction et la distance
+ function oubliCible(cx,cy){
+  const vw=document.documentElement.clientWidth||innerWidth,vh=document.documentElement.clientHeight||innerHeight;
+  let b={d:cx,dx:-1,dy:0,k:'bord'};
+  for(const [d,dx,dy] of [[vw-cx,1,0],[cy,0,-1],[vh-cy,0,1]])if(d<b.d)b={d,dx,dy,k:'bord'};
+  try{if(room&&room.mists&&room.mists.length){
+   const R=cv.getBoundingClientRect(),span=AR.x1-AR.x0+400,k=scale/dpr;
+   for(const m of room.mists){
+    const gx=((m.x-AR.x0+T*m.v)%span+span)%span+AR.x0-200,gy=m.y+Math.sin(T*0.3+m.r)*10;
+    const sx=R.left+(gx*scale+offX)/dpr,sy=R.top+(gy*scale+offY)/dpr,dd=hyp(sx-cx,sy-cy),d=Math.max(0,dd-m.r*k*0.55);
+    if(d<b.d)b={d,dx:dd?(sx-cx)/dd:0,dy:dd?(sy-cy)/dd:-1,k:'brume'};}}}catch(err){}
+  return b;
+ }
+ function oubliFx(a,i){
+  if(!document.body.animate)return;
+  const cell=document.querySelectorAll('#hMem .mcell')[i];if(!cell||!cell.firstElementChild)return;
+  const r=cell.getBoundingClientRect();if(!r.width||!r.height)return;
+  const box=document.createElement('div');box.className='oubli';box.setAttribute('aria-hidden','true');
+  box.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;--c:${cell.firstElementChild.style.getPropertyValue('--c')||'#cfc7b3'}`;
+  const ic=document.createElement('div');ic.className='of-t';ic.innerHTML=cell.innerHTML;box.appendChild(ic);
+  document.body.appendChild(box);
+  const fin=()=>box.remove();
+  if(reduit()){ic.animate([{opacity:1},{opacity:0}],{duration:FONDU_MS,easing:'ease-out',fill:'forwards'});setTimeout(fin,FONDU_MS+300);return;}
+  const cx=r.left+r.width/2,cy=r.top+r.height/2,c=oubliCible(cx,cy),ux=c.dx,uy=c.dy;
+  const trav=c.k==='bord'?Math.max(90,c.d+60):Math.max(80,c.d);      // jusqu’au bord (et au-delà : elle sort de l’écran), ou jusque dans la brume
+  const horiz=Math.abs(ux)>=Math.abs(uy),sx=horiz?2.3:0.5,sy=horiz?0.5:2.3,mx=1+(sx-1)*0.5,my=1+(sy-1)*0.5;
+  const ease='cubic-bezier(.25,.1,.3,1)',P_=(k,s)=>`translate(${ux*trav*k}px,${uy*trav*k}px) scale(${s})`;
+  // l’icône elle-même : elle s’éclaire, se trouble, s’étire dans le sens du départ, puis se dissout
+  ic.animate([
+   {transform:'translate(0,0) scale(1,1)',filter:'blur(0px) brightness(1) saturate(1)',opacity:1,offset:0},
+   {transform:P_(0.06,'1.12,1.12'),filter:'blur(1.5px) brightness(1.6) saturate(.5)',opacity:.95,offset:0.22},
+   {transform:P_(0.4,`${mx},${my}`),filter:'blur(6px) brightness(1.2) saturate(.2)',opacity:.55,offset:0.55},
+   {transform:P_(0.8,`${sx},${sy}`),filter:'blur(12px) brightness(1) saturate(0)',opacity:0,offset:1}
+  ],{duration:OUBLI_MS,easing:ease,fill:'forwards'});
+  // la volute : des bouffées de brume qui se détachent, un peu de travers, et vont plus loin que l’icône
+  for(let k=0;k<9;k++){
+   const p=document.createElement('i'),sz=12+Math.random()*14;p.className='of-p'+(k%3===0?' tint':'');
+   p.style.cssText=`width:${sz}px;height:${sz}px;left:${r.width/2-sz/2+(Math.random()-0.5)*12}px;top:${r.height/2-sz/2+(Math.random()-0.5)*12}px`;
+   box.appendChild(p);
+   const dist=trav*(0.55+Math.random()*0.6),wob=(Math.random()-0.5)*36,px=ux*dist-uy*wob,py=uy*dist+ux*wob;
+   p.animate([
+    {transform:'translate(0,0) scale(.3)',opacity:0,offset:0},
+    {transform:`translate(${px*0.25}px,${py*0.25}px) scale(1)`,opacity:.9,offset:0.25},
+    {transform:`translate(${px}px,${py}px) scale(2.1)`,opacity:0,offset:1}
+   ],{duration:620+Math.random()*280,delay:Math.random()*180,easing:ease,fill:'both'});
+  }
+  setTimeout(fin,OUBLI_MS+250);
+ }
  function forget(a){
   const M=MEM();const i=M.actifs.indexOf(a);if(i<0)return;
+  sfx('oubli');
+  try{oubliFx(a,i);}catch(err){console.error(err);}   // avant que le HUD ne soit redessiné : la tuile est encore à sa place
   M.actifs.splice(i,1);
   if(a.src==='t')delete P.ranks[a.id];else{const j=P.relics.indexOf(a.id);if(j>=0)P.relics.splice(j,1);}
   RUN.reserveBrume.push({id:a.id,source:a.src==='t'?'talent':'relique',rang:a.rang,g:a.g||0,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0});
@@ -9406,8 +9469,18 @@ function demoBoot(cls){
  }
 
  // ── Pause : la mémoire en tête de la colonne de droite ; fin de run : la mémoire au moment de la chute
+ // La réserve de la Brume (v17.8) : onglet Personnage, sous les statistiques, ce qui a été oublié pendant la descente, en icônes voilées,
+ // grisées et floutées. Aucun texte, aucune infobulle, ni rang ni gravure : on voit que la Brume garde quelque chose, pas quoi (D7).
+ function reserveHTML(){
+  const L=(RUN&&RUN.reserveBrume)||[];if(!L.length)return '';
+  return `<div class="pzres" aria-hidden="true">${L.map((x,i)=>`<span class="rv" style="--d:${(i*0.9)%5}s">${tile({id:x.id,src:x.source==='talent'?'t':'r',rang:x.rang,g:0},{off:false,g:0})}</span>`).join('')}</div>`;
+ }
+ function reservePerso(){
+  const pane=overlayEl.querySelector('.pzpane[data-p="perso"]');if(!pane||pane.querySelector('.pzres'))return;
+  const h=reserveHTML();if(h)pane.insertAdjacentHTML('afterbegin',h);   // en tête de l’onglet : sous les statistiques, elle serait sous le pli du panneau
+ }
  const _op=openPause;
- openPause=function(){_op();if(!on())return;const hd=overlayEl.querySelector('.pzhead')||overlayEl.querySelector('.lv > div:last-child');if(!hd||overlayEl.querySelector('.pzmem'))return;
+ openPause=function(){_op();if(!on())return;try{reservePerso();}catch(err){console.error(err);}const hd=overlayEl.querySelector('.pzhead')||overlayEl.querySelector('.lv > div:last-child');if(!hd||overlayEl.querySelector('.pzmem'))return;
   const M=MEM();hd.insertAdjacentHTML('beforeend',`<div class="pzmem" aria-label="Mémoire">${M.actifs.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}${Array.from({length:Math.max(0,CAP()-M.actifs.length)},()=>'<span class="mcell"><span class="mt empty"></span></span>').join('')}<span class="pzmem-n">${M.actifs.length} / ${CAP()}</span></div>`);};
  const _oe=openEnd;
  openEnd=function(win,abandon){const M=on()&&MEM();const first=!!(RUN&&!RUN.final);const r=_oe.apply(this,arguments);
@@ -9606,10 +9679,21 @@ function demoBoot(cls){
 .pzmem{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0 2px}.pzmem-n{color:var(--ash);font-size:13.5px;margin-left:4px;display:inline-flex;gap:4px;align-items:center}
 .endmem .h-sec{margin-bottom:6px}
 @media (max-width:760px){.mfcmp{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:auto}.mfarr{transform:rotate(90deg)}.mf-opt{min-width:56px;padding:8px 6px 6px}}
-.demo #hMem{display:none!important}`;
+.oubli{position:fixed;z-index:80;pointer-events:none}
+.oubli .of-t{position:absolute;inset:0;display:grid;place-items:center;transform-origin:50% 50%;will-change:transform,filter,opacity}
+.oubli .of-p{position:absolute;display:block;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;filter:blur(2.5px);
+ background:radial-gradient(circle,rgba(220,226,240,.75) 0%,rgba(190,198,224,.38) 45%,rgba(190,198,224,0) 72%)}
+.oubli .of-p.tint{background:radial-gradient(circle,rgba(228,232,244,.7) 0%,color-mix(in srgb,var(--c) 38%,transparent) 45%,transparent 72%)}
+.pzres{display:flex;flex-wrap:wrap;gap:10px 9px;margin:0 0 14px;padding:6px 4px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.pzres .rv{position:relative;display:grid;place-items:center;width:34px;height:34px;opacity:.5;filter:grayscale(1) blur(2.4px) brightness(.85)}
+.pzres .rv::after{content:'';position:absolute;inset:-7px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(190,198,222,.24),rgba(190,198,222,0) 70%)}
+.pzres .pp,.pzres .gv,.pzres .mt-x{display:none}
+@media (prefers-reduced-motion:no-preference){.pzres .rv{animation:rvdrift 6s ease-in-out infinite;animation-delay:var(--d,0s)}}
+@keyframes rvdrift{50%{opacity:.3;filter:grayscale(1) blur(3.4px) brightness(.8)}}
+.demo #hMem,.demo .oubli{display:none!important}`;
  document.head.appendChild(st);
 
- window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM};
+ window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM,oubliFx,oubliCible,reserveHTML};
 })();
 
 // ═════════════════════════ v17.5 · chaque ennemi blesse, plus d’ennemis coincés, plus rien qui arrête le joueur

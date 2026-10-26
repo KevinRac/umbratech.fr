@@ -167,7 +167,7 @@ function memoire(D) {
 .mtw.k-k{border-radius:9px;box-shadow:inset 0 0 0 2px #0e111a,inset 0 0 0 3.5px var(--c)}.mtw.k-u{border-width:3px;border-style:double}.mtw.k-c{box-shadow:0 0 0 2px #0e111a,0 0 0 3.5px var(--c)}.mtw.k-r{border-radius:6px}
 .mev dl{margin:6px 0 0}.mevg{margin:12px 0 0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}.mev dt{margin-top:8px;font-size:15px}.mev dd{margin:2px 0 0;font-size:14px;color:var(--mute)}
 .mleg{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}.mleg li{display:inline-flex;gap:8px;align-items:center}
-</style><header class="sh"><p class="eyebrow">Progression</p><h2>La Mémoire</h2><div class="lede"><p>Depuis la version 17, tu ne portes que <b>${S.plafond} talents</b> à la fois. Quand un talent nouveau arrive mémoire pleine, tu choisis celui qui part. Les reliques et l’équipement ne comptent pas.</p></div></header>
+</style><header class="sh"><p class="eyebrow">Progression</p><h2>La Mémoire</h2><div class="lede"><p>Depuis la version 17, tu ne portes que <b>${S.plafond} talents</b> à la fois. Quand un talent nouveau arrive mémoire pleine, tu choisis celui qui part. Les reliques et l’équipement ne comptent pas.</p><p>Ce que tu oublies, la Brume le garde.</p></div></header>
 <div class="grid g3">${regles}</div>
 <h3 class="sub">Lire une tuile</h3>
 <p>Chaque talent porté est une tuile : sa forme dit son genre (celle du nœud de l’arbre), sa couleur sa branche, son icône sa famille. Les points dessous sont ses rangs.</p>
