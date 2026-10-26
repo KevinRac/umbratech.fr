@@ -150,8 +150,315 @@
     {f:'damier',sur:'toi',motif:'hasard',allumees:5,cote:70,chargeS:0.65,degats:1.1}]}},
  // Mode d’essai (développement seulement : index.html?brume=<famille>|tout) : pause entre deux attaques du Masqué d’essai.
  essai:{reposS:1.2},
- // Palier 3b : rattachement talent par talent et relique par relique. Forme d’une entrée : id → {v:[variantes]} ou {renfort:'pv'}.
- // La famille vient de data/souvenirs.js ; ne rien recopier ici d’autre que ce qui change la version ennemie.
- talents:{},
- reliques:{}
+ // Palier 3b : rattachement talent par talent et relique par relique (v17.16). Forme d’une entrée : id → {} | {v:[variante]} | {renfort:'pv'|'degats'|'vitesse'|'armure'}.
+ // La famille vient de data/souvenirs.js (champs t et r) : ne rien en recopier ici. {} : la version ennemie de la famille telle quelle.
+ // Les commentaires disent ce que le talent demande et que le système ne sait pas traduire : rien n’a été inventé pour le coder.
+ // Règles : une variante seulement si le texte du talent la demande (perce → traverse ; répète, écho, second coup → double ; +rayon ou +portée de zone → elargi ;
+ // repousse → repousse ; soigne en frappant → vol) et si la forme de la famille l’accepte ; un renfort seulement si le talent n’est qu’un bonus chiffré
+ // (dégâts, critique, cadence → degats ; PV max → pv ; vitesse de déplacement → vitesse ; dégâts subis, bouclier → armure), le premier cité s’il y en a deux.
+ // node themist/outils/sim-brume.mjs refuse une entrée qui ne pointe pas vers un talent, une variante et un renfort qui existent, une variante sans effet
+ // sur sa famille, et tout talent ou relique laissé sans entrée.
+ talents:{
+  // Projectile (Rafale)
+  ray_x3a:{v:['traverse']},
+  pen_x1b:{v:['traverse']},
+  fan_n1:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  fan_n3:{}, // rebonds : pas de variante
+  fan_n4:{},
+  fan_n5:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  fan_n6:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  fan_x1a:{v:['double']},
+  fan_x2a:{},
+  pha_s4:{},
+  reg_n1:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  reg_n2:{}, // ralentit : pas de ralentissement du joueur
+  reg_n4:{renfort:'degats'},
+  reg_n6:{},
+  reg_x1a:{},
+  reg_x3a:{v:['traverse']},
+  reg_x3b:{},
+  sai_s2:{renfort:'degats'},
+  cad_x1b:{v:['traverse']},
+  aig_n1:{renfort:'degats'},
+  aig_n2:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  aig_n3:{},
+  aig_n4:{},
+  aig_n5:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  aig_n6:{}, // guidage : pas de variante
+  aig_x1a:{},
+  aig_x1b:{v:['traverse']},
+  aig_x2a:{v:['double']},
+  aig_x2b:{},
+  aig_x3a:{}, // guidage : pas de variante
+  aig_x3b:{}, // guidage : pas de variante
+  aig_k1:{}, // statistiques mêlées à une mécanique
+  aig_k2:{v:['traverse']},
+  bro_s1:{v:['traverse']},
+  bro_s2:{renfort:'degats'},
+  bro_s3:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  bro_s4:{},
+  bro_s5:{}, // ralentit : pas de ralentissement du joueur
+  bro_sk:{}, // capacité active ou mécanique propre au joueur
+  // Faisceau (Rais)
+  ray_n1:{renfort:'degats'},
+  ray_x1a:{v:['elargi']},
+  ray_x1b:{},
+  fan_x3b:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  fan_k2:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  sol_s4:{v:['double']},
+  sol_sk:{}, // capacité active ou mécanique propre au joueur
+  pha_sk:{}, // capacité active ou mécanique propre au joueur
+  reg_x1b:{}, // perçant voulu, mais « traverse » n’existe pas sur le couloir
+  reg_k2:{}, // capacité active ou mécanique propre au joueur
+  // Lame (Taillades)
+  ray_x3b:{}, // statistiques mêlées à une mécanique
+  pen_n1:{v:['elargi']},
+  pen_x1a:{v:['double']},
+  dif_n1:{v:['elargi']},
+  dif_n3:{}, // capacité active ou mécanique propre au joueur
+  dif_x1a:{v:['double']},
+  dif_x1b:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  abe_s4:{v:['double']},
+  cad_x1a:{v:['double']},
+  cad_k1:{v:['double']},
+  dgl_s1:{}, // exécution : pas de variante
+  dgl_s3:{renfort:'degats'},
+  dgl_s4:{}, // exécution : pas de variante
+  dgl_s5:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  // Ruée (Aller-retour)
+  pen_n2:{v:['double']},
+  pen_n3:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
+  pen_n4:{}, // capacité active ou mécanique propre au joueur
+  pen_x2a:{}, // rebonds : pas de variante
+  pen_x2b:{v:['double']},
+  pen_x3a:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  pen_x3b:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
+  dif_n2:{},
+  dif_x2a:{}, // capacité active ou mécanique propre au joueur
+  dif_x2b:{}, // une ruée qui étourdit : le joueur n’a pas d’état « étourdi »
+  cad_n2:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  cad_n3:{v:['double']},
+  cad_x2a:{}, // ralentit : pas de ralentissement du joueur
+  cad_x2b:{v:['double']},
+  cad_k2:{},
+  // Onde (Échos)
+  ray_n4:{}, // repousse voulu (rang 2), mais « repousse » n’existe pas sur l’anneau
+  ray_x2a:{v:['double']},
+  fan_k1:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  sol_s5:{}, // capacité active ou mécanique propre au joueur
+  vor_x3a:{},
+  dif_x3b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  reg_x2b:{},
+  reg_k1:{}, // statistiques mêlées à une mécanique
+  sai_s4:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  car_n1:{}, // ralentit : pas de ralentissement du joueur
+  car_n3:{}, // rebonds : pas de variante
+  car_n6:{},
+  car_x1a:{v:['double']},
+  car_x1b:{}, // étourdit et repousse voulus ; ni l’un ni l’autre n’existent sur l’anneau
+  car_k1:{},
+  req_n3:{},
+  pnt_x2b:{},
+  mdp_s5:{},
+  // Sol (Dalles)
+  ray_x2b:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  fan_n2:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  fan_x1b:{},
+  fan_x3a:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  pha_s1:{},
+  pha_s2:{renfort:'degats'},
+  pha_s3:{v:['elargi']},
+  pha_s5:{}, // ralentit : pas de ralentissement du joueur
+  reg_n3:{},
+  reg_n5:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
+  reg_x2a:{v:['elargi']},
+  req_n6:{}, // ralentit : pas de ralentissement du joueur
+  req_x3a:{}, // attire ou aspire : pas d’attraction du joueur
+  val_s1:{},
+  val_s2:{renfort:'degats'},
+  val_s3:{v:['elargi']},
+  val_s4:{}, // ralentit : pas de ralentissement du joueur
+  val_s5:{v:['repousse']},
+  val_sk:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  pnt_n1:{}, // immobilise : pas d’immobilisation du joueur
+  pnt_n4:{}, // immobilise : pas d’immobilisation du joueur
+  pnt_x1a:{}, // guidage : pas de variante
+  pnt_x1b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  pnt_x3a:{}, // immobilise : pas d’immobilisation du joueur
+  pnt_x3b:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
+  gts_s1:{},
+  gts_s2:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  gts_s3:{}, // immobilise : pas d’immobilisation du joueur
+  gts_s4:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
+  gts_sk:{}, // ralentit : pas de ralentissement du joueur
+  // Fil (Navette)
+  trm_n1:{renfort:'degats'},
+  trm_n2:{},
+  trm_n3:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  trm_n4:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
+  trm_n5:{}, // capacité active ou mécanique propre au joueur
+  trm_x1a:{}, // capacité active ou mécanique propre au joueur
+  trm_x1b:{}, // capacité active ou mécanique propre au joueur
+  trm_x2a:{}, // capacité active ou mécanique propre au joueur
+  trm_x2b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  trm_x3a:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  trm_x3b:{}, // statistiques mêlées à une mécanique
+  trm_k1:{}, // capacité active ou mécanique propre au joueur
+  trm_k2:{}, // capacité active ou mécanique propre au joueur
+  pnt_n2:{}, // statistiques mêlées à une mécanique
+  pnt_n3:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  pnt_n5:{}, // ralentit : pas de ralentissement du joueur
+  pnt_x2a:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  pnt_k1:{}, // capacité active ou mécanique propre au joueur
+  pnt_k2:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  gts_s5:{}, // capacité active ou mécanique propre au joueur
+  mdp_s1:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  mdp_s2:{renfort:'degats'},
+  mdp_s3:{renfort:'vitesse'},
+  mdp_s4:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  mdp_sk:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  // Cloche (Glas)
+  car_n2:{v:['double']},
+  car_n4:{}, // capacité active ou mécanique propre au joueur
+  car_n5:{}, // capacité active ou mécanique propre au joueur
+  car_x2a:{}, // capacité active ou mécanique propre au joueur
+  car_x2b:{v:['elargi']},
+  car_x3a:{}, // ralentit : pas de ralentissement du joueur
+  car_x3b:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  car_k2:{v:['double']},
+  cad_n1:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  cad_n4:{}, // capacité active ou mécanique propre au joueur
+  cad_n5:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  cad_n6:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  cad_x3a:{}, // capacité active ou mécanique propre au joueur
+  req_n1:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  req_n2:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  req_n5:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  req_x1a:{v:['double']},
+  req_x1b:{v:['double']},
+  req_x2b:{}, // statistiques mêlées à une mécanique
+  req_k1:{}, // statistiques mêlées à une mécanique
+  dgl_s2:{renfort:'degats'},
+  dgl_sk:{}, // capacité active ou mécanique propre au joueur
+  chd_s1:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  chd_s2:{renfort:'degats'},
+  chd_s3:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  chd_s4:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  chd_sk:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
+  // Dévoration (Mâchoire)
+  vor_n1:{}, // attire ou aspire : pas d’attraction du joueur
+  vor_n2:{},
+  vor_n3:{v:['elargi']},
+  vor_n4:{}, // exécution : pas de variante
+  vor_n5:{}, // ralentit : pas de ralentissement du joueur
+  vor_n6:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  vor_x1a:{}, // attire ou aspire : pas d’attraction du joueur
+  vor_x1b:{}, // immobilise : pas d’immobilisation du joueur
+  vor_x2a:{}, // exécution : pas de variante
+  vor_x2b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  vor_k1:{v:['vol']},
+  vor_k2:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  sai_sk:{}, // capacité active ou mécanique propre au joueur
+  aby_s1:{}, // attire ou aspire : pas d’attraction du joueur
+  aby_s2:{renfort:'degats'},
+  aby_s3:{v:['elargi']},
+  aby_s4:{}, // capacité active ou mécanique propre au joueur
+  aby_s5:{}, // exécution : pas de variante
+  aby_sk:{}, // capacité active ou mécanique propre au joueur
+  // Lumière (Aube)
+  ray_n2:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  ray_n3:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  ray_n5:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  ray_n6:{renfort:'degats'},
+  ray_k1:{}, // statistiques mêlées à une mécanique
+  ray_k2:{}, // statistiques mêlées à une mécanique
+  fan_x2b:{v:['elargi']},
+  sol_s1:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  sol_s2:{renfort:'degats'},
+  sol_s3:{v:['elargi']},
+  // Ombre (Croix d’ombre)
+  pen_n5:{}, // invisibilité : sans objet pour le porteur
+  pen_n6:{}, // invisibilité : sans objet pour le porteur
+  pen_k1:{}, // statistiques mêlées à une mécanique
+  pen_k2:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
+  omb_s1:{}, // invisibilité : sans objet pour le porteur
+  omb_s2:{renfort:'degats'},
+  omb_s3:{renfort:'vitesse'},
+  omb_s4:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  omb_s5:{v:['double']},
+  omb_sk:{}, // invisibilité : sans objet pour le porteur
+  // Soin (Saignée)
+  sai_s5:{},
+  req_n4:{},
+  req_x3b:{},
+  trm_n6:{},
+  // Garde (Bastion)
+  vor_x3b:{v:['repousse']},
+  dif_n4:{},
+  dif_n5:{renfort:'armure'},
+  dif_x3a:{}, // capacité active ou mécanique propre au joueur
+  dif_k1:{}, // statistiques mêlées à une mécanique
+  sai_s1:{},
+  sai_s3:{renfort:'pv'},
+  abe_s3:{},
+  cad_x3b:{}, // capacité active ou mécanique propre au joueur
+  req_x2a:{},
+  chd_s5:{}, // capacité active ou mécanique propre au joueur
+  pnt_n6:{}, // capacité active ou mécanique propre au joueur
+  // Fureur (Martèlement)
+  dif_n6:{renfort:'degats'},
+  dif_k2:{}, // capacité active ou mécanique propre au joueur
+  abe_s1:{renfort:'degats'},
+  abe_s2:{renfort:'degats'},
+  abe_s5:{renfort:'degats'},
+  abe_sk:{}, // capacité active ou mécanique propre au joueur
+  req_k2:{}, // statistiques mêlées à une mécanique
+ },
+ reliques:{
+  // Projectile (Rafale)
+  chain:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  dent:{renfort:'degats'},
+  // Faisceau (Rais)
+  oil:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  // Ruée (Aller-retour)
+  sand:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  feather:{renfort:'vitesse'},
+  pendule:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  // Onde (Échos)
+  bell:{},
+  // Fil (Navette)
+  ciseaux:{renfort:'degats'},
+  fuseau:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  // Cloche (Glas)
+  diapason:{}, // recharge, durée ou fenêtre : sans objet pour le porteur
+  battantr:{renfort:'degats'},
+  metro:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  // Lumière (Aube)
+  prismg:{}, // ralentit : pas de ralentissement du joueur
+  ash:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  // Soin (Saignée)
+  phoenix:{}, // renaissance : sans objet pour le porteur
+  calice:{},
+  moelle:{},
+  fiole:{},
+  lacry:{},
+  // Garde (Bastion)
+  wax:{renfort:'pv'},
+  cercle:{}, // statistiques mêlées à une mécanique
+  dea:{renfort:'armure'},
+  ancre:{renfort:'armure'},
+  os:{renfort:'pv'},
+  // Fureur (Martèlement)
+  eye:{renfort:'degats'},
+  ember:{}, // brûlure ou saignée : pas de dégâts sur la durée
+  epine:{renfort:'degats'},
+  gant:{renfort:'degats'},
+  cierge:{renfort:'degats'},
+  chaineg:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  // Fortune (Coup de dés)
+  crane:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  clef:{}, // ressource ou charge du joueur : sans objet pour le porteur
+  bourse:{renfort:'degats'},
+  boussole:{}, // ressource ou charge du joueur : sans objet pour le porteur
+ }
 };})(window.BRUME_DATA=window.BRUME_DATA||{});

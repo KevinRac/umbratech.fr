@@ -40,12 +40,26 @@ ok(Object.keys(J.formes).length === 9, 'vocabulaire : neuf formes');
 ok(/FO=CO\.zone/.test(html) && /EDGE=CO\.bord/.test(html), 'index.html : les zones du Masqué doivent prendre leurs couleurs dans assemble.couleurs');
 ok((html.match(/const FOE='([0-9, ]+)'/) || [])[1] === A.couleurs.zone, 'liseré des projectiles (FOE) = assemble.couleurs.zone');
 // palier 3b : ce qui sera rempli doit pointer vers des talents, variantes et renforts qui existent
-for (const [src, map, ids] of [['talents', J.talents, new Set(Object.values(SV.familles).flatMap(f => f.t || []))], ['reliques', J.reliques, new Set(Object.values(SV.familles).flatMap(f => f.r || []))]])
+// (v17.16) chaque talent et chaque relique est classé (entrée vide = la version de sa famille telle quelle), une variante a un effet réel sur sa famille,
+// une entrée est une variante OU un renfort, jamais les deux, et les renforts ne dépassent pas ce que renfortMax laisse à un porteur
+for (const [src, map, champ] of [['talents', J.talents, 't'], ['reliques', J.reliques, 'r']]) {
+  const famDe = {};
+  for (const [fid, Fm] of Object.entries(SV.familles)) for (const id of Fm[champ] || []) famDe[id] = fid;
+  for (const id of Object.keys(famDe)) ok(map && map[id], `${src}.${id} : non classé (une entrée vide {} suffit pour « la famille telle quelle »)`);
   for (const [id, x] of Object.entries(map || {})) {
-    ok(ids.has(id), `${src}.${id} : id inconnu de souvenirs.js`);
-    for (const v of x.v || []) ok(J.variantes[v], `${src}.${id} : variante ${v} inconnue`);
+    ok(famDe[id], `${src}.${id} : id inconnu de souvenirs.js`);
+    for (const v of x.v || []) {
+      ok(J.variantes[v], `${src}.${id} : variante ${v} inconnue`);
+      if (J.variantes[v] && famDe[id]) {
+        const avant = JSON.stringify(F.sbEtapes(J, famDe[id], [])), apres = JSON.stringify(F.sbEtapes(J, famDe[id], [v]));
+        ok(avant !== apres, `${src}.${id} : la variante ${v} ne change rien à la famille ${famDe[id]}`);
+      }
+    }
     if (x.renfort) ok(J.renforts[x.renfort], `${src}.${id} : renfort ${x.renfort} inconnu`);
+    ok(!(x.v && x.v.length && x.renfort), `${src}.${id} : une variante ou un renfort, pas les deux`);
+    ok((x.v || []).length <= 1, `${src}.${id} : une seule variante par souvenir`);
   }
+}
 
 // 1. Justice, famille par famille (le même vérificateur que le mode d'essai)
 const t0 = Date.now();

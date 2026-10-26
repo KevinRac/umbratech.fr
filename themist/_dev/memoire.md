@@ -1030,3 +1030,84 @@ Choix de ce palier non tranchés par la consigne :
 4. Ne pas brancher encore les armes sur le Masqué ordinaire : c’est le palier 4. Pour lui, il faudra : faire de l’attaque d’une famille une capacité du cycle (`asmPas` doit savoir qu’une capacité `sb:<famille>` dure plusieurs étapes : déléguer à `sbPas` pendant ce temps), compter sa `menace` dans `budgetMenace`, respecter ses `incompatibles` dans `asmCombos` (familles, capacités, corps), remplacer ou non les capacités de souvenir v17.9–v17.14 (décision à prendre : elles utilisent des formes que le joueur ne connaissait pas avant, taches, tourbillon, cercles, fil, faisceau), et appliquer `sbRenfort` au porteur. Attention : la **feinte du Brumeux** (`bluffTick`, un cercle posé sur toi, vrai ou faux, en salle de combat dès l’acte II ou la salle 6) tourne aussi dans les salles du Masqué ordinaire et ne consulte pas `asmZone` : aujourd’hui elle peut se superposer à une zone du Masqué. Pour tenir « une zone à la fois » au palier 4, elle doit attendre comme les autres ennemis.
 
 À surveiller : Fil et Cloche sont les plus lourdes (3,45 à l’acte III, sous le plafond de 3,6) ; Martèlement enchaîne trois losanges sur toi au plancher de 0,5 s ; la recherche de sortie en jeu coûte quelques millisecondes par zone (rien par image).
+
+## 20. Palier 3b : les souvenirs rattachés aux armes de la Brume (v17.16, 26 octobre 2026)
+
+Consigne : classer chacun des **240 talents** et des **34 reliques** (la famille vient de `data/souvenirs.js`, champs `t` et `r`) : la version ennemie de sa famille telle quelle, ou affinée par une **variante** déjà prévue, ou, pour un souvenir purement statistique, un **renfort** du porteur. Rien d’inventé : ni nouvelle forme, ni nouvelle variante, ni nouveau renfort. Données dans `data/souvenirs-brume.js` (`talents`, `reliques`). **Rien ne change pour le joueur** : aucun code du jeu ne lit encore ces tables (palier 4).
+
+### Résultat
+
+| | Talents + reliques |
+|---|---|
+| Variante | 40 (Perçant `traverse` 7, Redoublé `double` 19, Large `elargi` 11, Massif `repousse` 2, Vorace `vol` 1) |
+| Renfort | 37 (Brutal `degats` 28, Vif `vitesse` 3, Blindé `armure` 3, Robuste `pv` 3) |
+| La version de la famille telle quelle (elle suffit) | 41 |
+| La version de la famille telle quelle, **mais le souvenir demande autre chose que le système ne sait pas traduire** | 156 |
+
+Chaque entrée est `{}` (la famille telle quelle), `{v:['…']}` ou `{renfort:'…'}`, jamais les deux, une seule variante au plus. Les entrées de la dernière ligne portent un commentaire qui dit ce qui manque.
+
+### Règles de classement (appliquées partout de la même façon)
+
+1. **Variante**, seulement si le texte du souvenir la demande **et** si la forme de sa famille l’accepte : *perce, transperce* → `traverse` (projectile, rayons) ; *répète, écho, second coup, deux fois, double* → `double` (toute répétition, deux ou trois fois) ; *+ rayon, + portée de zone, + taille* → `elargi` ; *repousse* → `repousse` ; *soigne en frappant* → `vol`. Une variante déjà présente dans la famille (Saignée, Mâchoire et Bastion portent déjà `vol`, `vol` et `repousse` sur l’une de leurs étapes) ne se réécrit pas : sur Soin, `vol` ne change rien, le simulateur le refuse.
+2. **Renfort**, seulement si le souvenir n’est qu’un bonus chiffré, même conditionnel ou croissant : *dégâts, critique, cadence* → `degats` (approximation : le chargement du porteur n’est jamais touché, la cadence devient des dégâts) ; *PV max* → `pv` ; *vitesse de déplacement* → `vitesse` ; *dégâts subis en moins, bouclier* → `armure`. Quand il y a deux bonus, le premier cité l’emporte (le format n’en admet qu’un). Un bonus mêlé à une autre mécanique (étourdir, ressource, invisibilité, souvenirs à compter…) n’est pas un renfort.
+3. Sinon : la version de la famille telle quelle. Quand le souvenir demandait un effet que le système ne traduit pas, l’entrée le dit en commentaire.
+
+Choix de ce palier à connaître : un talent « répété trois fois » (Triple pulsation) devient `double` ; « +20 % de portée » devient `elargi` (× 1,15) quel que soit le pourcentage ; `rapide` n’est demandé par aucun souvenir (aucun ne parle de la vitesse d’un projectile ou d’une onde).
+
+### Ce que la consigne demandait et que le système ne permet pas
+
+« Une ruée qui assomme donne un couloir qui étourdit » : **impossible aujourd’hui**, comme l’annonçait le § 19 (le jeu n’a pas d’état « étourdi » pour le joueur, aucune variante n’étourdit). Rien n’a été inventé : ces souvenirs gardent la version de leur famille, avec le motif en commentaire. De même pour ralentir, immobiliser, brûler, marquer, attirer. **À décider avant le palier 4** : ajouter ou non un état de ce genre au joueur (étourdi, ralenti), et lequel, avec ses règles de justice (durée maximale, jamais enchaîné, jamais pendant une autre zone) ; sans cela, ces 54 souvenirs resteront sans effet propre.
+
+### Souvenirs que je n’ai pas pu classer proprement (156)
+
+Tous ont une entrée `{}` (la famille telle quelle). Ils sont groupés par ce qui manque.
+
+**A. Un état ou un contrôle que le jeu n’a pas pour le joueur**
+
+- Étourdir (le joueur n’a pas d’état « étourdi ») : 12. fan_n1 (Atterrissage), fan_n6 (Rappel Fracassant), dgl_s5 (Temps Fort), dif_x2b (Ruée écrasante), dif_x3b (Carapace explosive), car_x1b (Volée sourde), val_sk (Bal des Morts), pnt_x1b (Toile-piège), trm_x2b (Rembobinage), vor_x2b (Gourmandise) ; reliques : chain (Chaîne du geôlier), chaineg (Chaîne de glas).
+- Ralentir : 12. reg_n2 (Crachat collant), bro_s5 (Faufilage), cad_x2a (Pas glissé), car_n1 (Résonance prolongée), pha_s5 (Corne de brume), req_n6 (Cortège), val_s4 (Ronde), gts_sk (Grande Toile), pnt_n5 (Étranglement), car_x3a (Écho de bronze), vor_n5 (Bouche pleine) ; reliques : prismg (Prisme de garde).
+- Immobiliser : 5. pnt_n1 (Soie vive), pnt_n4 (Toile), pnt_x3a (Atterrissage tissé), gts_s3 (Soie collante), vor_x1b (Mâchoire profonde).
+- Brûlure, saignée : 14. aig_n5 (Saignée), fan_x3b (Fil de lumière), dif_x1b (Morsure arrachée), sai_s4 (Halo de Purification), ray_x2b (Soleil posé), fan_n2 (Lanterne brûlante), fan_x3a (Rappel brûlant), trm_n3 (Fil Tranchant), vor_n6 (Sucs Gastriques), ray_n3 (Aube Brûlante), ray_n5 (Aura vive), sol_s1 (Soleil Noir) ; reliques : oil (Huile sainte), ember (Braise éternelle).
+- Marquer, exposer, faire subir plus de dégâts : 7. pen_n3 (Pas d’Ombre), pen_x3b (Fente d’ombre), reg_n5 (Acidité durable), pnt_x3b (Toile mortelle), gts_s4 (Toile Piégée), trm_n4 (Tension croissante), pen_k2 (Marque du Crépuscule).
+- Attirer, aspirer : 4. req_x3a (Fosse commune), vor_n1 (Gorgée), vor_x1a (Tourbillon), aby_s1 (Gueule-Abîme).
+- Variante voulue mais refusée par la forme de la famille : 2. reg_x1b (Jet pénétrant), ray_n4 (Nova).
+
+**B. Ce qui n’a pas de sens pour un porteur**
+
+- Ressources et charges du joueur (Lueur, Bobine, Corruption, Résonance, Cadence, charges d’esquive, or, relances) : 21. fan_n5 (Rappel vif), reg_n1 (Reflux), aig_n2 (Pelote), bro_s3 (Point serré), pen_x3a (Danse d’ombre), cad_n2 (Pas léger), trm_x3a (Bobine généreuse), car_x3b (Résonance de garde), cad_n5 (Oreille fine), cad_n6 (Syncope), req_n2 (Deuil), req_n5 (Âmes errantes), vor_k2 (Estomac sans Fond), ray_n2 (Lueur d’aplomb) ; reliques : sand (Sablier d’ombre), fuseau (Fuseau d’os), metro (Métronome du sonneur), ash (Cendre d’étoile), crane (Crâne de rat), clef (Clé du Colporteur), boussole (Boussole brisée).
+- Recharges, durées, fenêtres de temps : 8. gts_s2 (Soie durable), pnt_k2 (Contrôle Total), cad_n1 (Attaque nette), req_n1 (Glas rapide), chd_s3 (Chœur nombreux), omb_s4 (Danse des Ombres) ; reliques : pendule (Pendule du beffroi), diapason (Diapason d’argent).
+- Invisibilité : 4. pen_n5 (Souffle d’ombre), pen_n6 (Silhouette), omb_s1 (Ombrelame), omb_sk (Nuit Éternelle).
+- Renaissance : 1. reliques : phoenix (Mèche de Phénix).
+
+**C. Une mécanique propre au joueur que la forme de la famille ne rend pas**
+
+- Alliés, pantins, choristes, lanternes ou toiles à lui : 10. fan_k2 (Constellation), fan_k1 (Lanterne Vivante), pnt_n3 (Pantin), pnt_x2a (Théâtre de marionnettes), mdp_s1 (Maître des Pantins), mdp_s4 (Fils de Commande), mdp_sk (Grand Guignol), chd_s1 (Chœur des Damnés), chd_s4 (Unisson), chd_sk (Requiem).
+- Capacité active, ultime ou mécanique d’attache : 31. bro_sk (Temps Suspendu), sol_sk (Zénith), pha_sk (Phare Tournant), reg_k2 (Ventre-Canon), dif_n3 (Bras de Brume), pen_n4 (Lame de Nuit), dif_x2a (Ruée-carapace), sol_s5 (Couronne Solaire), trm_n5 (Ourdissoir), trm_x1a (Fil étendu), trm_x1b (Fil explosif), trm_x2a (Arrachage en chaîne), trm_k1 (Destin Lié), trm_k2 (Fil Rouge), pnt_k1 (Danse des Pendus), gts_s5 (Araignée), car_n4 (Carillon), car_n5 (Timbre clair), car_x2a (Cloches orbitales), cad_n4 (Point d’orgue), cad_x3a (Orgue étendu), dgl_sk (Glas Funèbre), sai_sk (Absolution), aby_s4 (Avaleur de Brume), aby_sk (Gueule du Monde), dif_x3a (Carapace conquérante), cad_x3b (Orgue de combat), chd_s5 (Contre-chant), pnt_n6 (Bouclier de Chair), dif_k2 (Mutation Instable), abe_sk (Métamorphose).
+- Rebonds : 3. fan_n3 (Lanterne Ricochante), pen_x2a (Lame en chaîne), car_n3 (Ondes Rebondissantes).
+- Guidage : 4. aig_n6 (Aiguilles Chercheuses), aig_x3a (Essaim), aig_x3b (Chasseresse), pnt_x1a (Toile aimantée).
+- Exécutions : 5. dgl_s1 (Dernier Glas), dgl_s4 (Coup de Grâce), vor_n4 (Festin), vor_x2a (Banquet), aby_s5 (Engloutir).
+- Statistiques mêlées à une mécanique (donc pas un simple renfort) : 13. aig_k1 (Mille Points), ray_x3b (Frappe solaire), reg_k1 (Rupture Maîtrisée), trm_x3b (Tisserand fou), pnt_n2 (Pantin tenace), req_x2b (Tocsin vengeur), req_k1 (Glas des Âmes), ray_k1 (Cœur de Soleil), ray_k2 (Surcharge), pen_k1 (Enfant de la Nuit), dif_k1 (Colosse), req_k2 (Pacte du Sonneur) ; reliques : cercle (Cerclage de fer).
+
+Cas particuliers : `reg_x1b` (Jet pénétrant : perçant voulu, mais `traverse` n’existe pas sur le couloir), `ray_n4` (Nova : « repousse » au rang 2, absent de l’anneau), `car_x1b` (Volée sourde : étourdit et repousse, ni l’un ni l’autre sur l’anneau), `dif_x2b` (Ruée écrasante : l’exemple de la consigne, étourdit).
+
+### Variantes et renforts retenus
+
+- **Perçant** (`traverse`) : ray_x3a (Coup d’aurore) → Rafale ; pen_x1b (Onde d’ombre) → Rafale ; reg_x3a (Salive acide) → Rafale ; cad_x1b (Onde longue) → Rafale ; aig_x1b (Aiguille perçante) → Rafale ; aig_k2 (Aiguille du Destin) → Rafale ; bro_s1 (Brodeuse d’Âmes) → Rafale.
+- **Redoublé** (`double`) : fan_x1a (Boomerang) → Rafale ; aig_x2a (Double salve) → Rafale ; sol_s4 (Rayons Jumeaux) → Rais ; pen_x1a (Taillade croisée) → Taillades ; dif_x1a (Double croc) → Taillades ; abe_s4 (Tentacules) → Taillades ; cad_x1a (Frappe jumelée) → Taillades ; cad_k1 (Furioso) → Taillades ; pen_n2 (Image rémanente) → Aller-retour ; pen_x2b (Lame fantôme) → Aller-retour ; cad_n3 (Pas de Valse) → Aller-retour ; cad_x2b (Pas-écho) → Aller-retour ; ray_x2a (Triple pulsation) → Échos ; car_x1a (Cascade) → Échos ; car_n2 (Cloche vive) → Glas ; car_k2 (Tocsin) → Glas ; req_x1a (Glas double) → Glas ; req_x1b (Glas ancré) → Glas ; omb_s5 (Ombres Jumelles) → Croix d’ombre.
+- **Large** (`elargi`) : ray_x1a (Prisme vivant) → Rais ; pen_n1 (Estoc) → Taillades ; dif_n1 (Mâchoire de fer) → Taillades ; pha_s3 (Lentille de Fresnel) → Dalles ; reg_x2a (Bile persistante) → Dalles ; val_s3 (Grand salon) → Dalles ; car_x2b (Cloche majeure) → Glas ; vor_n3 (Gueule Béante) → Mâchoire ; aby_s3 (Mâchoires larges) → Mâchoire ; fan_x2b (Phare) → Aube ; sol_s3 (Solstice) → Aube.
+- **Massif** (`repousse`) : val_s5 (Révérence) → Dalles ; vor_x3b (Gueule blindée) → Bastion.
+- **Vorace** (`vol`) : vor_k1 (Faim Éternelle) → Mâchoire.
+- **Brutal** (`degats`) : reg_n4 (Jet précis), sai_s2 (Sainte Bile), aig_n1 (Cadence tressée), bro_s2 (Acier fin), ray_n1 (Faisceau chargé), dgl_s3 (Main lourde), pha_s2 (Huile de baleine), val_s2 (Talons ferrés), trm_n1 (Fil d’amorce), mdp_s2 (Cordes neuves), dgl_s2 (Glas sourd), chd_s2 (Voix d’outre-tombe), aby_s2 (Estomac sans fond), ray_n6 (Plein feu), sol_s2 (Feu sombre), omb_s2 (Lame fantôme), dif_n6 (Frénésie), abe_s1 (Aberration), abe_s2 (Chair malléable), abe_s5 (Yeux multiples) ; reliques : dent (Dent de Léviathan), ciseaux (Ciseaux de la Parque), battantr (Battant de fer), eye (Œil de verre), epine (Couronne d’épines), gant (Gantelet du sonneur), cierge (Cierge votif), bourse (Bourse du Pendu).
+- **Vif** (`vitesse`) : mdp_s3 (Troupe), omb_s3 (Voile) ; reliques : feather (Plume de corbeau).
+- **Blindé** (`armure`) : dif_n5 (Peau épaisse) ; reliques : dea (Dé à coudre), ancre (Ancre de brume).
+- **Robuste** (`pv`) : sai_s3 (Jeûne) ; reliques : wax (Cœur de cire), os (Os creux).
+
+### Vérification
+
+- `node themist/outils/sim-brume.mjs` : **3051 vérifications, 0 échec** (justice sur 15 familles × leurs variantes × 3 actes, file d’étapes, neuf contre-épreuves). Trois contrôles ajoutés : chaque talent et chaque relique de `souvenirs.js` a une entrée ; une variante change réellement sa famille ; une entrée n’est pas à la fois variante et renfort, avec une seule variante. Éprouvés en cassant le tableau à dessein (entrée retirée, variante sans effet, variante et renfort ensemble) : les quatre fautes sont refusées. Chaque variante employée ayant été jugée seule par `sbVerifier`, la justice couvre toutes les entrées.
+- **Mode d’essai en navigateur** (`index.html?brume=<famille>&acte=3[&variante=…][&renfort=…]&bot=1`, Chromium sans affichage, 24 s par cas, joueur conduit vers la sortie à 180 px/s sans esquive) : **48 cas** = les 15 familles de base, les 17 couples famille + variante et les 16 couples famille + renfort que le tableau emploie. Justice ✓ dans les 48 ; aucune étape sautée ; les variantes sont bien appliquées en jeu (`double` produit des étapes bis, `elargi`, `traverse`, `vol`, `repousse` sont portés par les zones) ; les renforts aussi (dégâts × 1,12, vitesse × 1,12, PV × 1,15, armure 0,1). Aucune erreur de script ; la seule ligne rouge de la console est un chargement réseau refusé par le bac à sable.
+- **Un défaut rare de la version 3a, antérieur à ce palier** (aucun code du jeu ne lit les tables) : sur Cloche de base, le joueur conduit vers la sortie a reçu **un coup (18 PV) sur environ 91 attaques** à 60 pas par seconde (le journal de ce coup n’a pas été relevé) ; Onde : aucun coup sur 36 attaques à pleine cadence. Avec six pages en parallèle (une vingtaine de pas par seconde), un coup sur Onde (23 PV, anneau de la 1re étape, en 896 × 647) et un sur Cloche (18 PV, anneau de la 2e étape, en 1184 × 661, près du coin bas droit) : dans les deux cas le joueur se trouvait déjà au point de sortie calculé. Les anneaux sont dans les deux familles touchées : la garantie « toujours une sortie » n’est donc pas absolue sur l’anneau ; **à comprendre avant le palier 4** (piste : l’écart entre la sortie calculée par `sbSortie` et le test de touche en jeu sur l’anneau, de près à un mur, ou à faible cadence).
+
+### Pour le palier 4
+
+Inchangé (§ 19, point 4), avec de plus : lire `talents[id]` / `reliques[id]` du souvenir porté pour obtenir ses variantes (`sbEtapes(J, famille, variantes)`) ou son renfort (`sbRenfort`) ; le porteur d’un souvenir classé « renfort » n’a **pas** l’attaque de sa famille, seulement le renforcement.
