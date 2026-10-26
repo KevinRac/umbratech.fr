@@ -138,7 +138,18 @@
    onde:{n:'Onde',de:'hurleur',ic:'u_wave',forme:'anneau',adj:{m:'hurlant',f:'hurlante'},menace:2,chargeS:0.65,rayonMax:340,vitesse:300,breche:70,degats:1.2},
    charge:{n:'Charge',de:'brute',ic:'u_charge',forme:'couloir',adj:{m:'furieux',f:'furieuse'},menace:3,chargeS:0.7,suivi:0.45,longueur:380,vitesse:720,degats:1.9,sonne:0.6},
    cone:{n:'Lame',de:'voile',ic:'u_blade',forme:'cone',adj:{m:'tranchant',f:'tranchante'},menace:2,chargeS:0.55,effetS:0.2,rayon:95,arc:2.2,degats:1.8,portee:120},
-   tirs:{n:'Salve',de:'spectre',ic:'u_volley',forme:'rayons',adj:{m:'tireur',f:'tireuse'},menace:2,chargeS:0.6,effetS:0.15,nombre:5,ecart:0.2,vitesse:250,longueur:420,degats:0.9}},
+   tirs:{n:'Salve',de:'spectre',ic:'u_volley',forme:'rayons',adj:{m:'tireur',f:'tireuse'},menace:2,chargeS:0.6,effetS:0.15,nombre:5,ecart:0.2,vitesse:250,longueur:420,degats:0.9},
+   // v17.9 · capacité de souvenir (souvenir:true) : jamais tirée seule, seulement quand il porte un souvenir de la famille qui la donne (voir souvenir).
+   // Taches : nombre flaques (rayon) sous toi et autour (ecart), posées au chargement ; à l'impact degats, puis elles restent effetS secondes
+   // et blessent de degatsTic toutes les tic secondes tant que tu y es. Il peut bouger pendant qu'elles restent.
+   taches:{n:'Taches',ic:'u_drop',forme:'taches',souvenir:true,adj:{m:'suintant',f:'suintante'},menace:2,chargeS:0.75,effetS:2.4,nombre:3,rayon:46,ecart:105,degats:1.3,tic:0.7,degatsTic:0.4}},
+  // v17.9 · Le Masqué porte parfois un souvenir de ta réserve (data/souvenirs.js, familles). chance : % des Masqués qui en portent un
+  // quand la réserve a un souvenir portable ; parActe : au plus autant de porteurs par acte ; familles : famille → capacité qu'il en tire
+  // (elle prend une des deux places de départ, sous le même budget de menace) ; parRang / parGravure : dégâts de cette capacité en plus,
+  // par rang au-delà du premier et par gravure ; usure : un souvenir déjà porté est moins souvent repris (poids 1 / (1 + usure × fois)).
+  // Brisé, il propose de reprendre le souvenir à la place de la relique (D9). Les dégâts infligés à un porteur ne comptent pas dans l'Accoutumance (D5).
+  souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,
+   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches'}},
   // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
   // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
   passive:{n:'Trait',ic:'u_arrow',intervalleS:1.4,preavisS:0.25,degats:0.6,vitesse:320,portee:560},

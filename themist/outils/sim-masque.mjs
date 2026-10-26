@@ -16,12 +16,26 @@ const m = html.match(/\/\*asm:pur\*\/([\s\S]*?)\/\*\/asm:pur\*\//);
 if (!m) { console.error('Bloc /*asm:pur*/ introuvable'); process.exit(1); }
 const ctx = { window: {}, Math, console };
 vm.createContext(ctx);
-for (const f of ['bestiaire.js', 'masque.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(m[1] + '\nthis.F={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmFin,asmNom};', ctx);
-const F = ctx.F, A = ctx.window.BRUME_DATA.bestiaire.assemble;
+for (const f of ['bestiaire.js', 'masque.js', 'souvenirs.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
+vm.runInContext(m[1] + '\nthis.F={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmFin,asmNom,asmSouvenir};', ctx);
+const F = ctx.F, A = ctx.window.BRUME_DATA.bestiaire.assemble, SV = ctx.window.BRUME_DATA.souvenirs;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; console.error('ÉCHEC : ' + msg); } };
 const zones = new Set([...Object.keys(A.capacites), ...Object.keys(A.signatures)]);
+const SOUV = Object.keys(A.capacites).filter(k => A.capacites[k].souvenir);
+
+// règles communes à toute combinaison
+function regles(c, act, salle, porte) {
+  const C = A.corps[c.corps], all = [...c.depart, c.eveil];
+  ok(new Set(all).size === 3, `${c.cle} : trois capacités distinctes`);
+  ok(all.every(k => !(C.exclut || []).includes(k)), `${c.cle} : exclusion du corps`);
+  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++)
+    ok(!A.incompatibles.some(([x, y]) => (x === all[i] && y === all[j]) || (x === all[j] && y === all[i])), `${c.cle} : incompatibilité ${all[i]}/${all[j]}`);
+  ok(c.menace <= A.budgetMenace[act], `${c.cle} : budget de menace`);
+  ok(!C.salle || salle >= C.salle, `${c.cle} : corps disponible à cette salle`);
+  if (porte) ok(c.depart.includes(porte), `${c.cle} : la capacité portée (${porte}) est au départ`);
+  ok(all.every(k => !A.capacites[k].souvenir || k === porte), `${c.cle} : capacité de souvenir sans souvenir`);
+}
 
 // 1. Combinaisons
 for (const [act, salle] of [[1, 3], [1, 6], [2, 9], [2, 13], [2, 14], [3, 16], [3, 20]]) {
@@ -29,15 +43,25 @@ for (const [act, salle] of [[1, 3], [1, 6], [2, 9], [2, 13], [2, 14], [3, 16], [
   const bases = new Set(L.map(c => c.base));
   console.log(`acte ${act}, salle ${salle} : ${bases.size} combinaisons (${L.length} avec la capacité d'éveil) — ${[...bases].join(', ')}`);
   ok(bases.size >= 2, `acte ${act} salle ${salle} : au moins deux combinaisons pour pouvoir alterner`);
-  for (const c of L) {
-    const C = A.corps[c.corps], all = [...c.depart, c.eveil];
-    ok(new Set(all).size === 3, `${c.cle} : trois capacités distinctes`);
-    ok(all.every(k => !(C.exclut || []).includes(k)), `${c.cle} : exclusion du corps`);
-    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++)
-      ok(!A.incompatibles.some(([x, y]) => (x === all[i] && y === all[j]) || (x === all[j] && y === all[i])), `${c.cle} : incompatibilité ${all[i]}/${all[j]}`);
-    ok(c.menace <= A.budgetMenace[act], `${c.cle} : budget de menace`);
-    ok(!C.salle || salle >= C.salle, `${c.cle} : corps disponible à cette salle`);
+  for (const c of L) regles(c, act, salle, null);
+}
+
+// 1 bis (v17.9). Souvenir porté : chaque famille portable a une capacité connue, et chaque capacité portée trouve des combinaisons
+ok(SOUV.length >= 1, 'au moins une capacité de souvenir');
+for (const [fam, cap] of Object.entries(A.souvenir.familles)) {
+  ok(SV.familles[fam], `famille ${fam} : absente de data/souvenirs.js`);
+  ok(A.capacites[cap], `famille ${fam} : capacité ${cap} inconnue`);
+}
+for (const k of SOUV) ok(Object.values(A.souvenir.familles).includes(k), `capacité de souvenir ${k} : aucune famille ne la donne`);
+for (const [act, salle] of [[1, 3], [2, 9], [2, 14], [3, 18]]) {
+  const parts = [];
+  for (const cap of new Set(Object.values(A.souvenir.familles))) {
+    const L = F.asmCombos(A, { act, salle, porte: cap });
+    ok(L.length >= 1, `acte ${act} salle ${salle} : aucune combinaison ne peut porter ${cap}`);
+    for (const c of L) regles(c, act, salle, cap);
+    parts.push(`${cap} ${new Set(L.map(c => c.base)).size}`);
   }
+  console.log(`porteur, acte ${act} salle ${salle} : ${parts.join(' · ')} combinaisons`);
 }
 // 2. Tirage : jamais deux fois la même combinaison de suite (10 000 apparitions par contexte)
 for (const [act, salle] of [[1, 4], [2, 10], [3, 18]]) {
@@ -57,9 +81,35 @@ for (const [act, salle] of [[1, 4], [2, 10], [3, 18]]) {
   console.log(`profil « frappe de loin » : Salve dans ${t0} tirages sans pondération, ${tirs} avec`);
   ok(tirs > t0, 'la pondération par profil favorise la capacité visée'); }
 
-// 3. File de sorts : simulation d'un combat complet par combinaison, à pas de temps irréguliers
+// 2 bis (v17.9). Choix du souvenir dans la réserve
+{
+  const fam = {}; for (const [k, f] of Object.entries(SV.familles)) (f.t || []).forEach(id => { fam[id] = k; });
+  const de = f => SV.familles[f].t[0], ent = (id, o) => Object.assign({ id, source: 'talent', rang: 1, g: 0, porte: 0 }, o);
+  const portable = Object.keys(A.souvenir.familles), nonPortable = Object.keys(SV.familles).filter(f => !portable.includes(f) && (SV.familles[f].t || []).length);
+  const S100 = Object.assign({}, A, { souvenir: Object.assign({}, A.souvenir, { chance: 100 }) });
+  ok(F.asmSouvenir(S100, [], fam, F.asmRng(1), 0) === null, 'réserve vide : rien');
+  if (nonPortable.length) ok(F.asmSouvenir(S100, nonPortable.map(f => ent(de(f))), fam, F.asmRng(2), 0) === null, `familles sans capacité (${nonPortable.join(', ')}) : rien`);
+  ok(F.asmSouvenir(S100, [ent('chain', { source: 'relique' })], fam, F.asmRng(3), 0) === null, 'une relique ne se porte pas');
+  ok(F.asmSouvenir(S100, [ent(de('sol'))], fam, F.asmRng(4), A.souvenir.parActe) === null, 'plafond de porteurs par acte');
+  for (const f of portable) { const r = F.asmSouvenir(S100, [ent(de(f))], fam, F.asmRng(5), 0); ok(r && r.cap === A.souvenir.familles[f], `famille ${f} : capacité ${A.souvenir.familles[f]}`); }
+  { const r = F.asmSouvenir(S100, [ent(de('sol'), { rang: 3, g: 2 })], fam, F.asmRng(6), 0);
+    ok(Math.abs(r.force - (1 + 2 * A.souvenir.parRang + 2 * A.souvenir.parGravure)) < 1e-9, `force au rang 3, gravé deux fois (${r.force})`); }
+  let n = 0; const N = 20000, res = [ent(de('sol'))];
+  for (let i = 0; i < N; i++) if (F.asmSouvenir(A, res, fam, F.asmRng(i * 7 + 11), 0)) n++;
+  console.log(`porteur : ${(n / N * 100).toFixed(1)} % des Masqués quand la réserve a un souvenir portable (réglé à ${A.souvenir.chance} %)`);
+  ok(Math.abs(n / N * 100 - A.souvenir.chance) < 2, 'fréquence des porteurs');
+  // usure : un souvenir déjà porté trois fois revient (1 + 3 × usure) fois moins souvent
+  const neuf = ent(de('sol')), use = ent(de('lame'), { porte: 3 }); let a = 0, b = 0;
+  for (let i = 0; i < N; i++) { const r = F.asmSouvenir(S100, [neuf, use], fam, F.asmRng(i + 99), 0); if (r.x === neuf) a++; else b++; }
+  const att = 1 + 3 * A.souvenir.usure;
+  console.log(`usure : neuf ${a}, porté trois fois ${b} (rapport ${(a / b).toFixed(2)}, attendu ${att})`);
+  ok(Math.abs(a / b - att) < 0.4, 'usure');
+}
+
+// 3. File de sorts : simulation d'un combat complet par combinaison, à pas de temps irréguliers (avec les porteurs de souvenir)
 let combats = 0;
-for (const act of [2, 3]) for (const co of F.asmCombos(A, { act, salle: 18 })) for (let rep = 0; rep < 25; rep++) {
+const filesDe = act => [...F.asmCombos(A, { act, salle: 18 }), ...[...new Set(Object.values(A.souvenir.familles))].flatMap(cap => F.asmCombos(A, { act, salle: 18, porte: cap }).filter(c => A.capacites[cap].souvenir))];
+for (const act of [2, 3]) for (const co of filesDe(act)) for (let rep = 0; rep < 25; rep++) {
   combats++;
   const rnd = F.asmRng(rep * 97 + co.cle.length), st = F.asmNouveau(A, co);
   let t = 0, pv = 100, active = null, lastEnd = -1e9, lastCast = null, cycle = [], eveilAt = null, casts = 0, sigs = 0;

@@ -8695,11 +8695,14 @@ function demoBoot(cls){
  function asmAppel(A,m){const vite=m.salles>=A.vite.sallesMin&&m.tempsS/Math.max(1,m.salles)<=A.vite.salleMaxS,intact=m.sansDegatsS>=A.intact.sansDegatsS;return{vite,intact,ok:vite||intact};}
  function asmIncomp(A,a,b){return A.incompatibles.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a));}
  // Toutes les combinaisons permises : {corps, depart:[a,b], eveil:c, menace, base (corps + paire de départ), cle}
+ // ctx.porte (v17.9) : la capacité tirée d'un souvenir porté ; elle est alors toujours l'une des deux capacités de départ.
+ // Une capacité de souvenir (souvenir:true) n'entre jamais dans une combinaison sans souvenir.
  function asmCombos(A,ctx){
-  const out=[],K=Object.keys(A.capacites),plaf=A.budgetMenace[ctx.act]!=null?A.budgetMenace[ctx.act]:Infinity;
+  const out=[],K=Object.keys(A.capacites).filter(k=>!A.capacites[k].souvenir||k===ctx.porte),plaf=A.budgetMenace[ctx.act]!=null?A.budgetMenace[ctx.act]:Infinity;
   for(const ck in A.corps){const C=A.corps[ck],S=A.signatures[C.signature];if(!S||(C.salle&&ctx.salle<C.salle))continue;
    const ok=K.filter(k=>!(C.exclut||[]).includes(k));
    for(let i=0;i<ok.length;i++)for(let j=i+1;j<ok.length;j++){const a=ok[i],b=ok[j];if(asmIncomp(A,a,b))continue;
+    if(ctx.porte&&a!==ctx.porte&&b!==ctx.porte)continue;
     for(const c of ok){if(c===a||c===b||asmIncomp(A,a,c)||asmIncomp(A,b,c))continue;
      const m=C.menace+S.menace+A.capacites[a].menace+A.capacites[b].menace+A.capacites[c].menace;if(m>plaf)continue;
      out.push({corps:ck,depart:[a,b],eveil:c,menace:m,base:`${ck}:${a}+${b}`,cle:`${ck}:${a}+${b}>${c}`});}}}
@@ -8742,8 +8745,18 @@ function demoBoot(cls){
  function asmFin(A,st,ev){const k=st.k;st.ph='pause';st.dernier=k;st.n++;st.t=A.pauseS+(A.signatures[k]?A.apresSignatureS:0)+(st.eveilDu?A.eveilS:0);st.eveilDu=false;st.k=null;if(ev)ev.push(['fin',k]);}
  // Nom composé court : le corps et l'adjectif de ses deux capacités de départ (« Brute hurlante et tranchante »)
  function asmNom(A,co){const C=A.corps[co.corps],g=C.g==='f'?'f':'m',adj=co.depart.map(k=>A.capacites[k].adj[g]);return `${C.n} ${adj[0]} et ${adj[1]}`;}
+ // v17.9 · Porte-t-il un souvenir ? res : la réserve de la run ({id, source, rang, g, porte}) ; fam : id de talent → famille ;
+ // n : porteurs déjà venus dans cet acte. Renvoie {x (l'entrée de la réserve), cap (la capacité qu'il en tire), force (× dégâts)} ou null.
+ function asmSouvenir(A,res,fam,rnd,n){const S=A.souvenir;if(!S||!res||!res.length||(n||0)>=(S.parActe==null?Infinity:S.parActe))return null;
+  const L=res.filter(x=>x.source==='talent'&&fam[x.id]&&S.familles[fam[x.id]]&&A.capacites[S.familles[fam[x.id]]]);
+  if(!L.length||rnd()*100>=S.chance)return null;
+  const ws=L.map(x=>1/(1+(S.usure==null?1:S.usure)*(x.porte||0))),tot=ws.reduce((a,b)=>a+b,0);let r=rnd()*tot,x=L[L.length-1];
+  for(let i=0;i<L.length;i++){r-=ws[i];if(r<=0){x=L[i];break;}}
+  return{x,cap:S.familles[fam[x.id]],force:1+(S.parRang||0)*Math.max(0,(x.rang||1)-1)+(S.parGravure||0)*(x.g||0)};}
  /*/asm:pur*/
- window.__asm={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,forcer:0};
+ window.__asm={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,asmSouvenir,forcer:0};
+ // familles de souvenirs (data/souvenirs.js) : id de talent → famille
+ const FAMS={};try{const F=(window.BRUME_DATA.souvenirs||{}).familles||{};for(const k in F)(F[k].t||[]).forEach(id=>{FAMS[id]=k;});}catch(err){}
 
  // ── Couleurs et dessin du masque (Path2D tirés des données, à l'échelle de l'ennemi)
  const COL=A.masque.couleurs,rgb=h=>{const n=parseInt(h.slice(1),16);return `${n>>16&255},${n>>8&255},${n&255}`;};
@@ -8769,9 +8782,10 @@ function demoBoot(cls){
   c.restore();}
  window.__asm.drawMask=drawMask;
  // Pour essayer en jeu, depuis la console : __asm.essai() ; __asm.essai('voile:onde+cone>charge', 3) ; troisième argument vrai : sans la première vague
- window.__asm.essai=function(cle,acte,direct){try{if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
-  RUN.act=Math.max(A.desActe,acte||2);RUN.g=Math.max(RUN.g,RUN.act>=3?18:10);RUN.roomIdx=Math.max(1,(A.premiereSalle||1)-1);window.__asm.forcer=1;window.__asm.combo=cle||null;
-  closeOverlay();queue.length=0;trans=null;fade=0;doEnter('elite');window.__asm.combo=null;window.__asm.forcer=0;
+ // quatrième argument (v17.9) : id d'un talent de la réserve qu'il doit porter (__memoire.reserve), par exemple __asm.essai(null,2,true,'fan_n2')
+ window.__asm.essai=function(cle,acte,direct,souv){try{if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+  RUN.act=Math.max(A.desActe,acte||2);RUN.g=Math.max(RUN.g,RUN.act>=3?18:10);RUN.roomIdx=Math.max(1,(A.premiereSalle||1)-1);window.__asm.forcer=1;window.__asm.combo=cle||null;window.__asm.souv=souv||null;
+  closeOverlay();queue.length=0;trans=null;fade=0;try{doEnter('elite');}finally{window.__asm.combo=null;window.__asm.forcer=0;window.__asm.souv=null;}
   if(direct&&room.asm&&room.waves.length>1)room.waves.shift();
   return room.asm?room.asm.nom:'(pas de Masqué ici)';}catch(err){console.error(err);return String(err);}};
  window.__asm.dbg=()=>({P,RUN,room,enemies,state,rings,kill:killEnemy,entrer:t=>{trans=null;fade=0;doEnter(t);},lancer:()=>{chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}});
@@ -8787,6 +8801,9 @@ function demoBoot(cls){
   else if(X.forme==='croix'){z.len=X.longueur;z.w=X.largeur;}
   else if(X.forme==='losanges'){z.h=X.taille;z.pts=[[P.x,P.y]];for(let i=0;i<X.nombre-1;i++){const b=Math.PI/4+i*Math.PI/2;z.pts.push([P.x+Math.cos(b)*X.ecart,P.y+Math.sin(b)*X.ecart]);}}
   else if(X.forme==='damier'){const q=X.cote;z.q=q;z.cells=[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]].map(([i,j])=>[P.x+i*q,P.y+j*q]);}
+  else if(X.forme==='taches'){z.r=X.rayon;const b=e.asm.rnd()*TAU,m=X.rayon+8;z.pts=[[P.x,P.y]];
+   for(let i=1;i<X.nombre;i++){const a=b+(i-1)*TAU/Math.max(1,X.nombre-1)+(e.asm.rnd()-0.5)*0.6;z.pts.push([clamp(P.x+Math.cos(a)*X.ecart,AR.x0+m,AR.x1-m),clamp(P.y+Math.sin(a)*X.ecart,AR.y0+m,AR.y1-m)]);}
+   z.sd=z.pts.map(()=>e.asm.rnd()*10);}
   return z;}
  function inZone(z,x,y,m){const dx=x-z.x,dy=y-z.y;
   switch(z.forme){
@@ -8794,19 +8811,20 @@ function demoBoot(cls){
   case 'cone':return hyp(dx,dy)<z.r+m&&angDiff(Math.atan2(dy,dx),z.a)<z.arc/2;
   case 'croix':for(let i=0;i<4;i++){const b=z.a+i*Math.PI/2,u=dx*Math.cos(b)+dy*Math.sin(b),v=-dx*Math.sin(b)+dy*Math.cos(b);if(u>=-z.w/2&&u<=z.len&&Math.abs(v)<z.w/2+m)return true;}return false;
   case 'losanges':for(const [px,py] of z.pts)if(Math.abs(x-px)+Math.abs(y-py)<z.h+m*1.2)return true;return false;
-  case 'damier':for(const [cx,cy] of z.cells)if(Math.abs(x-cx)<z.q/2+m&&Math.abs(y-cy)<z.q/2+m)return true;return false;}
+  case 'damier':for(const [cx,cy] of z.cells)if(Math.abs(x-cx)<z.q/2+m&&Math.abs(y-cy)<z.q/2+m)return true;return false;
+  case 'taches':for(const [px,py] of z.pts)if(hyp(x-px,y-py)<z.r+m)return true;return false;}
   return false;}
 
  // ── Annonce (avant le combat et à mi-vie) : masque, nom composé court, icônes. Pas de texte long.
  let card=null,cardHide=0,cardN=0;
  function showCard(e,eveil){const S=e.asm;
   if(!card){card=document.createElement('div');card.id='asmCard';card.setAttribute('role','status');card.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(card);}
-  const ic=k=>{const X=A.capacites[k]||A.signatures[k];return `<i class="${A.signatures[k]?'sig':''}${eveil&&k===S.st.reserve?' nw':''}" title="${esc(X.n)}">${icon(X.ic)}</i>`;};
+  const ic=k=>{const X=A.capacites[k]||A.signatures[k];return `<i class="${A.signatures[k]?'sig':''}${eveil&&k===S.st.reserve?' nw':''}${S.sv&&k===S.sv.cap?' sv':''}" title="${esc(X.n)}">${icon(X.ic)}</i>`;};
   const caps=S.st.caps.map(ic).join('')+(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig);
-  card.className=eveil?'eveil':'';
-  card.innerHTML=`<span class="mq" aria-hidden="true">${MQ.svg(COL,eveil?'fissure':'calme','asmc'+(++cardN))}</span><div><b>${esc(A.n)}${eveil?' · ▲':''}</b><span class="nm">${esc(S.nom)}</span><span class="ics">${caps}</span></div>`;
+  card.className=(eveil?'eveil':'')+(S.sv?' porte':'');
+  card.innerHTML=`<span class="mq" aria-hidden="true">${MQ.svg(COL,eveil?'fissure':'calme','asmc'+(++cardN))}</span><div><b>${esc(A.n)}${eveil?' · ▲':''}</b><span class="nm">${esc(S.nom)}</span><span class="ics">${caps}</span>${S.sv?`<span class="svn">${esc(S.sv.n)}</span>`:''}</div>`;
   try{stackBelow(card,toastEl);}catch(x){}
-  void card.offsetWidth;card.classList.add('show');cardHide=RUN.time+(eveil?2:2.8);}
+  void card.offsetWidth;card.classList.add('show');cardHide=RUN.time+(eveil?2:S.sv?3.6:2.8);}
  function hideCard(){if(card)card.classList.remove('show');cardHide=0;}
 
  // ── Salle : il vient quand tu domines (vite ou intact), dans toute salle de combat ; graine par apparition
@@ -8821,13 +8839,23 @@ function demoBoot(cls){
     if(force)window.__asm.forcer--;
     const seed=(Math.random()*4294967296)>>>0,rnd=asmRng(seed),mem=SAVE.asm18||{};
     const dernier=M.dernier||mem.dernier||null;
-    const co=window.__asm.combo?asmCombos(A,{act:Math.max(1,RUN.act),salle:G()}).find(c=>c.cle===window.__asm.combo)||null:asmTirage(A,{act:RUN.act,salle:G()},dernier,rnd,A.poidsProfil.actif?profile():null);
+    // v17.9 : un souvenir de la réserve ? (__asm.souv : forcer un id de talent de la réserve, pour l'essai en console)
+    const pa=M.porteurs=M.porteurs||{};let sv=null;
+    try{const res=RUN.reserveBrume||[];
+     if(window.__asm.souv){const x=res.find(y=>y.id===window.__asm.souv);if(x)sv=asmSouvenir(Object.assign({},A,{souvenir:Object.assign({},A.souvenir,{chance:100,parActe:Infinity})}),[x],FAMS,rnd,0);}
+     else sv=asmSouvenir(A,res,FAMS,rnd,pa[RUN.act]||0);}catch(err){console.error(err);sv=null;}
+    let co=null;const ctx={act:Math.max(1,RUN.act),salle:G()};
+    if(window.__asm.combo)co=asmCombos(A,Object.assign({porte:sv&&sv.cap},ctx)).find(c=>c.cle===window.__asm.combo)||null;
+    else{if(sv)co=asmTirage(A,Object.assign({porte:sv.cap},ctx),dernier,rnd,A.poidsProfil.actif?profile():null);
+     if(!co){sv=null;co=asmTirage(A,ctx,dernier,rnd,A.poidsProfil.actif?profile():null);}}
+    if(co&&sv&&!co.depart.includes(sv.cap))sv=null;
     if(co){const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3;
      // il arrive avec la deuxième vague : il prend la place du champion s'il y en a un, la vague garde ses autres ennemis
      const v=(w[1]||[]).filter(x=>!x.elite);if(!v.length)v.push(...row('rampant',n,'rand'));v.unshift({type:co.corps,elite:true,asm:true});
      if(w.length>1)w[1]=v;else w.push(v);
      RUN.seen.add(co.corps);
-     room.asm={seed,rnd,co,nom:asmNom(A,co),e:null,vaincu:false,wi:1,appel:ap};
+     room.asm={seed,rnd,co,nom:asmNom(A,co),e:null,vaincu:false,wi:1,appel:ap,sv};
+     if(sv){sv.x.porte=(sv.x.porte||0)+1;pa[RUN.act]=(pa[RUN.act]||0)+1;}
      M.dernier=co.base;M.salle=RUN.g;SAVE.asm18=Object.assign({},mem,{dernier:co.base});persist();}}}}
   catch(err){console.error(err);}
   return w;};
@@ -8841,7 +8869,7 @@ function demoBoot(cls){
    const C=A.corps[type],d=ED[type];
    e.maxHp*=A.stats.pv*C.pv/(d.hp*CHAMP.pv);e.hp=e.maxHp;e.dmg*=A.stats.degats/(d.dmg*CHAMP.degats);
    e.r=d.r*C.taille;e.spd=d.spd*spdMul()*C.vitesse;e.xp=A.stats.xp*(1+0.05*(G()-1));e.state='walk';e.tok=null;
-   e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co),z:null,flash:null,dash:null};
+   e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co),z:null,flash:null,dash:null,sv:R.sv?{cap:R.sv.cap,force:R.sv.force,id:R.sv.x.id,n:(NODES[R.sv.x.id]||{}).name||R.sv.x.id}:null};
    if(MO){e.asm.mont={t:0,tot:MT(),n:0};e.asm.st.t=Math.max(e.asm.st.t,MT());}
    showCard(e,false);sfx('asm_in');}}catch(err){console.error(err);}
   return e;};
@@ -8871,12 +8899,15 @@ function demoBoot(cls){
  const ZT=new Set(['brute','hurleur','voile']),_tt=tryTok;
  tryTok=function(e,k){if(e&&!e.asm&&ZT.has(e.type)&&e.tok!==k&&room&&room.asm&&asmZone())return false;return _tt.apply(this,arguments);};
  window.__asm.zone=asmZone;
- function annule(e){const S=e.asm,st=S.st;if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;}
+ function annule(e){const S=e.asm,st=S.st;if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;S.taches=null;}
  function onEvent(e,x){const S=e.asm,[t,k]=x;
   if(t==='eveil'){showCard(e,true);sfx('asm_eveil');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'violet'});if(!RM)shake(4,0.15);S.fis=true;return;}
   if(t==='charge'){S.z=zoneDe(e,k);S.flash=null;sfx(A.signatures[k]?'asm_sig':'asm_ch',S.st.tot);return;}
-  if(t==='fin'){S.z=null;S.dash=null;return;}
-  if(t==='lache'){const z=S.z;if(!z)return;const X=z.X,dmg=e.dmg*X.degats;
+  if(t==='fin'){S.z=null;S.dash=null;S.taches=null;return;}
+  if(t==='lache'){const z=S.z;if(!z)return;const X=z.X,f=S.sv&&S.sv.cap===k?S.sv.force:1,dmg=e.dmg*X.degats*f;
+   if(z.forme==='taches'){if(!P.dead&&inZone(z,P.x,P.y,P.r*0.5))hurtPlayer(dmg,e);
+    S.taches={z,t:0,max:asmEffet(A,k),tic:X.tic,dmg:e.dmg*X.degatsTic*f};S.z=null;sfx('spit');shake(3,0.12);
+    for(const [px,py] of z.pts)sparks(px,py,5,'#ff6a5a');return;}
    if(z.forme==='disque'){explosion(z.x,z.y,z.r,dmg,0,{col:'rgba(255,58,52,',spark:'#ff6a5a'});S.z=null;}
    else if(z.forme==='anneau'){ZR.push({x:z.x,y:z.y,r:e.r,v:X.vitesse,max:z.max,ga:z.ga,gw:z.gw,dmg,hit:false,src:e});sfx('howl');S.z=null;}
    else if(z.forme==='couloir'){S.dash={a:z.a,v:X.vitesse*spdMul(),left:z.len,hit:false,dmg};S.z=null;}
@@ -8896,6 +8927,9 @@ function demoBoot(cls){
   const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,autre:!tg.pl||zoneAutre(e),fige},S.rnd);
   for(const x of ev)onEvent(e,x);
   if(S.flash){S.flash.t-=dt;if(S.flash.t<=0)S.flash=null;}
+  // v17.9 · les taches restent : tant que tu y es, elles blessent toutes les tic secondes
+  if(S.taches){const Tc=S.taches;Tc.t+=dt;Tc.tic-=dt;
+   if(Tc.tic<=0){Tc.tic=Tc.z.X.tic;if(!P.dead&&inZone(Tc.z,P.x,P.y,P.r*0.3))hurtPlayer(Tc.dmg,e);}}
   const z=S.z;
   if(z&&st.ph==='charge'){const k=1-st.t/st.tot;
    if(z.forme==='couloir'&&k<z.X.suivi){z.a=Math.atan2(P.y-e.y,P.x-e.x);z.x=e.x;z.y=e.y;}
@@ -8905,7 +8939,7 @@ function demoBoot(cls){
    if(!D.hit&&!P.dead&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){D.hit=true;hurtPlayer(D.dmg,e);}
    if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);S.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');if(st.ph==='effet')asmFin(A,st,null);S.z=null;}
    else if(D.left<=0){S.dash=null;if(st.ph==='effet')asmFin(A,st,null);}}
-  else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'))move(e,dt,sp,tg,dP,st.att>0);
+  else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'||(st.ph==='effet'&&S.taches)))move(e,dt,sp,tg,dP,st.att>0);
   if(!S.dash&&!P.dead&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);
   // attaque passive : un trait vers toi à intervalle régulier, en plus de ses sorts (pas pendant son apparition)
   const PS=A.passive;if(PS&&st.ph!=='intro'){if(S.pas==null)S.pas=PS.intervalleS;
@@ -8937,10 +8971,21 @@ function demoBoot(cls){
   case 'croix':{c.translate(z.x,z.y);c.rotate(z.a);const arm=l=>()=>{c.beginPath();for(let i=0;i<4;i++){c.save();c.rotate(i*Math.PI/2);c.rect(z.w/2,-z.w/2,l-z.w/2,z.w);c.restore();}c.rect(-z.w/2,-z.w/2,z.w,z.w);};
     fill(a0,arm(z.len));fill(a1,arm(z.w/2+(z.len-z.w/2)*k));edge(()=>{c.beginPath();const w=z.w/2,L=z.len;c.moveTo(w,-w);c.lineTo(L,-w);c.lineTo(L,w);c.lineTo(w,w);c.lineTo(w,L);c.lineTo(-w,L);c.lineTo(-w,w);c.lineTo(-L,w);c.lineTo(-L,-w);c.lineTo(-w,-w);c.lineTo(-w,-L);c.lineTo(w,-L);c.closePath();});break;}
   case 'losanges':{const D=(h)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x,y-h);c.lineTo(x+h,y);c.lineTo(x,y+h);c.lineTo(x-h,y);c.closePath();}};fill(a0,D(z.h));fill(a1,D(z.h*k));edge(D(z.h));break;}
-  case 'damier':{const D=(s)=>()=>{c.beginPath();for(const [x,y] of z.cells)c.rect(x-s/2,y-s/2,s,s);};fill(a0,D(z.q));fill(a1,D(z.q*k));edge(D(z.q));break;}}
+  case 'damier':{const D=(s)=>()=>{c.beginPath();for(const [x,y] of z.cells)c.rect(x-s/2,y-s/2,s,s);};fill(a0,D(z.q));fill(a1,D(z.q*k));edge(D(z.q));break;}
+  case 'taches':{const D=(r)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x+r,y);c.arc(x,y,r,0,TAU);}};fill(a0,D(z.r));fill(a1,D(z.r*k));edge(D(z.r));break;}}
+  c.restore();}
+ // v17.9 · les taches posées : flaques sombres aux bords qui ondulent, qui restent puis s'effacent (liseré fixe en mouvements réduits)
+ function drawTaches(c,Tc){const z=Tc.z,left=Tc.max-Tc.t,al=clamp(left/0.4,0,1)*clamp(Tc.t/0.12,0,1);if(al<=0)return;c.save();
+  z.pts.forEach(([x,y],i)=>{const w=RM?z.sd[i]:z.sd[i]+T*1.6;c.save();c.translate(x,y);
+   const g=c.createRadialGradient(0,0,z.r*0.15,0,0,z.r*1.05);g.addColorStop(0,`rgba(120,14,18,${0.62*al})`);g.addColorStop(0.75,`rgba(${FO},${0.34*al})`);g.addColorStop(1,`rgba(${FO},0)`);
+   c.fillStyle=g;blobPath(c,z.r*1.04,w);c.fill();
+   c.strokeStyle=`rgba(${EDGE},${(RM?0.75:0.55+0.25*Math.sin(T*6+i))*al})`;c.lineWidth=1.8;c.setLineDash([6,6]);c.lineDashOffset=RM?0:-T*14;blobPath(c,z.r,w);c.stroke();c.setLineDash([]);
+   if(!RM)for(let j=0;j<2;j++){const a=z.sd[i]*3+j*2.4+T*0.8,rr=z.r*(0.25+0.3*((T*0.5+j*0.5+z.sd[i])%1));c.fillStyle=`rgba(255,150,130,${0.35*al})`;c.beginPath();c.arc(Math.cos(a)*rr,Math.sin(a)*rr,2.2,0,TAU);c.fill();}
+   c.restore();});
   c.restore();}
  const _dt=drawTelegraphs;
  drawTelegraphs=function(){_dt();try{const c=ctx;for(const e of enemies){if(e.dead||!e.asm)continue;const S=e.asm;
+   if(S.taches)drawTaches(c,S.taches);
    if(S.z&&S.st.ph==='charge')drawZone(c,S.z,clamp(1-S.st.t/S.st.tot,0,1),0);
    if(S.flash)drawZone(c,S.flash.z,1,S.flash.t/S.flash.max);}}catch(err){console.error(err);}};
  const _drg=drawRings;
@@ -9022,6 +9067,7 @@ function demoBoot(cls){
    L.forEach((k,i)=>{const x=e.x-tw/2+3+i*(sz+gap)+(k===st.sig?6:0)+sz/2;const on=lit&&k===st.k;
     if(k==='_'){drawIcon(c,'u_sleep',x,iy,sz,'rgba(185,170,220,.55)',1.8);return;}
     const X=A.capacites[k]||A.signatures[k];
+    if(S.sv&&k===S.sv.cap){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();}
     if(on){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.2,'255,120,110',0.6);c.restore();}
     drawIcon(c,X.ic,x,iy,on?sz*1.25:sz,on?'#ffffff':k===st.sig?'rgba(225,205,255,.98)':'rgba(236,228,250,.92)',k===st.sig?2.3:2);});
    if(e.stun>0){c.fillStyle='rgba(255,230,140,.95)';for(let i=0;i<3;i++){const a2=T*6+i*TAU/3;c.beginPath();c.arc(e.x+Math.cos(a2)*e.r*0.8,top+4+Math.sin(a2)*3,2.2,0,TAU);c.fill();}}}
@@ -9031,14 +9077,22 @@ function demoBoot(cls){
  const _ke=killEnemy;
  killEnemy=function(e){const was=e&&e.dead;_ke(e);
   try{if(!was&&e&&e.dead&&e.asm){const h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max);
-   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;sfx('asm_brise');hideCard();
+   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;e.asm.taches=null;sfx('asm_brise');hideCard();
    if(room&&room.asm){room.asm.vaincu=true;}
+   if(e.asm.sv)chron('asmSv',{n:e.asm.sv.n});
    RUN.asm=RUN.asm||{dernier:null,vaincus:[]};RUN.asm.vaincus.push(e.asm.nom);
    SAVE.asm18=Object.assign({},SAVE.asm18,{vaincus:((SAVE.asm18&&SAVE.asm18.vaincus)||0)+1});persist();
    chron('asm',{n:e.asm.nom});}}catch(err){console.error(err);}};
  const _orc=onRoomCleared;
  onRoomCleared=function(){const R=room&&room.asm,t=room&&room.type;_orc.apply(this,arguments);ZR=[];
-  try{if(R&&R.vaincu&&RUN&&!RUN.hub){if(t!=='elite'){RUN.sh.elites+=6;addGold(18+2*G(),true);}for(let i=0;i<(A.recompense.reliques||0);i++)enqueue(()=>openRelics(A.recompense.titre,A.recompense.texte));}}catch(err){console.error(err);}};
+  try{if(R&&R.vaincu&&RUN&&!RUN.hub){if(t!=='elite'){RUN.sh.elites+=6;addGold(18+2*G(),true);}
+   // v17.9 (D9) : s'il portait un souvenir, la première relique devient un choix : le reprendre, ou le laisser et choisir une relique
+   for(let i=0;i<(A.recompense.reliques||0);i++){const rel=()=>openRelics(A.recompense.titre,A.recompense.texte);
+    if(i===0&&R.sv&&window.__memoire&&window.__memoire.offreReprise){const x=R.sv.x;enqueue(()=>window.__memoire.offreReprise(x,rel,A.recompense.titre));}
+    else enqueue(rel);}}}catch(err){console.error(err);}};
+ // D5 : les dégâts infligés à un Masqué qui porte un souvenir ne comptent pas dans l'Accoutumance (ni dans la part de mécanique)
+ const _hsv=hitEnemy;hitEnemy=function(e){const R=RUN&&RUN.mem;if(!(e&&e.asm&&e.asm.sv&&R))return _hsv.apply(this,arguments);
+  const t0=R.tot,s0=R.sig,r0=R.resisted;const d=_hsv.apply(this,arguments);R.tot=t0;R.sig=s0;R.resisted=r0;return d;};
  const _st=step;
  step=function(dt){_st(dt);
   try{if(!(state==='play'&&RUN&&!RUN.hub&&P))return;
@@ -9047,7 +9101,8 @@ function demoBoot(cls){
    ZR=ZR.filter(g=>g.r<g.max);
    for(const b of ZB)b.t-=dt;ZB=ZB.filter(b=>b.t>0);}catch(err){console.error(err);}};
  const _ch=chron;
- chron=function(k,d){if(k!=='asm')return _ch.apply(this,arguments);if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch;c.notes.push({a:RUN.act,k,t:pick([`Tu as brisé un Masqué : ${d.n}.`,`Un Masqué s’est dressé devant toi (${d.n}). Son masque a volé en éclats.`])});if(c.notes.length>70)c.notes.shift();};
+ chron=function(k,d){if(k==='asmSv'){if(!RUN||RUN.hub)return;ensure14();RUN.ch.notes.push({a:RUN.act,k,t:`Un Masqué portait ${d.n}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();return;}
+  if(k!=='asm')return _ch.apply(this,arguments);if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch;c.notes.push({a:RUN.act,k,t:pick([`Tu as brisé un Masqué : ${d.n}.`,`Un Masqué s’est dressé devant toi (${d.n}). Son masque a volé en éclats.`])});if(c.notes.length>70)c.notes.shift();};
  const _oe=openEnd;
  openEnd=function(){hideCard();const r=_oe.apply(this,arguments);
   try{const V=RUN&&RUN.asm&&RUN.asm.vaincus;if(V&&V.length){const panel=overlayEl.querySelector('.panel');if(panel){
@@ -9082,6 +9137,9 @@ function demoBoot(cls){
 #asmCard .ics i.dort{opacity:.5;border-style:dashed}
 #asmCard .ics i.nw{color:#fff;border-color:#fff;background:rgba(255,255,255,.18);box-shadow:0 0 14px rgba(201,168,255,.7)}
 #asmCard.eveil{border-left-color:#c9a8ff}
+#asmCard .ics i.sv{color:#fff;border-color:#e1d4ff;background:rgba(215,200,255,.2);box-shadow:0 0 0 2px rgba(12,9,22,.9),0 0 0 3.5px rgba(225,212,255,.75),0 0 16px rgba(215,200,255,.55)}
+#asmCard .svn{display:block;margin-top:6px;font-size:14.5px;font-style:italic;letter-spacing:.02em;color:#e6dcff}
+@media (prefers-reduced-motion:no-preference){#asmCard.porte.show .ics i.sv{animation:tbpop .45s cubic-bezier(.2,1.6,.4,1)}}
 @media (prefers-reduced-motion:no-preference){#asmCard.show .mq{animation:tbpop .35s cubic-bezier(.2,1.6,.4,1)}#asmCard.eveil.show .ics i.nw{animation:tbpop .4s cubic-bezier(.2,1.6,.4,1)}}
 @media (prefers-reduced-motion:reduce){#asmCard{transition:none}}
 .asmEnd{display:flex;gap:14px;align-items:center;margin:8px 0 0;padding:8px 14px;border:1px solid #4a3a7a;border-left:4px solid #e4dcf4;border-radius:5px;background:rgba(184,146,255,.08)}
@@ -9418,12 +9476,12 @@ function demoBoot(cls){
   if(M.forgetN!==g){M.forgetN=g;M.ecrans=(M.ecrans||0)+1;}
   if(overlayEl.hidden&&window.__brief&&window.__brief.brief('memoire'))return;
   M.forgetOpen=true;
-  const gain={id:g.id,src:g.src,rang:g.src==='t'?(P.ranks[g.id]||0)+1:1};
+  const gain={id:g.id,src:g.src,rang:g.rang!=null?g.rang:g.src==='t'?(P.ranks[g.id]||0)+1:1,g:g.g||0};
   const ctx=g.ctx,canLater=ctx==='lv',canNo=ctx!=='asc';
   const opts=M.actifs.slice(0,CAP());
   let sel=-1,armedRoot=-1;
   const pre=opts.findIndex(a=>isOff(a));if(pre>=0)sel=pre;
-  const eyebrow=ctx==='asc'?'Rituel d’Ascension · mémoire pleine':'Talent · mémoire pleine';
+  const eyebrow=ctx==='asc'?'Rituel d’Ascension · mémoire pleine':ctx==='rep'?'Souvenir repris · mémoire pleine':'Talent · mémoire pleine';
   const h2=ctx==='asc'?'Ta nature change : quelque chose doit partir':'Prendre ou oublier';
   const lostHTML=i=>{
    if(i<0)return `<div class="mfd mfd-empty"><p class="h-sec">Oublié</p><div class="mfd-h"><span class="mt big empty"></span><div><h3 class="muted">?</h3><p class="mfd-m"><kbd>1</kbd>–<kbd>${CAP()%10}</kbd></p></div></div></div>`;
@@ -9449,7 +9507,7 @@ function demoBoot(cls){
    const a=opts[i];finish();
    L.classList.add('gone');
    forget(a);
-   if(ctx==='asc')doAsc(g.br);else{_tk(g.id);afterTalent(g.id);}
+   if(ctx==='asc')doAsc(g.br);else if(ctx==='rep')restore(g.entry);else{_tk(g.id);afterTalent(g.id);}
    toast(`Oublié : ${nameOf(a)}`,1.8);
    after();};
   const renounce=()=>{if(!armed()||!canNo)return;finish();M.renonces++;
@@ -9466,6 +9524,32 @@ function demoBoot(cls){
    if(c==='KeyR'||c==='Backspace'||c==='Delete'){renounce();return;}
    if(c==='Escape'){if(canLater)later();else if(canNo)renounce();return;}
   };
+ }
+
+ // ── v17.9 · Reprendre un souvenir (D9) : un Masqué brisé qui portait un souvenir de la réserve le propose à la place de la relique.
+ //    Reprendre : il revient avec son rang et ses gravures, sans soin ni effet rejoué ; mémoire pleine, l'écran d'oubli s'ouvre
+ //    (renoncer l'y laisse). Le laisser : la relique habituelle. Il ne revient jamais par l'écran de niveau (il reste à la Brume).
+ function restore(x){const M=MEM();const i=(RUN.reserveBrume||[]).indexOf(x);if(i<0)return;
+  RUN.reserveBrume.splice(i,1);
+  P.ranks[x.id]=x.rang;M.actifs.push({id:x.id,src:'t',rang:x.rang,g:x.g||0,depuis:{acte:RUN.act,salle:RUN.roomIdx},repris:1});
+  M.traces[x.id]=Math.max(M.traces[x.id]||0,x.rang);M.gains++;M.repris=(M.repris||0)+1;
+  resync();renderMem();
+  const a={id:x.id,src:'t'};toast(`Repris : ${nameOf(a)}`,1.8);sfx('pick');
+  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'repris',t:`Acte ${ROM[RUN.act]||'I'} : tu as repris ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
+ function offreReprise(x,relique,titre){
+  if(!on()||!(RUN.reserveBrume||[]).includes(x)||!NODES[x.id]){relique();return;}
+  const a={id:x.id,src:'t',rang:x.rang,g:x.g||0},plein=full();
+  openOverlay(`<div class="panel narrow mrp"><p class="eyebrow">${esc(titre||'Le masque se brise')}</p><h2>Sous ses éclats, un souvenir</h2>
+   <div class="mrp-c">
+    <button type="button" class="card mrp-s" id="mrps" style="--c:${colOf(a)}"><span class="meta"><span class="br">● ${esc(branchOf(a))}</span><span>${esc(kindOf(a))}</span></span><div class="gc-h">${tile(a,{big:true,off:false})}<div><h3>${esc(nameOf(a))}</h3><p>${esc(descOf(a,a.rang))}</p></div></div><span class="k">Reprendre · touche 1${maxOf(a)>1?` · rang ${a.rang}/${maxOf(a)}`:''}${a.g?' · gravure '+ROMG[a.g]:''}</span>${badge(plein?'swap':'')}</button>
+    <button type="button" class="card mrp-r" id="mrpr"><span class="meta"><span>Relique</span></span><div class="gc-h"><span class="mrp-ic">${icon('u_gem')}</span><div><h3>Le laisser</h3><p>Choisis une relique à la place.</p></div></div><span class="k">Touche 2</span></button>
+   </div></div>`,'mrpo');
+  const take=()=>{if(!armed())return;
+   if(!full()){restore(x);closeOverlay();return;}
+   MEM().pending={src:'t',id:x.id,ctx:'rep',rang:x.rang,g:x.g||0,entry:x};closeOverlay();};
+  const leave=()=>{if(!armed())return;closeOverlay();relique();};
+  $('#mrps').addEventListener('click',take);$('#mrpr').addEventListener('click',leave);
+  overlayKeys=(c,e)=>{if(c==='Digit1'||c==='Numpad1'||c==='Enter'||c==='NumpadEnter'){if(e)e.preventDefault();take();}else if(c==='Digit2'||c==='Numpad2')leave();};
  }
 
  // ── Pause : la mémoire en tête de la colonne de droite ; fin de run : la mémoire au moment de la chute
@@ -9599,7 +9683,7 @@ function demoBoot(cls){
    fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':(R.lastSrc||''),acte:RUN.act,salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
    tues:RUN.kills||0,degats:Math.round(RUN.dmg||0),pvMax:Math.round(P.s.maxHp),
    talents:Object.keys(M.traces).length,portes:M.actifs.length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),oublis:M.oublis||0,renonces:M.renonces||0,ecransOubli:M.ecrans||0,
-   gravures:M.gravures||0,eveils:EVN,reliques:(P.relics||[]).length,accoutumance:R.tot>0?Math.round(R.sig/R.tot*100)/100:null,
+   gravures:M.gravures||0,eveils:EVN,repris:M.repris||0,porteurs:Object.values((RUN.asm&&RUN.asm.porteurs)||{}).reduce((a,b)=>a+b,0),reliques:(P.relics||[]).length,accoutumance:R.tot>0?Math.round(R.sig/R.tot*100)/100:null,
    build:M.actifs.map(a=>a.id+':'+a.rang+(a.g?'+'+a.g:'')).join(' ')};
   const S=SAVE.stats17||(SAVE.stats17=[]);S.push(rec);if(S.length>80)S.splice(0,S.length-80);persist();
  }
@@ -9684,6 +9768,11 @@ function demoBoot(cls){
 .oubli .of-p{position:absolute;display:block;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;filter:blur(2.5px);
  background:radial-gradient(circle,rgba(220,226,240,.75) 0%,rgba(190,198,224,.38) 45%,rgba(190,198,224,0) 72%)}
 .oubli .of-p.tint{background:radial-gradient(circle,rgba(228,232,244,.7) 0%,color-mix(in srgb,var(--c) 38%,transparent) 45%,transparent 72%)}
+.mrp h2{margin:2px 0 14px}
+.mrp-c{display:grid;grid-template-columns:1.6fr 1fr;gap:12px}
+.mrp-s{border-color:#8f7fb8;box-shadow:0 0 0 1px rgba(201,168,255,.25),0 0 22px -8px rgba(201,168,255,.7)}
+.mrp-ic{width:58px;height:58px;flex:none;display:grid;place-items:center;border-radius:12px;border:1.6px solid var(--line-hi);color:var(--flame)}.mrp-ic .ic{width:30px;height:30px}
+@media (max-width:760px){.mrp-c{grid-template-columns:1fr}}
 .pzres{display:flex;flex-wrap:wrap;gap:10px 9px;margin:0 0 14px;padding:6px 4px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
 .pzres .rv{position:relative;display:grid;place-items:center;width:34px;height:34px;opacity:.5;filter:grayscale(1) blur(2.4px) brightness(.85)}
 .pzres .rv::after{content:'';position:absolute;inset:-7px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(190,198,222,.24),rgba(190,198,222,0) 70%)}
@@ -9693,7 +9782,7 @@ function demoBoot(cls){
 .demo #hMem,.demo .oubli{display:none!important}`;
  document.head.appendChild(st);
 
- window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM,oubliFx,oubliCible,reserveHTML};
+ window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM,oubliFx,oubliCible,reserveHTML,offreReprise,restore};
 })();
 
 // ═════════════════════════ v17.5 · chaque ennemi blesse, plus d’ennemis coincés, plus rien qui arrête le joueur
