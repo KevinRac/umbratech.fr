@@ -23,7 +23,7 @@ if (!asm || !sb) { console.error('Bloc /*asm:pur*/ ou /*sb:pur*/ introuvable'); 
 const ctx = { window: {}, Math, console };
 vm.createContext(ctx);
 for (const f of ['bestiaire.js', 'souvenirs.js', 'souvenirs-brume.js', 'icones.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(asm[1] + sb[1] + '\nthis.F={asmDuree,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbVerrou,sbPotentiel,sbIncompatibles,sbNouveau,sbPas,sbDegats,sbCoup,sbPlafond,sbDans};', ctx);
+vm.runInContext(asm[1] + sb[1] + '\nthis.F={asmDuree,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbVerrou,sbPotentiel,sbIncompatibles,sbNouveau,sbPas,sbDegats,sbCoup,sbPlafond,sbDans,sbArrivee};', ctx);
 const F = ctx.F, D = ctx.window.BRUME_DATA, A = D.bestiaire.assemble, J = D.souvenirsBrume, SV = D.souvenirs, IC = D.icones;
 const clone = o => JSON.parse(JSON.stringify(o));
 let fails = 0, checks = 0;
@@ -129,6 +129,39 @@ refuse('hors bornes', J2 => { J2.familles.projectile.etapes[0].vitesse = 900; re
   const R = J.justice.arene, c = { lx: 300, ly: 300, er: ER, px: 640, py: 384, a: 0, rnd: Math.random }, o = { lx: 300, ly: 300, er: ER, arene: R };
   ok(F.sbPlacer(J2, A, et, c, o, 3) === null, 'sans sortie possible, le placement renvoie null (l\'étape saute)');
   const et2 = F.sbEtapes(J, 'cloche', [])[0]; ok(F.sbPlacer(J, A, et2, c, o, 3) !== null, 'en plein milieu, la cloche se place'); }
+
+// 7. (v17.17) Le temps que la recherche de sortie croit avoir ne dépasse jamais celui du jeu.
+// On rejoue pas à pas les règles de touche du jeu (onde : |d − r| < 10 + 0,6 × PR hors brèche, r borné à son maximum ;
+// projectiles et rayons : partis à er du centre, touchent à rayon + PR − 3 ; ruée : corps du porteur à er + PR), à 20 et 60 images/s,
+// et on compare le premier instant de touche à sbArrivee : il ne doit jamais être plus tôt (au pas de temps près).
+// Puis : au-delà de la bande extérieure d'une onde, le jeu ne touche jamais (avant v17.17, la dernière image dépassait le cercle annoncé).
+ok(/g\.r=Math\.min\(g\.max,g\.r\+g\.v\*dt\)/.test(html), 'index.html : l\'onde (ZR) doit s\'arrêter à son rayon maximal');
+{ const PR = J.justice.joueur.rayon, er = ER; let s = 99; const rnd = () => (s = (s * 1103515245 + 12345) >>> 0) / 4294967296;
+  const premier = (z, x, y, dt) => {   // premier instant de touche selon les règles du jeu, ou Infinity
+    const T = z.forme === 'anneau' ? (z.max - z.r0) / z.v + dt : (z.len + 2 * er) / z.v + dt;
+    for (let t = dt; t <= T + 1e-9; t += dt) {
+      if (z.forme === 'anneau') { const r = Math.min(z.max, z.r0 + z.v * t), d = Math.hypot(x - z.x, y - z.y), a = Math.atan2(y - z.y, x - z.x);
+        if (Math.abs(d - r) < 10 + 0.6 * PR && F.sbDans({ ...z, r0: 0, max: 1e9 }, x, y, PR, er, 0) === true && Math.abs(((a - z.ga) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) > z.gw / 2) return t;
+        if (r >= z.max) break; }
+      else if (z.forme === 'couloir') { const u = Math.min(z.len, z.v * t), cx = z.x + Math.cos(z.a) * u, cy = z.y + Math.sin(z.a) * u; if (Math.hypot(x - cx, y - cy) < er + PR) return t; }
+      else { const u = er + z.v * t; if (u - er > z.len - er) break;
+        for (let i = 0; i < z.n; i++) { const aa = z.a + (i - (z.n - 1) / 2) * z.ec; if (Math.hypot(x - (z.x + Math.cos(aa) * u), y - (z.y + Math.sin(aa) * u)) < z.pr + PR - 3) return t; } } }
+    return Infinity; };
+  const zones = [
+    ...['onde', 'cloche'].map(f => ({ forme: 'anneau', x: 640, y: 384, r0: f === 'onde' ? er : 20, max: 360, v: 336, ga: 0, gw: 70 * Math.PI / 180 })),
+    { forme: 'couloir', mode: 'ruee', x: 400, y: 384, a: 0, len: 456, w: 2 * er, v: 840 },
+    { forme: 'projectile', x: 400, y: 384, a: 0, n: 3, ec: 16 * Math.PI / 180, len: 640, v: 400, pr: 13 },
+    { forme: 'rayons', x: 640, y: 384, a: 0, n: 8, ec: Math.PI / 4, len: 560, v: 420, pr: 9 }];
+  let n = 0, tard = 0, pire = 0;
+  for (const z of zones) for (const dt of [1 / 60, 0.05]) for (let k = 0; k < 400; k++) {
+    const x = z.x + (rnd() * 2 - 1) * 480, y = z.y + (rnd() * 2 - 1) * 300, t0 = premier(z, x, y, dt); if (t0 === Infinity) continue; n++;
+    const ta = F.sbArrivee(z, x, y, er, PR); if (t0 < ta - dt - 1e-9) { tard++; pire = Math.max(pire, ta - t0); } }
+  ok(tard === 0, `sbArrivee annonce une zone plus tard que le jeu : ${tard} cas sur ${n} (jusqu'à ${pire.toFixed(3)} s)`);
+  // bout de l'onde : à 20 images/s, rien au-delà de max + bande
+  let hors = 0; for (const z of zones.filter(z => z.forme === 'anneau')) for (let k = 0; k < 400; k++) { const a = Math.PI / 2 + rnd() * Math.PI, d = z.max + 10 + 0.6 * PR + 0.5 + rnd() * 20;
+    if (premier(z, z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, 0.05) !== Infinity) hors++; }
+  ok(hors === 0, `l'onde touche au-delà de son cercle annoncé : ${hors} cas`);
+  console.log(`temps d'arrivée : ${n} points touchés en jeu (onde, ruée, projectiles, rayons ; 20 et 60 images/s), ${tard ? tard + ' plus tôt' : 'aucun plus tôt'} que sbArrivee ne l'annonce`); }
 
 console.log(`\n${checks} vérifications, ${fails} échec(s)`);
 process.exit(fails ? 1 : 0);

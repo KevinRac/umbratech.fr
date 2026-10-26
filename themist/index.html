@@ -8835,11 +8835,13 @@ function demoBoot(cls){
   case 'losanges':{const m=0.6*PR+mg;for(const [px,py] of z.pts)if(Math.abs(x-px)+Math.abs(y-py)<z.h+m)return true;return false;}
   case 'damier':{const m=0.5*PR+mg;for(const [cx,cy] of z.cells)if(Math.abs(x-cx)<z.q/2+m&&Math.abs(y-cy)<z.q/2+m)return true;return false;}}
   return false;}
- // Délai entre le lâcher et le moment où la zone atteint ce point (0 : tout frappe d'un coup)
- function sbArrivee(z,x,y,er){const dx=x-z.x,dy=y-z.y;
-  if(z.forme==='anneau')return Math.max(0,Math.hypot(dx,dy)-z.r0)/z.v;
-  if(z.forme==='couloir'&&z.mode==='ruee')return Math.max(0,dx*Math.cos(z.a)+dy*Math.sin(z.a)-er)/z.v;
-  if(z.forme==='rayons'||z.forme==='projectile'){let t=Infinity;for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec;t=Math.min(t,Math.max(0,dx*Math.cos(aa)+dy*Math.sin(aa))/z.v);}return t;}
+ // Délai entre le lâcher et le PREMIER instant où la zone peut toucher ce point (0 : tout frappe d'un coup). v17.17 : on compte l'arrivée de son
+ // bord, avec les rayons de touche de sbDans et du jeu, et non de son centre : onde (bande de 10 + 0,6 × PR), corps qui fonce (er + PR),
+ // projectiles et rayons (partis du bord du porteur, à er du centre, touchent à rayon + PR − 3). Sans cela, ces bords mangeaient le réflexe.
+ function sbArrivee(z,x,y,er,PR){PR=PR||0;const dx=x-z.x,dy=y-z.y;
+  if(z.forme==='anneau')return Math.max(0,Math.hypot(dx,dy)-z.r0-(10+0.6*PR))/z.v;
+  if(z.forme==='couloir'&&z.mode==='ruee')return Math.max(0,dx*Math.cos(z.a)+dy*Math.sin(z.a)-er-(er+PR))/z.v;
+  if(z.forme==='rayons'||z.forme==='projectile'){const demi=z.pr+PR-3;let t=Infinity;for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec;t=Math.min(t,Math.max(0,dx*Math.cos(aa)+dy*Math.sin(aa)-er-demi)/z.v);}return t;}
   return 0;}
  // Durée de la zone après le lâcher (l'anneau s'étend, le porteur fonce, les projectiles volent ; les autres frappent d'un coup)
  function sbEffet(J,z){if(z.forme==='anneau')return(z.max-z.r0)/z.v;if(z.forme==='couloir'&&z.mode==='ruee')return z.len/z.v;
@@ -8854,7 +8856,7 @@ function demoBoot(cls){
   if(libre(p[0],p[1]))return{ok:true,d:0};
   const chemin=(qx,qy)=>{const d=Math.hypot(qx-p[0],qy-p[1]),n=Math.max(1,Math.ceil(d/5));
    for(let i=1;i<=n;i++){const u=i/n,x=p[0]+(qx-p[0])*u,y=p[1]+(qy-p[1])*u,tt=d*u/v+Jj.reflexeS;if(o.bloque&&o.bloque(x,y))return false;
-    for(const z of zs)if(sbDans(z,x,y,PR,er,0)&&tt>=t+sbArrivee(z,x,y,er))return false;}
+    for(const z of zs)if(sbDans(z,x,y,PR,er,0)&&tt>=t+sbArrivee(z,x,y,er,PR))return false;}
    return true;};
   let Tm=t;for(const z of zs)Tm=Math.max(Tm,t+sbEffet(J,z));const Rm=v*Tm+10;
   for(let r=6;r<=Rm;r+=6){const n=Math.max(16,Math.round(r/5));for(let k=0;k<n;k++){const a=k/n*SB_TAU,qx=p[0]+Math.cos(a)*r,qy=p[1]+Math.sin(a)*r;
@@ -9587,7 +9589,8 @@ function demoBoot(cls){
  step=function(dt){_st(dt);
   try{if(!(state==='play'&&RUN&&!RUN.hub&&P))return;
    if(cardHide&&RUN.time>=cardHide)hideCard();if(P.dead){hideCard();return;}if(trans)return;
-   for(const g of ZR){g.r+=g.v*dt;if(!g.hit&&!P.dead){const d=hyp(P.x-g.x,P.y-g.y);if(Math.abs(d-g.r)<10+P.r*0.6&&P.dashT<=0&&P.iT<=0&&angDiff(Math.atan2(P.y-g.y,P.x-g.x),g.ga)>g.gw/2){g.hit=true;hurtPlayer(g.dmg,g.src);}}}
+   // v17.17 : l'onde s'arrête à son rayon maximal (le cercle annoncé) ; avant, sa dernière image le dépassait de vitesse × pas (jusqu'à 14 px à 20 images/s)
+   for(const g of ZR){g.r=Math.min(g.max,g.r+g.v*dt);if(!g.hit&&!P.dead){const d=hyp(P.x-g.x,P.y-g.y);if(Math.abs(d-g.r)<10+P.r*0.6&&P.dashT<=0&&P.iT<=0&&angDiff(Math.atan2(P.y-g.y,P.x-g.x),g.ga)>g.gw/2){g.hit=true;hurtPlayer(g.dmg,g.src);}}}
    ZR=ZR.filter(g=>g.r<g.max);
    for(const b of ZB)b.t-=dt;ZB=ZB.filter(b=>b.t>0);}catch(err){console.error(err);}};
  const _ch=chron;

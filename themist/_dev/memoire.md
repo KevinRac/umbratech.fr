@@ -1106,8 +1106,44 @@ Cas particuliers : `reg_x1b` (Jet pénétrant : perçant voulu, mais `traverse` 
 
 - `node themist/outils/sim-brume.mjs` : **3051 vérifications, 0 échec** (justice sur 15 familles × leurs variantes × 3 actes, file d’étapes, neuf contre-épreuves). Trois contrôles ajoutés : chaque talent et chaque relique de `souvenirs.js` a une entrée ; une variante change réellement sa famille ; une entrée n’est pas à la fois variante et renfort, avec une seule variante. Éprouvés en cassant le tableau à dessein (entrée retirée, variante sans effet, variante et renfort ensemble) : les quatre fautes sont refusées. Chaque variante employée ayant été jugée seule par `sbVerifier`, la justice couvre toutes les entrées.
 - **Mode d’essai en navigateur** (`index.html?brume=<famille>&acte=3[&variante=…][&renfort=…]&bot=1`, Chromium sans affichage, 24 s par cas, joueur conduit vers la sortie à 180 px/s sans esquive) : **48 cas** = les 15 familles de base, les 17 couples famille + variante et les 16 couples famille + renfort que le tableau emploie. Justice ✓ dans les 48 ; aucune étape sautée ; les variantes sont bien appliquées en jeu (`double` produit des étapes bis, `elargi`, `traverse`, `vol`, `repousse` sont portés par les zones) ; les renforts aussi (dégâts × 1,12, vitesse × 1,12, PV × 1,15, armure 0,1). Aucune erreur de script ; la seule ligne rouge de la console est un chargement réseau refusé par le bac à sable.
-- **Un défaut rare de la version 3a, antérieur à ce palier** (aucun code du jeu ne lit les tables) : sur Cloche de base, le joueur conduit vers la sortie a reçu **un coup (18 PV) sur environ 91 attaques** à 60 pas par seconde (le journal de ce coup n’a pas été relevé) ; Onde : aucun coup sur 36 attaques à pleine cadence. Avec six pages en parallèle (une vingtaine de pas par seconde), un coup sur Onde (23 PV, anneau de la 1re étape, en 896 × 647) et un sur Cloche (18 PV, anneau de la 2e étape, en 1184 × 661, près du coin bas droit) : dans les deux cas le joueur se trouvait déjà au point de sortie calculé. Les anneaux sont dans les deux familles touchées : la garantie « toujours une sortie » n’est donc pas absolue sur l’anneau ; **à comprendre avant le palier 4** (piste : l’écart entre la sortie calculée par `sbSortie` et le test de touche en jeu sur l’anneau, de près à un mur, ou à faible cadence).
+- **Un défaut rare de la version 3a, antérieur à ce palier** (diagnostiqué et corrigé en v17.17, § 21) (aucun code du jeu ne lit les tables) : sur Cloche de base, le joueur conduit vers la sortie a reçu **un coup (18 PV) sur environ 91 attaques** à 60 pas par seconde (le journal de ce coup n’a pas été relevé) ; Onde : aucun coup sur 36 attaques à pleine cadence. Avec six pages en parallèle (une vingtaine de pas par seconde), un coup sur Onde (23 PV, anneau de la 1re étape, en 896 × 647) et un sur Cloche (18 PV, anneau de la 2e étape, en 1184 × 661, près du coin bas droit) : dans les deux cas le joueur se trouvait déjà au point de sortie calculé. Les anneaux sont dans les deux familles touchées : la garantie « toujours une sortie » n’est donc pas absolue sur l’anneau ; **à comprendre avant le palier 4** (piste : l’écart entre la sortie calculée par `sbSortie` et le test de touche en jeu sur l’anneau, de près à un mur, ou à faible cadence).
 
 ### Pour le palier 4
 
 Inchangé (§ 19, point 4), avec de plus : lire `talents[id]` / `reliques[id]` du souvenir porté pour obtenir ses variantes (`sbEtapes(J, famille, variantes)`) ou son renfort (`sbRenfort`) ; le porteur d’un souvenir classé « renfort » n’a **pas** l’attaque de sa famille, seulement le renforcement.
+
+## 21. Diagnostic de l’anneau : deux écarts entre la sortie calculée et le jeu (v17.17, 26 octobre 2026)
+
+Constat (§ 20) : sur Onde et Cloche, le joueur conduit vers la sortie calculée était parfois touché par l’onde, rarement à 60 images/s, plus souvent quand le jeu ralentit.
+
+### Méthode
+
+Copie de travail d’`index.html` (non versionnée, supprimée ensuite) qui relève, à chaque coup d’onde, la distance au centre, le rayon de l’onde, son maximum, la bande de touche, l’angle à la brèche, le pas de temps et la sortie calculée. Chromium sans affichage, processeur ralenti (× 4, six pages : le jeu tombe à son pas maximal de 0,05 s), `?brume=onde|cloche[&variante=…]&acte=3&bot=1`.
+
+### Cause 1 (celle des coups observés) : l’onde dépassait son cercle annoncé
+
+Six coups relevés, tous identiques : le joueur **arrêté sur la sortie calculée**, hors de la brèche, à 6 à 8 px **au-delà** de la bande extérieure de l’onde (`d − (max + bande)` = 6,2 à 7,8 px) ; l’onde, elle, avait un rayon de **7,5 à 7,9 px au-delà de son maximum** au moment du coup. Dans la boucle des ondes (`ZR`, bloc v16.24 du Masqué), le rayon avançait de `v × dt`, puis la touche était testée, puis seulement l’onde retirée (`g.r < g.max`) : la dernière image dépassait le maximum d’au plus `v × dt` (14 px à 280 px/s et 0,05 s ; 4,7 px à 60 images/s). La recherche de sortie, elle, tient pour sûr tout point au-delà de `max + bande + 4 px`. Dès que `v × dt` dépasse la marge de 4 px, ce qui arrive même à 60 images/s (4,7 px), une sortie au bord peut être touchée. C’est aussi un défaut visible : l’onde sortait du cercle pointillé qui l’annonce. Il touchait l’Onde du Masqué ordinaire autant que les armes de la Brume.
+
+**Correction** (dans le jeu) : `g.r = min(g.max, g.r + v × dt)`. L’onde frappe une dernière fois exactement à son maximum, puis disparaît. Le Masqué ordinaire en profite (un correctif, noté au journal).
+
+### Cause 2 (trouvée en cherchant la première) : le temps d’arrivée était compté au centre des zones
+
+`sbArrivee` disait quand une zone atteint un point par son **centre**. Le jeu, lui, touche dès que son **bord** arrive :
+- onde : la bande de touche fait 10 + 0,6 × PR (18,4 px) devant le front, soit 0,066 s à 280 px/s, 0,074 s à 250 px/s ;
+- projectiles et rayons : partis du bord du porteur (à `er` du centre, jusqu’à 32 px) et touchant à `rayon + PR − 3`, ils arrivaient jusqu’à 0,1 s plus tôt qu’annoncé ;
+- ruée : le corps du porteur touche à `er + PR`, 0,02 s plus tôt.
+
+Le réflexe retiré au joueur (`reflexeS`, 0,05 s) était donc mangé, et au-delà, par ces bords : la sortie pouvait passer, au mauvais moment, sur une zone qui arrivait plus tôt que prévu. Aucun coup observé n’en venait (les six venaient de la cause 1), mais l’écart est réel.
+
+**Correction** (logique pure, `/*sb:pur*/`) : `sbArrivee(z, x, y, er, PR)` rend le premier instant où la zone peut toucher le point, avec les rayons de touche du jeu (et de `sbDans`). Le réflexe redevient une vraie marge. Le temps d’effet (`sbEffet`) et la touche sur place (`sbDans`) étaient justes.
+
+### Vérification
+
+- `node themist/outils/sim-brume.mjs` : **3054 vérifications, 0 échec**. Étapes sautées et placements retouchés inchangés (Ruée 2 et Bastion 6 sur 472, contre un coin). Épreuve ajoutée (§ 7 du simulateur) : elle rejoue pas à pas, à 20 et 60 images/s, les règles de touche du jeu sur 1181 points touchés (onde, ruée, projectiles, rayons) et exige qu’aucun ne soit touché plus tôt que `sbArrivee` ne l’annonce. Elle vérifie aussi qu’au-delà de la bande extérieure l’onde ne touche jamais, et que le jeu borne bien l’onde. Contre-épreuve sur l’ancien `index.html` : **2 échecs** (516 points sur 1181 touchés plus tôt qu’annoncé, jusqu’à 0,101 s ; onde non bornée).
+- Mode d’essai ralenti (pas de 0,05 s), après correction : **0 coup sur 135 ondes lâchées** (Onde, Onde + rapide, Cloche, Cloche + double, environ 115 s de jeu chacune), plus 12 passages courts sans coup. Avant la correction, dans les mêmes conditions : 6 coups sur 6 passages.
+- Mode d’essai à cadence normale, les 48 cas du § 20 : **0 coup** (avant : 2), aucune étape sautée, aucune erreur de script.
+- `node themist/outils/sim-masque.mjs` : tout est bon. Masqué ordinaire (`?masque=`), écran titre et wiki : sans erreur.
+
+### Ce qui reste
+
+La garantie « toujours une sortie » repose maintenant sur des règles de touche écrites deux fois : dans le jeu, et dans `sbDans` / `sbArrivee`. L’épreuve du simulateur recopie celles du jeu : si l’on change un rayon de touche ou la boucle des ondes dans le jeu, il faut changer les trois. Au palier 4, la feinte du Brumeux (§ 19, point 4) reste à faire attendre.
