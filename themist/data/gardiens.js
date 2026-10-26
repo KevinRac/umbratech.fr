@@ -46,5 +46,9 @@
  // Fenêtre « à nu » : durée (s) et multiplicateur de dégâts
  aNu:{dureeS:3,mult:1.3},
  // Changement de phase : le gardien se protège (durée en s, part des dégâts subis)
- verrouPhase:{dureeS:1.2,degats:0.15}
+ verrouPhase:{dureeS:1.2,degats:0.15},
+ // PV des gardiens (index 1 à 3 = actes I à III). pv : base ; pvMul : multiplicateur d’équilibrage (avant les paliers et les Résonances).
+ // v17.10 : plus longs à tuer, ×1,4 (multiplicateurs avant : 1,9 · 1,8 · 1,8). PV au palier 0 : 2 650 · 5 750 · 9 000.
+ pv:[0,1000,2300,3600],
+ pvMul:[1,2.65,2.5,2.5]
 };})(window.BRUME_DATA=window.BRUME_DATA||{});

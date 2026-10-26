@@ -879,3 +879,14 @@ Réglages : `data/bestiaire.js`, `assemble.souvenir` et la capacité `taches` (`
 - **Essai** : `__asm.essai(null, 2, true, 'fan_n2')` ouvre une salle avec un Masqué qui porte `fan_n2` (il doit être dans `__memoire.reserve`).
 
 À surveiller sur les descentes exportées : le nombre de reprises par rapport aux reliques choisies, et si les Taches (2,4 s de sol interdit) pèsent trop au milieu des vagues de l’acte II.
+
+## 14. Trophées et Masqués renforcés (v17.10, 26 octobre 2026)
+
+Retour du joueur : la reprise mémoire pleine ne valait qu’un échange ; le souvenir repris doit être un trophée hors limite, et en contrepartie tous les Masqués (et les gardiens) doivent être bien plus durs.
+
+- **Trophée** (`souvenirs.js`, `trophees.parActe` : 1) : la première reprise d’un acte ne prend pas de place (`a.trophee` dans `RUN.memoire.actifs`, compteur `M.trophees[acte]`). Au-delà, la reprise redevient normale (écran d’oubli si la mémoire est pleine). Garde-fous contre la boucle « oublier exprès, reprendre gratis » : un par acte (trois par descente au plus), figé (l’arbre ne le propose plus en rang, `gravables` l’écarte), inoubliable (`forget` le refuse, l’écran d’oubli ne le montre pas), et il s’éteint comme les autres (D2, D4). HUD : dernière ligne du cadre de la Mémoire, sous un filet lavande ; pause : ligne à part ; statistiques : `trophees`.
+- **Tous les Masqués** (`bestiaire.js`, `assemble`) : PV 460 → 736 (×1,6) ; `stats.vitesse` ×1,2 ; `pauseS` 0,25 → 0,12 ; `apresSignatureS` 0,6 → 0,3 ; `attenteS` 1,2 → 0,5 ; trait passif 1,4 → 1 s ; éveil à 70 % (50 avant) ; `bougeCharge` (losanges, damier, taches) : il te poursuit pendant les chargements posés sur toi, pas pendant ceux centrés sur lui (sinon la zone ne serait plus là où il est). **Rage** (`rage`) : sous 30 % de PV, après l’éveil, une fois ; pause 0,05 s et aucun souffle après la signature ; aura rouge (fixe en mouvements réduits). Porteur : `souvenir.pv` +10 % de PV par rang au-delà du premier et par gravure. Planchers de chargement inchangés (0,5 s, signature 0,8 s) ; une zone à la fois. `sim-masque.mjs` vérifie la rage (une fois, après l’éveil, sous 30 %) et la pause plancher de rage.
+- **Gardiens** : PV dans `gardiens.js` (`pv`, `pvMul`), au lieu de `BAL.bossMul` codé en dur ; ×1,4 : 2 650, 5 750, 9 000 au palier 0 (mesuré en jeu). Le wiki affiche ces PV sur les fiches des gardiens.
+- **Wiki** : règle « Trophées » dans « La Mémoire » (« un souvenir arraché de haute lutte », sans nommer le Masqué), rage et poursuite dans « Le Masqué ».
+
+À surveiller : le temps passé contre les gardiens (`RUN.bossT`) et les morts contre les Masqués dans les descentes exportées ; si la rage rend l’acte I trop dur, la réserver aux actes II et III.

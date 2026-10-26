@@ -114,10 +114,16 @@
  //   Pour chaque capacité : ax (axe du profil), hi (vrai : plus probable si l'axe est haut), force (poids × (1 + force × écart)).
  assemble:{n:'Masqué',desActe:1,premiereSalle:3,chance:50,chanceBreche:100,exigeDomination:false,vite:{sallesMin:2,salleMaxS:25},intact:{sansDegatsS:60},ecartSalles:0,gardeAvantGardien:0,dansBreche:true,
   recompense:{reliques:1,titre:'Le masque se brise',texte:'Sous ses éclats, une relique de plus. Choisis-en une.'},
-  stats:{pv:460,degats:13,xp:30,contact:0.8},
+  // v17.10 : tous les Masqués renforcés (pv 460 → 736, ×1,6 ; vitesse : × la vitesse de son corps)
+  stats:{pv:736,degats:13,xp:30,contact:0.8,vitesse:1.2},
   escorte:{1:2,2:3,3:4},
-  annonceS:1,pauseS:0.25,prioriteS:0.5,apresSignatureS:0.6,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
-  eveilPV:50,eveilS:0.5,etourdissement:0.5,attenteS:1.2,
+  // v17.10 · plus agressif : pause 0,25 → 0,12 s, souffle après la signature 0,6 → 0,3 s, il attend 0,5 s au plus d'être à portée (1,2 avant),
+  // éveil à 70 % de PV (50 avant). Planchers inchangés : chargeMinS et signatureMinS (on lit toujours ses zones).
+  // rage : sous pv % de PV, il ne souffle presque plus (pauseS, apresSignatureS) et une aura rouge le signale.
+  // bougeCharge : formes posées sur toi (pas sur lui) : il continue de te poursuivre pendant leur chargement.
+  annonceS:1,pauseS:0.12,prioriteS:0.5,apresSignatureS:0.3,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
+  eveilPV:70,eveilS:0.5,etourdissement:0.5,attenteS:0.5,
+  rage:{pv:30,pauseS:0.05,apresSignatureS:0},bougeCharge:['losanges','damier','taches'],
   budgetMenace:{1:11,2:11,3:13},
   incompatibles:[['explosion','onde']],
   poidsProfil:{actif:false,regles:{
@@ -148,11 +154,12 @@
   // (elle prend une des deux places de départ, sous le même budget de menace) ; parRang / parGravure : dégâts de cette capacité en plus,
   // par rang au-delà du premier et par gravure ; usure : un souvenir déjà porté est moins souvent repris (poids 1 / (1 + usure × fois)).
   // Brisé, il propose de reprendre le souvenir à la place de la relique (D9). Les dégâts infligés à un porteur ne comptent pas dans l'Accoutumance (D5).
-  souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,
+  // pv (v17.10) : PV du porteur en plus, par rang au-delà du premier et par gravure du souvenir (voler un talent fort coûte cher).
+  souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,pv:0.1,
    familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches'}},
   // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
   // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
-  passive:{n:'Trait',ic:'u_arrow',intervalleS:1.4,preavisS:0.25,degats:0.6,vitesse:320,portee:560},
+  passive:{n:'Trait',ic:'u_arrow',intervalleS:1,preavisS:0.25,degats:0.6,vitesse:320,portee:560},
   // Sorts signature (un par corps), chacun avec une forme qu'aucun autre sort n'utilise.
   signatures:{
    fracas:{n:'Fracas',ic:'u_cross4',forme:'croix',menace:3,chargeS:0.9,effetS:0.3,longueur:420,largeur:60,degats:2.4},

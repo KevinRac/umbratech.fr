@@ -112,7 +112,7 @@ const filesDe = act => [...F.asmCombos(A, { act, salle: 18 }), ...[...new Set(Ob
 for (const act of [2, 3]) for (const co of filesDe(act)) for (let rep = 0; rep < 25; rep++) {
   combats++;
   const rnd = F.asmRng(rep * 97 + co.cle.length), st = F.asmNouveau(A, co);
-  let t = 0, pv = 100, active = null, lastEnd = -1e9, lastCast = null, cycle = [], eveilAt = null, casts = 0, sigs = 0;
+  let t = 0, pv = 100, active = null, lastEnd = -1e9, lastCast = null, cycle = [], eveilAt = null, casts = 0, sigs = 0, rageAt = null;
   const dur = 60 + rep;
   while (t < dur) {
     const dt = 0.004 + rnd() * 0.03; t += dt;
@@ -120,9 +120,10 @@ for (const act of [2, 3]) for (const co of filesDe(act)) for (let rep = 0; rep <
     const env = { dt, act, pv, dist: 60 + rnd() * 300, autre: rnd() < 0.02, fige: rnd() < 0.01 };
     for (const [ev, k] of F.asmPas(A, st, env, rnd)) {
       if (ev === 'eveil') { eveilAt = pv; ok(st.caps.length === 3, `${co.cle} : trois capacités après l'éveil`); }
+      if (ev === 'rage') { ok(rageAt === null, `${co.cle} : rage deux fois`); ok(eveilAt !== null, `${co.cle} : rage avant l'éveil`); rageAt = pv; }
       if (ev === 'charge') {
         ok(active === null, `${co.cle} : deux zones à la fois (${active} puis ${k})`);
-        ok(t - lastEnd >= A.pauseS - 1e-9, `${co.cle} : pause entre deux zones ${(t - lastEnd).toFixed(3)} s < ${A.pauseS} s`);
+        { const pmin = rageAt !== null && A.rage ? A.rage.pauseS : A.pauseS; ok(t - lastEnd >= pmin - 1e-9, `${co.cle} : pause entre deux zones ${(t - lastEnd).toFixed(3)} s < ${pmin} s`); }
         ok(k !== lastCast, `${co.cle} : ${k} deux fois de suite`);
         ok(zones.has(k), `${co.cle} : sort inconnu ${k}`);
         if (A.signatures[k]) { ok(st.tot >= A.signatureMinS - 1e-9, `${co.cle} : signature chargée en ${st.tot} s`); sigs++;
@@ -135,7 +136,8 @@ for (const act of [2, 3]) for (const co of filesDe(act)) for (let rep = 0; rep <
     }
     if (st.ph === 'effet' && st.k === 'charge' && rnd() < 0.01) { F.asmFin(A, st, null); active = null; lastEnd = t; }   // la charge heurte un mur (le jeu le fait après le pas)
   }
-  ok(eveilAt !== null && eveilAt <= A.eveilPV, `${co.cle} : éveil à mi-vie (${eveilAt})`);
+  ok(eveilAt !== null && eveilAt <= A.eveilPV, `${co.cle} : éveil à ${A.eveilPV} % (${eveilAt})`);
+  if (A.rage) ok(rageAt !== null && rageAt <= A.rage.pv, `${co.cle} : rage sous ${A.rage.pv} % (${rageAt})`);
   ok(sigs >= 2, `${co.cle} : signature lancée (${sigs})`);
   ok(F.asmNom(A, co).split(' ').length <= 5, `${co.cle} : nom court`);
 }

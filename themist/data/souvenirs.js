@@ -5,6 +5,9 @@
 (function(D){D.souvenirs={
  // Talents actifs en même temps (v17.1 : les reliques et l’équipement sont hors mémoire)
  plafond:10,
+ // Trophées (v17.10) : un souvenir repris sur un Masqué brisé ne prend pas de place, parActe fois par acte au plus (au-delà, il en prend une).
+ // Il est figé (ni rang ni gravure de plus), ne s’oublie pas et reste jusqu’à la fin de la descente ; il s’éteint comme les autres (D2, D4).
+ trophees:{parActe:1},
  // Gravure (v17.3) : mémoire pleine, un talent porté au rang max peut être gravé (max fois), sans prendre de place.
  // Chaque gravure intensifie ses effets chiffrés de part (0,4 = +40 %). Sans effet chiffré : le bonus gr de sa famille,
  // multiplié selon le genre du nœud (poids : mineur 1, compétence et majeur 1,5, nœud clé, racine et ultime 2).
