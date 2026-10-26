@@ -23,7 +23,7 @@ if (!asm || !sb) { console.error('Bloc /*asm:pur*/ ou /*sb:pur*/ introuvable'); 
 const ctx = { window: {}, Math, console };
 vm.createContext(ctx);
 for (const f of ['bestiaire.js', 'souvenirs.js', 'souvenirs-brume.js', 'icones.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(asm[1] + sb[1] + '\nthis.F={asmDuree,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbVerrou,sbPotentiel,sbIncompatibles,sbNouveau,sbPas,sbDegats,sbCoup,sbPlafond,sbDans,sbArrivee};', ctx);
+vm.runInContext(asm[1] + sb[1] + '\nthis.F={asmDuree,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbVerrou,sbPotentiel,sbIncompatibles,sbNouveau,sbPas,sbDegats,sbCoup,sbPlafond,sbDans,sbArrivee,sbEtourdit};', ctx);
 const F = ctx.F, D = ctx.window.BRUME_DATA, A = D.bestiaire.assemble, J = D.souvenirsBrume, SV = D.souvenirs, IC = D.icones;
 const clone = o => JSON.parse(JSON.stringify(o));
 let fails = 0, checks = 0;
@@ -162,6 +162,41 @@ ok(/g\.r=Math\.min\(g\.max,g\.r\+g\.v\*dt\)/.test(html), 'index.html : l\'onde (
     if (premier(z, z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, 0.05) !== Infinity) hors++; }
   ok(hors === 0, `l'onde touche au-delà de son cercle annoncé : ${hors} cas`);
   console.log(`temps d'arrivée : ${n} points touchés en jeu (onde, ruée, projectiles, rayons ; 20 et 60 images/s), ${tard ? tard + ' plus tôt' : 'aucun plus tôt'} que sbArrivee ne l'annonce`); }
+
+// 8. (v17.18) L'état « étourdi » : règles de sbEtourdit, file d'étapes qui attend, contre-épreuves, branchements du jeu.
+{ const R = J.justice.etourdi, V = J.variantes.etourdit, et = { f: 'cone', v: ['etourdit'] }, s = { etT: 0, immT: 0, att: 0 };
+  ok(F.sbEtourdit(J, { etT: 0, immT: 0, att: 0 }, { f: 'cone', v: [] }) === 0, 'étourdi : sans la variante, rien');
+  ok(Math.abs(F.sbEtourdit(J, s, et) - Math.min(V.dureeS, R.maxS)) < 1e-9, 'étourdi : un coup Assommant étourdit dureeS');
+  ok(F.sbEtourdit(J, { etT: 0, immT: 0, att: R.parAttaque }, et) === 0, 'étourdi : jamais deux fois dans la même attaque');
+  ok(F.sbEtourdit(J, { etT: 0, immT: R.immuniteS * 0.5, att: 0 }, et) === 0, 'étourdi : rien pendant l\'immunité, même dans une autre attaque');
+  ok(F.sbEtourdit(J, { etT: 0.1, immT: 0, att: 0 }, et) === 0, 'étourdi : jamais pendant un étourdissement');
+  ok(F.sbEtourdit(J, { etT: 0, immT: 0, att: 0 }, { f: 'projectile', v: ['etourdit'] }) === 0, 'étourdi : jamais par une volée de projectiles');
+  ok(s.immT >= s.etT + R.immuniteS - 1e-9, 'étourdi : l\'immunité commence à la fin de l\'étourdissement');
+  // la file d'étapes : étourdi à chaque lâcher (au hasard), l'étape suivante charge au plus tôt après la fin de l'étourdissement + un entracte
+  let r = 3; const rnd = () => (r = (r * 1103515245 + 12345) >>> 0) / 4294967296;
+  let pires = Infinity, n = 0;
+  for (const fid of Object.keys(J.familles)) {
+    const st = F.sbNouveau(J, fid, ['double']); let t = 0, finEt = -Infinity, att = 0;
+    for (let k = 0; k < 8000 && att < 5; k++) {
+      const dt = 0.004 + rnd() * 0.04, etourdi = t < finEt;
+      const ev = F.sbPas(J, A, st, { dt, act: 3, dist: 100, autre: false, fige: false, vivant: false, etourdi }); t += dt;
+      for (const [e] of ev) {
+        if (e === 'lache' && rnd() < 0.6) finEt = t + V.dureeS;
+        if (e === 'charge') { n++; ok(!etourdi, `${fid} : une étape charge pendant que tu es étourdi`); if (finEt > -Infinity) pires = Math.min(pires, t - finEt); }
+        if (e === 'finAttaque') att++; } } }
+  ok(pires >= J.justice.entracteS - 0.045, `étourdi : une étape a chargé ${pires.toFixed(3)} s après la fin de l'étourdissement (au moins ${J.justice.entracteS})`);
+  console.log(`étourdi : ${n} chargements, le plus tôt ${pires.toFixed(2)} s après la fin d'un étourdissement (entracte ${J.justice.entracteS} s)`);
+  // contre-épreuves : données d'étourdissement injustes, que le vérificateur doit refuser
+  refuse('étourdissement trop long', J2 => { J2.variantes.etourdit.dureeS = 1; return 'lame'; }, /etourdit : dureeS/);
+  refuse('étourdissement sur une volée', J2 => { J2.variantes.etourdit.formes.push('projectile'); return 'projectile'; }, /forme projectile interdite/);
+  refuse('étourdissements enchaînés', J2 => { J2.justice.etourdi.immuniteS = 0.3; return 'lame'; }, /immuniteS/);
+  refuse('deux étourdissements par attaque', J2 => { J2.justice.etourdi.parAttaque = 2; return 'lame'; }, /parAttaque/);
+  // branchements du jeu : tu ne bouges plus, n'attaques plus, n'esquives plus ; intouchable ; la file sait que tu es étourdi
+  ok(/moveInput=function\(\)\{if\(sbEtourdi\(\)\)return\[0,0\]/.test(html), 'index.html : un joueur étourdi ne se déplace pas');
+  ok(/tryDash=function\(\)\{if\(sbEtourdi\(\)\)return;/.test(html), 'index.html : un joueur étourdi n\'esquive pas');
+  ok(/updatePlayer=function\(dt\)\{if\(!sbEtourdi\(\)\)return/.test(html), 'index.html : un joueur étourdi n\'attaque pas');
+  ok(/P\.iT=Math\.max\(P\.iT,d\+0\.05\)/.test(html), 'index.html : un joueur étourdi est intouchable');
+  ok(/etourdi:sbEtourdi\(\)\}\)/.test(html), 'index.html : la file d\'étapes reçoit l\'étourdissement'); }
 
 console.log(`\n${checks} vérifications, ${fails} échec(s)`);
 process.exit(fails ? 1 : 0);

@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v17.17',
+ actuelle:'v17.18',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-10-27',h:'v17.18',t:'Technique : préparation de l’état « étourdi ». Certaines futures attaques du Masqué pourront t’étourdir un très court instant (0,35 s) : tu ne peux plus bouger, frapper ni esquiver, mais rien ne peut te toucher pendant ce temps, cela n’arrive qu’une fois par attaque, jamais deux fois de suite, et l’attaque suivante attend que tu aies repris la main. Rien ne change encore en partie.'},
  {d:'2026-10-26',h:'v17.17',t:'Correctif : l’onde du Masqué s’arrête désormais exactement au cercle pointillé qui l’annonce ; elle pouvait le dépasser de quelques pixels, surtout quand le jeu ralentissait, et toucher quelqu’un qui se croyait hors de portée. Technique : les futures attaques du Masqué jugent désormais le temps qu’il te faut pour t’écarter d’après le bord des ondes, des ruées et des projectiles, et non leur centre.'},
  {d:'2026-10-26',h:'v17.16',t:'Technique : les futures attaques du Masqué sont rattachées aux souvenirs. Chacun des 240 talents et des 34 reliques est classé : la version ennemie de sa famille telle quelle, ou affinée par l’une des variantes déjà prévues (perçant, redoublé, large, massif, vorace), ou, quand le souvenir n’est qu’un bonus chiffré (dégâts, PV, vitesse, dégâts subis), un renforcement du porteur à la place d’une attaque. Ce que le système ne sait pas encore traduire (étourdir, ralentir, brûler…) est répertorié sans avoir été inventé. Rien ne change encore en partie.'},
  {d:'2026-10-26',h:'v17.15',t:'Technique : préparation de nouvelles attaques du Masqué, bâties uniquement avec les formes de zone que tu connais déjà (disque, anneau à brèche, couloir, cône, rayons, croix, losanges, damier, projectile à liseré) et soumises à des règles de justice vérifiées par le code : un chargement jamais plus court que ceux d’aujourd’hui, toujours une sortie à pied, une seule zone à la fois, les mêmes couleurs. Rien ne change encore en partie.'},

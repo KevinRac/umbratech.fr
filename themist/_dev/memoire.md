@@ -1056,7 +1056,7 @@ Choix de ce palier à connaître : un talent « répété trois fois » (Triple 
 
 ### Ce que la consigne demandait et que le système ne permet pas
 
-« Une ruée qui assomme donne un couloir qui étourdit » : **impossible aujourd’hui**, comme l’annonçait le § 19 (le jeu n’a pas d’état « étourdi » pour le joueur, aucune variante n’étourdit). Rien n’a été inventé : ces souvenirs gardent la version de leur famille, avec le motif en commentaire. De même pour ralentir, immobiliser, brûler, marquer, attirer. **À décider avant le palier 4** : ajouter ou non un état de ce genre au joueur (étourdi, ralenti), et lequel, avec ses règles de justice (durée maximale, jamais enchaîné, jamais pendant une autre zone) ; sans cela, ces 54 souvenirs resteront sans effet propre.
+« Une ruée qui assomme donne un couloir qui étourdit » : **impossible aujourd’hui** (décidé et codé en v17.18 : le joueur a un état « étourdi », § 22), comme l’annonçait le § 19 (le jeu n’a pas d’état « étourdi » pour le joueur, aucune variante n’étourdit). Rien n’a été inventé : ces souvenirs gardent la version de leur famille, avec le motif en commentaire. De même pour ralentir, immobiliser, brûler, marquer, attirer. **À décider avant le palier 4** : ajouter ou non un état de ce genre au joueur (étourdi, ralenti), et lequel, avec ses règles de justice (durée maximale, jamais enchaîné, jamais pendant une autre zone) ; sans cela, ces 54 souvenirs resteront sans effet propre.
 
 ### Souvenirs que je n’ai pas pu classer proprement (156)
 
@@ -1147,3 +1147,43 @@ Le réflexe retiré au joueur (`reflexeS`, 0,05 s) était donc mangé, et au-del
 ### Ce qui reste
 
 La garantie « toujours une sortie » repose maintenant sur des règles de touche écrites deux fois : dans le jeu, et dans `sbDans` / `sbArrivee`. L’épreuve du simulateur recopie celles du jeu : si l’on change un rayon de touche ou la boucle des ondes dans le jeu, il faut changer les trois. Au palier 4, la feinte du Brumeux (§ 19, point 4) reste à faire attendre.
+
+## 22. L’état « étourdi » du joueur et la variante Assommant (v17.18, 27 octobre 2026)
+
+Décision de l’auteur (27 octobre) : le joueur peut être **étourdi** (pas « ralenti »). Comme le reste des armes de la Brume, il ne sert qu’au mode d’essai tant que le palier 4 n’est pas fait : **rien ne change en partie**.
+
+### Les règles, et où le code les tient
+
+| Règle | Valeur | Où |
+|---|---|---|
+| Une variante, pas un état libre : seule `etourdit` (« Assommant ») étourdit | — | `souvenirs-brume.js`, `variantes.etourdit` |
+| Court | `dureeS` 0,35 s, jamais plus que `justice.etourdi.maxS` (0,4 s ; `sbVerifier` refuse au-delà de 0,5) | `sbEtourdit`, `sbVerifier` |
+| Seul un coup qui t’a vraiment blessé étourdit : une esquive, une invulnérabilité ou un bouclier qui absorbe tout l’évitent | — | `sbTouche` (après `hurtPlayer`, seulement si des PV ont été perdus) |
+| Intouchable pendant tout l’étourdissement, **par tous** (le porteur, ses projectiles, les autres ennemis, la feinte du Brumeux) : personne n’en profite | `P.iT ≥ durée + 0,05 s` (le jeu donne déjà 0,65 s après un coup) | `sbTouche` |
+| Au plus une fois par attaque | `parAttaque` 1 | `sbEtourdit` (`B.etAtt`, remis à zéro au premier chargement) |
+| Jamais enchaîné : une immunité commence à la fin de l’étourdissement | `immuniteS` 3 s (au moins 2) | `sbEtourdit` |
+| La suite attend : l’étape suivante ne charge qu’une fois l’étourdissement fini **et** un entracte entier écoulé | `entracteS` 0,25 s | `sbPas` (`env.etourdi`) |
+| Jamais sur une forme qui frappe en plusieurs morceaux dans le temps (une volée : les autres orbes trouveraient un joueur sans défense) | `interdites` : projectile, rayons | `sbEtourdit`, `sbVerifier` |
+| Formes permises | disque, cône, croix, losanges, damier, couloir (rai et ruée), anneau | `variantes.etourdit.formes` |
+
+Étourdi, le joueur ne se déplace plus (`moveInput`), n’esquive plus (`tryDash`), n’attaque plus et ne lance plus de compétence (clics masqués pendant `updatePlayer` ; touches d’action avalées en capture, sauf déplacement, pause, son, talents et guide). Il reprend la main dès la fin, touches tenues comprises. Le pilote du mode d’essai ne le bouge pas non plus. Lisibilité : « Étourdi » s’affiche au-dessus de lui, avec les trois points dorés qui tournent, comme sur un ennemi étourdi (immobiles en mouvements réduits). Le dessin passe par `drawNums`, commun aux quatre formes. Changer de salle efface l’état.
+
+Choix de ce palier à connaître : la durée est celle de la variante, pas celle du talent (Ruée écrasante étourdit 0,8 s chez le joueur, 0,35 s chez le porteur) ; Assommant n’a pas de télégraphe propre (la zone est la même ; la carte d’arrivée montre la famille).
+
+### Reclassement (palier 3b)
+
+Sept souvenirs passent à `{v:['etourdit']}` : Temps Fort `dgl_s5` (Taillades), Ruée écrasante `dif_x2b` (Aller-retour, l’exemple de la consigne), Carapace explosive `dif_x3b` et Volée sourde `car_x1b` (Échos ; sa « repousse » reste sans équivalent sur l’anneau), Bal des Morts `val_sk` et Toile-piège `pnt_x1b` (Dalles), Gourmandise `vor_x2b` (Mâchoire).
+
+Restent sans équivalent : Atterrissage `fan_n1`, Rappel Fracassant `fan_n6`, Rembobinage `trm_x2b` et la Chaîne du geôlier `chain`, parce que leur famille frappe en volée de projectiles (Rafale, Navette) ; la Chaîne de glas `chaineg`, qui fait plus de dégâts aux étourdis mais n’étourdit pas.
+
+Nouveau total : variante 47 (dont `etourdit` 7), renfort 37, famille telle quelle 41, sans équivalent 149 (au lieu de 156).
+
+### Vérification
+
+- `node themist/outils/sim-brume.mjs` : **3337 vérifications, 0 échec**. Épreuve ajoutée (§ 8 du simulateur) : les règles de `sbEtourdit` une à une ; la file d’étapes de chaque famille avec Redoublé, étourdi au hasard à 60 % des lâchers : 240 chargements, jamais pendant un étourdissement, le plus tôt 0,27 s après sa fin (entracte 0,25 s) ; quatre contre-épreuves refusées (étourdissement trop long, sur une volée, immunité trop courte, deux par attaque) ; les branchements du jeu. Contre-épreuve sur le code : sans l’attente de la file ni les interdits, l’épreuve donne 95 échecs.
+- **En jeu**, joueur immobile pour être touché, variante Assommant, acte III, 40 s, les quatre formes de joueur : Taillades, Aller-retour, Échos, Dalles, Mâchoire, Glas. **14 étourdissements**, chacun de 0,35 s ; **aucun coup reçu pendant** ; l’étape suivante charge 0,28 à 1,07 s après la fin (jamais moins qu’un entracte) ; deux étourdissements toujours séparés de plus de 3,35 s (4,03 s au plus court) ; pendant l’étourdissement, Espace, clic gauche, A, E, F et D tenu : **0 px de déplacement, 0 esquive, 0 attaque** ; après, D tenu le fait repartir (14 fois sur 14). Aucune erreur de script.
+- Régression : mode d’essai avec le pilote sur les six mêmes familles sans la variante, 0 coup ; `sim-masque.mjs` tout bon ; Masqué ordinaire et écran titre sans erreur.
+
+### Pour le palier 4
+
+L’intouchabilité règle d’avance la question des autres ennemis et de la feinte du Brumeux pendant l’étourdissement. Reste à garder une seule source d’étourdissement à la fois : si un autre système du jeu devait un jour étourdir le joueur, il devra passer par `sbEtourdit` (ou partager `P.sbEt`) pour que l’immunité tienne.

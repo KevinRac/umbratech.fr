@@ -8888,7 +8888,9 @@ function demoBoot(cls){
  // env : {dt, act, dist (px jusqu'à toi), autre (une autre zone ennemie est active), fige (étourdi), vivant (la zone de l'étape en cours vit encore)}
  // Évènements : ['charge',i] ['lache',i] ['fin',i] (fin d'étape) ['finAttaque',null]
  function sbNouveau(J,fid,vars){return{fid,etapes:sbEtapes(J,fid,vars),i:0,ph:'attente',t:0,tot:0,att:0,bloque:0,n:0,tient:false};}
+ // v17.18 · env.etourdi (tu es étourdi) : l'entracte reste plein et rien ne charge ; l'étape suivante attend la fin de l'étourdissement, puis un entracte entier.
  function sbPas(J,A,st,env){const ev=[],dt=env.dt;
+  if(env.etourdi&&(st.ph==='entracte'||st.ph==='attente')){if(st.ph==='entracte')st.t=J.justice.entracteS;else{st.ph='entracte';st.t=J.justice.entracteS;}return ev;}
   if(st.ph==='repos'){st.t-=dt;if(st.t<=0){st.ph='attente';st.i=0;}return ev;}
   if(st.ph==='attente'){if(env.fige)return ev;
    if(env.autre){st.bloque+=dt;return ev;}
@@ -8900,6 +8902,11 @@ function demoBoot(cls){
    return ev;}
   if(st.ph==='entracte'){st.t-=dt;if(st.t<=0)st.ph='attente';return ev;}
   return ev;}
+ // v17.18 · L'état « étourdi » du joueur. s : {etT (temps d'étourdissement restant), immT (temps avant qu'on puisse t'étourdir de nouveau), att
+ // (étourdissements déjà posés dans cette attaque)}. À n'appeler que pour un coup qui t'a vraiment blessé. Renvoie la durée posée (0 : rien).
+ function sbEtourdit(J,s,et){const V=J.variantes.etourdit,R=J.justice.etourdi;if(!V||!R||!(et.v||[]).includes('etourdit'))return 0;
+  if(R.interdites.includes(et.f)||(s.etT||0)>0||(s.immT||0)>0||(s.att||0)>=R.parAttaque)return 0;
+  const d=Math.min(V.dureeS,R.maxS);s.etT=d;s.immT=d+R.immuniteS;s.att=(s.att||0)+1;return d;}
  // ── Vérification complète (hors jeu et en mode d'essai) : renvoie la liste des manquements, vide si tout est juste.
  // Positions d'essai : porteur au centre, contre un mur, dans un coin ; toi à plusieurs distances et angles ; zones « sur toi » aussi
  // contre les murs et dans les coins. Chaque famille, à chaque acte, seule puis avec chaque variante qui la concerne.
@@ -8907,6 +8914,15 @@ function demoBoot(cls){
   const er=opt.er||32,rng=opt.rnd||(()=>{let s=12345;return()=>{s=(s*1103515245+12345)>>>0;return s/4294967296;};})();
   const acts=opt.actes||[1,2,3],fams=opt.familles||Object.keys(J.familles),pas=opt.pas||1;
   if(!A.couleurs||!A.couleurs.zone||!A.couleurs.bord)err.push('couleurs : assemble.couleurs (zone, bord) manquant dans bestiaire.js');
+  // v17.18 · étourdi : court, une fois par attaque, une immunité après, jamais sur une forme qui frappe en plusieurs morceaux
+  if(J.variantes.etourdit){const V=J.variantes.etourdit,R=J.justice.etourdi;
+   if(!R)err.push('etourdit : justice.etourdi manquant');
+   else{if(!(V.dureeS>0)||V.dureeS>R.maxS+1e-9)err.push(`etourdit : dureeS ${V.dureeS} hors de ]0, ${R.maxS}]`);
+    if(R.maxS>0.5+1e-9)err.push(`justice.etourdi.maxS ${R.maxS} : au plus 0,5 s`);
+    if(R.parAttaque!==1)err.push('justice.etourdi.parAttaque : 1');
+    if(!(R.immuniteS>=2))err.push(`justice.etourdi.immuniteS ${R.immuniteS} : au moins 2 s`);
+    for(const f of ['projectile','rayons'])if(!R.interdites.includes(f))err.push(`justice.etourdi.interdites : ${f} doit y être (volée)`);
+    for(const f of V.formes)if(R.interdites.includes(f))err.push(`etourdit : forme ${f} interdite (elle frappe en plusieurs morceaux)`);}}
   (function cherche(o,ch){if(o&&typeof o==='object')for(const k in o){if(/^(col|couleur|couleurs|color)$/i.test(k))err.push(`couleurs : ${ch}.${k} — les couleurs viennent du Masqué`);cherche(o[k],ch+'.'+k);}
    else if(typeof o==='string'&&/^#[0-9a-f]{3,8}$|^rgba?\(/i.test(o))err.push(`couleurs : ${ch} = ${o}`);})(J.familles,'familles');
   for(const fid of fams){const F=J.familles[fid];if(!F){err.push(`${fid} : famille absente`);continue;}
@@ -9102,7 +9118,7 @@ function demoBoot(cls){
  const _mp=makePuppet;makePuppet=function(e){if(e&&e.asm)return;return _mp.apply(this,arguments);};
  let ZR=[],ZB=[];
  const _er=enterRoom;
- enterRoom=function(type){hideCard();ZR=[];ZB=[];_er.apply(this,arguments);
+ enterRoom=function(type){hideCard();ZR=[];ZB=[];if(P)P.sbEt=null;_er.apply(this,arguments);
   try{if(room&&room.asm){delete room.dmg161;
    // Brèche : son champion s'efface (vague retirée), le Masqué garde sa place dans la deuxième vague
    room.waves=room.waves.filter(v=>v.some(x=>x.asm)||!v.some(x=>x.elite));room.asm.wi=room.waves.findIndex(v=>v.some(x=>x.asm));}}
@@ -9264,10 +9280,26 @@ function demoBoot(cls){
  function sbTouche(e,B,et,dmg,ox,oy){const h0=P.hp;hurtPlayer(dmg,e);const pris=h0-P.hp;if(!(pris>0))return;B.recu=(B.recu||0)+pris;
   const v=et.v||[];
   if(v.includes('vol')){const n=Math.min(e.maxHp-e.hp,pris*SBJ.variantes.vol.part);if(n>0){e.hp+=n;addNum(e.x,e.y-e.r-14,'+'+Math.round(n),'asoin');}}
-  if(v.includes('repousse')){const R=SBJ.variantes.repousse,dx=P.x-ox,dy=P.y-oy,d=hyp(dx,dy)||1;B.pousse={ux:dx/d,uy:dy/d,v:R.px/R.dureeS,t:R.dureeS};}}
+  if(v.includes('repousse')){const R=SBJ.variantes.repousse,dx=P.x-ox,dy=P.y-oy,d=hyp(dx,dy)||1;B.pousse={ux:dx/d,uy:dy/d,v:R.px/R.dureeS,t:R.dureeS};}
+  // v17.18 · étourdi (sbEtourdit tient les règles) : ni déplacement, ni attaque, ni esquive, ni compétence ; intouchable tout ce temps, par tous
+  if(v.includes('etourdit')&&!P.dead){const s=P.sbEt||(P.sbEt={etT:0,immT:0});s.att=B.etAtt||0;const d=sbEtourdit(SBJ,s,et);B.etAtt=s.att;
+   if(d>0){P.iT=Math.max(P.iT,d+0.05);P.dashT=0;P.dashBuf=0;P.clickQ=0;P.rclickQ=0;addNum(P.x,P.y-40,'Étourdi','echo');
+    if(SB.essai)(SB.essai.etJ=SB.essai.etJ||[]).push({t:+RUN.time.toFixed(3),d,i:B.st.i});}}}
+ // v17.18 · le joueur étourdi : ses commandes ne répondent plus (le menu, la pause et le son, si) ; il reprend la main dès la fin
+ const sbEtourdi=()=>!!(P&&P.sbEt&&P.sbEt.etT>0&&!P.dead);
+ const _miE=moveInput;moveInput=function(){if(sbEtourdi())return[0,0];return _miE.apply(this,arguments);};
+ const _tdE=tryDash;tryDash=function(){if(sbEtourdi())return;return _tdE.apply(this,arguments);};
+ const _upE=updatePlayer;updatePlayer=function(dt){if(!sbEtourdi())return _upE.apply(this,arguments);
+  const l=mouse.l,r=mouse.r;mouse.l=false;mouse.r=false;P.clickQ=0;P.rclickQ=0;P.dashBuf=0;try{return _upE.apply(this,arguments);}finally{mouse.l=l;mouse.r=r;}};
+ const SB_LIBRES=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','KeyP','KeyM','Tab','KeyH'];
+ addEventListener('keydown',ev=>{if(state==='play'&&overlayEl.hidden&&sbEtourdi()&&!SB_LIBRES.includes(ev.code)){ev.preventDefault();ev.stopImmediatePropagation();}},true);
+ cv.addEventListener('mousedown',ev=>{if(state==='play'&&sbEtourdi())ev.stopImmediatePropagation();},true);
+ // trois points dorés qui tournent au-dessus de toi, comme sur un ennemi étourdi (immobiles en mouvements réduits)
+ const _dnE=drawNums;drawNums=function(){try{if(sbEtourdi()){const c=ctx,top=P.y-P.r-16;c.save();c.fillStyle='rgba(255,230,140,.95)';
+   for(let i=0;i<3;i++){const a2=(RM?0:T*6)+i*TAU/3;c.beginPath();c.arc(P.x+Math.cos(a2)*P.r*0.9,top+Math.sin(a2)*3,2.6,0,TAU);c.fill();}c.restore();}}catch(err){}return _dnE.apply(this,arguments);};
  function sbLache(e,B,et){const z0=B.zc;B.zc=null;if(!z0)return;const dmg=e.dmg*sbCoup(SBJ,et,RUN.act,B.k);B.vivants=[];
   for(const z of z0.zs){
-   if(z.forme==='anneau'){const g={x:z.x,y:z.y,r:z.r0,v:z.v,max:z.max,ga:z.ga,gw:z.gw,dmg,hit:false,src:e};ZR.push(g);B.vivants.push(()=>ZR.includes(g));sfx('howl');continue;}
+   if(z.forme==='anneau'){const g={x:z.x,y:z.y,r:z.r0,v:z.v,max:z.max,ga:z.ga,gw:z.gw,dmg,hit:false,src:e,sb:{e,B,et}};ZR.push(g);B.vivants.push(()=>ZR.includes(g));sfx('howl');continue;}
    if(z.forme==='couloir'&&z.mode==='ruee'){B.dash={a:z.a,v:z.v,left:z.len,hit:false,dmg,et};B.vivants.push(()=>!!B.dash);continue;}
    if(z.forme==='rayons'||z.forme==='projectile'){const L=[],trav=(et.v||[]).includes('traverse');
     for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec,p={x:z.x+Math.cos(aa)*e.r,y:z.y+Math.sin(aa)*e.r,vx:Math.cos(aa)*z.v,vy:Math.sin(aa)*z.v,r:z.pr,dmg,life:(z.len-e.r)/z.v,from:e,sbL:z.len-e.r,sbD:0,sbNav:z.nav||false,sbTrav:trav};eproj.push(p);L.push(p);}
@@ -9282,9 +9314,9 @@ function demoBoot(cls){
  function sbMaj(e,dt,rooted,fige){const S=e.asm,B=S.sb,st=S.st,F=SBJ.familles[B.fid];
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
   const vivant=(B.vivants||[]).some(f=>f());
-  const ev=sbPas(SBJ,A,B.st,{dt,act:RUN.act,dist:dP,autre:!tg.pl||zoneAutre(e),fige,vivant});
+  const ev=sbPas(SBJ,A,B.st,{dt,act:RUN.act,dist:dP,autre:!tg.pl||zoneAutre(e),fige,vivant,etourdi:sbEtourdi()});
   for(const [t,i] of ev){const et=B.st.etapes[i];
-   if(t==='charge'){if(i===0){B.k=sbPlafond(SBJ,B.st.etapes,RUN.act);B.prec=null;B.anc=null;}
+   if(t==='charge'){if(i===0){B.k=sbPlafond(SBJ,B.st.etapes,RUN.act);B.prec=null;B.anc=null;B.etAtt=0;}if(SB.essai)(SB.essai.chJ=SB.essai.chJ||[]).push({t:+RUN.time.toFixed(3),i,et:sbEtourdi()});
     if(et.suivi>0){B.zc={zs:sbPieces(SBJ,et,sbCtx(e,B,et)).zs,fige:false};B.dbg='suit';}
     else if(!sbFixe(e,B,et)){B.st.ph='effet';B.st.t=0;continue;}
     sfx('asm_ch',B.st.tot);B.dernier={i,et,charge:B.st.tot,plancher:sbPlancher(A,RUN.act,false)};}
@@ -9335,7 +9367,7 @@ function demoBoot(cls){
   for(const k of L){const X=SBJ.renforts[k];if(X.pv){e.maxHp*=1+X.pv;e.hp=e.maxHp;}if(X.degats)e.dmg*=1+X.degats;if(X.vitesse)e.spd*=1+X.vitesse;red+=X.reduit||0;}
   if(red>0)e.asm.sbReduit=Math.min(0.3,red);}
  const _hetB=hitEnemy;hitEnemy=function(e,dmg,o){if(e&&e.asm&&e.asm.sbReduit&&typeof dmg==='number')dmg*=1-e.asm.sbReduit;return _hetB.call(this,e,dmg,o);};
- window.__asm.sb={J:SBJ,SB,sbRenfort,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbPotentiel,sbIncompatibles,sbNouveau,sbPas};
+ window.__asm.sb={J:SBJ,SB,joueur:()=>P,temps:()=>RUN&&RUN.time,sbEtourdit,sbRenfort,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbPotentiel,sbIncompatibles,sbNouveau,sbPas};
  // ── v17.15 · Mode d'essai des armes de la Brume (développement seulement : aucune touche, aucun accès en jeu normal)
  // index.html?brume=<famille>|tout [&classe=lum|gou|her|tis] [&acte=1|2|3] [&variante=double,vol…] [&renfort=pv,…] [&dieu=0]
  // Ouvre une salle vide avec un Masqué d'essai qui ne fait que l'attaque de cette famille, en boucle (sans trait passif, sans éveil ni rage).
@@ -9371,7 +9403,7 @@ function demoBoot(cls){
   const _stT=step;step=function(dt){_stT(dt);try{if(!(state==='play'&&RUN&&room&&room.asm&&room.asm.test))return;
    if(E.suivant&&RUN.time>=E.suivant){const i=ordre.indexOf(E.fid);apparait(E.tout?ordre[(i+1)%ordre.length]:E.fid);}
    const B=E.e&&!E.e.dead&&E.e.asm&&E.e.asm.sb;
-   if(E.bot&&B&&B.fuiteQ&&!P.dead){const [qx,qy]=B.fuiteQ,dx=qx-P.x,dy=qy-P.y,d=hyp(dx,dy),v=SBJ.justice.joueur.vitesse*dt;if(d>0.5){P.x+=dx/d*Math.min(d,v);P.y+=dy/d*Math.min(d,v);collidePlayer();}}
+   if(E.bot&&B&&B.fuiteQ&&!P.dead&&!sbEtourdi()){const [qx,qy]=B.fuiteQ,dx=qx-P.x,dy=qy-P.y,d=hyp(dx,dy),v=SBJ.justice.joueur.vitesse*dt;if(d>0.5){P.x+=dx/d*Math.min(d,v);P.y+=dy/d*Math.min(d,v);collidePlayer();}}
    if((E.n=(E.n||0)+1)%12===0)barre();}catch(err){console.error(err);}};
   function barre(){if(!E.bar){E.bar=document.createElement('div');E.bar.id='sbEssai';document.body.appendChild(E.bar);
     E.bar.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;ev.stopPropagation();
@@ -9382,7 +9414,7 @@ function demoBoot(cls){
    const fam=ordre.map(f=>`<button data-f="${f}" class="${f===E.fid?'on':''}" title="${esc(SBJ.familles[f].n)} (${esc(f)})">${icon(SBJ.familles[f].ic)}</button>`).join('');
    const et=d?`étape ${d.i+1}/${B.st.etapes.length} · ${esc(SBJ.formes[d.et.f].n)} · chargement ${d.charge.toFixed(2)} s (Masqué ${d.plancher.toFixed(2)} s)`:'—';
    E.bar.innerHTML=`<b>Armes de la Brume · essai</b><span class="fams">${fam}</span><button data-a="suiv" title="Famille suivante">▶</button><button data-a="dieu" class="${E.dieu?'on':''}" title="Tu ne descends pas sous 1 PV">PV ∞</button>`+
-    `<span class="lu">${esc(F.n)} · acte ${E.acte}${E.vars.length?' · '+esc(E.vars.join('+')):''}${E.renf.length?' · renfort '+esc(E.renf.join('+')):''} · ${et} · ${B?esc(B.dbg||''):''}${B&&B.fuite?` à ${Math.round(B.fuite)} px`:''} · sauts ${B?B.sauts:0} · subis ${Math.round(E.subis)} (${E.coups} coups) · justice ${V?(V.err.length?`<em>${V.err.length} manquement(s)</em>`:'✓'):'…'}</span>`;}
+    `<span class="lu">${esc(F.n)} · acte ${E.acte}${E.vars.length?' · '+esc(E.vars.join('+')):''}${E.renf.length?' · renfort '+esc(E.renf.join('+')):''} · ${et} · ${B?esc(B.dbg||''):''}${B&&B.fuite?` à ${Math.round(B.fuite)} px`:''} · sauts ${B?B.sauts:0} · subis ${Math.round(E.subis)} (${E.coups} coups)${(E.etJ||[]).length?` · étourdi ${E.etJ.length} fois`:''} · justice ${V?(V.err.length?`<em>${V.err.length} manquement(s)</em>`:'✓'):'…'}</span>`;}
   const stS=document.createElement('style');stS.textContent=`#sbEssai{position:fixed;left:50%;top:4px;transform:translateX(-50%);z-index:60;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;max-width:min(98vw,1100px);padding:6px 10px;background:rgba(12,9,22,.93);border:1px solid #6a5aa0;border-radius:6px;color:#efe8ff;font:12px/1.3 system-ui,sans-serif}
 #sbEssai b{color:#cdb4ff;font-weight:600}#sbEssai .fams{display:flex;gap:2px}#sbEssai button{all:unset;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 4px;border-radius:4px;border:1px solid #3a3060;color:#efe8ff}
 #sbEssai button.on{border-color:#e4dcf4;background:rgba(184,146,255,.22)}#sbEssai button .ic{width:18px;height:18px}#sbEssai .lu{flex-basis:100%;opacity:.88}#sbEssai em{color:#ff8a80;font-style:normal}`;
@@ -9589,8 +9621,9 @@ function demoBoot(cls){
  step=function(dt){_st(dt);
   try{if(!(state==='play'&&RUN&&!RUN.hub&&P))return;
    if(cardHide&&RUN.time>=cardHide)hideCard();if(P.dead){hideCard();return;}if(trans)return;
+   if(P.sbEt){P.sbEt.etT-=dt;P.sbEt.immT-=dt;if(P.sbEt.etT>0){P.vx=0;P.vy=0;}}
    // v17.17 : l'onde s'arrête à son rayon maximal (le cercle annoncé) ; avant, sa dernière image le dépassait de vitesse × pas (jusqu'à 14 px à 20 images/s)
-   for(const g of ZR){g.r=Math.min(g.max,g.r+g.v*dt);if(!g.hit&&!P.dead){const d=hyp(P.x-g.x,P.y-g.y);if(Math.abs(d-g.r)<10+P.r*0.6&&P.dashT<=0&&P.iT<=0&&angDiff(Math.atan2(P.y-g.y,P.x-g.x),g.ga)>g.gw/2){g.hit=true;hurtPlayer(g.dmg,g.src);}}}
+   for(const g of ZR){g.r=Math.min(g.max,g.r+g.v*dt);if(!g.hit&&!P.dead){const d=hyp(P.x-g.x,P.y-g.y);if(Math.abs(d-g.r)<10+P.r*0.6&&P.dashT<=0&&P.iT<=0&&angDiff(Math.atan2(P.y-g.y,P.x-g.x),g.ga)>g.gw/2){g.hit=true;if(g.sb)sbTouche(g.sb.e,g.sb.B,g.sb.et,g.dmg,g.x,g.y);else hurtPlayer(g.dmg,g.src);}}}
    ZR=ZR.filter(g=>g.r<g.max);
    for(const b of ZB)b.t-=dt;ZB=ZB.filter(b=>b.t>0);}catch(err){console.error(err);}};
  const _ch=chron;

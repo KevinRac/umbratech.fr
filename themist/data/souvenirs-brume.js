@@ -34,8 +34,15 @@
  // × dégâts du porteur, échelle d’acte comprise (Fracas, la plus lourde signature, fait 2,4) ;
  // suiviMax : une zone ne te suit jamais plus que cette part de son chargement ; essais : placements tentés avant de faire sauter une étape ;
  // arene : salle de référence pour la vérification hors jeu (celle du jeu : 1280 × 720, marges comprises).
+ // etourdi (v17.18) : l’état « étourdi » du joueur, que seule la variante « etourdit » pose. Règles, tenues par le code (sbEtourdit, sbPas, jeu) :
+ //  maxS : il ne dure jamais plus ; tu es intouchable tout ce temps, par tous (personne n’en profite) ; seul un coup qui t’a vraiment blessé
+ //  étourdit (une esquive, une invulnérabilité ou un bouclier qui absorbe tout l’évitent) ; parAttaque : au plus une fois par attaque ;
+ //  immuniteS : après, plus aucun étourdissement pendant ce temps ; l’étape suivante ne commence à charger qu’une fois l’étourdissement fini
+ //  et un entracte entier écoulé ; interdites : formes qui frappent en plusieurs morceaux dans le temps (une volée : les autres orbes trouveraient
+ //  un joueur sans défense), où la variante est refusée.
  justice:{joueur:{rayon:14,vitesse:180},marge:4,reflexeS:0.05,verrouMinS:0.22,entracteS:0.25,flashS:0.2,
-  degatsEtapeMax:2.4,degatsMax:3.6,suiviMax:0.6,essais:8,arene:{x0:56,y0:92,x1:1224,y1:676}},
+  degatsEtapeMax:2.4,degatsMax:3.6,suiviMax:0.6,essais:8,arene:{x0:56,y0:92,x1:1224,y1:676},
+  etourdi:{maxS:0.4,parAttaque:1,immuniteS:3,interdites:['projectile','rayons']}},
  // Bornes de chaque forme (variantes comprises) : [min, max]
  bornes:{
   disque:{rayon:[40,150]},
@@ -51,14 +58,16 @@
  // et la vérification repasse toutes les règles avec elle. Aucune ne crée de forme nouvelle.
  //  traverse : les projectiles passent à travers les piliers (pas les murs) ; rapide : vitesse × fois ; elargi : taille × fois (brèche inchangée) ;
  //  double : l’étape est jouée deux fois de suite ; vol : le porteur se soigne d’une part des dégâts infligés ;
- //  repousse : touché, tu es repoussé de px (en dureeS, sans perdre la main ni traverser un mur).
+ //  repousse : touché, tu es repoussé de px (en dureeS, sans perdre la main ni traverser un mur) ;
+ //  etourdit (v17.18) : touché, tu es étourdi dureeS (ni déplacement, ni attaque, ni esquive, ni compétence ; intouchable), selon justice.etourdi.
  variantes:{
   traverse:{n:'Perçant',formes:['projectile','rayons']},
   rapide:{n:'Rapide',formes:['projectile','rayons','anneau','couloir'],fois:1.2},
   elargi:{n:'Large',formes:['disque','cone','losanges','damier','croix','couloir','projectile','rayons'],fois:1.15},
   double:{n:'Redoublé',formes:['disque','cone','couloir','croix','losanges','damier','projectile','rayons','anneau']},
   vol:{n:'Vorace',formes:['disque','cone','croix','losanges','damier','couloir'],part:0.5},
-  repousse:{n:'Massif',formes:['disque','cone','croix','losanges','damier','couloir'],px:90,dureeS:0.2}},
+  repousse:{n:'Massif',formes:['disque','cone','croix','losanges','damier','couloir'],px:90,dureeS:0.2},
+  etourdit:{n:'Assommant',formes:['disque','cone','croix','losanges','damier','couloir','anneau'],dureeS:0.35}},
  // Renforts (palier 3b) : un souvenir purement statistique (+PV, +vitesse…) renforce le porteur au lieu de lui donner une attaque.
  // Un porteur n’en cumule jamais plus que renfortMax. Le chargement n’est jamais touché.
  renforts:{pv:{n:'Robuste',pv:0.15},degats:{n:'Brutal',degats:0.12},vitesse:{n:'Vif',vitesse:0.12},armure:{n:'Blindé',reduit:0.1}},
@@ -150,11 +159,11 @@
     {f:'damier',sur:'toi',motif:'hasard',allumees:5,cote:70,chargeS:0.65,degats:1.1}]}},
  // Mode d’essai (développement seulement : index.html?brume=<famille>|tout) : pause entre deux attaques du Masqué d’essai.
  essai:{reposS:1.2},
- // Palier 3b : rattachement talent par talent et relique par relique (v17.16). Forme d’une entrée : id → {} | {v:[variante]} | {renfort:'pv'|'degats'|'vitesse'|'armure'}.
+ // Palier 3b : rattachement talent par talent et relique par relique (v17.16 ; étourdissement en v17.18). Forme d’une entrée : id → {} | {v:[variante]} | {renfort:'pv'|'degats'|'vitesse'|'armure'}.
  // La famille vient de data/souvenirs.js (champs t et r) : ne rien en recopier ici. {} : la version ennemie de la famille telle quelle.
  // Les commentaires disent ce que le talent demande et que le système ne sait pas traduire : rien n’a été inventé pour le coder.
  // Règles : une variante seulement si le texte du talent la demande (perce → traverse ; répète, écho, second coup → double ; +rayon ou +portée de zone → elargi ;
- // repousse → repousse ; soigne en frappant → vol) et si la forme de la famille l’accepte ; un renfort seulement si le talent n’est qu’un bonus chiffré
+ // repousse → repousse ; soigne en frappant → vol ; étourdit, assomme → etourdit) et si la forme de la famille l’accepte ; un renfort seulement si le talent n’est qu’un bonus chiffré
  // (dégâts, critique, cadence → degats ; PV max → pv ; vitesse de déplacement → vitesse ; dégâts subis, bouclier → armure), le premier cité s’il y en a deux.
  // node themist/outils/sim-brume.mjs refuse une entrée qui ne pointe pas vers un talent, une variante et un renfort qui existent, une variante sans effet
  // sur sa famille, et tout talent ou relique laissé sans entrée.
@@ -162,11 +171,11 @@
   // Projectile (Rafale)
   ray_x3a:{v:['traverse']},
   pen_x1b:{v:['traverse']},
-  fan_n1:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  fan_n1:{}, // étourdit, mais sa famille frappe en volée de projectiles : « etourdit » y est interdit (les autres orbes trouveraient un joueur sans défense)
   fan_n3:{}, // rebonds : pas de variante
   fan_n4:{},
   fan_n5:{}, // ressource ou charge du joueur : sans objet pour le porteur
-  fan_n6:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  fan_n6:{}, // étourdit, mais sa famille frappe en volée de projectiles : « etourdit » y est interdit (les autres orbes trouveraient un joueur sans défense)
   fan_x1a:{v:['double']},
   fan_x2a:{},
   pha_s4:{},
@@ -224,7 +233,7 @@
   dgl_s1:{}, // exécution : pas de variante
   dgl_s3:{renfort:'degats'},
   dgl_s4:{}, // exécution : pas de variante
-  dgl_s5:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  dgl_s5:{v:['etourdit']},
   // Ruée (Aller-retour)
   pen_n2:{v:['double']},
   pen_n3:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
@@ -235,7 +244,7 @@
   pen_x3b:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
   dif_n2:{},
   dif_x2a:{}, // capacité active ou mécanique propre au joueur
-  dif_x2b:{}, // une ruée qui étourdit : le joueur n’a pas d’état « étourdi »
+  dif_x2b:{v:['etourdit']}, // étourdit 0,8 s chez toi : la variante dure 0,35 s (justice)
   cad_n2:{}, // ressource ou charge du joueur : sans objet pour le porteur
   cad_n3:{v:['double']},
   cad_x2a:{}, // ralentit : pas de ralentissement du joueur
@@ -247,7 +256,7 @@
   fan_k1:{}, // alliés, pantins, choristes, lanternes ou toiles à lui
   sol_s5:{}, // capacité active ou mécanique propre au joueur
   vor_x3a:{},
-  dif_x3b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  dif_x3b:{v:['etourdit']},
   reg_x2b:{},
   reg_k1:{}, // statistiques mêlées à une mécanique
   sai_s4:{}, // brûlure ou saignée : pas de dégâts sur la durée
@@ -255,7 +264,7 @@
   car_n3:{}, // rebonds : pas de variante
   car_n6:{},
   car_x1a:{v:['double']},
-  car_x1b:{}, // étourdit et repousse voulus ; ni l’un ni l’autre n’existent sur l’anneau
+  car_x1b:{v:['etourdit']}, // étourdit et repousse : seul l’étourdissement existe sur l’anneau
   car_k1:{},
   req_n3:{},
   pnt_x2b:{},
@@ -279,11 +288,11 @@
   val_s3:{v:['elargi']},
   val_s4:{}, // ralentit : pas de ralentissement du joueur
   val_s5:{v:['repousse']},
-  val_sk:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  val_sk:{v:['etourdit']},
   pnt_n1:{}, // immobilise : pas d’immobilisation du joueur
   pnt_n4:{}, // immobilise : pas d’immobilisation du joueur
   pnt_x1a:{}, // guidage : pas de variante
-  pnt_x1b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  pnt_x1b:{v:['etourdit']},
   pnt_x3a:{}, // immobilise : pas d’immobilisation du joueur
   pnt_x3b:{}, // marque, exposé ou dégâts subis en plus : pas d’état sur le joueur
   gts_s1:{},
@@ -300,7 +309,7 @@
   trm_x1a:{}, // capacité active ou mécanique propre au joueur
   trm_x1b:{}, // capacité active ou mécanique propre au joueur
   trm_x2a:{}, // capacité active ou mécanique propre au joueur
-  trm_x2b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  trm_x2b:{}, // étourdit, mais sa famille frappe en volée de projectiles : « etourdit » y est interdit (les autres orbes trouveraient un joueur sans défense)
   trm_x3a:{}, // ressource ou charge du joueur : sans objet pour le porteur
   trm_x3b:{}, // statistiques mêlées à une mécanique
   trm_k1:{}, // capacité active ou mécanique propre au joueur
@@ -355,7 +364,7 @@
   vor_x1a:{}, // attire ou aspire : pas d’attraction du joueur
   vor_x1b:{}, // immobilise : pas d’immobilisation du joueur
   vor_x2a:{}, // exécution : pas de variante
-  vor_x2b:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  vor_x2b:{v:['etourdit']},
   vor_k1:{v:['vol']},
   vor_k2:{}, // ressource ou charge du joueur : sans objet pour le porteur
   sai_sk:{}, // capacité active ou mécanique propre au joueur
@@ -416,7 +425,7 @@
  },
  reliques:{
   // Projectile (Rafale)
-  chain:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  chain:{}, // étourdit, mais sa famille frappe en volée de projectiles : « etourdit » y est interdit (les autres orbes trouveraient un joueur sans défense)
   dent:{renfort:'degats'},
   // Faisceau (Rais)
   oil:{}, // brûlure ou saignée : pas de dégâts sur la durée
@@ -454,7 +463,7 @@
   epine:{renfort:'degats'},
   gant:{renfort:'degats'},
   cierge:{renfort:'degats'},
-  chaineg:{}, // étourdit : le joueur n’a pas d’état « étourdi »
+  chaineg:{}, // dégâts en plus contre un étourdi : ce n’est pas un étourdissement
   // Fortune (Coup de dés)
   crane:{}, // ressource ou charge du joueur : sans objet pour le porteur
   clef:{}, // ressource ou charge du joueur : sans objet pour le porteur
