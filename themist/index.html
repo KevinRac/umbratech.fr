@@ -8805,7 +8805,12 @@ function demoBoot(cls){
   else if(X.forme==='taches'){z.r=X.rayon;const b=e.asm.rnd()*TAU,m=X.rayon+8;z.pts=[[P.x,P.y]];
    for(let i=1;i<X.nombre;i++){const a=b+(i-1)*TAU/Math.max(1,X.nombre-1)+(e.asm.rnd()-0.5)*0.6;z.pts.push([clamp(P.x+Math.cos(a)*X.ecart,AR.x0+m,AR.x1-m),clamp(P.y+Math.sin(a)*X.ecart,AR.y0+m,AR.y1-m)]);}
    z.sd=z.pts.map(()=>e.asm.rnd()*10);}
+  // v17.11 · tourbillon et cercles : centrés sur toi au début du chargement, puis figés
+  else if(X.forme==='tourbillon'){z.cx=P.x;z.cy=P.y;z.r=X.rayon;z.core=X.coeur;}
+  else if(X.forme==='cercles'){z.cx=P.x;z.cy=P.y;z.n=X.nombre;z.w=X.largeur;z.pas=X.pas;z.R=(X.nombre-1)*X.pas+X.largeur;}
   return z;}
+ // le joueur (à la marge m près) est-il dans l'anneau i des cercles ? (l'anneau 0 est un disque)
+ function dansAnneau(z,i,x,y,m){const d=hyp(x-z.cx,y-z.cy),lo=i*z.pas;return d<lo+z.w+m&&(i===0||d>lo-m);}
  function inZone(z,x,y,m){const dx=x-z.x,dy=y-z.y;
   switch(z.forme){
   case 'disque':return hyp(dx,dy)<z.r+m;
@@ -8813,7 +8818,9 @@ function demoBoot(cls){
   case 'croix':for(let i=0;i<4;i++){const b=z.a+i*Math.PI/2,u=dx*Math.cos(b)+dy*Math.sin(b),v=-dx*Math.sin(b)+dy*Math.cos(b);if(u>=-z.w/2&&u<=z.len&&Math.abs(v)<z.w/2+m)return true;}return false;
   case 'losanges':for(const [px,py] of z.pts)if(Math.abs(x-px)+Math.abs(y-py)<z.h+m*1.2)return true;return false;
   case 'damier':for(const [cx,cy] of z.cells)if(Math.abs(x-cx)<z.q/2+m&&Math.abs(y-cy)<z.q/2+m)return true;return false;
-  case 'taches':for(const [px,py] of z.pts)if(hyp(x-px,y-py)<z.r+m)return true;return false;}
+  case 'taches':for(const [px,py] of z.pts)if(hyp(x-px,y-py)<z.r+m)return true;return false;
+  case 'tourbillon':return hyp(x-z.cx,y-z.cy)<z.r+m;
+  case 'cercles':for(let i=0;i<z.n;i++)if(dansAnneau(z,i,x,y,m))return true;return false;}
   return false;}
 
  // ── Annonce (avant le combat et à mi-vie) : masque, nom composé court, icônes. Pas de texte long.
@@ -8901,13 +8908,19 @@ function demoBoot(cls){
  const ZT=new Set(['brute','hurleur','voile']),_tt=tryTok;
  tryTok=function(e,k){if(e&&!e.asm&&ZT.has(e.type)&&e.tok!==k&&room&&room.asm&&asmZone())return false;return _tt.apply(this,arguments);};
  window.__asm.zone=asmZone;
- function annule(e){const S=e.asm,st=S.st;if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;S.taches=null;}
+ function annule(e){const S=e.asm,st=S.st;if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;S.taches=null;S.tourb=null;S.cercles=null;}
  function onEvent(e,x){const S=e.asm,[t,k]=x;
   if(t==='eveil'){showCard(e,true);sfx('asm_eveil');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'violet'});if(!RM)shake(4,0.15);S.fis=true;return;}
   if(t==='rage'){S.rage=true;tlights.push({x:e.x,y:e.y,r:300,t:0.45,max:0.45,c:'blood'});if(!RM)shake(4,0.15);sfx('asm_eveil');return;}
   if(t==='charge'){S.z=zoneDe(e,k);S.flash=null;sfx(A.signatures[k]?'asm_sig':'asm_ch',S.st.tot);return;}
-  if(t==='fin'){S.z=null;S.dash=null;S.taches=null;return;}
+  if(t==='fin'){
+   if(S.tourb){const Tb=S.tourb;   // v17.11 · le tourbillon se ferme : un dernier coup sur son cœur
+    if(!P.dead&&hyp(P.x-Tb.z.cx,P.y-Tb.z.cy)<Tb.z.core+P.r*0.5)hurtPlayer(Tb.fin,e);
+    sparks(Tb.z.cx,Tb.z.cy,10,'#ff6a5a');sfx('explode');shake(3,0.12);}
+   S.z=null;S.dash=null;S.taches=null;S.tourb=null;S.cercles=null;return;}
   if(t==='lache'){const z=S.z;if(!z)return;const X=z.X,f=S.sv&&S.sv.cap===k?S.sv.force:1,dmg=e.dmg*X.degats*f;
+   if(z.forme==='tourbillon'){S.tourb={z,t:0,max:asmEffet(A,k),tic:X.tic,dmg:e.dmg*X.degatsTic*f,fin:dmg};S.z=null;sfx('howl');shake(2,0.1);return;}
+   if(z.forme==='cercles'){S.cercles={z,t:0,max:asmEffet(A,k),i:0,dmg};S.z=null;return;}
    if(z.forme==='taches'){if(!P.dead&&inZone(z,P.x,P.y,P.r*0.5))hurtPlayer(dmg,e);
     S.taches={z,t:0,max:asmEffet(A,k),tic:X.tic,dmg:e.dmg*X.degatsTic*f};S.z=null;sfx('spit');shake(3,0.12);
     for(const [px,py] of z.pts)sparks(px,py,5,'#ff6a5a');return;}
@@ -8933,6 +8946,14 @@ function demoBoot(cls){
   // v17.9 · les taches restent : tant que tu y es, elles blessent toutes les tic secondes
   if(S.taches){const Tc=S.taches;Tc.t+=dt;Tc.tic-=dt;
    if(Tc.tic<=0){Tc.tic=Tc.z.X.tic;if(!P.dead&&inZone(Tc.z,P.x,P.y,P.r*0.3))hurtPlayer(Tc.dmg,e);}}
+  // v17.11 · tourbillon : il t'attire vers son centre (sauf pendant une esquive), son cœur blesse à intervalle
+  if(S.tourb){const Tb=S.tourb,zz=Tb.z;Tb.t+=dt;Tb.tic-=dt;
+   if(!P.dead&&P.dashT<=0){const dx=zz.cx-P.x,dy=zz.cy-P.y,d=hyp(dx,dy);if(d<zz.r&&d>2){const v=Math.min(d,zz.X.attire*dt);P.x+=dx/d*v;P.y+=dy/d*v;collidePlayer();}}
+   if(Tb.tic<=0){Tb.tic=zz.X.tic;if(!P.dead&&Tb.max-Tb.t>zz.X.finS&&hyp(P.x-zz.cx,P.y-zz.cy)<zz.core+P.r*0.3)hurtPlayer(Tb.dmg,e);}}   // les dernières finS secondes : plus de tic, pour que le coup final ne tombe pas dans l'invulnérabilité du dernier
+  // v17.11 · cercles : les anneaux frappent l'un après l'autre, du centre vers l'extérieur, toutes les battueS secondes
+  if(S.cercles){const Cc=S.cercles,zz=Cc.z;Cc.t+=dt;
+   while(Cc.i<zz.n&&Cc.t>=Cc.i*zz.X.battueS){const i=Cc.i++;if(!P.dead&&dansAnneau(zz,i,P.x,P.y,P.r*0.5))hurtPlayer(Cc.dmg,e);
+    sfx('bell');if(i===0)shake(3,0.12);sparks(zz.cx+Math.cos(i*2.1)*(i*zz.pas+zz.w/2),zz.cy+Math.sin(i*2.1)*(i*zz.pas+zz.w/2),4,'#ff6a5a');}}
   const z=S.z;
   if(z&&st.ph==='charge'){const k=1-st.t/st.tot;
    if(z.forme==='couloir'&&k<z.X.suivi){z.a=Math.atan2(P.y-e.y,P.x-e.x);z.x=e.x;z.y=e.y;}
@@ -8942,7 +8963,7 @@ function demoBoot(cls){
    if(!D.hit&&!P.dead&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){D.hit=true;hurtPlayer(D.dmg,e);}
    if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);S.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');if(st.ph==='effet')asmFin(A,st,null);S.z=null;}
    else if(D.left<=0){S.dash=null;if(st.ph==='effet')asmFin(A,st,null);}}
-  else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'||(st.ph==='effet'&&S.taches)||(st.ph==='charge'&&S.z&&(A.bougeCharge||[]).includes(S.z.forme))))move(e,dt,sp,tg,dP,st.att>0);
+  else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'||(st.ph==='effet'&&(S.taches||S.tourb||S.cercles))||(st.ph==='charge'&&S.z&&(A.bougeCharge||[]).includes(S.z.forme))))move(e,dt,sp,tg,dP,st.att>0);
   if(!S.dash&&!P.dead&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);
   // attaque passive : un trait vers toi à intervalle régulier, en plus de ses sorts (pas pendant son apparition)
   const PS=A.passive;if(PS&&st.ph!=='intro'){if(S.pas==null)S.pas=PS.intervalleS;
@@ -8975,7 +8996,29 @@ function demoBoot(cls){
     fill(a0,arm(z.len));fill(a1,arm(z.w/2+(z.len-z.w/2)*k));edge(()=>{c.beginPath();const w=z.w/2,L=z.len;c.moveTo(w,-w);c.lineTo(L,-w);c.lineTo(L,w);c.lineTo(w,w);c.lineTo(w,L);c.lineTo(-w,L);c.lineTo(-w,w);c.lineTo(-L,w);c.lineTo(-L,-w);c.lineTo(-w,-w);c.lineTo(-w,-L);c.lineTo(w,-L);c.closePath();});break;}
   case 'losanges':{const D=(h)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x,y-h);c.lineTo(x+h,y);c.lineTo(x,y+h);c.lineTo(x-h,y);c.closePath();}};fill(a0,D(z.h));fill(a1,D(z.h*k));edge(D(z.h));break;}
   case 'damier':{const D=(s)=>()=>{c.beginPath();for(const [x,y] of z.cells)c.rect(x-s/2,y-s/2,s,s);};fill(a0,D(z.q));fill(a1,D(z.q*k));edge(D(z.q));break;}
-  case 'taches':{const D=(r)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x+r,y);c.arc(x,y,r,0,TAU);}};fill(a0,D(z.r));fill(a1,D(z.r*k));edge(D(z.r));break;}}
+  case 'taches':{const D=(r)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x+r,y);c.arc(x,y,r,0,TAU);}};fill(a0,D(z.r));fill(a1,D(z.r*k));edge(D(z.r));break;}
+  case 'tourbillon':{const D=r=>()=>{c.beginPath();c.arc(z.cx,z.cy,r,0,TAU);};fill(a0,D(z.r));fill(a1,D(z.r*k));fill(0.16+0.2*k,D(z.core));edge(D(z.r));spirales(c,z,0.5+0.3*k);break;}
+  case 'cercles':{const A_=()=>{c.beginPath();for(let i=0;i<z.n;i++)anneauPath(c,z,i);};fill(a0,A_);
+    c.save();c.beginPath();c.arc(z.cx,z.cy,z.R*k,0,TAU);c.clip();fill(a1,A_);c.restore();edge(A_);break;}}
+  c.restore();}
+ // v17.11 · chemin d'un anneau des cercles (le premier est un disque) ; spirales du tourbillon (immobiles en mouvements réduits)
+ function anneauPath(c,z,i){const lo=i*z.pas,hi=lo+z.w;c.moveTo(z.cx+hi,z.cy);c.arc(z.cx,z.cy,hi,0,TAU);if(i>0){c.moveTo(z.cx+lo,z.cy);c.arc(z.cx,z.cy,lo,0,TAU,true);}}
+ function spirales(c,z,al){c.save();c.lineCap='round';c.strokeStyle=`rgba(${EDGE},${al})`;c.lineWidth=1.6;const rot=RM?0:-T*3.2;
+  for(let j=0;j<3;j++){c.beginPath();for(let s=0;s<=14;s++){const u=s/14,a=rot+j*TAU/3+u*2.3,r=z.r*0.96*(1-u)+z.core*u;if(s)c.lineTo(z.cx+Math.cos(a)*r,z.cy+Math.sin(a)*r);else c.moveTo(z.cx+Math.cos(a)*r,z.cy+Math.sin(a)*r);}c.stroke();}
+  c.restore();}
+ // v17.11 · le tourbillon actif : disque sombre qui tourne, cœur rouge, il se resserre à la fin
+ function drawTourb(c,Tb){const z=Tb.z,left=Tb.max-Tb.t,al=clamp(left/0.3,0,1)*clamp(Tb.t/0.1,0,1);if(al<=0)return;c.save();
+  const rr=z.r*(0.82+0.18*clamp(left/0.3,0,1)),g=c.createRadialGradient(z.cx,z.cy,z.core*0.3,z.cx,z.cy,rr);
+  g.addColorStop(0,`rgba(120,14,18,${0.66*al})`);g.addColorStop(0.3,`rgba(${FO},${0.3*al})`);g.addColorStop(1,`rgba(${FO},${0.04*al})`);
+  c.fillStyle=g;c.beginPath();c.arc(z.cx,z.cy,rr,0,TAU);c.fill();
+  c.strokeStyle=`rgba(${EDGE},${(RM?0.75:0.55+0.25*Math.sin(T*10))*al})`;c.lineWidth=2;c.beginPath();c.arc(z.cx,z.cy,z.core,0,TAU);c.stroke();
+  spirales(c,{cx:z.cx,cy:z.cy,r:rr,core:z.core},0.7*al);c.restore();}
+ // v17.11 · les cercles qui frappent : les anneaux à venir restent en liseré, chacun s'illumine à son tour puis s'éteint
+ function drawCercles(c,Cc){const z=Cc.z,bt=z.X.battueS;c.save();
+  for(let i=0;i<z.n;i++){const dt_=Cc.t-i*bt;let fa,ea;
+   if(dt_<0){fa=0.1;ea=0.55;}else if(dt_<0.3){const q=1-dt_/0.3;fa=0.1+0.5*q;ea=0.55+0.4*q;}else continue;
+   c.beginPath();anneauPath(c,z,i);c.fillStyle=`rgba(${FO},${fa})`;c.fill();
+   c.strokeStyle=`rgba(${EDGE},${ea})`;c.lineWidth=1.8;if(dt_<0){strokeDash(c);}c.stroke();c.setLineDash([]);}
   c.restore();}
  // v17.9 · les taches posées : flaques sombres aux bords qui ondulent, qui restent puis s'effacent (liseré fixe en mouvements réduits)
  function drawTaches(c,Tc){const z=Tc.z,left=Tc.max-Tc.t,al=clamp(left/0.4,0,1)*clamp(Tc.t/0.12,0,1);if(al<=0)return;c.save();
@@ -8989,6 +9032,8 @@ function demoBoot(cls){
  const _dt=drawTelegraphs;
  drawTelegraphs=function(){_dt();try{const c=ctx;for(const e of enemies){if(e.dead||!e.asm)continue;const S=e.asm;
    if(S.taches)drawTaches(c,S.taches);
+   if(S.tourb)drawTourb(c,S.tourb);
+   if(S.cercles)drawCercles(c,S.cercles);
    if(S.z&&S.st.ph==='charge')drawZone(c,S.z,clamp(1-S.st.t/S.st.tot,0,1),0);
    if(S.flash)drawZone(c,S.flash.z,1,S.flash.t/S.flash.max);}}catch(err){console.error(err);}};
  const _drg=drawRings;
@@ -9081,7 +9126,7 @@ function demoBoot(cls){
  const _ke=killEnemy;
  killEnemy=function(e){const was=e&&e.dead;_ke(e);
   try{if(!was&&e&&e.dead&&e.asm){const h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max);
-   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;e.asm.taches=null;sfx('asm_brise');hideCard();
+   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;e.asm.taches=null;e.asm.tourb=null;e.asm.cercles=null;sfx('asm_brise');hideCard();
    if(room&&room.asm){room.asm.vaincu=true;}
    if(e.asm.sv)chron('asmSv',{n:e.asm.sv.n});
    RUN.asm=RUN.asm||{dernier:null,vaincus:[]};RUN.asm.vaincus.push(e.asm.nom);

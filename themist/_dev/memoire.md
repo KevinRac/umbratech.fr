@@ -890,3 +890,20 @@ Retour du joueur : la reprise mémoire pleine ne valait qu’un échange ; le so
 - **Wiki** : règle « Trophées » dans « La Mémoire » (« un souvenir arraché de haute lutte », sans nommer le Masqué), rage et poursuite dans « Le Masqué ».
 
 À surveiller : le temps passé contre les gardiens (`RUN.bossT`) et les morts contre les Masqués dans les descentes exportées ; si la rage rend l’acte I trop dur, la réserver aux actes II et III.
+
+## 15. Palier 2, deuxième tranche : Tourbillon et Cercles (v17.11, 26 octobre 2026)
+
+Les familles **Dévoration** (Gouffre, 19 talents) et **Cloche** (Héraut, 27 talents) donnent désormais une capacité au Masqué porteur, comme Sol donne les Taches. Avec elles, sept familles sur quinze sont portables (Projectile, Lame, Ruée, Onde, Sol, Dévoration, Cloche).
+
+| Famille | Capacité | Forme | Ce que ça fait |
+|---|---|---|---|
+| Dévoration | `tourbillon` (`u_maw`) | `tourbillon` | Disque de 140 px posé sous toi au chargement, figé. Pendant 1,7 s il t’attire vers son centre (120 px/s, jamais pendant une esquive) ; son cœur (34 px) blesse de 0,3 × dégâts toutes les 0,5 s (plus de tic dans les 0,7 dernières secondes : l’invulnérabilité de 0,65 s après un coup avalait sinon le coup final) ; à la fermeture, un dernier coup de 1,5 × dégâts si tu es resté dans le cœur. |
+| Cloche | `cercles` (`u_bell`) | `cercles` | Un disque (34 px) et deux anneaux (34 px de large, pas de 74 px) posés sous toi, figés. Après 0,8 s de chargement ils frappent du centre vers l’extérieur toutes les 0,45 s (1,4 × dégâts chacun, son de cloche). L’espace entre deux anneaux (40 px) est sûr. Le chargement se lit de l’intérieur vers l’extérieur, comme l’ordre des coups. |
+
+Réglages : `data/bestiaire.js`, `assemble.capacites.tourbillon` / `cercles` et `assemble.souvenir.familles`. Les deux formes rejoignent `bougeCharge` (il te poursuit pendant le chargement) et, comme les Taches, il peut bouger pendant leur effet.
+
+Garde-fous (vérifiés par `outils/sim-masque.mjs`, section 1 ter) : l’attraction reste sous 70 % de la vitesse la plus basse envisagée (Gouffre en dévoration) ; on peut sortir du disque avant la fin ; l’espace entre anneaux laisse passer le joueur ; la battue des cercles reste au-dessus de l’invulnérabilité du joueur (0,65 s : à 0,45 s, un deuxième anneau touché juste après le premier ne blesse pas deux fois).
+
+Wiki : inchangé (il ne liste pas les capacités de souvenir), seule la version suit. Journal : v17.11.
+
+À surveiller : si le tourbillon est trop facile à quitter (il n’attire que 120 px/s) ou si les Cercles tuent surtout au premier coup (le disque central, quand on ne bouge pas pendant le chargement).

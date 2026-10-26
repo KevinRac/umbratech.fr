@@ -53,6 +53,16 @@ for (const [fam, cap] of Object.entries(A.souvenir.familles)) {
   ok(A.capacites[cap], `famille ${fam} : capacité ${cap} inconnue`);
 }
 for (const k of SOUV) ok(Object.values(A.souvenir.familles).includes(k), `capacité de souvenir ${k} : aucune famille ne la donne`);
+// 1 ter (v17.11). Géométrie des zones qui durent : on doit toujours pouvoir s'en sortir ou s'y glisser
+{ const PR = 11, VMIN = 190;   // rayon du joueur ; vitesse la plus basse envisagée (Gouffre en dévoration ≈ 0,6 × vitesse de base)
+  const T = A.capacites.tourbillon, C = A.capacites.cercles;
+  ok(T && T.coeur < T.rayon && T.attire > 0 && T.tic > 0.65 * 0.7 && T.effetS > 0, 'tourbillon : champs et cœur dans le disque');
+  ok(T.finS >= 0.65 && T.finS < T.effetS, `tourbillon : finS (${T.finS}) doit couvrir l'invulnérabilité du joueur (0,65 s)`);
+  ok(T.attire < VMIN * 0.7, `tourbillon : l'attraction (${T.attire}) doit rester sous 70 % de la vitesse la plus basse (${VMIN})`);
+  ok(T.rayon / (VMIN - T.attire) <= T.effetS + T.chargeS + 0.2, `tourbillon : on doit pouvoir sortir du disque à temps (${(T.rayon / (VMIN - T.attire)).toFixed(2)} s)`);
+  ok(C && C.nombre >= 2 && C.pas - C.largeur >= 2 * PR * 0.5 + 24, `cercles : l'espace entre deux anneaux (${C.pas - C.largeur} px) doit laisser passer le joueur`);
+  ok(Math.abs(C.effetS - ((C.nombre - 1) * C.battueS + 0.55)) < 0.2, `cercles : effetS (${C.effetS}) ≈ (nombre-1) × battueS + 0,55`);
+  ok(C.battueS >= 0.4, 'cercles : une battue plus courte que l’invulnérabilité du joueur la rendrait injuste'); }
 for (const [act, salle] of [[1, 3], [2, 9], [2, 14], [3, 18]]) {
   const parts = [];
   for (const cap of new Set(Object.values(A.souvenir.familles))) {

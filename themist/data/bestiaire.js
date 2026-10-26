@@ -123,7 +123,7 @@
   // bougeCharge : formes posées sur toi (pas sur lui) : il continue de te poursuivre pendant leur chargement.
   annonceS:1,pauseS:0.12,prioriteS:0.5,apresSignatureS:0.3,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
   eveilPV:70,eveilS:0.5,etourdissement:0.5,attenteS:0.5,
-  rage:{pv:30,pauseS:0.05,apresSignatureS:0},bougeCharge:['losanges','damier','taches'],
+  rage:{pv:30,pauseS:0.05,apresSignatureS:0},bougeCharge:['losanges','damier','taches','tourbillon','cercles'],
   budgetMenace:{1:11,2:11,3:13},
   incompatibles:[['explosion','onde']],
   poidsProfil:{actif:false,regles:{
@@ -148,7 +148,14 @@
    // v17.9 · capacité de souvenir (souvenir:true) : jamais tirée seule, seulement quand il porte un souvenir de la famille qui la donne (voir souvenir).
    // Taches : nombre flaques (rayon) sous toi et autour (ecart), posées au chargement ; à l'impact degats, puis elles restent effetS secondes
    // et blessent de degatsTic toutes les tic secondes tant que tu y es. Il peut bouger pendant qu'elles restent.
-   taches:{n:'Taches',ic:'u_drop',forme:'taches',souvenir:true,adj:{m:'suintant',f:'suintante'},menace:2,chargeS:0.75,effetS:2.4,nombre:3,rayon:46,ecart:105,degats:1.3,tic:0.7,degatsTic:0.4}},
+   taches:{n:'Taches',ic:'u_drop',forme:'taches',souvenir:true,adj:{m:'suintant',f:'suintante'},menace:2,chargeS:0.75,effetS:2.4,nombre:3,rayon:46,ecart:105,degats:1.3,tic:0.7,degatsTic:0.4},
+   // v17.11 · Tourbillon (famille Dévoration) : un disque de rayon posé sous toi au chargement. Pendant effetS secondes il t'attire vers son centre
+   // (attire px/s, moins que ta vitesse : tu peux sortir en t'éloignant ; tu le sens surtout si tu restes immobile) ; son cœur (coeur px) blesse de
+   // degatsTic toutes les tic secondes (sauf pendant les finS dernières secondes : ton invulnérabilité après un coup durerait plus que l'intervalle et avalerait le coup final), et à sa fermeture un dernier coup de degats si tu es resté dans le cœur.
+   tourbillon:{n:'Tourbillon',ic:'u_maw',forme:'tourbillon',souvenir:true,adj:{m:'aspirant',f:'aspirante'},menace:2,chargeS:0.8,effetS:1.7,rayon:140,coeur:34,attire:120,degats:1.5,tic:0.5,degatsTic:0.3,finS:0.7},
+   // v17.11 · Cercles (famille Cloche) : nombre anneaux concentriques posés sous toi au chargement (le premier est un disque), de largeur px,
+   // espacés de pas px. Ils frappent l'un après l'autre, du centre vers l'extérieur, toutes les battueS secondes : reste entre deux anneaux.
+   cercles:{n:'Cercles',ic:'u_bell',forme:'cercles',souvenir:true,adj:{m:'sonnant',f:'sonnante'},menace:2,chargeS:0.8,effetS:1.45,nombre:3,largeur:34,pas:74,battueS:0.45,degats:1.4}},
   // v17.9 · Le Masqué porte parfois un souvenir de ta réserve (data/souvenirs.js, familles). chance : % des Masqués qui en portent un
   // quand la réserve a un souvenir portable ; parActe : au plus autant de porteurs par acte ; familles : famille → capacité qu'il en tire
   // (elle prend une des deux places de départ, sous le même budget de menace) ; parRang / parGravure : dégâts de cette capacité en plus,
@@ -156,7 +163,7 @@
   // Brisé, il propose de reprendre le souvenir à la place de la relique (D9). Les dégâts infligés à un porteur ne comptent pas dans l'Accoutumance (D5).
   // pv (v17.10) : PV du porteur en plus, par rang au-delà du premier et par gravure du souvenir (voler un talent fort coûte cher).
   souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,pv:0.1,
-   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches'}},
+   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches',devoration:'tourbillon',cloche:'cercles'}},
   // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
   // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
   passive:{n:'Trait',ic:'u_arrow',intervalleS:1,preavisS:0.25,degats:0.6,vitesse:320,portee:560},
