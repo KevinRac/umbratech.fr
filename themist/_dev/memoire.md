@@ -1019,7 +1019,7 @@ Choix de ce palier non tranchés par la consigne :
 ### Mesures
 
 - `node themist/outils/sim-brume.mjs` : 0 manquement sur 15 familles × leurs variantes × 3 actes ; les neuf contre-épreuves (disque géant, damier plein, anneau sans brèche, forme inconnue, couleur, incompatibilité oubliée, dégâts, zone qui suit jusqu’au coup, hors bornes) sont refusées.
-- En jeu (Chromium sans affichage, acte III, Héraut, `bot=1`) : mesure en cours, ajoutée au commit suivant.
+- En jeu (Chromium sans affichage, acte III, Héraut, 20 s par famille) : avec `bot=1`, **0 coup sur 87 attaques** des 15 familles, aucune étape sautée ; joueur immobile, chaque forme le touche (projectiles, navette, rayons, onde, ruée, disque…), 16 à 28 PV par coup. Les seuls coups parasites venaient de la feinte du Brumeux (`endBluff`), désormais coupée dans la salle d’essai. Le Masqué ordinaire (`?masque=`) et l’écran titre tournent sans erreur ; la barre d’essai n’existe pas hors du paramètre `brume`.
 - `node themist/outils/sim-masque.mjs` : inchangé (le Masqué ordinaire n’est pas touché) ; `node themist/outils/wiki.mjs --check` : à jour, la génération charge le nouveau fichier sans s’en servir.
 
 ### Ce que le palier 3b doit remplir
