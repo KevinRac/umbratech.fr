@@ -8752,11 +8752,14 @@ function demoBoot(cls){
  // v17.9 · Porte-t-il un souvenir ? res : la réserve de la run ({id, source, rang, g, porte}) ; fam : id de talent → famille ;
  // n : porteurs déjà venus dans cet acte. Renvoie {x (l'entrée de la réserve), cap (la capacité qu'il en tire), force (× dégâts)} ou null.
  function asmSouvenir(A,res,fam,rnd,n){const S=A.souvenir;if(!S||!res||!res.length||(n||0)>=(S.parActe==null?Infinity:S.parActe))return null;
-  const L=res.filter(x=>x.source==='talent'&&fam[x.id]&&S.familles[fam[x.id]]&&A.capacites[S.familles[fam[x.id]]]);
+  // v17.14 : une famille donne soit une capacité (familles → capacites), soit un état (etats → A.etats)
+  const capDe=f=>S.familles[f]&&A.capacites[S.familles[f]]?S.familles[f]:null,etatDe=f=>S.etats&&A.etats&&S.etats[f]&&A.etats[S.etats[f]]?S.etats[f]:null;
+  const L=res.filter(x=>x.source==='talent'&&fam[x.id]&&(capDe(fam[x.id])||etatDe(fam[x.id])));
   if(!L.length||rnd()*100>=S.chance)return null;
   const ws=L.map(x=>1/(1+(S.usure==null?1:S.usure)*(x.porte||0))),tot=ws.reduce((a,b)=>a+b,0);let r=rnd()*tot,x=L[L.length-1];
   for(let i=0;i<L.length;i++){r-=ws[i];if(r<=0){x=L[i];break;}}
-  return{x,cap:S.familles[fam[x.id]],force:1+(S.parRang||0)*Math.max(0,(x.rang||1)-1)+(S.parGravure||0)*(x.g||0)};}
+  const cap=capDe(fam[x.id]);
+  return{x,cap,etat:cap?null:etatDe(fam[x.id]),force:1+(S.parRang||0)*Math.max(0,(x.rang||1)-1)+(S.parGravure||0)*(x.g||0)};}
  /*/asm:pur*/
  window.__asm={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,asmSouvenir,forcer:0};
  // familles de souvenirs (data/souvenirs.js) : id de talent → famille
@@ -8772,7 +8775,7 @@ function demoBoot(cls){
   if(fis){c.lineCap='round';c.lineJoin='round';for(const p of MP.fissures){c.strokeStyle=COL.trait;c.lineWidth=6;c.stroke(p);c.strokeStyle=COL.fissure;c.lineWidth=2.4;c.stroke(p);}}}
  // etat : calme | charge | fissure | brise ; o.lit (yeux allumés), o.k (avancement de la brisure 0…1), o.a (opacité)
  function drawMask(c,x,y,h,etat,o){o=o||{};const s=h/MQ.vb[1]*(o.sc||1),lit=!!o.lit,fis=etat==='fissure'||etat==='brise',k=o.k||0;
-  c.save();c.translate(x-MQ.centre[0]*s,y-MQ.centre[1]*s);c.scale(s,s);c.globalAlpha=o.a==null?1:o.a;
+  c.save();c.translate(x-MQ.centre[0]*s,y-MQ.centre[1]*s);c.scale(s,s);c.globalAlpha*=o.a==null?1:o.a;   // multiplié (v17.14) : le Voile peut l'effacer
   const pul=lit&&!RM?0.8+0.2*Math.sin(T*16):1;
   c.save();c.globalCompositeOperation='lighter';for(const [ex,ey,r] of MQ.lueurs)glow(c,ex,ey,r*(lit?9:5.5),rgb(lit?COL.oeilVif:COL.oeil),(lit?0.55:0.25)*pul);c.restore();
   if(etat==='brise'){const d=5+k*(RM?0:46);
@@ -8842,7 +8845,8 @@ function demoBoot(cls){
  function showCard(e,eveil){const S=e.asm;
   if(!card){card=document.createElement('div');card.id='asmCard';card.setAttribute('role','status');card.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(card);}
   const ic=k=>{const X=A.capacites[k]||A.signatures[k];return `<i class="${A.signatures[k]?'sig':''}${eveil&&k===S.st.reserve?' nw':''}${S.sv&&k===S.sv.cap?' sv':''}" title="${esc(X.n)}">${icon(X.ic)}</i>`;};
-  const caps=S.st.caps.map(ic).join('')+(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig);
+  const ET=S.sv&&S.sv.etat&&A.etats[S.sv.etat];
+  const caps=S.st.caps.map(ic).join('')+(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig)+(ET?`<i class="sv et" title="${esc(ET.n)}">${icon(ET.ic)}</i>`:'');
   card.className=(eveil?'eveil':'')+(S.sv?' porte':'');
   card.innerHTML=`<span class="mq" aria-hidden="true">${MQ.svg(COL,eveil?'fissure':'calme','asmc'+(++cardN))}</span><div><b>${esc(A.n)}${eveil?' · ▲':''}</b><span class="nm">${esc(S.nom)}</span><span class="ics">${caps}</span>${S.sv?`<span class="svn">${esc(S.sv.n)}</span>`:''}</div>`;
   try{stackBelow(card,toastEl);}catch(x){}
@@ -8870,7 +8874,7 @@ function demoBoot(cls){
     if(window.__asm.combo)co=asmCombos(A,Object.assign({porte:sv&&sv.cap},ctx)).find(c=>c.cle===window.__asm.combo)||null;
     else{if(sv)co=asmTirage(A,Object.assign({porte:sv.cap},ctx),dernier,rnd,A.poidsProfil.actif?profile():null);
      if(!co){sv=null;co=asmTirage(A,ctx,dernier,rnd,A.poidsProfil.actif?profile():null);}}
-    if(co&&sv&&!co.depart.includes(sv.cap))sv=null;
+    if(co&&sv&&sv.cap&&!co.depart.includes(sv.cap))sv=null;   // un état (v17.14) ne prend pas de place de départ
     if(co){const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3;
      // il arrive avec la deuxième vague : il prend la place du champion s'il y en a un, la vague garde ses autres ennemis
      const v=(w[1]||[]).filter(x=>!x.elite);if(!v.length)v.push(...row('rampant',n,'rand'));v.unshift({type:co.corps,elite:true,asm:true});
@@ -8892,14 +8896,15 @@ function demoBoot(cls){
    e.maxHp*=A.stats.pv*C.pv/(d.hp*CHAMP.pv);e.hp=e.maxHp;e.dmg*=A.stats.degats/(d.dmg*CHAMP.degats);
    if(R.sv&&A.souvenir&&A.souvenir.pv){const x=R.sv.x;e.maxHp*=1+A.souvenir.pv*(Math.max(0,(x.rang||1)-1)+(x.g||0));e.hp=e.maxHp;}   // v17.10 : un porteur d'un souvenir fort a plus de PV
    e.r=d.r*C.taille;e.spd=d.spd*spdMul()*C.vitesse*(A.stats.vitesse||1);e.xp=A.stats.xp*(1+0.05*(G()-1));e.state='walk';e.tok=null;
-   e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co),z:null,flash:null,dash:null,sv:R.sv?{cap:R.sv.cap,force:R.sv.force,id:R.sv.x.id,n:(NODES[R.sv.x.id]||{}).name||R.sv.x.id}:null};
+   e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co),z:null,flash:null,dash:null,sv:R.sv?{cap:R.sv.cap,etat:R.sv.etat||null,force:R.sv.force,id:R.sv.x.id,n:(NODES[R.sv.x.id]||{}).name||R.sv.x.id}:null};
+   etatInit(e);
    if(MO){e.asm.mont={t:0,tot:MT(),n:0};e.asm.st.t=Math.max(e.asm.st.t,MT());}
    showCard(e,false);sfx('asm_in');}}catch(err){console.error(err);}
   return e;};
  // pas de contre-mesure, pas de règle de salle, et la salle ne compte pas dans la moyenne qui sert à juger les contre-mesures
  const _bp=brumeuxPlan;brumeuxPlan=function(){if(room&&room.asm)return;return _bp.apply(this,arguments);};
  const _sr=setRule;setRule=function(){if(room&&room.asm)return;return _sr.apply(this,arguments);};
- const immun=e=>e&&e.asm&&e.asm.mont&&MO&&MO.immunise;
+ const immun=e=>e&&e.asm&&((e.asm.mont&&MO&&MO.immunise)||(e.asm.ombre&&e.asm.ombre.on));   // v17.14 : effacé par le Voile, il est intouchable
  const _he=hitEnemy;hitEnemy=function(e){if(immun(e))return 0;return _he.apply(this,arguments);};
  const _fh=friendlyHit;friendlyHit=function(o){if(immun(o))return;return _fh.apply(this,arguments);};
  const _rh=rawHit;rawHit=function(e){if(immun(e))return;return _rh.apply(this,arguments);};
@@ -8953,9 +8958,62 @@ function demoBoot(cls){
   if(fast){moveTo(e,tg.x,tg.y,sp*1.3,dt);return;}
   if(C.mouvement==='approche'){if(!tg.pl||dP>70)moveTo(e,tg.x,tg.y,sp,dt);else{const a=Math.atan2(e.y-P.y,e.x-P.x)+0.8*e.dir*dt;moveTo(e,P.x+Math.cos(a)*64,P.y+Math.sin(a)*64,sp*0.7,dt);}}
   else keepRange(e,tg,sp,dt,C.distance[0],C.distance[1]);}
+ // ── v17.14 · États portés (familles Lumière, Ombre, Soin, Garde, Fureur) : réglages dans assemble.etats
+ const ETAT=e=>e&&e.asm&&e.asm.sv&&e.asm.sv.etat?A.etats[e.asm.sv.etat]:null;
+ function etatInit(e){const S=e.asm,k=S.sv&&S.sv.etat,X=ETAT(e);if(!X)return;const f=S.sv.force||1;
+  if(k==='voile')S.ombre={t:X.premierS,on:false,d:0,a:1};
+  else if(k==='regen')S.soin={t:X.premierS,c:0,pris:0};
+  else if(k==='carapace')S.garde={t:X.premierS,on:0};
+  else if(k==='fureur'){e.dmg*=1+X.degats*f;e.spd*=1+X.vitesse;}}
+ // un point libre à d px du joueur (dans la salle, hors des piliers), pour le retour du Voile
+ // (près d'un mur, le recadrage rapproche le point : on garde le plus proche de d parmi 12 essais)
+ function pointPres(e,d){let best=null,bd=-1;for(let i=0;i<12;i++){const a=e.asm.rnd()*TAU,x=clamp(P.x+Math.cos(a)*d,AR.x0+e.r+4,AR.x1-e.r-4),y=clamp(P.y+Math.sin(a)*d,AR.y0+e.r+4,AR.y1-e.r-4);
+   if(room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+e.r+4))continue;const h=hyp(x-P.x,y-P.y);if(h>=d*0.9)return[x,y];if(h>bd){bd=h;best=[x,y];}}
+  return best||[e.x,e.y];}
+ function etatPas(e,dt){const S=e.asm,st=S.st,X=ETAT(e);if(!X)return;
+  if(S.ombre){const O=S.ombre;
+   if(!O.on){O.t-=dt;if(O.t<=0&&st.ph==='pause'&&!S.dash&&e.stun<=0){O.on=true;O.d=X.dureeS;sfx('dash');for(let i=0;i<10;i++)parts.push({x:e.x+rand(-e.r,e.r),y:e.y+rand(-e.r,e.r),vx:rand(-40,40),vy:rand(-60,-10),life:0.6,max:0.6,size:rand(5,10),col:'#2a2238',layer:'post',drag:2,grow:1.2,a:0.55});}}
+   else{O.d-=dt;if(O.d<=0){O.on=false;O.t=X.cycleS;const [x,y]=pointPres(e,X.reparait);e.x=x;e.y=y;sparks(x,y,8,'#c9b4ff');sfx('dash');}}
+   O.a=RM?(O.on?X.alpha:1):O.a+((O.on?X.alpha:1)-O.a)*Math.min(1,dt*14);}
+  if(S.soin){const R=S.soin;
+   if(R.c>0){R.c-=dt;
+    if(e.stun>0||R.pris>=X.rupture*e.maxHp){R.c=0;R.t=X.cycleS;sparks(e.x,e.y,8,'#7cf0a0');addNum(e.x,e.y-e.r-14,'Interrompu','asoin');}
+    else if(R.c<=0){const n=Math.min(e.maxHp-e.hp,e.maxHp*X.soin*(S.sv.force||1));e.hp+=n;R.t=X.cycleS;if(n>=1)addNum(e.x,e.y-e.r-14,'+'+Math.round(n),'asoin');sfx('heart');tlights.push({x:e.x,y:e.y,r:160,t:0.35,max:0.35,c:'bile'});}}
+   else{R.t-=dt;if(R.t<=0&&e.hp/e.maxHp*100<X.seuil){R.c=X.canalS;R.pris=0;}}}
+  if(S.garde){const Gd=S.garde;
+   if(Gd.on>0){Gd.on-=dt;if(Gd.on<=0)Gd.t=X.cycleS-X.dureeS;}
+   else{Gd.t-=dt;if(Gd.t<=0){Gd.on=X.dureeS;sfx('chomp');}}}}
+ // dégâts qu'il subit : la carapace les réduit ; pendant la canalisation du soin, on les compte pour l'interrompre
+ const _het=hitEnemy;hitEnemy=function(e,dmg,o){
+  if(e&&e.asm&&e.asm.garde&&e.asm.garde.on>0&&typeof dmg==='number'){const X=A.etats.carapace;dmg*=1-Math.min(X.reduitMax,X.reduit*(e.asm.sv.force||1));}
+  const h0=e&&e.asm&&e.asm.soin&&e.asm.soin.c>0?e.hp:null;const r=_het.call(this,e,dmg,o);
+  if(h0!=null&&e.asm.soin)e.asm.soin.pris+=Math.max(0,h0-e.hp);return r;};
+ // dégâts que tu subis : dans le halo d'un porteur de Lumière, tu en prends plus (toutes les sources)
+ function halo(){for(const e of enemies){if(e.dead||!e.asm||e.asm.mont)continue;const X=ETAT(e);if(X&&e.asm.sv.etat==='halo'&&hyp(P.x-e.x,P.y-e.y)<X.rayon)return 1+X.expose*(e.asm.sv.force||1);}return 1;}
+ const _hpe=hurtPlayer;hurtPlayer=function(dmg,src){try{if(room&&room.asm&&P&&!P.dead)dmg*=halo();}catch(err){}return _hpe.call(this,dmg,src);};
+ // au sol, sous lui : le halo doré, et l'anneau vert du soin qui se resserre
+ function etatSol(c,e){const S=e.asm,X=ETAT(e);if(!X||S.mont)return;
+  if(S.sv.etat==='halo'){const dans=hyp(P.x-e.x,P.y-e.y)<X.rayon,pul=RM?1:0.85+0.15*Math.sin(T*3);c.save();
+   const g=c.createRadialGradient(e.x,e.y,X.rayon*0.2,e.x,e.y,X.rayon);g.addColorStop(0,`rgba(255,226,140,${0.02})`);g.addColorStop(0.85,`rgba(255,214,110,${(dans?0.16:0.08)*pul})`);g.addColorStop(1,'rgba(255,214,110,0)');
+   c.fillStyle=g;c.beginPath();c.arc(e.x,e.y,X.rayon,0,TAU);c.fill();
+   c.strokeStyle=`rgba(255,222,130,${(dans?0.85:0.5)*pul})`;c.lineWidth=dans?2.4:1.6;c.setLineDash([3,7]);c.lineDashOffset=RM?0:T*12;c.beginPath();c.arc(e.x,e.y,X.rayon,0,TAU);c.stroke();c.setLineDash([]);
+   if(dans){c.globalCompositeOperation='lighter';glow(c,P.x,P.y-6,26,'255,220,120',0.35*pul);}c.restore();}
+  if(S.soin&&S.soin.c>0){const k=1-S.soin.c/X.canalS;c.save();c.strokeStyle=`rgba(124,240,160,${0.5+0.4*k})`;c.lineWidth=3;c.beginPath();c.arc(e.x,e.y,e.r*(2.6-1.4*k),0,TAU);c.stroke();
+   c.fillStyle=`rgba(124,240,160,${0.08+0.12*k})`;c.beginPath();c.arc(e.x,e.y,e.r*(2.6-1.4*k),0,TAU);c.fill();c.restore();}}
+ // sur lui : arcs de la carapace, lueur de la fureur
+ function etatSurLui(c,e){const S=e.asm;if(!S.sv||!S.sv.etat)return;
+  if(S.garde&&S.garde.on>0){const al=Math.min(1,S.garde.on/0.25);c.save();c.strokeStyle=`rgba(190,210,235,${0.85*al})`;c.lineWidth=4;const rot=RM?0:T*1.5;
+   for(let i=0;i<6;i++){const a=i/6*TAU+rot;c.beginPath();c.arc(e.x,e.y,e.r*1.35,a,a+0.72);c.stroke();}c.restore();}
+  if(S.sv.etat==='fureur'){c.save();c.globalCompositeOperation='lighter';glow(c,e.x,e.y+e.r*0.3,e.r*2,'255,140,50',RM?0.45:0.38+0.14*Math.sin(T*7));c.restore();
+   c.save();c.strokeStyle=`rgba(255,160,70,${RM?0.6:0.45+0.2*Math.sin(T*7)})`;c.lineWidth=2;c.beginPath();c.arc(e.x,e.y,e.r*1.2,0,TAU);c.stroke();c.restore();}}
+ // le Voile : il s'efface (corps, masque et icônes)
+ const _deb3=drawEnemyBody;drawEnemyBody=function(e){const O=e.asm&&e.asm.ombre;if(!O||O.a>=0.999)return _deb3(e);ctx.save();ctx.globalAlpha*=O.a;try{_deb3(e);}finally{ctx.restore();}};
+ const _dep3=drawEnemyPost;drawEnemyPost=function(e){const O=e.asm&&e.asm.ombre;if(!O||O.a>=0.999)return _dep3(e);ctx.save();ctx.globalAlpha*=O.a;try{_dep3(e);}finally{ctx.restore();}};
+ NUMSTYLE.asoin=[17,'#7cf0a0'];
  function update(e,dt,rooted){const S=e.asm,st=S.st;let fige=false;
   if(S.mont){montStep(e,dt);asmPas(A,st,{dt,act:RUN.act,pv:100,dist:999,autre:true,fige:false},S.rnd);return;}
   if(e.stun>0){e.stun-=dt/A.etourdissement;fige=true;}
+  etatPas(e,dt);if(S.ombre&&S.ombre.on)fige=true;   // v17.14 : effacé, il ne lance rien, ne bouge pas et ne touche pas
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
   const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,autre:!tg.pl||zoneAutre(e),fige},S.rnd);
   for(const x of ev)onEvent(e,x);
@@ -8989,7 +9047,7 @@ function demoBoot(cls){
    if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);S.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');if(st.ph==='effet')asmFin(A,st,null);S.z=null;}
    else if(D.left<=0){S.dash=null;if(st.ph==='effet')asmFin(A,st,null);}}
   else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'||(st.ph==='effet'&&(S.taches||S.tourb||S.cercles))||(st.ph==='charge'&&S.z&&(A.bougeCharge||[]).includes(S.z.forme))))move(e,dt,sp,tg,dP,st.att>0);
-  if(!S.dash&&!P.dead&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);
+  if(!S.dash&&!P.dead&&dP<e.r+P.r-2&&!(S.ombre&&S.ombre.on))contact(e,e.dmg*A.stats.contact);
   // attaque passive : un trait vers toi à intervalle régulier, en plus de ses sorts (pas pendant son apparition)
   const PS=A.passive;if(PS&&st.ph!=='intro'){if(S.pas==null)S.pas=PS.intervalleS;
    if(!fige&&tg.pl&&!P.dead&&dP<=PS.portee&&!S.dash)S.pas-=dt;
@@ -9072,6 +9130,7 @@ function demoBoot(cls){
   c.restore();}
  const _dt=drawTelegraphs;
  drawTelegraphs=function(){_dt();try{const c=ctx;for(const e of enemies){if(e.dead||!e.asm)continue;const S=e.asm;
+   etatSol(c,e);
    if(S.taches)drawTaches(c,S.taches);
    if(S.tourb)drawTourb(c,S.tourb);
    if(S.cercles)drawCercles(c,S.cercles);
@@ -9146,6 +9205,7 @@ function demoBoot(cls){
   try{const c=ctx,lit=st.ph==='charge',h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max),fis=e.hp/e.maxHp*100<=A.masque.fissurePV;
    let jx=0,jy=0;if(lit&&!RM&&A.signatures[st.k]){jx=rand(-0.7,0.7);jy=rand(-0.7,0.7);}
    if(S.rage&&!M){c.save();c.globalCompositeOperation='lighter';glow(c,e.x,e.y,e.r*2.1,'255,70,80',RM?0.32:0.24+0.12*Math.sin(T*9));c.restore();}
+   if(!M)etatSurLui(c,e);
    const [fx_,fy_]=facePos(e);if(M)montPost(c,e,M,fx_,fy_,h);else drawMask(c,fx_+jx,fy_+jy,h,fis?'fissure':'calme',{lit});
    const PS=A.passive;if(PS&&S.pas!=null&&S.pas>0&&S.pas<=PS.preavisS){const k=1-S.pas/PS.preavisS;c.save();c.globalCompositeOperation='lighter';glow(c,fx_,fy_+h*0.42,4+10*k,'255,110,100',0.5+0.4*k);c.restore();}
    const top=Math.min(topY(e),faceY(e)-h*0.5)-6;
@@ -9154,10 +9214,12 @@ function demoBoot(cls){
    if(lit){const k=clamp(1-st.t/st.tot,0,1),sig=!!A.signatures[st.k],bh=sig?7:5,y=top-8-bh;
     c.fillStyle='rgba(0,0,0,.8)';c.fillRect(e.x-w/2-2,y-2,w+4,bh+4);c.fillStyle=sig?'#ff3d5a':'#ff5a50';c.fillRect(e.x-w/2,y,w*k,bh);
     if(sig){c.strokeStyle='rgba(255,240,245,.9)';c.lineWidth=1.4;c.strokeRect(e.x-w/2-1,y-1,w+2,bh+2);}}
-   const L=[...st.caps,...(st.eveil?[]:['_']),st.sig],sz=15,gap=4,tw=L.length*sz+(L.length-1)*gap+6,iy=top-(lit?(A.signatures[st.k]?27:25):12)-sz/2;
+   const L=[...st.caps,...(st.eveil?[]:['_']),st.sig,...(S.sv&&S.sv.etat?['@']:[])],sz=15,gap=4,tw=L.length*sz+(L.length-1)*gap+6+(S.sv&&S.sv.etat?6:0),iy=top-(lit?(A.signatures[st.k]?27:25):12)-sz/2;
    c.fillStyle='rgba(8,6,14,.78)';rr(c,e.x-tw/2-3,iy-sz/2-4,tw+6,sz+8,6);c.fill();
-   L.forEach((k,i)=>{const x=e.x-tw/2+3+i*(sz+gap)+(k===st.sig?6:0)+sz/2;const on=lit&&k===st.k;
+   L.forEach((k,i)=>{const x=e.x-tw/2+3+i*(sz+gap)+(k===st.sig?6:k==='@'?12:0)+sz/2;const on=lit&&k===st.k;
     if(k==='_'){drawIcon(c,'u_sleep',x,iy,sz,'rgba(185,170,220,.55)',1.8);return;}
+    if(k==='@'){const ET=A.etats[S.sv.etat];c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();
+     drawIcon(c,ET.ic,x,iy,sz,'rgba(240,232,255,.98)',2);return;}
     const X=A.capacites[k]||A.signatures[k];
     if(S.sv&&k===S.sv.cap){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();}
     if(on){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.2,'255,120,110',0.6);c.restore();}

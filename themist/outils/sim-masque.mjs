@@ -63,6 +63,17 @@ for (const k of SOUV) ok(Object.values(A.souvenir.familles).includes(k), `capaci
   ok(C && C.nombre >= 2 && C.pas - C.largeur >= 2 * PR * 0.5 + 24, `cercles : l'espace entre deux anneaux (${C.pas - C.largeur} px) doit laisser passer le joueur`);
   ok(Math.abs(C.effetS - ((C.nombre - 1) * C.battueS + 0.55)) < 0.2, `cercles : effetS (${C.effetS}) ≈ (nombre-1) × battueS + 0,55`);
   ok(C.battueS >= 0.4, 'cercles : une battue plus courte que l’invulnérabilité du joueur la rendrait injuste'); }
+// 1 quinquies (v17.14). États : chaque famille d'état existe, chaque état est défini et ses durées se lisent
+for (const [fam, k] of Object.entries(A.souvenir.etats || {})) {
+  const X = A.etats && A.etats[k];
+  ok(SV.familles[fam], `état : famille ${fam} absente de data/souvenirs.js`);
+  ok(X && X.n && X.ic, `état ${k} : nom et icône`);
+  ok(!A.souvenir.familles[fam], `famille ${fam} : à la fois capacité et état`);
+  if (X && X.cycleS) ok((X.dureeS || X.canalS || 0) < X.cycleS && X.premierS >= 0, `état ${k} : la durée doit rester sous le cycle`);
+  if (X && X.reduit) ok(X.reduit <= X.reduitMax && X.reduitMax < 1, `état ${k} : réduction bornée sous 100 %`);
+  if (X && X.expose) ok(X.expose > 0 && X.expose <= 0.5 && X.rayon > 0, `état ${k} : exposition raisonnable`);
+  if (X && X.soin) ok(X.soin <= 0.15 && X.rupture > 0 && X.seuil < 100, `état ${k} : soin borné et interruptible`);
+}
 // 1 quater (v17.13). Fil et Faisceau
 { const PR = 11, VMIN = 190, F = A.capacites.fil, Q = A.capacites.faisceau;
   const chargeMin = Math.max(A.chargeMinS, Math.min(F.chargeS, Q.chargeS) * Math.pow(A.accelerationActe, 2));
@@ -105,13 +116,19 @@ for (const [act, salle] of [[1, 4], [2, 10], [3, 18]]) {
 {
   const fam = {}; for (const [k, f] of Object.entries(SV.familles)) (f.t || []).forEach(id => { fam[id] = k; });
   const de = f => SV.familles[f].t[0], ent = (id, o) => Object.assign({ id, source: 'talent', rang: 1, g: 0, porte: 0 }, o);
-  const portable = Object.keys(A.souvenir.familles), nonPortable = Object.keys(SV.familles).filter(f => !portable.includes(f) && (SV.familles[f].t || []).length);
+  const etats = A.souvenir.etats || {}, portable = [...Object.keys(A.souvenir.familles), ...Object.keys(etats)], nonPortable = Object.keys(SV.familles).filter(f => !portable.includes(f) && (SV.familles[f].t || []).length);
   const S100 = Object.assign({}, A, { souvenir: Object.assign({}, A.souvenir, { chance: 100 }) });
   ok(F.asmSouvenir(S100, [], fam, F.asmRng(1), 0) === null, 'réserve vide : rien');
   if (nonPortable.length) ok(F.asmSouvenir(S100, nonPortable.map(f => ent(de(f))), fam, F.asmRng(2), 0) === null, `familles sans capacité (${nonPortable.join(', ')}) : rien`);
   ok(F.asmSouvenir(S100, [ent('chain', { source: 'relique' })], fam, F.asmRng(3), 0) === null, 'une relique ne se porte pas');
   ok(F.asmSouvenir(S100, [ent(de('sol'))], fam, F.asmRng(4), A.souvenir.parActe) === null, 'plafond de porteurs par acte');
-  for (const f of portable) { const r = F.asmSouvenir(S100, [ent(de(f))], fam, F.asmRng(5), 0); ok(r && r.cap === A.souvenir.familles[f], `famille ${f} : capacité ${A.souvenir.familles[f]}`); }
+  for (const f of portable) { const r = F.asmSouvenir(S100, [ent(de(f))], fam, F.asmRng(5), 0);
+    if (A.souvenir.familles[f]) ok(r && r.cap === A.souvenir.familles[f] && !r.etat, `famille ${f} : capacité ${A.souvenir.familles[f]}`);
+    else ok(r && r.cap === null && r.etat === etats[f], `famille ${f} : état ${etats[f]}`); }
+  // v17.14 · un porteur d'état garde un tirage ordinaire (aucune capacité de souvenir dans ses combinaisons)
+  for (const f of Object.keys(etats)) { const r = F.asmSouvenir(S100, [ent(de(f))], fam, F.asmRng(6), 0);
+    for (let i = 0; i < 200; i++) { const co = F.asmTirage(A, { act: 2, salle: 10, porte: r.cap }, null, F.asmRng(i + 11), null);
+      ok(co && [...co.depart, co.eveil].every(k => !A.capacites[k].souvenir), `état ${etats[f]} : capacité de souvenir tirée sans souvenir`); } }
   { const r = F.asmSouvenir(S100, [ent(de('sol'), { rang: 3, g: 2 })], fam, F.asmRng(6), 0);
     ok(Math.abs(r.force - (1 + 2 * A.souvenir.parRang + 2 * A.souvenir.parGravure)) < 1e-9, `force au rang 3, gravé deux fois (${r.force})`); }
   let n = 0; const N = 20000, res = [ent(de('sol'))];

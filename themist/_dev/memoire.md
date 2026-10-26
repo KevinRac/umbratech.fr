@@ -935,3 +935,27 @@ Mesures en jeu (Chromium) : fil, joueur immobile : 22 PV, distance 201 → 49 px
 Wiki : inchangé (il ne liste pas les capacités de souvenir), seule la version suit. Journal : v17.13.
 
 À surveiller : la traction du Fil pour un corps à corps (elle ramène au contact du Masqué : bon pour un Gouffre, moins pour un Lumenarque) ; la lisibilité du balayage du Faisceau sur un fond sombre.
+
+## 18. Palier 2, quatrième tranche : les états (v17.14, 26 octobre 2026)
+
+Les familles **Lumière, Ombre, Soin, Garde et Fureur** donnent au Masqué porteur un **état** au lieu d’une capacité : il garde un tirage ordinaire (ses deux capacités de départ, sa capacité d’éveil, sa signature) et l’état s’y ajoute. L’état est montré par son icône cerclée de lavande, après la signature (au-dessus de lui et dans sa bulle d’arrivée). Avec elles, quatorze familles sur quinze sont portables.
+
+**Fortune n’est pas faite** : la famille n’a aucun talent (seulement 4 reliques : crâne, clef, bourse, boussole), et le Masqué ne porte que des talents oubliés. Elle attend que le Masqué puisse porter une relique (ou qu’un talent Fortune existe). Idée gardée : il vole de l’or à chaque coup et le rend, majoré, à sa mort.
+
+| Famille | État | Effet | Signal |
+|---|---|---|---|
+| Lumière | `halo` (`u_star`) | Dans 150 px autour de lui, tu subis +25 % de dégâts (toutes les sources) | Cercle doré pointillé au sol, plus vif quand tu y es, lueur dorée sur toi |
+| Ombre | `voile` (`u_ghost`) | Toutes les 5,5 s (première à 3 s), entre deux sorts, il s’efface 1,1 s : intouchable, immobile, sans contact ni tir ; il reparaît à 140 px de toi | Bouffée sombre, corps, masque et icônes à 15 % d’opacité, étincelles violettes au retour |
+| Soin | `regen` (`u_heart`) | Sous 85 % de PV, toutes les 6 s : canalise 1,2 s puis se soigne de 8 % de ses PV max. Lui infliger 6 % de ses PV max pendant la canalisation, ou l’étourdir, l’interrompt | Anneau vert qui se resserre, « +N » vert, « Interrompu » |
+| Garde | `carapace` (`u_shield`) | 3 s toutes les 7 s : −40 % de dégâts subis (au plus −60 % avec la force du souvenir) | Six arcs gris-bleu qui tournent autour de lui |
+| Fureur | `fureur` (`u_fist`) | Permanent : +15 % de dégâts (× force), +20 % de vitesse | Lueur et anneau orangés sous lui |
+
+Réglages : `data/bestiaire.js`, `assemble.etats` et `assemble.souvenir.etats` (famille → état). Logique pure : `asmSouvenir` renvoie `{x, cap, etat, force}` (une famille donne soit une capacité, soit un état). Jeu : bloc v16.24 (`etatInit`, `etatPas`, `etatSol`, `etatSurLui`, enveloppes de `hitEnemy` et `hurtPlayer`, `immun` étendu au Voile, opacité du Voile sur le corps et le masque).
+
+Garde-fous (sim-masque.mjs, 1 quinquies et 2 bis) : chaque état a sa famille, son nom et son icône ; aucune famille n’est à la fois capacité et état ; durées sous le cycle ; réduction bornée sous 100 % ; exposition au plus +50 % ; soin au plus 15 % et interruptible ; un porteur d’état ne tire jamais de capacité de souvenir.
+
+Mesures en jeu (Chromium, normal et mouvements réduits) : halo 125 dedans / 100 dehors ; voile 0 dégât une fois effacé, retour à 136–144 px ; régénération +8 %, interrompue par 7 % ; carapace 60 / 100 ; fureur dégâts ×1,15. Corrigé pendant les tests : le masque restait opaque pendant le Voile (`drawMask` imposait l’opacité, elle est maintenant multipliée) ; près d’un mur, le Voile reparaissait trop près (on garde le point le plus proche de 140 px).
+
+Wiki : inchangé (il ne liste pas ce que porte le Masqué), seule la version suit. Journal : v17.14.
+
+À surveiller : le Halo contre un corps à corps (+25 % en permanence au contact : il se cumule avec la survie du Gouffre, −20 %, ce qui fait un net +0 % environ) ; le Voile contre les classes qui ont besoin d’une cible (il est intouchable 1,1 s toutes les 5,5 s, soit environ 20 % du temps).

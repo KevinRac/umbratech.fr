@@ -170,7 +170,24 @@
   // Brisé, il propose de reprendre le souvenir à la place de la relique (D9). Les dégâts infligés à un porteur ne comptent pas dans l'Accoutumance (D5).
   // pv (v17.10) : PV du porteur en plus, par rang au-delà du premier et par gravure du souvenir (voler un talent fort coûte cher).
   souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,pv:0.1,
-   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches',devoration:'tourbillon',cloche:'cercles',fil:'fil',faisceau:'faisceau'}},
+   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches',devoration:'tourbillon',cloche:'cercles',fil:'fil',faisceau:'faisceau'},
+   // v17.14 · familles d'état : pas de zone, pas de place de départ ; le porteur garde ses capacités tirées et gagne un état (voir etats).
+   // Fortune n'a aucun talent (seulement des reliques, que le Masqué ne porte pas) : pas d'état pour elle tant que c'est le cas.
+   etats:{lumiere:'halo',ombre:'voile',soin:'regen',garde:'carapace',fureur:'fureur'}},
+  // v17.14 · États portés (un seul par porteur). ic : icône (data/icones.js), montrée cerclée de lavande après sa signature.
+  // force (rang et gravure du souvenir, voir souvenir) multiplie expose, soin et degats ; reduit est borné par reduitMax.
+  etats:{
+   // Halo : un cercle doré au sol autour de lui (rayon px) ; tant que tu y es, tu subis expose de dégâts en plus (de toutes les sources).
+   halo:{n:'Halo',ic:'u_star',rayon:150,expose:0.25},
+   // Voile : toutes les cycleS secondes, entre deux sorts, il s'efface dureeS secondes (presque invisible et intouchable), puis reparaît à reparait px de toi.
+   voile:{n:'Voile',ic:'u_ghost',cycleS:5.5,premierS:3,dureeS:1.1,alpha:0.15,reparait:140},
+   // Régénération : sous seuil % de PV, toutes les cycleS secondes, il canalise canalS secondes (anneau vert qui se resserre) puis se soigne de soin × PV max.
+   // Lui infliger rupture × PV max pendant la canalisation, ou l'étourdir, l'interrompt.
+   regen:{n:'Régénération',ic:'u_heart',cycleS:6,premierS:2,canalS:1.2,soin:0.08,seuil:85,rupture:0.06},
+   // Carapace : dureeS secondes sur cycleS, il subit reduit de dégâts en moins (arcs gris-bleu autour de lui).
+   carapace:{n:'Carapace',ic:'u_shield',cycleS:7,premierS:2,dureeS:3,reduit:0.4,reduitMax:0.6},
+   // Fureur : en permanence, degats de dégâts et vitesse de vitesse en plus (lueur orangée sous lui).
+   fureur:{n:'Fureur',ic:'u_fist',degats:0.15,vitesse:0.2}},
   // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
   // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
   passive:{n:'Trait',ic:'u_arrow',intervalleS:1,preavisS:0.25,degats:0.6,vitesse:320,portee:560},
