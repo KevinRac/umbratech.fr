@@ -50,5 +50,8 @@
  // PV des gardiens (index 1 à 3 = actes I à III). pv : base ; pvMul : multiplicateur d’équilibrage (avant les paliers et les Résonances).
  // v17.10 : plus longs à tuer, ×1,4 (multiplicateurs avant : 1,9 · 1,8 · 1,8). PV au palier 0 : 2 650 · 5 750 · 9 000.
  pv:[0,1000,2300,3600],
- pvMul:[1,2.65,2.5,2.5]
+ pvMul:[1,2.65,2.5,2.5],
+ // v17.12 · Survie du Gouffre, seulement quand un gardien ou un Masqué est en vie dans la salle (son corps à corps l'expose à leurs zones).
+ // degatsRecus : × les dégâts qu'il reçoit ; vol : part des dégâts qu'il inflige à un gardien ou à un Masqué qui lui revient en PV (pas sur les dégâts sur la durée).
+ survieGouffre:{degatsRecus:0.8,vol:0.05}
 };})(window.BRUME_DATA=window.BRUME_DATA||{});

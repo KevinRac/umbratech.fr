@@ -241,7 +241,13 @@ function chance(p, court) {
   const nb = n === 1 ? 'une' : mot(n);
   return court ? `${nb} sur ${mot(d)}` : `${nb} chance${n > 1 ? 's' : ''} sur ${mot(d)}`;
 }
-function bestiaire(B, I, MQ) {
+// v17.12 · phrase sur la survie du Gouffre face aux gardiens et aux Masqués (données : gardiens.js, survieGouffre)
+function survieGouffre(G) {
+  const S = G && G.survieGouffre; if (!S) return '';
+  const pct = x => Math.round(x * 100);
+  return `<p>Face à un gardien ou à un Masqué, le <b>Gouffre</b> encaisse mieux : <b>−${pct(1 - S.degatsRecus)} %</b> de dégâts reçus, et ${pct(S.vol)} % des dégâts qu’il leur inflige lui reviennent en PV. Son corps à corps l’expose à leurs zones.</p>`;
+}
+function bestiaire(B, I, MQ, G) {
   const E = B.ennemis, C = B.champion, RS = B.reglesSalle, BR = B.breche, EF = B.efficacite;
   const nom = k => E[k].n;
   const ennemis = Object.values(E).filter(e => e.desc).map(e =>
@@ -289,6 +295,7 @@ function bestiaire(B, I, MQ) {
 ${AS.montage ? `<p><b>Le montage.</b> À son arrivée, l’aberration est invoquée par un bruitage de brume d’environ trois secondes et demie : la brume gonfle, un chœur désaccordé s’affaisse, des chuchotements passent, puis un coup sourd. C’est un son à lui, différent de celui du Brumeux. Le corps d’origine descend au bout de <b>fils de marionnette</b>, le masque tombe sur sa tête et y est <b>cousu de force</b> : une aiguille, tenue par un fil qui remonte jusqu’à sa croix, trace chaque point un à un et le masque se serre contre la tête à chaque point ; il grossit le temps de la couture pour qu’on la voie bien (les points restent visibles), puis les fils sont coupés et ses yeux s’allument. Le montage dure ${sec(AS.montage.descenteS + AS.montage.masqueS + AS.montage.coutureS + AS.montage.coupeS)}${AS.montage.immunise ? ' ; pendant ce temps, il ne frappe pas et ne peut pas être blessé' : ''}.</p>
 ` : ''}<p>Il arrive avec la <b>deuxième vague</b> : en salle d’élite à la place du champion ; en Brèche, son champion s’efface. Pendant ses sorts, les autres ennemis ne lancent pas les leurs, et il attend la fin des leurs : <b>jamais deux zones à la fois</b>. Chaque sort se <b>charge</b> : barre au-dessus de lui, zone rouge dès le début, son qui monte, yeux du masque allumés, icône du sort qui s’éclaire. Une forme correspond toujours au même sort. Il ne lance <b>qu’un sort à la fois</b>, avec ${sec(AS.pauseS)} de pause entre deux, et souffle un peu plus après sa signature. Ses sorts tournent en cycle : chaque capacité une fois, dans un ordre qui change, puis la signature. ${AS.rage ? `Sous ${AS.rage.pv} % de PV, il entre en <b>rage</b> : une aura rouge l’entoure et il ne souffle presque plus entre deux sorts. ` : ''}${AS.bougeCharge && AS.bougeCharge.length ? 'Pendant les sorts qu’il pose sous tes pieds, il continue de te poursuivre. ' : ''}Ses étourdissements durent ${AS.etourdissement === 0.5 ? 'moitié moins' : `${pct(AS.etourdissement)} de la normale`}. Pas de contre-mesure ni de règle de salle avec lui. Brisé, il donne <b>${AS.recompense.reliques > 1 ? `${mot(AS.recompense.reliques)} reliques` : 'une relique'}</b> de plus que la salle ; hors salle d’élite, il donne aussi l’or et les éclats d’un champion.</p>${AS.souvenir ? `
 <p>Parfois, il porte autre chose. Tu le reconnaîtras.</p>` : ''}
+${survieGouffre(G)}
 <h4 class="sub">Corps</h4>
 <div class="grid g3">${corps}</div>
 <h4 class="sub">Capacités empruntées</h4>
@@ -327,7 +334,7 @@ function gardiens(G, F) {
   const failles = Object.entries(G.failles).map(([a, f]) => `<article class="ent"><h4>${esc(A[a - 1].boss)}</h4><p><b>${esc(f.l1)}.</b></p><p><b>${esc(f.l3)}.</b> ${esc(f.t3)}</p></article>`).join('');
   const fen = Object.entries(G.fenetres).map(([c, x]) => `<article class="ent" data-cls="${c}"><h4 style="color:${F[c].col}">${esc(F[c].n)}</h4><p><b>Avertissement :</b> ${esc(x.warn)}.</p><p><b>Fenêtre :</b> ${esc(x.label)}.</p></article>`).join('');
   const titre2 = Object.keys(G.failles).map((a, i) => `${esc(i ? lower(A[a - 1].boss) : A[a - 1].boss)} · Acte ${ROM[a]}`).join(' et ');
-  return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Chaque acte se termine par un gardien. Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux du palier 0 ; les paliers de Brume les augmentent.</p>' : ''}</div></header>
+  return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Chaque acte se termine par un gardien. Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux du palier 0 ; les paliers de Brume les augmentent.</p>' : ''}${survieGouffre(G)}</div></header>
 <div class="grid g3">${cartes}</div>
 
 <h3 class="sub">${esc(A[0].boss)} · Acte I</h3>
@@ -491,7 +498,7 @@ export function build(html) {
   out = replaceSection(out, 'memoire', memoire(D));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D), D.souvenirs));
   out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
-  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque));
+  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque, D.gardiens));
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
   out = replaceSection(out, 'talents', talents(D.talents, D.arbre, D.souvenirs));

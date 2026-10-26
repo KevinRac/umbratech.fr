@@ -907,3 +907,12 @@ Garde-fous (vérifiés par `outils/sim-masque.mjs`, section 1 ter) : l’attract
 Wiki : inchangé (il ne liste pas les capacités de souvenir), seule la version suit. Journal : v17.11.
 
 À surveiller : si le tourbillon est trop facile à quitter (il n’attire que 120 px/s) ou si les Cercles tuent surtout au premier coup (le disque central, quand on ne bouge pas pendant le chargement).
+
+## 16. Survie du Gouffre contre les gardiens et les Masqués (v17.12, 26 octobre 2026)
+
+Constat du joueur : depuis v17.10, le Gouffre (corps à corps obligé pour son DPS) ne passe pas l’acte III : un Masqué lance un sort toutes les 0,7 s environ et le Gouffre paie toutes ses zones sans fenêtre pour frapper. Demande : de la survie pour le Gouffre, mais seulement contre gardien ou Masqué.
+
+Réglage (`data/gardiens.js`, `survieGouffre`) : × 0,8 sur les dégâts reçus, et vol de 5 % des dégâts infligés à un gardien ou à un Masqué (hors dégâts sur la durée). Actif tant qu’un gardien (`type==='boss'`) ou un Masqué (`e.asm`) est en vie dans la salle (`gouGrand()`), donc aussi contre leur escorte. Le soin passe par `heal(…, 'boss')`, source déjà autorisée sous Famine. Il s’ajoute à la Carapace et aux mutations (multiplicatif).
+
+Non fait (à mesurer d’abord sur des descentes exportées) : respiration de fin de cycle (apresSignatureS), rage limitée aux actes I–II.
+Wiki : une phrase dans « Les gardiens » et dans « Le Masqué », générée depuis les données.

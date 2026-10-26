@@ -993,6 +993,8 @@ function resetLantern(){const L=P.lan;if(P.cls!=='lum'){L.state='none';return;}L
 function collidePlayer(){for(const p of room.pillars){const dx=P.x-p.x,dy=P.y-p.y,d=hyp(dx,dy)||1,m=p.r+P.r;if(d<m){P.x=p.x+dx/d*m;P.y=p.y+dy/d*m;}}P.x=clamp(P.x,AR.x0+P.r,AR.x1-P.r);P.y=clamp(P.y,AR.y0+P.r,AR.y1-P.r);}
 function nearestEnemy(x,y,max,skip){let best=null,bd=max;for(const e of enemies){if(e.dead||(skip&&skip.has(e)))continue;const d=hyp(e.x-x,e.y-y);if(d<bd){bd=d;best=e;}}return best;}
 function gainLueur(n,raw){if(P.cls!=='lum')return;P.lueur=Math.min(100,P.lueur+n*(raw?1:P.s.lueurGain*(1+P.elan/100)));}
+// v17.12 · le Gouffre face à un gardien ou à un Masqué en vie : il encaisse mieux (data/gardiens.js, survieGouffre)
+function gouGrand(){return !!(P&&P.cls==='gou'&&GA_D.survieGouffre&&room&&enemies.some(x=>!x.dead&&(x.type==='boss'||x.asm)));}
 function heal(n,src){if(P.s.faim&&!['devour','boss','halte'].includes(src))return;P.hp=Math.min(P.s.maxHp,P.hp+n);}
 function gainXp(n){P.xp+=n;while(P.xp>=xpNeed(P.level)){P.xp-=xpNeed(P.level);P.level++;P.pendingLv++;heal(P.s.maxHp*0.06,'level');sfx('level');}}
 function moveInput(){let mx=0,my=0;if(keys.has('KeyW')||keys.has('ArrowUp'))my-=1;if(keys.has('KeyS')||keys.has('ArrowDown'))my+=1;if(keys.has('KeyA')||keys.has('ArrowLeft'))mx-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))mx+=1;return[mx,my];}
@@ -1392,6 +1394,7 @@ function hitEnemy(e,base,o={}){
  e.hp-=dmg;RUN.dmg+=dmg;e.lastHit=RUN.time;if(e.fixed)e.dmgLog.push([RUN.time,dmg]);
  v6AfterHit(e,dmg,o);
  if(s.lifesteal)heal(dmg*s.lifesteal,'steal');
+ if(!o.dot&&P.cls==='gou'&&(e.type==='boss'||e.asm)&&GA_D.survieGouffre)heal(dmg*GA_D.survieGouffre.vol,'boss');
  if(o.dot)e.dotAcc+=dmg;
  else{e.flash=0.09;addNum(e.x+rand(-6,6),e.y-e.r-6,Math.round(dmg),crit?'crit':(o.light?'light':o.cor?'cor':'n'));
   if(crit){if(s.danse)danseReduce();if(!RM)freezeT=Math.max(freezeT,0.035);sfx('crit');}else sfx('hit');
@@ -1436,7 +1439,7 @@ function playerDown(){
 }
 function hurtPlayer(dmg,src){
  if(P.iT>0||P.dashT>0||P.dead||state!=='play')return;
- const s=P.s;dmg*=s.dmgTaken;
+ const s=P.s;dmg*=s.dmgTaken;if(gouGrand())dmg*=GA_D.survieGouffre.degatsRecus;
  if(P.cls==='gou'){if(P.carapT>0)dmg*=s.carapace>=2?0.25:0.4;if(mutHas('pierre'))dmg*=0.6;if(P.metaT>0)dmg*=0.7;
   if(P.carapT>0&&P.carapFx<=0){P.carapFx=0.4;later(0,()=>explosion(P.x,P.y,95,0,30,{col:'rgba(200,200,190,',spark:'#e0ddd0',light:'none'}));}
   if(s.thorns&&src&&src.thornT<=0){src.thornT=0.5;hitEnemy(src,s.thorns,{crit:false,kb:120,sx:P.x,sy:P.y,color:'#e2b0ff'});}}
