@@ -190,6 +190,9 @@
    fureur:{n:'Fureur',ic:'u_fist',degats:0.15,vitesse:0.2}},
   // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
   // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
+  // Couleurs de toutes ses zones (et de celles des armes de la Brume, data/souvenirs-brume.js, qui n'en ont pas d'autres) :
+  // zone : remplissage (r,g,b) ; bord : liseré pointillé (r,g,b) ; charge / signature : barre de chargement au-dessus de lui.
+  couleurs:{zone:'255,58,52',bord:'255,96,84',charge:'#ff5a50',signature:'#ff3d5a'},
   passive:{n:'Trait',ic:'u_arrow',intervalleS:1,preavisS:0.25,degats:0.6,vitesse:320,portee:560},
   // Sorts signature (un par corps), chacun avec une forme qu'aucun autre sort n'utilise.
   signatures:{

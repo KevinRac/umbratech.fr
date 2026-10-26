@@ -959,3 +959,74 @@ Mesures en jeu (Chromium, normal et mouvements réduits) : halo 125 dedans / 100
 Wiki : inchangé (il ne liste pas ce que porte le Masqué), seule la version suit. Journal : v17.14.
 
 À surveiller : le Halo contre un corps à corps (+25 % en permanence au contact : il se cumule avec la survie du Gouffre, −20 %, ce qui fait un net +0 % environ) ; le Voile contre les classes qui ont besoin d’une cible (il est intouchable 1,1 s toutes les 5,5 s, soit environ 20 % du temps).
+
+## 19. Palier 3a : les armes de la Brume, le système (v17.15, 26 octobre 2026)
+
+Consigne : chaque famille de souvenirs reçoit une **version ennemie** construite uniquement avec les formes que le joueur connaît déjà, sous des règles de justice **codées**. Données dans un fichier à part, mode d’essai réservé au développement. **Rien ne change pour le joueur** : aucun Masqué ordinaire ne s’en sert, le tirage du Masqué et ses capacités de souvenir (v17.9 à v17.14) sont intacts, le wiki n’en dit rien.
+
+### Ce qui est construit
+
+| Où | Quoi |
+|---|---|
+| `data/souvenirs-brume.js` (`BRUME_DATA.souvenirsBrume`) | Vocabulaire (9 formes), règles de justice, bornes des formes, variantes, renforts, les 15 familles (attaque en étapes, forme principale, icône, adjectif, menace, échelle d’acte, incompatibilités), réglage du mode d’essai, tables `talents` et `reliques` **vides** (palier 3b). |
+| `data/bestiaire.js`, `assemble.couleurs` | Les couleurs des zones du Masqué sortent du code (`zone`, `bord`, `charge`, `signature`) : le Masqué et les armes les lisent au même endroit. Valeurs inchangées. |
+| `index.html`, bloc `/*sb:pur*/` (dans le bloc v16.24 du Masqué) | Logique pure : `sbEtapes`, `sbCharge`/`sbPlancher`/`sbVerrou`, `sbPieces` (géométrie au format `drawZone`), `sbDans` (touché, mêmes règles que le jeu), `sbArrivee`/`sbEffet`, `sbSortie`, `sbPlacer`, `sbPlafond`/`sbCoup`, `sbIncompatibles`, `sbNouveau`/`sbPas` (file d’étapes), `sbVerifier`. |
+| `index.html`, section « v17.15 · Les armes de la Brume, en salle » | Exécution sur un Masqué qui porte `e.asm.sb` : `sbMaj` (file, suivi puis figement, déplacements, ruée, repousse), `sbLache` (anneau dans `ZR`, ruée, projectiles dans `eproj`, zones instantanées), `sbDessin` (`drawZone` du Masqué ; projectiles : trajet en pointillé et orbe au liseré qui grossit), navette et perçant dans une enveloppe d’`updateProjectiles`, `sbRenfort`. Branchements : `update` (une ligne), `drawTelegraphs`, icônes au-dessus de lui et carte d’arrivée (l’icône de la famille, cerclée de lavande), `annule`, brisure. |
+| `index.html`, mode d’essai | `index.html?brume=<famille>|tout[&classe=lum|gou|her|tis][&acte=1|2|3][&variante=…][&renfort=…][&dieu=0][&bot=1]`. Aucune touche. Salle vide (sans la feinte du Brumeux), Masqué d’essai (pas de trait passif, ni éveil ni rage, pas d’XP, pas de récompense ; brisé, il revient, ou passe à la famille suivante en mode `tout`). Barre en haut : 15 icônes pour choisir, ▶, « PV ∞ » (par défaut : jamais sous 1 PV), étape en cours, chargement contre celui du Masqué, sortie trouvée (px), étapes sautées, dégâts subis, et `sbVerifier` rejoué sur la famille montrée. `bot=1` : conduit le joueur vers la sortie calculée à 180 px/s (contact du porteur coupé) pour voir qu’elle existe. Console : `__asm.sb`. |
+| `outils/sim-brume.mjs` | Juge les données hors navigateur (même `sbVerifier`), vérifie la file d’étapes et fait neuf contre-épreuves (données injustes qui doivent être refusées). |
+
+### Une attaque, des étapes
+
+Une version ennemie est une **attaque** de 2 ou 3 étapes. Une étape = **une** zone d’**une** forme (plusieurs pièces de la même forme sont permises, comme les cinq losanges d’Éclats). L’étape suivante ne charge qu’une fois la précédente **finie** (onde arrivée au bout, projectiles disparus, ruée terminée), plus un silence `entracteS` (0,25 s). Champs : `f`, `sur` (`lui`, `toi`, `ancre` = centre de l’étape précédente), `vise`, `suivi` (part du chargement où la zone te suit, puis se fige), `chargeS` (acte I), `degats` (× dégâts du porteur), `portee`, `v` (variantes propres), et les mesures de la forme.
+
+| Famille | Attaque | Forme principale | Étapes | Dégâts I / III (attaque entière) | Incompatibles |
+|---|---|---|---|---|---|
+| Projectile | Rafale | projectile | 2 volées de 3 orbes au liseré, visées | 1,53 / 2,07 | Fil |
+| Faisceau | Rais | couloir | 3 rais instantanés (34 px de large), chacun revisé | 2,04 / 2,76 | Ruée, cap. Charge |
+| Lame | Taillades | cône | 2 cônes (110°, puis 140°), il s’approche | 1,87 / 2,53 | Dévoration, Garde, cap. Lame |
+| Ruée | Aller-retour | couloir | 2 ruées (corps du porteur, 700 px/s) | 2,04 / 2,76 | Faisceau, cap. Charge |
+| Onde | Échos | anneau à brèche | 2 ondes, la seconde brèche à l’opposé de la première | 1,70 / 2,30 | Cloche, Garde, cap. Explosion, Onde |
+| Sol | Dalles | damier | damier en +, puis en × sur la même grille (les cases sûres s’inversent) | 1,87 / 2,53 | Fortune, corps Voilé |
+| Fil | Navette | projectile | 2 navettes en V puis 1 navette : elles reviennent sur leur trajet | 2,55 / 3,45 | Projectile |
+| Cloche | Glas | disque | la cloche tombe sur toi, son onde part de là, puis une deuxième cloche | 2,55 / 3,45 | Garde, Onde, cap. Explosion, Onde |
+| Dévoration | Mâchoire | cône | deux mâchoires sur les côtés (le milieu est sûr), puis la morsure (vol) | 1,79 / 2,42 | Garde, Lame, cap. Lame |
+| Lumière | Aube | rayons | 2 étoiles de 8 rayons, un rayon sur toi | 1,53 / 2,07 | cap. Salve |
+| Ombre | Croix d’ombre | croix | croix en × sur toi, puis en + | 2,04 / 2,76 | corps Brute |
+| Soin | Saignée | losanges | 3 losanges sur toi et en ligne (vol), deux fois | 1,87 / 2,53 | Fureur, corps Spectre |
+| Garde | Bastion | disque | le bouclier éclate autour de lui, puis coup de bouclier en cône (repousse) | 2,13 / 2,88 | Cloche, Dévoration, Lame, Onde, cap. Lame, Explosion, Onde |
+| Fureur | Martèlement | losanges | 3 losanges sur toi, de plus en plus vite (0,6 → 0,5 s) | 2,29 / 3,10 | Soin, corps Spectre |
+| Fortune | Coup de dés | damier | 5 cases tirées sur 9, deux fois | 1,87 / 2,53 | Sol, corps Voilé |
+
+Fortune n’a toujours aucun talent : sa version existe (complète et jouable en essai) pour le Glas Originel ou un Masqué qui porterait une relique, plus tard.
+
+### Les règles de justice, et où le code les tient
+
+1. **Formes connues seulement.** `sbVerifier` refuse toute étape dont `f` n’est pas l’une des neuf formes (`formes`), une variante interdite sur une forme, une mesure hors `bornes`.
+2. **Chargement.** `sbCharge` = `chargeS` × `accelerationActe` par acte, **jamais sous `sbPlancher`** : la plus courte des capacités actuelles du Masqué à cet acte, lue par `asmDuree` (0,55 / 0,50 / 0,50 s) ; une étape aussi lourde que la plus légère signature ne descend pas sous la plus courte signature (0,85 s). Le plancher suit le Masqué : s’il charge plus lentement, ses armes aussi. Entre le figement et le coup : au moins `verrouMinS` (0,22 s), et `suivi` ≤ 0,6.
+3. **Toujours une sortie.** `sbSortie` cherche, depuis ta position au figement, un point libre (dans la salle, hors des piliers en jeu, hors du corps du porteur, hors de toute pièce plus une marge de 4 px) que tu atteins **à pied, en ligne droite, à 180 px/s, sans esquive**, sans jamais être sur une pièce au moment où elle y frappe (instantanée : au lâcher ; anneau, ruée, projectiles : à leur arrivée), réflexe de 0,05 s retiré. En jeu, `sbPlacer` l’exige **avant chaque zone** (au chargement pour une zone fixe, au figement pour une zone qui suit) ; sinon il retourne la zone, tourne la brèche, décale vers le centre de la salle ou tire à nouveau ce qui est tiré au hasard (8 essais) ; sinon **l’étape saute** : aucune zone sans sortie n’est jamais posée. Hors jeu, `sbVerifier` l’éprouve depuis 4 positions du porteur (centre, mur, deux coins) × 6 distances × 16 angles, à l’acte III, seule et avec chaque variante. Un saut n’est toléré que porteur dans un coin (au plus 10 % des placements) : aujourd’hui Ruée et Bastion sautent dans 2 et 6 cas sur 472, contre un coin.
+4. **Jamais deux zones à la fois.** `sbPas` est une file à une place : chargement, lâcher, effet tant que la zone vit, silence, étape suivante. Le porteur garde la priorité de zone de sa première charge à la fin de l’attaque (`st.ph` vaut `charge` ou `effet` : `asmZone` fait attendre les Brutes, Hurleurs, Voilés et Bouffis) et attend lui-même que les zones des autres soient finies (`zoneAutre`). Le simulateur tire des pas de temps, des attentes et des durées de zone au hasard et vérifie qu’il n’y a jamais deux zones ouvertes.
+5. **Mêmes couleurs.** Les données n’ont pas de couleur (`sbVerifier` refuse tout champ `col`/`couleur` ou toute valeur `#…`/`rgb…`) ; tout est dessiné par `drawZone` du Masqué avec `assemble.couleurs` ; les projectiles sont des projectiles ennemis ordinaires, au liseré `FOE`, que le simulateur compare à `assemble.couleurs.zone`.
+6. **Dégâts.** Une étape ≤ `degatsEtapeMax` (2,4, comme Fracas) ; une attaque entière, échelle d’acte comprise, ≤ `degatsMax` (3,6). Les données doivent tenir sans aide ; avec des variantes, le code **plafonne** (`sbPlafond` baisse toutes les étapes d’autant ; 16 cas aujourd’hui, × 0,70 à × 0,98). Navette : deux passages comptés.
+7. **Incompatibilités** (comme Explosion et Onde). Règle : deux familles sont incompatibles si la forme principale de l’une apparaît dans l’attaque de l’autre, **formes voisines comprises** (le Masqué rend voisines les formes de deux capacités incompatibles : disque et anneau). Même règle contre les capacités du Masqué, et contre un corps dont la signature a une forme de l’attaque (le corps ne peut pas la porter). Les listes écrites dans les données doivent être exactement celles que donne la règle, et réciproques.
+
+Choix de ce palier non tranchés par la consigne :
+- **Pas d’accélération de salle** (`spdMul`) sur les projectiles, l’onde et la ruée des armes : la sortie est jugée sur ces vitesses-là. Les capacités actuelles du Masqué gardent la leur.
+- Le cône part du **bord** du porteur (comme la Lame du Masqué) ; la vérification prend le plus gros corps (Brute, 32 px).
+- Variantes possibles (une seule étape doublée par `double`, la dernière qui s’y prête) : `traverse`, `rapide` (× 1,2), `elargi` (× 1,15, brèche inchangée), `double`, `vol` (50 % des dégâts infligés rendus au porteur), `repousse` (90 px en 0,2 s, sans perdre la main ni traverser un mur). Aucune n’étourdit le joueur : le jeu n’a pas d’état « étourdi » pour lui, et ce palier n’en invente pas.
+- **Renforts** (souvenir purement statistique → porteur renforcé, jamais le chargement) : `pv` +15 %, `degats` +12 %, `vitesse` +12 %, `armure` −10 % de dégâts subis (au plus −30 %), deux au plus (`renfortMax`). Appliqués par `sbRenfort` ; essai : `&renfort=pv,armure`.
+- Le Masqué d’essai n’a **pas son trait passif** (projectile tiré toutes les secondes, qui n’est pas une zone) pour qu’on lise l’attaque seule.
+
+### Mesures
+
+- `node themist/outils/sim-brume.mjs` : 0 manquement sur 15 familles × leurs variantes × 3 actes ; les neuf contre-épreuves (disque géant, damier plein, anneau sans brèche, forme inconnue, couleur, incompatibilité oubliée, dégâts, zone qui suit jusqu’au coup, hors bornes) sont refusées.
+- En jeu (Chromium sans affichage, acte III, Héraut, `bot=1`) : mesure en cours, ajoutée au commit suivant.
+- `node themist/outils/sim-masque.mjs` : inchangé (le Masqué ordinaire n’est pas touché) ; `node themist/outils/wiki.mjs --check` : à jour, la génération charge le nouveau fichier sans s’en servir.
+
+### Ce que le palier 3b doit remplir
+
+1. **`talents`** dans `souvenirs-brume.js` : les 240 talents (la famille vient de `souvenirs.js`, ne pas la recopier). Pour chacun : rien (la version de sa famille telle quelle), ou `{v:[…]}` (variantes : par exemple une aiguille perçante → `traverse`, une ruée qui assomme → `repousse`, un talent de dévoration qui soigne → `vol`, un talent « de plus » → `double`), ou `{renfort:'pv'|'degats'|'vitesse'|'armure'}` pour un souvenir purement statistique (+PV, +vitesse…). Une variante n’existe que si elle est dans `variantes` ; **ne pas en inventer** : si un talent demande autre chose (étourdir le joueur, ralentir, une forme nouvelle), le signaler dans ce document au lieu de le coder.
+2. **`reliques`** : les 34 reliques, même forme (la plupart des reliques de statistiques → `renfort`). Elles ne sont jamais portées aujourd’hui (le Masqué ne porte que des talents) : c’est pour le Glas Originel et Fortune.
+3. **Vérifier chaque famille en mode d’essai**, avec les variantes et renforts utilisés : `index.html?brume=<famille>&acte=3&variante=…&renfort=…` (et `&bot=1` pour voir la sortie). `node themist/outils/sim-brume.mjs` vérifie que chaque entrée pointe vers un talent, une variante et un renfort qui existent, et repasse la justice avec chaque variante.
+4. Ne pas brancher encore les armes sur le Masqué ordinaire : c’est le palier 4. Pour lui, il faudra : faire de l’attaque d’une famille une capacité du cycle (`asmPas` doit savoir qu’une capacité `sb:<famille>` dure plusieurs étapes : déléguer à `sbPas` pendant ce temps), compter sa `menace` dans `budgetMenace`, respecter ses `incompatibles` dans `asmCombos` (familles, capacités, corps), remplacer ou non les capacités de souvenir v17.9–v17.14 (décision à prendre : elles utilisent des formes que le joueur ne connaissait pas avant, taches, tourbillon, cercles, fil, faisceau), et appliquer `sbRenfort` au porteur. Attention : la **feinte du Brumeux** (`bluffTick`, un cercle posé sur toi, vrai ou faux, en salle de combat dès l’acte II ou la salle 6) tourne aussi dans les salles du Masqué ordinaire et ne consulte pas `asmZone` : aujourd’hui elle peut se superposer à une zone du Masqué. Pour tenir « une zone à la fois » au palier 4, elle doit attendre comme les autres ennemis.
+
+À surveiller : Fil et Cloche sont les plus lourdes (3,45 à l’acte III, sous le plafond de 3,6) ; Martèlement enchaîne trois losanges sur toi au plancher de 0,5 s ; la recherche de sortie en jeu coûte quelques millisecondes par zone (rien par image).

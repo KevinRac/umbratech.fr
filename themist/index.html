@@ -450,6 +450,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/sanctuaire.js"></script>
 <script src="data/memoire.js"></script>
 <script src="data/souvenirs.js"></script>
+<script src="data/souvenirs-brume.js"></script>
 <script src="data/histoire.js"></script>
 <script src="data/versions.js"></script>
 <script>
@@ -8682,7 +8683,7 @@ function demoBoot(cls){
 // Chaque sort est précédé d'un chargement visible (barre au-dessus de lui, zone rouge dès le début, son qui monte) ;
 // un seul sort de zone à la fois, une pause fixe entre deux. Tout l'état vit sur l'ennemi (e.asm) et la salle (room.asm) :
 // il repart de zéro à chaque salle et à chaque run. Réglages : data/bestiaire.js (assemble) ; dessin : data/masque.js.
-(function(){const A=BE_D.assemble,MQ=window.BRUME_DATA.masque,DEMO=/[?&]demo=/.test(location.search);
+(function(){const A=BE_D.assemble,MQ=window.BRUME_DATA.masque,SBJ=window.BRUME_DATA.souvenirsBrume,DEMO=/[?&]demo=/.test(location.search);
  if(!A||!MQ)return;
  // ── Logique pure (vérifiée hors navigateur par un script Node qui extrait ce bloc)
  /*asm:pur*/
@@ -8764,6 +8765,194 @@ function demoBoot(cls){
  window.__asm={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,asmSouvenir,forcer:0};
  // familles de souvenirs (data/souvenirs.js) : id de talent → famille
  const FAMS={};try{const F=(window.BRUME_DATA.souvenirs||{}).familles||{};for(const k in F)(F[k].t||[]).forEach(id=>{FAMS[id]=k;});}catch(err){}
+ // ── v17.15 · Les armes de la Brume (palier 3a) : logique pure. Données : data/souvenirs-brume.js. Vérification : outils/sim-brume.mjs.
+ /*sb:pur*/
+ // Logique pure des armes de la Brume (vérifiée hors navigateur par outils/sim-brume.mjs, avec le bloc /*asm:pur*/ du Masqué).
+ // J : data/souvenirs-brume.js ; A : bestiaire.js (assemble). Angles des données en degrés, ici en radians.
+ const SB_RAD=Math.PI/180,SB_TAU=Math.PI*2;
+ function sbAng(a,b){let d=Math.abs(a-b)%SB_TAU;return d>Math.PI?SB_TAU-d:d;}
+ function sbActe(F,act){const k=Math.max(1,Math.min(3,act||1))-1;return F&&F.acte?F.acte[k]:1;}
+ // Les étapes d'une famille, variantes appliquées (celles de l'étape, plus vars), « double » déplié
+ function sbEtapes(J,fid,vars){const F=J.familles[fid];if(!F)return[];const out=[];
+  const ok=(k,f)=>J.variantes[k]&&J.variantes[k].formes.includes(f);
+  let dbl=-1;if((vars||[]).includes('double'))F.etapes.forEach((e,i)=>{if(ok('double',e.f))dbl=i;});   // « double » demandé : la dernière étape qui s'y prête
+  F.etapes.forEach((e0,i)=>{const v=[...new Set([...(e0.v||[]),...(vars||[]).filter(k=>k!=='double'||i===dbl)])].filter(k=>ok(k,e0.f));
+   const e=Object.assign({},e0,{v,fam:fid});
+   if(v.includes('rapide')&&e.vitesse)e.vitesse*=J.variantes.rapide.fois;
+   if(v.includes('elargi'))for(const k of ['rayon','taille','cote','largeur'])if(e[k]!=null)e[k]*=J.variantes.elargi.fois;
+   out.push(e);if(v.includes('double'))out.push(Object.assign({},e,{bis:1}));});
+  return out;}
+ // Plancher de chargement : jamais sous la plus courte des capacités actuelles du Masqué à cet acte (asmDuree, son accélération et son
+ // plancher compris) ; une étape aussi lourde qu'une signature ne descend jamais sous la plus courte des signatures.
+ function sbPlancher(A,act,lourd){let m=Infinity;for(const k in A.capacites)m=Math.min(m,asmDuree(A,k,act));
+  if(lourd){let s=Infinity;for(const k in A.signatures)s=Math.min(s,asmDuree(A,k,act));m=Math.max(m,s);}
+  return m;}
+ function sbLourd(A,deg){let m=Infinity;for(const k in A.signatures)m=Math.min(m,A.signatures[k].degats);return deg>=m;}
+ function sbDegats(J,et,act){return et.degats*sbActe(J.familles[et.fam],act);}
+ // Plafond codé : si une attaque (variantes comprises) peut faire plus que degatsMax, toutes ses étapes baissent d'autant (et une étape seule jamais plus que degatsEtapeMax).
+ function sbBrut(J,ets,act){let s=0;for(const et of ets)s+=sbDegats(J,et,act)*(et.f==='projectile'&&et.navette?2:1);return s;}
+ function sbPlafond(J,ets,act){const b=sbBrut(J,ets,act);return b>J.justice.degatsMax?J.justice.degatsMax/b:1;}
+ function sbCoup(J,et,act,k){return Math.min(sbDegats(J,et,act)*(k==null?1:k),J.justice.degatsEtapeMax/(et.f==='projectile'&&et.navette?2:1));}
+ function sbCharge(J,A,et,act){const f=Math.pow(A.accelerationActe,Math.max(0,(act||1)-A.desActe));
+  return Math.max(et.chargeS*f,sbPlancher(A,act||1,sbLourd(A,sbDegats(J,et,act))));}
+ // temps entre le moment où la zone se fige et le coup
+ function sbVerrou(J,A,et,act){return sbCharge(J,A,et,act)*(1-(et.suivi||0));}
+ // Les zones d'une étape, au format des zones du Masqué (drawZone) plus ce qu'il faut pour les faire voyager.
+ // c : {lx,ly (porteur), er (son rayon), px,py (toi), ax,ay (ancre), a (angle porteur → toi), prec (étape précédente : {ga}), rnd, rot (essai), dx,dy (décalage d'essai)}
+ function sbPieces(J,et,c){const rnd=c.rnd||Math.random,a=(c.a||0)+(c.rot||0);
+  const pos=()=>{const p=et.sur==='toi'?[c.px,c.py]:et.sur==='ancre'?(c.ax!=null?[c.ax,c.ay]:[c.px,c.py]):[c.lx,c.ly];return et.sur==='lui'?p:[p[0]+(c.dx||0),p[1]+(c.dy||0)];};
+  const [x,y]=pos();let zs=[],ga=null;
+  switch(et.f){
+  case 'disque':zs=[{forme:'disque',x,y,r:et.rayon}];break;
+  case 'anneau':{const gw=et.breche*SB_RAD;
+   ga=(et.brecheVers==='oppose'&&c.prec&&c.prec.ga!=null?c.prec.ga+Math.PI:et.brecheVers==='toi'?Math.atan2(c.py-y,c.px-x):rnd()*SB_TAU)+(c.rot||0);
+   zs=[{forme:'anneau',x,y,r0:et.sur==='lui'?c.er:(et.depart||0),max:et.rayonMax,v:et.vitesse,ga,gw}];break;}
+  case 'couloir':zs=[{forme:'couloir',x,y,a,len:et.longueur,w:et.mode==='ruee'?c.er*2:et.largeur,mode:et.mode||'rai',v:et.vitesse||0}];break;
+  case 'cone':{const n=et.nombre||1,ec=(et.ecart||0)*SB_RAD;for(let i=0;i<n;i++)zs.push({forme:'cone',x,y,a:a+(i-(n-1)/2)*ec,r:c.er+et.rayon,arc:et.arc*SB_RAD});break;}
+  case 'rayons':{const n=et.nombre,ec=et.etoile?SB_TAU/n:(et.ecart||0)*SB_RAD;zs=[{forme:'rayons',x,y,a:a+(et.decale||0)*SB_RAD,n,ec,len:et.longueur,v:et.vitesse,pr:et.rayon}];break;}
+  case 'croix':zs=[{forme:'croix',x,y,a:(et.rot||0)*SB_RAD+(c.rot||0),len:et.longueur,w:et.largeur}];break;
+  case 'losanges':{const n=et.nombre||1,b=rnd()*SB_TAU,pts=[[x,y]];for(let i=1;i<n;i++){const bb=b+(i-1)*SB_TAU/Math.max(1,n-1);pts.push([x+Math.cos(bb)*et.ecart,y+Math.sin(bb)*et.ecart]);}
+   zs=[{forme:'losanges',pts,h:et.taille}];break;}
+  case 'damier':{const q=et.cote;let cl;
+   if(et.motif==='plus')cl=[[0,0],[1,0],[-1,0],[0,1],[0,-1]];
+   else if(et.motif==='x')cl=[[0,0],[1,1],[1,-1],[-1,1],[-1,-1]];
+   else{const all=[];for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)all.push([i,j]);for(let i=all.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=all[i];all[i]=all[j];all[j]=t;}cl=all.slice(0,et.allumees||5);}
+   zs=[{forme:'damier',cells:cl.map(([i,j])=>[x+i*q,y+j*q]),q}];break;}
+  case 'projectile':{const n=et.nombre||1;zs=[{forme:'projectile',x,y,a,n,ec:(et.ecart||0)*SB_RAD,len:et.portee,v:et.vitesse,pr:et.rayon,nav:!!et.navette}];break;}}
+  return{zs,ancre:[x,y],ga};}
+ // Le joueur (centre x,y, rayon PR) est-il touché par cette zone ? Mêmes règles que le jeu : zones du Masqué (marge 0,5 × PR, 0,6 pour
+ // les losanges), explosion (PR entier), onde (bande de 10 + 0,6 × PR hors brèche), projectiles (rayon + PR − 3), corps qui fonce (er + PR).
+ // mg : marge de plus (recherche de sortie).
+ function sbDans(z,x,y,PR,er,mg){mg=mg||0;const dx=x-z.x,dy=y-z.y;
+  const ligne=(a,len,demi,u0)=>{const u=dx*Math.cos(a)+dy*Math.sin(a),v=-dx*Math.sin(a)+dy*Math.cos(a);return u>=u0&&u<=len&&Math.abs(v)<demi;};
+  switch(z.forme){
+  case 'disque':return Math.hypot(dx,dy)<z.r+PR+mg;
+  case 'anneau':{const d=Math.hypot(dx,dy),b=10+0.6*PR+mg;if(d<z.r0-b||d>z.max+b)return false;return sbAng(Math.atan2(dy,dx),z.ga)>z.gw/2-(mg/Math.max(d,1));}
+  case 'couloir':{if(z.mode==='ruee'){const m=er+PR+mg;return ligne(z.a,z.len+m,m,-m);}return ligne(z.a,z.len,z.w/2+0.5*PR+mg,-z.w/2);}
+  case 'cone':return Math.hypot(dx,dy)<z.r+0.5*PR+mg&&sbAng(Math.atan2(dy,dx),z.a)<z.arc/2+(mg+0.5*PR)/Math.max(Math.hypot(dx,dy),1);
+  case 'rayons':case 'projectile':{const n=z.n,demi=z.pr+PR-3+mg;for(let i=0;i<n;i++)if(ligne(z.a+(i-(n-1)/2)*z.ec,z.len,demi,-demi))return true;return false;}
+  case 'croix':{const m=0.5*PR+mg;for(let i=0;i<4;i++)if(ligne(z.a+i*Math.PI/2,z.len,z.w/2+m,-z.w/2))return true;return false;}
+  case 'losanges':{const m=0.6*PR+mg;for(const [px,py] of z.pts)if(Math.abs(x-px)+Math.abs(y-py)<z.h+m)return true;return false;}
+  case 'damier':{const m=0.5*PR+mg;for(const [cx,cy] of z.cells)if(Math.abs(x-cx)<z.q/2+m&&Math.abs(y-cy)<z.q/2+m)return true;return false;}}
+  return false;}
+ // Délai entre le lâcher et le moment où la zone atteint ce point (0 : tout frappe d'un coup)
+ function sbArrivee(z,x,y,er){const dx=x-z.x,dy=y-z.y;
+  if(z.forme==='anneau')return Math.max(0,Math.hypot(dx,dy)-z.r0)/z.v;
+  if(z.forme==='couloir'&&z.mode==='ruee')return Math.max(0,dx*Math.cos(z.a)+dy*Math.sin(z.a)-er)/z.v;
+  if(z.forme==='rayons'||z.forme==='projectile'){let t=Infinity;for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec;t=Math.min(t,Math.max(0,dx*Math.cos(aa)+dy*Math.sin(aa))/z.v);}return t;}
+  return 0;}
+ // Durée de la zone après le lâcher (l'anneau s'étend, le porteur fonce, les projectiles volent ; les autres frappent d'un coup)
+ function sbEffet(J,z){if(z.forme==='anneau')return(z.max-z.r0)/z.v;if(z.forme==='couloir'&&z.mode==='ruee')return z.len/z.v;
+  if(z.forme==='rayons')return z.len/z.v;if(z.forme==='projectile')return(z.nav?2:1)*z.len/z.v;return J.justice.flashS;}
+ function sbCoups(z){return z.forme==='projectile'&&z.nav?2:1;}
+ // Toujours une sortie : depuis p (où tu es quand la zone se fige), existe-t-il un point libre que tu atteins à pied, en ligne droite,
+ // sans jamais être sur la zone au moment où elle y frappe ? t : temps entre le figement et le lâcher.
+ // o : {lx,ly,er (le porteur : on ne traverse pas son corps), arene, bloque(x,y) (piliers, en jeu)}
+ function sbSortie(J,zs,p,t,o){const Jj=J.justice,PR=Jj.joueur.rayon,v=Jj.joueur.vitesse,mg=Jj.marge,R=o.arene,er=o.er||0;
+  const corps=(x,y)=>o.lx!=null&&Math.hypot(x-o.lx,y-o.ly)<er+PR;
+  const libre=(x,y)=>x>=R.x0+PR&&x<=R.x1-PR&&y>=R.y0+PR&&y<=R.y1-PR&&!(o.bloque&&o.bloque(x,y))&&!corps(x,y)&&!zs.some(z=>sbDans(z,x,y,PR,er,mg));
+  if(libre(p[0],p[1]))return{ok:true,d:0};
+  const chemin=(qx,qy)=>{const d=Math.hypot(qx-p[0],qy-p[1]),n=Math.max(1,Math.ceil(d/5));
+   for(let i=1;i<=n;i++){const u=i/n,x=p[0]+(qx-p[0])*u,y=p[1]+(qy-p[1])*u,tt=d*u/v+Jj.reflexeS;if(o.bloque&&o.bloque(x,y))return false;
+    for(const z of zs)if(sbDans(z,x,y,PR,er,0)&&tt>=t+sbArrivee(z,x,y,er))return false;}
+   return true;};
+  let Tm=t;for(const z of zs)Tm=Math.max(Tm,t+sbEffet(J,z));const Rm=v*Tm+10;
+  for(let r=6;r<=Rm;r+=6){const n=Math.max(16,Math.round(r/5));for(let k=0;k<n;k++){const a=k/n*SB_TAU,qx=p[0]+Math.cos(a)*r,qy=p[1]+Math.sin(a)*r;
+   if(libre(qx,qy)&&chemin(qx,qy))return{ok:true,d:r,q:[qx,qy]};}}
+  return{ok:false};}
+ // Placer une étape : on garde la première géométrie qui laisse une sortie ; sinon on la retourne, on la décale vers le centre de la salle
+ // ou on tire à nouveau ce qui est tiré au hasard (essais fois) ; sinon null : l'étape saute (jamais de zone sans sortie).
+ function sbPlacer(J,A,et,c,o,act){const n=Math.max(1,J.justice.essais),t=sbVerrou(J,A,et,act),R=o.arene,cx=(R.x0+R.x1)/2,cy=(R.y0+R.y1)/2;
+  for(let k=0;k<n;k++){const cc=Object.assign({},c);
+   if(k>0){if(et.sur==='lui'){if(et.vise)cc.rot=(k%2?1:-1)*Math.ceil(k/2)*0.2;else if(et.f==='anneau')cc.rot=(k%2?1:-1)*Math.ceil(k/2)*0.6;}
+    else{const bx=cx-(et.sur==='ancre'&&c.ax!=null?c.ax:c.px),by=cy-(et.sur==='ancre'&&c.ax!=null?c.ay:c.py),d=Math.hypot(bx,by)||1,s=Math.min(d,28*k);cc.dx=bx/d*s;cc.dy=by/d*s;}}
+   const pc=sbPieces(J,et,cc);
+   if(sbSortie(J,pc.zs,[c.px,c.py],t,o).ok)return Object.assign(pc,{essai:k,verrou:t});}
+  return null;}
+ // Dégâts qu'une attaque entière peut faire si tu restes dessans bouger (échelle d'acte comprise)
+ function sbPotentiel(J,fid,vars,act){const ets=sbEtapes(J,fid,vars),k=sbPlafond(J,ets,act);let s=0;for(const et of ets)s+=sbCoup(J,et,act,k)*(et.f==='projectile'&&et.navette?2:1);return s;}
+ // Formes utilisées par une famille, et incompatibilités qui en découlent (comme Explosion et Onde : même forme, même porteur interdit)
+ function sbFormes(J,fid){return[...new Set((J.familles[fid].etapes||[]).map(e=>e.f))];}
+ // formes de l'attaque, plus leurs voisines au sens du Masqué : deux capacités incompatibles (Explosion et Onde) rendent leurs formes voisines
+ function sbVoisines(J,A,fid){const fo=sbFormes(J,fid),out=new Set(fo),fc=k=>(A.capacites[k]||{}).forme;
+  for(const [a,b] of A.incompatibles||[]){if(fo.includes(fc(a)))out.add(fc(b));if(fo.includes(fc(b)))out.add(fc(a));}
+  return[...out];}
+ function sbIncompatibles(J,A,fid){const F=J.familles[fid],fo=sbVoisines(J,A,fid),out={familles:[],capacites:[],corps:[]};
+  for(const g in J.familles){if(g===fid)continue;const G=J.familles[g];if(fo.includes(G.forme)||sbVoisines(J,A,g).includes(F.forme))out.familles.push(g);}
+  for(const k in A.capacites)if(fo.includes(A.capacites[k].forme))out.capacites.push(k);
+  for(const k in A.corps){const S=A.signatures[A.corps[k].signature];if(S&&sbFormes(J,fid).includes(S.forme))out.corps.push(k);}
+  return out;}
+ // ── File d'une attaque : une étape après l'autre, jamais deux zones à la fois.
+ // env : {dt, act, dist (px jusqu'à toi), autre (une autre zone ennemie est active), fige (étourdi), vivant (la zone de l'étape en cours vit encore)}
+ // Évènements : ['charge',i] ['lache',i] ['fin',i] (fin d'étape) ['finAttaque',null]
+ function sbNouveau(J,fid,vars){return{fid,etapes:sbEtapes(J,fid,vars),i:0,ph:'attente',t:0,tot:0,att:0,bloque:0,n:0,tient:false};}
+ function sbPas(J,A,st,env){const ev=[],dt=env.dt;
+  if(st.ph==='repos'){st.t-=dt;if(st.t<=0){st.ph='attente';st.i=0;}return ev;}
+  if(st.ph==='attente'){if(env.fige)return ev;
+   if(env.autre){st.bloque+=dt;return ev;}
+   const et=st.etapes[st.i];if(et.portee&&env.dist>et.portee&&st.att<A.attenteS){st.att+=dt;return ev;}
+   st.att=0;st.bloque=0;st.ph='charge';st.t=st.tot=sbCharge(J,A,et,env.act);st.tient=true;ev.push(['charge',st.i]);return ev;}
+  if(st.ph==='charge'){if(!env.fige)st.t-=dt;if(st.t<=0){st.ph='effet';st.t=st.etapes[st.i].effetS!=null?st.etapes[st.i].effetS:0;ev.push(['lache',st.i]);}return ev;}
+  if(st.ph==='effet'){st.t-=dt;if(st.t>0||env.vivant)return ev;ev.push(['fin',st.i]);st.i++;
+   if(st.i<st.etapes.length){st.ph='entracte';st.t=J.justice.entracteS;}else{st.ph='repos';st.t=(A.pauseS||0)+((J.essai&&J.essai.reposS)||0);st.tient=false;st.n++;ev.push(['finAttaque',null]);}
+   return ev;}
+  if(st.ph==='entracte'){st.t-=dt;if(st.t<=0)st.ph='attente';return ev;}
+  return ev;}
+ // ── Vérification complète (hors jeu et en mode d'essai) : renvoie la liste des manquements, vide si tout est juste.
+ // Positions d'essai : porteur au centre, contre un mur, dans un coin ; toi à plusieurs distances et angles ; zones « sur toi » aussi
+ // contre les murs et dans les coins. Chaque famille, à chaque acte, seule puis avec chaque variante qui la concerne.
+ function sbVerifier(J,A,opt){opt=opt||{};const err=[],note=[],R=J.justice.arene,PR=J.justice.joueur.rayon,FO=Object.keys(J.formes);
+  const er=opt.er||32,rng=opt.rnd||(()=>{let s=12345;return()=>{s=(s*1103515245+12345)>>>0;return s/4294967296;};})();
+  const acts=opt.actes||[1,2,3],fams=opt.familles||Object.keys(J.familles),pas=opt.pas||1;
+  if(!A.couleurs||!A.couleurs.zone||!A.couleurs.bord)err.push('couleurs : assemble.couleurs (zone, bord) manquant dans bestiaire.js');
+  (function cherche(o,ch){if(o&&typeof o==='object')for(const k in o){if(/^(col|couleur|couleurs|color)$/i.test(k))err.push(`couleurs : ${ch}.${k} — les couleurs viennent du Masqué`);cherche(o[k],ch+'.'+k);}
+   else if(typeof o==='string'&&/^#[0-9a-f]{3,8}$|^rgba?\(/i.test(o))err.push(`couleurs : ${ch} = ${o}`);})(J.familles,'familles');
+  for(const fid of fams){const F=J.familles[fid];if(!F){err.push(`${fid} : famille absente`);continue;}
+   if(!F.n||!F.ic||!F.forme||!F.adj||F.menace==null||!Array.isArray(F.acte)||F.acte.length!==3)err.push(`${fid} : n, ic, forme, adj, menace, acte[3] requis`);
+   if(!FO.includes(F.forme))err.push(`${fid} : forme principale ${F.forme} hors vocabulaire`);
+   if(!(F.etapes||[]).some(e=>e.f===F.forme))err.push(`${fid} : la forme principale n'apparaît dans aucune étape`);
+   const inc=sbIncompatibles(J,A,fid),dec=F.incompatibles||{};
+   for(const k of ['familles','capacites','corps']){const a=[...(dec[k]||[])].sort().join(','),b=[...inc[k]].sort().join(',');if(a!==b)err.push(`${fid} : incompatibles.${k} = [${a}], la règle donne [${b}]`);}
+   for(const g of dec.familles||[])if(!((J.familles[g]||{}).incompatibles||{familles:[]}).familles.includes(fid))err.push(`${fid} / ${g} : incompatibilité non réciproque`);
+   if(Object.keys(A.corps).every(k=>inc.corps.includes(k)))err.push(`${fid} : aucun corps ne peut la porter`);
+   const variantes=[null,...Object.keys(J.variantes).filter(v=>(F.etapes||[]).some(e=>J.variantes[v].formes.includes(e.f)))];
+   for(const e0 of F.etapes||[]){if(!FO.includes(e0.f))err.push(`${fid} : forme ${e0.f} hors vocabulaire`);
+    for(const v of e0.v||[])if(!J.variantes[v]||!J.variantes[v].formes.includes(e0.f))err.push(`${fid} : variante ${v} interdite sur ${e0.f}`);
+    if((e0.suivi||0)<0||(e0.suivi||0)>J.justice.suiviMax)err.push(`${fid} : suivi ${e0.suivi} hors de [0, ${J.justice.suiviMax}]`);
+    if(!['lui','toi','ancre'].includes(e0.sur))err.push(`${fid} : sur = lui | toi | ancre`);}
+   if(F.etapes&&F.etapes[0]&&F.etapes[0].sur==='ancre')err.push(`${fid} : la première étape n'a pas d'ancre`);
+   for(const v of variantes){const vs=v?[v]:[],nom=fid+(v?'+'+v:''),ets=sbEtapes(J,fid,vs);
+    for(const et of ets){const B=J.bornes[et.f]||{};for(const k in B){if(et[k]==null)continue;if(et[k]<B[k][0]-1e-9||et[k]>B[k][1]+1e-9)err.push(`${nom} : ${et.f}.${k} = ${+et[k].toFixed(2)} hors de [${B[k]}]`);}}
+    for(const act of acts){
+     const brut=sbBrut(J,ets,act),pot=sbPotentiel(J,fid,vs,act);
+     if(!v&&brut>J.justice.degatsMax+1e-9)err.push(`${nom}, acte ${act} : ${brut.toFixed(2)} × dégâts possibles (max ${J.justice.degatsMax}) — les données doivent tenir sans le plafond`);
+     if(pot>J.justice.degatsMax+1e-9)err.push(`${nom}, acte ${act} : plafond non tenu (${pot.toFixed(2)})`);
+     if(v&&brut>J.justice.degatsMax+1e-9)note.push(`${nom}, acte ${act} : plafonné (× ${(J.justice.degatsMax/brut).toFixed(2)})`);
+     ets.forEach((et,i)=>{const ch=sbCharge(J,A,et,act),pl=sbPlancher(A,act,false),tv=sbVerrou(J,A,et,act),dg=sbDegats(J,et,act)*(et.f==='projectile'&&et.navette?2:1);
+      if(ch<pl-1e-9)err.push(`${nom} étape ${i+1}, acte ${act} : chargement ${ch.toFixed(2)} s sous celui du Masqué (${pl.toFixed(2)} s)`);
+      if(tv<J.justice.verrouMinS-1e-9)err.push(`${nom} étape ${i+1}, acte ${act} : ${tv.toFixed(2)} s entre figement et coup (min ${J.justice.verrouMinS})`);
+      if(sbCoup(J,et,act,sbPlafond(J,ets,act))*(et.f==='projectile'&&et.navette?2:1)>J.justice.degatsEtapeMax+1e-9)err.push(`${nom} étape ${i+1}, acte ${act} : ${dg.toFixed(2)} × dégâts en une étape (max ${J.justice.degatsEtapeMax})`);});
+     if(act!==acts[acts.length-1]&&!opt.tousActes)continue;   // la sortie se vérifie au chargement le plus court (dernier acte)
+     const porteurs=[[(R.x0+R.x1)/2,(R.y0+R.y1)/2],[R.x0+er+30,(R.y0+R.y1)/2],[R.x0+er+30,R.y0+er+30],[R.x1-er-30,R.y1-er-30]];
+     const D=[er+PR+4,70,120,180,260,380];let n=0,dur=0,saut=0;
+     porteurs.forEach(([lx,ly],pi)=>{const coin=pi>=2;for(const d of D)for(let k=0;k<16;k+=pas){const aa=k/16*SB_TAU,px=lx+Math.cos(aa)*d,py=ly+Math.sin(aa)*d;
+      if(px<R.x0+PR||px>R.x1-PR||py<R.y0+PR||py>R.y1-PR)continue;
+      const o={lx,ly,er,arene:R};let prec=null,anc=null;
+      for(let i=0;i<ets.length;i++){const et=ets[i];
+       // une étape posée sur l'ancre : tu as pu bouger depuis l'étape d'avant (on essaie plusieurs écarts)
+       const ecarts=et.sur==='ancre'?[[0,0],[40,0],[0,-80],[110,30],[-60,-60],[160,0]]:[[0,0]];
+       for(const [ex,ey] of ecarts){const ax=anc?anc[0]:px,ay=anc?anc[1]:py,qx=Math.min(R.x1-PR,Math.max(R.x0+PR,(et.sur==='ancre'?ax:px)+ex)),qy=Math.min(R.y1-PR,Math.max(R.y0+PR,(et.sur==='ancre'?ay:py)+ey));
+        if(Math.hypot(qx-lx,qy-ly)<er+PR)continue;
+        const c={lx,ly,er,px:qx,py:qy,ax,ay,a:Math.atan2(qy-ly,qx-lx),prec,rnd:rng};n++;
+        const pc=sbPlacer(J,A,et,c,o,act);
+        // dans un coin, l'étape peut sauter (le code ne pose jamais une zone sans sortie) ; ailleurs, c'est une faute de données
+        if(!pc){if(coin)saut++;else err.push(`${nom} étape ${i+1}, acte ${act} : aucune sortie (porteur ${lx|0},${ly|0} ; toi ${qx|0},${qy|0})`);continue;}
+        if(pc.essai>0)dur++;}
+       const pc0=sbPieces(J,et,{lx,ly,er,px,py,ax:anc?anc[0]:px,ay:anc?anc[1]:py,a:Math.atan2(py-ly,px-lx),prec,rnd:rng});prec={ga:pc0.ga};anc=pc0.ancre;}}});
+     if(saut>n*0.1)err.push(`${nom}, acte ${act} : ${saut} étapes sautées sur ${n} placements (plus de 10 %)`);
+     note.push(`${nom}, acte ${act} : ${n} placements, ${dur} déplacés, ${saut} sautés (porteur dans un coin) pour garder une sortie`);}}}
+  return{err,note};}
+ /*/sb:pur*/
 
  // ── Couleurs et dessin du masque (Path2D tirés des données, à l'échelle de l'ennemi)
  const COL=A.masque.couleurs,rgb=h=>{const n=parseInt(h.slice(1),16);return `${n>>16&255},${n>>8&255},${n&255}`;};
@@ -8804,7 +8993,7 @@ function demoBoot(cls){
  window.__asm.dbg=()=>({P,RUN,room,enemies,state,rings,kill:killEnemy,entrer:t=>{trans=null;fade=0;doEnter(t);},lancer:()=>{chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}});
 
  // ── Zones : géométrie figée au début du chargement (sauf le suivi de la charge, de la lame et de la salve)
- const FO='255,58,52',EDGE='255,96,84';
+ const CO=A.couleurs||{},FO=CO.zone||'255,58,52',EDGE=CO.bord||'255,96,84';   // v17.15 : couleurs dans bestiaire.js (assemble.couleurs), partagées avec les armes de la Brume
  function zoneDe(e,k){const S=A.signatures[k],X=S||A.capacites[k],a=Math.atan2(P.y-e.y,P.x-e.x),z={k,forme:X.forme,x:e.x,y:e.y,a,X,sig:!!S};
   if(X.forme==='disque')z.r=X.rayon;
   else if(X.forme==='anneau'){z.max=X.rayonMax;z.ga=e.asm.rnd()*TAU;z.gw=X.breche*Math.PI/180;}
@@ -8845,8 +9034,8 @@ function demoBoot(cls){
  function showCard(e,eveil){const S=e.asm;
   if(!card){card=document.createElement('div');card.id='asmCard';card.setAttribute('role','status');card.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(card);}
   const ic=k=>{const X=A.capacites[k]||A.signatures[k];return `<i class="${A.signatures[k]?'sig':''}${eveil&&k===S.st.reserve?' nw':''}${S.sv&&k===S.sv.cap?' sv':''}" title="${esc(X.n)}">${icon(X.ic)}</i>`;};
-  const ET=S.sv&&S.sv.etat&&A.etats[S.sv.etat];
-  const caps=S.st.caps.map(ic).join('')+(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig)+(ET?`<i class="sv et" title="${esc(ET.n)}">${icon(ET.ic)}</i>`:'');
+  const ET=S.sv&&S.sv.etat&&A.etats[S.sv.etat],SF=S.sb&&SBJ.familles[S.sb.fid];
+  const caps=SF?`<i class="sv" title="${esc(SF.n)}">${icon(SF.ic)}</i>`:S.st.caps.map(ic).join('')+(SF?'':(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig))+(ET?`<i class="sv et" title="${esc(ET.n)}">${icon(ET.ic)}</i>`:'');
   card.className=(eveil?'eveil':'')+(S.sv?' porte':'');
   card.innerHTML=`<span class="mq" aria-hidden="true">${MQ.svg(COL,eveil?'fissure':'calme','asmc'+(++cardN))}</span><div><b>${esc(A.n)}${eveil?' · ▲':''}</b><span class="nm">${esc(S.nom)}</span><span class="ics">${caps}</span>${S.sv?`<span class="svn">${esc(S.sv.n)}</span>`:''}</div>`;
   try{stackBelow(card,toastEl);}catch(x){}
@@ -8927,7 +9116,7 @@ function demoBoot(cls){
  const ZT=new Set(['brute','hurleur','voile']),_tt=tryTok;
  tryTok=function(e,k){if(e&&!e.asm&&ZT.has(e.type)&&e.tok!==k&&room&&room.asm&&asmZone())return false;return _tt.apply(this,arguments);};
  window.__asm.zone=asmZone;
- function annule(e){const S=e.asm,st=S.st;if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;S.taches=null;S.tourb=null;S.cercles=null;S.fil=null;S.beam=null;}
+ function annule(e){const S=e.asm,st=S.st;if(S.sb){sbAnnule(e);return;}if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;S.taches=null;S.tourb=null;S.cercles=null;S.fil=null;S.beam=null;}
  function onEvent(e,x){const S=e.asm,[t,k]=x;
   if(t==='eveil'){showCard(e,true);sfx('asm_eveil');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'violet'});if(!RM)shake(4,0.15);S.fis=true;return;}
   if(t==='rage'){S.rage=true;tlights.push({x:e.x,y:e.y,r:300,t:0.45,max:0.45,c:'blood'});if(!RM)shake(4,0.15);sfx('asm_eveil');return;}
@@ -9014,6 +9203,7 @@ function demoBoot(cls){
   if(S.mont){montStep(e,dt);asmPas(A,st,{dt,act:RUN.act,pv:100,dist:999,autre:true,fige:false},S.rnd);return;}
   if(e.stun>0){e.stun-=dt/A.etourdissement;fige=true;}
   etatPas(e,dt);if(S.ombre&&S.ombre.on)fige=true;   // v17.14 : effacé, il ne lance rien, ne bouge pas et ne touche pas
+  if(S.sb){sbMaj(e,dt,rooted,fige);return;}   // v17.15 : Masqué d'essai des armes de la Brume (sa propre file d'étapes)
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
   const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,autre:!tg.pl||zoneAutre(e),fige},S.rnd);
   for(const x of ev)onEvent(e,x);
@@ -9053,6 +9243,149 @@ function demoBoot(cls){
    if(!fige&&tg.pl&&!P.dead&&dP<=PS.portee&&!S.dash)S.pas-=dt;
    if(S.pas<=0){S.pas=PS.intervalleS;const fp=facePos(e),a=Math.atan2(P.y-fp[1],P.x-fp[0]),v=PS.vitesse*spdMul();
     eproj.push({x:fp[0]+Math.cos(a)*8,y:fp[1]+Math.sin(a)*8,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:6,dmg:e.dmg*PS.degats,life:4,from:e});sfx('shoot');}}}
+ // ── v17.15 · Les armes de la Brume, en salle. Rien ne s'en sert en jeu normal : seul le Masqué d'essai (index.html?brume=…) porte e.asm.sb.
+ // Une attaque = des étapes ; une étape = une zone du Masqué (mêmes formes, même dessin drawZone, mêmes couleurs assemble.couleurs).
+ // Justice tenue par le code : chargement sbCharge (jamais sous le Masqué), sortie cherchée avant chaque zone (sbPlacer, sinon l'étape saute),
+ // une zone à la fois (l'étape suivante attend que la précédente ait fini, projectiles, onde et ruée compris ; les autres ennemis attendent).
+ // Pas d'accélération de salle (spdMul) sur ses projectiles, son onde et sa ruée : leurs vitesses sont celles que la vérification a jugées.
+ const SB={J:SBJ,essai:null};
+ function sbOrigine(e){return{lx:e.x,ly:e.y,er:e.r,arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)};}
+ function sbCtx(e,B,et){return{lx:e.x,ly:e.y,er:e.r,px:P.x,py:P.y,ax:B.anc?B.anc[0]:null,ay:B.anc?B.anc[1]:null,a:Math.atan2(P.y-e.y,P.x-e.x),prec:B.prec,rnd:e.asm.rnd};}
+ // fixer la géométrie d'une étape (au chargement si elle ne suit pas, au figement sinon) ; null : aucune sortie, l'étape saute
+ function sbFixe(e,B,et){const pc=sbPlacer(SBJ,A,et,sbCtx(e,B,et),sbOrigine(e),RUN.act);
+  if(!pc){B.sauts=(B.sauts||0)+1;B.zc=null;B.dbg='saute';return false;}
+  B.zc={zs:pc.zs,fige:true};B.prec={ga:pc.ga};B.anc=pc.ancre;B.dbg=pc.essai?`déplacée (${pc.essai})`:'sortie';
+  try{const s=sbSortie(SBJ,pc.zs,[P.x,P.y],sbVerrou(SBJ,A,et,RUN.act),sbOrigine(e));B.fuite=s.d;B.fuiteQ=s.q||[P.x,P.y];}catch(err){}
+  return true;}
+ function sbAnnule(e){const B=e.asm.sb;B.zc=null;B.dash=null;const s=B.st;if(s.ph==='charge'||s.ph==='effet'){s.ph='effet';s.t=0;}}
+ // touché : dégâts, puis vol (le porteur se soigne) et repousse (tu recules sans perdre la main)
+ function sbTouche(e,B,et,dmg,ox,oy){const h0=P.hp;hurtPlayer(dmg,e);const pris=h0-P.hp;if(!(pris>0))return;B.recu=(B.recu||0)+pris;
+  const v=et.v||[];
+  if(v.includes('vol')){const n=Math.min(e.maxHp-e.hp,pris*SBJ.variantes.vol.part);if(n>0){e.hp+=n;addNum(e.x,e.y-e.r-14,'+'+Math.round(n),'asoin');}}
+  if(v.includes('repousse')){const R=SBJ.variantes.repousse,dx=P.x-ox,dy=P.y-oy,d=hyp(dx,dy)||1;B.pousse={ux:dx/d,uy:dy/d,v:R.px/R.dureeS,t:R.dureeS};}}
+ function sbLache(e,B,et){const z0=B.zc;B.zc=null;if(!z0)return;const dmg=e.dmg*sbCoup(SBJ,et,RUN.act,B.k);B.vivants=[];
+  for(const z of z0.zs){
+   if(z.forme==='anneau'){const g={x:z.x,y:z.y,r:z.r0,v:z.v,max:z.max,ga:z.ga,gw:z.gw,dmg,hit:false,src:e};ZR.push(g);B.vivants.push(()=>ZR.includes(g));sfx('howl');continue;}
+   if(z.forme==='couloir'&&z.mode==='ruee'){B.dash={a:z.a,v:z.v,left:z.len,hit:false,dmg,et};B.vivants.push(()=>!!B.dash);continue;}
+   if(z.forme==='rayons'||z.forme==='projectile'){const L=[],trav=(et.v||[]).includes('traverse');
+    for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec,p={x:z.x+Math.cos(aa)*e.r,y:z.y+Math.sin(aa)*e.r,vx:Math.cos(aa)*z.v,vy:Math.sin(aa)*z.v,r:z.pr,dmg,life:(z.len-e.r)/z.v,from:e,sbL:z.len-e.r,sbD:0,sbNav:z.nav||false,sbTrav:trav};eproj.push(p);L.push(p);}
+    B.vivants.push(()=>L.some(p=>!p.dead&&eproj.includes(p)));sfx('shoot');continue;}
+   // zones qui frappent d'un coup
+   if(!P.dead&&sbDans(z,P.x,P.y,P.r,e.r,0))sbTouche(e,B,et,dmg,z.x!=null?z.x:e.x,z.y!=null?z.y:e.y);
+   if(z.forme==='disque')explosion(z.x,z.y,z.r,0,0,{col:`rgba(${FO},`,spark:'#ff6a5a'});
+   else if(z.forme==='cone'){fx.push({k:'slash',x:z.x,y:z.y-6,a:z.a,r:z.r,arc:z.arc,dir:1,style:'foe',t:0.2,max:0.2});sfx('lame');}
+   else{shake(4,0.16);sfx(z.forme==='couloir'?'lame':'explode');}
+   (B.flash=B.flash||[]).push({z,t:SBJ.justice.flashS,max:SBJ.justice.flashS});}}
+ // un pas du porteur : file d'étapes (sbPas), géométrie, déplacements, ruée, repousse
+ function sbMaj(e,dt,rooted,fige){const S=e.asm,B=S.sb,st=S.st,F=SBJ.familles[B.fid];
+  const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
+  const vivant=(B.vivants||[]).some(f=>f());
+  const ev=sbPas(SBJ,A,B.st,{dt,act:RUN.act,dist:dP,autre:!tg.pl||zoneAutre(e),fige,vivant});
+  for(const [t,i] of ev){const et=B.st.etapes[i];
+   if(t==='charge'){if(i===0){B.k=sbPlafond(SBJ,B.st.etapes,RUN.act);B.prec=null;B.anc=null;}
+    if(et.suivi>0){B.zc={zs:sbPieces(SBJ,et,sbCtx(e,B,et)).zs,fige:false};B.dbg='suit';}
+    else if(!sbFixe(e,B,et)){B.st.ph='effet';B.st.t=0;continue;}
+    sfx('asm_ch',B.st.tot);B.dernier={i,et,charge:B.st.tot,plancher:sbPlancher(A,RUN.act,false)};}
+   else if(t==='lache')sbLache(e,B,et);
+   else if(t==='fin'){B.vivants=[];}}
+  // pendant le chargement : la zone suit (vise, ou centre sur toi) jusqu'à suivi, puis se fige (et c'est là qu'on lui cherche une sortie)
+  const sst=B.st,et=sst.etapes[sst.i];
+  if(sst.ph==='charge'&&B.zc&&!B.zc.fige){const k=1-sst.t/sst.tot;
+   if(k<et.suivi)B.zc.zs=sbPieces(SBJ,et,Object.assign(sbCtx(e,B,et),{rnd:asmRng(B.graine=B.graine||((e.asm.rnd()*1e9)>>>0))})).zs;
+   else if(!sbFixe(e,B,et)){sst.ph='effet';sst.t=0;}}
+  if(sst.ph==='charge'&&B.zc&&B.zc.zs[0]&&B.zc.zs[0].a!=null&&et.sur==='lui')e.ang=B.zc.zs[0].a;
+  if(sst.ph!=='charge')B.graine=0;
+  // ce que voient les autres ennemis et le dessin du Masqué : il tient la zone de sa première charge à la fin de l'attaque
+  st.ph=sst.ph==='charge'?'charge':(sst.tient&&sst.ph!=='repos')?'effet':'pause';st.t=sst.t;st.tot=sst.tot||1;st.k='sb';st.bloque=sst.bloque;st.att=sst.att;
+  if(B.flash){for(const f of B.flash)f.t-=dt;B.flash=B.flash.filter(f=>f.t>0);}
+  if(B.pousse&&!P.dead){const Q=B.pousse,s=Math.min(Q.t,dt);P.x+=Q.ux*Q.v*s;P.y+=Q.uy*Q.v*s;collidePlayer();Q.t-=dt;if(Q.t<=0)B.pousse=null;}
+  if(B.dash&&!fige){const D=B.dash,s2=Math.min(D.left,D.v*dt);e.x+=Math.cos(D.a)*s2;e.y+=Math.sin(D.a)*s2;D.left-=s2;e.ang=D.a;
+   if(!D.hit&&!P.dead&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){D.hit=true;sbTouche(e,B,D.et,D.dmg,e.x,e.y);}
+   if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);B.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');}
+   else if(D.left<=0)B.dash=null;}
+  else if(!fige&&!rooted&&(sst.ph==='repos'||sst.ph==='attente'||sst.ph==='entracte'||(sst.ph==='charge'&&et&&et.sur!=='lui')||(sst.ph==='effet'&&!B.dash)))move(e,dt,sp,tg,dP,sst.ph==='attente'&&sst.att>0);
+  if(!B.dash&&!P.dead&&!S.sansContact&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);}
+ // dessin : la zone qui charge (k : avancement), les éclats des zones qui ont frappé ; projectiles : leur trajet en pointillé et l'orbe au liseré qui grossit
+ function sbDessinProj(c,z,k,e){c.save();c.lineCap='round';
+  for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec,cs=Math.cos(aa),sn=Math.sin(aa),x0=z.x+cs*e.r,y0=z.y+sn*e.r,x1=z.x+cs*z.len,y1=z.y+sn*z.len;
+   c.strokeStyle=`rgba(${FO},0.12)`;c.lineWidth=z.pr*2;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();
+   c.strokeStyle=`rgba(${EDGE},${RM?0.75:0.5+0.25*Math.sin(T*24)})`;c.lineWidth=1.6;strokeDash(c);c.beginPath();c.moveTo(x0,y0);c.lineTo(x0+(x1-x0)*k,y0+(y1-y0)*k);c.stroke();c.setLineDash([]);
+   if(z.nav){c.strokeStyle=`rgba(${EDGE},0.8)`;c.lineWidth=2;const bx=x1-cs*10,by=y1-sn*10;c.beginPath();c.moveTo(bx-sn*7+cs*6,by+cs*7+sn*6);c.lineTo(bx,by);c.lineTo(bx+sn*7+cs*6,by-cs*7+sn*6);c.stroke();}
+   const ox=x0+cs*(z.pr+4),oy=y0+sn*(z.pr+4),rr=z.pr*(0.35+0.65*k);
+   c.fillStyle='rgba(16,8,30,.92)';c.beginPath();c.arc(ox,oy,rr,0,TAU);c.fill();c.strokeStyle=`rgba(${FO},.9)`;c.lineWidth=1.8;c.beginPath();c.arc(ox,oy,rr*1.6,0,TAU);c.stroke();}
+  c.restore();}
+ function sbDessin(c,e){const B=e.asm.sb,st=B.st;
+  if(B.flash)for(const f of B.flash)if(f.z.forme!=='projectile')drawZone(c,f.z,1,f.t/f.max);
+  if(st.ph!=='charge'||!B.zc)return;const k=clamp(1-st.t/st.tot,0,1);
+  for(const z of B.zc.zs){if(z.forme==='projectile')sbDessinProj(c,z,k,e);else if(z.forme==='couloir'&&z.mode==='ruee')drawZone(c,Object.assign({},z,{w:e.r*2}),k,0);else drawZone(c,z,k,0);}}
+ // projectiles de la Brume : la navette revient sur son trajet, le perçant traverse les piliers (pas les murs). Les autres suivent la règle commune.
+ const _upj=updateProjectiles;
+ updateProjectiles=function(dt){const M=eproj.filter(p=>p.sbNav||p.sbTrav);if(!M.length)return _upj.apply(this,arguments);
+  eproj=eproj.filter(p=>!(p.sbNav||p.sbTrav));const r=_upj.apply(this,arguments);
+  for(const p of M){if(p.dead)continue;const sp=hyp(p.vx,p.vy);p.x+=p.vx*dt;p.y+=p.vy*dt;p.sbD+=sp*dt;
+   if(p.sbD>=p.sbL){if(p.sbNav&&!p.retour){p.retour=true;p.sbD=0;p.vx=-p.vx;p.vy=-p.vy;p.touche=false;}else{p.dead=true;continue;}}
+   const mur=p.x<AR.x0+p.r*0.5||p.x>AR.x1-p.r*0.5||p.y<AR.y0+p.r*0.5||p.y>AR.y1-p.r*0.5;
+   if(mur||(!p.sbTrav&&hitsWall(p.x,p.y,p.r*0.5))){p.dead=true;continue;}
+   if(!p.touche&&!P.dead&&hyp(p.x-P.x,p.y-P.y)<p.r+P.r-3&&P.iT<=0&&P.dashT<=0){hurtPlayer(p.dmg);if(p.sbNav)p.touche=true;else p.dead=true;}}
+  for(const p of M)if(!p.dead)eproj.push(p);return r;};
+ // Renforts (souvenirs purement statistiques, palier 3b) : PV, dégâts, vitesse de déplacement, dégâts subis en moins. Au plus renfortMax ; jamais le chargement.
+ function sbRenfort(e,keys){const L=(keys||[]).filter(k=>SBJ.renforts[k]).slice(0,SBJ.renfortMax);let red=0;
+  for(const k of L){const X=SBJ.renforts[k];if(X.pv){e.maxHp*=1+X.pv;e.hp=e.maxHp;}if(X.degats)e.dmg*=1+X.degats;if(X.vitesse)e.spd*=1+X.vitesse;red+=X.reduit||0;}
+  if(red>0)e.asm.sbReduit=Math.min(0.3,red);}
+ const _hetB=hitEnemy;hitEnemy=function(e,dmg,o){if(e&&e.asm&&e.asm.sbReduit&&typeof dmg==='number')dmg*=1-e.asm.sbReduit;return _hetB.call(this,e,dmg,o);};
+ window.__asm.sb={J:SBJ,SB,sbRenfort,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbPotentiel,sbIncompatibles,sbNouveau,sbPas};
+ // ── v17.15 · Mode d'essai des armes de la Brume (développement seulement : aucune touche, aucun accès en jeu normal)
+ // index.html?brume=<famille>|tout [&classe=lum|gou|her|tis] [&acte=1|2|3] [&variante=double,vol…] [&renfort=pv,…] [&dieu=0]
+ // Ouvre une salle vide avec un Masqué d'essai qui ne fait que l'attaque de cette famille, en boucle (sans trait passif, sans éveil ni rage).
+ // « tout » : les quinze familles l'une après l'autre (la suivante vient quand tu brises le masque). Une barre en haut permet de choisir.
+ // dieu (par défaut) : tu ne descends jamais sous 1 PV ; la barre compte les dégâts subis. bot=1 : tu es conduit (à la vitesse de référence
+ // de la justice, 180 px/s) vers la sortie trouvée à chaque zone, pour voir qu'elle existe vraiment (sans esquive) ; contact du porteur coupé. Rien n'est vérifié du tirage ordinaire ici :
+ // c'est node themist/outils/sim-brume.mjs qui juge les données ; la barre rejoue sbVerifier sur la famille montrée (acte choisi).
+ const QB=/[?&]brume=([a-z]+)/.exec(location.search);
+ if(QB&&!DEMO&&SBJ){const q=k=>(new RegExp(`[?&]${k}=([a-z0-9,]+)`).exec(location.search)||[])[1];
+  const ordre=Object.keys(SBJ.familles),E=SB.essai={tout:QB[1]==='tout',fid:QB[1]==='tout'?ordre[0]:QB[1],cls:q('classe'),acte:+(q('acte')||2),
+   vars:(q('variante')||'').split(',').filter(v=>SBJ.variantes[v]),renf:(q('renfort')||'').split(',').filter(v=>SBJ.renforts[v]).slice(0,SBJ.renfortMax),dieu:q('dieu')!=='0',bot:q('bot')==='1',subis:0,coups:0,
+   suivant:0,bar:null,e:null,verif:null};
+  E.acte=Math.max(1,Math.min(3,E.acte||2));
+  function corpsPour(fid){const no=(SBJ.familles[fid].incompatibles||{}).corps||[];return['brute','spectre','voile'].find(k=>A.corps[k]&&!no.includes(k))||'brute';}
+  function apparait(fid){if(!SBJ.familles[fid])return;E.fid=fid;const F=SBJ.familles[fid],corps=corpsPour(fid),C=A.corps[corps],g=C.g==='f'?'f':'m';
+   const co={corps,depart:[],eveil:null,menace:F.menace,base:'sb:'+fid,cle:'sb:'+fid};
+   room.asm={seed:1,rnd:asmRng((Math.random()*4294967296)>>>0),co,nom:`${C.n} ${F.adj[g]}`,e:null,vaincu:false,wi:0,appel:null,sv:null,test:true};
+   room.cleared=false;room.waves=[];room.waveI=0;room.spawning=[];room.doors=[];room.bl=null;room.blT=1e9;   // pas de feinte du Brumeux dans la salle d'essai : on mesure les armes seules
+   const e=createEnemy(corps,W/2,AR.y0+150,true);if(!e||!e.asm){console.error('Masqué d’essai : pas d’assemblage');return;}
+   e.xp=0;e.asm.mont=null;Object.assign(e.asm.st,{ph:'pause',t:0,caps:[],eveil:true,reserve:null});
+   sbRenfort(e,E.renf);
+   e.asm.sb={fid,vars:E.vars,st:Object.assign(sbNouveau(SBJ,fid,E.vars),{ph:'repos',t:0.9}),k:1,recu:0,sauts:0};
+   if(E.bot)e.asm.sansContact=true;E.e=e;E.suivant=0;showCard(e,false);
+   try{const t0=performance.now();E.verif=sbVerifier(SBJ,A,{familles:[fid],actes:[E.acte],pas:4,er:e.r});E.verif.ms=performance.now()-t0;
+    if(E.verif.err.length)console.warn('Armes de la Brume · '+fid,E.verif.err);}catch(err){console.error(err);}
+   barre();}
+  function lance(){try{if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[E.cls]?E.cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+   RUN.act=E.acte;RUN.g=Math.max(RUN.g,[0,4,10,18][E.acte]);RUN.roomIdx=Math.max(1,(A.premiereSalle||1)-1);window.__asm.forcer=0;
+   closeOverlay();queue.length=0;trans=null;fade=0;doEnter('combat');room.wtheme=null;room.annT=0;apparait(E.fid);}catch(err){console.error(err);}}
+  // la salle d'essai ne se vide jamais : brisé, le Masqué revient (le suivant, en mode « tout »), sans récompense
+  const _orcT=onRoomCleared;onRoomCleared=function(){if(room&&room.asm&&room.asm.test){room.cleared=false;E.suivant=RUN.time+1.2;return;}return _orcT.apply(this,arguments);};
+  const _lhT=loseHp;loseHp=function(n){const t=room&&room.asm&&room.asm.test&&P&&n>0;if(t){E.subis+=n;E.coups++;const B=E.e&&E.e.asm&&E.e.asm.sb;(E.journal=E.journal||[]).push({t:+RUN.time.toFixed(2),n:Math.round(n),ph:B&&B.st.ph,i:B&&B.st.i,f:B&&B.dernier&&B.dernier.et.f,p:[P.x|0,P.y|0],q:B&&B.fuiteQ&&B.fuiteQ.map(v=>v|0)});if(E.journal.length>40)E.journal.shift();}if(E.dieu&&t){P.hp=Math.max(1,P.hp-n);return;}return _lhT.apply(this,arguments);};
+  const _stT=step;step=function(dt){_stT(dt);try{if(!(state==='play'&&RUN&&room&&room.asm&&room.asm.test))return;
+   if(E.suivant&&RUN.time>=E.suivant){const i=ordre.indexOf(E.fid);apparait(E.tout?ordre[(i+1)%ordre.length]:E.fid);}
+   const B=E.e&&!E.e.dead&&E.e.asm&&E.e.asm.sb;
+   if(E.bot&&B&&B.fuiteQ&&!P.dead){const [qx,qy]=B.fuiteQ,dx=qx-P.x,dy=qy-P.y,d=hyp(dx,dy),v=SBJ.justice.joueur.vitesse*dt;if(d>0.5){P.x+=dx/d*Math.min(d,v);P.y+=dy/d*Math.min(d,v);collidePlayer();}}
+   if((E.n=(E.n||0)+1)%12===0)barre();}catch(err){console.error(err);}};
+  function barre(){if(!E.bar){E.bar=document.createElement('div');E.bar.id='sbEssai';document.body.appendChild(E.bar);
+    E.bar.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;ev.stopPropagation();
+     if(b.dataset.f)apparait(b.dataset.f);else if(b.dataset.a==='dieu'){E.dieu=!E.dieu;barre();}
+     else if(b.dataset.a==='suiv'){const i=ordre.indexOf(E.fid);apparait(ordre[(i+1)%ordre.length]);}});
+    E.bar.addEventListener('pointerdown',ev=>ev.stopPropagation());}
+   const F=SBJ.familles[E.fid],B=E.e&&E.e.asm&&E.e.asm.sb,d=B&&B.dernier,V=E.verif;
+   const fam=ordre.map(f=>`<button data-f="${f}" class="${f===E.fid?'on':''}" title="${esc(SBJ.familles[f].n)} (${esc(f)})">${icon(SBJ.familles[f].ic)}</button>`).join('');
+   const et=d?`étape ${d.i+1}/${B.st.etapes.length} · ${esc(SBJ.formes[d.et.f].n)} · chargement ${d.charge.toFixed(2)} s (Masqué ${d.plancher.toFixed(2)} s)`:'—';
+   E.bar.innerHTML=`<b>Armes de la Brume · essai</b><span class="fams">${fam}</span><button data-a="suiv" title="Famille suivante">▶</button><button data-a="dieu" class="${E.dieu?'on':''}" title="Tu ne descends pas sous 1 PV">PV ∞</button>`+
+    `<span class="lu">${esc(F.n)} · acte ${E.acte}${E.vars.length?' · '+esc(E.vars.join('+')):''}${E.renf.length?' · renfort '+esc(E.renf.join('+')):''} · ${et} · ${B?esc(B.dbg||''):''}${B&&B.fuite?` à ${Math.round(B.fuite)} px`:''} · sauts ${B?B.sauts:0} · subis ${Math.round(E.subis)} (${E.coups} coups) · justice ${V?(V.err.length?`<em>${V.err.length} manquement(s)</em>`:'✓'):'…'}</span>`;}
+  const stS=document.createElement('style');stS.textContent=`#sbEssai{position:fixed;left:50%;top:4px;transform:translateX(-50%);z-index:60;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;max-width:min(98vw,1100px);padding:6px 10px;background:rgba(12,9,22,.93);border:1px solid #6a5aa0;border-radius:6px;color:#efe8ff;font:12px/1.3 system-ui,sans-serif}
+#sbEssai b{color:#cdb4ff;font-weight:600}#sbEssai .fams{display:flex;gap:2px}#sbEssai button{all:unset;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 4px;border-radius:4px;border:1px solid #3a3060;color:#efe8ff}
+#sbEssai button.on{border-color:#e4dcf4;background:rgba(184,146,255,.22)}#sbEssai button .ic{width:18px;height:18px}#sbEssai .lu{flex-basis:100%;opacity:.88}#sbEssai em{color:#ff8a80;font-style:normal}`;
+  document.head.appendChild(stS);
+  addEventListener('load',()=>setTimeout(lance,400));}
  const _pre=v6EnemyPre;
  v6EnemyPre=function(e,dt){const r=_pre(e,dt);
   if(!r&&e&&!e.asm&&!e.dead&&e.type==='bouffi'&&e.state!=='fuse'&&e.stun<=0&&room&&room.asm&&asmZone()){const tg=enemyTarget(e);moveTo(e,tg.x,tg.y,e.spd*v6Slow(e),dt);return true;} // le Bouffi ne s'amorce pas pendant un sort du Masqué
@@ -9135,6 +9468,7 @@ function demoBoot(cls){
    if(S.tourb)drawTourb(c,S.tourb);
    if(S.cercles)drawCercles(c,S.cercles);
    if(S.beam)drawBeam(c,S.beam,e);
+   if(S.sb)sbDessin(c,e);
    if(S.fil)drawFil(c,S.fil,e);
    if(S.z&&S.st.ph==='charge')drawZone(c,S.z,clamp(1-S.st.t/S.st.tot,0,1),0);
    if(S.flash)drawZone(c,S.flash.z,1,S.flash.t/S.flash.max);}}catch(err){console.error(err);}};
@@ -9212,12 +9546,14 @@ function demoBoot(cls){
    // PV (violet), barre de chargement, icônes
    const w=Math.max(46,e.r*2);c.fillStyle='rgba(0,0,0,.7)';c.fillRect(e.x-w/2-1,top-4,w+2,5);c.fillStyle='#b892ff';c.fillRect(e.x-w/2,top-3,w*Math.max(0,e.hp/e.maxHp),3);
    if(lit){const k=clamp(1-st.t/st.tot,0,1),sig=!!A.signatures[st.k],bh=sig?7:5,y=top-8-bh;
-    c.fillStyle='rgba(0,0,0,.8)';c.fillRect(e.x-w/2-2,y-2,w+4,bh+4);c.fillStyle=sig?'#ff3d5a':'#ff5a50';c.fillRect(e.x-w/2,y,w*k,bh);
+    c.fillStyle='rgba(0,0,0,.8)';c.fillRect(e.x-w/2-2,y-2,w+4,bh+4);c.fillStyle=sig?(CO.signature||'#ff3d5a'):(CO.charge||'#ff5a50');c.fillRect(e.x-w/2,y,w*k,bh);
     if(sig){c.strokeStyle='rgba(255,240,245,.9)';c.lineWidth=1.4;c.strokeRect(e.x-w/2-1,y-1,w+2,bh+2);}}
-   const L=[...st.caps,...(st.eveil?[]:['_']),st.sig,...(S.sv&&S.sv.etat?['@']:[])],sz=15,gap=4,tw=L.length*sz+(L.length-1)*gap+6+(S.sv&&S.sv.etat?6:0),iy=top-(lit?(A.signatures[st.k]?27:25):12)-sz/2;
+   const L=S.sb?['#']:[...st.caps,...(st.eveil?[]:['_']),st.sig,...(S.sv&&S.sv.etat?['@']:[])],sz=15,gap=4,tw=L.length*sz+(L.length-1)*gap+6+(S.sv&&S.sv.etat?6:0),iy=top-(lit?(A.signatures[st.k]?27:25):12)-sz/2;
    c.fillStyle='rgba(8,6,14,.78)';rr(c,e.x-tw/2-3,iy-sz/2-4,tw+6,sz+8,6);c.fill();
    L.forEach((k,i)=>{const x=e.x-tw/2+3+i*(sz+gap)+(k===st.sig?6:k==='@'?12:0)+sz/2;const on=lit&&k===st.k;
     if(k==='_'){drawIcon(c,'u_sleep',x,iy,sz,'rgba(185,170,220,.55)',1.8);return;}
+    if(k==='#'){const F=SBJ.familles[S.sb.fid];c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();   // v17.15 : l'icône de sa famille, cerclée de lavande
+     if(on){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.2,'255,120,110',0.6);c.restore();}drawIcon(c,F.ic,x,iy,on?sz*1.25:sz,on?'#ffffff':'rgba(240,232,255,.98)',2);return;}
     if(k==='@'){const ET=A.etats[S.sv.etat];c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();
      drawIcon(c,ET.ic,x,iy,sz,'rgba(240,232,255,.98)',2);return;}
     const X=A.capacites[k]||A.signatures[k];
@@ -9231,7 +9567,7 @@ function demoBoot(cls){
  const _ke=killEnemy;
  killEnemy=function(e){const was=e&&e.dead;_ke(e);
   try{if(!was&&e&&e.dead&&e.asm){const h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max);
-   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;e.asm.taches=null;e.asm.tourb=null;e.asm.cercles=null;e.asm.fil=null;e.asm.beam=null;sfx('asm_brise');hideCard();
+   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;e.asm.taches=null;e.asm.tourb=null;e.asm.cercles=null;e.asm.fil=null;e.asm.beam=null;if(e.asm.sb){e.asm.sb.zc=null;e.asm.sb.dash=null;e.asm.sb.flash=null;}sfx('asm_brise');hideCard();
    if(room&&room.asm){room.asm.vaincu=true;}
    if(e.asm.sv)chron('asmSv',{n:e.asm.sv.n});
    RUN.asm=RUN.asm||{dernier:null,vaincus:[]};RUN.asm.vaincus.push(e.asm.nom);

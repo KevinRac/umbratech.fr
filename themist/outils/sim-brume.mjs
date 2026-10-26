@@ -1,0 +1,120 @@
+#!/usr/bin/env node
+// La Brume · vérification hors navigateur des armes de la Brume (palier 3a, v17.15)
+// Extrait la logique pure d'index.html (blocs /*asm:pur*/ du Masqué et /*sb:pur*/ des armes) et la fait tourner avec
+// data/bestiaire.js, data/souvenirs.js, data/souvenirs-brume.js et data/icones.js.
+// Les règles de justice sont jugées par sbVerifier (le même code que le mode d'essai en jeu) :
+//  - vocabulaire : chaque étape est UNE zone d'une des neuf formes connues ; aucune couleur dans les données ;
+//  - chargement : jamais plus court que les capacités actuelles du Masqué (sbCharge, acte par acte), figement assez tôt ;
+//  - sortie : depuis des centaines de positions (porteur au centre, contre un mur, dans un coin ; toi à six distances, seize angles),
+//    à chaque acte le plus rapide, seule et avec chaque variante, on trouve un point libre atteint à pied avant le coup ;
+//  - dégâts : une étape ≤ degatsEtapeMax, une attaque ≤ degatsMax (données sans le plafond ; variantes : plafond codé) ;
+//  - incompatibilités : celles écrites dans les données sont celles que donne la règle, et réciproques.
+// Puis : la file d'étapes ne pose jamais deux zones à la fois, et le vérificateur attrape bien des données injustes (contre-épreuves).
+//   node themist/outils/sim-brume.mjs            (ajouter --vite pour sauter la moitié des angles)
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+const asm = html.match(/\/\*asm:pur\*\/([\s\S]*?)\/\*\/asm:pur\*\//), sb = html.match(/\/\*sb:pur\*\/([\s\S]*?)\/\*\/sb:pur\*\//);
+if (!asm || !sb) { console.error('Bloc /*asm:pur*/ ou /*sb:pur*/ introuvable'); process.exit(1); }
+const ctx = { window: {}, Math, console };
+vm.createContext(ctx);
+for (const f of ['bestiaire.js', 'souvenirs.js', 'souvenirs-brume.js', 'icones.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
+vm.runInContext(asm[1] + sb[1] + '\nthis.F={asmDuree,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbVerrou,sbPotentiel,sbIncompatibles,sbNouveau,sbPas,sbDegats,sbCoup,sbPlafond,sbDans};', ctx);
+const F = ctx.F, D = ctx.window.BRUME_DATA, A = D.bestiaire.assemble, J = D.souvenirsBrume, SV = D.souvenirs, IC = D.icones;
+const clone = o => JSON.parse(JSON.stringify(o));
+let fails = 0, checks = 0;
+const ok = (c, msg) => { checks++; if (!c) { fails++; console.error('ÉCHEC : ' + msg); } };
+const VITE = process.argv.includes('--vite');
+// rayon du plus gros corps de Masqué (Brute : 22 × 1,45) : la vérification se fait avec lui
+const ER = Math.max(...Object.entries(A.corps).map(([k, C]) => D.bestiaire.ennemis?.[k]?.stats?.r * C.taille || 0), 32);
+
+// 0. Les familles : mêmes ids que data/souvenirs.js, icône connue, forme principale dans le vocabulaire
+for (const f of Object.keys(SV.familles)) ok(J.familles[f], `famille ${f} (souvenirs.js) : pas de version ennemie`);
+for (const f of Object.keys(J.familles)) { ok(SV.familles[f], `famille ${f} : absente de souvenirs.js`); ok(IC[J.familles[f].ic], `famille ${f} : icône ${J.familles[f].ic} absente de icones.js`); }
+ok(Object.keys(J.formes).length === 9, 'vocabulaire : neuf formes');
+// couleurs : celles du Masqué, lues dans bestiaire.js par le jeu ; le liseré des projectiles ennemis (FOE) est la même couleur
+ok(/FO=CO\.zone/.test(html) && /EDGE=CO\.bord/.test(html), 'index.html : les zones du Masqué doivent prendre leurs couleurs dans assemble.couleurs');
+ok((html.match(/const FOE='([0-9, ]+)'/) || [])[1] === A.couleurs.zone, 'liseré des projectiles (FOE) = assemble.couleurs.zone');
+// palier 3b : ce qui sera rempli doit pointer vers des talents, variantes et renforts qui existent
+for (const [src, map, ids] of [['talents', J.talents, new Set(Object.values(SV.familles).flatMap(f => f.t || []))], ['reliques', J.reliques, new Set(Object.values(SV.familles).flatMap(f => f.r || []))]])
+  for (const [id, x] of Object.entries(map || {})) {
+    ok(ids.has(id), `${src}.${id} : id inconnu de souvenirs.js`);
+    for (const v of x.v || []) ok(J.variantes[v], `${src}.${id} : variante ${v} inconnue`);
+    if (x.renfort) ok(J.renforts[x.renfort], `${src}.${id} : renfort ${x.renfort} inconnu`);
+  }
+
+// 1. Justice, famille par famille (le même vérificateur que le mode d'essai)
+const t0 = Date.now();
+const V = F.sbVerifier(J, A, { er: ER, pas: VITE ? 2 : 1 });
+for (const e of V.err) ok(false, e);
+checks += V.note.length;
+console.log(`justice : ${Object.keys(J.familles).length} familles, ${V.note.length} cas (famille × variante × acte), ${V.err.length} manquement(s) — ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+const deplaces = V.note.filter(n => / [1-9]\d* déplacés| [1-9]\d* sautés/.test(n));
+if (deplaces.length) console.log('  placements retouchés pour garder une sortie :\n   ' + deplaces.map(n => n.replace(' pour garder une sortie', '').replace(' (porteur dans un coin)', '')).join('\n   '));
+const plaf = V.note.filter(n => /plafonné/.test(n));
+if (plaf.length) console.log(`  plafond de dégâts appliqué (variantes) : ${plaf.length} cas, de × ${Math.min(...plaf.map(n => +n.match(/× ([\d.]+)/)[1])).toFixed(2)} à × ${Math.max(...plaf.map(n => +n.match(/× ([\d.]+)/)[1])).toFixed(2)}`);
+
+// 2. Tableau de lecture
+console.log('\nfamille      forme        étapes  chargement I → III (s)        dégâts I / III  menace  incompatibles');
+for (const [fid, Fm] of Object.entries(J.familles)) {
+  const ets = F.sbEtapes(J, fid, []), ch = a => ets.map(et => F.sbCharge(J, A, et, a).toFixed(2)).join(' ');
+  const inc = Fm.incompatibles, txt = [...inc.familles, ...inc.capacites.map(k => 'cap:' + k), ...inc.corps.map(k => 'corps:' + k)].join(', ');
+  console.log(`${fid.padEnd(12)} ${Fm.forme.padEnd(12)} ${String(ets.length).padEnd(7)} ${(ch(1) + ' → ' + ch(3)).padEnd(30)} ${F.sbPotentiel(J, fid, [], 1).toFixed(2)} / ${F.sbPotentiel(J, fid, [], 3).toFixed(2)}     ${Fm.menace}       ${txt || '—'}`);
+}
+console.log(`plancher du Masqué : ${[1, 2, 3].map(a => F.sbPlancher(A, a, false).toFixed(2)).join(' / ')} s (actes I / II / III) ; étape aussi lourde qu'une signature : ${F.sbPlancher(A, 3, true).toFixed(2)} s`);
+
+// 3. Le chargement est tenu par le code, même si une donnée descend trop bas
+{ const J2 = clone(J); J2.familles.onde.etapes[0].chargeS = 0.05; J2.familles.ombre.etapes[0].degats = 2.4;
+  for (const a of [1, 2, 3]) {
+    ok(F.sbCharge(J2, A, F.sbEtapes(J2, 'onde', [])[0], a) >= F.sbPlancher(A, a, false) - 1e-9, `chargement plancher, acte ${a}`);
+    ok(F.sbCharge(J2, A, F.sbEtapes(J2, 'ombre', [])[0], a) >= F.sbPlancher(A, a, true) - 1e-9, `chargement d'une étape lourde ≥ signature, acte ${a}`);
+  }
+  // le plancher suit le Masqué : s'il charge plus lentement, ses armes aussi
+  const A2 = clone(A); for (const k in A2.capacites) A2.capacites[k].chargeS += 0.3;
+  ok(F.sbPlancher(A2, 3, false) > F.sbPlancher(A, 3, false), 'le plancher est lu dans les capacités du Masqué'); }
+
+// 4. Une zone à la fois : la file d'étapes, avec des pas de temps, des attentes et des zones qui durent tirés au hasard
+{ let s = 7; const rnd = () => (s = (s * 1103515245 + 12345) >>> 0) / 4294967296;
+  for (const fid of Object.keys(J.familles)) for (const vars of [[], ['double']]) {
+    const st = F.sbNouveau(J, fid, vars); let t = 0, actives = 0, finPrec = -Infinity, vivantJusqua = 0, chargeDebut = 0, maxActives = 0, attaques = 0;
+    for (let k = 0; k < 6000 && attaques < 4; k++) {
+      const dt = 0.004 + rnd() * 0.03, autre = st.ph === 'attente' && rnd() < 0.3;
+      const ev = F.sbPas(J, A, st, { dt, act: 1 + (k % 3), dist: rnd() * 400, autre, fige: rnd() < 0.05, vivant: t < vivantJusqua });
+      t += dt;
+      for (const [e, i] of ev) {
+        if (e === 'charge') { actives++; ok(t - finPrec >= J.justice.entracteS - 0.05 || i === 0, `${fid} : étape ${i + 1} chargée ${(t - finPrec).toFixed(2)} s après la fin de la précédente`); ok(!autre, `${fid} : chargée pendant une autre zone`); chargeDebut = t; ok(Math.abs(st.tot - F.sbCharge(J, A, st.etapes[i], 1 + (k % 3))) < 1e-9, `${fid} : durée de chargement`); }
+        if (e === 'lache') { ok(t - chargeDebut >= st.tot - 0.04 - dt, `${fid} : lâchée avant la fin du chargement`); vivantJusqua = t + rnd() * 1.5; }
+        if (e === 'fin') { ok(t >= vivantJusqua - 1e-9, `${fid} : étape finie alors que sa zone vit encore`); actives--; finPrec = t; }
+        if (e === 'finAttaque') attaques++;
+        maxActives = Math.max(maxActives, actives);
+      }
+    }
+    ok(maxActives === 1, `${fid}${vars.length ? '+' + vars : ''} : ${maxActives} zones à la fois`);
+    ok(attaques >= 2, `${fid} : la file tourne (${attaques} attaques)`);
+  } }
+
+// 5. Contre-épreuves : le vérificateur doit refuser des données injustes
+const refuse = (nom, modif, motif) => { const J2 = clone(J); const fid = modif(J2); const r = F.sbVerifier(J2, A, { familles: [fid], actes: [3], pas: 4, er: ER });
+  ok(r.err.some(e => motif.test(e)), `contre-épreuve « ${nom} » : non détectée (${r.err.slice(0, 2).join(' | ') || 'aucun manquement'})`); };
+refuse('disque géant sur toi', J2 => { J2.familles.cloche.etapes[0].rayon = 260; J2.bornes.disque.rayon = [40, 300]; return 'cloche'; }, /aucune sortie/);
+refuse('damier plein', J2 => { Object.assign(J2.familles.fortune.etapes[0], { allumees: 9, cote: 90 }); J2.bornes.damier.allumees = [3, 9]; return 'fortune'; }, /aucune sortie/);
+refuse('anneau sans brèche', J2 => { J2.familles.onde.etapes[0].breche = 2; J2.bornes.anneau.breche = [0, 120]; return 'onde'; }, /aucune sortie/);
+refuse('forme inconnue', J2 => { J2.familles.sol.etapes[0].f = 'tourbillon'; return 'sol'; }, /hors vocabulaire/);
+refuse('couleur dans les données', J2 => { J2.familles.lame.etapes[0].col = '#ff0000'; return 'lame'; }, /couleurs/);
+refuse('incompatibilité oubliée', J2 => { J2.familles.lame.incompatibles.capacites = []; return 'lame'; }, /incompatibles/);
+refuse('trop de dégâts', J2 => { J2.familles.ombre.etapes.forEach(e => { e.degats = 2; }); return 'ombre'; }, /dégâts/);
+refuse('zone qui suit jusqu’au coup', J2 => { J2.familles.lame.etapes[0].suivi = 0.95; return 'lame'; }, /suivi|figement/);
+refuse('hors bornes', J2 => { J2.familles.projectile.etapes[0].vitesse = 900; return 'projectile'; }, /hors de/);
+
+// 6. Le placement en jeu : sans sortie, l'étape saute (jamais de zone sans sortie)
+{ const J2 = clone(J); J2.familles.cloche.etapes[0].rayon = 400; const et = F.sbEtapes(J2, 'cloche', [])[0];
+  const R = J.justice.arene, c = { lx: 300, ly: 300, er: ER, px: 640, py: 384, a: 0, rnd: Math.random }, o = { lx: 300, ly: 300, er: ER, arene: R };
+  ok(F.sbPlacer(J2, A, et, c, o, 3) === null, 'sans sortie possible, le placement renvoie null (l\'étape saute)');
+  const et2 = F.sbEtapes(J, 'cloche', [])[0]; ok(F.sbPlacer(J, A, et2, c, o, 3) !== null, 'en plein milieu, la cloche se place'); }
+
+console.log(`\n${checks} vérifications, ${fails} échec(s)`);
+process.exit(fails ? 1 : 0);
