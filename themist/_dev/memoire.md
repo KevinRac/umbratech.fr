@@ -916,3 +916,22 @@ Réglage (`data/gardiens.js`, `survieGouffre`) : × 0,8 sur les dégâts reçus,
 
 Non fait (à mesurer d’abord sur des descentes exportées) : respiration de fin de cycle (apresSignatureS), rage limitée aux actes I–II.
 Wiki : une phrase dans « Les gardiens » et dans « Le Masqué », générée depuis les données.
+
+## 17. Palier 2, troisième tranche : Fil et Faisceau (v17.13, 26 octobre 2026)
+
+Les familles **Fil** (Tisse-Destin, 25 talents) et **Faisceau** (10 talents, surtout Lumenarque) donnent une capacité au Masqué porteur. Neuf familles sur quinze sont portables (Projectile, Lame, Ruée, Onde, Sol, Dévoration, Cloche, Fil, Faisceau) ; restent les familles d’état (Lumière, Ombre, Soin, Garde) et les passifs (Fureur, Fortune).
+
+| Famille | Capacité | Forme | Ce que ça fait |
+|---|---|---|---|
+| Fil | `fil` (`u_thread`) | `fil` | Couloir de 34 px sur 400 px qui te suit pendant les 55 % premiers du chargement (0,8 s), puis se fige. S’il te touche au lâcher : dégâts (1,3 × dégâts), puis il te tire vers lui à 180 px/s pendant 1 s (arrêt au contact). Une esquive coupe le fil. S’il te rate, le trait se dissipe. `portee` 320 : il s’approche avant de le lancer. |
+| Faisceau | `faisceau` (`u_beam`) | `faisceau` | Secteur de 90° et de 340 px centré sur toi, qui te suit jusqu’à la moitié du chargement (0,9 s), puis se fige. Un rayon de 26 px le balaie d’un bord à l’autre en 1,2 s, dans un sens tiré au hasard : le bord de départ est un trait clair avec une flèche. Il blesse une fois (1,6 × dégâts). `portee` 300. |
+
+Réglages : `data/bestiaire.js`, `assemble.capacites.fil` / `faisceau` et `assemble.souvenir.familles`. Contrairement aux zones posées sur toi (taches, tourbillon, cercles), elles partent de lui : il ne te poursuit pas pendant le chargement (elles ne sont pas dans `bougeCharge`).
+
+Garde-fous (sim-masque.mjs, section 1 quater) : le fil est plus étroit qu’un joueur mais plus large que lui ; la traction reste sous la vitesse la plus basse (on peut toujours résister) et sous la longueur du fil ; la pire fuite du secteur du faisceau (≈ 141 px, quand fuir sur le côté coûte autant que fuir en arrière) tient dans le chargement le plus court plus 0,3 s ; le balayage dure au moins 1 s.
+
+Mesures en jeu (Chromium) : fil, joueur immobile : 22 PV, distance 201 → 49 px ; avec une esquive 0,3 s après l’accroche : 201 → 147 px ; faisceau, joueur dans le secteur : 27 PV ; joueur hors du secteur : 0.
+
+Wiki : inchangé (il ne liste pas les capacités de souvenir), seule la version suit. Journal : v17.13.
+
+À surveiller : la traction du Fil pour un corps à corps (elle ramène au contact du Masqué : bon pour un Gouffre, moins pour un Lumenarque) ; la lisibilité du balayage du Faisceau sur un fond sombre.

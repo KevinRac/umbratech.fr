@@ -63,6 +63,16 @@ for (const k of SOUV) ok(Object.values(A.souvenir.familles).includes(k), `capaci
   ok(C && C.nombre >= 2 && C.pas - C.largeur >= 2 * PR * 0.5 + 24, `cercles : l'espace entre deux anneaux (${C.pas - C.largeur} px) doit laisser passer le joueur`);
   ok(Math.abs(C.effetS - ((C.nombre - 1) * C.battueS + 0.55)) < 0.2, `cercles : effetS (${C.effetS}) ≈ (nombre-1) × battueS + 0,55`);
   ok(C.battueS >= 0.4, 'cercles : une battue plus courte que l’invulnérabilité du joueur la rendrait injuste'); }
+// 1 quater (v17.13). Fil et Faisceau
+{ const PR = 11, VMIN = 190, F = A.capacites.fil, Q = A.capacites.faisceau;
+  const chargeMin = Math.max(A.chargeMinS, Math.min(F.chargeS, Q.chargeS) * Math.pow(A.accelerationActe, 2));
+  ok(F && F.largeur >= 2 * PR && F.suivi > 0 && F.suivi < 1, `fil : largeur (${F.largeur}) au moins un joueur, suivi entre 0 et 1`);
+  ok(F.tire < VMIN, `fil : la traction (${F.tire}) doit rester sous la vitesse la plus basse (${VMIN}) : on peut toujours résister`);
+  ok(F.tire * F.effetS <= F.longueur, 'fil : on n’est pas tiré plus loin que la longueur du fil');
+  const s = Math.sin(Q.balayage * Math.PI / 360), pire = Q.longueur * s / (1 + s);   // pire distance de fuite (latérale = radiale), au plus favorable des deux
+  ok(Q && Q.balayage > 0 && Q.balayage < 180 && Q.largeur >= 2 * PR, 'faisceau : balayage et largeur raisonnables');
+  ok(pire <= VMIN * (chargeMin + 0.3), `faisceau : la pire fuite du secteur (${pire.toFixed(0)} px) doit tenir dans le chargement le plus court (${(chargeMin + 0.3).toFixed(2)} s à ${VMIN} px/s)`);
+  ok(Q.effetS >= 1, 'faisceau : un balayage plus court que 1 s serait trop rapide à lire'); }
 for (const [act, salle] of [[1, 3], [2, 9], [2, 14], [3, 18]]) {
   const parts = [];
   for (const cap of new Set(Object.values(A.souvenir.familles))) {

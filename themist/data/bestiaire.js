@@ -155,7 +155,14 @@
    tourbillon:{n:'Tourbillon',ic:'u_maw',forme:'tourbillon',souvenir:true,adj:{m:'aspirant',f:'aspirante'},menace:2,chargeS:0.8,effetS:1.7,rayon:140,coeur:34,attire:120,degats:1.5,tic:0.5,degatsTic:0.3,finS:0.7},
    // v17.11 · Cercles (famille Cloche) : nombre anneaux concentriques posés sous toi au chargement (le premier est un disque), de largeur px,
    // espacés de pas px. Ils frappent l'un après l'autre, du centre vers l'extérieur, toutes les battueS secondes : reste entre deux anneaux.
-   cercles:{n:'Cercles',ic:'u_bell',forme:'cercles',souvenir:true,adj:{m:'sonnant',f:'sonnante'},menace:2,chargeS:0.8,effetS:1.45,nombre:3,largeur:34,pas:74,battueS:0.45,degats:1.4}},
+   cercles:{n:'Cercles',ic:'u_bell',forme:'cercles',souvenir:true,adj:{m:'sonnant',f:'sonnante'},menace:2,chargeS:0.8,effetS:1.45,nombre:3,largeur:34,pas:74,battueS:0.45,degats:1.4},
+   // v17.13 · Fil (famille Fil, Tisse-Destin) : un couloir étroit (largeur px, longueur px) te vise pendant le chargement (il te suit jusqu'à suivi du chargement,
+   // puis se fige). S'il te touche au lâcher, il t'accroche : dégâts, puis il te tire vers lui à tire px/s pendant effetS secondes. Une esquive coupe le fil.
+   fil:{n:'Fil',ic:'u_thread',forme:'fil',souvenir:true,adj:{m:'tisseur',f:'tisseuse'},menace:2,chargeS:0.8,effetS:1,longueur:400,largeur:34,suivi:0.55,tire:180,degats:1.3,portee:320},
+   // v17.13 · Faisceau (famille Faisceau) : un secteur de balayage degrés, de longueur px, centré sur toi au début du chargement (il te suit jusqu'à la moitié).
+   // Au lâcher, un rayon (largeur px) le balaie d'un bord à l'autre en effetS secondes, dans un sens tiré au hasard (le bord de départ est marqué, avec une flèche) ;
+   // il te blesse une fois quand il te passe dessus. Sors du secteur ou esquive.
+   faisceau:{n:'Faisceau',ic:'u_beam',forme:'faisceau',souvenir:true,adj:{m:'rayonnant',f:'rayonnante'},menace:2,chargeS:0.9,effetS:1.2,longueur:340,largeur:26,balayage:90,degats:1.6,portee:300}},
   // v17.9 · Le Masqué porte parfois un souvenir de ta réserve (data/souvenirs.js, familles). chance : % des Masqués qui en portent un
   // quand la réserve a un souvenir portable ; parActe : au plus autant de porteurs par acte ; familles : famille → capacité qu'il en tire
   // (elle prend une des deux places de départ, sous le même budget de menace) ; parRang / parGravure : dégâts de cette capacité en plus,
@@ -163,7 +170,7 @@
   // Brisé, il propose de reprendre le souvenir à la place de la relique (D9). Les dégâts infligés à un porteur ne comptent pas dans l'Accoutumance (D5).
   // pv (v17.10) : PV du porteur en plus, par rang au-delà du premier et par gravure du souvenir (voler un talent fort coûte cher).
   souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,pv:0.1,
-   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches',devoration:'tourbillon',cloche:'cercles'}},
+   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches',devoration:'tourbillon',cloche:'cercles',fil:'fil',faisceau:'faisceau'}},
   // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
   // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
   passive:{n:'Trait',ic:'u_arrow',intervalleS:1,preavisS:0.25,degats:0.6,vitesse:320,portee:560},
