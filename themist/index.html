@@ -8787,11 +8787,17 @@ function demoBoot(cls){
  window.__asm.drawMask=drawMask;
  // Pour essayer en jeu, depuis la console : __asm.essai() ; __asm.essai('voile:onde+cone>charge', 3) ; troisième argument vrai : sans la première vague
  // quatrième argument (v17.9) : id d'un talent de la réserve qu'il doit porter (__memoire.reserve), par exemple __asm.essai(null,2,true,'fan_n2')
- window.__asm.essai=function(cle,acte,direct,souv){try{if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+ window.__asm.essai=function(cle,acte,direct,souv,cls){try{if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[cls]?cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+  // v17.13 · outil de test : si le souvenir demandé n'est pas dans la réserve, on l'y met (rang 1, jamais porté)
+  if(souv&&NODES[souv]&&!(RUN.reserveBrume=RUN.reserveBrume||[]).some(x=>x.id===souv))RUN.reserveBrume.push({id:souv,source:'talent',rang:1,g:0,oublie:{acte:RUN.act||1,salle:RUN.roomIdx||1},porte:0});
   RUN.act=Math.max(A.desActe,acte||2);RUN.g=Math.max(RUN.g,RUN.act>=3?18:10);RUN.roomIdx=Math.max(1,(A.premiereSalle||1)-1);window.__asm.forcer=1;window.__asm.combo=cle||null;window.__asm.souv=souv||null;
   closeOverlay();queue.length=0;trans=null;fade=0;try{doEnter('elite');}finally{window.__asm.combo=null;window.__asm.forcer=0;window.__asm.souv=null;}
   if(direct&&room.asm&&room.waves.length>1)room.waves.shift();
   return room.asm?room.asm.nom:'(pas de Masqué ici)';}catch(err){console.error(err);return String(err);}};
+ // v17.13 · sans console : index.html?masque=<id de talent>[&classe=lum|gou|her|tis][&acte=1|2|3] ouvre une salle avec un Masqué qui porte ce souvenir
+ const QM=/[?&]masque=([a-z0-9_]+)/.exec(location.search);
+ if(QM&&!DEMO){const qc=(/[?&]classe=([a-z]+)/.exec(location.search)||[])[1],qa=+((/[?&]acte=([123])/.exec(location.search)||[])[1]||2);
+  addEventListener('load',()=>setTimeout(()=>{const n=window.__asm.essai(null,qa,true,QM[1],qc);try{toast('Essai · '+n,3);}catch(x){}},400));}
  window.__asm.dbg=()=>({P,RUN,room,enemies,state,rings,kill:killEnemy,entrer:t=>{trans=null;fade=0;doEnter(t);},lancer:()=>{chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}});
 
  // ── Zones : géométrie figée au début du chargement (sauf le suivi de la charge, de la lame et de la salve)
