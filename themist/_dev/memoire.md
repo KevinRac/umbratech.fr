@@ -832,3 +832,22 @@ Question du joueur : au début de l’acte III, le build est presque fait. Avec 
 
 - La gravure ajoute de la puissance tardive alors que les ennemis montent déjà de 8,5 % de PV par salle : mesurer si elle rend l’acte III trop facile pour les builds rapides.
 - Les cartes de gravure viennent en plus des trois talents ; si l’écran devient trop long sur petit écran, remplacer un talent au lieu d’ajouter.
+
+## 11. Clôture du palier 1 : mesure (v17.7, 26 octobre 2026)
+
+Livré depuis v17.0 : mémoire de 10 talents (reliques hors mémoire), écran « prendre / oublier », gravure, 93 éveils (36 nœuds clés et ultimes, 57 compétences), statistiques de fin de run (`SAVE.stats17`, 80 descentes, export chez l’Archiviste ; `__memoire.stats()` en console).
+
+**Mesure au bot** (`bal10.mjs` : 4 formes × 3 graines, jusqu’à l’acte III salle 7 ; mémoire 10 contre mémoire sans limite). Le bot tue les ennemis d’un coup et choisit au hasard : il mesure la puissance de la fiche, pas la difficulté. Indice offensif = dmg × vitesse d’attaque × (1 + crit × (critMult − 1)) ; PV effectifs = PV max / dégâts subis. Moyennes :
+
+| Forme | Acte II (illimité → 10) | Acte III | Fin (acte III, salle 7) |
+|---|---|---|---|
+| Lumenarque | 1,14 / 112 → 1,05 / 111 | 1,16 / 125 → 1,26 / 141 | 1,16 / 142 → 1,38 / 143 |
+| Gouffre | 1,03 / 134 → 1,10 / 154 | 1,03 / 129 → 1,12 / 162 | 1,10 / 142 → 1,30 / 188 |
+| Héraut | 1,16 / 123 → 1,05 / 124 | 1,16 / 157 → 1,25 / 159 | 1,21 / 142 → 1,30 / 143 |
+| Tisse-Destin | 1,40 / 161 → 1,11 / 132 | 1,53 / 143 → 1,29 / 119 | 1,58 / 137 → 1,78 / 143 |
+
+Lecture : avec la gravure, la fiche à 10 talents rattrape puis dépasse la fiche sans limite en fin de run (les bonus de famille portent surtout sur les dégâts). Seul Tisse-Destin est nettement en dessous aux actes II et III (−20 % d’indice offensif, −10 à −18 % de PV effectifs) ; trois graines seulement, à confirmer sur de vraies parties avant de toucher aux chiffres. Ce que l’indice ne voit pas : les compétences, les éveils, la synergie des builds resserrés.
+
+Le bot n’avait atteint aucun éveil (1 à 5 gravures par run, rarement deux fois le même talent) : v17.7 fait viser de préférence un talent déjà gravé une fois (poids 3, 4 s’il a un éveil ; mesuré : 25 % des cartes de gravure, contre 10 % avant).
+
+**Ce qui reste ouvert, à trancher sur les descentes exportées** (pas au bot) : difficulté réelle avec la montée des ennemis (+8,5 % de PV par salle, inchangée), part de l’Accoutumance (D5, champ `accoutumance` de l’export), Tisse-Destin au milieu de run, éveils trop forts éventuels (Pacte scellé, Pluie d’acier, Ciel étoilé, Grand bal, Marionnettiste, Clocher). Le palier 2 (Masqué) peut démarrer ; ces réglages se feront en parallèle, sur données.

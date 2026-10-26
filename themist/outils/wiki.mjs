@@ -178,6 +178,7 @@ function memoire(D) {
 <h3 class="sub" id="gravure">Graver un souvenir</h3>
 <p>Mémoire pleine, l’écran de niveau propose en plus une <b>carte de gravure</b> (bordure dorée, marquée « Gravure ${ROMG[1]} »). Elle vise un talent que tu portes déjà <b>au rang maximum</b>, et <b>ne prend aucune place</b> : c’est la façon de te renforcer quand ton build est fait. Si l’arbre n’a plus rien à t’offrir, jusqu’à trois cartes de gravure remplacent les talents.</p>
 <ul>
+<li>La carte vise de préférence un talent <b>déjà gravé une fois</b>, surtout s’il a un éveil : le chemin vers l’éveil ne dépend pas du hasard.</li>
 <li>Un talent peut être gravé <b>${GV.max} fois</b> (Gravure ${ROMG[1]}${GV.max > 1 ? ', puis ' + ROMG.slice(2, GV.max + 1).join(', ') : ''}). Sur sa tuile, un liseré doré et un losange par gravure.</li>
 <li>Talent à effets chiffrés (dégâts, rayon, PV, recharge…) : chaque gravure les intensifie de <b>${pct} %</b> (+${pct * GV.max} % à ${GV.max} gravures). Les niveaux de compétence, les compteurs et les interrupteurs ne bougent pas.</li>
 <li>Talent sans effet chiffré (la plupart des mineurs de branche et des majeurs) : chaque gravure donne le <b>bonus de sa famille</b> (ci-dessous), multiplié selon le genre du nœud : ${esc(poidsTxt)}.</li>

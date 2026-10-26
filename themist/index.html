@@ -9437,7 +9437,7 @@ function demoBoot(cls){
    const box=overlayEl.querySelector('.lv .cards');if(!box||box.querySelector('.gcard'))return;
    const cand=gravables();if(!cand.length)return;
    const want=box.querySelector('.card[data-id]')?1:Math.min(3,cand.length);
-   const picks=shuffle(cand.slice()).slice(0,want),gmap={};let i=box.querySelectorAll('.card').length;
+   const pool=cand.slice(),picks=[],gmap={};while(picks.length<want&&pool.length){const w=a=>(a.g||0)>=1?(EVD[a.id]?4:3):1;let t=pool.reduce((n,a)=>n+w(a),0)*Math.random(),k=0;for(;k<pool.length-1;k++){t-=w(pool[k]);if(t<=0)break;}picks.push(pool.splice(k,1)[0]);}let i=box.querySelectorAll('.card').length;
    for(const a of picks){const g=(a.g||0)+1;gmap[i]=a.id;
     const ev=g>=2&&EVD[a.id];box.insertAdjacentHTML('beforeend',`<button type="button" class="card gcard${ev?' evc':''}" data-gid="${a.id}" style="--c:${colOf(a)}"><span class="meta"><span class="br">● ${esc(branchOf(a))}</span><span>${ev?'Éveil':'Gravure '+ROMG[g]}</span></span><div class="gc-h">${tile(a,{big:true,g})}<div><h3>${esc(nameOf(a))}</h3><p>${esc(graveTxt(a))}</p></div></div><span class="k">Sans place · touche ${i+1}</span>${badge('up')}</button>`);i++;}
    const cap=$('#cap'),take=id=>{if(!armed())return;grave(id);closeOverlay();};
