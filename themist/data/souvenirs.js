@@ -8,6 +8,39 @@
  // Trophées (v17.10) : un souvenir repris sur un Masqué brisé ne prend pas de place, parActe fois par acte au plus (au-delà, il en prend une).
  // Il est figé (ni rang ni gravure de plus), ne s’oublie pas et reste jusqu’à la fin de la descente ; il s’éteint comme les autres (D2, D4).
  trophees:{parActe:1},
+ // Le Dernier Souvenir (palier 5, cadrage v17.23 : décisions DS1 à DS19) : en combat, brûler un talent porté pour un effet unique.
+ // Il est perdu pour de bon : ni mémoire, ni réserve de la Brume ; sa place se libère ; ce qui en dépendait s’éteint (D4) ; sa trace reste.
+ // actif : faux tant que les effets (action 3) et la touche (action 4) ne sont pas branchés ; en console : __dernier.
+ // parActe : braises par acte, rendues à l’entrée de chaque acte, non cumulables ; maintienS : durée du maintien de la touche ;
+ // invulS : invulnérabilité à l’embrasement ; interdits : genres de nœud qu’on ne brûle pas (c : racine de voie) et les trophées.
+ // force = poids du genre (gravure.poids) × (1 + parRang × (rang − 1)) × (1 + parGravure × gravures) : de 1 à 3.
+ // plafonds : sur un gardien ou un Masqué, une brûlure fait au plus gardienPv × force de ses PV max, jamais plus de gardienPvMax ;
+ //  soin et bouclier en part des PV max, jamais plus que soinMax / bouclierMax.
+ // controles : ce qui ne touche jamais un gardien ni un Masqué (remplacé par fort, à la même force).
+ // familles : n nom, d texte (jeu et wiki), v valeurs à la force 1 (durées en s : clés finissant par S, jamais plus de dureeMaxS),
+ //  monte : clés multipliées par la force (les durées ne montent jamais), max : bornes après la force, fort : ce qui remplace
+ //  les contrôles contre un gardien ou un Masqué. Fortune n’a aucun talent : rien à brûler.
+ dernier:{actif:false,parActe:1,touche:'KeyX',maintienS:0.35,invulS:0.5,dureeMaxS:5,
+  interdits:{genres:['c'],trophee:true},
+  force:{parRang:0.15,parGravure:0.25},
+  plafonds:{gardienPv:0.04,gardienPvMax:0.08,soinMax:0.4,bouclierMax:0.4},
+  controles:['acheve','etourdiS','immobileS','attire','avale','recul','ralenti'],
+  familles:{
+   projectile:{n:'Dernière salve',d:'Des traits chercheurs partent de toi et se répartissent sur les ennemis.',v:{traits:12,degats:14},monte:['degats']},
+   faisceau:{n:'Dernier rayon',d:'Un rayon fait un tour complet autour de toi.',v:{degats:60,portee:420,tourS:0.8},monte:['degats']},
+   lame:{n:'Dernière taille',d:'Un coup tout autour de toi, qui achève les ennemis ordinaires affaiblis.',v:{degats:70,rayon:140,acheve:0.2},monte:['degats']},
+   ruee:{n:'Dernier élan',d:'Tes esquives sont pleines et sans recharge, et chacune blesse ce qu’elle traverse.',v:{dureeS:3,degats:25},monte:['degats']},
+   onde:{n:'Dernière onde',d:'Une onde part de toi jusqu’au bord de la salle et repousse les ennemis.',v:{degats:50,recul:200},monte:['degats']},
+   sol:{n:'Dernière terre',d:'Le sol brûle sous chaque ennemi et le ralentit.',v:{dps:20,dureeS:3,ralenti:0.4},monte:['dps']},
+   fil:{n:'Dernier fil',d:'Tous les ennemis de la salle sont attachés et immobiles.',v:{immobileS:2.5},monte:['degats'],fort:{degats:40}},
+   cloche:{n:'Dernier glas',d:'Une cloche sonne sur toute la salle et étourdit les ennemis ordinaires.',v:{degats:30,etourdiS:1.2},monte:['degats']},
+   devoration:{n:'Dernière bouchée',d:'Les ennemis proches sont attirés vers toi ; les plus affaiblis sont avalés et te soignent.',v:{rayon:260,attire:1,avale:0.25,soinParAvale:4},monte:['soinParAvale','degats'],fort:{degats:45}},
+   lumiere:{n:'Dernier jour',d:'Un éclair expose tous les ennemis et dissipe les projectiles des ennemis ordinaires.',v:{exposeS:4,expose:0.25,dissipe:1},monte:['expose'],max:{expose:0.5}},
+   ombre:{n:'Dernière ombre',d:'Tu disparais : les ennemis perdent ta trace, et tous tes coups sont critiques.',v:{invisibleS:3,critMult:0.3},monte:['critMult'],max:{critMult:0.9}},
+   soin:{n:'Dernier souffle',d:'Un soin, compté sur tes PV max après la brûlure.',v:{soin:0.25},monte:['soin']},
+   garde:{n:'Dernier rempart',d:'Un bouclier qui tient quelques secondes.',v:{bouclier:0.3,dureeS:5},monte:['bouclier']},
+   fureur:{n:'Dernière fureur',d:'Tes dégâts et ta vitesse d’attaque montent quelques secondes.',v:{dmg:0.4,vitesse:0.3,dureeS:5},monte:['dmg','vitesse'],max:{dmg:1,vitesse:0.6}}
+  }},
  // Gravure (v17.3) : mémoire pleine, un talent porté au rang max peut être gravé (max fois), sans prendre de place.
  // Chaque gravure intensifie ses effets chiffrés de part (0,4 = +40 %). Sans effet chiffré : le bonus gr de sa famille,
  // multiplié selon le genre du nœud (poids : mineur 1, compétence et majeur 1,5, nœud clé, racine et ultime 2).

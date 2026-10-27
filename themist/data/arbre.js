@@ -91,7 +91,7 @@
   x:l=>`<rect class="halo" x="-26" y="-26" width="52" height="52" rx="6"/><rect class="sh xs" x="-17" y="-17" width="34" height="34" rx="4" transform="rotate(45)"/><text class="xl" text-anchor="middle" y="5">${l}</text>`
  };
  const RK={m:26,s:32,x:36,k:36,c:40};
- // o.cls : forme · o.etat(id) → {r,rk,av,sealed,excl,offer,sel,hl,t,off} (jeu ; t : oublié, encore tracé ; off : en mémoire mais éteint) · o.statique : tout révélé (wiki)
+ // o.cls : forme · o.etat(id) → {r,rk,av,sealed,excl,offer,sel,hl,t,off} (jeu ; t : oublié, encore tracé ; b : brûlé, tracé mais perdu pour de bon ; off : en mémoire mais éteint) · o.statique : tout révélé (wiki)
  // o.scelle(br) : voie non choisie · o.pref : préfixe des id des nœuds
  // Les nœuds sont dans <g class="world"> (qui pivote pour déplier une branche) ; leur contenu, dans <g class="up">
  // (qui contre-pivote, pour que les noms restent droits). Voir vue().
@@ -124,7 +124,7 @@
   for(const id of idsOf(cls)){
    const n=T.noeuds[id],br=brOf(id),B=T.branches[br],[x,y]=pos(id),e=etat(id)||{},lat=(B.sub?G.voie:G.principal).slots[slotOf(id)][1];
    const c=['ar-n'];
-   if(st)c.push('av');else{if(e.r)c.push('own');else if(e.t)c.push('oub');else if(e.av)c.push('av');if(e.off)c.push('off');if(e.sealed)c.push('sealed');if(e.excl)c.push('excl');}
+   if(st)c.push('av');else{if(e.r)c.push('own');else if(e.b)c.push('bru');else if(e.t)c.push('oub');else if(e.av)c.push('av');if(e.off)c.push('off');if(e.sealed)c.push('sealed');if(e.excl)c.push('excl');}
    if(e.offer)c.push('offer');if(e.sel)c.push('sel');if(e.hl)c.push('hl');
    const gl=n.k==='x'?GLY.x(id.endsWith('a')?'A':'B'):GLY[n.k]||GLY.c,rk=e.rk!=null?e.rk:'',ry=RK[n.k]||36,rr=RAY[n.k]||19;
    // nom : de côté, vers l'extérieur de la branche
@@ -137,7 +137,7 @@
   }
   return s+'</g></svg>';
  }
- // Légende : genres de nœud (et états, si o.etats)
+ // Légende : genres de nœud (et états, si o.etats ; « Brûlé » en plus si o.brule)
  function legende(o){
   o=o||{};
   const sym=(g,c)=>`<svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n av" style="--c:${c||'#cfc7b3'}" aria-hidden="true">${g}</svg>`;
@@ -150,7 +150,8 @@
     +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n offer" style="--c:#f3b94d" aria-hidden="true">${GLY.s}</svg><span>Proposé</span></li>`
     +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n excl" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Incompatible</span></li>`
     +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n oub" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Oublié</span></li>`
-    +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n own off" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Éteint</span></li>`;
+    +`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n own off" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Éteint</span></li>`
+    +(o.brule?`<li><svg viewBox="-30 -30 60 60" width="24" height="24" class="ar-n bru" style="--c:#cfc7b3" aria-hidden="true">${GLY.s}</svg><span>Brûlé</span></li>`:'');
   }
   return h+'</ul>';
  }
@@ -173,6 +174,9 @@
 .ar-n.oub .sh{fill:#161a27;stroke:var(--c);stroke-dasharray:2 3;opacity:.7}
 .ar-n.oub .in{fill:var(--c);opacity:.25}
 .ar-n.oub .xs{fill:#161a27;stroke-dasharray:2 3}
+.ar-n.bru .sh{fill:#140f0d;stroke:#8a5a3c;stroke-dasharray:1 2.5;opacity:.75}
+.ar-n.bru .in{fill:#e08a4a;opacity:.22}
+.ar-n.bru .xs{fill:#140f0d;stroke:#8a5a3c;stroke-dasharray:1 2.5}
 .ar-n.off{filter:grayscale(1) brightness(.6)}
 .ar-n.excl .sh{stroke:#8a4452;stroke-dasharray:3 3}
 .ar-n .halo{fill:none;stroke:#fff;stroke-width:2;opacity:0}

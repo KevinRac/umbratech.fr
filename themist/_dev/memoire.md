@@ -1366,3 +1366,33 @@ Le Reflet est hors de la liste `enemies` : rien ne le vise, ne l'attache ni ne l
 - **La lisibilité** se juge en jouant : on doit reconnaître sa propre silhouette, pas un ennemi invoqué.
 - Le pilote n'esquive pas et ne frappe pas ; un joueur qui frappe le Cœur pendant un geste n'a pas été mesuré.
 - Une relecture du code par un second agent, prévue au découpage (action 7), n'a pas été faite.
+
+## 27. Palier 5 : le Dernier Souvenir, actions 1 et 2 (28 octobre 2026, pas encore actif)
+
+Cadrage : document `claude/la-brume-v17-23-dernier-souvenir-cadrage.md` du projet claude.ai (décisions DS1 à DS19). L'auteur a demandé les actions 1 et 2 du découpage (DS19) ; les recommandations du cadrage sont appliquées telles quelles. **Le jeu ne montre encore rien** : `dernier.actif` est faux dans `souvenirs.js` tant que les effets (action 3) et la touche (action 4) ne sont pas branchés. Pas de numéro de version ni de ligne de journal : rien ne change pour le joueur.
+
+### Ce qui est construit
+
+| Où | Quoi |
+|---|---|
+| `data/souvenirs.js`, `dernier` | Réglages : `actif`, `parActe` 1, `touche` KeyX, `maintienS` 0,35, `invulS` 0,5, `dureeMaxS` 5, `interdits` (racine de voie, trophée), `force` (0,15 par rang, 0,25 par gravure, poids du genre de la gravure), `plafonds` (4 % des PV d'un gardien ou d'un Masqué par point de force, 8 % au plus ; soin et bouclier ≤ 40 % des PV max), `controles`, et les 14 effets de famille (`n`, `d`, `v`, `monte`, `max`, `fort`). Fortune n'a pas de talent, donc pas d'effet. |
+| `data/icones.js` | `u_braise` (la flamme du Dernier Souvenir). |
+| `data/arbre.js` | État `b` (brûlé : tracé, cendre, pointillé braise), classe `bru`, légende « Brûlé » sur demande (`legende({etats, brule})`). Le wiki reçoit la feuille de style (régénéré), pas la légende. |
+| `index.html`, bloc `/*ds:pur*/` (dans « v17 · La Mémoire ») | `dsGenre`, `dsForce`, `dsRefus` (relique, trophée, genre, famille, effet en cours), `dsBraises` / `dsDepense` (une par acte, non cumulable), `dsCombat`, `dsValeurs` (force, bornes, contrôles remplacés contre un gardien ou un Masqué), `dsPlafond`, `dsMaintien`. |
+| `index.html`, bloc v17 | `burn()` à côté de `forget()` : retire le talent sans le pousser dans la réserve, `M.brules`, braise dépensée, recalcul sans soin (`resync`), ce qui en dépendait s'éteint, trace gardée, chronique « tu as brûlé … ». `nodeAvailable` refuse un talent brûlé (jamais reproposé ; jamais gravé ni repris, puisqu'il n'est ni en mémoire ni dans la réserve). `DS_COURS` : la brûlure attend la fin d'un effet en cours (12 ultimes, Carapace, Point d'orgue). Désignation (`M.designe`) : clic sur une tuile de la Mémoire dans la pause (une seule, second clic retire ; la racine refuse), liseré de braise sur la tuile au HUD et dans la pause, fêlure sur ce qui s'éteindrait avec elle, braise de l'acte au bout de la rangée ; la désignation tombe si le talent part autrement. Arbre : état brûlé, légende « Brûlé » quand il y en a. |
+| `outils/sim-dernier.mjs` | Vérification hors navigateur (voir Mesures). |
+| Console | `__dernier` : `activer()` (montre la désignation sans toucher aux données), `designer(id)`, `bruler(id?, {libre})`, `refus(id)`, `force(id)`, `braises()`, `enCombat()`, `valeurs(famille, force, fort)`, `plafond(force, pv)`, et pour les essais `prendre(id, rang, gravures)` (passe par `restore` : il compte comme « repris » dans les statistiques), `dispo`, `offres`, `gravables`, `arbre`, `legende`. |
+
+### Écart avec le cadrage
+
+- Ombre (« Dernière ombre ») : le cadrage ne lui donnait rien qui monte avec la force ; `critMult` +0,3 (au plus +0,9) a été ajouté pour que le rang et la gravure comptent pour toutes les familles. À valider.
+
+### Mesures
+
+- `sim-dernier.mjs` : **3 988 vérifications, 0 échec**. 228 talents brûlables sur 240 (les 12 racines non) : 63 mineurs, 57 compétences, 72 majeurs, 24 nœuds clés, 12 ultimes ; force de 1 à 3 ; trois brûlures au plus par descente ; plafonds au palier 0 (force 1 · 2 et 3) : Mère-Brume 106 · 212, Héraut Noyé 230 · 460, Glas 360 · 720, Masqué 29 · 59. Contre-épreuves faites à la main : une durée qui monte avec la force et un ultime retiré de `DS_COURS` sont attrapés.
+- `sim-brume.mjs --vite` : 46 602, 0 échec. `sim-masque.mjs` : 3 583 218 contrôles, tout est bon. `wiki.mjs --check` : à jour.
+- Chromium sans affichage (`?masque=fan_n2&classe=…&acte=2`, quatre formes, 117 vérifications, 0 échec, aucune erreur de script) : inerte tant que `actif` est faux ; racine refusée, ultime brûlable, ultime en cours refusé ; désignation par clic dans la pause, marque au HUD, fêlure sur le majeur lié, second clic qui retire ; brûlure en combat : place libérée, rien dans la réserve, rang retiré et trace gardée, aucun soin, `P.s` identique à la mémoire efficace rejouée, jamais reproposé (300 tirages) ni gravable, arbre « brûlé » et légende, majeur lié éteint ; deuxième brûlure du même acte refusée, braise rendue à l'acte suivant, refus hors combat, désignation tombée à l'oubli, trophée ni brûlé ni désigné, ligne de chronique.
+
+### Ce qui reste (DS19)
+
+Actions 3 (les 14 effets, invulnérabilité, plafonds, Accoutumance), 4 (touche X maintenue, HUD de la braise, embrasement, son, aide), 5 (`?dernier=`), 6 (statistiques, fin de run), 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
