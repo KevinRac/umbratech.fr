@@ -82,3 +82,21 @@ jobs:
           fi
           node .github/scripts/gw1-config.mjs | sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o PubkeyAuthentication=no "$IONOS_USER@$IONOS_HOST" 'set -eu; umask 077; cd ~/public/gw1/api; cat > config.local.php.tmp; mv config.local.php.tmp config.local.php'
           echo "config.local.php écrit sur le serveur."
+
+      # Ring Dodge : écrit ringdodge/acces.local.php sur le serveur (empreinte du mot de passe des
+      # testeurs et clé de signature des cookies), à partir du secret RINGDODGE_MDP.
+      # Le mot de passe n'est jamais dans le dépôt. Sans le secret, l'étape est ignorée.
+      - name: Écrire l'accès de Ring Dodge
+        env:
+          IONOS_HOST: ${{ secrets.SSH_IONOS }}
+          IONOS_USER: ${{ secrets.SSH_USER }}
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          RINGDODGE_MDP: ${{ secrets.RINGDODGE_MDP }}
+        run: |
+          if [ -z "$RINGDODGE_MDP" ]; then
+            echo "Secret RINGDODGE_MDP absent : accès de Ring Dodge laissé tel quel."
+            exit 0
+          fi
+          command -v php >/dev/null || sudo apt-get install -y php-cli
+          php .github/scripts/ringdodge-acces.php | sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o PubkeyAuthentication=no "$IONOS_USER@$IONOS_HOST" 'set -eu; umask 077; cd ~/public/ringdodge; cat > acces.local.php.tmp; mv acces.local.php.tmp acces.local.php'
+          echo "acces.local.php écrit sur le serveur."

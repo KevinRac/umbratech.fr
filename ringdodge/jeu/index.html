@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Ring Dodge</title>
+    <meta name="description" content="Balle au prisonnier en chacun pour soi, à 5 joueurs." />
+    <meta name="theme-color" content="#0b0e16" />
+    <meta name="color-scheme" content="dark" />
+    <!-- Application web : ajout à l'écran d'accueil (iPhone : seule voie vers le plein écran) -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Ring Dodge" />
+    <link rel="apple-touch-icon" href="./icones/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icones/icone-192.png" />
+    <script type="module" crossorigin src="./assets/index-CUA6yBL7.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D0izeRwS.css">
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene" aria-label="Arène"></canvas>
+      <div id="safe-probe" aria-hidden="true"></div>
+
+      <!-- HUD minimal (GDD 5.3) -->
+      <div id="hud" hidden>
+        <header id="band">
+          <ol class="pips" id="pips-left"></ol>
+          <div class="clock"><b id="time">0:00</b><span id="phase">Échauffement</span></div>
+          <ol class="pips" id="pips-right"></ol>
+        </header>
+        <div id="tags"></div>
+        <div id="popups"></div>
+        <ol id="feed" aria-live="polite"></ol>
+        <div id="countdown" hidden></div>
+        <div id="banner" hidden></div>
+        <div id="actions" aria-hidden="true">
+          <div class="act ball" data-act="ball"><span class="ballslot"></span><b>Mains vides</b><kbd>Clic gauche</kbd></div>
+          <div class="act" data-act="dodge"><i></i><b>Esquive</b><kbd>Maj</kbd></div>
+          <div class="act" data-act="guard"><i></i><b>Garde</b><kbd>Clic droit</kbd></div>
+          <div class="act" data-act="special"><i></i><b>Spéciale</b><kbd>E · R visée</kbd></div>
+        </div>
+        <div id="meter" title="Images par seconde"></div>
+        <button id="pause-btn" class="round" aria-label="Pause">❚❚</button>
+      </div>
+
+      <!-- Commandes tactiles (section 9.4) -->
+      <div id="touch" hidden>
+        <div class="joy-zone"></div>
+        <div class="joy" hidden><div class="knob"></div></div>
+        <div class="tb throw" data-act="throw"><i></i><span class="ballslot"></span><b>Lancer</b></div>
+        <div class="tb guard" data-act="guard"><i></i><b>Garde</b></div>
+        <div class="tb dodge" data-act="dodge"><i></i><b>Esquive</b></div>
+        <div class="tb special" data-act="special"><i></i><b>Spéciale</b></div>
+      </div>
+
+      <!-- Accueil -->
+      <section id="menu" class="screen">
+        <div class="card menu-card">
+          <h1>Ring <span>Dodge</span></h1>
+          <p class="tagline">Balle au prisonnier, 5 joueurs, chacun pour soi.</p>
+          <fieldset class="chars" id="chars"><legend>Ton personnage</legend></fieldset>
+          <fieldset class="levels" id="levels"><legend>Niveau des bots</legend></fieldset>
+          <button id="play" class="primary">Jouer</button>
+          <p class="hint" id="controls-hint"></p>
+          <p class="hint install" id="install-hint" hidden></p>
+          <div class="checks">
+            <label class="check" id="autoaim-row"><input type="checkbox" id="autoaim" checked /> Visée automatique au simple toucher</label>
+            <label class="check" id="lefty-row"><input type="checkbox" id="lefty" /> Commandes inversées (gaucher)</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pause -->
+      <section id="pause" class="screen" hidden>
+        <div class="card">
+          <h2>Pause</h2>
+          <div class="buttons">
+            <button id="resume" class="primary">Reprendre</button>
+            <button id="restart">Recommencer</button>
+            <button id="to-menu">Menu</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Écran de fin -->
+      <section id="end" class="screen" hidden>
+        <div class="card end-card">
+          <h2 id="end-title">Fin de partie</h2>
+          <p id="end-sub" class="sub"></p>
+          <table id="ranking"></table>
+          <div class="buttons">
+            <button id="again" class="primary">Rejouer</button>
+            <button id="end-menu">Menu</button>
+          </div>
+          <p id="end-fps" class="hint"></p>
+        </div>
+      </section>
+
+      <!-- Portrait sur téléphone -->
+      <section id="rotate" class="screen" hidden>
+        <div class="rotate-box">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="20" y="8" width="24" height="44" rx="5" fill="none" stroke="currentColor" stroke-width="3"/><path d="M50 40a18 18 0 0 1-18 18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M28 56l4 3 1-5" fill="none" stroke="currentColor" stroke-width="3"/></svg>
+          <p>Tourne ton téléphone</p>
+          <small>Le jeu se joue en paysage.</small>
+        </div>
+      </section>
+
+      <div id="fatal" hidden></div>
+    </div>
+  </body>
+</html>

@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /gw1/api/
+Disallow: /ringdodge/
 
 Sitemap: https://umbratech.fr/sitemap.xml

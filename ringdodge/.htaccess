@@ -1,0 +1,14 @@
+# Ring Dodge (version d'essai) : tout passe par porte.php, qui vérifie l'accès des testeurs.
+# Le jeu (jeu/) et l'empreinte du mot de passe (acces.local.php) ne sont jamais servis directement.
+Options -Indexes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^porte\.php$ - [L]
+  RewriteRule ^ porte.php [L,QSA]
+</IfModule>
+<IfModule !mod_rewrite.c>
+  Require all denied
+</IfModule>
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow"
+</IfModule>

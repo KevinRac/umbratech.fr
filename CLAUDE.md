@@ -23,6 +23,13 @@
 - Partie à plusieurs : salle d'attente → chrono par objet (tous les joueurs répondent) → révélation → classement. État `G` (joueurs, réponses `rep`, résultats `res`) sauvé dans le navigateur de l'écran ; chaque téléphone a un identifiant `pid` persistant.
 - Le jeu est dans `js/jeu.js`, la manette dans `js/manette.js`, la liaison écran/téléphones (MQTT public, code de salle) dans `js/liaison.js`. Mode d'emploi : `Azertyrolien/README.md`.
 
+## Ring Dodge (`ringdodge/`)
+
+- Version d'essai du jeu Ring Dodge pour les testeurs. Le **code source n'est pas ici** : il est dans le dépôt privé KevinRac/ringdodge ; ne jamais le copier dans ce dépôt public.
+- `ringdodge/jeu/` est généré par `npm run publier` dans KevinRac/ringdodge : ne pas le modifier à la main.
+- Tout passe par `ringdodge/porte.php` (`.htaccess`) : page de mot de passe, cookie signé de 30 jours ; seuls le manifeste et les icônes sont servis sans connexion.
+- Mot de passe : secret GitHub `RINGDODGE_MDP` ; le déploiement écrit `ringdodge/acces.local.php` (empreinte et clé de cookie) par `.github/scripts/ringdodge-acces.php`. Ce fichier n'est jamais dans le dépôt.
+
 ## Publication
 
 - Push direct sur `main` (déploiement automatique sur IONOS).

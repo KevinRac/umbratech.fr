@@ -1,2 +1,5 @@
 # Secrets du serveur (le dépôt est public)
 gw1/api/config.local.php
+
+# Ring Dodge : empreinte du mot de passe des testeurs, écrite par le déploiement
+ringdodge/acces.local.php
