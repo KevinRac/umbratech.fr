@@ -202,5 +202,21 @@ ok(/g\.r=Math\.min\(g\.max,g\.r\+g\.v\*dt\)/.test(html), 'index.html : l\'onde (
   // et seul sbEtourdit étourdit le joueur
   ok((html.match(/P\.sbEt=\{|P\.sbEt=P\.sbEt|\(P\.sbEt=\{/g) || []).length === 1, 'index.html : une seule source d\'étourdissement du joueur (sbTouche → sbEtourdit)'); }
 
+// 9. (v17.20) La sortie à ta vitesse : en jeu, sbSortie reçoit ta vitesse à pied (o.pv, pMarche) et cherche à la plus lente des deux.
+//    Plus vite que la justice ne change rien ; plus lent, la sortie trouvée est à ta portée, sinon l'étape saute.
+{ const R = J.justice.arene, V = J.justice.joueur.vitesse; let n = 0, plusLoin = 0, sautLent = 0;
+  for (const f of Object.keys(J.familles)) for (const et of F.sbEtapes(J, f, [])) for (const [lx, ly, px, py] of [[400, 384, 640, 384], [640, 200, 640, 500], [300, 600, 900, 300]]) {
+    const c = { lx, ly, er: ER, px, py, a: 0, rnd: F.asmRng ? Math.random : Math.random }, o = { lx, ly, er: ER, arene: R };
+    let pc; try { pc = F.sbPlacer(J, A, et, c, o, 3); } catch (err) { continue; } if (!pc) continue;
+    const t = F.sbVerrou(J, A, et, 3), base = F.sbSortie(J, pc.zs, [px, py], t, o), vite = F.sbSortie(J, pc.zs, [px, py], t, Object.assign({ pv: V * 2 }, o));
+    ok(JSON.stringify(base) === JSON.stringify(vite), `${f} : plus vite que la justice, même sortie`); n++;
+    for (const pv of [150, 120]) { const lent = F.sbSortie(J, pc.zs, [px, py], t, Object.assign({ pv }, o));
+      if (!lent.ok) { sautLent++; continue; }
+      ok(lent.d <= pv * (t + 3) + 10, `${f} : à ${pv} px/s, sortie à ta portée (${lent.d} px)`);
+      if (base.ok && lent.d > base.d) plusLoin++; } }
+  console.log(`sortie à ta vitesse : ${n} placements ; à 150 et 120 px/s, ${sautLent} sans sortie (l'étape sauterait), ${plusLoin} sorties différentes`);
+  ok(/function sbOrigine\(e\)\{return\{[^}]*pv:pMarche\(\)/.test(html), 'index.html : sbOrigine passe ta vitesse à pied (pv:pMarche())');
+  ok(/v=Math\.min\(Jj\.joueur\.vitesse,o\.pv\|\|Infinity\)/.test(html), 'index.html : sbSortie ne cherche jamais plus vite que la justice'); }
+
 console.log(`\n${checks} vérifications, ${fails} échec(s)`);
 process.exit(fails ? 1 : 0);

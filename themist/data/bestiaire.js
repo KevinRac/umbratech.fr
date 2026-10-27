@@ -108,6 +108,9 @@
  // eveilPV : % de PV où la troisième capacité s'éveille ; eveilS : temps de lecture du signal avant le sort suivant.
  // etourdissement : durée des étourdissements subis (1 = normale). attenteS : temps qu'il prend pour s'approcher avant un sort court.
  // budgetMenace : plafond de menace par acte (corps + signature + les trois capacités).
+ // budgetPorteur (v17.20) : menace en plus pour un Masqué qui porte l'arme de la Brume d'un souvenir (pas pour un renfort ni un Masqué
+ //   ordinaire). À +2, le porteur des actes I et II a le plafond de l'acte III : le Glas et le Bastion (menace 3, beaucoup d'incompatibilités)
+ //   y trouvent enfin une combinaison. Au-delà de +2 rien ne change : aucune combinaison ne dépasse 13.
  // incompatibles : paires de capacités jamais ensemble (explosion et onde : deux zones rondes centrées sur lui).
  //   La Brute ne prend pas la Charge : son Fracas en est déjà une, dans quatre directions.
  // poidsProfil : pondération du tirage selon ton profil (profile()) ; désactivée tant que actif est faux.
@@ -124,7 +127,7 @@
   annonceS:1,pauseS:0.12,prioriteS:0.5,apresSignatureS:0.3,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
   eveilPV:70,eveilS:0.5,etourdissement:0.5,attenteS:0.5,
   rage:{pv:30,pauseS:0.05,apresSignatureS:0},bougeCharge:['losanges','damier'],
-  budgetMenace:{1:11,2:11,3:13},
+  budgetMenace:{1:11,2:11,3:13},budgetPorteur:2,
   incompatibles:[['explosion','onde']],
   poidsProfil:{actif:false,regles:{
    explosion:{ax:'portee',hi:false,force:0.8},tirs:{ax:'portee',hi:true,force:0.8},

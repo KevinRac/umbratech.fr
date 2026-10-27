@@ -1001,6 +1001,13 @@ function gainXp(n){P.xp+=n;while(P.xp>=xpNeed(P.level)){P.xp-=xpNeed(P.level);P.
 function moveInput(){let mx=0,my=0;if(keys.has('KeyW')||keys.has('ArrowUp'))my-=1;if(keys.has('KeyS')||keys.has('ArrowDown'))my+=1;if(keys.has('KeyA')||keys.has('ArrowLeft'))mx-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))mx+=1;return[mx,my];}
 function addElan(n){const before=P.elan;P.elan=Math.min(100,P.elan+n);P.elanT=1.8;if(before<100&&P.elan>=100){toast('Élan maximal',1.2);sfx('elan');}}
 
+// v17.20 · vitesse à pied du joueur, hors ralentissements qu'il tient lui-même et relâche quand il veut (faisceau de la Lanterne tenu,
+// Dévoration, Absolution). Les armes de la Brume cherchent leur sortie à cette vitesse si elle est sous celle de la justice (sbOrigine → o.pv).
+function pMarche(obs){const s=P.s;let sp=s.speed*(1+0.15*P.elan/100);
+ if(P.cls==='her'&&herTranse())sp*=1.2;
+ if(P.cls==='lum'){if(obs==null)obs=isObscur();sp*=obs?1+s.obscurSpeed:1;}
+ else if(P.cls==='gou'){sp*=[1,0.94,0.9][gouTier()];if(mutHas('fievre'))sp*=1.3;}
+ return sp;}
 function updatePlayer(dt){
  const s=P.s;
  P.atkT-=dt;P.iT-=dt;P.aCd-=dt;P.eCd-=dt;P.ultCd-=dt;P.rCd-=dt;P.swingT-=dt;P.hurtFlash-=dt;P.ambushT-=dt;P.dashInvisT-=dt;P.blindT-=dt;P.nightT-=dt;P.lan.pickCd-=dt;P.carapT-=dt;P.carapFx-=dt;P.metaT-=dt;P.stompCd-=dt;
@@ -1015,10 +1022,9 @@ function updatePlayer(dt){
   P.ghostT=(P.ghostT||0)-dt;if(P.ghostT<=0){P.ghostT=0.03;fx.push({k:'ghost',x:P.x,y:P.y,cls:P.cls,sc:P.cls==='gou'?gouScale():1,t:0.26,max:0.26,col:P.cls==='gou'?'150,225,110':P.cls==='her'?'140,190,255':P.cls==='tis'?'255,110,150':obs?'170,130,255':'255,200,120'});}if(P.cls==='gou'&&Math.random()<0.6)parts.push({x:P.x+rand(-8,8),y:P.y+12,vx:rand(-40,40),vy:rand(-30,0),life:0.4,max:0.4,size:rand(4,8),col:'#3a3a30',layer:'pre',drag:3,grow:1,a:0.6});
   if(P.cls==='gou'||s.pasOmbre||P.macDash){for(const e of enemies){if(e.dead||P.dashHit.has(e))continue;if(hyp(e.x-P.x,e.y-P.y)<e.r+P.r+6){P.dashHit.add(e);if(P.cls==='gou')hitEnemy(e,14*s.dashDmg,{kb:300*Math.min(2,s.dashDmg),sx:P.x-P.dashVx,sy:P.y-P.dashVy,color:'#c8f08a'});else if(P.macDash)hitEnemy(e,14+3*P.cad,{kb:120,sx:P.x,sy:P.y,color:'#bcd8ff'});else hitEnemy(e,18,{mark:4,kb:80,sx:P.x,sy:P.y,color:'#c9b4ff'});}}}
  }else{
-  let sp=s.speed*(1+0.15*P.elan/100);
-  if(P.cls==='her'&&herTranse())sp*=1.2;
-  if(P.cls==='lum'){sp*=obs?1+s.obscurSpeed:1;if(P.beam&&P.lan.state==='held')sp*=0.55;}
-  else if(P.cls==='gou'){sp*=[1,0.94,0.9][gouTier()];if(mutHas('fievre'))sp*=1.3;if(P.devour)sp*=0.6;if(P.absT>0)sp*=0.3;}
+  let sp=pMarche(obs);   // v17.20 : vitesse à pied, sans ce que tu tiens toi-même (faisceau tenu, Dévoration, Absolution)
+  if(P.cls==='lum'){if(P.beam&&P.lan.state==='held')sp*=0.55;}
+  else if(P.cls==='gou'){if(P.devour)sp*=0.6;if(P.absT>0)sp*=0.3;}
   const l=hyp(mx,my);const tvx=l?mx/l*sp:0,tvy=l?my/l*sp:0;const k=Math.min(1,dt*16);
   P.vx+=(tvx-P.vx)*k;P.vy+=(tvy-P.vy)*k;P.x+=P.vx*dt;P.y+=P.vy*dt;
  }
@@ -8709,7 +8715,7 @@ function demoBoot(cls){
  // ctx.porte (v17.9) : la capacité tirée d'un souvenir porté ; elle est alors toujours l'une des deux capacités de départ (jamais l'éveil).
  // v17.19 : c'est « sb:<famille> » (ctx.J : les armes de la Brume) ; un corps de ses incompatibles ne la porte pas.
  function asmCombos(A,ctx){const J=ctx.J,pf=asmSb(ctx.porte);if(ctx.porte&&!(pf&&J&&J.familles[pf]))return[];
-  const out=[],K=[...Object.keys(A.capacites),...(pf?[ctx.porte]:[])],plaf=A.budgetMenace[ctx.act]!=null?A.budgetMenace[ctx.act]:Infinity;
+  const out=[],K=[...Object.keys(A.capacites),...(pf?[ctx.porte]:[])],plaf=(A.budgetMenace[ctx.act]!=null?A.budgetMenace[ctx.act]:Infinity)+(pf?(A.budgetPorteur||0):0);   // v17.20 : budgetPorteur
   const nonCorps=pf?((J.familles[pf].incompatibles||{}).corps||[]):[];
   for(const ck in A.corps){const C=A.corps[ck],S=A.signatures[C.signature];if(!S||(C.salle&&ctx.salle<C.salle)||nonCorps.includes(ck))continue;
    const ok=K.filter(k=>!(C.exclut||[]).includes(k));
@@ -8877,7 +8883,8 @@ function demoBoot(cls){
  // sans jamais être sur la zone au moment où elle y frappe ? t : temps entre le figement et le lâcher.
  // o : {lx,ly,er (le porteur : on ne traverse pas son corps), arene, bloque(x,y) (piliers, en jeu)}
  // o.pr (v17.19, en jeu) : ton vrai rayon s'il dépasse celui de la justice (le Gouffre grossit) ; jamais moins strict que joueur.rayon
- function sbSortie(J,zs,p,t,o){const Jj=J.justice,PR=Math.max(Jj.joueur.rayon,o.pr||0),v=Jj.joueur.vitesse,mg=Jj.marge,R=o.arene,er=o.er||0;
+ // o.pv (v17.20, en jeu) : ta vitesse à pied si elle est sous celle de la justice (pMarche) ; jamais plus rapide que joueur.vitesse
+ function sbSortie(J,zs,p,t,o){const Jj=J.justice,PR=Math.max(Jj.joueur.rayon,o.pr||0),v=Math.min(Jj.joueur.vitesse,o.pv||Infinity),mg=Jj.marge,R=o.arene,er=o.er||0;
   const corps=(x,y)=>o.lx!=null&&Math.hypot(x-o.lx,y-o.ly)<er+PR;
   const libre=(x,y)=>x>=R.x0+PR&&x<=R.x1-PR&&y>=R.y0+PR&&y<=R.y1-PR&&!(o.bloque&&o.bloque(x,y))&&!corps(x,y)&&!zs.some(z=>sbDans(z,x,y,PR,er,mg));
   if(libre(p[0],p[1]))return{ok:true,d:0};
@@ -9221,13 +9228,13 @@ function demoBoot(cls){
    if(!fige&&tg.pl&&!P.dead&&dP<=PS.portee&&!S.dash&&!sst)S.pas-=dt;
    if(S.pas<=0){S.pas=PS.intervalleS;const fp=facePos(e),a=Math.atan2(P.y-fp[1],P.x-fp[0]),v=PS.vitesse*spdMul();
     eproj.push({x:fp[0]+Math.cos(a)*8,y:fp[1]+Math.sin(a)*8,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:6,dmg:e.dmg*PS.degats,life:4,from:e});sfx('shoot');}}}
- // ── v17.15 · Les armes de la Brume, en salle. Rien ne s'en sert en jeu normal : seul le Masqué d'essai (index.html?brume=…) porte e.asm.sb.
+ // ── v17.15 · Les armes de la Brume, en salle. v17.19 : le Masqué porteur d'un souvenir (e.asm.sb) et le Masqué d'essai (index.html?brume=…).
  // Une attaque = des étapes ; une étape = une zone du Masqué (mêmes formes, même dessin drawZone, mêmes couleurs assemble.couleurs).
  // Justice tenue par le code : chargement sbCharge (jamais sous le Masqué), sortie cherchée avant chaque zone (sbPlacer, sinon l'étape saute),
  // une zone à la fois (l'étape suivante attend que la précédente ait fini, projectiles, onde et ruée compris ; les autres ennemis attendent).
  // Pas d'accélération de salle (spdMul) sur ses projectiles, son onde et sa ruée : leurs vitesses sont celles que la vérification a jugées.
  const SB={J:SBJ,essai:null};
- function sbOrigine(e){return{lx:e.x,ly:e.y,er:e.r,pr:P.r,arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)};}
+ function sbOrigine(e){return{lx:e.x,ly:e.y,er:e.r,pr:P.r,pv:pMarche(),arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)};}
  function sbCtx(e,B,et){return{lx:e.x,ly:e.y,er:e.r,px:P.x,py:P.y,ax:B.anc?B.anc[0]:null,ay:B.anc?B.anc[1]:null,a:Math.atan2(P.y-e.y,P.x-e.x),prec:B.prec,rnd:e.asm.rnd};}
  // fixer la géométrie d'une étape (au chargement si elle ne suit pas, au figement sinon) ; null : aucune sortie, l'étape saute
  function sbFixe(e,B,et){const pc=sbPlacer(SBJ,A,et,sbCtx(e,B,et),sbOrigine(e),RUN.act);
@@ -9376,7 +9383,7 @@ function demoBoot(cls){
   const _stT=step;step=function(dt){_stT(dt);try{if(!(state==='play'&&RUN&&room&&room.asm&&room.asm.test))return;
    if(E.suivant&&RUN.time>=E.suivant){const i=ordre.indexOf(E.fid);apparait(E.tout?ordre[(i+1)%ordre.length]:E.fid);}
    const B=E.e&&!E.e.dead&&E.e.asm&&E.e.asm.sb;
-   if(E.bot&&B&&B.fuiteQ&&!P.dead&&!sbEtourdi()){const [qx,qy]=B.fuiteQ,dx=qx-P.x,dy=qy-P.y,d=hyp(dx,dy),v=SBJ.justice.joueur.vitesse*dt;if(d>0.5){P.x+=dx/d*Math.min(d,v);P.y+=dy/d*Math.min(d,v);collidePlayer();}}
+   if(E.bot&&B&&B.fuiteQ&&!P.dead&&!sbEtourdi()){const [qx,qy]=B.fuiteQ,dx=qx-P.x,dy=qy-P.y,d=hyp(dx,dy),v=Math.min(SBJ.justice.joueur.vitesse,pMarche())*dt;if(d>0.5){P.x+=dx/d*Math.min(d,v);P.y+=dy/d*Math.min(d,v);collidePlayer();}}
    if((E.n=(E.n||0)+1)%12===0)barre();}catch(err){console.error(err);}};
   function barre(){if(!E.bar){E.bar=document.createElement('div');E.bar.id='sbEssai';document.body.appendChild(E.bar);
     E.bar.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;ev.stopPropagation();

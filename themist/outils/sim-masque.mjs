@@ -36,7 +36,8 @@ function regles(c, act, salle, porte) {
   for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++)
     ok(!A.incompatibles.some(([x, y]) => (x === all[i] && y === all[j]) || (x === all[j] && y === all[i])), `${c.cle} : incompatibilité ${all[i]}/${all[j]}`);
   const men = A.corps[c.corps].menace + A.signatures[C.signature].menace + all.reduce((s, k) => s + F.asmMenace(A, J, k), 0);
-  ok(c.menace === men && c.menace <= A.budgetMenace[act], `${c.cle} : budget de menace (${c.menace}, recompté ${men}, budget ${A.budgetMenace[act]})`);
+  const plaf = A.budgetMenace[act] + (porte ? (A.budgetPorteur || 0) : 0);   // v17.20 : le porteur d'une arme a budgetPorteur en plus
+  ok(c.menace === men && c.menace <= plaf, `${c.cle} : budget de menace (${c.menace}, recompté ${men}, budget ${plaf})`);
   ok(!C.salle || salle >= C.salle, `${c.cle} : corps disponible à cette salle`);
   ok(all.every(k => !RETIREES.includes(k)), `${c.cle} : capacité de souvenir retirée (v17.9–v17.14)`);
   ok(!F.asmSb(c.eveil), `${c.cle} : l'arme de la Brume n'est jamais la capacité d'éveil`);
@@ -65,20 +66,22 @@ ok(!A.etats && !A.souvenir.familles && !A.souvenir.etats, 'assemble : plus de ta
 ok(!/souvenir:true/.test(readFileSync(join(ROOT, 'data', 'bestiaire.js'), 'utf8')), 'bestiaire.js : plus aucune capacité souvenir:true');
 ok(F.asmCombos(A, { act: 2, salle: 10, porte: 'taches', J }).length === 0 && F.asmCombos(A, { act: 2, salle: 10, porte: 'sb:inconnue', J }).length === 0, 'un porte inconnu ne donne aucune combinaison');
 for (const k of Object.keys(J.renforts)) ok(J.renforts[k].ic && IC[J.renforts[k].ic], `renfort ${k} : icône connue (data/icones.js)`);
-// (le budget des actes I et II peut ne laisser aucune place à une arme lourde : elle n'est alors pas choisie, voir 2 bis ; à l'acte III, toutes passent)
+// v17.20 : avec budgetPorteur, chaque famille trouve une place à chaque acte (avant, le Glas et le Bastion n'en avaient pas aux actes I et II)
+ok(A.budgetPorteur >= 0, 'budgetPorteur : présent et positif');
+ok(F.asmCombos(A, { act: 1, salle: 4 }).every(c => c.menace <= A.budgetMenace[1]), 'budgetPorteur : sans souvenir porté, le budget de l’acte ne bouge pas');
 const sansPlace = {};
 for (const [act, salle] of [[1, 3], [2, 9], [2, 14], [3, 18]]) {
   const parts = [];
   for (const f of Object.keys(J.familles)) {
     const porte = 'sb:' + f, L = F.asmCombos(A, { act, salle, porte, J });
-    if (act === 3) ok(L.length >= 1, `acte ${act} salle ${salle} : aucune combinaison ne peut porter ${f}`);
-    else if (!L.length) (sansPlace[act] = sansPlace[act] || new Set()).add(f);
+    ok(L.length >= 1, `acte ${act} salle ${salle} : aucune combinaison ne peut porter ${f}`);
+    if (!L.length) (sansPlace[act] = sansPlace[act] || new Set()).add(f);
     for (const c of L) regles(c, act, salle, porte);
     parts.push(`${f} ${new Set(L.map(c => c.base)).size}`);
   }
   console.log(`porteur, acte ${act} salle ${salle} : ${parts.join(' · ')} combinaisons`);
 }
-for (const act in sansPlace) console.log(`acte ${act} : pas de place sous le budget (${A.budgetMenace[act]}) pour ${[...sansPlace[act]].join(', ')}`);
+for (const act in sansPlace) console.log(`acte ${act} : pas de place sous le budget (${A.budgetMenace[act]} + ${A.budgetPorteur || 0}) pour ${[...sansPlace[act]].join(', ')}`);
 // l'incompatibilité entre familles (deux armes chez un même porteur, ce qui n'arrive pas aujourd'hui) est tenue par asmIncomp
 for (const [f, Fm] of Object.entries(J.familles)) for (const g of Fm.incompatibles.familles || []) ok(F.asmIncomp(A, 'sb:' + f, 'sb:' + g, J), `asmIncomp : ${f} / ${g}`);
 for (const [f, Fm] of Object.entries(J.familles)) for (const k of Fm.incompatibles.capacites || []) ok(F.asmIncomp(A, k, 'sb:' + f, J), `asmIncomp : ${k} / ${f}`);

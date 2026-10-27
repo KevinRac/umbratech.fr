@@ -1239,3 +1239,42 @@ Avec des vagues présentes, le joueur étourdi recevait des coups des autres enn
 - Le pilote n’est pas un joueur : il va droit à la sortie, à la vitesse de référence, sans esquive. Une forme plus lente que 180 px/s (Gouffre en Dévoration) n’a pas la garantie de sortie à pied (la recherche ne connaît que la vitesse de la justice), et un joueur qui frappe pendant l’attaque n’a pas été mesuré.
 - Ce qui reste sans équivalent (étourdir sur une volée, ralentir, brûler…) garde l’attaque de la famille telle quelle (§ 20, § 22).
 - Les rayons de touche restent écrits à trois endroits (jeu, `sbDans` / `sbArrivee`, épreuve § 7) : non modifiés.
+
+## 24. Budget du porteur, sortie à ta vitesse (v17.20, 27 octobre 2026)
+
+Suite des limites du § 23.
+
+### Budget du porteur
+
+- `assemble.budgetPorteur` (bestiaire.js) : **+2** de menace pour un Masqué qui porte une arme de la Brume (`asmCombos`, seulement quand `ctx.porte` est une `sb:<famille>` ; ni pour un renfort, ni pour un Masqué ordinaire, dont le budget ne bouge pas).
+- Pourquoi +2 et pas +3 : aucune combinaison ne dépasse 13 de menace (corps 1–2 + signature 3 + trois capacités 2–3). À +2, le porteur des actes I et II a le plafond de l’acte III ; à +3 la liste est **identique** (mesuré). L’acte III n’est pas touché (13 + 2 ne débloque rien).
+- Le Glas et le Bastion étaient sans place aux actes I et II à cause de leurs incompatibilités : Glas (pas d’explosion ni d’onde) et Bastion (ni lame, ni explosion, ni onde) ne tenaient que sur le Spectre, avec Salve (2) et Charge (3) : 1 + 3 + 3 + 2 + 3 = 12.
+- Combinaisons (bases) avec un porteur, actes I et II, avant → après : Glas 0 → 4, Bastion 0 → 2, Ruée 2 → 6, Ombre 2 → 3 ; les autres inchangées. Menace moyenne d’un porteur : 10,9 → 11,0 (acte I), 10,9 → 11,3 (acte II, avec le Voilé à partir de la salle 14) ; les Masqués ordinaires restent à 11,0 / 11,4.
+- Le Bastion n’a toujours que 2 combinaisons (Spectre, avec Salve et Charge dans un sens ou dans l’autre), à tous les actes : c’est le prix de ses incompatibilités, pas du budget.
+- `sim-masque.mjs` : le budget recompté tient compte de `budgetPorteur` ; **chaque famille doit trouver une place à chaque acte** (avant, seulement à l’acte III) ; un Masqué ordinaire reste sous le budget de l’acte.
+
+### Sortie à ta vitesse
+
+- `pMarche(obs)` (index.html, avant `updatePlayer`) : ta vitesse à pied, sortie du calcul de déplacement (même formule : élan, transe de l’Hérault, obscurité de la Lanterne, palier et Fièvre du Gouffre), **sans** ce que tu tiens toi-même et relâches quand tu veux : faisceau de la Lanterne tenu (× 0,55), Dévoration (× 0,6), Absolution (× 0,3). `updatePlayer` applique ces trois-là après.
+- `sbOrigine` passe `pv: pMarche()` ; `sbSortie` cherche à `min(justice.joueur.vitesse, o.pv)` : jamais plus vite que la justice (180 px/s), plus lentement si tu l’es. Si rien n’est à ta portée, `sbPlacer` essaie ses autres placements, puis l’étape saute (règle inchangée). Le simulateur, `sbVerifier` et le tableau de lecture gardent la vitesse de référence.
+- Le pilote du mode d’essai (`bot=1`) roule à la même vitesse (`min(180, pMarche())`).
+- Choix : la Dévoration et l’Absolution ne comptent pas. Les compter ferait sauter une bonne part des étapes chaque fois que le Gouffre dévore ; le joueur peut relâcher, comme il peut s’arrêter de frapper.
+- `sim-brume.mjs` § 9 : 99 placements ; plus vite que la justice, même sortie ; à 150 et 120 px/s, toute sortie trouvée est à ta portée, 9 cas sur 198 sans sortie (en jeu, l’étape essaierait un autre placement puis sauterait). **3629 vérifications, 0 échec.**
+
+### Trait passif
+
+- Rappel : le trait passif du Masqué est **suspendu** pendant une attaque de la Brume (v17.19, `!sst`), parce que la sortie est jugée sans lui. Ce n’est pas un défaut de son : on n’y touche pas (le réactiver casserait la garantie de sortie).
+
+### Mesures
+
+- En jeu (Chromium, horloge à 60 images par seconde, même banc qu’au § 23, 30 s par essai, vagues à zones et Spectre immortels autour) :
+  - Gouffre acte III, 14 familles (Fortune n’est jamais portée), à 4 réglages : vitesse normale (≈ 184 px/s, pilote à 180), **150**, **120** px/s, et **gros** (rayon × 1,3 = 18,2 px) à 150 : **56 essais, 56 porteurs, 150 attaques, 319 étapes, 0 étape sautée, 0 coup de l’arme**, aucune zone du Masqué en même temps qu’une autre ou qu’une feinte, aucune erreur.
+  - Glas et Bastion aux actes I (Lanterne) et II (Tisse-Destin), deux souvenirs chacun : **8 essais, 8 porteurs** (Brute ou Spectre), 21 attaques, 0 étape sautée, 0 coup de l’arme.
+  - Descente ordinaire (réserve vide), les quatre formes, 24 salles d’acte I : 7 Masqués ordinaires, aucune superposition, **aucune erreur** (le calcul de vitesse a été déplacé dans `pMarche`).
+- `sim-masque.mjs` : tout passe ; tirage avec réserve à 50,0 % de porteurs ; le Glas passe de 486 à 1490 porteurs sur le tirage complet, le Bastion de 215 à 639.
+
+### Ce qui reste à surveiller
+
+- Les zones ordinaires simultanées (ennemis de types différents) et la feinte qui n’attend pas les ennemis ordinaires : inchangé, à corriger seulement sur un cas vu en jeu (§ 23).
+- Sous ≈ 120 px/s, certaines étapes sauteront plus souvent : le Masqué semblera moins dangereux avec une forme très lente. Aucune forme n’y descend aujourd’hui sans ralentissement tenu.
+
