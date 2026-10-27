@@ -36,7 +36,20 @@
     spiral:{n:'Spirale',d:'Trois bras de tirs violets tournent autour du Cœur.'},
     sweep:{n:'Faisceaux',d:'Des lignes orange pointillées annoncent des faisceaux qui balaient la salle. Quand ils s’arrêtent, le Cœur s’épuise : frappe.'},
     drain:{n:'Dévoreuse',d:'La Brume dévore ta lumière quelques secondes.'},
-    summon:{n:'Appel',d:'Il appelle Voilés, Rampants et Bouffis.'}}}},
+    summon:{n:'Appel',d:'Il appelle Voilés, Rampants et Bouffis.'}},
+   // v17.22 · Le Glas se souvient (palier 3 de la Mémoire). Hors de file et de liste : le wiki ne les lit pas et ne dit pas d'où cela vient.
+   // Quand ta réserve contient des souvenirs qui ont une arme de la Brume, il en tire un répertoire à l'entrée de sa salle (max gestes de familles
+   // différentes et compatibles, pondérés vers les plus récemment oubliés : recence = [poids du plus ancien, du plus récent] ; usure ignorée).
+   // repertoire[temps] : gestes joués à ce temps (les premiers du répertoire, à tour de rôle). file[temps] : une clé « brume » à la place
+   // d'une occurrence de chaque attaque de remplace, plus ajoute (jamais deux de suite, ni juste après un Appel). Réserve sans geste : rien ne change.
+   // Un geste est joué par le Reflet : ta silhouette sortie du Cœur, qui fait l'attaque de la famille (data/souvenirs-brume.js) comme un Masqué
+   // porteur, sous la même justice. degats : × les dégâts du Glas (avant la force du souvenir et le plafond). reflet : r (px), naissanceS, finS,
+   // distance [min, max] à toi où il naît, vitesse (px/s ; ×1,3 quand il vient te chercher). attenteMaxS : s'il attend plus longtemps qu'une zone
+   // du Glas se termine, il renonce. renforts : au plus max souvenirs classés renfort ; Brutal et Vif renforcent le Reflet, Robuste et Blindé
+   // retirent reduitBulle des dégâts que le Cœur subit pendant un geste (au plus max × reduitBulle). copie : la copie de la Mère-Brume reste-t-elle
+   // aux temps 2 et 3 quand le répertoire existe (faux : le Glas se souvient au lieu d'imiter).
+   souvenirs:{max:3,recence:[1,3],repertoire:[0,0,2,3],file:{2:{ajoute:1},3:{remplace:['implosion'],ajoute:1}},degats:0.6,
+    reflet:{r:18,naissanceS:0.6,finS:0.4,distance:[180,220],vitesse:126},attenteMaxS:5,renforts:{max:2,reduitBulle:0.1},copie:false}}},
  // Fenêtres de vulnérabilité par forme : cd intervalle de base (s), warn avertissement, label étiquette, toast explication
  fenetres:{
   lum:{cd:9,warn:'Il s’apprête à ouvrir son noyau',label:'Noyau exposé · +30 %',toast:'Il ouvre son noyau à la lumière. Frappe pendant 3 secondes : +30 % de dégâts.'},

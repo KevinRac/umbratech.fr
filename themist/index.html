@@ -6995,6 +6995,12 @@ openCodex=function(back){
  window.__brumeAber=brumeAber;
  window.__brumeAction=brumeAction;
  window.__brumeOubli=brumeOubli;
+ // v17.22 · le Reflet sort du Cœur : le chuchotement de l'oubli, voyelles à l'envers, un souffle un peu plus sombre (toujours sans grondement)
+ function brumeSouvenir(delay){if(!AC||muted)return;if(!throttle('brumeSouvenir',400))return;const t=AC.currentTime+(delay||0)+0.02,bus=vbus(2.1,0.55);
+  brume(bus,t,1.1,0.2,420,1400,900);
+  chuchote(bus,t+0.04,0.55,0.7,'u','o');
+  chuchote(bus,t+0.38,0.6,0.45,'i','e');}
+ window.__brumeSouvenir=brumeSouvenir;
  function demon(who){if(!AC||muted)return;if(!throttle('demon',900))return;
   if(who==='mere'){voice({type:'sawtooth',f0:760,f1:240,dur:1.3,vol:0.13,vib:9,vibD:46,lp0:3400,lp1:900,dist:5,att:0.04});voice({type:'sawtooth',f0:140,f1:58,dur:1.5,vol:0.16,vib:6,vibD:8,lp0:900,lp1:160,dist:6});noise(1.1,0.12,1900,'bandpass',0.05);tone(52,1.4,'sine',0.14,34);}
   else if(who==='chroniqueur'){noise(1.4,0.09,2600,'bandpass');tone(440,1.2,'sine',0.05,310);tone(466,1.2,'sine',0.04,330,0.08);}
@@ -7552,6 +7558,7 @@ details.fold>.chips{margin-top:8px}
  const _ue16=updateEnemies;
  updateEnemies=function(dt){_ue16(dt);if(RUN&&!RUN.hub)try{hzTick(dt);}catch(err){console.error(err);}};
  const _cw16=clearWorld;clearWorld=function(){_cw16();HZ.length=0;};
+ window.__glasHZ=()=>HZ;   // v17.22 : un geste du Glas attend que ces zones soient finies
  const _bd16=bossDefeated;bossDefeated=function(e){HZ.length=0;_bd16(e);};
  function drawHZ(){const c=ctx;
   for(const h of HZ){c.save();
@@ -9167,12 +9174,12 @@ function demoBoot(cls){
  // Lui attend de son côté que leurs zones soient finies (zoneAutre). Jamais deux zones ennemies à la fois.
  function asmZone(){if(ZR.length)return true;for(const e of enemies)if(e.asm&&!e.dead&&(e.asm.st.ph==='charge'||e.asm.st.ph==='effet'||(e.asm.st.bloque||0)>=A.prioriteS))return true;return false;}  // après prioriteS d'attente, la prochaine zone est à lui
  const ZT=new Set(['brute','hurleur','voile']),_tt=tryTok;
- tryTok=function(e,k){if(e&&!e.asm&&ZT.has(e.type)&&e.tok!==k&&room&&room.asm&&asmZone())return false;return _tt.apply(this,arguments);};
+ tryTok=function(e,k){if(e&&!e.asm&&ZT.has(e.type)&&e.tok!==k&&((room&&room.asm&&asmZone())||glasZone()))return false;return _tt.apply(this,arguments);};
  window.__asm.zone=asmZone;window.__asm.zr=()=>ZR;   // ZR : ondes du Masqué en cours (essais)
  // v17.19 · la feinte du Brumeux attend comme les autres ennemis : elle ne se pose pas pendant une zone du Masqué (ni quand la suivante est à lui,
  // asmZone), ni pendant que tu es étourdi ; et le Masqué attend qu'elle soit finie (zoneAutre). Jamais deux zones à la fois, feinte comprise.
  const _blT=bluffTick;bluffTick=function(dt){
-  if(room&&room.asm&&!room.bl&&(asmZone()||sbEtourdi())){if(room.blT!=null&&room.blT<=0.05)room.blT=0.05;return;}
+  if(room&&!room.bl&&((room.asm&&(asmZone()||sbEtourdi()))||glasZone())){if(room.blT!=null&&room.blT<=0.05)room.blT=0.05;return;}
   return _blT.apply(this,arguments);};
  // v17.19 · l'arme de la Brume portée : interrompue (tiré, mis en orbite, pantin), l'attaque entière s'arrête ; ce qui est déjà lâché
  // (onde, projectiles) va au bout, et il attend que ce soit fini avant sa zone suivante (vivant).
@@ -9245,7 +9252,8 @@ function demoBoot(cls){
  // une zone à la fois (l'étape suivante attend que la précédente ait fini, projectiles, onde et ruée compris ; les autres ennemis attendent).
  // Pas d'accélération de salle (spdMul) sur ses projectiles, son onde et sa ruée : leurs vitesses sont celles que la vérification a jugées.
  const SB={J:SBJ,essai:null};
- function sbOrigine(e){return{lx:e.x,ly:e.y,er:e.r,pr:P.r,pv:pMarche(),arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)};}
+ function sbOrigine(e){const gb=room&&room.type==='boss'&&room.boss&&!room.boss.dead?room.boss:null;   // v17.22 : le corps du gardien bloque la sortie
+  return{lx:e.x,ly:e.y,er:e.r,pr:P.r,pv:pMarche(),arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)||!!(gb&&hyp(x-gb.x,y-gb.y)<gb.r+P.r)};}
  function sbCtx(e,B,et){return{lx:e.x,ly:e.y,er:e.r,px:P.x,py:P.y,ax:B.anc?B.anc[0]:null,ay:B.anc?B.anc[1]:null,a:Math.atan2(P.y-e.y,P.x-e.x),prec:B.prec,rnd:e.asm.rnd};}
  // fixer la géométrie d'une étape (au chargement si elle ne suit pas, au figement sinon) ; null : aucune sortie, l'étape saute
  function sbFixe(e,B,et){const pc=sbPlacer(SBJ,A,et,sbCtx(e,B,et),sbOrigine(e),RUN.act);
@@ -9315,9 +9323,9 @@ function demoBoot(cls){
  function sbMaj(e,dt,rooted,fige){const S=e.asm,B=S.sb,st=S.st,F=SBJ.familles[B.fid];
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
   const vivant=(B.vivants||[]).some(f=>f());
-  const ev=sbPas(SBJ,A,B.st,{dt,act:RUN.act,dist:dP,er:e.r,autre:!tg.pl||zoneAutre(e),fige,vivant,etourdi:sbEtourdi()});
+  const ev=sbPas(SBJ,A,B.st,{dt,act:RUN.act,dist:dP,er:e.r,autre:!tg.pl||zoneAutre(e)||!!(S.autre&&S.autre()),fige,vivant,etourdi:sbEtourdi()});
   for(const [t,i] of ev){const et=B.st.etapes[i];
-   if(t==='charge'){if(i===0){B.k=sbPlafond(SBJ,B.st.etapes,RUN.act);B.prec=null;B.anc=null;B.etAtt=0;}if(SB.essai)(SB.essai.chJ=SB.essai.chJ||[]).push({t:+RUN.time.toFixed(3),i,et:sbEtourdi()});
+   if(t==='charge'){if(i===0){B.k=B.force!=null?sbForce(SBJ,B.st.etapes,RUN.act,B.force):sbPlafond(SBJ,B.st.etapes,RUN.act);B.prec=null;B.anc=null;B.etAtt=0;}if(SB.essai)(SB.essai.chJ=SB.essai.chJ||[]).push({t:+RUN.time.toFixed(3),i,et:sbEtourdi()});
     if(et.suivi>0){B.zc={zs:sbPieces(SBJ,et,sbCtx(e,B,et)).zs,fige:false};B.dbg='suit';}
     else if(!sbFixe(e,B,et)){sbSaute(B);continue;}
     sfx('asm_ch',B.st.tot);B.dernier={i,et,charge:B.st.tot,plancher:sbPlancher(A,RUN.act,false)};}
@@ -9413,7 +9421,7 @@ function demoBoot(cls){
   addEventListener('load',()=>setTimeout(lance,400));}
  const _pre=v6EnemyPre;
  v6EnemyPre=function(e,dt){const r=_pre(e,dt);
-  if(!r&&e&&!e.asm&&!e.dead&&e.type==='bouffi'&&e.state!=='fuse'&&e.stun<=0&&room&&room.asm&&asmZone()){const tg=enemyTarget(e);moveTo(e,tg.x,tg.y,e.spd*v6Slow(e),dt);return true;} // le Bouffi ne s'amorce pas pendant un sort du Masqué
+  if(!r&&e&&!e.asm&&!e.dead&&e.type==='bouffi'&&e.state!=='fuse'&&e.stun<=0&&((room&&room.asm&&asmZone())||glasZone())){const tg=enemyTarget(e);moveTo(e,tg.x,tg.y,e.spd*v6Slow(e),dt);return true;} // le Bouffi ne s'amorce pas pendant un sort du Masqué
   if(!e||!e.asm||e.dead)return r;
   try{if(r){if(e.yank||e.orbitT>0||e.puppet>0)annule(e);else update(e,dt,true);return true;}update(e,dt,false);}catch(err){console.error(err);}
   return true;};
@@ -9608,6 +9616,252 @@ function demoBoot(cls){
 .asmEnd .mq{flex:none;width:40px;height:50px}.asmEnd .mq svg{width:100%;height:100%;display:block}
 .asmEnd b{display:block;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:#c9a8ff}.asmEnd span{font-size:15px}
 .demo #asmCard{display:none!important}`;document.head.appendChild(st);
+
+ // ───────────────────────── v17.22 · Le Glas Originel se souvient (palier 3 de la Mémoire)
+ // Aux temps 2 et 3, quand ta réserve contient des souvenirs qui ont une arme de la Brume, le Cœur fait sortir de la Brume ta silhouette
+ // (le Reflet), qui joue ce geste comme un Masqué porteur : même file d'étapes (sbMaj, sbPas), même justice (sortie avant chaque zone,
+ // plancher de chargement, plafond), mêmes couleurs. Pendant un geste, rien d'autre ne s'ouvre : c'est une bulle (le Battement se tait,
+ // le geste attend que les anneaux, le Battement inverse, les tirs et la Dévoreuse soient finis, les invoqués attendent leur tour).
+ // Réglages : data/gardiens.js (attaques[3].souvenirs). Vérification : outils/sim-brume.mjs (section 10), mode d'essai index.html?glas=…
+ // Le Brumeux garde ses secrets : aucun texte n'explique d'où viennent ces gestes.
+ /*glas:pur*/
+ // S : data/gardiens.js, attaques[3].souvenirs ; J : data/souvenirs-brume.js ; fam : id de talent → famille ; As : assemble.souvenir (parRang, parGravure).
+ function glasEntree(J,x){return((x.source==='talent'?J.talents:J.reliques)||{})[x.id]||{};}
+ // Poids à la récence : du plus ancien (S.recence[0]) au plus récent (S.recence[1]), linéaire ; ordre : acte, salle, puis ordre d'entrée dans la réserve.
+ function glasRecence(S,L){const idx=L.map((x,i)=>({x,i})).sort((a,b)=>((a.x.oublie||{}).acte||0)-((b.x.oublie||{}).acte||0)||((a.x.oublie||{}).salle||0)-((b.x.oublie||{}).salle||0)||a.i-b.i);
+  const w=new Map(),n=idx.length,lo=(S.recence||[1,1])[0],hi=(S.recence||[1,1])[1];idx.forEach((o,r)=>w.set(o.x,n>1?lo+(hi-lo)*r/(n-1):hi));return w;}
+ function glasRoue(L,w,rnd){const tot=L.reduce((s,x)=>s+w.get(x),0);let r=rnd()*tot;for(const x of L){r-=w.get(x);if(r<=0)return x;}return L[L.length-1];}
+ function glasCompat(J,a,b){const I=f=>((J.familles[f]||{}).incompatibles||{}).familles||[];return a!==b&&!I(a).includes(b)&&!I(b).includes(a);}
+ // Le répertoire, tiré une fois à l'entrée de la salle : au plus S.max gestes (talents dont la famille a une arme, pas un renfort), familles différentes
+ // et compatibles, tirés sans remise à la récence (l'usure du Masqué est ignorée) ; puis au plus S.renforts.max renforts (clés différentes), s'il y a un geste.
+ // Renvoie {gestes:[{x,id,fid,vars,force}], renforts:[{x,id,k}]} (gestes dans l'ordre du tirage : le temps 2 joue les premiers).
+ function glasRepertoire(S,J,fam,As,res,rnd){const out={gestes:[],renforts:[]};if(!S||!J||!res||!res.length)return out;
+  const L=res.filter(x=>x&&x.source==='talent'&&fam[x.id]&&J.familles[fam[x.id]]);if(!L.length)return out;
+  const w=glasRecence(S,L),force=x=>1+((As&&As.parRang)||0)*Math.max(0,(x.rang||1)-1)+((As&&As.parGravure)||0)*(x.g||0);
+  let G=L.filter(x=>!glasEntree(J,x).renfort);
+  while(out.gestes.length<(S.max||3)&&G.length){const x=glasRoue(G,w,rnd),fid=fam[x.id],E=glasEntree(J,x);
+   out.gestes.push({x,id:x.id,fid,vars:(E.v||[]).slice(),force:force(x)});
+   const pris=out.gestes.map(g=>g.fid);G=G.filter(y=>pris.every(p=>glasCompat(J,p,fam[y.id])));}
+  if(out.gestes.length){let R=L.filter(x=>{const k=glasEntree(J,x).renfort;return k&&J.renforts[k];});const rmax=Math.min(((S.renforts||{}).max)||0,J.renfortMax||0);
+   while(out.renforts.length<rmax&&R.length){const x=glasRoue(R,w,rnd),k=glasEntree(J,x).renfort;out.renforts.push({x,id:x.id,k});R=R.filter(y=>glasEntree(J,y).renfort!==k);}}
+  return out;}
+ // Gestes joués à ce temps : les n premiers du répertoire (S.repertoire[temps], jamais plus que le répertoire)
+ function glasEnJeu(S,rep,ph){return Math.min(rep.gestes.length,(S.repertoire||[])[ph]||0);}
+ // La file d'un temps : celle du gardien, une clé « brume » à la place d'une occurrence de chaque attaque de remplace, plus ajoute.
+ // Sans geste (n = 0) : la file du gardien, inchangée.
+ function glasFile(S,file,ph,n){const F=(file[ph]||[]).slice(),R=(S.file||{})[ph];if(!R||!n)return F;
+  for(const k of R.remplace||[]){const i=F.indexOf(k);if(i>=0)F[i]='brume';}
+  for(let i=0;i<(R.ajoute||0);i++)F.push('brume');return F;}
+ // Mélange : jamais deux « brume » de suite, ni « brume » juste après un Appel (prec : la dernière clé jouée).
+ function glasMelangeOk(a,prec){return a.every((k,i)=>{const p=i?a[i-1]:prec;return k!=='brume'||(p!=='brume'&&p!=='summon');});}
+ function glasMelange(F,prec,rnd){let a=F.slice();
+  for(let t=0;t<80;t++){for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const x=a[i];a[i]=a[j];a[j]=x;}if(glasMelangeOk(a,prec))return a;}
+  const autres=F.filter(k=>k!=='brume'),nb=F.length-autres.length;a=autres.slice();   // à défaut : chaque « brume » après une clé qui le permet
+  for(let b=0;b<nb;b++){let pos=-1;for(let i=0;i<=a.length;i++){const p=i?a[i-1]:prec;if(p!=='brume'&&p!=='summon'&&a[i]!=='brume'){pos=i;break;}}if(pos<0)break;a.splice(pos,0,'brume');}
+  return a;}
+ // La bulle d'un geste, pas à pas : naissance du Reflet (rien ne charge), jeu (son attaque), fin (il se dissout ; ce qu'il a lâché va au bout),
+ // entracte, puis le Glas reprend. env : {dt, fini (l'attaque du Reflet est finie), attente (il attend qu'une zone du gardien finisse),
+ // vivant (ce qu'il a lâché vit encore), etourdi, coupe (changement de temps, mort)}. Évènements : jeu, abandon, dissout, libere.
+ function glasBulle(S){return{ph:'naissance',t:((S.reflet||{}).naissanceS)||0.6,att:0};}
+ function glasPas(S,J,b,env){const ev=[],fin=((S.reflet||{}).finS)||0.4;
+  const dissout=()=>{b.ph='fin';b.t=fin;ev.push(['dissout']);};
+  if(env.coupe&&(b.ph==='naissance'||b.ph==='jeu')){dissout();return ev;}
+  if(b.ph==='naissance'){b.t-=env.dt;if(b.t<=0){b.ph='jeu';ev.push(['jeu']);}return ev;}
+  if(b.ph==='jeu'){if(env.fini){dissout();return ev;}
+   if(env.attente){b.att+=env.dt;if(b.att>(S.attenteMaxS||5)){ev.push(['abandon']);dissout();}}else b.att=0;return ev;}
+  if(b.ph==='fin'){b.t-=env.dt;if(b.t<=0&&!env.vivant&&!env.etourdi){b.ph='entracte';b.t=J.justice.entracteS;}return ev;}
+  if(b.ph==='entracte'){if(env.etourdi){b.t=J.justice.entracteS;return ev;}b.t-=env.dt;if(b.t<=0){b.ph='finie';ev.push(['libere']);}return ev;}
+  return ev;}
+ /*/glas:pur*/
+ const SG=(GA_D&&GA_D.attaques&&GA_D.attaques[3]&&GA_D.attaques[3].souvenirs)||null;
+ const glasBoss=()=>RUN&&!RUN.hub&&RUN.act===3&&room&&room.type==='boss'&&room.boss&&!room.boss.dead&&room.boss.type==='boss'?room.boss:null;
+ const glasEtat=()=>room&&room.glas&&room.glas.rep.gestes.length?room.glas:null;
+ // un geste est en cours (de la naissance du Reflet à la fin de l'entracte) : les autres zones attendent
+ function glasZone(){const G=room&&room.glas;return !!(G&&G.bulle&&G.bulle.ph!=='finie');}
+ // ce qui fait attendre le Reflet avant chaque chargement, en plus de zoneAutre (anneaux du Battement, zones des invoqués) :
+ // le Battement inverse et les cloches (HZ), les tirs du gardien (Spirale, Couronne), la Dévoreuse
+ function glasOccupe(b){const hz=window.__glasHZ?window.__glasHZ():[];return hz.length>0||eproj.some(p=>p.boss&&!p.dead)||(room&&room.drainT>0)||!!(b&&b.state&&b.state!=='idle');}
+ const EG=window.__glas={};   // console et mode d'essai
+ const glasCopie=()=>EG.essai?!!EG.essai.copie:!!(SG&&SG.copie);
+ // répertoire à l'entrée de la salle du Glas (la réserve de la run ; rien n'est persistant)
+ function glasInit(b){const res=RUN.reserveBrume||[],rnd=res.length?asmRng((Math.random()*4294967296)>>>0):Math.random;   // réserve vide : aucun tirage
+  const f=EG.forcer;EG.forcer=null;const rep=f?f():glasRepertoire(SG,SBJ,FAMS,A.souvenir,res,rnd);
+  let red=0;for(const r of rep.renforts){const X=SBJ.renforts[r.k];if(X&&(X.pv||X.reduit))red+=(SG.renforts||{}).reduitBulle||0;}
+  room.glas={rep,i:0,q:null,qph:0,prec:null,bulle:null,reflet:null,reduit:red,vus:[],apresEt:0};
+  RUN.glasStats={reserve:res.length,rep:rep.gestes.length,renforts:rep.renforts.length,ids:rep.gestes.map(g=>g.id),joues:0,sauts:0,renonces:0,abandons:0,coupes:0};}
+ const _cbG=createBoss;
+ createBoss=function(){const e=_cbG.apply(this,arguments);try{if(SG&&RUN&&!RUN.hub&&RUN.act===3&&room&&!DEMO)glasInit(e);}catch(err){console.error(err);}return e;};
+ // la file du Glas : aux temps 2 et 3, des clés « brume » s'y glissent ; les autres clés passent par la file du gardien (v16, nextKey)
+ const _hpG=heartPattern;
+ heartPattern=function(e){const G=glasEtat();
+  if(!G||!e.c13||e.phase<2||RUN.act!==3){_hpG(e);return;}
+  const n=glasEnJeu(SG,G.rep,e.phase);
+  if(!G.q||!G.q.length||G.qph!==e.phase){G.qph=e.phase;G.q=glasMelange(glasFile(SG,GA_D.attaques[3].file,e.phase,n),G.prec,Math.random);
+   if(EG.essai&&!EG.essai.appel)G.q=G.q.filter(k=>k!=='summon');}
+  const k=G.q.shift();G.prec=k;
+  if(k==='brume'&&n>0){glasGeste(e,G,n);return;}
+  e.q16ph=e.phase;e.q16=[k==='brume'?'spiral':k];
+  const cp=e.copy;if(!glasCopie())e.copy=null;try{_hpG(e);}finally{e.copy=cp;}};
+ // changement de temps : le geste en cours s'arrête (ce qui est lâché va au bout, et le Glas attend que ce soit fini)
+ const _b13G=b13Phase;
+ b13Phase=function(e,ph){const G=RUN&&RUN.act===3&&room&&room.glas;
+  if(G&&G.bulle)glasCoupe(G);
+  _b13G(e,ph);
+  if(G&&G.bulle)e.patT=9e9;};
+ // ── Le Reflet : ta silhouette, translucide, teintée de brume. Hors de la liste des ennemis : rien ne le vise, rien ne l'attache,
+ // il ne se tue pas et ne touche pas au contact. Sa file d'étapes est celle d'un porteur seul (sbMaj, comme le Masqué d'essai).
+ function refletNouveau(b,G,g,q){const R=SG.reflet,dmg=b.dmg*(SG.degats||1);let spd=R.vitesse||126,force=g.force||1;
+  // Brutal passe par la force (sous le plafond des armes, comme le rang et la gravure) ; Vif par sa vitesse
+  for(const r of G.rep.renforts){const X=SBJ.renforts[r.k];if(X.degats)force*=1+X.degats;if(X.vitesse)spd*=1+X.vitesse;}
+  const e={reflet:true,type:'boss',name:b.name,x:q.x,y:q.y,r:R.r||18,dmg,spd,dir:Math.random()<0.5?1:-1,ang:Math.atan2(P.y-q.y,P.x-q.x),face:Math.atan2(P.y-q.y,P.x-q.x),
+   stun:0,kbx:0,kby:0,thornT:1e9,ctT:0,wT:0,wob:0,walk:0,vx:0,sp:0,dead:false,elite:false,cls:P.cls,g,boss:b,nait:RUN.time,fin:0,
+   get hp(){return b.hp;},set hp(v){if(!b.dead)b.hp=Math.min(b.maxHp,v);},get maxHp(){return b.maxHp;},   // Vorace : le Cœur boit ce que le Reflet te prend
+   asm:{reflet:true,rnd:asmRng((Math.random()*4294967296)>>>0),co:{corps:'voile'},st:{ph:'pause',t:0,tot:1,k:null,caps:[],sig:null},sansContact:true,
+    sb:{fid:g.fid,vars:g.vars,st:sbNouveau(SBJ,g.fid,g.vars),k:1,force,recu:0,sauts:0,seul:true},autre:()=>glasOccupe(b)}};
+  return e;}
+ function glasGeste(b,G,n){const g=G.rep.gestes[G.i%n];G.i++;
+  b.state='idle';b.patT=9e9;G.bulle=glasBulle(SG);G.bulle.g=g;
+  const R=SG.reflet,d0=(R.distance||[180,220])[0],d1=(R.distance||[180,220])[1],a0=Math.atan2(b.y-P.y,b.x-P.x);let q=null;
+  for(let k=0;k<14&&!q;k++){const a=a0+(k%2?1:-1)*Math.ceil(k/2)*0.45,d=rand(d0,d1),c=mereSafePoint(P.x+Math.cos(a)*d,P.y+Math.sin(a)*d);
+   if(hyp(c.x-b.x,c.y-b.y)>b.r+(R.r||18)+24&&hyp(c.x-P.x,c.y-P.y)>(R.r||18)+P.r+60)q=c;}
+  if(!q)q=mereSafePoint(P.x+Math.cos(a0)*d0,P.y+Math.sin(a0)*d0);
+  const rf=G.reflet=refletNouveau(b,G,g,q);
+  sfx('souvenir');
+  // la brume quitte le Cœur et rejoint le point où il naît (rien en mouvements réduits)
+  if(!RM)for(let i=0;i<7;i++){const u=i/6;later(i*0.07,()=>{if(room&&room.glas&&room.glas.reflet===rf)mist(b.x+(q.x-b.x)*u,b.y+(q.y-b.y)*u,24,'#2a2440');});}
+  tlights.push({x:q.x,y:q.y,r:180,t:0.6,max:0.6,c:'violet'});}
+ // carte d'arrivée, la première fois qu'un souvenir est joué dans le combat : son icône (et ses renforts), le nom du talent. Rien d'autre.
+ function carteReflet(G,g){if(G.vus.includes(g.id))return;G.vus.push(g.id);
+  if(!card){card=document.createElement('div');card.id='asmCard';card.setAttribute('role','status');card.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(card);}
+  const F=SBJ.familles[g.fid],rf=G.rep.renforts.map(r=>SBJ.renforts[r.k]).filter(Boolean);
+  card.className='porte reflet';
+  card.innerHTML=`<div><span class="ics"><i class="sv" title="${esc(F.n)}">${icon(F.ic)}</i>${rf.map(X=>`<i class="sv et" title="${esc(X.n)}">${icon(X.ic)}</i>`).join('')}</span><span class="svn">${esc((NODES[g.id]||{}).name||g.id)}</span></div>`;
+  try{stackBelow(card,toastEl);}catch(x){}void card.offsetWidth;card.classList.add('show');cardHide=RUN.time+2.4;}
+ function glasCoupe(G){const B=G.bulle,rf=G.reflet;if(!B)return;
+  for(const [t] of glasPas(SG,SBJ,B,{dt:0,coupe:true}))if(t==='dissout'&&rf){refletDissout(rf);if(RUN.glasStats)RUN.glasStats.coupes++;}}
+ function refletDissout(rf){if(rf.fin)return;rf.fin=RUN.time;const Bs=rf.asm.sb;Bs.zc=null;Bs.dash=null;
+  if(!RM)mist(rf.x,rf.y,22,'#2a2440');}
+ function refletMaj(e,dt){let fige=false;if(e.stun>0){e.stun-=dt;fige=true;}
+  const x0=e.x,y0=e.y,Bs=e.asm.sb;sbMaj(e,dt,false,fige);
+  if(!Bs.dash){collideEnemy(e);const b=e.boss,d=hyp(e.x-b.x,e.y-b.y),m=b.r+e.r;if(d<m&&d>0){e.x=b.x+(e.x-b.x)/d*m;e.y=b.y+(e.y-b.y)/d*m;}}
+  const mv=hyp(e.x-x0,e.y-y0);e.walk+=mv*0.09;e.vx=(e.x-x0)/Math.max(dt,1e-3);e.sp=mv/Math.max(dt,1e-3);
+  if(!Bs.dash)e.face=Math.atan2(P.y-e.y,P.x-e.x);else e.face=Bs.dash.a;
+  if(Bs.dernier)e.charge=true;}
+ function glasTick(b,G,dt){
+  // tu es étourdi : le Glas ne lance rien de neuf, ni dans l'entracte qui suit (changement de temps compris)
+  if(sbEtourdi())G.apresEt=SBJ.justice.entracteS;else if(G.apresEt>0)G.apresEt-=dt;
+  const B=G.bulle;
+  if(!B){if((sbEtourdi()||G.apresEt>0)&&b.state==='idle')b.patT=Math.max(b.patT,Math.max(0,G.apresEt||0)+0.02);return;}
+  b.state='idle';b.patT=9e9;b.beatT=Math.max(b.beatT||0,0.5);   // la bulle : il ne lance rien et le Battement se tait
+  const rf=G.reflet,Bs=rf&&rf.asm.sb;let fini=false,attente=false;
+  if(rf&&!rf.fin&&B.ph==='jeu'){refletMaj(rf,dt);fini=Bs.st.n>0;attente=Bs.st.ph==='attente'&&(Bs.st.bloque||0)>0;}
+  else if(rf&&B.ph==='fin')sbSuivi(rf,Bs,dt);   // la repousse et les éclats vont au bout
+  const vivant=!!(Bs&&(Bs.vivants||[]).some(f=>f()));
+  for(const [t] of glasPas(SG,SBJ,B,{dt,fini,attente,vivant,etourdi:sbEtourdi()})){const S=RUN.glasStats;
+   if(t==='jeu')carteReflet(G,B.g);
+   else if(t==='abandon'){if(S)S.abandons++;}
+   else if(t==='dissout'&&rf){refletDissout(rf);if(S){S.sauts+=Bs.sauts||0;if(!rf.charge)S.renonces++;else S.joues++;}}
+   else if(t==='libere'){G.bulle=null;G.reflet=null;b.patT=bossGap(b);b.beatT=Math.max(b.beatT||0,0.6);}}}
+ const _ueG=updateEnemies;
+ updateEnemies=function(dt){const b=glasBoss(),G=b&&room.glas;
+  // la fenêtre « à nu » (Accoutumance) ne se déclenche pas pendant un geste : son signal attend, son minuteur aussi
+  const gel=!!(G&&G.bulle&&b.adapt&&P.cls!=='tis');if(gel&&b.cutWarn>0)b.cutWarn+=dt;
+  _ueG(dt);
+  if(!b||!G)return;
+  try{if(gel&&!(b.cutWarn>0)){const X=BOSSX[P.cls];if(X&&X.cd){const thr=X.cd-1.2*b.adapt+v9CdPlus();b.cutT=Math.min(b.cutT||0,thr-1e-3);}}
+   glasTick(b,G,dt);}catch(err){console.error(err);}};
+ // Robuste et Blindé : le Cœur subit moins pendant un geste ; le Reflet, lui, ne se touche pas
+ const _heG=hitEnemy;hitEnemy=function(e,dmg,o){if(e&&e.reflet)return 0;
+  if(e&&e.type==='boss'&&room&&room.glas&&room.glas.bulle&&room.glas.reduit>0&&typeof dmg==='number')dmg*=1-room.glas.reduit;
+  return _heG.call(this,e,dmg,o);};
+ const _fhG=friendlyHit;friendlyHit=function(o){if(o&&o.reflet)return;return _fhG.apply(this,arguments);};
+ const _rhG=rawHit;rawHit=function(e){if(e&&e.reflet)return;return _rhG.apply(this,arguments);};
+ // mort du Glas : le Reflet et ce qu'il a lâché disparaissent avec lui ; la chronique garde une ligne par souvenir joué
+ const _bdG=bossDefeated;
+ bossDefeated=function(e){const G=room&&room.glas;
+  if(G&&RUN&&RUN.act===3){const rf=G.reflet;if(rf){eproj=eproj.filter(p=>p.from!==rf);ZR=ZR.filter(g=>g.src!==rf);}G.bulle=null;G.reflet=null;
+   for(const id of G.vus)chron('glasSv',{n:(NODES[id]||{}).name||id});}
+  return _bdG.apply(this,arguments);};
+ const _cwG=clearWorld;clearWorld=function(){_cwG.apply(this,arguments);if(room&&room.glas){room.glas.bulle=null;room.glas.reflet=null;}};
+ const _chG=chron;
+ chron=function(k,d){if(k==='glasSv'){if(!RUN||RUN.hub)return;ensure14();RUN.ch.notes.push({a:RUN.act,k,t:`Le Glas sonnait encore ${d.n}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();return;}
+  return _chG.apply(this,arguments);};
+ const _sfxG=sfx;sfx=function(k){if(k==='souvenir'){if(!AC||muted)return;if(window.__brumeSouvenir)window.__brumeSouvenir();return;}return _sfxG.apply(this,arguments);};
+ // ── Dessin : ses zones (celles du Masqué, en rouge), sa silhouette, son icône cerclée de lavande et celles de ses renforts
+ let OC=null;
+ function refletAlpha(e){const R=SG.reflet,t=RUN.time;if(e.fin)return clamp(1-(t-e.fin)/(R.finS||0.4),0,1);return clamp((t-e.nait)/(R.naissanceS||0.6),0,1);}
+ function dessinReflet(c,e){const al=refletAlpha(e);if(al<=0.01)return;
+  if(!OC){OC=document.createElement('canvas');OC.width=OC.height=240;}
+  const o=OC.getContext('2d');o.setTransform(1,0,0,1,0,0);o.globalCompositeOperation='source-over';o.globalAlpha=1;o.clearRect(0,0,240,240);o.setTransform(2,0,0,2,0,0);
+  const keep=ctx;ctx=o;
+  try{const op={alpha:1,walk:e.walk,vx:e.vx||0,sp:e.sp||0};
+   if(e.cls==='lum')drawLumHero(60,70,e.face,op);else if(e.cls==='gou')drawGouHero(60,70,e.face,Object.assign(op,{sc:1,tier:0,open:0.3,muts:0}));
+   else if(e.cls==='her')drawHerHero(60,70,e.face,op);else drawTisHero(60,70,e.face,op);}
+  catch(err){}finally{ctx=keep;}
+  o.setTransform(1,0,0,1,0,0);o.globalCompositeOperation='source-atop';o.fillStyle='rgba(168,152,210,0.6)';o.fillRect(0,0,240,240);o.globalCompositeOperation='source-over';
+  c.save();c.globalCompositeOperation='lighter';glow(c,e.x,e.y-4,e.r*2.6,'180,160,255',(RM?0.2:0.16+0.06*Math.sin(T*3))*al);c.restore();
+  c.save();c.globalAlpha=al*0.66;c.drawImage(OC,e.x-60,e.y-70,120,120);c.restore();
+  // icônes : l'arme de sa famille, puis ses renforts, cerclées de lavande ; la barre de chargement de l'étape en cours
+  const Bs=e.asm.sb,st=Bs.st,lit=st.ph==='charge'&&!e.fin,F=SBJ.familles[Bs.fid],RF=room.glas?room.glas.rep.renforts.map(r=>SBJ.renforts[r.k]).filter(Boolean):[];
+  const L=[F.ic,...RF.map(X=>X.ic)],sz=15,gap=5,tw=L.length*sz+(L.length-1)*gap,top=e.y-e.r-30,iy=top-(lit?14:4);
+  c.save();c.globalAlpha=al;c.fillStyle='rgba(8,6,14,.78)';rr(c,e.x-tw/2-6,iy-sz/2-4,tw+12,sz+8,6);c.fill();
+  L.forEach((ic,i)=>{const x=e.x-tw/2+i*(sz+gap)+sz/2,on=lit&&i===0;
+   if(i>0){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();}
+   c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();
+   if(on){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.2,'255,120,110',0.6);c.restore();}
+   drawIcon(c,ic,x,iy,on?sz*1.25:sz,on?'#ffffff':'rgba(240,232,255,.98)',2);});
+  if(lit){const k=clamp(1-st.t/st.tot,0,1),w=44,y=top-2;c.fillStyle='rgba(0,0,0,.8)';c.fillRect(e.x-w/2-2,y-2,w+4,9);c.fillStyle=CO.charge||'#ff5a50';c.fillRect(e.x-w/2,y,w*k,5);}
+  c.restore();}
+ const _dtG=drawTelegraphs;
+ drawTelegraphs=function(){_dtG();try{const G=room&&room.glas,rf=G&&G.reflet;if(!rf)return;
+  if(!rf.fin)sbDessin(ctx,rf);else{const Bs=rf.asm.sb;if(Bs.flash)for(const f of Bs.flash)if(f.z.forme!=='projectile')drawZone(ctx,f.z,1,f.t/f.max);}
+  dessinReflet(ctx,rf);}catch(err){console.error(err);}};
+ // ── Mode d'essai (développement seulement) : index.html?glas=<famille|id de talent>[,…][&temps=2|3][&classe=lum|gou|her|tis]
+ // [&variante=…][&renfort=pv,degats,vitesse,armure][&copie=1][&appel=0][&dieu=0][&bot=1]
+ // Ouvre la salle du Glas Originel à l'acte III, réserve forcée (dans l'ordre donné : le premier est le premier du répertoire), PV du Glas tenus
+ // dans le temps demandé, toi jamais sous 1 PV (dieu). bot=1 : tu es conduit vers la sortie calculée à chaque zone du Reflet (vitesse de référence).
+ // En console : __glas.essai('sol,onde,cloche', 3, 'gou') ; __glas.etat() ; __glas.repertoire(reserve).
+ function talentDe(fid,v){const F=(window.BRUME_DATA.souvenirs.familles||{})[fid];if(!F)return null;const L=(F.t||[]).filter(id=>NODES[id]&&!glasEntree(SBJ,{source:'talent',id}).renfort);
+  return L.find(id=>(glasEntree(SBJ,{source:'talent',id}).v||[]).join()===(v||[]).join())||L.find(id=>!(glasEntree(SBJ,{source:'talent',id}).v||[]).length)||L[0]||null;}
+ function renfortDe(k){for(const fid in window.BRUME_DATA.souvenirs.familles){for(const id of window.BRUME_DATA.souvenirs.familles[fid].t||[])if(NODES[id]&&glasEntree(SBJ,{source:'talent',id}).renfort===k)return id;}return null;}
+ EG.etat=()=>room&&room.glas;
+ // développement : lecture de l'état et crochets par image (banc d'essai hors navigateur visible)
+ EG.dbg=()=>({RUN,room,P,state,eproj,enemies,rings,ACTS,hitEnemy,sbEtourdi,lancer:c=>{chosenCls=CLS[c]?c:'lum';startRun();},entrer:t=>{closeOverlay();queue.length=0;trans=null;fade=0;doEnter(t);}});
+ EG.repertoire=res=>glasRepertoire(SG,SBJ,FAMS,A.souvenir,res||RUN.reserveBrume||[],Math.random);
+ EG.essai=null;
+ EG.lancer=function(liste,temps,cls,opt){opt=opt||{};try{
+  const toks=(Array.isArray(liste)?liste:String(liste||'').split(',')).filter(Boolean),vars=(opt.vars||[]).filter(v=>SBJ.variantes[v]);
+  const E=EG.essai=Object.assign({temps:temps===3?3:2,appel:true,copie:false,dieu:true,bot:false,subis:0,coups:0,coupsBulle:0,sup:0,images:0,imagesZone:0,journal:[]},opt,{vars});
+  if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[cls]?cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+  RUN.act=3;RUN.g=Math.max(RUN.g,24);RUN.roomIdx=ACTS[3].rooms;
+  const res=[],gestes=[];let salle=1;
+  for(const t of toks){const id=NODES[t]?t:talentDe(t,vars);if(!id)continue;const x={id,source:'talent',rang:1,g:0,oublie:{acte:3,salle:salle++},porte:0};res.push(x);
+   const fid=FAMS[id],Ent=glasEntree(SBJ,x);if(!fid||Ent.renfort||gestes.some(g=>g.fid===fid))continue;gestes.push({x,id,fid,vars:vars.length?vars.filter(v=>SBJ.variantes[v].formes.some(f=>SBJ.familles[fid].etapes.some(e=>e.f===f))):(Ent.v||[]).slice(),force:1});}
+  const renforts=[];for(const k of (opt.renf||[]).slice(0,Math.min(SG.renforts.max,SBJ.renfortMax))){const id=renfortDe(k);if(!id)continue;const x={id,source:'talent',rang:1,g:0,oublie:{acte:3,salle:salle++},porte:0};res.push(x);renforts.push({x,id,k});}
+  RUN.reserveBrume=res;EG.forcer=()=>({gestes:gestes.slice(0,SG.max||3),renforts});
+  closeOverlay();queue.length=0;trans=null;fade=0;doEnter('boss');room.bannerT=Math.min(room.bannerT||0,0.3);
+  return gestes.slice(0,SG.max||3).map(g=>g.fid+' · '+((NODES[g.id]||{}).name||g.id)).join(', ')||'(aucun geste : le Glas d’avant)';}catch(err){console.error(err);return String(err);}};
+ const QG=/[?&]glas=([a-z0-9_,]+)/.exec(location.search);
+ if(QG&&!DEMO&&SG){const q=k=>(new RegExp(`[?&]${k}=([a-z0-9,]+)`).exec(location.search)||[])[1];
+  const opt={appel:q('appel')!=='0',copie:q('copie')==='1',dieu:q('dieu')!=='0',bot:q('bot')==='1',vars:(q('variante')||'').split(',').filter(Boolean),renf:(q('renfort')||'').split(',').filter(v=>SBJ.renforts[v])};
+  addEventListener('load',()=>setTimeout(()=>{const n=EG.lancer(QG[1],+(q('temps')||2),q('classe'),opt);try{toast('Essai · '+n,3);}catch(x){}},400));}
+ // le bilan de l'essai : coups reçus (pendant un geste ou non), images où une zone du Reflet est ouverte en même temps qu'une zone du Glas ou d'un invoqué
+ const _lhG=loseHp;loseHp=function(n){if(EG.hookPerte)try{EG.hookPerte(n);}catch(err){}const E=EG.essai;if(E&&room&&room.type==='boss'&&P&&n>0){const G=room.glas,B=G&&G.bulle,rf=G&&G.reflet,Bs=rf&&rf.asm.sb;
+   E.subis+=n;E.coups++;if(B&&rf&&(Bs.st.ph==='charge'||Bs.st.ph==='effet'||(Bs.vivants||[]).some(f=>f())||rf.fin))E.coupsBulle++;
+   E.journal.push({t:+RUN.time.toFixed(2),n:Math.round(n),bulle:B?B.ph:null,ph:Bs&&Bs.st.ph,i:Bs&&Bs.st.i,f:Bs&&Bs.dernier&&Bs.dernier.et.f,p:[P.x|0,P.y|0],q:Bs&&Bs.fuiteQ&&Bs.fuiteQ.map(v=>v|0),anneaux:rings.length,hz:(window.__glasHZ?window.__glasHZ().length:0),tirs:eproj.filter(p=>p.boss).length});if(E.journal.length>80)E.journal.shift();
+   if(E.dieu){P.hp=Math.max(1,P.hp-n);return;}}
+  return _lhG.apply(this,arguments);};
+ const _stG=step;step=function(dt){_stG(dt);if(EG.hook&&state==='play')try{EG.hook(dt);}catch(err){console.error(err);}const E=EG.essai;try{if(!E||state!=='play'||!RUN||!room||room.type!=='boss')return;const b=room.boss;if(!b||b.dead)return;
+  if(!E.pv0){E.pv0=true;b.hp=b.maxHp*(E.temps===3?0.3:0.6);}
+  // PV du Glas tenus dans le temps demandé
+  const lo=E.temps===3?0.05:0.34,hi=E.temps===3?0.33:0.65;if(b.hp<b.maxHp*lo)b.hp=b.maxHp*lo;if(b.hp>b.maxHp*hi&&b.phase>=E.temps)b.hp=b.maxHp*hi;
+  const G=room.glas,rf=G&&G.reflet,Bs=rf&&!rf.fin&&rf.asm.sb;E.images++;
+  // une zone du Reflet est ouverte (chargement, ou ce qu'il a lâché vit encore) : rien d'autre ne doit l'être
+  const zR=!!(Bs&&(Bs.st.ph==='charge'||(Bs.vivants||[]).some(f=>f())||Bs.dash));
+  if(zR){E.imagesZone++;const autre=rings.length>0||(window.__glasHZ&&window.__glasHZ().length>0)||eproj.some(p=>p.boss&&!p.dead)||room.drainT>0||b.state!=='idle'||enemies.some(o=>!o.dead&&o!==b&&((o.type==='bouffi'&&o.state==='fuse')||(o.type==='brute'&&(o.state==='wind'||o.state==='charge'))||(o.type==='hurleur'&&o.state==='sing')||(o.type==='voile'&&(o.state==='blink'||o.state==='wind'))));
+   if(autre){E.sup++;if((E.supJ=E.supJ||[]).length<20)E.supJ.push({t:+RUN.time.toFixed(2),anneaux:rings.length,hz:window.__glasHZ?window.__glasHZ().length:0,tirs:eproj.filter(p=>p.boss&&!p.dead).length,noir:room.drainT>0,etat:b.state});}}
+  if(E.bot&&Bs&&Bs.fuiteQ&&(Bs.st.ph==='charge'||Bs.st.ph==='effet'||Bs.dash||(Bs.vivants||[]).some(f=>f()))&&!P.dead&&!sbEtourdi()){const [qx,qy]=Bs.fuiteQ,dx=qx-P.x,dy=qy-P.y,d=hyp(dx,dy),v=Math.min(SBJ.justice.joueur.vitesse,pMarche())*dt;if(d>0.5){P.x+=dx/d*Math.min(d,v);P.y+=dy/d*Math.min(d,v);collidePlayer();}}}catch(err){console.error(err);}};
+ const stG=document.createElement('style');stG.textContent=`#asmCard.reflet{padding:8px 18px 8px 12px}#asmCard.reflet .svn{margin-top:4px;font-size:16px}`;document.head.appendChild(stG);
 })();
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -10153,7 +10407,7 @@ function demoBoot(cls){
    fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':(R.lastSrc||''),acte:RUN.act,salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
    tues:RUN.kills||0,degats:Math.round(RUN.dmg||0),pvMax:Math.round(P.s.maxHp),
    talents:Object.keys(M.traces).length,portes:M.actifs.length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),oublis:M.oublis||0,renonces:M.renonces||0,ecransOubli:M.ecrans||0,
-   gravures:M.gravures||0,eveils:EVN,repris:M.repris||0,trophees:trophees().length,porteurs:Object.values((RUN.asm&&RUN.asm.porteurs)||{}).reduce((a,b)=>a+b,0),reliques:(P.relics||[]).length,accoutumance:R.tot>0?Math.round(R.sig/R.tot*100)/100:null,
+   gravures:M.gravures||0,eveils:EVN,repris:M.repris||0,trophees:trophees().length,porteurs:Object.values((RUN.asm&&RUN.asm.porteurs)||{}).reduce((a,b)=>a+b,0),glas:RUN.glasStats||null,reliques:(P.relics||[]).length,accoutumance:R.tot>0?Math.round(R.sig/R.tot*100)/100:null,
    build:M.actifs.map(a=>a.id+':'+a.rang+(a.g?'+'+a.g:'')).join(' ')};
   const S=SAVE.stats17||(SAVE.stats17=[]);S.push(rec);if(S.length>80)S.splice(0,S.length-80);persist();
  }

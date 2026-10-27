@@ -18,12 +18,12 @@ import vm from 'node:vm';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
-const asm = html.match(/\/\*asm:pur\*\/([\s\S]*?)\/\*\/asm:pur\*\//), sb = html.match(/\/\*sb:pur\*\/([\s\S]*?)\/\*\/sb:pur\*\//);
-if (!asm || !sb) { console.error('Bloc /*asm:pur*/ ou /*sb:pur*/ introuvable'); process.exit(1); }
+const asm = html.match(/\/\*asm:pur\*\/([\s\S]*?)\/\*\/asm:pur\*\//), sb = html.match(/\/\*sb:pur\*\/([\s\S]*?)\/\*\/sb:pur\*\//), gl = html.match(/\/\*glas:pur\*\/([\s\S]*?)\/\*\/glas:pur\*\//);
+if (!asm || !sb || !gl) { console.error('Bloc /*asm:pur*/, /*sb:pur*/ ou /*glas:pur*/ introuvable'); process.exit(1); }
 const ctx = { window: {}, Math, console };
 vm.createContext(ctx);
-for (const f of ['bestiaire.js', 'souvenirs.js', 'souvenirs-brume.js', 'icones.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(asm[1] + sb[1] + '\nthis.F={asmDuree,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbVerrou,sbPotentiel,sbIncompatibles,sbNouveau,sbPas,sbDegats,sbCoup,sbPlafond,sbDans,sbArrivee,sbEtourdit};', ctx);
+for (const f of ['bestiaire.js', 'souvenirs.js', 'souvenirs-brume.js', 'icones.js', 'gardiens.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
+vm.runInContext(asm[1] + sb[1] + gl[1] + '\nthis.F={sbForce,glasRepertoire,glasEnJeu,glasFile,glasMelange,glasMelangeOk,glasBulle,glasPas,glasCompat,asmRng,asmDuree,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbVerrou,sbPotentiel,sbIncompatibles,sbNouveau,sbPas,sbDegats,sbCoup,sbPlafond,sbDans,sbArrivee,sbEtourdit};', ctx);
 const F = ctx.F, D = ctx.window.BRUME_DATA, A = D.bestiaire.assemble, J = D.souvenirsBrume, SV = D.souvenirs, IC = D.icones;
 const clone = o => JSON.parse(JSON.stringify(o));
 let fails = 0, checks = 0;
@@ -215,8 +215,93 @@ ok(/g\.r=Math\.min\(g\.max,g\.r\+g\.v\*dt\)/.test(html), 'index.html : l\'onde (
       ok(lent.d <= pv * (t + 3) + 10, `${f} : à ${pv} px/s, sortie à ta portée (${lent.d} px)`);
       if (base.ok && lent.d > base.d) plusLoin++; } }
   console.log(`sortie à ta vitesse : ${n} placements ; à 150 et 120 px/s, ${sautLent} sans sortie (l'étape sauterait), ${plusLoin} sorties différentes`);
-  ok(/function sbOrigine\(e\)\{return\{[^}]*pv:pMarche\(\)/.test(html), 'index.html : sbOrigine passe ta vitesse à pied (pv:pMarche())');
+  ok(/function sbOrigine\(e\)\{[^\n]*\n?[^}]*return\{[^}]*pv:pMarche\(\)/.test(html), 'index.html : sbOrigine passe ta vitesse à pied (pv:pMarche())');
   ok(/v=Math\.min\(Jj\.joueur\.vitesse,o\.pv\|\|Infinity\)/.test(html), 'index.html : sbSortie ne cherche jamais plus vite que la justice'); }
+
+// 10. (v17.22) Le Glas Originel se souvient : répertoire tiré dans la réserve, file des temps 2 et 3, bulle d'un geste, justice dans sa salle,
+//     dégâts. Le geste est joué par le Reflet (porteur seul, rayon reflet.r), avec la même justice que le Masqué ; le corps du Cœur bloque la sortie.
+{ const S = D.gardiens.attaques[3].souvenirs, FILE = D.gardiens.attaques[3].file, As = A.souvenir;
+  const fam = {}; for (const [fid, Fm] of Object.entries(SV.familles)) for (const id of Fm.t || []) fam[id] = fid;
+  const ent = id => J.talents[id] || {}, ids = Object.keys(fam), armes = ids.filter(id => !ent(id).renfort), renforts = ids.filter(id => ent(id).renfort);
+  const rnd = F.asmRng(11);   // générateur du jeu (mulberry32)
+  const x = (id, salle, o) => Object.assign({ id, source: 'talent', rang: 1, g: 0, oublie: { acte: 3, salle }, porte: 0 }, o || {});
+  // a. réserve vide, ou sans arme : aucun geste (le combat est celui d'avant)
+  ok(F.glasRepertoire(S, J, fam, As, [], rnd).gestes.length === 0, 'glas : réserve vide, aucun geste');
+  { const R = F.glasRepertoire(S, J, fam, As, renforts.slice(0, 4).map((id, i) => x(id, i)), rnd); ok(R.gestes.length === 0 && R.renforts.length === 0, 'glas : réserve de renforts seulement, ni geste ni renfort'); }
+  // b. 2000 réserves tirées au hasard : au plus max gestes, familles différentes et compatibles, aucun renfort parmi eux ; renforts de clés différentes
+  let nRep = 0, tailles = [0, 0, 0, 0];
+  for (let k = 0; k < 2000; k++) { const n = 1 + Math.floor(rnd() * 9), res = Array.from({ length: n }, (_, i) => x(ids[Math.floor(rnd() * ids.length)], i + 1, { rang: 1 + Math.floor(rnd() * 3), g: Math.floor(rnd() * 3), porte: Math.floor(rnd() * 3) }));
+    const R = F.glasRepertoire(S, J, fam, As, res, rnd), fs = R.gestes.map(g => g.fid); nRep++; tailles[R.gestes.length]++;
+    ok(R.gestes.length <= S.max, `glas : ${R.gestes.length} gestes (max ${S.max})`);
+    ok(new Set(fs).size === fs.length, `glas : deux gestes de la même famille (${fs})`);
+    for (let i = 0; i < fs.length; i++) for (let j = i + 1; j < fs.length; j++) ok(F.glasCompat(J, fs[i], fs[j]), `glas : ${fs[i]} et ${fs[j]} incompatibles dans un répertoire`);
+    ok(R.gestes.every(g => !ent(g.id).renfort && J.familles[g.fid]), 'glas : un renfort ne donne jamais un geste');
+    ok(R.gestes.every(g => res.includes(g.x)), 'glas : un geste vient toujours de la réserve');
+    ok(new Set(R.renforts.map(q => q.k)).size === R.renforts.length && R.renforts.length <= Math.min(S.renforts.max, J.renfortMax), 'glas : renforts de clés différentes, sous le maximum');
+    ok(R.gestes.length || !R.renforts.length, 'glas : pas de renfort sans geste');
+    for (const g of R.gestes) ok(Math.abs(g.force - (1 + As.parRang * (g.x.rang - 1) + As.parGravure * g.x.g)) < 1e-9, 'glas : force du souvenir (rang, gravure)');
+    // le nombre de gestes possibles : autant que de familles d'armes différentes et compatibles disponibles, jusqu'au max
+    const dispo = [...new Set(res.filter(y => !ent(y.id).renfort).map(y => fam[y.id]))]; if (dispo.length) ok(R.gestes.length >= 1, 'glas : une arme disponible donne au moins un geste'); }
+  // c. récence : le plus récemment oublié pèse recence[1], le plus ancien recence[0] ; l'usure (porte) ne change rien
+  { const trio = ['sol', 'ruee', 'lumiere'].map(f => armes.find(id => fam[id] === f)), cpt = [0, 0, 0], N = 20000;
+    for (let k = 0; k < N; k++) { const res = trio.map((id, i) => x(id, i + 1, { porte: i === 2 ? 5 : 0 })); const g0 = F.glasRepertoire(S, J, fam, As, res, rnd).gestes[0]; cpt[trio.indexOf(g0.id)]++; }
+    const [lo, hi] = S.recence, mid = (lo + hi) / 2, tot = lo + mid + hi, att = [lo / tot, mid / tot, hi / tot];
+    for (let i = 0; i < 3; i++) ok(Math.abs(cpt[i] / N - att[i]) < 0.015, `glas : récence, premier geste ${i + 1} tiré ${(cpt[i] / N * 100).toFixed(1)} % (attendu ${(att[i] * 100).toFixed(1)} %)`);
+    console.log(`\nglas : ${nRep} répertoires (0 à 3 gestes : ${tailles.join(' / ')}) ; premier geste du plus ancien au plus récent : ${cpt.map(c => (c / N * 100).toFixed(1) + ' %').join(', ')}`); }
+  // d. la file : sans geste, celle du gardien telle quelle ; avec, ce que disent les données, et toute attaque du gardien reste dans chaque temps
+  for (const ph of [1, 2, 3]) ok(JSON.stringify(F.glasFile(S, FILE, ph, 0)) === JSON.stringify(FILE[ph]), `glas : temps ${ph}, sans geste, file inchangée`);
+  for (const ph of [2, 3]) { const Fp = F.glasFile(S, FILE, ph, 2), R = S.file[ph] || {};
+    ok(Fp.filter(k => k === 'brume').length === (R.remplace || []).length + (R.ajoute || 0), `glas : temps ${ph}, nombre de gestes dans la file`);
+    for (const k of new Set(FILE[ph])) ok(Fp.includes(k), `glas : temps ${ph}, l'attaque ${k} du gardien a disparu (le wiki ne serait plus vrai)`); }
+  ok(F.glasEnJeu(S, { gestes: [1, 2, 3] }, 1) === 0 && F.glasEnJeu(S, { gestes: [1] }, 3) === 1, 'glas : gestes en jeu par temps');
+  // e. mélange : jamais deux gestes de suite ni juste après un Appel, rien de perdu ni d'inventé
+  { let n = 0; for (let k = 0; k < 10000; k++) { const ph = 2 + (k % 2), Fp = F.glasFile(S, FILE, ph, 3), prec = ['brume', 'summon', 'spiral', null][k % 4], m = F.glasMelange(Fp, prec, rnd);
+      ok(F.glasMelangeOk(m, prec), `glas : mélange fautif (${prec} → ${m})`); ok([...m].sort().join() === [...Fp].sort().join(), 'glas : le mélange perd ou ajoute une attaque'); n++; }
+    console.log(`glas : ${n} files mélangées, jamais deux gestes de suite ni un geste juste après un Appel`); }
+  // f. la bulle : naissance, jeu, fin (ce qui est lâché va au bout), entracte, puis le Glas reprend ; coupée, abandonnée, étourdi
+  { const run = (envs) => { const b = F.glasBulle(S), ev = []; for (const e of envs) for (const [t] of F.glasPas(S, J, b, Object.assign({ dt: 0.05 }, e))) ev.push(t); return { b, ev }; };
+    const rep = (n, e) => Array.from({ length: n }, () => e || {});
+    let o = run([...rep(11), ...rep(10), { fini: true }, ...rep(9, { vivant: true }), ...rep(20)]);
+    ok(o.ev.join() === 'jeu,dissout,libere' && o.b.ph === 'finie', `glas : bulle ordinaire (${o.ev})`);
+    o = run([...rep(14), { fini: true }, ...rep(30, { vivant: true })]); ok(!o.ev.includes('libere'), 'glas : le Glas attend que ce qui est lâché soit fini');
+    o = run([...rep(5), { coupe: true }, ...rep(20)]); ok(o.ev.join() === 'dissout,libere', `glas : coupée pendant la naissance (${o.ev})`);
+    o = run([...rep(13), ...rep(Math.ceil((S.attenteMaxS + 0.2) / 0.05), { attente: true })]); ok(o.ev.includes('abandon') && o.ev.includes('dissout'), 'glas : il renonce après attenteMaxS d\'attente');
+    o = run([...rep(14), { fini: true }, ...rep(9), ...rep(40, { etourdi: true })]); ok(!o.ev.includes('libere'), 'glas : rien ne reprend pendant que tu es étourdi');
+    o = run([...rep(14), { fini: true }, ...rep(9), ...rep(40, { etourdi: true }), ...rep(4)]); ok(!o.ev.includes('libere'), 'glas : un entracte entier après la fin de l\'étourdissement');
+    o = run([...rep(14), { fini: true }, ...rep(9), ...rep(40, { etourdi: true }), ...rep(6)]); ok(o.ev.includes('libere'), 'glas : il reprend après l\'entracte'); }
+  // g. justice dans la salle du Glas : le Reflet (rayon reflet.r) à des positions libres, toi autour de lui ; le Cœur et les piliers de cristal bloquent
+  { const R = J.justice.arene, PR = J.justice.joueur.rayon, er = S.reflet.r, coeur = { x: (R.x0 + R.x1) / 2, y: R.y0 + 180, r: 62 }, piliers = [{ x: 300, y: 560, r: 26 }, { x: 980, y: 560, r: 26 }];
+    const bloque = (px, py) => piliers.some(p => Math.hypot(px - p.x, py - p.y) < p.r + PR) || Math.hypot(px - coeur.x, py - coeur.y) < coeur.r + PR;
+    const libre = (px, py, m) => px > R.x0 + m && px < R.x1 - m && py > R.y0 + m && py < R.y1 - m && !piliers.some(p => Math.hypot(px - p.x, py - p.y) < p.r + m) && Math.hypot(px - coeur.x, py - coeur.y) > coeur.r + m;
+    const pos = []; for (const [fx, fy] of [[0.5, 0.75], [0.2, 0.45], [0.8, 0.45], [0.5, 0.5], [0.08, 0.9], [0.92, 0.9], [0.3, 0.2], [0.72, 0.18], [0.5, 0.95], [0.05, 0.12]]) { const lx = R.x0 + (R.x1 - R.x0) * fx, ly = R.y0 + (R.y1 - R.y0) * fy; if (libre(lx, ly, er + 4)) pos.push([lx, ly]); }
+    const vars = new Set([null]); for (const e of Object.values(J.talents)) for (const v of e.v || []) vars.add(v);
+    let n = 0, saut = 0, pire = { f: '', t: 0 };
+    for (const fid of Object.keys(J.familles)) { if (fid === 'fortune') continue; let nf = 0, sf = 0;
+      for (const v of vars) { const ets = F.sbEtapes(J, fid, v ? [v] : []); if (v && JSON.stringify(ets) === JSON.stringify(F.sbEtapes(J, fid, []))) continue;
+        for (const [lx, ly] of pos) for (const d of [er + PR + 4, 80, 140, 200, 280]) for (let k = 0; k < 16; k += VITE ? 2 : 1) {
+          const a = k / 16 * Math.PI * 2, px = lx + Math.cos(a) * d, py = ly + Math.sin(a) * d; if (!libre(px, py, PR) || bloque(px, py)) continue;
+          const o = { lx, ly, er, arene: R, bloque }; let prec = null, anc = null;
+          for (const et of ets) { const c = { lx, ly, er, px, py, ax: anc ? anc[0] : px, ay: anc ? anc[1] : py, a: Math.atan2(py - ly, px - lx), prec, rnd }; n++; nf++;
+            const pc = F.sbPlacer(J, A, et, c, o, 3); if (!pc) { saut++; sf++; }
+            const p0 = F.sbPieces(J, et, c); prec = { ga: p0.ga }; anc = p0.ancre; } } }
+      if (sf / Math.max(1, nf) > pire.t) pire = { f: fid, t: sf / Math.max(1, nf) };
+      ok(sf <= nf * 0.1, `glas : ${fid}, ${sf} étapes sautées sur ${nf} placements dans la salle du Glas (plus de 10 %)`); }
+    console.log(`glas : justice dans la salle du Glas (Reflet r ${er}, Cœur et piliers en obstacle) : ${n} placements, ${saut} étapes sautées (${(saut / n * 100).toFixed(1)} % ; au plus ${(pire.t * 100).toFixed(1)} % pour ${pire.f})`); }
+  // h. dégâts : × dégâts du Glas, force (rang 3, deux gravures) et Brutal compris, sous le plafond des armes
+  { let pe = 0, pa = 0; const fmax = (1 + As.parRang * 2 + As.parGravure * 2) * (1 + J.renforts.degats.degats);
+    for (const fid of Object.keys(J.familles)) for (const v of [null, ...Object.keys(J.variantes)]) { const ets = F.sbEtapes(J, fid, v ? [v] : []), k = F.sbForce(J, ets, 3, fmax); let tot = 0;
+      for (const et of ets) { const c = F.sbCoup(J, et, 3, k) * (et.f === 'projectile' && et.navette ? 2 : 1) * S.degats; pe = Math.max(pe, c); tot += c; } pa = Math.max(pa, tot); }
+    ok(pe <= J.justice.degatsEtapeMax * S.degats + 1e-9, `glas : une étape fait ${pe.toFixed(2)} × les dégâts du Glas (max ${(J.justice.degatsEtapeMax * S.degats).toFixed(2)})`);
+    ok(pa <= J.justice.degatsMax * S.degats + 1e-9, `glas : une attaque fait ${pa.toFixed(2)} × les dégâts du Glas (max ${(J.justice.degatsMax * S.degats).toFixed(2)})`);
+    console.log(`glas : dégâts au pire (rang 3, deux gravures, Brutal) : ${pe.toFixed(2)} par étape, ${pa.toFixed(2)} par attaque, × les dégâts du Glas`); }
+  // i. branchements du jeu
+  ok(/bloque:\(x,y\)=>room\.pillars\.some\([^\n]*\|\|!!\(gb&&hyp\(x-gb\.x,y-gb\.y\)<gb\.r\+P\.r\)/.test(html), 'index.html : le corps du gardien bloque la sortie (sbOrigine)');
+  ok(/\(\(room&&room\.asm&&asmZone\(\)\)\|\|glasZone\(\)\)\)return false;/.test(html), 'index.html : pendant un geste, les invoqués n\'ouvrent pas de zone (tryTok)');
+  ok(/e\.type==='bouffi'&&e\.state!=='fuse'[^\n]*glasZone\(\)/.test(html), 'index.html : pendant un geste, le Bouffi ne s\'amorce pas');
+  ok(/autre:!tg\.pl\|\|zoneAutre\(e\)\|\|!!\(S\.autre&&S\.autre\(\)\)/.test(html), 'index.html : le Reflet attend les zones du gardien (sbMaj, S.autre)');
+  ok(/B\.k=B\.force!=null\?sbForce\(/.test(html), 'index.html : la force du Reflet passe par sbForce (plafond)');
+  ok(/hitEnemy=function\(e,dmg,o\)\{if\(e&&e\.reflet\)return 0;/.test(html), 'index.html : le Reflet ne se touche pas');
+  ok(/b\.state='idle';b\.patT=9e9;b\.beatT=Math\.max\(b\.beatT\|\|0,0\.5\);/.test(html), 'index.html : pendant un geste, le Battement se tait et le Glas ne lance rien'); }
 
 console.log(`\n${checks} vérifications, ${fails} échec(s)`);
 process.exit(fails ? 1 : 0);

@@ -1304,3 +1304,65 @@ Retour de l’auteur : un Masqué qui a un sort au corps à corps (zone centrée
 - Un joueur qui fuit sans cesse rend les sorts au contact inoffensifs (2 s de poursuite puis abandon) : c’est voulu, mais si le Masqué paraît trop passif contre un kiteur, raccourcir `attenteS` ou lui faire tirer son trait pendant la poursuite.
 - Plus près de toi, le Masqué inflige plus souvent ses dégâts de contact pendant l’approche (contact × 0,8 de ses dégâts).
 
+
+## 26. Palier 3 : le Glas Originel se souvient (v17.22, 27 octobre 2026)
+
+Cadrage : document `claude/la-brume-v17-22-glas-cadrage.md` du projet claude.ai (décisions G1 à G18). L'auteur a demandé d'appliquer toutes les recommandations telles quelles (27 octobre).
+
+### Ce qui est construit
+
+| Où | Quoi |
+|---|---|
+| `data/gardiens.js`, `attaques[3].souvenirs` | Réglages : `max` 3 gestes, `recence` [1, 3], `repertoire` [—, 0, 2, 3] par temps, `file` (temps 2 : +1 ; temps 3 : un Battement inverse remplacé, +1), `degats` 0,6, `reflet` (r 18, naissance 0,6 s, fin 0,4 s, naît à 180–220 px de toi, 126 px/s, ×1,3 quand il vient te chercher), `attenteMaxS` 5, `renforts` (max 2, −10 % par Robuste ou Blindé pendant un geste), `copie` faux. Hors de `file` et `liste` : le wiki ne les lit pas. |
+| `index.html`, bloc `/*glas:pur*/` (dans le bloc du Masqué) | `glasRepertoire` (tirage sans remise à la récence, familles différentes et compatibles, renforts à part), `glasEnJeu`, `glasFile`, `glasMelange` (jamais deux gestes de suite ni juste après un Appel), `glasBulle` / `glasPas` (naissance, jeu, fin, entracte, reprise ; coupure, abandon, étourdi). |
+| `index.html`, section « v17.22 · Le Glas Originel se souvient » (fin du bloc du Masqué) | Répertoire à la création du Glas (`createBoss`), clés `brume` dans `heartPattern` (les autres clés passent par `nextKey` du bloc v16), le Reflet (`refletNouveau`, `refletMaj` → `sbMaj`), la bulle (`glasTick`), coupure au changement de temps (`b13Phase`), mort (`bossDefeated`), dessin (silhouette de ta forme dessinée hors écran puis teintée, icônes cerclées de lavande, barre de chargement), carte d'arrivée, chronique, mode d'essai `?glas=`, accès de développement `__glas`. |
+| Branchements ailleurs | `sbOrigine` : le corps du gardien bloque la sortie. `sbMaj` : `B.force` passe par `sbForce` ; `S.autre()` fait attendre le Reflet. `tryTok`, la mèche du Bouffi et la feinte attendent aussi `glasZone()`. Bloc v16 : `window.__glasHZ`. Moteur de voix : `brumeSouvenir` (le chuchotement de l'oubli, voyelles inversées, sans grave). Statistiques de descente : champ `glas` (`reserve`, `rep`, `renforts`, `ids`, `joues`, `sauts`, `renonces`, `abandons`, `coupes`). |
+| `outils/sim-brume.mjs`, section 10 | Répertoire, récence, file, mélange, bulle, justice dans la salle du Glas, dégâts, branchements. |
+| `outils/wiki.mjs` | Une phrase sous les attaques du Glas : « À partir du deuxième temps, une silhouette sort parfois du Cœur. Tu la reconnaîtras. » |
+
+### Comment un geste se joue
+
+1. À l'entrée de la salle, le répertoire est tiré dans `RUN.reserveBrume` (talents seulement). Réserve sans arme : `room.glas.rep.gestes` est vide et `heartPattern` appelle la version d'avant sans rien toucher (aucun tirage aléatoire de plus).
+2. Aux temps 2 et 3, la file du Glas est `glasFile` mélangée par `glasMelange`. Une clé `brume` lance le geste suivant du répertoire, à tour de rôle parmi les `repertoire[temps]` premiers.
+3. La bulle commence : le Glas reste `idle`, `patT` est tenu, le Battement ne bat plus (`beatT` tenu à 0,5 s). Le Reflet naît dans un filet de brume parti du Cœur (0,6 s ; rien en mouvements réduits), au chuchotement `sfx('souvenir')`.
+4. Le Reflet joue l'attaque de la famille par `sbMaj` (porteur seul, corps « rôdeur » 110–170 px). Avant chaque chargement, il attend `zoneAutre` (anneaux du Battement, zones des invoqués) et `glasOccupe` (`HZ`, tirs du gardien, Dévoreuse). S'il attend plus de 5 s, il renonce.
+5. L'attaque finie (ou abandonnée), il se dissout (0,4 s). Le Glas attend que ce qu'il a lâché soit fini, puis un entracte (0,25 s), puis reprend (`patT = bossGap`).
+
+Le Reflet est hors de la liste `enemies` : rien ne le vise, ne l'attache ni ne le tue (`hitEnemy`, `friendlyHit`, `rawHit` le refusent). Il a `type:'boss'`, si bien qu'une mort pendant un geste est attribuée au Glas. Variante Vorace : ce qu'il te prend soigne le Cœur.
+
+### Choix de l'implémentation à connaître
+
+- Renfort Brutal : il passe par la force, donc sous le plafond (le cadrage le prévoyait sur les dégâts du Reflet, ce qui aurait dépassé le plafond annoncé de 1,44 par étape). Vif : vitesse d'approche du Reflet. Robuste et Blindé : le Cœur subit −10 % chacun pendant un geste.
+- Le message du deuxième temps : les messages de tutoriel (`tuto`) sont éteints depuis la v15. Effacer la copie ne retire donc aucun texte.
+- La fenêtre « à nu » : pendant un geste, son signal est gelé et son minuteur bloqué juste sous le seuil ; elle s'ouvre après le geste. Le Tisse-Destin (fils tranchés) n'est pas concerné.
+- Étourdi : pendant un étourdissement et l'entracte qui suit, le Glas ne lance rien de neuf (`patT` tenu), geste ou non.
+- Le mode d'essai démarre le Glas à 60 % (temps 2) ou 30 % (temps 3) de PV et le tient dans ce temps ; `&appel=0` retire l'Appel de la file pour mesurer les gestes seuls.
+
+### Mesures
+
+- `sim-brume.mjs` : **46 602 vérifications, 0 échec** (`--vite`). Section 10 :
+  - 2000 répertoires tirés au hasard (0 à 3 gestes : 25 / 301 / 451 / 1223), jamais deux familles égales ni incompatibles, jamais un renfort comme geste ;
+  - récence : premier geste du plus ancien au plus récent 16,6 / 33,5 / 49,9 % (attendu 16,7 / 33,3 / 50) ;
+  - file : sans geste, identique à la v17.21 ; chaque attaque du Glas reste dans son temps ; 10 000 files mélangées sans deux gestes de suite ni geste après un Appel ;
+  - bulle : ordinaire, coupée, abandonnée, étourdi (rien ne reprend avant la fin de l'étourdissement plus un entracte) ;
+  - justice dans la salle du Glas (Reflet r 18, Cœur et piliers de cristal en obstacle) : 52 200 placements, 25 étapes sautées (au plus 0,6 %, Bastion) ;
+  - dégâts au pire (rang 3, deux gravures, Brutal) : 1,23 × les dégâts du Glas par étape, 2,16 par attaque (plafonds 1,44 et 2,16).
+- `sim-masque.mjs` : 3 583 218 contrôles, tout est bon (le contrôle de la feinte lit maintenant aussi `glasZone()`). `wiki.mjs --check` : à jour.
+- En jeu (Chromium sans affichage, horloge à 60 images par seconde, une image sur six dessinée, pilote vers la sortie à 180 px/s ou à ta vitesse si elle est plus lente, mode `?glas=`) :
+  - **14 familles × 4 formes** (temps 2 et 3 en alternance, 35 s, sans Appel) : 56 essais, **80 gestes joués, 0 coup reçu pendant un geste, 0 image où une zone du Reflet est ouverte en même temps qu'une zone du Glas ou d'un invoqué, 0 étape sautée, 0 renoncement, 0 abandon, aucune erreur**. Le Glas passe 21 % du temps des temps 2 et 3 dans un geste ; un geste dure 3 à 6 s, attente des tirs de la Spirale comprise.
+  - **Étourdi** (Assommant sur Aller-retour, Échos, Mâchoire, Taillades, Dalles, Croix d'ombre, Bastion, Saignée ; joueur immobile, quatre formes, temps 2 et 3 ; 16 essais) : 12 étourdissements, **0 coup reçu pendant**, aucun chargement pendant, le suivant au plus tôt 0,28 s après la fin, le Glas n'a rien lancé pendant ni dans l'entracte. Les gestes touchent bien un joueur immobile (2 à 6 coups par essai).
+  - **Variantes** (Redoublé ×3, Perçant, Large ×2, Massif, Vorace) et **renforts** (Brutal, Vif, Robuste, Blindé, Brutal + Blindé) : 13 essais, 0 coup, 0 superposition, 0 saut.
+  - **Avec l'Appel** (4 essais, 60 s) : 0 superposition ; les coups reçus pendant un geste (1 à 5) sont le contact des Rampants invoqués autour du pilote immobile (toutes les 0,66 s, 10 à 14 PV, à toutes les phases), pas des zones.
+  - **Coupures** : 4 changements de temps pendant un geste, aucun chargement après la coupure, 0 superposition. **Mort du Glas** pendant un geste : 3 essais, la ligne de chronique écrite (« Le Glas sonnait encore Nova. »), aucun projectile du Reflet restant, aucune erreur.
+  - **Gouffre** (Dalles, Glas, Croix d'ombre, Échos, Martèlement, Saignée) à 150 px/s, 120 px/s et gros (r 18,2) à 150 : 18 essais, 36 gestes, **0 coup, 0 saut**.
+  - **Mouvements réduits** (trois gestes) : 3 gestes, 0 coup, aucune erreur. **Réserve sans geste** : aucun Reflet, aucune erreur.
+  - **Régressions** : écran titre, Masqué porteur (`?masque=`), arme seule (`?brume=onde`), Héraut Noyé (acte II), Glas sans réserve hors mode d'essai : aucune erreur.
+  - Captures : la silhouette de chaque forme se lit (translucide, grisée de lavande), icône et barre au-dessus, carte avec le nom du talent.
+
+### À surveiller
+
+- **La durée du combat** n'a pas été mesurée sur de vraies parties : le pilote ne frappe pas. Estimation du cadrage : +8 à +15 % sur les temps 2 et 3. Le champ `glas` des statistiques de descente et `RUN.bossT` diront si `pvMul[3]` doit passer de 2,5 à 2,3.
+- **L'attente des tirs de la Spirale** allonge certains gestes (jusqu'à 2 s avant la première zone). Si la bulle paraît molle, le Reflet pourrait ne pas attendre les tirs déjà loin de toi.
+- **La lisibilité** se juge en jouant : on doit reconnaître sa propre silhouette, pas un ennemi invoqué.
+- Le pilote n'esquive pas et ne frappe pas ; un joueur qui frappe le Cœur pendant un geste n'a pas été mesuré.
+- Une relecture du code par un second agent, prévue au découpage (action 7), n'a pas été faite.

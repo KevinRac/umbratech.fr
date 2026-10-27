@@ -322,8 +322,10 @@ function attaquesGardien(G, a) {
     if (!t.length) return 'Tout le combat'; if (t.length === 3) return 'Les trois temps';
     const s = t.map(i => TEMPS[i]).join(' et ') + (t.length > 1 ? ' temps' : ' temps'); return s[0].toUpperCase() + s.slice(1); };
   const cartes = Object.entries(X.liste).map(([k, x]) => `<article class="ent"><h4>${esc(x.n)}</h4><p class="k">${esc(quand(k))}</p><p>${esc(x.d)}</p></article>`).join('');
+  // v17.22 : le Glas se souvient (attaques[3].souvenirs) ; le wiki ne dit pas d'où viennent ces gestes, seulement qu'on les reconnaîtra
+  const souv = X.souvenirs ? `\n<p>À partir du deuxième temps, une silhouette sort parfois du Cœur. Tu la reconnaîtras.</p>` : '';
   return `<h3 class="sub">Attaques · ${esc(G.actes[a - 1].boss)}</h3>
-<div class="grid g3">${cartes}</div>`;
+<div class="grid g3">${cartes}</div>${souv}`;
 }
 
 function gardiens(G, F) {
