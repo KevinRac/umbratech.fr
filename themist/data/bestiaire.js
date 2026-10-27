@@ -107,6 +107,9 @@
  // accelerationActe : chargement des capacités (pas de la signature) multiplié par ce facteur par acte au-delà de desActe.
  // eveilPV : % de PV où la troisième capacité s'éveille ; eveilS : temps de lecture du signal avant le sort suivant.
  // etourdissement : durée des étourdissements subis (1 = normale). attenteS : temps qu'il prend pour s'approcher avant un sort court.
+ //   v17.21 : 0,5 → 2 s, et s'il ne t'a pas atteint à temps il renonce à ce sort (ou à cette attaque de la Brume) au lieu de le lancer pour rien.
+ // atteinte (v17.21) : un sort au contact (zone centrée sur lui : disque, cône) ne part que si tu es à atteinte × ce que la zone couvre
+ //   (cône : rayon + son corps ; disque : rayon), même si sa portee écrite est plus grande ou absente. Un Spectre ou un Voilé vient donc au contact.
  // budgetMenace : plafond de menace par acte (corps + signature + les trois capacités).
  // budgetPorteur (v17.20) : menace en plus pour un Masqué qui porte l'arme de la Brume d'un souvenir (pas pour un renfort ni un Masqué
  //   ordinaire). À +2, le porteur des actes I et II a le plafond de l'acte III : le Glas et le Bastion (menace 3, beaucoup d'incompatibilités)
@@ -125,7 +128,7 @@
   // rage : sous pv % de PV, il ne souffle presque plus (pauseS, apresSignatureS) et une aura rouge le signale.
   // bougeCharge : formes posées sur toi (pas sur lui) : il continue de te poursuivre pendant leur chargement.
   annonceS:1,pauseS:0.12,prioriteS:0.5,apresSignatureS:0.3,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
-  eveilPV:70,eveilS:0.5,etourdissement:0.5,attenteS:0.5,
+  eveilPV:70,eveilS:0.5,etourdissement:0.5,attenteS:2,atteinte:0.8,
   rage:{pv:30,pauseS:0.05,apresSignatureS:0},bougeCharge:['losanges','damier'],
   budgetMenace:{1:11,2:11,3:13},budgetPorteur:2,
   incompatibles:[['explosion','onde']],

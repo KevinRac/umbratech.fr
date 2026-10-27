@@ -8767,11 +8767,17 @@ function demoBoot(cls){
    if(!st.file.length)st.file=asmCycle(st.caps,st.sig,st.dernier,rnd);
    const k=st.file[0],X=A.capacites[k],sf=asmSb(k);
    if(sf){st.file.shift();st.att=0;st.bloque=0;st.k=k;st.sb=sbNouveau(J,sf,st.sbv);st.ph='attente';st.t=0;st.tot=1;ev.push(['sbdebut',k]);return ev;}   // v17.19 : elle commence (sa première étape au pas suivant)
-   if(X&&X.portee&&env.dist>X.portee&&st.att<A.attenteS){st.att+=dt;return ev;}
+   const pt=asmPortee(A,X,env.er);   // v17.21 : sort au contact, il vient te chercher ; trop loin après attenteS, il y renonce
+   if(pt&&env.dist>pt){if(st.att<A.attenteS){st.att+=dt;return ev;}st.file.shift();st.att=0;st.bloque=0;st.k=k;ev.push(['renonce',k]);asmFin(A,st,ev);return ev;}
    st.file.shift();st.att=0;st.bloque=0;st.k=k;st.ph='charge';st.t=st.tot=asmDuree(A,k,env.act);ev.push(['charge',k]);return ev;}
   if(st.ph==='charge'){if(!env.fige)st.t-=dt;if(st.t<=0){st.ph='effet';st.t=asmEffet(A,st.k);ev.push(['lache',st.k]);}return ev;}
   if(st.ph==='effet'){st.t-=dt;if(st.t<=0)asmFin(A,st,ev);return ev;}
   return ev;}
+ // v17.21 · distance de lancement d'un sort au contact (zone centrée sur lui : disque, cône) : sa portée écrite, mais jamais plus que
+ // A.atteinte × ce que la zone couvre vraiment (cône : son rayon + le corps er ; disque : son rayon). Les autres formes gardent portee.
+ function asmAtteinte(A,f,rayon,er){return f==='cone'?(er||0)+rayon:f==='disque'?rayon:null;}
+ function asmPortee(A,X,er){if(!X)return 0;const r=X.rayon!=null?asmAtteinte(A,X.forme,X.rayon,er):null;
+  if(r==null)return X.portee||0;return Math.min(X.portee||Infinity,(A.atteinte||1)*r);}
  function asmFin(A,st,ev){const k=st.k,R=st.rage&&A.rage;st.ph='pause';st.dernier=k;st.n++;st.t=(R?R.pauseS:A.pauseS)+(A.signatures[k]?(R?R.apresSignatureS:A.apresSignatureS):0)+(st.eveilDu?A.eveilS:0);st.eveilDu=false;st.k=null;if(ev)ev.push(['fin',k]);}
  // Nom composé court : le corps et l'adjectif de ses deux capacités de départ (« Brute hurlante et tranchante »)
  function asmNom(A,co,J){const C=A.corps[co.corps],g=C.g==='f'?'f':'m',adj=co.depart.map(k=>(asmSb(k)?J.familles[asmSb(k)]:A.capacites[k]).adj[g]);return `${C.n} ${adj[0]} et ${adj[1]}`;}
@@ -8923,12 +8929,16 @@ function demoBoot(cls){
  // Évènements : ['charge',i] ['lache',i] ['fin',i] (fin d'étape) ['finAttaque',null]
  function sbNouveau(J,fid,vars){return{fid,etapes:sbEtapes(J,fid,vars),i:0,ph:'attente',t:0,tot:0,att:0,bloque:0,n:0,tient:false};}
  // v17.18 · env.etourdi (tu es étourdi) : l'entracte reste plein et rien ne charge ; l'étape suivante attend la fin de l'étourdissement, puis un entracte entier.
+ // v17.21 · distance de lancement d'une étape : portee (projectiles : leur course) ; une zone au contact posée sur lui (disque, cône) ne se lance
+ // que si tu es à A.atteinte × ce qu'elle couvre, même sans portee écrite (le disque du Bastion n'en avait pas)
+ function sbPortee(A,et,er){if(et.sur==='lui'&&(et.f==='disque'||et.f==='cone')&&et.rayon!=null)return Math.min(et.portee||Infinity,(A.atteinte||1)*asmAtteinte(A,et.f,et.rayon,er));return et.portee||0;}
  function sbPas(J,A,st,env){const ev=[],dt=env.dt;
   if(env.etourdi&&(st.ph==='entracte'||st.ph==='attente')){if(st.ph==='entracte')st.t=J.justice.entracteS;else{st.ph='entracte';st.t=J.justice.entracteS;}return ev;}
   if(st.ph==='repos'){st.t-=dt;if(st.t<=0){st.ph='attente';st.i=0;}return ev;}
   if(st.ph==='attente'){if(env.fige)return ev;
    if(env.autre){st.bloque+=dt;return ev;}
-   const et=st.etapes[st.i];if(et.portee&&env.dist>et.portee&&st.att<A.attenteS){st.att+=dt;return ev;}
+   const et=st.etapes[st.i],pt=sbPortee(A,et,env.er);   // v17.21 : comme asmPortee ; trop loin après attenteS, il renonce à toute l'attaque
+   if(pt&&env.dist>pt){if(st.att<A.attenteS){st.att+=dt;return ev;}st.att=0;st.bloque=0;st.i=st.etapes.length-1;st.ph='effet';st.t=0;ev.push(['renonce',st.i]);return ev;}
    st.att=0;st.bloque=0;st.ph='charge';st.t=st.tot=sbCharge(J,A,et,env.act);st.tient=true;ev.push(['charge',st.i]);return ev;}
   if(st.ph==='charge'){if(!env.fige)st.t-=dt;if(st.t<=0){st.ph='effet';st.t=st.etapes[st.i].effetS!=null?st.etapes[st.i].effetS:0;ev.push(['lache',st.i]);}return ev;}
   if(st.ph==='effet'){st.t-=dt;if(st.t>0||env.vivant)return ev;ev.push(['fin',st.i]);st.i++;
@@ -9180,6 +9190,7 @@ function demoBoot(cls){
    sfx('asm_ch',B.st.tot);B.dernier={i:k,et,charge:B.st.tot,plancher:sbPlancher(A,RUN.act,false)};return;}
   if(t==='sblache'){sbLache(e,S.sb,S.sb.st.etapes[k]);return;}
   if(t==='sbfin'){S.sb.vivants=[];return;}
+  if(t==='renonce'||t==='sbrenonce'){S.renonces=(S.renonces||0)+1;S.z=null;if(S.sb)S.sb.zc=null;return;}   // v17.21 : trop loin, il a renoncé (rien n'est posé)
   if(t==='charge'){S.z=zoneDe(e,k);S.flash=null;sfx(A.signatures[k]?'asm_sig':'asm_ch',S.st.tot);return;}
   if(t==='fin'){S.z=null;S.dash=null;if(S.sb&&asmSb(k)){S.sb.zc=null;S.sb.st=SB_REPOS;}return;}
   if(t==='lache'){const z=S.z;if(!z)return;const X=z.X,dmg=e.dmg*X.degats;
@@ -9204,7 +9215,7 @@ function demoBoot(cls){
   // v17.19 · l'arme de la Brume portée : sbPas (par asmPas) sait que sa zone vit encore (onde, projectiles, ruée) et que tu es étourdi ;
   // il attend aussi la fin de ses propres zones lâchées (onde, projectiles d'une attaque interrompue) avant d'en ouvrir une autre.
   const B=S.sb,vivant=!!(B&&(B.vivants||[]).some(f=>f()));
-  const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,autre:!tg.pl||zoneAutre(e)||ZR.length>0||vivant,fige,vivant,etourdi:sbEtourdi()},S.rnd,SBJ);
+  const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,er:e.r,autre:!tg.pl||zoneAutre(e)||ZR.length>0||vivant,fige,vivant,etourdi:sbEtourdi()},S.rnd,SBJ);
   for(const x of ev)onEvent(e,x);
   if(S.flash){S.flash.t-=dt;if(S.flash.t<=0)S.flash=null;}
   const z=S.z;
@@ -9304,7 +9315,7 @@ function demoBoot(cls){
  function sbMaj(e,dt,rooted,fige){const S=e.asm,B=S.sb,st=S.st,F=SBJ.familles[B.fid];
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
   const vivant=(B.vivants||[]).some(f=>f());
-  const ev=sbPas(SBJ,A,B.st,{dt,act:RUN.act,dist:dP,autre:!tg.pl||zoneAutre(e),fige,vivant,etourdi:sbEtourdi()});
+  const ev=sbPas(SBJ,A,B.st,{dt,act:RUN.act,dist:dP,er:e.r,autre:!tg.pl||zoneAutre(e),fige,vivant,etourdi:sbEtourdi()});
   for(const [t,i] of ev){const et=B.st.etapes[i];
    if(t==='charge'){if(i===0){B.k=sbPlafond(SBJ,B.st.etapes,RUN.act);B.prec=null;B.anc=null;B.etAtt=0;}if(SB.essai)(SB.essai.chJ=SB.essai.chJ||[]).push({t:+RUN.time.toFixed(3),i,et:sbEtourdi()});
     if(et.suivi>0){B.zc={zs:sbPieces(SBJ,et,sbCtx(e,B,et)).zs,fige:false};B.dbg='suit';}

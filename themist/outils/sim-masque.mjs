@@ -20,7 +20,7 @@ if (!m || !sbm) { console.error('Bloc /*asm:pur*/ ou /*sb:pur*/ introuvable'); p
 const ctx = { window: {}, Math, console };
 vm.createContext(ctx);
 for (const f of ['bestiaire.js', 'masque.js', 'souvenirs.js', 'souvenirs-brume.js', 'icones.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(m[1] + sbm[1] + '\nthis.F={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmFin,asmNom,asmSouvenir,asmSb,asmMenace,asmIncomp,sbNouveau,sbPas,sbEtapes,sbForce,sbBrut,sbCoup,sbPlafond,sbCharge};', ctx);
+vm.runInContext(m[1] + sbm[1] + '\nthis.F={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmFin,asmNom,asmSouvenir,asmSb,asmMenace,asmIncomp,asmPortee,sbPortee,sbNouveau,sbPas,sbEtapes,sbForce,sbBrut,sbCoup,sbPlafond,sbCharge};', ctx);
 const F = ctx.F, A = ctx.window.BRUME_DATA.bestiaire.assemble, SV = ctx.window.BRUME_DATA.souvenirs, J = ctx.window.BRUME_DATA.souvenirsBrume, IC = ctx.window.BRUME_DATA.icones;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; console.error('ÉCHEC : ' + msg); } };
@@ -156,7 +156,7 @@ for (const [act, salle] of [[1, 4], [2, 10], [3, 18]]) {
 // 3. File de sorts : simulation d'un combat complet par combinaison, à pas de temps irréguliers. v17.19 : avec les porteurs d'une arme de
 // la Brume (asmPas délègue à sbPas) : une zone à la fois (chargement → fin d'étape, éveil compris), entracte entre deux étapes, pause
 // après l'attaque, aucune étape ni capacité qui charge pendant que tu es étourdi (ni moins d'un entracte après).
-let combats = 0, attaquesSim = 0, etapesSim = 0;
+let combats = 0, attaquesSim = 0, etapesSim = 0, contactSim = 0, renonceSim = 0;
 const filesDe = act => [...F.asmCombos(A, { act, salle: 18, J }), ...Object.keys(J.familles).flatMap(f => F.asmCombos(A, { act, salle: 18, porte: 'sb:' + f, J }).filter((c, i) => i % 3 === 0).map(c => Object.assign({ vars: [] }, c)))];
 for (const act of [1, 2, 3]) for (const co of filesDe(act)) for (let rep = 0; rep < (co.depart.some(F.asmSb) ? 6 : 25); rep++) {
   combats++;
@@ -167,7 +167,7 @@ for (const act of [1, 2, 3]) for (const co of filesDe(act)) for (let rep = 0; re
     const dt = 0.004 + rnd() * 0.03; t += dt;
     pv = Math.max(1, 100 - t * (100 / dur) * 1.4);
     const etourdi = t < etT;
-    const env = { dt, act, pv, dist: 60 + rnd() * 300, autre: rnd() < 0.02, fige: rnd() < 0.01, vivant: t < vivantT, etourdi };
+    const env = { dt, act, pv, er: 22, dist: 60 + rnd() * 300, autre: rnd() < 0.02, fige: rnd() < 0.01, vivant: t < vivantT, etourdi };
     for (const [ev, k] of F.asmPas(A, st, env, rnd, J)) {
       if (ev === 'eveil') { eveilAt = pv; ok(st.caps.length === 3, `${co.cle} : trois capacités après l'éveil`); ok(!F.asmSb(st.reserve), `${co.cle} : éveil sur l'arme`); }
       if (ev === 'rage') { ok(rageAt === null, `${co.cle} : rage deux fois`); ok(eveilAt !== null, `${co.cle} : rage avant l'éveil`); rageAt = pv; }
@@ -180,18 +180,21 @@ for (const act of [1, 2, 3]) for (const co of filesDe(act)) for (let rep = 0; re
         if (ev === 'sbdebut') { ok(k === porte && st.sb, `${co.cle} : arme inconnue ${k}`); sbAtt++; attaquesSim++; cycle.push(k); active = k; lastCast = k; casts++; finEtape = -1e9; }
         else {
           ok(zones.has(k), `${co.cle} : sort inconnu ${k}`);
+          { const pt = F.asmPortee(A, A.capacites[k], env.er); if (pt) { ok(env.dist <= pt + 1e-9, `${co.cle} : ${k} lancé à ${env.dist.toFixed(0)} px (portée ${pt.toFixed(0)})`); contactSim++; } }
           if (A.signatures[k]) { ok(st.tot >= A.signatureMinS - 1e-9, `${co.cle} : signature chargée en ${st.tot} s`); sigs++;
             ok(cycle.length >= 1 && new Set(cycle).size === cycle.length, `${co.cle} : cycle avant la signature (${cycle.join(',')})`); cycle = []; }
           else { ok(st.tot >= A.chargeMinS - 1e-9, `${co.cle} : capacité chargée en ${st.tot} s`); ok(st.caps.includes(k), `${co.cle} : ${k} hors de ses capacités`); cycle.push(k); }
           ok(st.ph === 'charge', `${co.cle} : état après chargement`);
           active = k; lastCast = k; casts++; }
       }
-      if (ev === 'sbcharge') { etapesSim++; ok(active === porte && st.sb, `${co.cle} : étape hors de son attaque`); ok(!etourdi, `${co.cle} : étape qui charge pendant un étourdissement`);
+      if (ev === 'sbcharge') { etapesSim++; { const pt = F.sbPortee(A, st.sb.etapes[k], env.er); if (pt) ok(env.dist <= pt + 1e-9, `${co.cle} : étape ${k} lancée à ${env.dist.toFixed(0)} px (portée ${pt.toFixed(0)})`); } ok(active === porte && st.sb, `${co.cle} : étape hors de son attaque`); ok(!etourdi, `${co.cle} : étape qui charge pendant un étourdissement`);
         ok(t - finEtape >= J.justice.entracteS - 0.04, `${co.cle} : entracte ${(t - finEtape).toFixed(3)} s entre deux étapes`);
         if (etFin > -1e9 && t >= etFin) ok(t - etFin >= J.justice.entracteS - 0.04, `${co.cle} : étape ${(t - etFin).toFixed(3)} s après un étourdissement`);
         ok(st.ph === 'charge', `${co.cle} : l'étape qui charge tient la zone`); }
       if (ev === 'sblache') { if (rnd() < 0.5) vivantT = t + rnd() * 0.9; if (vars.length && rnd() < 0.4 && t >= etT + 3) { etT = t + 0.35; etFin = etT; } }
       if (ev === 'sbfin') { ok(t >= vivantT - 1e-9, `${co.cle} : étape finie pendant que sa zone vit`); finEtape = t; }
+      if (ev === 'renonce') { renonceSim++; lastCast = k; cycle.push(k); ok(!A.signatures[k], `${co.cle} : renonce à sa signature`); }
+      if (ev === 'sbrenonce') renonceSim++;
       if (ev === 'fin') { active = null; lastEnd = t; }
     }
     // tant qu'une attaque est en cours, les autres ennemis la voient (charge ou effet dès sa première charge)
@@ -204,7 +207,24 @@ for (const act of [1, 2, 3]) for (const co of filesDe(act)) for (let rep = 0; re
   if (porte) ok(sbAtt >= 2, `${co.cle} : arme lancée (${sbAtt})`);
   ok(F.asmNom(A, co, J).split(' ').length <= 5, `${co.cle} : nom court (${F.asmNom(A, co, J)})`);
 }
-console.log(`file de sorts : ${combats} combats simulés, dont ${attaquesSim} attaques de la Brume (${etapesSim} étapes)`);
+console.log(`file de sorts : ${combats} combats simulés, dont ${attaquesSim} attaques de la Brume (${etapesSim} étapes) ; ${contactSim} sorts au contact, tous à portée ; ${renonceSim} renoncements`);
+// 3 bis (v17.21). Sorts au contact : jamais lancés hors de portée ; trop loin, il vient te chercher attenteS secondes puis renonce
+for (const [k, X] of Object.entries(A.capacites)) if (X.forme === 'cone' || X.forme === 'disque') {
+  const pt = F.asmPortee(A, X, 22), r = X.forme === 'cone' ? 22 + X.rayon : X.rayon;
+  ok(pt > 0 && pt <= A.atteinte * r + 1e-9, `${k} : portée de lancement ${pt} au plus ${A.atteinte} × ${r}`); }
+for (const [f, Fm] of Object.entries(J.familles)) Fm.etapes.forEach((et, i) => { if (et.sur === 'lui' && (et.f === 'cone' || et.f === 'disque')) {
+  const pt = F.sbPortee(A, et, 22), r = et.f === 'cone' ? 22 + et.rayon : et.rayon;
+  ok(pt > 0 && pt <= A.atteinte * r + 1e-9, `${f} étape ${i} : portée de lancement ${pt} au plus ${A.atteinte} × ${r}`); } });
+ok(A.attenteS >= 1.5 && A.atteinte > 0 && A.atteinte <= 1, 'attenteS et atteinte : réglages présents');
+{ let loin = 0, ren = 0, lances = 0, sbRen = 0; const contactEt = et => et.sur === 'lui' && (et.f === 'cone' || et.f === 'disque');
+  for (const co of filesDe(3)) { const rnd = F.asmRng(co.cle.length * 13), st = F.asmNouveau(A, co, []); let t = 0;
+    while (t < 40) { const dt = 1 / 60; t += dt;
+      for (const [ev, k] of F.asmPas(A, st, { dt, act: 3, pv: 100, er: 22, dist: 600, autre: false, fige: false, vivant: false, etourdi: false }, rnd, J)) {
+        if (ev === 'charge' && A.capacites[k] && ['cone', 'disque'].includes(A.capacites[k].forme)) loin++;
+        if (ev === 'sbcharge' && contactEt(st.sb.etapes[k])) loin++;
+        if (ev === 'renonce') ren++; if (ev === 'sbrenonce') sbRen++; if (ev === 'charge' || ev === 'sbcharge') lances++; } } }
+  ok(loin === 0, `toujours à 600 px : ${loin} sorts au contact lancés`); ok(ren > 0 && sbRen > 0, `toujours à 600 px : il renonce (${ren} sorts, ${sbRen} attaques)`);
+  console.log(`toujours à 600 px, 40 s par combinaison : ${lances} zones lancées (aucune au contact), ${ren} sorts et ${sbRen} attaques abandonnés`); }
 // v17.19 · branchements du jeu : la feinte du Brumeux attend (asmZone), le Masqué l'attend (zoneAutre), une seule source d'étourdissement
 ok(/function zoneAutre\(e\)\{if\(rings\.length\|\|\(room&&room\.bl\)\)return true;/.test(html), 'index.html : le Masqué attend la fin de la feinte du Brumeux');
 ok(/bluffTick=function\(dt\)\{\s*if\(room&&room\.asm&&!room\.bl&&\(asmZone\(\)\|\|sbEtourdi\(\)\)\)/.test(html), 'index.html : la feinte attend la zone du Masqué');
@@ -212,6 +232,7 @@ ok(/bluffTick=function\(dt\)\{\s*if\(room&&room\.asm&&!room\.bl&&\(asmZone\(\)\|
   ok(ecr.every(x => x === 'P.sbEt=null' || x === 'P.sbEt={etT:0,immT:0})') && pose.length === 1 && pose[0] === '.etT=d'
     && /P\.sbEt\|\|\(P\.sbEt=\{etT:0,immT:0\}\);s\.att=B\.etAtt\|\|0;const d=sbEtourdit\(/.test(html), `index.html : l\u2019étourdissement du joueur ne passe que par sbEtourdit (${ecr.join(' | ')} ; ${pose.join(' | ')})`); }
 ok(/etourdi:sbEtourdi\(\)\},S\.rnd,SBJ\)/.test(html), 'index.html : le cycle du Masqué reçoit l’étourdissement');
+ok((html.match(/dist:dP,er:e\.r,/g) || []).length === 2, 'index.html : le cycle et le Masqué d’essai reçoivent la taille du porteur (er), pour la portée des sorts au contact');
 ok(!/spdMul\(\)/.test(html.slice(html.indexOf('function sbLache('), html.indexOf('function sbSaute('))), 'index.html : pas d’accélération de salle sur les armes');
 // durées de chargement : jamais sous les planchers, même à l'acte III et au-delà
 for (const act of [2, 3, 4, 6]) { for (const k of Object.keys(A.signatures)) ok(F.asmDuree(A, k, act) >= A.signatureMinS, `signature ${k} acte ${act}`);

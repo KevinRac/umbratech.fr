@@ -1278,3 +1278,29 @@ Suite des limites du § 23.
 - Les zones ordinaires simultanées (ennemis de types différents) et la feinte qui n’attend pas les ennemis ordinaires : inchangé, à corriger seulement sur un cas vu en jeu (§ 23).
 - Sous ≈ 120 px/s, certaines étapes sauteront plus souvent : le Masqué semblera moins dangereux avec une forme très lente. Aucune forme n’y descend aujourd’hui sans ralentissement tenu.
 
+## 25. Le Masqué vient au contact (v17.21, 27 octobre 2026)
+
+Retour de l’auteur : un Masqué qui a un sort au corps à corps (zone centrée sur lui) doit aller au contact ; un Spectre qui reste à distance et lâche sa zone dans le vide ne sert à rien.
+
+### Diagnostic
+
+- Avant un sort court, il ne s’approchait que **0,5 s** (`attenteS`), puis lançait quand même. Un Spectre (garde-distance 210–300 px, ≈ 164 px/s en approche) parcourt ≈ 80 px en 0,5 s : il lançait loin.
+- Les portées écrites dépassaient souvent ce que la zone couvre : Explosion lancée à 150 px pour un disque de 100 ; Lame 120 pour 95 + son corps ; cône du Bastion 140 pour 85 + son corps ; Taillades 110 et 100 pour 80 et 66 + son corps ; le disque du Bastion (centré sur lui) n’avait **aucune** portée : lancé à n’importe quelle distance.
+
+### Règle
+
+- `assemble.atteinte` (0,8) : un sort ou une étape **au contact** (disque ou cône posé sur lui) ne part que si tu es à 0,8 × ce que la zone couvre (cône : son rayon + le corps du Masqué ; disque : son rayon), même si la portée écrite est plus grande ou absente. `asmPortee` (capacités) et `sbPortee` (étapes) ; le jeu passe la taille du Masqué (`env.er`). Les autres formes gardent leur `portee` (projectiles : c’est aussi leur course).
+- `attenteS` 0,5 → **2 s** : il fonce sur toi (× 1,3, comme avant) ; s’il ne t’a pas atteint à temps, il **renonce** : événement `renonce` (capacité ordinaire : comptée comme lancée pour le cycle, aucune zone, pause normale) ou `sbrenonce` (arme de la Brume : **toute l’attaque** est abandonnée, pour ne pas enchaîner deux poursuites). La signature n’a pas de portée : jamais abandonnée.
+- Fuir reste une défense : toutes les formes marchent plus vite que lui en approche (205 à 232 px/s contre ≈ 164).
+- Le corps garde sa façon de bouger hors de ces approches : le Spectre revient à distance après son sort.
+
+### Mesures
+
+- `sim-masque.mjs` : dans la file de sorts simulée, **22 738 sorts au contact, tous à portée** ; joueur toujours à 600 px, 40 s par combinaison : aucune zone au contact lancée, 322 sorts et 153 attaques abandonnés ; portées de lancement ≤ 0,8 × couverture pour chaque capacité et chaque étape au contact ; la taille du porteur est bien passée par le jeu. `sim-brume.mjs` : 3584 vérifications, 0 échec (la file aléatoire abandonne quelques attaques, d’où moins d’étapes comptées).
+- En jeu (Chromium, même banc, 30 s par essai) : Voilé (Explosion, Lame), Brute (Explosion, Lame), Spectre porteur de Bastion, Taillades, Mâchoire, Voilé porteur de Taillades, joueur immobile puis joueur qui fuit à 230 px/s (12 essais) : immobile, toutes les zones au contact partent avec toi dedans (au plus 0,81 × leur rayon, contre 210–300 px avant pour le Spectre) ; en fuite, 4 à 5 renoncements par essai, aucune zone lancée dans le vide. Série des 14 familles (Gouffre et trois autres formes, 21 essais) : 51 attaques, 110 étapes, **0 étape sautée, 0 coup de l’arme**, 45 zones au contact toutes à portée, aucune superposition, aucune erreur. Descente ordinaire, quatre formes, 24 salles : 9 Masqués ordinaires, aucune erreur.
+
+### À surveiller
+
+- Un joueur qui fuit sans cesse rend les sorts au contact inoffensifs (2 s de poursuite puis abandon) : c’est voulu, mais si le Masqué paraît trop passif contre un kiteur, raccourcir `attenteS` ou lui faire tirer son trait pendant la poursuite.
+- Plus près de toi, le Masqué inflige plus souvent ses dégâts de contact pendant l’approche (contact × 0,8 de ses dégâts).
+
