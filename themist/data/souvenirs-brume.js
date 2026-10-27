@@ -1,7 +1,8 @@
 // La Brume · Les armes de la Brume (palier 3a) : la version ennemie de chaque famille de souvenirs
 // Source unique : le jeu (index.html, bloc « v17.15 · Les armes de la Brume ») et ses outils (outils/sim-brume.mjs) lisent ce fichier.
 // Le wiki ne l’affiche pas (le Brumeux garde ses secrets) ; outils/wiki.mjs le charge sans s’en servir.
-// Rien de ce fichier n’agit encore en jeu normal : seul le mode d’essai (index.html?brume=<famille>) s’en sert.
+// v17.19 (palier 4) : le Masqué qui porte un souvenir de ta réserve lance l’attaque de sa famille (variante lue dans talents) ou reçoit son renfort ;
+// le mode d’essai (index.html?brume=<famille>) montre une attaque seule.
 //
 // Une version ennemie est une ATTAQUE en plusieurs étapes. Chaque étape est UNE zone, d’UNE forme que le joueur connaît déjà
 // (formes ci-dessous). Les étapes se suivent : la suivante ne commence à charger qu’une fois la précédente finie.
@@ -70,7 +71,8 @@
   etourdit:{n:'Assommant',formes:['disque','cone','croix','losanges','damier','couloir','anneau'],dureeS:0.35}},
  // Renforts (palier 3b) : un souvenir purement statistique (+PV, +vitesse…) renforce le porteur au lieu de lui donner une attaque.
  // Un porteur n’en cumule jamais plus que renfortMax. Le chargement n’est jamais touché.
- renforts:{pv:{n:'Robuste',pv:0.15},degats:{n:'Brutal',degats:0.12},vitesse:{n:'Vif',vitesse:0.12},armure:{n:'Blindé',reduit:0.1}},
+ // ic (v17.19) : icône (data/icones.js) montrée cerclée de lavande après sa signature, au-dessus de lui et dans sa bulle d’arrivée.
+ renforts:{pv:{n:'Robuste',ic:'u_heart',pv:0.15},degats:{n:'Brutal',ic:'u_fist',degats:0.12},vitesse:{n:'Vif',ic:'u_bolt',vitesse:0.12},armure:{n:'Blindé',ic:'u_shield',reduit:0.1}},
  renfortMax:2,
  // Familles (mêmes ids que data/souvenirs.js). n : nom de l’attaque ; ic : icône (data/icones.js) ; forme : sa forme principale ;
  // adj : adjectif pour un nom composé (m, f) ; menace : poids dans le budget du Masqué (comme ses capacités) ;

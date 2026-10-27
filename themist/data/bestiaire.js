@@ -123,7 +123,7 @@
   // bougeCharge : formes posées sur toi (pas sur lui) : il continue de te poursuivre pendant leur chargement.
   annonceS:1,pauseS:0.12,prioriteS:0.5,apresSignatureS:0.3,signatureMinS:0.8,chargeMinS:0.5,accelerationActe:0.9,
   eveilPV:70,eveilS:0.5,etourdissement:0.5,attenteS:0.5,
-  rage:{pv:30,pauseS:0.05,apresSignatureS:0},bougeCharge:['losanges','damier','taches','tourbillon','cercles'],
+  rage:{pv:30,pauseS:0.05,apresSignatureS:0},bougeCharge:['losanges','damier'],
   budgetMenace:{1:11,2:11,3:13},
   incompatibles:[['explosion','onde']],
   poidsProfil:{actif:false,regles:{
@@ -144,50 +144,16 @@
    onde:{n:'Onde',de:'hurleur',ic:'u_wave',forme:'anneau',adj:{m:'hurlant',f:'hurlante'},menace:2,chargeS:0.65,rayonMax:340,vitesse:300,breche:70,degats:1.2},
    charge:{n:'Charge',de:'brute',ic:'u_charge',forme:'couloir',adj:{m:'furieux',f:'furieuse'},menace:3,chargeS:0.7,suivi:0.45,longueur:380,vitesse:720,degats:1.9,sonne:0.6},
    cone:{n:'Lame',de:'voile',ic:'u_blade',forme:'cone',adj:{m:'tranchant',f:'tranchante'},menace:2,chargeS:0.55,effetS:0.2,rayon:95,arc:2.2,degats:1.8,portee:120},
-   tirs:{n:'Salve',de:'spectre',ic:'u_volley',forme:'rayons',adj:{m:'tireur',f:'tireuse'},menace:2,chargeS:0.6,effetS:0.15,nombre:5,ecart:0.2,vitesse:250,longueur:420,degats:0.9},
-   // v17.9 · capacité de souvenir (souvenir:true) : jamais tirée seule, seulement quand il porte un souvenir de la famille qui la donne (voir souvenir).
-   // Taches : nombre flaques (rayon) sous toi et autour (ecart), posées au chargement ; à l'impact degats, puis elles restent effetS secondes
-   // et blessent de degatsTic toutes les tic secondes tant que tu y es. Il peut bouger pendant qu'elles restent.
-   taches:{n:'Taches',ic:'u_drop',forme:'taches',souvenir:true,adj:{m:'suintant',f:'suintante'},menace:2,chargeS:0.75,effetS:2.4,nombre:3,rayon:46,ecart:105,degats:1.3,tic:0.7,degatsTic:0.4},
-   // v17.11 · Tourbillon (famille Dévoration) : un disque de rayon posé sous toi au chargement. Pendant effetS secondes il t'attire vers son centre
-   // (attire px/s, moins que ta vitesse : tu peux sortir en t'éloignant ; tu le sens surtout si tu restes immobile) ; son cœur (coeur px) blesse de
-   // degatsTic toutes les tic secondes (sauf pendant les finS dernières secondes : ton invulnérabilité après un coup durerait plus que l'intervalle et avalerait le coup final), et à sa fermeture un dernier coup de degats si tu es resté dans le cœur.
-   tourbillon:{n:'Tourbillon',ic:'u_maw',forme:'tourbillon',souvenir:true,adj:{m:'aspirant',f:'aspirante'},menace:2,chargeS:0.8,effetS:1.7,rayon:140,coeur:34,attire:120,degats:1.5,tic:0.5,degatsTic:0.3,finS:0.7},
-   // v17.11 · Cercles (famille Cloche) : nombre anneaux concentriques posés sous toi au chargement (le premier est un disque), de largeur px,
-   // espacés de pas px. Ils frappent l'un après l'autre, du centre vers l'extérieur, toutes les battueS secondes : reste entre deux anneaux.
-   cercles:{n:'Cercles',ic:'u_bell',forme:'cercles',souvenir:true,adj:{m:'sonnant',f:'sonnante'},menace:2,chargeS:0.8,effetS:1.45,nombre:3,largeur:34,pas:74,battueS:0.45,degats:1.4},
-   // v17.13 · Fil (famille Fil, Tisse-Destin) : un couloir étroit (largeur px, longueur px) te vise pendant le chargement (il te suit jusqu'à suivi du chargement,
-   // puis se fige). S'il te touche au lâcher, il t'accroche : dégâts, puis il te tire vers lui à tire px/s pendant effetS secondes. Une esquive coupe le fil.
-   fil:{n:'Fil',ic:'u_thread',forme:'fil',souvenir:true,adj:{m:'tisseur',f:'tisseuse'},menace:2,chargeS:0.8,effetS:1,longueur:400,largeur:34,suivi:0.55,tire:180,degats:1.3,portee:320},
-   // v17.13 · Faisceau (famille Faisceau) : un secteur de balayage degrés, de longueur px, centré sur toi au début du chargement (il te suit jusqu'à la moitié).
-   // Au lâcher, un rayon (largeur px) le balaie d'un bord à l'autre en effetS secondes, dans un sens tiré au hasard (le bord de départ est marqué, avec une flèche) ;
-   // il te blesse une fois quand il te passe dessus. Sors du secteur ou esquive.
-   faisceau:{n:'Faisceau',ic:'u_beam',forme:'faisceau',souvenir:true,adj:{m:'rayonnant',f:'rayonnante'},menace:2,chargeS:0.9,effetS:1.2,longueur:340,largeur:26,balayage:90,degats:1.6,portee:300}},
+   tirs:{n:'Salve',de:'spectre',ic:'u_volley',forme:'rayons',adj:{m:'tireur',f:'tireuse'},menace:2,chargeS:0.6,effetS:0.15,nombre:5,ecart:0.2,vitesse:250,longueur:420,degats:0.9}},
   // v17.9 · Le Masqué porte parfois un souvenir de ta réserve (data/souvenirs.js, familles). chance : % des Masqués qui en portent un
-  // quand la réserve a un souvenir portable ; parActe : au plus autant de porteurs par acte ; familles : famille → capacité qu'il en tire
-  // (elle prend une des deux places de départ, sous le même budget de menace) ; parRang / parGravure : dégâts de cette capacité en plus,
-  // par rang au-delà du premier et par gravure ; usure : un souvenir déjà porté est moins souvent repris (poids 1 / (1 + usure × fois)).
+  // quand la réserve a un souvenir portable ; parActe : au plus autant de porteurs par acte ; usure : un souvenir déjà porté est moins souvent repris
+  // (poids 1 / (1 + usure × fois)). v17.19 (palier 4) : le souvenir porté lui donne l'arme de la Brume de sa famille (data/souvenirs-brume.js :
+  // attaque en étapes, variante lue dans talents[id]), qui prend une des deux places de départ (jamais l'éveil), sous le même budget de menace
+  // (menace de la famille) et avec ses incompatibilités ; ou, pour un souvenir classé renfort, un renforcement du porteur (sbRenfort) en plus
+  // d'un tirage ordinaire. parRang / parGravure : dégâts de l'attaque en plus, par rang au-delà du premier et par gravure, toujours sous le plafond
+  // des armes (justice.degatsMax, degatsEtapeMax). pv (v17.10) : PV du porteur en plus, par rang au-delà du premier et par gravure du souvenir.
   // Brisé, il propose de reprendre le souvenir à la place de la relique (D9). Les dégâts infligés à un porteur ne comptent pas dans l'Accoutumance (D5).
-  // pv (v17.10) : PV du porteur en plus, par rang au-delà du premier et par gravure du souvenir (voler un talent fort coûte cher).
-  souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,pv:0.1,
-   familles:{projectile:'tirs',lame:'cone',ruee:'charge',onde:'onde',sol:'taches',devoration:'tourbillon',cloche:'cercles',fil:'fil',faisceau:'faisceau'},
-   // v17.14 · familles d'état : pas de zone, pas de place de départ ; le porteur garde ses capacités tirées et gagne un état (voir etats).
-   // Fortune n'a aucun talent (seulement des reliques, que le Masqué ne porte pas) : pas d'état pour elle tant que c'est le cas.
-   etats:{lumiere:'halo',ombre:'voile',soin:'regen',garde:'carapace',fureur:'fureur'}},
-  // v17.14 · États portés (un seul par porteur). ic : icône (data/icones.js), montrée cerclée de lavande après sa signature.
-  // force (rang et gravure du souvenir, voir souvenir) multiplie expose, soin et degats ; reduit est borné par reduitMax.
-  etats:{
-   // Halo : un cercle doré au sol autour de lui (rayon px) ; tant que tu y es, tu subis expose de dégâts en plus (de toutes les sources).
-   halo:{n:'Halo',ic:'u_star',rayon:150,expose:0.25},
-   // Voile : toutes les cycleS secondes, entre deux sorts, il s'efface dureeS secondes (presque invisible et intouchable), puis reparaît à reparait px de toi.
-   voile:{n:'Voile',ic:'u_ghost',cycleS:5.5,premierS:3,dureeS:1.1,alpha:0.15,reparait:140},
-   // Régénération : sous seuil % de PV, toutes les cycleS secondes, il canalise canalS secondes (anneau vert qui se resserre) puis se soigne de soin × PV max.
-   // Lui infliger rupture × PV max pendant la canalisation, ou l'étourdir, l'interrompt.
-   regen:{n:'Régénération',ic:'u_heart',cycleS:6,premierS:2,canalS:1.2,soin:0.08,seuil:85,rupture:0.06},
-   // Carapace : dureeS secondes sur cycleS, il subit reduit de dégâts en moins (arcs gris-bleu autour de lui).
-   carapace:{n:'Carapace',ic:'u_shield',cycleS:7,premierS:2,dureeS:3,reduit:0.4,reduitMax:0.6},
-   // Fureur : en permanence, degats de dégâts et vitesse de vitesse en plus (lueur orangée sous lui).
-   fureur:{n:'Fureur',ic:'u_fist',degats:0.15,vitesse:0.2}},
+  souvenir:{chance:50,parActe:2,parRang:0.15,parGravure:0.15,usure:1,pv:0.1},
   // Attaque passive : un trait tiré vers toi toutes les intervalleS secondes, en parallèle de ses sorts (ce n'est pas une zone :
   // un projectile au liseré rouge, comme ceux des Spectres). preavisS : son menton s'allume juste avant. portee : distance de tir max.
   // Couleurs de toutes ses zones (et de celles des armes de la Brume, data/souvenirs-brume.js, qui n'en ont pas d'autres) :

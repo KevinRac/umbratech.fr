@@ -196,7 +196,11 @@ ok(/g\.r=Math\.min\(g\.max,g\.r\+g\.v\*dt\)/.test(html), 'index.html : l\'onde (
   ok(/tryDash=function\(\)\{if\(sbEtourdi\(\)\)return;/.test(html), 'index.html : un joueur étourdi n\'esquive pas');
   ok(/updatePlayer=function\(dt\)\{if\(!sbEtourdi\(\)\)return/.test(html), 'index.html : un joueur étourdi n\'attaque pas');
   ok(/P\.iT=Math\.max\(P\.iT,d\+0\.05\)/.test(html), 'index.html : un joueur étourdi est intouchable');
-  ok(/etourdi:sbEtourdi\(\)\}\)/.test(html), 'index.html : la file d\'étapes reçoit l\'étourdissement'); }
+  ok(/etourdi:sbEtourdi\(\)\}\)/.test(html), 'index.html : la file d\'étapes reçoit l\'étourdissement');
+  // v17.19 : intouchable par TOUS, autres ennemis compris (la règle v17.5 laisse passer les autres pendant l'invulnérabilité d'un coup)
+  ok(/hurtPlayer=function\(\)\{if\(sbEtourdi\(\)\)return;/.test(html), 'index.html : pendant l\'étourdissement, aucun coup ne passe (hurtPlayer)');
+  // et seul sbEtourdit étourdit le joueur
+  ok((html.match(/P\.sbEt=\{|P\.sbEt=P\.sbEt|\(P\.sbEt=\{/g) || []).length === 1, 'index.html : une seule source d\'étourdissement du joueur (sbTouche → sbEtourdit)'); }
 
 console.log(`\n${checks} vérifications, ${fails} échec(s)`);
 process.exit(fails ? 1 : 0);

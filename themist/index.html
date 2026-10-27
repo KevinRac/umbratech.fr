@@ -8697,18 +8697,26 @@ function demoBoot(cls){
   return r.roomIdx<r.actRooms-A.gardeAvantGardien;}                 // salle de gardien = actRooms : jamais
  // Vient-il te chercher ? m : {salles (salles de combat purgées dans la run), tempsS (leur temps total), sansDegatsS}
  function asmAppel(A,m){const vite=m.salles>=A.vite.sallesMin&&m.tempsS/Math.max(1,m.salles)<=A.vite.salleMaxS,intact=m.sansDegatsS>=A.intact.sansDegatsS;return{vite,intact,ok:vite||intact};}
- function asmIncomp(A,a,b){return A.incompatibles.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a));}
+ // v17.19 · une capacité « sb:<famille> » est l'arme de la Brume d'un souvenir porté (data/souvenirs-brume.js, J) : sa menace et ses
+ // incompatibilités (familles, capacités, corps) viennent de la famille. Elle n'existe que dans un tirage qui la porte (ctx.porte).
+ function asmSb(k){return typeof k==='string'&&k.slice(0,3)==='sb:'?k.slice(3):null;}
+ function asmMenace(A,J,k){const f=asmSb(k);return f?((J&&J.familles[f])||{}).menace||0:A.capacites[k].menace;}
+ function asmIncomp(A,a,b,J){if(A.incompatibles.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a)))return true;
+  for(const [p,q] of [[a,b],[b,a]]){const f=asmSb(p);if(!f||!J||!J.familles[f])continue;const I=J.familles[f].incompatibles||{},g=asmSb(q);
+   if(g?(I.familles||[]).includes(g):(I.capacites||[]).includes(q))return true;}
+  return false;}
  // Toutes les combinaisons permises : {corps, depart:[a,b], eveil:c, menace, base (corps + paire de départ), cle}
- // ctx.porte (v17.9) : la capacité tirée d'un souvenir porté ; elle est alors toujours l'une des deux capacités de départ.
- // Une capacité de souvenir (souvenir:true) n'entre jamais dans une combinaison sans souvenir.
- function asmCombos(A,ctx){
-  const out=[],K=Object.keys(A.capacites).filter(k=>!A.capacites[k].souvenir||k===ctx.porte),plaf=A.budgetMenace[ctx.act]!=null?A.budgetMenace[ctx.act]:Infinity;
-  for(const ck in A.corps){const C=A.corps[ck],S=A.signatures[C.signature];if(!S||(C.salle&&ctx.salle<C.salle))continue;
+ // ctx.porte (v17.9) : la capacité tirée d'un souvenir porté ; elle est alors toujours l'une des deux capacités de départ (jamais l'éveil).
+ // v17.19 : c'est « sb:<famille> » (ctx.J : les armes de la Brume) ; un corps de ses incompatibles ne la porte pas.
+ function asmCombos(A,ctx){const J=ctx.J,pf=asmSb(ctx.porte);if(ctx.porte&&!(pf&&J&&J.familles[pf]))return[];
+  const out=[],K=[...Object.keys(A.capacites),...(pf?[ctx.porte]:[])],plaf=A.budgetMenace[ctx.act]!=null?A.budgetMenace[ctx.act]:Infinity;
+  const nonCorps=pf?((J.familles[pf].incompatibles||{}).corps||[]):[];
+  for(const ck in A.corps){const C=A.corps[ck],S=A.signatures[C.signature];if(!S||(C.salle&&ctx.salle<C.salle)||nonCorps.includes(ck))continue;
    const ok=K.filter(k=>!(C.exclut||[]).includes(k));
-   for(let i=0;i<ok.length;i++)for(let j=i+1;j<ok.length;j++){const a=ok[i],b=ok[j];if(asmIncomp(A,a,b))continue;
+   for(let i=0;i<ok.length;i++)for(let j=i+1;j<ok.length;j++){const a=ok[i],b=ok[j];if(asmIncomp(A,a,b,J))continue;
     if(ctx.porte&&a!==ctx.porte&&b!==ctx.porte)continue;
-    for(const c of ok){if(c===a||c===b||asmIncomp(A,a,c)||asmIncomp(A,b,c))continue;
-     const m=C.menace+S.menace+A.capacites[a].menace+A.capacites[b].menace+A.capacites[c].menace;if(m>plaf)continue;
+    for(const c of ok){if(c===a||c===b||asmSb(c)||asmIncomp(A,a,c,J)||asmIncomp(A,b,c,J))continue;
+     const m=C.menace+S.menace+asmMenace(A,J,a)+asmMenace(A,J,b)+asmMenace(A,J,c);if(m>plaf)continue;
      out.push({corps:ck,depart:[a,b],eveil:c,menace:m,base:`${ck}:${a}+${b}`,cle:`${ck}:${a}+${b}>${c}`});}}}
   return out;}
  // Poids d'une combinaison selon le profil du joueur (1 si la pondération est coupée)
@@ -8729,19 +8737,30 @@ function demoBoot(cls){
   const C=A.capacites[k],f=Math.pow(A.accelerationActe,Math.max(0,act-A.desActe));return Math.max(C.chargeS*f,A.chargeMinS);}
  // Durée de la zone après le chargement (l'onde s'étend, la charge traverse, les autres frappent d'un coup)
  function asmEffet(A,k){const X=A.signatures[k]||A.capacites[k];if(X.forme==='anneau')return X.rayonMax/X.vitesse;if(X.forme==='couloir')return X.longueur/X.vitesse;return X.effetS||0.1;}
- function asmNouveau(A,co){return{ph:'intro',t:A.annonceS,tot:0,k:null,file:[],dernier:null,eveil:false,caps:co.depart.slice(),reserve:co.eveil,sig:A.corps[co.corps].signature,att:0,n:0};}
+ // vars (v17.19) : variantes de l'arme de la Brume portée (souvenirsBrume.talents[id].v)
+ function asmNouveau(A,co,vars){return{ph:'intro',t:A.annonceS,tot:0,k:null,file:[],dernier:null,eveil:false,caps:co.depart.slice(),reserve:co.eveil,sig:A.corps[co.corps].signature,att:0,n:0,sbv:(vars||[]).slice(),sb:null};}
  // Un pas de la file de sorts. env : {dt, act, pv (% de PV), dist (px jusqu'au joueur), autre (une autre zone ennemie est active
- // ou il ne te voit pas), fige (étourdi)}. Évènements : ['eveil',c] ['charge',k] ['lache',k] ['fin',k]
- function asmPas(A,st,env,rnd){const ev=[],dt=env.dt;
+ // ou il ne te voit pas), fige (étourdi), vivant et etourdi (v17.19, pour l'arme de la Brume : sa zone vit encore ; tu es étourdi)}.
+ // Évènements : ['eveil',c] ['charge',k] ['lache',k] ['fin',k] ; v17.19, arme de la Brume (k = « sb:<famille> », J requis) :
+ // ['sbdebut',k] puis, étape par étape, ['sbcharge',i] ['sblache',i] ['sbfin',i], et ['fin',k] quand l'attaque entière est finie.
+ // Une attaque dure plusieurs étapes : tant qu'elle n'est pas finie, asmPas délègue à sbPas (une zone à la fois, l'étape suivante attend
+ // la fin de la précédente) ; st.ph reflète la file (charge, effet de sa première charge à la fin de l'attaque, sinon attente).
+ function asmPas(A,st,env,rnd,J){const ev=[],dt=env.dt;
   if(!st.eveil&&env.pv<=A.eveilPV){st.eveil=true;st.caps.push(st.reserve);
    if(!st.file.length){st.file=asmCycle(st.caps,st.sig,st.dernier,rnd);st.file.splice(st.file.indexOf(st.reserve),1);}st.file.unshift(st.reserve); // la nouvelle capacité passe en tête, une seule fois par cycle
    if(st.ph==='pause'||st.ph==='intro')st.t=Math.max(st.t,0)+A.eveilS;else st.eveilDu=true;ev.push(['eveil',st.reserve]);}
   if(!st.rage&&A.rage&&st.eveil&&env.pv<=A.rage.pv){st.rage=true;ev.push(['rage',null]);}   // v17.10 : rage (après l'éveil, jamais avant)
+  // v17.19 · étourdi : rien ne charge pendant l'étourdissement ni dans l'entracte qui suit sa fin (apresEt), même s'il finit pendant une zone
+  if(J){if(env.etourdi)st.apresEt=J.justice.entracteS;else if(st.apresEt>0)st.apresEt-=dt;}
+  if(st.sb){const sst=st.sb;   // v17.19 · l'arme de la Brume en cours : sbPas tient la file d'étapes
+   for(const [t,i] of sbPas(J,A,sst,env)){if(t==='finAttaque'){st.sb=null;asmFin(A,st,ev);return ev;}ev.push(['sb'+t,i]);}
+   st.ph=sst.ph==='charge'?'charge':sst.tient?'effet':'attente';st.t=sst.t;st.tot=sst.tot||1;st.bloque=sst.bloque;st.att=sst.att;return ev;}
   if(st.ph==='intro'){if(!env.fige)st.t-=dt;if(st.t<=0){st.ph='pause';st.t=0;}return ev;}
-  if(st.ph==='pause'){st.t-=dt;if(st.t>0||env.fige)return ev;
+  if(st.ph==='pause'){st.t-=dt;if(st.t>0||env.fige||st.apresEt>0)return ev;
    if(env.autre){st.bloque=(st.bloque||0)+dt;return ev;}   // une autre zone est active : il attend (et réclame la suivante, voir prioriteS)
    if(!st.file.length)st.file=asmCycle(st.caps,st.sig,st.dernier,rnd);
-   const k=st.file[0],X=A.capacites[k];
+   const k=st.file[0],X=A.capacites[k],sf=asmSb(k);
+   if(sf){st.file.shift();st.att=0;st.bloque=0;st.k=k;st.sb=sbNouveau(J,sf,st.sbv);st.ph='attente';st.t=0;st.tot=1;ev.push(['sbdebut',k]);return ev;}   // v17.19 : elle commence (sa première étape au pas suivant)
    if(X&&X.portee&&env.dist>X.portee&&st.att<A.attenteS){st.att+=dt;return ev;}
    st.file.shift();st.att=0;st.bloque=0;st.k=k;st.ph='charge';st.t=st.tot=asmDuree(A,k,env.act);ev.push(['charge',k]);return ev;}
   if(st.ph==='charge'){if(!env.fige)st.t-=dt;if(st.t<=0){st.ph='effet';st.t=asmEffet(A,st.k);ev.push(['lache',st.k]);}return ev;}
@@ -8749,21 +8768,25 @@ function demoBoot(cls){
   return ev;}
  function asmFin(A,st,ev){const k=st.k,R=st.rage&&A.rage;st.ph='pause';st.dernier=k;st.n++;st.t=(R?R.pauseS:A.pauseS)+(A.signatures[k]?(R?R.apresSignatureS:A.apresSignatureS):0)+(st.eveilDu?A.eveilS:0);st.eveilDu=false;st.k=null;if(ev)ev.push(['fin',k]);}
  // Nom composé court : le corps et l'adjectif de ses deux capacités de départ (« Brute hurlante et tranchante »)
- function asmNom(A,co){const C=A.corps[co.corps],g=C.g==='f'?'f':'m',adj=co.depart.map(k=>A.capacites[k].adj[g]);return `${C.n} ${adj[0]} et ${adj[1]}`;}
+ function asmNom(A,co,J){const C=A.corps[co.corps],g=C.g==='f'?'f':'m',adj=co.depart.map(k=>(asmSb(k)?J.familles[asmSb(k)]:A.capacites[k]).adj[g]);return `${C.n} ${adj[0]} et ${adj[1]}`;}
  // v17.9 · Porte-t-il un souvenir ? res : la réserve de la run ({id, source, rang, g, porte}) ; fam : id de talent → famille ;
- // n : porteurs déjà venus dans cet acte. Renvoie {x (l'entrée de la réserve), cap (la capacité qu'il en tire), force (× dégâts)} ou null.
- function asmSouvenir(A,res,fam,rnd,n){const S=A.souvenir;if(!S||!res||!res.length||(n||0)>=(S.parActe==null?Infinity:S.parActe))return null;
-  // v17.14 : une famille donne soit une capacité (familles → capacites), soit un état (etats → A.etats)
-  const capDe=f=>S.familles[f]&&A.capacites[S.familles[f]]?S.familles[f]:null,etatDe=f=>S.etats&&A.etats&&S.etats[f]&&A.etats[S.etats[f]]?S.etats[f]:null;
-  const L=res.filter(x=>x.source==='talent'&&fam[x.id]&&(capDe(fam[x.id])||etatDe(fam[x.id])));
+ // n : porteurs déjà venus dans cet acte ; J (v17.19) : les armes de la Brume. Tout talent de la réserve dont la famille a une arme se porte ;
+ // peut(fid, entrée) (facultatif) : faux si aucune combinaison ne peut porter cette arme ici (budget de menace, incompatibilités) : il n'est pas choisi.
+ // Renvoie {x (l'entrée de la réserve), fid (sa famille), cap (« sb:<famille> », ou null pour un renfort), vars (variantes de l'attaque),
+ // renfort (clé de renfort, ou null), force (× dégâts de l'attaque, sous le plafond des armes)} ou null.
+ function asmEntree(J,x){return((x.source==='talent'?J.talents:J.reliques)||{})[x.id]||{};}
+ function asmSouvenir(A,res,fam,rnd,n,J,peut){const S=A.souvenir;if(!S||!J||!res||!res.length||(n||0)>=(S.parActe==null?Infinity:S.parActe))return null;
+  const L=res.filter(x=>x.source==='talent'&&fam[x.id]&&J.familles[fam[x.id]]&&(!peut||peut(fam[x.id],asmEntree(J,x))));
   if(!L.length||rnd()*100>=S.chance)return null;
   const ws=L.map(x=>1/(1+(S.usure==null?1:S.usure)*(x.porte||0))),tot=ws.reduce((a,b)=>a+b,0);let r=rnd()*tot,x=L[L.length-1];
   for(let i=0;i<L.length;i++){r-=ws[i];if(r<=0){x=L[i];break;}}
-  const cap=capDe(fam[x.id]);
-  return{x,cap,etat:cap?null:etatDe(fam[x.id]),force:1+(S.parRang||0)*Math.max(0,(x.rang||1)-1)+(S.parGravure||0)*(x.g||0)};}
+  const fid=fam[x.id],E=asmEntree(J,x),rf=E.renfort&&J.renforts[E.renfort]?E.renfort:null;
+  return{x,fid,cap:rf?null:'sb:'+fid,vars:rf?[]:(E.v||[]).slice(),renfort:rf,force:1+(S.parRang||0)*Math.max(0,(x.rang||1)-1)+(S.parGravure||0)*(x.g||0)};}
  /*/asm:pur*/
- window.__asm={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,asmSouvenir,forcer:0};
+ window.__asm={asmRng,asmEligible,asmAppel,asmCombos,asmTirage,asmCycle,asmDuree,asmEffet,asmNouveau,asmPas,asmNom,asmSouvenir,asmSb,forcer:0};
  // familles de souvenirs (data/souvenirs.js) : id de talent → famille
+ // v17.19 · file d'étapes au repos (aucune arme de la Brume en cours) : ce que lit le dessin entre deux attaques
+ const SB_REPOS=Object.freeze({ph:'repos',etapes:Object.freeze([]),i:0,t:0,tot:1,tient:false});
  const FAMS={};try{const F=(window.BRUME_DATA.souvenirs||{}).familles||{};for(const k in F)(F[k].t||[]).forEach(id=>{FAMS[id]=k;});}catch(err){}
  // ── v17.15 · Les armes de la Brume (palier 3a) : logique pure. Données : data/souvenirs-brume.js. Vérification : outils/sim-brume.mjs.
  /*sb:pur*/
@@ -8792,6 +8815,9 @@ function demoBoot(cls){
  // Plafond codé : si une attaque (variantes comprises) peut faire plus que degatsMax, toutes ses étapes baissent d'autant (et une étape seule jamais plus que degatsEtapeMax).
  function sbBrut(J,ets,act){let s=0;for(const et of ets)s+=sbDegats(J,et,act)*(et.f==='projectile'&&et.navette?2:1);return s;}
  function sbPlafond(J,ets,act){const b=sbBrut(J,ets,act);return b>J.justice.degatsMax?J.justice.degatsMax/b:1;}
+ // v17.19 · force d'un souvenir porté (rang et gravures, × 1,15 chacun au-delà du premier) : elle s'applique aux dégâts de l'attaque,
+ // mais le plafond reste maître (l'attaque entière jamais plus que degatsMax ; chaque étape, par sbCoup, jamais plus que degatsEtapeMax).
+ function sbForce(J,ets,act,force){const b=sbBrut(J,ets,act),f=Math.max(1,force||1);return b>0?Math.min(f,J.justice.degatsMax/b):1;}
  function sbCoup(J,et,act,k){return Math.min(sbDegats(J,et,act)*(k==null?1:k),J.justice.degatsEtapeMax/(et.f==='projectile'&&et.navette?2:1));}
  function sbCharge(J,A,et,act){const f=Math.pow(A.accelerationActe,Math.max(0,(act||1)-A.desActe));
   return Math.max(et.chargeS*f,sbPlancher(A,act||1,sbLourd(A,sbDegats(J,et,act))));}
@@ -8850,7 +8876,8 @@ function demoBoot(cls){
  // Toujours une sortie : depuis p (où tu es quand la zone se fige), existe-t-il un point libre que tu atteins à pied, en ligne droite,
  // sans jamais être sur la zone au moment où elle y frappe ? t : temps entre le figement et le lâcher.
  // o : {lx,ly,er (le porteur : on ne traverse pas son corps), arene, bloque(x,y) (piliers, en jeu)}
- function sbSortie(J,zs,p,t,o){const Jj=J.justice,PR=Jj.joueur.rayon,v=Jj.joueur.vitesse,mg=Jj.marge,R=o.arene,er=o.er||0;
+ // o.pr (v17.19, en jeu) : ton vrai rayon s'il dépasse celui de la justice (le Gouffre grossit) ; jamais moins strict que joueur.rayon
+ function sbSortie(J,zs,p,t,o){const Jj=J.justice,PR=Math.max(Jj.joueur.rayon,o.pr||0),v=Jj.joueur.vitesse,mg=Jj.marge,R=o.arene,er=o.er||0;
   const corps=(x,y)=>o.lx!=null&&Math.hypot(x-o.lx,y-o.ly)<er+PR;
   const libre=(x,y)=>x>=R.x0+PR&&x<=R.x1-PR&&y>=R.y0+PR&&y<=R.y1-PR&&!(o.bloque&&o.bloque(x,y))&&!corps(x,y)&&!zs.some(z=>sbDans(z,x,y,PR,er,mg));
   if(libre(p[0],p[1]))return{ok:true,d:0};
@@ -8982,7 +9009,7 @@ function demoBoot(cls){
   if(fis){c.lineCap='round';c.lineJoin='round';for(const p of MP.fissures){c.strokeStyle=COL.trait;c.lineWidth=6;c.stroke(p);c.strokeStyle=COL.fissure;c.lineWidth=2.4;c.stroke(p);}}}
  // etat : calme | charge | fissure | brise ; o.lit (yeux allumés), o.k (avancement de la brisure 0…1), o.a (opacité)
  function drawMask(c,x,y,h,etat,o){o=o||{};const s=h/MQ.vb[1]*(o.sc||1),lit=!!o.lit,fis=etat==='fissure'||etat==='brise',k=o.k||0;
-  c.save();c.translate(x-MQ.centre[0]*s,y-MQ.centre[1]*s);c.scale(s,s);c.globalAlpha*=o.a==null?1:o.a;   // multiplié (v17.14) : le Voile peut l'effacer
+  c.save();c.translate(x-MQ.centre[0]*s,y-MQ.centre[1]*s);c.scale(s,s);c.globalAlpha*=o.a==null?1:o.a;   // multiplié : l'opacité du dessin en cours est gardée
   const pul=lit&&!RM?0.8+0.2*Math.sin(T*16):1;
   c.save();c.globalCompositeOperation='lighter';for(const [ex,ey,r] of MQ.lueurs)glow(c,ex,ey,r*(lit?9:5.5),rgb(lit?COL.oeilVif:COL.oeil),(lit?0.55:0.25)*pul);c.restore();
   if(etat==='brise'){const d=5+k*(RM?0:46);
@@ -9021,39 +9048,24 @@ function demoBoot(cls){
   else if(X.forme==='croix'){z.len=X.longueur;z.w=X.largeur;}
   else if(X.forme==='losanges'){z.h=X.taille;z.pts=[[P.x,P.y]];for(let i=0;i<X.nombre-1;i++){const b=Math.PI/4+i*Math.PI/2;z.pts.push([P.x+Math.cos(b)*X.ecart,P.y+Math.sin(b)*X.ecart]);}}
   else if(X.forme==='damier'){const q=X.cote;z.q=q;z.cells=[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]].map(([i,j])=>[P.x+i*q,P.y+j*q]);}
-  else if(X.forme==='taches'){z.r=X.rayon;const b=e.asm.rnd()*TAU,m=X.rayon+8;z.pts=[[P.x,P.y]];
-   for(let i=1;i<X.nombre;i++){const a=b+(i-1)*TAU/Math.max(1,X.nombre-1)+(e.asm.rnd()-0.5)*0.6;z.pts.push([clamp(P.x+Math.cos(a)*X.ecart,AR.x0+m,AR.x1-m),clamp(P.y+Math.sin(a)*X.ecart,AR.y0+m,AR.y1-m)]);}
-   z.sd=z.pts.map(()=>e.asm.rnd()*10);}
-  // v17.11 · tourbillon et cercles : centrés sur toi au début du chargement, puis figés
-  else if(X.forme==='tourbillon'){z.cx=P.x;z.cy=P.y;z.r=X.rayon;z.core=X.coeur;}
-  else if(X.forme==='cercles'){z.cx=P.x;z.cy=P.y;z.n=X.nombre;z.w=X.largeur;z.pas=X.pas;z.R=(X.nombre-1)*X.pas+X.largeur;}
-  // v17.13 · fil : couloir étroit qui te suit ; faisceau : secteur centré sur toi, balayé par un rayon dans un sens tiré au hasard
-  else if(X.forme==='fil'){z.len=X.longueur;z.w=X.largeur;}
-  else if(X.forme==='faisceau'){z.len=X.longueur;z.w=X.largeur;z.arc=X.balayage*Math.PI/180;z.dir=e.asm.rnd()<0.5?1:-1;}
   return z;}
- // le joueur (à la marge m près) est-il dans l'anneau i des cercles ? (l'anneau 0 est un disque)
- function dansAnneau(z,i,x,y,m){const d=hyp(x-z.cx,y-z.cy),lo=i*z.pas;return d<lo+z.w+m&&(i===0||d>lo-m);}
  function inZone(z,x,y,m){const dx=x-z.x,dy=y-z.y;
   switch(z.forme){
   case 'disque':return hyp(dx,dy)<z.r+m;
   case 'cone':return hyp(dx,dy)<z.r+m&&angDiff(Math.atan2(dy,dx),z.a)<z.arc/2;
   case 'croix':for(let i=0;i<4;i++){const b=z.a+i*Math.PI/2,u=dx*Math.cos(b)+dy*Math.sin(b),v=-dx*Math.sin(b)+dy*Math.cos(b);if(u>=-z.w/2&&u<=z.len&&Math.abs(v)<z.w/2+m)return true;}return false;
   case 'losanges':for(const [px,py] of z.pts)if(Math.abs(x-px)+Math.abs(y-py)<z.h+m*1.2)return true;return false;
-  case 'damier':for(const [cx,cy] of z.cells)if(Math.abs(x-cx)<z.q/2+m&&Math.abs(y-cy)<z.q/2+m)return true;return false;
-  case 'taches':for(const [px,py] of z.pts)if(hyp(x-px,y-py)<z.r+m)return true;return false;
-  case 'fil':{const u=dx*Math.cos(z.a)+dy*Math.sin(z.a),v=-dx*Math.sin(z.a)+dy*Math.cos(z.a);return u>=-4&&u<=z.len&&Math.abs(v)<z.w/2+m;}
-  case 'faisceau':return hyp(dx,dy)<z.len+m&&angDiff(Math.atan2(dy,dx),z.a)<z.arc/2;
-  case 'tourbillon':return hyp(x-z.cx,y-z.cy)<z.r+m;
-  case 'cercles':for(let i=0;i<z.n;i++)if(dansAnneau(z,i,x,y,m))return true;return false;}
+  case 'damier':for(const [cx,cy] of z.cells)if(Math.abs(x-cx)<z.q/2+m&&Math.abs(y-cy)<z.q/2+m)return true;return false;}
   return false;}
 
  // ── Annonce (avant le combat et à mi-vie) : masque, nom composé court, icônes. Pas de texte long.
  let card=null,cardHide=0,cardN=0;
  function showCard(e,eveil){const S=e.asm;
   if(!card){card=document.createElement('div');card.id='asmCard';card.setAttribute('role','status');card.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(card);}
-  const ic=k=>{const X=A.capacites[k]||A.signatures[k];return `<i class="${A.signatures[k]?'sig':''}${eveil&&k===S.st.reserve?' nw':''}${S.sv&&k===S.sv.cap?' sv':''}" title="${esc(X.n)}">${icon(X.ic)}</i>`;};
-  const ET=S.sv&&S.sv.etat&&A.etats[S.sv.etat],SF=S.sb&&SBJ.familles[S.sb.fid];
-  const caps=SF?`<i class="sv" title="${esc(SF.n)}">${icon(SF.ic)}</i>`:S.st.caps.map(ic).join('')+(SF?'':(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig))+(ET?`<i class="sv et" title="${esc(ET.n)}">${icon(ET.ic)}</i>`:'');
+  // v17.19 : l'arme de la Brume portée (« sb:<famille> ») montre l'icône de sa famille, un renfort la sienne après la signature, cerclées de lavande
+  const ic=k=>{const f=asmSb(k),X=f?SBJ.familles[f]:A.capacites[k]||A.signatures[k];return `<i class="${A.signatures[k]?'sig':''}${eveil&&k===S.st.reserve?' nw':''}${S.sv&&k===S.sv.cap?' sv':''}" title="${esc(X.n)}">${icon(X.ic)}</i>`;};
+  const RF=S.sv&&S.sv.renfort&&SBJ.renforts[S.sv.renfort],SF=S.sb&&S.sb.seul&&SBJ.familles[S.sb.fid];
+  const caps=SF?`<i class="sv" title="${esc(SF.n)}">${icon(SF.ic)}</i>`:S.st.caps.map(ic).join('')+(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig)+(RF?`<i class="sv et" title="${esc(RF.n)}">${icon(RF.ic)}</i>`:'');
   card.className=(eveil?'eveil':'')+(S.sv?' porte':'');
   card.innerHTML=`<span class="mq" aria-hidden="true">${MQ.svg(COL,eveil?'fissure':'calme','asmc'+(++cardN))}</span><div><b>${esc(A.n)}${eveil?' · ▲':''}</b><span class="nm">${esc(S.nom)}</span><span class="ics">${caps}</span>${S.sv?`<span class="svn">${esc(S.sv.n)}</span>`:''}</div>`;
   try{stackBelow(card,toastEl);}catch(x){}
@@ -9074,20 +9086,23 @@ function demoBoot(cls){
     const dernier=M.dernier||mem.dernier||null;
     // v17.9 : un souvenir de la réserve ? (__asm.souv : forcer un id de talent de la réserve, pour l'essai en console)
     const pa=M.porteurs=M.porteurs||{};let sv=null;
-    try{const res=RUN.reserveBrume||[];
-     if(window.__asm.souv){const x=res.find(y=>y.id===window.__asm.souv);if(x)sv=asmSouvenir(Object.assign({},A,{souvenir:Object.assign({},A.souvenir,{chance:100,parActe:Infinity})}),[x],FAMS,rnd,0);}
-     else sv=asmSouvenir(A,res,FAMS,rnd,pa[RUN.act]||0);}catch(err){console.error(err);sv=null;}
-    let co=null;const ctx={act:Math.max(1,RUN.act),salle:G()};
-    if(window.__asm.combo)co=asmCombos(A,Object.assign({porte:sv&&sv.cap},ctx)).find(c=>c.cle===window.__asm.combo)||null;
-    else{if(sv)co=asmTirage(A,Object.assign({porte:sv.cap},ctx),dernier,rnd,A.poidsProfil.actif?profile():null);
-     if(!co){sv=null;co=asmTirage(A,ctx,dernier,rnd,A.poidsProfil.actif?profile():null);}}
-    if(co&&sv&&sv.cap&&!co.depart.includes(sv.cap))sv=null;   // un état (v17.14) ne prend pas de place de départ
+    try{const res=RUN.reserveBrume||[],cx={act:Math.max(1,RUN.act),salle:G(),J:SBJ},pc={};
+     // v17.19 : un souvenir dont l'arme ne tient dans aucune combinaison ici (budget de menace de l'acte, incompatibilités) n'est pas choisi
+     const peut=(f,E)=>!!(E.renfort&&SBJ.renforts[E.renfort])||(pc[f]!=null?pc[f]:(pc[f]=asmCombos(A,Object.assign({porte:'sb:'+f},cx)).length>0));
+     if(window.__asm.souv){const x=res.find(y=>y.id===window.__asm.souv);if(x)sv=asmSouvenir(Object.assign({},A,{souvenir:Object.assign({},A.souvenir,{chance:100,parActe:Infinity})}),[x],FAMS,rnd,0,SBJ);}
+     else sv=asmSouvenir(A,res,FAMS,rnd,pa[RUN.act]||0,SBJ,peut);}catch(err){console.error(err);sv=null;}
+    // v17.19 : une arme de la Brume prend une place de départ (sb:<famille>) ; un renfort laisse un tirage ordinaire
+    let co=null;const ctx={act:Math.max(1,RUN.act),salle:G(),J:SBJ},porte=sv&&sv.cap?{porte:sv.cap}:{};
+    if(window.__asm.combo)co=asmCombos(A,Object.assign(porte,ctx)).find(c=>c.cle===window.__asm.combo)||null;
+    else{co=asmTirage(A,Object.assign(porte,ctx),dernier,rnd,A.poidsProfil.actif?profile():null);
+     if(!co&&sv){sv=null;co=asmTirage(A,ctx,dernier,rnd,A.poidsProfil.actif?profile():null);}}
+    if(co&&sv&&sv.cap&&!co.depart.includes(sv.cap))sv=null;
     if(co){const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3;
      // il arrive avec la deuxième vague : il prend la place du champion s'il y en a un, la vague garde ses autres ennemis
      const v=(w[1]||[]).filter(x=>!x.elite);if(!v.length)v.push(...row('rampant',n,'rand'));v.unshift({type:co.corps,elite:true,asm:true});
      if(w.length>1)w[1]=v;else w.push(v);
      RUN.seen.add(co.corps);
-     room.asm={seed,rnd,co,nom:asmNom(A,co),e:null,vaincu:false,wi:1,appel:ap,sv};
+     room.asm={seed,rnd,co,nom:asmNom(A,co,SBJ),e:null,vaincu:false,wi:1,appel:ap,sv};
      if(sv){sv.x.porte=(sv.x.porte||0)+1;pa[RUN.act]=(pa[RUN.act]||0)+1;}
      M.dernier=co.base;M.salle=RUN.g;SAVE.asm18=Object.assign({},mem,{dernier:co.base});persist();}}}}
   catch(err){console.error(err);}
@@ -9103,15 +9118,17 @@ function demoBoot(cls){
    e.maxHp*=A.stats.pv*C.pv/(d.hp*CHAMP.pv);e.hp=e.maxHp;e.dmg*=A.stats.degats/(d.dmg*CHAMP.degats);
    if(R.sv&&A.souvenir&&A.souvenir.pv){const x=R.sv.x;e.maxHp*=1+A.souvenir.pv*(Math.max(0,(x.rang||1)-1)+(x.g||0));e.hp=e.maxHp;}   // v17.10 : un porteur d'un souvenir fort a plus de PV
    e.r=d.r*C.taille;e.spd=d.spd*spdMul()*C.vitesse*(A.stats.vitesse||1);e.xp=A.stats.xp*(1+0.05*(G()-1));e.state='walk';e.tok=null;
-   e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co),z:null,flash:null,dash:null,sv:R.sv?{cap:R.sv.cap,etat:R.sv.etat||null,force:R.sv.force,id:R.sv.x.id,n:(NODES[R.sv.x.id]||{}).name||R.sv.x.id}:null};
-   etatInit(e);
+   e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co,R.sv&&R.sv.vars),z:null,flash:null,dash:null,sv:R.sv?{cap:R.sv.cap,fid:R.sv.fid,vars:R.sv.vars||[],renfort:R.sv.renfort||null,force:R.sv.force,id:R.sv.x.id,n:(NODES[R.sv.x.id]||{}).name||R.sv.x.id}:null};
+   // v17.19 : l'arme de la Brume portée (sa file d'étapes vit dans st.sb, la géométrie et les zones ici), ou le renfort du porteur
+   if(e.asm.sv&&e.asm.sv.cap)e.asm.sb={fid:e.asm.sv.fid,vars:e.asm.sv.vars,st:SB_REPOS,k:1,recu:0,sauts:0};
+   if(e.asm.sv&&e.asm.sv.renfort)sbRenfort(e,[e.asm.sv.renfort]);
    if(MO){e.asm.mont={t:0,tot:MT(),n:0};e.asm.st.t=Math.max(e.asm.st.t,MT());}
    showCard(e,false);sfx('asm_in');}}catch(err){console.error(err);}
   return e;};
  // pas de contre-mesure, pas de règle de salle, et la salle ne compte pas dans la moyenne qui sert à juger les contre-mesures
  const _bp=brumeuxPlan;brumeuxPlan=function(){if(room&&room.asm)return;return _bp.apply(this,arguments);};
  const _sr=setRule;setRule=function(){if(room&&room.asm)return;return _sr.apply(this,arguments);};
- const immun=e=>e&&e.asm&&((e.asm.mont&&MO&&MO.immunise)||(e.asm.ombre&&e.asm.ombre.on));   // v17.14 : effacé par le Voile, il est intouchable
+ const immun=e=>e&&e.asm&&e.asm.mont&&MO&&MO.immunise;
  const _he=hitEnemy;hitEnemy=function(e){if(immun(e))return 0;return _he.apply(this,arguments);};
  const _fh=friendlyHit;friendlyHit=function(o){if(immun(o))return;return _fh.apply(this,arguments);};
  const _rh=rawHit;rawHit=function(e){if(immun(e))return;return _rh.apply(this,arguments);};
@@ -9125,7 +9142,8 @@ function demoBoot(cls){
   catch(err){console.error(err);}};
 
  // ── Comportement
- function zoneAutre(e){if(rings.length)return true;
+ // v17.19 : la feinte du Brumeux (room.bl, un cercle posé sur toi, vrai ou faux) est une zone comme les autres
+ function zoneAutre(e){if(rings.length||(room&&room.bl))return true;
   for(const o of enemies){if(o===e||o.dead||o.asm)continue;if((o.type==='bouffi'&&o.state==='fuse')||(o.type==='brute'&&(o.state==='wind'||o.state==='charge'))||(o.type==='hurleur'&&o.state==='sing')||(o.type==='voile'&&(o.state==='blink'||o.state==='wind')))return true;}  // le clignement du Voilé précède toujours son cône
   return false;}
  // Tant que le Masqué charge ou lance un sort (ou que son onde court), les autres ennemis n'en lancent pas : ils attendent.
@@ -9133,26 +9151,31 @@ function demoBoot(cls){
  function asmZone(){if(ZR.length)return true;for(const e of enemies)if(e.asm&&!e.dead&&(e.asm.st.ph==='charge'||e.asm.st.ph==='effet'||(e.asm.st.bloque||0)>=A.prioriteS))return true;return false;}  // après prioriteS d'attente, la prochaine zone est à lui
  const ZT=new Set(['brute','hurleur','voile']),_tt=tryTok;
  tryTok=function(e,k){if(e&&!e.asm&&ZT.has(e.type)&&e.tok!==k&&room&&room.asm&&asmZone())return false;return _tt.apply(this,arguments);};
- window.__asm.zone=asmZone;
- function annule(e){const S=e.asm,st=S.st;if(S.sb){sbAnnule(e);return;}if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);S.z=null;S.dash=null;S.taches=null;S.tourb=null;S.cercles=null;S.fil=null;S.beam=null;}
+ window.__asm.zone=asmZone;window.__asm.zr=()=>ZR;   // ZR : ondes du Masqué en cours (essais)
+ // v17.19 · la feinte du Brumeux attend comme les autres ennemis : elle ne se pose pas pendant une zone du Masqué (ni quand la suivante est à lui,
+ // asmZone), ni pendant que tu es étourdi ; et le Masqué attend qu'elle soit finie (zoneAutre). Jamais deux zones à la fois, feinte comprise.
+ const _blT=bluffTick;bluffTick=function(dt){
+  if(room&&room.asm&&!room.bl&&(asmZone()||sbEtourdi())){if(room.blT!=null&&room.blT<=0.05)room.blT=0.05;return;}
+  return _blT.apply(this,arguments);};
+ // v17.19 · l'arme de la Brume portée : interrompue (tiré, mis en orbite, pantin), l'attaque entière s'arrête ; ce qui est déjà lâché
+ // (onde, projectiles) va au bout, et il attend que ce soit fini avant sa zone suivante (vivant).
+ function annule(e){const S=e.asm,st=S.st;if(S.sb&&S.sb.seul){sbAnnule(e);return;}
+  if(st.sb){st.sb=null;asmFin(A,st,null);}else if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);
+  S.z=null;S.dash=null;if(S.sb){S.sb.zc=null;S.sb.dash=null;S.sb.st=SB_REPOS;}}
  function onEvent(e,x){const S=e.asm,[t,k]=x;
   if(t==='eveil'){showCard(e,true);sfx('asm_eveil');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'violet'});if(!RM)shake(4,0.15);S.fis=true;return;}
   if(t==='rage'){S.rage=true;tlights.push({x:e.x,y:e.y,r:300,t:0.45,max:0.45,c:'blood'});if(!RM)shake(4,0.15);sfx('asm_eveil');return;}
+  // v17.19 · l'arme de la Brume : début de l'attaque (plafond et force du souvenir), puis ses étapes une à une
+  if(t==='sbdebut'){const B=S.sb;B.st=S.st.sb;B.k=sbForce(SBJ,B.st.etapes,RUN.act,S.sv&&S.sv.force);B.prec=null;B.anc=null;B.etAtt=0;B.zc=null;B.vivants=[];return;}
+  if(t==='sbcharge'){const B=S.sb,et=B.st.etapes[k];
+   if(et.suivi>0){B.zc={zs:sbPieces(SBJ,et,sbCtx(e,B,et)).zs,fige:false};B.dbg='suit';}
+   else if(!sbFixe(e,B,et)){sbSaute(B);return;}
+   sfx('asm_ch',B.st.tot);B.dernier={i:k,et,charge:B.st.tot,plancher:sbPlancher(A,RUN.act,false)};return;}
+  if(t==='sblache'){sbLache(e,S.sb,S.sb.st.etapes[k]);return;}
+  if(t==='sbfin'){S.sb.vivants=[];return;}
   if(t==='charge'){S.z=zoneDe(e,k);S.flash=null;sfx(A.signatures[k]?'asm_sig':'asm_ch',S.st.tot);return;}
-  if(t==='fin'){
-   if(S.tourb){const Tb=S.tourb;   // v17.11 · le tourbillon se ferme : un dernier coup sur son cœur
-    if(!P.dead&&hyp(P.x-Tb.z.cx,P.y-Tb.z.cy)<Tb.z.core+P.r*0.5)hurtPlayer(Tb.fin,e);
-    sparks(Tb.z.cx,Tb.z.cy,10,'#ff6a5a');sfx('explode');shake(3,0.12);}
-   S.z=null;S.dash=null;S.taches=null;S.tourb=null;S.cercles=null;S.fil=null;S.beam=null;return;}
-  if(t==='lache'){const z=S.z;if(!z)return;const X=z.X,f=S.sv&&S.sv.cap===k?S.sv.force:1,dmg=e.dmg*X.degats*f;
-   if(z.forme==='tourbillon'){S.tourb={z,t:0,max:asmEffet(A,k),tic:X.tic,dmg:e.dmg*X.degatsTic*f,fin:dmg};S.z=null;sfx('howl');shake(2,0.1);return;}
-   if(z.forme==='cercles'){S.cercles={z,t:0,max:asmEffet(A,k),i:0,dmg};S.z=null;return;}
-   if(z.forme==='fil'){const acc=!P.dead&&inZone(z,P.x,P.y,P.r*0.5);   // v17.13 · le fil part : s'il te touche il t'accroche, dégâts, puis il te tire
-    if(acc)hurtPlayer(dmg,e);S.fil={z,t:0,max:asmEffet(A,k),acc};S.z=null;sfx('lame');return;}
-   if(z.forme==='faisceau'){S.beam={z,t:0,max:asmEffet(A,k),a0:z.a-z.dir*z.arc/2,dir:z.dir,ang:z.a-z.dir*z.arc/2,hit:false,dmg};S.z=null;sfx('howl');shake(2,0.1);return;}
-   if(z.forme==='taches'){if(!P.dead&&inZone(z,P.x,P.y,P.r*0.5))hurtPlayer(dmg,e);
-    S.taches={z,t:0,max:asmEffet(A,k),tic:X.tic,dmg:e.dmg*X.degatsTic*f};S.z=null;sfx('spit');shake(3,0.12);
-    for(const [px,py] of z.pts)sparks(px,py,5,'#ff6a5a');return;}
+  if(t==='fin'){S.z=null;S.dash=null;if(S.sb&&asmSb(k)){S.sb.zc=null;S.sb.st=SB_REPOS;}return;}
+  if(t==='lache'){const z=S.z;if(!z)return;const X=z.X,dmg=e.dmg*X.degats;
    if(z.forme==='disque'){explosion(z.x,z.y,z.r,dmg,0,{col:'rgba(255,58,52,',spark:'#ff6a5a'});S.z=null;}
    else if(z.forme==='anneau'){ZR.push({x:z.x,y:z.y,r:e.r,v:X.vitesse,max:z.max,ga:z.ga,gw:z.gw,dmg,hit:false,src:e});sfx('howl');S.z=null;}
    else if(z.forme==='couloir'){S.dash={a:z.a,v:X.vitesse*spdMul(),left:z.len,hit:false,dmg};S.z=null;}
@@ -9165,100 +9188,37 @@ function demoBoot(cls){
   if(fast){moveTo(e,tg.x,tg.y,sp*1.3,dt);return;}
   if(C.mouvement==='approche'){if(!tg.pl||dP>70)moveTo(e,tg.x,tg.y,sp,dt);else{const a=Math.atan2(e.y-P.y,e.x-P.x)+0.8*e.dir*dt;moveTo(e,P.x+Math.cos(a)*64,P.y+Math.sin(a)*64,sp*0.7,dt);}}
   else keepRange(e,tg,sp,dt,C.distance[0],C.distance[1]);}
- // ── v17.14 · États portés (familles Lumière, Ombre, Soin, Garde, Fureur) : réglages dans assemble.etats
- const ETAT=e=>e&&e.asm&&e.asm.sv&&e.asm.sv.etat?A.etats[e.asm.sv.etat]:null;
- function etatInit(e){const S=e.asm,k=S.sv&&S.sv.etat,X=ETAT(e);if(!X)return;const f=S.sv.force||1;
-  if(k==='voile')S.ombre={t:X.premierS,on:false,d:0,a:1};
-  else if(k==='regen')S.soin={t:X.premierS,c:0,pris:0};
-  else if(k==='carapace')S.garde={t:X.premierS,on:0};
-  else if(k==='fureur'){e.dmg*=1+X.degats*f;e.spd*=1+X.vitesse;}}
- // un point libre à d px du joueur (dans la salle, hors des piliers), pour le retour du Voile
- // (près d'un mur, le recadrage rapproche le point : on garde le plus proche de d parmi 12 essais)
- function pointPres(e,d){let best=null,bd=-1;for(let i=0;i<12;i++){const a=e.asm.rnd()*TAU,x=clamp(P.x+Math.cos(a)*d,AR.x0+e.r+4,AR.x1-e.r-4),y=clamp(P.y+Math.sin(a)*d,AR.y0+e.r+4,AR.y1-e.r-4);
-   if(room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+e.r+4))continue;const h=hyp(x-P.x,y-P.y);if(h>=d*0.9)return[x,y];if(h>bd){bd=h;best=[x,y];}}
-  return best||[e.x,e.y];}
- function etatPas(e,dt){const S=e.asm,st=S.st,X=ETAT(e);if(!X)return;
-  if(S.ombre){const O=S.ombre;
-   if(!O.on){O.t-=dt;if(O.t<=0&&st.ph==='pause'&&!S.dash&&e.stun<=0){O.on=true;O.d=X.dureeS;sfx('dash');for(let i=0;i<10;i++)parts.push({x:e.x+rand(-e.r,e.r),y:e.y+rand(-e.r,e.r),vx:rand(-40,40),vy:rand(-60,-10),life:0.6,max:0.6,size:rand(5,10),col:'#2a2238',layer:'post',drag:2,grow:1.2,a:0.55});}}
-   else{O.d-=dt;if(O.d<=0){O.on=false;O.t=X.cycleS;const [x,y]=pointPres(e,X.reparait);e.x=x;e.y=y;sparks(x,y,8,'#c9b4ff');sfx('dash');}}
-   O.a=RM?(O.on?X.alpha:1):O.a+((O.on?X.alpha:1)-O.a)*Math.min(1,dt*14);}
-  if(S.soin){const R=S.soin;
-   if(R.c>0){R.c-=dt;
-    if(e.stun>0||R.pris>=X.rupture*e.maxHp){R.c=0;R.t=X.cycleS;sparks(e.x,e.y,8,'#7cf0a0');addNum(e.x,e.y-e.r-14,'Interrompu','asoin');}
-    else if(R.c<=0){const n=Math.min(e.maxHp-e.hp,e.maxHp*X.soin*(S.sv.force||1));e.hp+=n;R.t=X.cycleS;if(n>=1)addNum(e.x,e.y-e.r-14,'+'+Math.round(n),'asoin');sfx('heart');tlights.push({x:e.x,y:e.y,r:160,t:0.35,max:0.35,c:'bile'});}}
-   else{R.t-=dt;if(R.t<=0&&e.hp/e.maxHp*100<X.seuil){R.c=X.canalS;R.pris=0;}}}
-  if(S.garde){const Gd=S.garde;
-   if(Gd.on>0){Gd.on-=dt;if(Gd.on<=0)Gd.t=X.cycleS-X.dureeS;}
-   else{Gd.t-=dt;if(Gd.t<=0){Gd.on=X.dureeS;sfx('chomp');}}}}
- // dégâts qu'il subit : la carapace les réduit ; pendant la canalisation du soin, on les compte pour l'interrompre
- const _het=hitEnemy;hitEnemy=function(e,dmg,o){
-  if(e&&e.asm&&e.asm.garde&&e.asm.garde.on>0&&typeof dmg==='number'){const X=A.etats.carapace;dmg*=1-Math.min(X.reduitMax,X.reduit*(e.asm.sv.force||1));}
-  const h0=e&&e.asm&&e.asm.soin&&e.asm.soin.c>0?e.hp:null;const r=_het.call(this,e,dmg,o);
-  if(h0!=null&&e.asm.soin)e.asm.soin.pris+=Math.max(0,h0-e.hp);return r;};
- // dégâts que tu subis : dans le halo d'un porteur de Lumière, tu en prends plus (toutes les sources)
- function halo(){for(const e of enemies){if(e.dead||!e.asm||e.asm.mont)continue;const X=ETAT(e);if(X&&e.asm.sv.etat==='halo'&&hyp(P.x-e.x,P.y-e.y)<X.rayon)return 1+X.expose*(e.asm.sv.force||1);}return 1;}
- const _hpe=hurtPlayer;hurtPlayer=function(dmg,src){try{if(room&&room.asm&&P&&!P.dead)dmg*=halo();}catch(err){}return _hpe.call(this,dmg,src);};
- // au sol, sous lui : le halo doré, et l'anneau vert du soin qui se resserre
- function etatSol(c,e){const S=e.asm,X=ETAT(e);if(!X||S.mont)return;
-  if(S.sv.etat==='halo'){const dans=hyp(P.x-e.x,P.y-e.y)<X.rayon,pul=RM?1:0.85+0.15*Math.sin(T*3);c.save();
-   const g=c.createRadialGradient(e.x,e.y,X.rayon*0.2,e.x,e.y,X.rayon);g.addColorStop(0,`rgba(255,226,140,${0.02})`);g.addColorStop(0.85,`rgba(255,214,110,${(dans?0.16:0.08)*pul})`);g.addColorStop(1,'rgba(255,214,110,0)');
-   c.fillStyle=g;c.beginPath();c.arc(e.x,e.y,X.rayon,0,TAU);c.fill();
-   c.strokeStyle=`rgba(255,222,130,${(dans?0.85:0.5)*pul})`;c.lineWidth=dans?2.4:1.6;c.setLineDash([3,7]);c.lineDashOffset=RM?0:T*12;c.beginPath();c.arc(e.x,e.y,X.rayon,0,TAU);c.stroke();c.setLineDash([]);
-   if(dans){c.globalCompositeOperation='lighter';glow(c,P.x,P.y-6,26,'255,220,120',0.35*pul);}c.restore();}
-  if(S.soin&&S.soin.c>0){const k=1-S.soin.c/X.canalS;c.save();c.strokeStyle=`rgba(124,240,160,${0.5+0.4*k})`;c.lineWidth=3;c.beginPath();c.arc(e.x,e.y,e.r*(2.6-1.4*k),0,TAU);c.stroke();
-   c.fillStyle=`rgba(124,240,160,${0.08+0.12*k})`;c.beginPath();c.arc(e.x,e.y,e.r*(2.6-1.4*k),0,TAU);c.fill();c.restore();}}
- // sur lui : arcs de la carapace, lueur de la fureur
- function etatSurLui(c,e){const S=e.asm;if(!S.sv||!S.sv.etat)return;
-  if(S.garde&&S.garde.on>0){const al=Math.min(1,S.garde.on/0.25);c.save();c.strokeStyle=`rgba(190,210,235,${0.85*al})`;c.lineWidth=4;const rot=RM?0:T*1.5;
-   for(let i=0;i<6;i++){const a=i/6*TAU+rot;c.beginPath();c.arc(e.x,e.y,e.r*1.35,a,a+0.72);c.stroke();}c.restore();}
-  if(S.sv.etat==='fureur'){c.save();c.globalCompositeOperation='lighter';glow(c,e.x,e.y+e.r*0.3,e.r*2,'255,140,50',RM?0.45:0.38+0.14*Math.sin(T*7));c.restore();
-   c.save();c.strokeStyle=`rgba(255,160,70,${RM?0.6:0.45+0.2*Math.sin(T*7)})`;c.lineWidth=2;c.beginPath();c.arc(e.x,e.y,e.r*1.2,0,TAU);c.stroke();c.restore();}}
- // le Voile : il s'efface (corps, masque et icônes)
- const _deb3=drawEnemyBody;drawEnemyBody=function(e){const O=e.asm&&e.asm.ombre;if(!O||O.a>=0.999)return _deb3(e);ctx.save();ctx.globalAlpha*=O.a;try{_deb3(e);}finally{ctx.restore();}};
- const _dep3=drawEnemyPost;drawEnemyPost=function(e){const O=e.asm&&e.asm.ombre;if(!O||O.a>=0.999)return _dep3(e);ctx.save();ctx.globalAlpha*=O.a;try{_dep3(e);}finally{ctx.restore();}};
- NUMSTYLE.asoin=[17,'#7cf0a0'];
+ NUMSTYLE.asoin=[17,'#7cf0a0'];   // « +N » vert du porteur qui se soigne (variante Vorace)
  function update(e,dt,rooted){const S=e.asm,st=S.st;let fige=false;
-  if(S.mont){montStep(e,dt);asmPas(A,st,{dt,act:RUN.act,pv:100,dist:999,autre:true,fige:false},S.rnd);return;}
+  if(S.mont){montStep(e,dt);asmPas(A,st,{dt,act:RUN.act,pv:100,dist:999,autre:true,fige:false},S.rnd,SBJ);return;}
   if(e.stun>0){e.stun-=dt/A.etourdissement;fige=true;}
-  etatPas(e,dt);if(S.ombre&&S.ombre.on)fige=true;   // v17.14 : effacé, il ne lance rien, ne bouge pas et ne touche pas
-  if(S.sb){sbMaj(e,dt,rooted,fige);return;}   // v17.15 : Masqué d'essai des armes de la Brume (sa propre file d'étapes)
+  if(S.sb&&S.sb.seul){sbMaj(e,dt,rooted,fige);return;}   // v17.15 : Masqué d'essai des armes de la Brume (sa propre file d'étapes)
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
-  const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,autre:!tg.pl||zoneAutre(e),fige},S.rnd);
+  // v17.19 · l'arme de la Brume portée : sbPas (par asmPas) sait que sa zone vit encore (onde, projectiles, ruée) et que tu es étourdi ;
+  // il attend aussi la fin de ses propres zones lâchées (onde, projectiles d'une attaque interrompue) avant d'en ouvrir une autre.
+  const B=S.sb,vivant=!!(B&&(B.vivants||[]).some(f=>f()));
+  const ev=asmPas(A,st,{dt,act:RUN.act,pv:e.hp/e.maxHp*100,dist:dP,autre:!tg.pl||zoneAutre(e)||ZR.length>0||vivant,fige,vivant,etourdi:sbEtourdi()},S.rnd,SBJ);
   for(const x of ev)onEvent(e,x);
   if(S.flash){S.flash.t-=dt;if(S.flash.t<=0)S.flash=null;}
-  // v17.9 · les taches restent : tant que tu y es, elles blessent toutes les tic secondes
-  if(S.taches){const Tc=S.taches;Tc.t+=dt;Tc.tic-=dt;
-   if(Tc.tic<=0){Tc.tic=Tc.z.X.tic;if(!P.dead&&inZone(Tc.z,P.x,P.y,P.r*0.3))hurtPlayer(Tc.dmg,e);}}
-  // v17.11 · tourbillon : il t'attire vers son centre (sauf pendant une esquive), son cœur blesse à intervalle
-  if(S.tourb){const Tb=S.tourb,zz=Tb.z;Tb.t+=dt;Tb.tic-=dt;
-   if(!P.dead&&P.dashT<=0){const dx=zz.cx-P.x,dy=zz.cy-P.y,d=hyp(dx,dy);if(d<zz.r&&d>2){const v=Math.min(d,zz.X.attire*dt);P.x+=dx/d*v;P.y+=dy/d*v;collidePlayer();}}
-   if(Tb.tic<=0){Tb.tic=zz.X.tic;if(!P.dead&&Tb.max-Tb.t>zz.X.finS&&hyp(P.x-zz.cx,P.y-zz.cy)<zz.core+P.r*0.3)hurtPlayer(Tb.dmg,e);}}   // les dernières finS secondes : plus de tic, pour que le coup final ne tombe pas dans l'invulnérabilité du dernier
-  // v17.13 · fil accroché : il te tire vers lui (tire px/s) jusqu'au contact ; une esquive le coupe
-  if(S.fil){const F=S.fil;F.t+=dt;
-   if(F.acc&&!P.dead){if(P.dashT>0){F.acc=false;sparks(P.x,P.y,6,'#f6ecc8');}
-    else{const dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy),stop=e.r+P.r+14;if(d>stop){const v=Math.min(d-stop,F.z.X.tire*dt);P.x+=dx/d*v;P.y+=dy/d*v;collidePlayer();}}}}
-  // v17.13 · faisceau : le rayon balaie le secteur d'un bord à l'autre, il blesse une fois quand il te passe dessus
-  if(S.beam){const Bm=S.beam,zz=Bm.z;Bm.t+=dt;Bm.ang=Bm.a0+Bm.dir*zz.arc*clamp(Bm.t/Bm.max,0,1);
-   if(!Bm.hit&&!P.dead){const dx=P.x-e.x,dy=P.y-e.y,cs=Math.cos(Bm.ang),sn=Math.sin(Bm.ang),u=dx*cs+dy*sn,v=-dx*sn+dy*cs;
-    if(u>=-4&&u<=zz.len&&Math.abs(v)<zz.w/2+P.r*0.5){Bm.hit=true;hurtPlayer(Bm.dmg,e);}}}
-  // v17.11 · cercles : les anneaux frappent l'un après l'autre, du centre vers l'extérieur, toutes les battueS secondes
-  if(S.cercles){const Cc=S.cercles,zz=Cc.z;Cc.t+=dt;
-   while(Cc.i<zz.n&&Cc.t>=Cc.i*zz.X.battueS){const i=Cc.i++;if(!P.dead&&dansAnneau(zz,i,P.x,P.y,P.r*0.5))hurtPlayer(Cc.dmg,e);
-    sfx('bell');if(i===0)shake(3,0.12);sparks(zz.cx+Math.cos(i*2.1)*(i*zz.pas+zz.w/2),zz.cy+Math.sin(i*2.1)*(i*zz.pas+zz.w/2),4,'#ff6a5a');}}
   const z=S.z;
   if(z&&st.ph==='charge'){const k=1-st.t/st.tot;
-   if((z.forme==='couloir'||z.forme==='fil')&&k<z.X.suivi){z.a=Math.atan2(P.y-e.y,P.x-e.x);z.x=e.x;z.y=e.y;}
-   else if((z.forme==='cone'||z.forme==='rayons'||z.forme==='faisceau')&&k<0.5){z.a=Math.atan2(P.y-e.y,P.x-e.x);z.x=e.x;z.y=e.y;}
+   if(z.forme==='couloir'&&k<z.X.suivi){z.a=Math.atan2(P.y-e.y,P.x-e.x);z.x=e.x;z.y=e.y;}
+   else if((z.forme==='cone'||z.forme==='rayons')&&k<0.5){z.a=Math.atan2(P.y-e.y,P.x-e.x);z.x=e.x;z.y=e.y;}
    e.ang=z.a;}
+  const sst=st.sb,et=sst&&sst.etapes[sst.i];
+  if(B)sbSuivi(e,B,dt);
   if(S.dash&&!fige){const D=S.dash,st2=Math.min(D.left,D.v*dt);e.x+=Math.cos(D.a)*st2;e.y+=Math.sin(D.a)*st2;D.left-=st2;e.ang=D.a;
    if(!D.hit&&!P.dead&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){D.hit=true;hurtPlayer(D.dmg,e);}
    if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);S.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');if(st.ph==='effet')asmFin(A,st,null);S.z=null;}
    else if(D.left<=0){S.dash=null;if(st.ph==='effet')asmFin(A,st,null);}}
-  else if(!fige&&!rooted&&(st.ph==='pause'||st.ph==='intro'||(st.ph==='effet'&&(S.taches||S.tourb||S.cercles))||(st.ph==='charge'&&S.z&&(A.bougeCharge||[]).includes(S.z.forme))))move(e,dt,sp,tg,dP,st.att>0);
-  if(!S.dash&&!P.dead&&dP<e.r+P.r-2&&!(S.ombre&&S.ombre.on))contact(e,e.dmg*A.stats.contact);
-  // attaque passive : un trait vers toi à intervalle régulier, en plus de ses sorts (pas pendant son apparition)
+  else if(B&&B.dash){if(!fige)sbRuee(e,B,dt);}
+  else if(!fige&&!rooted&&(sst?(sst.ph==='attente'||sst.ph==='entracte'||(sst.ph==='charge'&&et&&et.sur!=='lui')||sst.ph==='effet')
+   :(st.ph==='pause'||st.ph==='intro'||(st.ph==='charge'&&S.z&&(A.bougeCharge||[]).includes(S.z.forme)))))move(e,dt,sp,tg,dP,st.att>0);
+  if(!S.dash&&!(B&&B.dash)&&!P.dead&&!S.sansContact&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);
+  // attaque passive : un trait vers toi à intervalle régulier, en plus de ses sorts (pas pendant son apparition ;
+  // v17.19 : pas pendant une arme de la Brume, dont la sortie est jugée sans lui)
   const PS=A.passive;if(PS&&st.ph!=='intro'){if(S.pas==null)S.pas=PS.intervalleS;
-   if(!fige&&tg.pl&&!P.dead&&dP<=PS.portee&&!S.dash)S.pas-=dt;
+   if(!fige&&tg.pl&&!P.dead&&dP<=PS.portee&&!S.dash&&!sst)S.pas-=dt;
    if(S.pas<=0){S.pas=PS.intervalleS;const fp=facePos(e),a=Math.atan2(P.y-fp[1],P.x-fp[0]),v=PS.vitesse*spdMul();
     eproj.push({x:fp[0]+Math.cos(a)*8,y:fp[1]+Math.sin(a)*8,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:6,dmg:e.dmg*PS.degats,life:4,from:e});sfx('shoot');}}}
  // ── v17.15 · Les armes de la Brume, en salle. Rien ne s'en sert en jeu normal : seul le Masqué d'essai (index.html?brume=…) porte e.asm.sb.
@@ -9267,7 +9227,7 @@ function demoBoot(cls){
  // une zone à la fois (l'étape suivante attend que la précédente ait fini, projectiles, onde et ruée compris ; les autres ennemis attendent).
  // Pas d'accélération de salle (spdMul) sur ses projectiles, son onde et sa ruée : leurs vitesses sont celles que la vérification a jugées.
  const SB={J:SBJ,essai:null};
- function sbOrigine(e){return{lx:e.x,ly:e.y,er:e.r,arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)};}
+ function sbOrigine(e){return{lx:e.x,ly:e.y,er:e.r,pr:P.r,arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)};}
  function sbCtx(e,B,et){return{lx:e.x,ly:e.y,er:e.r,px:P.x,py:P.y,ax:B.anc?B.anc[0]:null,ay:B.anc?B.anc[1]:null,a:Math.atan2(P.y-e.y,P.x-e.x),prec:B.prec,rnd:e.asm.rnd};}
  // fixer la géométrie d'une étape (au chargement si elle ne suit pas, au figement sinon) ; null : aucune sortie, l'étape saute
  function sbFixe(e,B,et){const pc=sbPlacer(SBJ,A,et,sbCtx(e,B,et),sbOrigine(e),RUN.act);
@@ -9287,6 +9247,10 @@ function demoBoot(cls){
     if(SB.essai)(SB.essai.etJ=SB.essai.etJ||[]).push({t:+RUN.time.toFixed(3),d,i:B.st.i});}}}
  // v17.18 · le joueur étourdi : ses commandes ne répondent plus (le menu, la pause et le son, si) ; il reprend la main dès la fin
  const sbEtourdi=()=>!!(P&&P.sbEt&&P.sbEt.etT>0&&!P.dead);
+ // v17.19 · étourdi = intouchable par tous. L'invulnérabilité posée par sbTouche ne suffit pas en présence d'autres ennemis : depuis la v17.5,
+ // celle qui suit un coup ne protège que de l'ennemi qui l'a donné (P.hitIT), et le coup qui étourdit en pose une plus longue que l'étourdissement.
+ // Tout coup reçu pendant l'étourdissement est donc refusé ici (ennemis, projectiles, feinte) ; seuls les coûts que tu t'infliges (loseHp) passent.
+ const _hpEt=hurtPlayer;hurtPlayer=function(){if(sbEtourdi())return;return _hpEt.apply(this,arguments);};
  const _miE=moveInput;moveInput=function(){if(sbEtourdi())return[0,0];return _miE.apply(this,arguments);};
  const _tdE=tryDash;tryDash=function(){if(sbEtourdi())return;return _tdE.apply(this,arguments);};
  const _upE=updatePlayer;updatePlayer=function(dt){if(!sbEtourdi())return _upE.apply(this,arguments);
@@ -9300,7 +9264,8 @@ function demoBoot(cls){
  function sbLache(e,B,et){const z0=B.zc;B.zc=null;if(!z0)return;const dmg=e.dmg*sbCoup(SBJ,et,RUN.act,B.k);B.vivants=[];
   for(const z of z0.zs){
    if(z.forme==='anneau'){const g={x:z.x,y:z.y,r:z.r0,v:z.v,max:z.max,ga:z.ga,gw:z.gw,dmg,hit:false,src:e,sb:{e,B,et}};ZR.push(g);B.vivants.push(()=>ZR.includes(g));sfx('howl');continue;}
-   if(z.forme==='couloir'&&z.mode==='ruee'){B.dash={a:z.a,v:z.v,left:z.len,hit:false,dmg,et};B.vivants.push(()=>!!B.dash);continue;}
+   // v17.19 · la ruée part de l'origine de sa zone (x0, y0) et suit sa ligne : ni le recul ni la séparation entre ennemis (collideEnemy) ne l'en écartent
+   if(z.forme==='couloir'&&z.mode==='ruee'){B.dash={a:z.a,v:z.v,left:z.len,hit:false,dmg,et,x0:z.x!=null?z.x:e.x,y0:z.y!=null?z.y:e.y,fait:0};B.vivants.push(()=>!!B.dash);continue;}
    if(z.forme==='rayons'||z.forme==='projectile'){const L=[],trav=(et.v||[]).includes('traverse');
     for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec,p={x:z.x+Math.cos(aa)*e.r,y:z.y+Math.sin(aa)*e.r,vx:Math.cos(aa)*z.v,vy:Math.sin(aa)*z.v,r:z.pr,dmg,life:(z.len-e.r)/z.v,from:e,sbL:z.len-e.r,sbD:0,sbNav:z.nav||false,sbTrav:trav};eproj.push(p);L.push(p);}
     B.vivants.push(()=>L.some(p=>!p.dead&&eproj.includes(p)));sfx('shoot');continue;}
@@ -9310,7 +9275,25 @@ function demoBoot(cls){
    else if(z.forme==='cone'){fx.push({k:'slash',x:z.x,y:z.y-6,a:z.a,r:z.r,arc:z.arc,dir:1,style:'foe',t:0.2,max:0.2});sfx('lame');}
    else{shake(4,0.16);sfx(z.forme==='couloir'?'lame':'explode');}
    (B.flash=B.flash||[]).push({z,t:SBJ.justice.flashS,max:SBJ.justice.flashS});}}
- // un pas du porteur : file d'étapes (sbPas), géométrie, déplacements, ruée, repousse
+ // une étape sans sortie saute : rien n'est posé, la file passe à la suite
+ function sbSaute(B){B.zc=null;B.st.ph='effet';B.st.t=0;}
+ // pendant le chargement : la zone suit (vise, ou centre sur toi) jusqu'à suivi, puis se fige (et c'est là qu'on lui cherche une sortie) ;
+ // puis les éclats des zones qui ont frappé, et la repousse. Partagé par le Masqué d'essai et le porteur (v17.19).
+ function sbSuivi(e,B,dt){const sst=B.st,et=sst.etapes[sst.i];
+  if(sst.ph==='charge'&&B.zc&&!B.zc.fige){const k=1-sst.t/sst.tot;
+   if(k<et.suivi)B.zc.zs=sbPieces(SBJ,et,Object.assign(sbCtx(e,B,et),{rnd:asmRng(B.graine=B.graine||((e.asm.rnd()*1e9)>>>0))})).zs;
+   else if(!sbFixe(e,B,et))sbSaute(B);}
+  if(sst.ph==='charge'&&B.zc&&B.zc.zs[0]&&B.zc.zs[0].a!=null&&et&&et.sur==='lui')e.ang=B.zc.zs[0].a;
+  if(sst.ph!=='charge')B.graine=0;
+  if(B.flash){for(const f of B.flash)f.t-=dt;B.flash=B.flash.filter(f=>f.t>0);}
+  if(B.pousse&&!P.dead){const Q=B.pousse,s=Math.min(Q.t,dt);P.x+=Q.ux*Q.v*s;P.y+=Q.uy*Q.v*s;collidePlayer();Q.t-=dt;if(Q.t<=0)B.pousse=null;}}
+ // la ruée : le corps du porteur fonce (sans accélération de salle), touche une fois, s'assomme contre un mur
+ function sbRuee(e,B,dt){const D=B.dash,s2=Math.min(D.left,D.v*dt);D.fait=(D.fait||0)+s2;
+  if(D.x0!=null){e.x=D.x0+Math.cos(D.a)*D.fait;e.y=D.y0+Math.sin(D.a)*D.fait;e.kbx=0;e.kby=0;}else{e.x+=Math.cos(D.a)*s2;e.y+=Math.sin(D.a)*s2;}D.left-=s2;e.ang=D.a;
+  if(!D.hit&&!P.dead&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){D.hit=true;sbTouche(e,B,D.et,D.dmg,e.x,e.y);}
+  if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);B.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');}
+  else if(D.left<=0)B.dash=null;}
+ // un pas du Masqué d'essai : file d'étapes (sbPas), géométrie, déplacements, ruée, repousse
  function sbMaj(e,dt,rooted,fige){const S=e.asm,B=S.sb,st=S.st,F=SBJ.familles[B.fid];
   const tg=enemyTarget(e),dP=hyp(P.x-e.x,P.y-e.y),sp=e.spd*(e.exposed?1-P.s.exposeSlow:1)*(P.nightT>0?0.5:1)*(e.hasteT>0?1.3:1)*v6Slow(e);
   const vivant=(B.vivants||[]).some(f=>f());
@@ -9318,25 +9301,15 @@ function demoBoot(cls){
   for(const [t,i] of ev){const et=B.st.etapes[i];
    if(t==='charge'){if(i===0){B.k=sbPlafond(SBJ,B.st.etapes,RUN.act);B.prec=null;B.anc=null;B.etAtt=0;}if(SB.essai)(SB.essai.chJ=SB.essai.chJ||[]).push({t:+RUN.time.toFixed(3),i,et:sbEtourdi()});
     if(et.suivi>0){B.zc={zs:sbPieces(SBJ,et,sbCtx(e,B,et)).zs,fige:false};B.dbg='suit';}
-    else if(!sbFixe(e,B,et)){B.st.ph='effet';B.st.t=0;continue;}
+    else if(!sbFixe(e,B,et)){sbSaute(B);continue;}
     sfx('asm_ch',B.st.tot);B.dernier={i,et,charge:B.st.tot,plancher:sbPlancher(A,RUN.act,false)};}
    else if(t==='lache')sbLache(e,B,et);
    else if(t==='fin'){B.vivants=[];}}
-  // pendant le chargement : la zone suit (vise, ou centre sur toi) jusqu'à suivi, puis se fige (et c'est là qu'on lui cherche une sortie)
   const sst=B.st,et=sst.etapes[sst.i];
-  if(sst.ph==='charge'&&B.zc&&!B.zc.fige){const k=1-sst.t/sst.tot;
-   if(k<et.suivi)B.zc.zs=sbPieces(SBJ,et,Object.assign(sbCtx(e,B,et),{rnd:asmRng(B.graine=B.graine||((e.asm.rnd()*1e9)>>>0))})).zs;
-   else if(!sbFixe(e,B,et)){sst.ph='effet';sst.t=0;}}
-  if(sst.ph==='charge'&&B.zc&&B.zc.zs[0]&&B.zc.zs[0].a!=null&&et.sur==='lui')e.ang=B.zc.zs[0].a;
-  if(sst.ph!=='charge')B.graine=0;
+  sbSuivi(e,B,dt);
   // ce que voient les autres ennemis et le dessin du Masqué : il tient la zone de sa première charge à la fin de l'attaque
   st.ph=sst.ph==='charge'?'charge':(sst.tient&&sst.ph!=='repos')?'effet':'pause';st.t=sst.t;st.tot=sst.tot||1;st.k='sb';st.bloque=sst.bloque;st.att=sst.att;
-  if(B.flash){for(const f of B.flash)f.t-=dt;B.flash=B.flash.filter(f=>f.t>0);}
-  if(B.pousse&&!P.dead){const Q=B.pousse,s=Math.min(Q.t,dt);P.x+=Q.ux*Q.v*s;P.y+=Q.uy*Q.v*s;collidePlayer();Q.t-=dt;if(Q.t<=0)B.pousse=null;}
-  if(B.dash&&!fige){const D=B.dash,s2=Math.min(D.left,D.v*dt);e.x+=Math.cos(D.a)*s2;e.y+=Math.sin(D.a)*s2;D.left-=s2;e.ang=D.a;
-   if(!D.hit&&!P.dead&&hyp(P.x-e.x,P.y-e.y)<e.r+P.r){D.hit=true;sbTouche(e,B,D.et,D.dmg,e.x,e.y);}
-   if(crashed(e)){e.stun=Math.max(e.stun,(A.capacites.charge.sonne||0.6)*A.etourdissement);B.dash=null;shake(4,0.15);sparks(e.x,e.y,8,'#d8c9b0');}
-   else if(D.left<=0)B.dash=null;}
+  if(B.dash){if(!fige)sbRuee(e,B,dt);}
   else if(!fige&&!rooted&&(sst.ph==='repos'||sst.ph==='attente'||sst.ph==='entracte'||(sst.ph==='charge'&&et&&et.sur!=='lui')||(sst.ph==='effet'&&!B.dash)))move(e,dt,sp,tg,dP,sst.ph==='attente'&&sst.att>0);
   if(!B.dash&&!P.dead&&!S.sansContact&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);}
  // dessin : la zone qui charge (k : avancement), les éclats des zones qui ont frappé ; projectiles : leur trajet en pointillé et l'orbe au liseré qui grossit
@@ -9367,7 +9340,7 @@ function demoBoot(cls){
   for(const k of L){const X=SBJ.renforts[k];if(X.pv){e.maxHp*=1+X.pv;e.hp=e.maxHp;}if(X.degats)e.dmg*=1+X.degats;if(X.vitesse)e.spd*=1+X.vitesse;red+=X.reduit||0;}
   if(red>0)e.asm.sbReduit=Math.min(0.3,red);}
  const _hetB=hitEnemy;hitEnemy=function(e,dmg,o){if(e&&e.asm&&e.asm.sbReduit&&typeof dmg==='number')dmg*=1-e.asm.sbReduit;return _hetB.call(this,e,dmg,o);};
- window.__asm.sb={J:SBJ,SB,joueur:()=>P,temps:()=>RUN&&RUN.time,sbEtourdit,sbRenfort,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbPotentiel,sbIncompatibles,sbNouveau,sbPas};
+ window.__asm.sb={J:SBJ,SB,joueur:()=>P,temps:()=>RUN&&RUN.time,sbEtourdit,sbForce,sbRenfort,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbPotentiel,sbIncompatibles,sbNouveau,sbPas};
  // ── v17.15 · Mode d'essai des armes de la Brume (développement seulement : aucune touche, aucun accès en jeu normal)
  // index.html?brume=<famille>|tout [&classe=lum|gou|her|tis] [&acte=1|2|3] [&variante=double,vol…] [&renfort=pv,…] [&dieu=0]
  // Ouvre une salle vide avec un Masqué d'essai qui ne fait que l'attaque de cette famille, en boucle (sans trait passif, sans éveil ni rage).
@@ -9389,7 +9362,7 @@ function demoBoot(cls){
    const e=createEnemy(corps,W/2,AR.y0+150,true);if(!e||!e.asm){console.error('Masqué d’essai : pas d’assemblage');return;}
    e.xp=0;e.asm.mont=null;Object.assign(e.asm.st,{ph:'pause',t:0,caps:[],eveil:true,reserve:null});
    sbRenfort(e,E.renf);
-   e.asm.sb={fid,vars:E.vars,st:Object.assign(sbNouveau(SBJ,fid,E.vars),{ph:'repos',t:0.9}),k:1,recu:0,sauts:0};
+   e.asm.sb={fid,vars:E.vars,st:Object.assign(sbNouveau(SBJ,fid,E.vars),{ph:'repos',t:0.9}),k:1,recu:0,sauts:0,seul:true};
    if(E.bot)e.asm.sansContact=true;E.e=e;E.suivant=0;showCard(e,false);
    try{const t0=performance.now();E.verif=sbVerifier(SBJ,A,{familles:[fid],actes:[E.acte],pas:4,er:e.r});E.verif.ms=performance.now()-t0;
     if(E.verif.err.length)console.warn('Armes de la Brume · '+fid,E.verif.err);}catch(err){console.error(err);}
@@ -9445,65 +9418,11 @@ function demoBoot(cls){
   case 'croix':{c.translate(z.x,z.y);c.rotate(z.a);const arm=l=>()=>{c.beginPath();for(let i=0;i<4;i++){c.save();c.rotate(i*Math.PI/2);c.rect(z.w/2,-z.w/2,l-z.w/2,z.w);c.restore();}c.rect(-z.w/2,-z.w/2,z.w,z.w);};
     fill(a0,arm(z.len));fill(a1,arm(z.w/2+(z.len-z.w/2)*k));edge(()=>{c.beginPath();const w=z.w/2,L=z.len;c.moveTo(w,-w);c.lineTo(L,-w);c.lineTo(L,w);c.lineTo(w,w);c.lineTo(w,L);c.lineTo(-w,L);c.lineTo(-w,w);c.lineTo(-L,w);c.lineTo(-L,-w);c.lineTo(-w,-w);c.lineTo(-w,-L);c.lineTo(w,-L);c.closePath();});break;}
   case 'losanges':{const D=(h)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x,y-h);c.lineTo(x+h,y);c.lineTo(x,y+h);c.lineTo(x-h,y);c.closePath();}};fill(a0,D(z.h));fill(a1,D(z.h*k));edge(D(z.h));break;}
-  case 'damier':{const D=(s)=>()=>{c.beginPath();for(const [x,y] of z.cells)c.rect(x-s/2,y-s/2,s,s);};fill(a0,D(z.q));fill(a1,D(z.q*k));edge(D(z.q));break;}
-  case 'taches':{const D=(r)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x+r,y);c.arc(x,y,r,0,TAU);}};fill(a0,D(z.r));fill(a1,D(z.r*k));edge(D(z.r));break;}
-  case 'tourbillon':{const D=r=>()=>{c.beginPath();c.arc(z.cx,z.cy,r,0,TAU);};fill(a0,D(z.r));fill(a1,D(z.r*k));fill(0.16+0.2*k,D(z.core));edge(D(z.r));spirales(c,z,0.5+0.3*k);break;}
-  case 'fil':{c.translate(z.x,z.y);c.rotate(z.a);const P_=l=>()=>{c.beginPath();c.rect(0,-z.w/2,l,z.w);};fill(a0,P_(z.len));fill(a1,P_(z.len*k));edge(P_(z.len));
-    c.strokeStyle=`rgba(${EDGE},0.8)`;c.lineWidth=1.5;c.beginPath();c.moveTo(0,0);c.lineTo(z.len*k,0);c.stroke();break;}
-  case 'faisceau':{const P_=r=>()=>{c.beginPath();c.moveTo(z.x,z.y);c.arc(z.x,z.y,r,z.a-z.arc/2,z.a+z.arc/2);c.closePath();};fill(a0,P_(z.len));fill(a1,P_(z.len*k));edge(P_(z.len));
-    const sa=z.a-z.dir*z.arc/2;   // le bord de départ du rayon, et une flèche dans le sens du balayage
-    c.strokeStyle=`rgba(255,226,216,${0.55+0.35*k})`;c.lineWidth=3;c.beginPath();c.moveTo(z.x,z.y);c.lineTo(z.x+Math.cos(sa)*z.len,z.y+Math.sin(sa)*z.len);c.stroke();
-    const ra=z.len*0.62,ax=z.x+Math.cos(sa)*ra,ay=z.y+Math.sin(sa)*ra,tx=-Math.sin(sa)*z.dir,ty=Math.cos(sa)*z.dir;
-    c.fillStyle=`rgba(255,226,216,0.85)`;c.beginPath();c.moveTo(ax+tx*16,ay+ty*16);c.lineTo(ax-tx*4+ty*9,ay-ty*4-tx*9);c.lineTo(ax-tx*4-ty*9,ay-ty*4+tx*9);c.closePath();c.fill();break;}
-  case 'cercles':{const A_=()=>{c.beginPath();for(let i=0;i<z.n;i++)anneauPath(c,z,i);};fill(a0,A_);
-    c.save();c.beginPath();c.arc(z.cx,z.cy,z.R*k,0,TAU);c.clip();fill(a1,A_);c.restore();edge(A_);break;}}
-  c.restore();}
- // v17.11 · chemin d'un anneau des cercles (le premier est un disque) ; spirales du tourbillon (immobiles en mouvements réduits)
- function anneauPath(c,z,i){const lo=i*z.pas,hi=lo+z.w;c.moveTo(z.cx+hi,z.cy);c.arc(z.cx,z.cy,hi,0,TAU);if(i>0){c.moveTo(z.cx+lo,z.cy);c.arc(z.cx,z.cy,lo,0,TAU,true);}}
- function spirales(c,z,al){c.save();c.lineCap='round';c.strokeStyle=`rgba(${EDGE},${al})`;c.lineWidth=1.6;const rot=RM?0:-T*3.2;
-  for(let j=0;j<3;j++){c.beginPath();for(let s=0;s<=14;s++){const u=s/14,a=rot+j*TAU/3+u*2.3,r=z.r*0.96*(1-u)+z.core*u;if(s)c.lineTo(z.cx+Math.cos(a)*r,z.cy+Math.sin(a)*r);else c.moveTo(z.cx+Math.cos(a)*r,z.cy+Math.sin(a)*r);}c.stroke();}
-  c.restore();}
- // v17.13 · le rayon du faisceau : cœur clair, halo rouge, il balaie le secteur ; le fil : trait tendu jusqu'au joueur s'il l'a accroché
- function drawBeam(c,Bm,e){const zz=Bm.z,al=clamp((Bm.max-Bm.t)/0.2,0,1)*clamp(Bm.t/0.05,0,1);if(al<=0)return;c.save();
-  c.strokeStyle=`rgba(${FO},${0.22*al})`;c.lineWidth=2;c.setLineDash([6,8]);c.beginPath();c.arc(e.x,e.y,zz.len,zz.a-zz.arc/2,zz.a+zz.arc/2);c.stroke();c.setLineDash([]);
-  c.translate(e.x,e.y);c.rotate(Bm.ang);c.globalCompositeOperation='lighter';
-  c.fillStyle=`rgba(${FO},${0.3*al})`;c.fillRect(0,-zz.w,zz.len,zz.w*2);c.fillStyle=`rgba(255,110,96,${0.55*al})`;c.fillRect(0,-zz.w/2,zz.len,zz.w);c.fillStyle=`rgba(255,232,224,${0.9*al})`;c.fillRect(0,-zz.w*0.17,zz.len,zz.w*0.34);c.restore();}
- function drawFil(c,F,e){const zz=F.z,fp=facePos(e);c.save();c.lineCap='round';
-  if(F.acc&&!P.dead){const mx=(fp[0]+P.x)/2,my=(fp[1]+P.y)/2,sag=RM?0:Math.sin(T*18)*5;c.strokeStyle='rgba(255,226,216,0.9)';c.lineWidth=2;c.beginPath();c.moveTo(fp[0],fp[1]);c.quadraticCurveTo(mx+sag,my-sag,P.x,P.y-4);c.stroke();c.strokeStyle=`rgba(${FO},0.5)`;c.lineWidth=5;c.stroke();}
-  else if(F.t<0.25){const al=1-F.t/0.25;c.strokeStyle=`rgba(255,226,216,${0.8*al})`;c.lineWidth=2;c.beginPath();c.moveTo(zz.x,zz.y);c.lineTo(zz.x+Math.cos(zz.a)*zz.len,zz.y+Math.sin(zz.a)*zz.len);c.stroke();}
-  c.restore();}
- // v17.11 · le tourbillon actif : disque sombre qui tourne, cœur rouge, il se resserre à la fin
- function drawTourb(c,Tb){const z=Tb.z,left=Tb.max-Tb.t,al=clamp(left/0.3,0,1)*clamp(Tb.t/0.1,0,1);if(al<=0)return;c.save();
-  const rr=z.r*(0.82+0.18*clamp(left/0.3,0,1)),g=c.createRadialGradient(z.cx,z.cy,z.core*0.3,z.cx,z.cy,rr);
-  g.addColorStop(0,`rgba(120,14,18,${0.66*al})`);g.addColorStop(0.3,`rgba(${FO},${0.3*al})`);g.addColorStop(1,`rgba(${FO},${0.04*al})`);
-  c.fillStyle=g;c.beginPath();c.arc(z.cx,z.cy,rr,0,TAU);c.fill();
-  c.strokeStyle=`rgba(${EDGE},${(RM?0.75:0.55+0.25*Math.sin(T*10))*al})`;c.lineWidth=2;c.beginPath();c.arc(z.cx,z.cy,z.core,0,TAU);c.stroke();
-  spirales(c,{cx:z.cx,cy:z.cy,r:rr,core:z.core},0.7*al);c.restore();}
- // v17.11 · les cercles qui frappent : les anneaux à venir restent en liseré, chacun s'illumine à son tour puis s'éteint
- function drawCercles(c,Cc){const z=Cc.z,bt=z.X.battueS;c.save();
-  for(let i=0;i<z.n;i++){const dt_=Cc.t-i*bt;let fa,ea;
-   if(dt_<0){fa=0.1;ea=0.55;}else if(dt_<0.3){const q=1-dt_/0.3;fa=0.1+0.5*q;ea=0.55+0.4*q;}else continue;
-   c.beginPath();anneauPath(c,z,i);c.fillStyle=`rgba(${FO},${fa})`;c.fill();
-   c.strokeStyle=`rgba(${EDGE},${ea})`;c.lineWidth=1.8;if(dt_<0){strokeDash(c);}c.stroke();c.setLineDash([]);}
-  c.restore();}
- // v17.9 · les taches posées : flaques sombres aux bords qui ondulent, qui restent puis s'effacent (liseré fixe en mouvements réduits)
- function drawTaches(c,Tc){const z=Tc.z,left=Tc.max-Tc.t,al=clamp(left/0.4,0,1)*clamp(Tc.t/0.12,0,1);if(al<=0)return;c.save();
-  z.pts.forEach(([x,y],i)=>{const w=RM?z.sd[i]:z.sd[i]+T*1.6;c.save();c.translate(x,y);
-   const g=c.createRadialGradient(0,0,z.r*0.15,0,0,z.r*1.05);g.addColorStop(0,`rgba(120,14,18,${0.62*al})`);g.addColorStop(0.75,`rgba(${FO},${0.34*al})`);g.addColorStop(1,`rgba(${FO},0)`);
-   c.fillStyle=g;blobPath(c,z.r*1.04,w);c.fill();
-   c.strokeStyle=`rgba(${EDGE},${(RM?0.75:0.55+0.25*Math.sin(T*6+i))*al})`;c.lineWidth=1.8;c.setLineDash([6,6]);c.lineDashOffset=RM?0:-T*14;blobPath(c,z.r,w);c.stroke();c.setLineDash([]);
-   if(!RM)for(let j=0;j<2;j++){const a=z.sd[i]*3+j*2.4+T*0.8,rr=z.r*(0.25+0.3*((T*0.5+j*0.5+z.sd[i])%1));c.fillStyle=`rgba(255,150,130,${0.35*al})`;c.beginPath();c.arc(Math.cos(a)*rr,Math.sin(a)*rr,2.2,0,TAU);c.fill();}
-   c.restore();});
+  case 'damier':{const D=(s)=>()=>{c.beginPath();for(const [x,y] of z.cells)c.rect(x-s/2,y-s/2,s,s);};fill(a0,D(z.q));fill(a1,D(z.q*k));edge(D(z.q));break;}}
   c.restore();}
  const _dt=drawTelegraphs;
  drawTelegraphs=function(){_dt();try{const c=ctx;for(const e of enemies){if(e.dead||!e.asm)continue;const S=e.asm;
-   etatSol(c,e);
-   if(S.taches)drawTaches(c,S.taches);
-   if(S.tourb)drawTourb(c,S.tourb);
-   if(S.cercles)drawCercles(c,S.cercles);
-   if(S.beam)drawBeam(c,S.beam,e);
    if(S.sb)sbDessin(c,e);
-   if(S.fil)drawFil(c,S.fil,e);
    if(S.z&&S.st.ph==='charge')drawZone(c,S.z,clamp(1-S.st.t/S.st.tot,0,1),0);
    if(S.flash)drawZone(c,S.flash.z,1,S.flash.t/S.flash.max);}}catch(err){console.error(err);}};
  const _drg=drawRings;
@@ -9573,7 +9492,6 @@ function demoBoot(cls){
   try{const c=ctx,lit=st.ph==='charge',h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max),fis=e.hp/e.maxHp*100<=A.masque.fissurePV;
    let jx=0,jy=0;if(lit&&!RM&&A.signatures[st.k]){jx=rand(-0.7,0.7);jy=rand(-0.7,0.7);}
    if(S.rage&&!M){c.save();c.globalCompositeOperation='lighter';glow(c,e.x,e.y,e.r*2.1,'255,70,80',RM?0.32:0.24+0.12*Math.sin(T*9));c.restore();}
-   if(!M)etatSurLui(c,e);
    const [fx_,fy_]=facePos(e);if(M)montPost(c,e,M,fx_,fy_,h);else drawMask(c,fx_+jx,fy_+jy,h,fis?'fissure':'calme',{lit});
    const PS=A.passive;if(PS&&S.pas!=null&&S.pas>0&&S.pas<=PS.preavisS){const k=1-S.pas/PS.preavisS;c.save();c.globalCompositeOperation='lighter';glow(c,fx_,fy_+h*0.42,4+10*k,'255,110,100',0.5+0.4*k);c.restore();}
    const top=Math.min(topY(e),faceY(e)-h*0.5)-6;
@@ -9582,15 +9500,15 @@ function demoBoot(cls){
    if(lit){const k=clamp(1-st.t/st.tot,0,1),sig=!!A.signatures[st.k],bh=sig?7:5,y=top-8-bh;
     c.fillStyle='rgba(0,0,0,.8)';c.fillRect(e.x-w/2-2,y-2,w+4,bh+4);c.fillStyle=sig?(CO.signature||'#ff3d5a'):(CO.charge||'#ff5a50');c.fillRect(e.x-w/2,y,w*k,bh);
     if(sig){c.strokeStyle='rgba(255,240,245,.9)';c.lineWidth=1.4;c.strokeRect(e.x-w/2-1,y-1,w+2,bh+2);}}
-   const L=S.sb?['#']:[...st.caps,...(st.eveil?[]:['_']),st.sig,...(S.sv&&S.sv.etat?['@']:[])],sz=15,gap=4,tw=L.length*sz+(L.length-1)*gap+6+(S.sv&&S.sv.etat?6:0),iy=top-(lit?(A.signatures[st.k]?27:25):12)-sz/2;
+   const RF=S.sv&&S.sv.renfort&&SBJ.renforts[S.sv.renfort],L=S.sb&&S.sb.seul?['#']:[...st.caps,...(st.eveil?[]:['_']),st.sig,...(RF?['@']:[])],sz=15,gap=4,tw=L.length*sz+(L.length-1)*gap+6+(RF?6:0),iy=top-(lit?(A.signatures[st.k]?27:25):12)-sz/2;
    c.fillStyle='rgba(8,6,14,.78)';rr(c,e.x-tw/2-3,iy-sz/2-4,tw+6,sz+8,6);c.fill();
    L.forEach((k,i)=>{const x=e.x-tw/2+3+i*(sz+gap)+(k===st.sig?6:k==='@'?12:0)+sz/2;const on=lit&&k===st.k;
     if(k==='_'){drawIcon(c,'u_sleep',x,iy,sz,'rgba(185,170,220,.55)',1.8);return;}
     if(k==='#'){const F=SBJ.familles[S.sb.fid];c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();   // v17.15 : l'icône de sa famille, cerclée de lavande
      if(on){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.2,'255,120,110',0.6);c.restore();}drawIcon(c,F.ic,x,iy,on?sz*1.25:sz,on?'#ffffff':'rgba(240,232,255,.98)',2);return;}
-    if(k==='@'){const ET=A.etats[S.sv.etat];c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();
+    if(k==='@'){const ET=RF;c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();
      drawIcon(c,ET.ic,x,iy,sz,'rgba(240,232,255,.98)',2);return;}
-    const X=A.capacites[k]||A.signatures[k];
+    const X=asmSb(k)?SBJ.familles[asmSb(k)]:A.capacites[k]||A.signatures[k];   // v17.19 : l'arme de la Brume montre l'icône de sa famille
     if(S.sv&&k===S.sv.cap){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.05,'215,200,255',RM?0.5:0.4+0.15*Math.sin(T*3));c.restore();c.strokeStyle='rgba(225,212,255,.85)';c.lineWidth=1.2;c.beginPath();c.arc(x,iy,sz*0.72,0,TAU);c.stroke();}
     if(on){c.save();c.globalCompositeOperation='lighter';glow(c,x,iy,sz*1.2,'255,120,110',0.6);c.restore();}
     drawIcon(c,X.ic,x,iy,on?sz*1.25:sz,on?'#ffffff':k===st.sig?'rgba(225,205,255,.98)':'rgba(236,228,250,.92)',k===st.sig?2.3:2);});
@@ -9601,7 +9519,7 @@ function demoBoot(cls){
  const _ke=killEnemy;
  killEnemy=function(e){const was=e&&e.dead;_ke(e);
   try{if(!was&&e&&e.dead&&e.asm){const h=clamp(e.r*A.masque.taille,A.masque.min,A.masque.max);
-   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;e.asm.taches=null;e.asm.tourb=null;e.asm.cercles=null;e.asm.fil=null;e.asm.beam=null;if(e.asm.sb){e.asm.sb.zc=null;e.asm.sb.dash=null;e.asm.sb.flash=null;}sfx('asm_brise');hideCard();
+   const fp=facePos(e);ZB.push({x:fp[0],y:fp[1],h,t:A.masque.brisureS,max:A.masque.brisureS});e.asm.z=null;e.asm.flash=null;if(e.asm.sb){e.asm.sb.zc=null;e.asm.sb.dash=null;e.asm.sb.flash=null;}sfx('asm_brise');hideCard();
    if(room&&room.asm){room.asm.vaincu=true;}
    if(e.asm.sv)chron('asmSv',{n:e.asm.sv.n});
    RUN.asm=RUN.asm||{dernier:null,vaincus:[]};RUN.asm.vaincus.push(e.asm.nom);
