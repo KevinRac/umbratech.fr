@@ -1,14 +1,19 @@
-# Ring Dodge (version d'essai) : tout passe par porte.php, qui vérifie l'accès des testeurs.
-# Le jeu (jeu/) et l'empreinte du mot de passe (acces.local.php) ne sont jamais servis directement.
+# Ring Dodge (version d'essai, ouverte à tous) : le jeu construit est dans jeu/,
+# servi à l'adresse /ringdodge/ sans le « jeu/ » dans l'adresse.
 Options -Indexes
+DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^porte\.php$ - [L]
-  RewriteRule ^ porte.php [L,QSA]
-</IfModule>
-<IfModule !mod_rewrite.c>
-  Require all denied
+  RewriteRule ^jeu/ - [L]
+  RewriteRule ^(.*)$ jeu/$1 [L]
 </IfModule>
 <IfModule mod_headers.c>
   Header set X-Robots-Tag "noindex, nofollow"
+  # Fichiers dont le nom contient leur version (assets/) : cache long ; le reste : toujours revalidé
+  <FilesMatch "\.(html|json|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>
