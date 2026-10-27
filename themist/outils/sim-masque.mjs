@@ -227,7 +227,7 @@ ok(A.attenteS >= 1.5 && A.atteinte > 0 && A.atteinte <= 1, 'attenteS et atteinte
   console.log(`toujours à 600 px, 40 s par combinaison : ${lances} zones lancées (aucune au contact), ${ren} sorts et ${sbRen} attaques abandonnés`); }
 // v17.19 · branchements du jeu : la feinte du Brumeux attend (asmZone), le Masqué l'attend (zoneAutre), une seule source d'étourdissement
 ok(/function zoneAutre\(e\)\{if\(rings\.length\|\|\(room&&room\.bl\)\)return true;/.test(html), 'index.html : le Masqué attend la fin de la feinte du Brumeux');
-ok(/bluffTick=function\(dt\)\{\s*if\(room&&room\.asm&&!room\.bl&&\(asmZone\(\)\|\|sbEtourdi\(\)\)\)/.test(html), 'index.html : la feinte attend la zone du Masqué');
+ok(/bluffTick=function\(dt\)\{\s*if\(room&&!room\.bl&&\(\(room\.asm&&\(asmZone\(\)\|\|sbEtourdi\(\)\)\)\|\|glasZone\(\)\)\)/.test(html), 'index.html : la feinte attend la zone du Masqué (et, v17.22, un geste du Glas)');
 { const ecr = [...html.matchAll(/P\.sbEt\s*=(?!=)[^;]*/g)].map(x => x[0]), pose = [...html.matchAll(/\.etT\s*=(?!=)[^;,]*/g)].map(x => x[0]);
   ok(ecr.every(x => x === 'P.sbEt=null' || x === 'P.sbEt={etT:0,immT:0})') && pose.length === 1 && pose[0] === '.etT=d'
     && /P\.sbEt\|\|\(P\.sbEt=\{etT:0,immT:0\}\);s\.att=B\.etAtt\|\|0;const d=sbEtourdit\(/.test(html), `index.html : l\u2019étourdissement du joueur ne passe que par sbEtourdit (${ecr.join(' | ')} ; ${pose.join(' | ')})`); }

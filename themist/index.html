@@ -9825,6 +9825,8 @@ function demoBoot(cls){
   return L.find(id=>(glasEntree(SBJ,{source:'talent',id}).v||[]).join()===(v||[]).join())||L.find(id=>!(glasEntree(SBJ,{source:'talent',id}).v||[]).length)||L[0]||null;}
  function renfortDe(k){for(const fid in window.BRUME_DATA.souvenirs.familles){for(const id of window.BRUME_DATA.souvenirs.familles[fid].t||[])if(NODES[id]&&glasEntree(SBJ,{source:'talent',id}).renfort===k)return id;}return null;}
  EG.etat=()=>room&&room.glas;
+ // développement : lecture de l'état et crochets par image (banc d'essai hors navigateur visible)
+ EG.dbg=()=>({RUN,room,P,state,eproj,enemies,rings,ACTS,hitEnemy,sbEtourdi,lancer:c=>{chosenCls=CLS[c]?c:'lum';startRun();},entrer:t=>{closeOverlay();queue.length=0;trans=null;fade=0;doEnter(t);}});
  EG.repertoire=res=>glasRepertoire(SG,SBJ,FAMS,A.souvenir,res||RUN.reserveBrume||[],Math.random);
  EG.essai=null;
  EG.lancer=function(liste,temps,cls,opt){opt=opt||{};try{
@@ -9844,12 +9846,12 @@ function demoBoot(cls){
   const opt={appel:q('appel')!=='0',copie:q('copie')==='1',dieu:q('dieu')!=='0',bot:q('bot')==='1',vars:(q('variante')||'').split(',').filter(Boolean),renf:(q('renfort')||'').split(',').filter(v=>SBJ.renforts[v])};
   addEventListener('load',()=>setTimeout(()=>{const n=EG.lancer(QG[1],+(q('temps')||2),q('classe'),opt);try{toast('Essai · '+n,3);}catch(x){}},400));}
  // le bilan de l'essai : coups reçus (pendant un geste ou non), images où une zone du Reflet est ouverte en même temps qu'une zone du Glas ou d'un invoqué
- const _lhG=loseHp;loseHp=function(n){const E=EG.essai;if(E&&room&&room.type==='boss'&&P&&n>0){const G=room.glas,B=G&&G.bulle,rf=G&&G.reflet,Bs=rf&&rf.asm.sb;
+ const _lhG=loseHp;loseHp=function(n){if(EG.hookPerte)try{EG.hookPerte(n);}catch(err){}const E=EG.essai;if(E&&room&&room.type==='boss'&&P&&n>0){const G=room.glas,B=G&&G.bulle,rf=G&&G.reflet,Bs=rf&&rf.asm.sb;
    E.subis+=n;E.coups++;if(B&&rf&&(Bs.st.ph==='charge'||Bs.st.ph==='effet'||(Bs.vivants||[]).some(f=>f())||rf.fin))E.coupsBulle++;
    E.journal.push({t:+RUN.time.toFixed(2),n:Math.round(n),bulle:B?B.ph:null,ph:Bs&&Bs.st.ph,i:Bs&&Bs.st.i,f:Bs&&Bs.dernier&&Bs.dernier.et.f,p:[P.x|0,P.y|0],q:Bs&&Bs.fuiteQ&&Bs.fuiteQ.map(v=>v|0),anneaux:rings.length,hz:(window.__glasHZ?window.__glasHZ().length:0),tirs:eproj.filter(p=>p.boss).length});if(E.journal.length>80)E.journal.shift();
    if(E.dieu){P.hp=Math.max(1,P.hp-n);return;}}
   return _lhG.apply(this,arguments);};
- const _stG=step;step=function(dt){_stG(dt);const E=EG.essai;try{if(!E||state!=='play'||!RUN||!room||room.type!=='boss')return;const b=room.boss;if(!b||b.dead)return;
+ const _stG=step;step=function(dt){_stG(dt);if(EG.hook&&state==='play')try{EG.hook(dt);}catch(err){console.error(err);}const E=EG.essai;try{if(!E||state!=='play'||!RUN||!room||room.type!=='boss')return;const b=room.boss;if(!b||b.dead)return;
   if(!E.pv0){E.pv0=true;b.hp=b.maxHp*(E.temps===3?0.3:0.6);}
   // PV du Glas tenus dans le temps demandé
   const lo=E.temps===3?0.05:0.34,hi=E.temps===3?0.33:0.65;if(b.hp<b.maxHp*lo)b.hp=b.maxHp*lo;if(b.hp>b.maxHp*hi&&b.phase>=E.temps)b.hp=b.maxHp*hi;
