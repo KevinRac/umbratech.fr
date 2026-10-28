@@ -9,7 +9,8 @@
 //  - le combat : seulement en descente, salle non purifiée, ennemi vivant, sans écran, transition, mort ni étourdi ;
 //  - les valeurs : quantités qui montent avec la force, durées qui ne montent pas, soin et bouclier plafonnés,
 //    aucun contrôle contre un gardien ou un Masqué (remplacé par des dégâts), plafond de dégâts sur leurs PV ;
-//  - le jeu : la table des effets en cours (DS_COURS) couvre les 12 ultimes et ne cite que des talents qui existent.
+//  - le jeu : la table des effets en cours (DS_COURS) couvre les 12 ultimes et ne cite que des talents qui existent ;
+//    l’embrasement (action 3) a un effet par famille, le crochet de plafond de hitEnemy est en place, l’Accoutumance est épargnée.
 //   node themist/outils/sim-dernier.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -167,6 +168,17 @@ if (m) {
   for (const id of ids.filter(id => /_sk$/.test(id))) ok(cles.includes(id), `DS_COURS : l'ultime ${id} (${N[id].name}) manque`);
 }
 ok(/if\(inRes\('t',id\)\|\|brule\(id\)\)return false;/.test(html), 'index.html : nodeAvailable doit refuser un talent brûlé');
+// 9. Le jeu : l'embrasement (action 3). Chaque famille a son effet, le plafond passe par le crochet de hitEnemy,
+//    la brûlure ne compte pas dans l'Accoutumance, l'invulnérabilité est posée contre tout.
+const emb = html.match(/function embraser\(rec\)\{([\s\S]*?)\n \}\n/);
+ok(emb, 'index.html : function embraser introuvable');
+if (emb) for (const f of Object.keys(DS.familles)) ok(emb[1].includes(`f==='${f}'`), `embraser : aucun effet pour la famille ${f}`);
+ok(/let dmg=base\*m;[^\n]*\n if\(o\.plaf\)dmg=Math\.max\(0,o\.plaf\(e,dmg\)\|\|0\);/.test(html), 'hitEnemy : le crochet o.plaf doit suivre le calcul des dégâts (après le seuil de phase)');
+ok(/if\(o&&o\.ds\)\{const R=RUN\.mem;[\s\S]{0,200}R\.tot=t0;R\.sig=s0;R\.resisted=r0;/.test(html), 'hitEnemy : les coups o.ds doivent laisser intacte l\'Accoutumance');
+ok(/P\.iT=Math\.max\(P\.iT\|\|0,DS\.invulS\|\|0\.5\);P\.hitIT=0;/.test(html), 'embraser : invulnérabilité contre tout (P.hitIT remis à 0)');
+ok(/try\{embraser\(r\);\}catch\(err\)\{console\.error\(err\);\}/.test(html) && html.indexOf('try{embraser(r);}') > html.indexOf('resync();renderMem();\n  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:\'brule\''), 'burn : l\'effet part après le recalcul');
+// le plafond par brûlure ne doit jamais dépasser gardienPvMax, quelle que soit la force (rappel sur la plage réelle)
+for (const fo of [1, 1.5, 2, 2.25, 2.6, 3]) ok(F.dsPlafond(DS, fo, 1000) <= DS.plafonds.gardienPvMax * 1000 + 1e-9, `plafond à la force ${fo}`);
 ok(!/function burn[\s\S]{0,1500}reserveBrume\.push/.test(html), 'index.html : burn ne doit rien pousser dans la réserve');
 
 // Tableau de lecture

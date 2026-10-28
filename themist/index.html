@@ -1398,6 +1398,7 @@ function hitEnemy(e,base,o={}){
  let crit=false;
  if(!o.dot&&o.crit!==false){let c=s.crit+(o.critAdd||0)+(obs?s.obscurCrit:0)+(s.oeil?P.roomMut*(s.oeil>=2?0.12:0.08):0);if(P.nightT>0||o.forceCrit)c=1;if(Math.random()<c){crit=true;m*=(s.enfant&&obs)?s.critMult+1.2:s.critMult;if(s.enfant&&obs&&EVL('pen_k1'))heal(2,'enfant');if(s.oeil&&EVL('abe_s5'))o.stun=Math.max(o.stun||0,0.3);}}
  let dmg=base*m;if(e.type==='boss'){const fl=(e.phase===1?0.66:e.phase===2?0.33:0)*e.maxHp;if(fl>0&&e.hp-dmg<fl-1)dmg=Math.max(0,e.hp-(fl-1));}
+ if(o.plaf)dmg=Math.max(0,o.plaf(e,dmg)||0);   // v17.23 : plafond posé par l'appelant (Dernier Souvenir, sur les gardiens et les Masqués)
  e.hp-=dmg;RUN.dmg+=dmg;e.lastHit=RUN.time;if(e.fixed)e.dmgLog.push([RUN.time,dmg]);
  v6AfterHit(e,dmg,o);
  if(s.lifesteal)heal(dmg*s.lifesteal,'steal');
@@ -10143,7 +10144,8 @@ function demoBoot(cls){
  function designe(){const M=MEM();if(!M||!M.designe)return null;const a=M.actifs.find(x=>x.src==='t'&&x.id===M.designe&&!x.trophee);if(!a)M.designe=null;return a||null;}
  function designer(id){const M=MEM();if(!M)return false;const a=M.actifs.find(x=>x.src==='t'&&x.id===id&&!x.trophee);
   if(!a||M.designe===id||dsRefusDe(a,false)){M.designe=null;return false;}M.designe=id;return true;}
- // brûler : renvoie {refus:code} ou ce que l'effet (action 3) jouera. opts.libre : hors combat et sans braise (essais en console)
+ // brûler : renvoie {refus:code}, ou la fiche de la brûlure (aussi gardée dans M.brules) après avoir lancé son effet (embraser).
+ // opts.libre : hors combat et sans braise (essais en console)
  function burn(a,opts){opts=opts||{};const M=MEM();
   if(!DS||!on())return {refus:'off'};
   if(!a||M.actifs.indexOf(a)<0)return {refus:'absent'};
@@ -10156,11 +10158,178 @@ function demoBoot(cls){
   M.actifs.splice(M.actifs.indexOf(a),1);delete P.ranks[a.id];
   if(!opts.libre)M.braise=dsDepense(M.braise,RUN.act,DS);
   if(M.designe===a.id)M.designe=null;
-  const r={id:a.id,famille:fam,genre:gen,rang:a.rang,g:a.g||0,force,acte:RUN.act,salle:RUN.roomIdx,contre,eteints:fel};
+  // v : valeurs contre un ennemi ordinaire ; vf : contre un gardien ou un Masqué (contrôles remplacés). Mesures remplies par l'effet.
+  const r={id:a.id,famille:fam,genre:gen,rang:a.rang,g:a.g||0,force,acte:RUN.act,salle:RUN.roomIdx,contre,eteints:fel,
+   v:dsValeurs(DS,fam,force,false),vf:dsValeurs(DS,fam,force,true),degats:0,surFort:0,boost:0,plafonne:0,touches:0,acheves:0,avales:0,soin:0,bouclier:0,dissipes:0};
   (M.brules||(M.brules=[])).push(r);
   resync();renderMem();
   try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'brule',t:`Acte ${ROM[RUN.act]||'I'} : tu as brûlé ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}
-  return Object.assign({valeurs:dsValeurs(DS,fam,force,contre!=='vague')},r);}
+  try{embraser(r);}catch(err){console.error(err);}   // après le recalcul : un soin se compte sur les PV max d'après (DS10)
+  return r;}
+
+ // ── v17.23 (palier 5, action 3) · L'embrasement : l'effet de la famille du souvenir brûlé (DS6 à DS9, DS12).
+ //    Valeurs : souvenirs.js (dernier.familles), à la force de la brûlure (dsValeurs). Les dégâts sont des dégâts de base, comme ceux
+ //    des éveils : tes bonus de dégâts s'y appliquent, jamais de critique. Durées courtes et fixes. Couleurs du joueur, jamais de rouge.
+ //    Contre un gardien ou un Masqué (fortE) : valeurs « vf » (aucun contrôle : ni achèvement, ni étourdi, ni attache, ni attraction,
+ //    ni recul, ni ralenti ; des dégâts à la place), et ce que la brûlure lui fait perdre (ses coups, et le surplus qu'elle donne à
+ //    tes coups : Fureur, exposition, critiques de l'Ombre) ne dépasse jamais son plafond (dsPlafond : 4 % de ses PV max par point
+ //    de force, 8 % au plus), tenu au plus près du coup par le crochet o.plaf de hitEnemy. Le verrou de phase et le « à nu » du Glas
+ //    passent avant le plafond. Le Reflet du Glas n'est pas dans enemies : rien ne le touche.
+ //    Les coups de la brûlure (o.ds) ne comptent pas dans l'Accoutumance (ni part de mécanique, ni total, ni résistance mesurée).
+ //    À l'embrasement : invulS (0,5 s) d'invulnérabilité contre tout. Un changement de salle ou une mort éteint ce qui dure encore.
+ const DSX=[];let DSR=null;
+ const BUD=new WeakMap();   // fiche de brûlure → (ennemi fort → PV qu'elle peut encore lui faire perdre)
+ const DSCOL={projectile:'255,226,160',faisceau:'255,236,190',lame:'255,214,150',ruee:'255,200,120',onde:'200,225,255',sol:'255,166,84',
+  fil:'255,205,225',cloche:'175,212,255',devoration:'190,240,140',lumiere:'255,246,220',ombre:'200,170,255',soin:'210,255,215',garde:'246,236,200',fureur:'255,176,84'};
+ const DSSON={projectile:'needle',faisceau:'zap',lame:'lame',ruee:'elan',onde:'nova',sol:'spit',fil:'fil',cloche:'bigbell',devoration:'devour',lumiere:'nova',ombre:'dash',soin:'heart',garde:'bellstrong',fureur:'rupture'};
+ const fortE=e=>!!e&&(e.type==='boss'||!!e.asm);
+ const dsCibles=()=>enemies.filter(e=>!e.dead&&!(e.puppet>0)&&!e.fixed);
+ const VE=(rec,e)=>fortE(e)?rec.vf:rec.v;
+ function reste(rec,e){if(!fortE(e))return Infinity;let B=BUD.get(rec);if(!B)BUD.set(rec,B=new Map());if(!B.has(e))B.set(e,dsPlafond(DS,rec.force,e.maxHp||0));return B.get(e);}
+ function charge(rec,e,x){if(!fortE(e)||!(x>0))return;const r=reste(rec,e);BUD.get(rec).set(e,Math.max(0,r-x));if(r-x<=1e-6)rec.plafonne=1;}
+ // un coup de la brûlure : jamais de critique ; contre un fort, ni recul ni étourdi, et sous son plafond
+ function dsHit(rec,e,base,o){if(!e||e.dead||e.puppet>0||!(base>0))return 0;const fort=fortE(e);if(fort&&reste(rec,e)<1)return 0;
+  const oo=Object.assign({},o||{},{crit:false,ds:rec});
+  if(fort){delete oo.kb;delete oo.stun;oo.plaf=(t,d)=>{const x=Math.min(d,reste(rec,t));charge(rec,t,x);return x;};}
+  const d=hitEnemy(e,base,oo)||0;rec.degats+=d;if(fort)rec.surFort+=d;if(d>0&&!o.dot)rec.touches++;return d;}
+ const _heDS=hitEnemy;
+ hitEnemy=function(e,base,o){
+  if(!e||!RUN||RUN.hub||!P||typeof base!=='number')return _heDS.apply(this,arguments);
+  if(o&&o.ds){const R=RUN.mem;if(!R)return _heDS.apply(this,arguments);   // Accoutumance : la brûlure ne compte pas
+   const t0=R.tot,s0=R.sig,r0=R.resisted;try{return _heDS.apply(this,arguments);}finally{R.tot=t0;R.sig=s0;R.resisted=r0;}}
+  if(!DSX.length&&!(e.dsExp&&e.dsExp.fin>RUN.time))return _heDS.apply(this,arguments);
+  o=o||{};const s=P.s,parts=[];let mul=1,cmB=0;
+  for(const x of DSX)if(x.f==='fureur'&&x.v.dmg>0){mul*=1+x.v.dmg;parts.push([x.rec,1+x.v.dmg]);}
+  if(e.dsExp&&e.dsExp.fin>RUN.time&&e.dsExp.v>0){mul*=1+e.dsExp.v;parts.push([e.dsExp.rec,1+e.dsExp.v]);}
+  const om=DSX.find(x=>x.f==='ombre');
+  const o2=Object.assign({},o);
+  if(om&&!o.dot&&o.crit!==false){o2.forceCrit=true;cmB=om.v.critMult||0;
+   // ce que la brûlure ajoute en moyenne : critique forcé et dégâts critiques en plus, contre ce que tu aurais fait sans elle
+   const cm=s.critMult;let c=Math.max(0,Math.min(1,s.crit+(o.critAdd||0)+(isObscur()?s.obscurCrit||0:0)));if(P.nightT>0||o.forceCrit)c=1;
+   parts.push([om.rec,(cm+cmB)/(1+c*(cm-1))]);}
+  if(!parts.length)return _heDS.apply(this,arguments);
+  if(fortE(e)){const prev=o2.plaf;
+   o2.plaf=(t,d)=>{let K=1,L=0;for(const [,k] of parts){K*=k;L+=Math.log(k);}const extra=d*(1-1/K);let ok=0;
+    if(extra>0&&L>0)for(const [rec,k] of parts){const share=extra*Math.log(k)/L,a=Math.min(share,reste(rec,t));charge(rec,t,a);rec.boost+=a;ok+=a;}
+    const out=d-extra+ok;return prev?prev(t,out):out;};}
+  if(cmB)s.critMult+=cmB;
+  try{return _heDS.call(this,e,base*mul,o2);}finally{if(cmB)s.critMult-=cmB;}};
+ const _acDS=atkCooldown;
+ atkCooldown=function(){let c=_acDS.apply(this,arguments);for(const x of DSX)if(x.f==='fureur'&&x.v.vitesse>0)c/=1+x.v.vitesse;return c;};
+ function dsFin(){DSX.length=0;for(const e of enemies)if(e.dsExp)e.dsExp=null;}
+ // ── L'effet, famille par famille
+ function embraser(rec){
+  if(!P||P.dead)return;
+  if(DSR!==room){dsFin();DSR=room;}
+  const f=rec.famille,v=rec.v,col=DSCOL[f]||'255,226,160',x0=P.x,y0=P.y,L=dsCibles();
+  P.iT=Math.max(P.iT||0,DS.invulS||0.5);P.hitIT=0;   // contre tout, pas seulement contre l'ennemi d'un coup (v17.5)
+  tlights.push({x:x0,y:y0,r:320,t:0.45,max:0.45,c:'warm'});sfx(DSSON[f]||'nova');
+  const X={f,rec,v,t:0,col};
+  if(f==='projectile'){const n=Math.max(1,Math.round(v.traits||12)),tg=L.slice().sort((a,b)=>hyp(a.x-x0,a.y-y0)-hyp(b.x-x0,b.y-y0));
+   X.traits=[];if(tg.length)for(let i=0;i<n;i++){const a=i/n*TAU+P.face;X.traits.push({x:x0+Math.cos(a)*16,y:y0+Math.sin(a)*16,vx:Math.cos(a)*380,vy:Math.sin(a)*380,tg:tg[i%tg.length],life:2,tr:[]});}
+   DSX.push(X);}
+  else if(f==='faisceau'){X.a0=P.face;X.ap=P.face;X.hit=new Set();DSX.push(X);}
+  else if(f==='lame'){const R=v.rayon||140;
+   fx.push({k:'ring',x:x0,y:y0,r0:30,r1:R,w:18,t:0.32,max:0.32,col:`rgba(${col},`,fill:false});fx.push({k:'star',x:x0,y:y0,s:46,t:0.18,max:0.18,col,rot:rand(0,TAU)});shake(6,0.18);
+   for(const e of L){if(hyp(e.x-x0,e.y-y0)>R+e.r)continue;const V=VE(rec,e);dsHit(rec,e,V.degats,{kb:180,sx:x0,sy:y0});
+    if(!e.dead&&!fortE(e)&&!e.elite&&V.acheve>0&&e.hp/e.maxHp<V.acheve){RUN.dmg+=Math.max(0,e.hp);rec.degats+=Math.max(0,e.hp);e.hp=0;impactFx(e.x,e.y,true,col);killEnemy(e);rec.acheves++;}}}
+  else if(f==='ruee'){P.dashCh=P.s.dashCharges;X.cur=null;DSX.push(X);}
+  else if(f==='onde'){let R=0;for(const [cx,cy] of [[AR.x0,AR.y0],[AR.x1,AR.y0],[AR.x0,AR.y1],[AR.x1,AR.y1]])R=Math.max(R,hyp(cx-x0,cy-y0));
+   X.x=x0;X.y=y0;X.R=R;X.T=0.7;X.hit=new Set();fx.push({k:'ring',x:x0,y:y0,r0:20,r1:R,w:22,t:X.T,max:X.T,col:`rgba(${col},`,fill:false});shake(5,0.2);DSX.push(X);}
+  else if(f==='sol'){X.tick=0;X.patches=L.map(e=>({x:e.x,y:e.y,r:Math.max(42,e.r+26),s:Math.random()*10}));DSX.push(X);}
+  else if(f==='fil'){X.liens=[];
+   for(const e of L){if(fortE(e)){dsHit(rec,e,rec.vf.degats,{});X.liens.push({e,t:0.45});}
+    else{const d=(v.immobileS||2.5)*(e.elite?0.6:1);e.stun=Math.max(e.stun||0,d);e.kbx=e.kby=0;X.liens.push({e,t:d});rec.touches++;}}
+   DSX.push(X);}
+  else if(f==='cloche'){fx.push({k:'ring',x:x0,y:y0,r0:20,r1:900,w:16,t:0.6,max:0.6,col:`rgba(${col},`,fill:false});fx.push({k:'ring',x:x0,y:y0,r0:10,r1:120,w:10,t:0.3,max:0.3,col:`rgba(${col},`,fill:true});shake(6,0.25);
+   for(const e of L){const V=VE(rec,e);dsHit(rec,e,V.degats,{stun:V.etourdiS||0});}}
+  else if(f==='devoration'){const R=v.rayon||260;
+   fx.push({k:'ring',x:x0,y:y0,r0:R,r1:24,w:14,t:0.4,max:0.4,col:`rgba(${col},`,fill:false});
+   for(const e of L){const dx=e.x-x0,dy=e.y-y0,d=hyp(dx,dy)||1;if(d>R+e.r)continue;
+    if(fortE(e)){dsHit(rec,e,rec.vf.degats,{});continue;}
+    if(!e.elite&&v.avale>0&&e.hp/e.maxHp<v.avale){RUN.dmg+=Math.max(0,e.hp);rec.degats+=Math.max(0,e.hp);e.hp=0;sparks(e.x,e.y,10,'#bff5a0');killEnemy(e);rec.avales++;
+     const h0=P.hp;heal(v.soinParAvale||0,'boss');rec.soin+=P.hp-h0;continue;}
+    if(v.attire){const D=Math.max(0,d-(P.r+e.r+24)),k=9*D*(e.elite?0.4:1);e.kbx=(e.kbx||0)-dx/d*k;e.kby=(e.kby||0)-dy/d*k;rec.touches++;}}}
+  else if(f==='lumiere'){fx.push({k:'ring',x:x0,y:y0,r0:30,r1:1000,w:30,t:0.5,max:0.5,col:`rgba(${col},`,fill:true});tlights.push({x:x0,y:y0,r:1100,t:0.6,max:0.6,c:'warm'});
+   for(const e of L){const V=VE(rec,e);if(V.expose>0){e.dsExp={fin:RUN.time+(V.exposeS||4),v:V.expose,rec};rec.touches++;}}
+   if(v.dissipe)for(const p of eproj){if(p.dead||p.boss||p.sbL!=null)continue;const fr=p.from;if(fr&&(fr.asm||fr.reflet||fr.type==='boss'))continue;p.dead=true;sparks(p.x,p.y,4,'#fff6dc');rec.dissipes++;}
+   eproj=eproj.filter(p=>!p.dead);}
+  else if(f==='ombre'){mist(x0,y0,22,'#2a2440');P.invisible=true;DSX.push(X);}
+  else if(f==='soin'){const h0=P.hp;heal(P.s.maxHp*(v.soin||0),'boss');rec.soin+=P.hp-h0;
+   fx.push({k:'ring',x:x0,y:y0,r0:60,r1:14,w:12,t:0.45,max:0.45,col:`rgba(${col},`,fill:true});sparks(x0,y0,12,'#d8ffd8');}
+  else if(f==='garde'){const b=P.s.maxHp*(v.bouclier||0),s0=P.shield||0;P.shield=Math.min(P.s.maxHp,s0+b);P.shieldT=Math.max(P.shieldT||0,v.dureeS||5);rec.bouclier+=P.shield-s0;
+   X.reste=P.shield-s0;DSX.push(X);fx.push({k:'ring',x:x0,y:y0,r0:70,r1:24,w:12,t:0.4,max:0.4,col:`rgba(${col},`,fill:false});}
+  else if(f==='fureur'){DSX.push(X);}
+ }
+ // ── ce qui dure : une image après l'autre (dans updatePlayer : l'étourdissement ne l'arrête pas, la pause oui)
+ function dsTick(dt){
+  if(DSR!==room){dsFin();DSR=room;return;}
+  if(!DSX.length)return;const s=P.s;
+  for(const X of DSX.slice()){X.t+=dt;const v=X.v,rec=X.rec;let fini=false;
+   if(X.f==='projectile'){
+    for(const p of X.traits){p.life-=dt;if(p.tg&&p.tg.dead){p.tg=nearestFoe(p.x,p.y,900);}
+     if(!p.tg||p.life<=0){p.dead=true;continue;}
+     const a=Math.atan2(p.vy,p.vx),b=Math.atan2(p.tg.y-p.y,p.tg.x-p.x);let d=b-a;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=TAU;
+     // le trait s'ouvre en gerbe, puis fond sur sa cible : virage de plus en plus serré, droit au but de près (jamais d'orbite)
+     const dist=hyp(p.tg.x-p.x,p.tg.y-p.y),sp=Math.min(980,hyp(p.vx,p.vy)+1400*dt),tr=(dist<150?40:10+12*(2-p.life))*dt,na=a+clamp(d,-tr,tr);p.vx=Math.cos(na)*sp;p.vy=Math.sin(na)*sp;
+     p.tr.push([p.x,p.y]);if(p.tr.length>6)p.tr.shift();p.x+=p.vx*dt;p.y+=p.vy*dt;
+     if(hyp(p.tg.x-p.x,p.tg.y-p.y)<p.tg.r+6){p.dead=true;const V=VE(rec,p.tg);dsHit(rec,p.tg,V.degats,{kb:60,sx:p.x-p.vx*0.02,sy:p.y-p.vy*0.02});impactFx(p.x,p.y,false,X.col);}}
+    X.traits=X.traits.filter(p=>!p.dead);fini=!X.traits.length;}
+   else if(X.f==='faisceau'){const T0=v.tourS||0.8,a1=X.a0+TAU*Math.min(1,X.t/T0),R=v.portee||420,sw=a1-X.ap;
+    for(const e of dsCibles()){if(X.hit.has(e))continue;const dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy);if(d-e.r>R)continue;
+     const hw=d>e.r?Math.asin(e.r/d):Math.PI;let q=(Math.atan2(dy,dx)-X.ap)%TAU;if(q<0)q+=TAU;
+     if(q<=sw+hw||q>=TAU-hw){X.hit.add(e);dsHit(rec,e,VE(rec,e).degats,{kb:90,sx:P.x,sy:P.y});}}
+    X.ap=a1;const ex=P.x+Math.cos(a1)*R,ey=P.y+Math.sin(a1)*R;
+    fx.push({k:'line',x1:P.x,y1:P.y,x2:ex,y2:ey,w:12,t:0.09,max:0.09,col:`rgba(${X.col},`});tlights.push({x:(P.x+ex)/2,y:(P.y+ey)/2,r:220,t:0.08,max:0.08,c:'warm'});
+    fini=X.t>=T0;}
+   else if(X.f==='ruee'){P.dashCh=s.dashCharges;
+    if(P.dashT>0){if(!X.cur)X.cur=new Set();for(const e of dsCibles()){if(X.cur.has(e))continue;if(hyp(e.x-P.x,e.y-P.y)<P.r+e.r+8){X.cur.add(e);dsHit(rec,e,VE(rec,e).degats,{kb:150,sx:P.x,sy:P.y});}}
+     if(!RM&&Math.random()<dt*40)parts.push({x:P.x+rand(-6,6),y:P.y+rand(-6,6),vx:rand(-20,20),vy:rand(-40,-10),life:0.35,max:0.35,size:2.2,col:'#ffc878',layer:'post',drag:2});}
+    else X.cur=null;
+    fini=X.t>=(v.dureeS||3);}
+   else if(X.f==='onde'){const R=easeOut(Math.min(1,X.t/X.T))*X.R;
+    for(const e of dsCibles()){if(X.hit.has(e))continue;if(hyp(e.x-X.x,e.y-X.y)-e.r<=R){X.hit.add(e);const V=VE(rec,e);dsHit(rec,e,V.degats,{kb:V.recul||0,sx:X.x,sy:X.y});}}
+    fini=X.t>=X.T;}
+   else if(X.f==='sol'){X.tick-=dt;
+    if(X.tick<=0){X.tick+=0.25;for(const e of dsCibles()){if(!X.patches.some(p=>hyp(e.x-p.x,e.y-p.y)<p.r+e.r*0.5))continue;const V=VE(rec,e);
+     dsHit(rec,e,(V.dps||0)*0.25,{dot:true});if(V.ralenti>0&&!e.dead){e.slowT=Math.max(e.slowT||0,0.35);e.slowK=Math.max(e.slowK||0,V.ralenti);}}}
+    fini=X.t>=(v.dureeS||3);}
+   else if(X.f==='fil'){for(const l of X.liens)l.t-=dt;X.liens=X.liens.filter(l=>l.t>0&&!l.e.dead);fini=!X.liens.length;}
+   else if(X.f==='ombre'){P.invisible=true;fini=X.t>=(v.invisibleS||3);}
+   // le rempart tient dureeS, puis s'use (25 PV par seconde, comme le bouclier du Gouffre, qui s'use déjà de lui-même)
+   else if(X.f==='garde'){X.reste=Math.min(X.reste,P.shield||0);
+    if(X.t>=(v.dureeS||5)&&X.reste>0){const d=Math.min(X.reste,25*dt);X.reste-=d;if(P.cls!=='gou')P.shield=Math.max(0,P.shield-d);}
+    fini=X.reste<=1e-6;}
+   else if(X.f==='fureur'){if(!RM&&Math.random()<dt*14)parts.push({x:P.x+rand(-12,12),y:P.y+rand(-6,10),vx:rand(-15,15),vy:rand(-80,-40),life:0.45,max:0.45,size:2.4,col:'#ffb054',layer:'post',drag:1});
+    fini=X.t>=(v.dureeS||5);}
+   else fini=true;
+   if(fini){const i=DSX.indexOf(X);if(i>=0)DSX.splice(i,1);}}
+ }
+ const _upDS=updatePlayer;
+ updatePlayer=function(dt){_upDS.apply(this,arguments);if(!P||P.dead||!RUN||RUN.hub)return;try{dsTick(dt);}catch(err){console.error(err);}};
+ // ── dessin : au sol (le sol qui brûle, le halo des exposés), puis au-dessus (traits, liens, auras)
+ const _dpDS=drawPools;
+ drawPools=function(){_dpDS.apply(this,arguments);if(!P||!RUN||RUN.hub)return;
+  const c=ctx,rm=RM;let any=false;for(const e of enemies)if(!e.dead&&e.dsExp&&e.dsExp.fin>RUN.time){any=true;break;}
+  const sol=DSX.find(x=>x.f==='sol');if(!sol&&!any)return;
+  c.save();c.globalCompositeOperation='lighter';
+  if(sol){const k=Math.min(1,((sol.v.dureeS||3)-sol.t)/0.5,sol.t/0.15);
+   for(const p of sol.patches){const fl=rm?1:0.85+0.15*Math.sin(T*9+p.s);glow(c,p.x,p.y,p.r*1.15,'255,140,60',0.42*k*fl);glow(c,p.x,p.y,p.r*0.6,'255,214,140',0.35*k*fl);
+    c.strokeStyle=`rgba(255,176,90,${0.55*k})`;c.lineWidth=2;c.setLineDash(rm?[]:[5,4]);c.lineDashOffset=rm?0:-T*30;c.beginPath();c.arc(p.x,p.y,p.r,0,TAU);c.stroke();}
+   c.setLineDash([]);}
+  if(any)for(const e of enemies){if(e.dead||!e.dsExp||e.dsExp.fin<=RUN.time)continue;const k=Math.min(1,(e.dsExp.fin-RUN.time)/0.5);glow(c,e.x,e.y+e.r*0.3,e.r*1.9,'255,236,190',0.32*k);}
+  c.restore();};
+ const _dppDS=drawPproj;
+ drawPproj=function(){_dppDS.apply(this,arguments);if(!P||!RUN||RUN.hub||!DSX.length)return;const c=ctx,rm=RM;
+  c.save();c.globalCompositeOperation='lighter';
+  for(const X of DSX){
+   if(X.f==='projectile')for(const p of X.traits){if(!rm&&p.tr.length>1){c.strokeStyle=`rgba(${X.col},.45)`;c.lineWidth=3;c.beginPath();c.moveTo(p.tr[0][0],p.tr[0][1]);for(const q of p.tr)c.lineTo(q[0],q[1]);c.lineTo(p.x,p.y);c.stroke();}
+    glow(c,p.x,p.y,13,X.col,0.55);star4(c,p.x,p.y,6,'255,250,235',0.95,Math.atan2(p.vy,p.vx));}
+   else if(X.f==='fil')for(const l of X.liens){const e=l.e,k=Math.min(1,l.t/0.3);c.strokeStyle=`rgba(${X.col},${0.6*k})`;c.lineWidth=1.6;
+    c.beginPath();c.moveTo(P.x,P.y-4);if(rm)c.lineTo(e.x,e.y);else{const mx=(P.x+e.x)/2,my=(P.y+e.y)/2+10*Math.sin(T*6+e.x*0.01);c.quadraticCurveTo(mx,my,e.x,e.y);}c.stroke();glow(c,e.x,e.y,e.r*1.3,X.col,0.25*k);}
+   else if(X.f==='ruee'||X.f==='fureur'||X.f==='ombre'){const D=X.f==='ruee'?(X.v.dureeS||3):X.f==='fureur'?(X.v.dureeS||5):(X.v.invisibleS||3),k=Math.min(1,(D-X.t)/0.4,X.t/0.15);
+    const pu=rm?1:0.8+0.2*Math.sin(T*8);glow(c,P.x,P.y,(X.f==='fureur'?42:32)*pu,X.col,(X.f==='ombre'?0.18:0.32)*k);}}
+  c.restore();};
 
  // ── Accès à l’arbre (D4) : voisinage et seuils sur les traces ; exclusions sur la mémoire ; une paire A/B tracée reste close ;
  //    un souvenir oublié ne se reprend pas en montant de niveau (il appartient à la Brume)
@@ -10628,7 +10797,9 @@ function demoBoot(cls){
   // essais : porter un talent tout de suite (rang, gravures), sans écran ni soin ; lire un nœud de l'arbre
   prendre:(id,rang=1,g=0)=>{if(!on()||!NODES[id]||inMem('t',id))return false;const x={id,source:'talent',rang,g,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0};RUN.reserveBrume.push(x);restore(x);return true;},
   noeud:id=>NODES[id]?{id,kind:NODES[id].kind,max:NODES[id].max,reqS:NODES[id].reqS||'',br:NODES[id].br}:null,dispo:id=>nodeAvailable(id),offres:()=>rollOffers([]),gravables:()=>gravables().map(a=>a.id),
-  arbre:id=>treeState(id,[]),legende:()=>treeBlock([]).includes('Brûlé')};
+  arbre:id=>treeState(id,[]),legende:()=>treeBlock([]).includes('Brûlé'),
+  // action 3 : ce qui dure encore, la cadence d'attaque du moment, le plafond d'une brûlure sur un ennemi
+  effets:()=>DSX.map(x=>x.f),cadence:()=>atkCooldown(),plafondDe:(e,force)=>e?dsPlafond(DS,force,e.maxHp):null,fort:e=>fortE(e)};
 })();
 
 // ═════════════════════════ v17.5 · chaque ennemi blesse, plus d’ennemis coincés, plus rien qui arrête le joueur

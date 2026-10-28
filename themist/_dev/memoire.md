@@ -1367,9 +1367,9 @@ Le Reflet est hors de la liste `enemies` : rien ne le vise, ne l'attache ni ne l
 - Le pilote n'esquive pas et ne frappe pas ; un joueur qui frappe le Cœur pendant un geste n'a pas été mesuré.
 - Une relecture du code par un second agent, prévue au découpage (action 7), n'a pas été faite.
 
-## 27. Palier 5 : le Dernier Souvenir, actions 1 et 2 (28 octobre 2026, pas encore actif)
+## 27. Palier 5 : le Dernier Souvenir, actions 1 à 3 (28 octobre 2026, pas encore actif)
 
-Cadrage : document `claude/la-brume-v17-23-dernier-souvenir-cadrage.md` du projet claude.ai (décisions DS1 à DS19). L'auteur a demandé les actions 1 et 2 du découpage (DS19) ; les recommandations du cadrage sont appliquées telles quelles. **Le jeu ne montre encore rien** : `dernier.actif` est faux dans `souvenirs.js` tant que les effets (action 3) et la touche (action 4) ne sont pas branchés. Pas de numéro de version ni de ligne de journal : rien ne change pour le joueur.
+Cadrage : document `claude/la-brume-v17-23-dernier-souvenir-cadrage.md` du projet claude.ai (décisions DS1 à DS19). L'auteur a demandé les actions 1 et 2, puis 3, du découpage (DS19) ; les recommandations du cadrage sont appliquées telles quelles. **Le jeu ne montre encore rien** : `dernier.actif` est faux dans `souvenirs.js` tant que la touche X (action 4) n'est pas branchée ; les effets existent, mais seule la console peut brûler (`__dernier.bruler`). Pas de numéro de version ni de ligne de journal : rien ne change pour le joueur.
 
 ### Ce qui est construit
 
@@ -1393,6 +1393,49 @@ Cadrage : document `claude/la-brume-v17-23-dernier-souvenir-cadrage.md` du proje
 - `sim-brume.mjs --vite` : 46 602, 0 échec. `sim-masque.mjs` : 3 583 218 contrôles, tout est bon. `wiki.mjs --check` : à jour.
 - Chromium sans affichage (`?masque=fan_n2&classe=…&acte=2`, quatre formes, 117 vérifications, 0 échec, aucune erreur de script) : inerte tant que `actif` est faux ; racine refusée, ultime brûlable, ultime en cours refusé ; désignation par clic dans la pause, marque au HUD, fêlure sur le majeur lié, second clic qui retire ; brûlure en combat : place libérée, rien dans la réserve, rang retiré et trace gardée, aucun soin, `P.s` identique à la mémoire efficace rejouée, jamais reproposé (300 tirages) ni gravable, arbre « brûlé » et légende, majeur lié éteint ; deuxième brûlure du même acte refusée, braise rendue à l'acte suivant, refus hors combat, désignation tombée à l'oubli, trophée ni brûlé ni désigné, ligne de chronique.
 
+### Action 3 : l'embrasement (28 octobre 2026)
+
+`burn()` calcule deux jeux de valeurs à la force de la brûlure, `v` (contre un ennemi ordinaire) et `vf` (contre un gardien ou un Masqué : `fortE`, c'est-à-dire `type:'boss'` ou `e.asm`), puis lance `embraser(rec)` **après** le recalcul. Ce qui dure vit dans `DSX` et avance image par image dans `updatePlayer` (l'étourdissement ne l'arrête pas, la pause oui) ; un changement de salle l'éteint (`DSR`).
+
+| Famille | Ce que fait le jeu | Contre un fort |
+|---|---|---|
+| Projectile | 12 traits partent en gerbe et fondent chacun sur une cible (réparties de la plus proche à la plus loin ; une cible morte : le plus proche) ; virage de plus en plus serré, droit au but sous 150 px (sans quoi ils orbitaient). | Dégâts sous le plafond. |
+| Faisceau | Un rayon de 420 px fait un tour complet autour de toi en 0,8 s, en partant de ta visée ; chaque ennemi touché une fois. | Idem. |
+| Lame | Coup de 140 px autour de toi ; achève les ennemis ordinaires (pas les champions) sous 20 % de PV. | Pas d'achèvement ni de recul. |
+| Ruée | 3 s : charges d'esquive toujours pleines ; chaque esquive blesse une fois chaque ennemi qu'elle traverse. | Dégâts sous le plafond. |
+| Onde | Une onde part de toi jusqu'au coin le plus loin de la salle (0,7 s) ; chacun est touché quand le front passe, et repoussé. | Pas de recul. |
+| Sol | Le sol brûle 3 s sous chaque ennemi (taches fixes, r = e.r + 26, au moins 42) : 20 par seconde, ralenti de 40 %. | Pas de ralenti. |
+| Fil | Chaque ennemi ordinaire est immobile 2,5 s (étourdi, × 0,6 pour un champion), relié à toi par un fil. | 40 dégâts. |
+| Cloche | Toute la salle : 30 dégâts, ennemis ordinaires étourdis 1,2 s (× 0,6 pour un champion). | Pas d'étourdi. |
+| Dévoration | Dans 260 px : les ennemis ordinaires (pas les champions) sous 25 % de PV sont avalés (+4 PV chacun), les autres attirés vers toi. | 45 dégâts, pas d'attraction. |
+| Lumière | Tous exposés 4 s (+25 % de dégâts subis) ; les tirs des ennemis ordinaires en vol sont dissipés (ceux des gardiens, des Masqués, du Reflet et des armes de la Brume restent). | Exposition gardée, son surplus sous le plafond. |
+| Ombre | 3 s invisible (les ennemis perdent ta trace ; frapper ne la rompt pas), tous tes coups sont critiques avec +0,3 de dégâts critiques. | Surplus sous le plafond. |
+| Soin | Soin de 25 % des PV max, comptés après la brûlure (au plus 40 %). | — |
+| Garde | Bouclier de 30 % des PV max (au plus 40 %), qui tient 5 s puis s'use à 25 PV/s (le Héraut et le Tisse-Destin n'avaient aucune usure de bouclier : elle est faite par l'effet). | — |
+| Fureur | 5 s : +40 % de dégâts, +30 % de vitesse d'attaque (`atkCooldown`). | Surplus sous le plafond. |
+
+Règles communes :
+- **Dégâts de base**, comme ceux des éveils : tes bonus de dégâts s'y appliquent, jamais de critique (`crit:false`).
+- **Invulnérabilité** de 0,5 s à l'embrasement, contre tout : `P.iT` et `P.hitIT = 0` (sinon la règle v17.5 laissait passer les autres ennemis).
+- **Plafond** : chaque fiche de brûlure tient, par ennemi fort, ce qu'elle peut encore lui faire perdre (`dsPlafond`, dans une `WeakMap`). Il est appliqué **au plus près du coup**, par un crochet générique ajouté au cœur de `hitEnemy` : `o.plaf(e, dmg)`, juste après le seuil de phase, donc après tous les multiplicateurs (verrou de phase, « à nu » du Glas, Robuste et Blindé, Accoutumance). Les coups de la brûlure passent par `dsHit`. Ses surplus sur tes propres coups (Fureur, exposition, Ombre) passent par l'enveloppe extérieure de `hitEnemy` : la part qui vient de la brûlure (pour l'Ombre : critique forcé et bonus, contre ce que tu aurais fait en moyenne sans elle) est retirée au-delà du plafond.
+- **Accoutumance** : un coup marqué `o.ds` laisse `RUN.mem` (tot, sig, resisted) tel qu'il l'a trouvé.
+- **Couleurs** : celles du joueur (or, braise, blanc, et la teinte de la famille), jamais de rouge. Mouvements réduits : pas de scintillement ni de particules, les zones gardent leur dessin fixe.
+- **Fiche** (`M.brules`, pour les statistiques de l'action 6) : `degats`, `surFort`, `boost`, `plafonne`, `touches`, `acheves`, `avales`, `soin`, `bouclier`, `dissipes`.
+
+Ce que je n'ai pas bouché, faute de raison forte :
+- Destin Lié (Tisse-Destin) répercute 40 % d'un coup sur les autres ennemis attachés par `rawHit`, hors du plafond : une brûlure sur un ennemi ordinaire attaché peut donc toucher un gardien attaché de 40 % de ce coup. C'est la mécanique du joueur, pas l'effet ; à surveiller.
+- Les coups de la brûlure comptent dans la mesure de portée du profil (contre-mesures, `hitN`/`hitD`) : le cadrage ne demandait que l'Accoutumance. Une brûlure par acte.
+- Une brûlure pendant le montage d'un Masqué (3,85 s, intouchable) ne lui fait rien : c'est l'immunité existante.
+
+Mesures de l'action 3 :
+- `sim-dernier.mjs` : **4 013 vérifications, 0 échec** (en plus : un effet par famille dans `embraser`, le crochet `o.plaf`, l'Accoutumance épargnée, l'invulnérabilité contre tout, l'effet après le recalcul ; contre-épreuve : une famille retirée d'`embraser` est attrapée). `sim-brume.mjs --vite` : 46 602, 0 échec. `sim-masque.mjs` : 3 583 218 contrôles, tout est bon. `wiki.mjs --check` : à jour. Banc des actions 1 et 2 : 117, 0 échec.
+- Chromium sans affichage, **520 vérifications, 0 échec, aucune erreur de script** :
+  - **vagues** (quatre formes, chaque famille de la forme, six ennemis dont un affaibli et un champion affaibli) : invulnérabilité (un coup reçu juste après est paré), Accoutumance intacte, aucun effet qui dure après 5 s ; traits (10 à 12 touchent sur 12), rayon (tous ceux à portée), achèvement (l'affaibli oui, le champion non), esquive (charges pleines, ennemi traversé touché), recul de l'onde (172 px/s au départ), ralenti 0,4, immobiles 2,5 s (champion 1,5), étourdis 1,2 s, avalés (champion épargné) et attirés, exposés (+25 % exactement), tir ordinaire dissipé et tir de gardien gardé, critique forcé (× 2,1), invisible de 0 à 3 s, soin (25 % × force), bouclier (30 % × force, tient 5 s puis s'use), Fureur (× 1 + 0,4 × force sur les dégâts, cadence plus courte) ;
+  - **Masqué** (quatre formes, chaque famille au plus fort talent de la forme, gravé deux fois : force 2,25 à 3) : PV perdus ≤ plafond partout (93 PV à l'acte II pour 1 157 PV, force 3), ni étourdi, ni repoussé, ni attiré, ni ralenti, ni achevé, ni avalé ; surplus de Fureur, d'exposition et d'Ombre sur 60 coups ≤ plafond ;
+  - **gardiens** (Mère-Brume au Gouffre, Héraut Noyé au Héraut, Glas temps 2 au Lumenarque et temps 3 au Tisse-Destin, force 3) : PV perdus ≤ plafond (212, 460, 720), aucun étourdi ; Fureur et Ombre plafonnées pile au plafond sur 60 coups ; verrou de phase tenu (une Dernière taille juste au-dessus du seuil s'y arrête) ; le Reflet n'est jamais dans `enemies` ;
+  - **salle** : un changement de salle éteint la Fureur en cours et rend la cadence normale.
+- Captures prises à mi-effet (traits, rayon, sol, fils, cloche, exposition, aura de Fureur, rempart) : chaque effet se lit, aucun rouge ajouté.
+
 ### Ce qui reste (DS19)
 
-Actions 3 (les 14 effets, invulnérabilité, plafonds, Accoutumance), 4 (touche X maintenue, HUD de la braise, embrasement, son, aide), 5 (`?dernier=`), 6 (statistiques, fin de run), 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
+Actions 4 (touche X maintenue, HUD de la braise, embrasement de la tuile, icône au-dessus du héros, son du chuchotement brisé, aide), 5 (`?dernier=`), 6 (statistiques, fin de run), 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
