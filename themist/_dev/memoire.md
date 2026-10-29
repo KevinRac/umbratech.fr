@@ -1436,6 +1436,14 @@ Mesures de l'action 3 :
   - **salle** : un changement de salle éteint la Fureur en cours et rend la cadence normale.
 - Captures prises à mi-effet (traits, rayon, sol, fils, cloche, exposition, aura de Fureur, rempart) : chaque effet se lit, aucun rouge ajouté.
 
+### Action 4 : la touche X (29 octobre 2026, toujours pas active)
+
+Tout est dans le bloc « v17.23 (palier 5, action 4) » d'index.html, avant « Accès à l'arbre (D4) ». `dernier.actif` reste faux : rien ne se voit, l'essai se fait par `__dernier.activer()`.
+- **Geste** : X maintenue 0,35 s (`dsMaintien`, `DS.maintienS`) en combat (`dsEnCombat`) avec un souvenir désigné et la braise de l'acte. État `DSH` ; le temps avance dans `updatePlayer` (la pause l'arrête). Lâcher, la pause ou tout écran qui s'ouvre (`openOverlay`), `blur`, la fin du combat, l'étourdissement ou la mort l'annulent ; une fois brûlé, il faut relâcher pour recommencer. Refus avec un message court (`dsPourquoi`, `DS_DIT`) : aucune désignation, braise consumée, pas en combat, trophée / compétence clé / effet en cours. Les messages n'ont pas de « : » (le bandeau y coupe son titre).
+- **HUD** : `#hBraise` sous la mémoire (icône `u_braise` + touche X) : éteinte si la braise est consumée, allumée si un souvenir est désigné, jauge conique autour de l'icône et halo qui grandit sur la tuile désignée pendant le maintien (`--h`). Au-dessus du héros (`drawPproj`) : un anneau qui se ferme et une petite flamme. La ligne d'aide du bas ajoute « X maintenir : brûler » une fois un souvenir désigné ; l'écran titre et le guide (page Commandes) listent X quand `dernier.actif` est vrai (`window.__dsAide`).
+- **Embrasement** (`dsTuileFx`, avant le retrait de la tuile) : elle s'éclaire en orange, monte et se défait en braises (11 points) ; en « mouvements réduits », un simple fondu sans braises. Son : `sfx('brule')` → `__brumeBrule` (le chuchotement de l'oubli, brisé en trois éclats, avec des craquements de braise ; toujours sans grondement ni chœur).
+- Banc Chromium (`banc-touche.mjs`, 33 vérifications, 0 échec, aucune erreur de script) : inactif (X ne fait rien, aucun HUD) ; sans désignation ; maintien en cours et jauge ; lâcher qui annule ; maintien complet (brûlé, braise consumée, tuile qui s'embrase puis disparaît) ; seconde brûlure refusée ; pause en plein maintien ; salle purifiée ; mouvements réduits. Simulateurs et bancs des actions 1 à 3 inchangés (4 013, 46 602, 3 583 218, 117, 520).
+
 ### Ce qui reste (DS19)
 
-Actions 4 (touche X maintenue, HUD de la braise, embrasement de la tuile, icône au-dessus du héros, son du chuchotement brisé, aide), 5 (`?dernier=`), 6 (statistiques, fin de run), 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
+Actions 5 (`?dernier=`), 6 (statistiques, fin de run), 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).

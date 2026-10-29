@@ -1852,7 +1852,7 @@ function openTitle(){
  const back=SAVE.runs>0;
  const prog=back?`<p class="h-sec" style="margin-top:0">Ta progression</p><div class="tiles" style="margin-top:0"><div class="tile"><span>Descentes</span><b>${SAVE.runs}</b></div><div class="tile"><span>Victoires</span><b>${SAVE.wins}</b></div><div class="tile"><span>Éclats</span><b>${SAVE.shards}</b></div></div>`
   :`<p class="h-sec" style="margin-top:0">Avant ta première descente</p><p class="tip" style="margin:0">Tu t’éveilles au Sanctuaire, le dernier lieu que la Brume n’a pas pris. Ses habitants t’aideront à devenir plus fort entre deux descentes. Le portail, lui, mène en bas.</p>`;
- const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],['Échap','Pause et arbre de talents']];
+ const keys=[[MOVE(),'Se déplacer'],['Souris','Viser'],['Clic G','Attaque de base (maintenir)'],['Clic D','Compétence principale'],['Espace','Esquive'],[KL.KeyR,'Capacité signature'],[`${KL.KeyQ} · ${KL.KeyE} · ${KL.KeyF}`,'Compétences de l’arbre'],...(window.__dsAide&&window.__dsAide()?[['X','Brûler le souvenir désigné (maintenir, en combat)']]:[]),['Échap','Pause et arbre de talents']];
  openOverlay(`<div class="title-wrap"><div class="title-main"><span class="emblem">${icon('s_lan')}</span><p class="eyebrow">Prototype jouable · ${window.BRUME_DATA.versions.actuelle}</p><h1>La Brume</h1><p class="lede">Un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume. Chaque retour au Sanctuaire te rend plus fort.</p><button type="button" class="btn primary big" id="go">${back?'Retourner au Sanctuaire':'S’éveiller au Sanctuaire'}</button><p class="coarse-note">Ce prototype se joue au clavier et à la souris.</p></div><div>${prog}<p class="h-sec">Commandes</p>${keysHTML(keys)}<p class="tip">Ta progression est enregistrée dans ce navigateur.</p></div></div>`,'see');
  overlayAt=0;
  $('#go').addEventListener('click',enterHub);
@@ -5334,7 +5334,7 @@ function openGuide(back){
  ${st('u_book','Carte du Glas','Fragments sur boss, champions, autels','#ff9a52')}
  ${st('u_ghost','Tombe d’Écho','Reprends-la là où tu es mort','#8ec5ff')}
  </div>`)],
-  ['Commandes',pg('Commandes',CLS[chosenCls].short,`<div class="gd2-keys">${[...keysFor(chosenCls),['Tab','Talent en attente'],['H','Ce guide']].map(([k,v])=>`<span class="gd2-k"><kbd>${esc(k)}</kbd>${v}</span>`).join('')}</div>`)]
+  ['Commandes',pg('Commandes',CLS[chosenCls].short,`<div class="gd2-keys">${[...keysFor(chosenCls),['Tab','Talent en attente'],...(window.__dsAide&&window.__dsAide()?[['X','Brûler le souvenir désigné (maintenir)']]:[]),['H','Ce guide']].map(([k,v])=>`<span class="gd2-k"><kbd>${esc(k)}</kbd>${v}</span>`).join('')}</div>`)]
  ];
  const N=pages.length;let cur=0;
  const html=`<div class="panel guide gd2"><p class="eyebrow" id="gstep"></p><h2>Comment jouer</h2>
@@ -6982,6 +6982,13 @@ openCodex=function(back){
   brume(bus,t,1.0,0.2,520,1700,1100);
   chuchote(bus,t+0.04,0.5,0.7,'o','u');
   chuchote(bus,t+0.34,0.55,0.45,'e','i');}
+ // v17.23 · brûler un souvenir (≈ 1 s) : le chuchotement de l'oubli, mais brisé en trois éclats qui se rallument, et des craquements de braise par-dessus
+ function brumeBrule(delay){if(!AC||muted)return;if(!throttle('brumeBrule',300))return;const t=AC.currentTime+(delay||0)+0.02,bus=vbus(1.6,0.5);
+  brume(bus,t,0.7,0.16,700,2300,1500);
+  chuchote(bus,t+0.02,0.2,0.8,'o','a');chuchote(bus,t+0.27,0.16,0.6,'e','i');chuchote(bus,t+0.5,0.34,0.5,'u','o');
+  for(const d of[0.05,0.13,0.31,0.38,0.58,0.71]){const nz=AC.createBufferSource(),hf=AC.createBiquadFilter(),g=AC.createGain(),T=t+d;nz.buffer=getNoise();hf.type='highpass';hf.frequency.value=2600+d*900;
+   g.gain.setValueAtTime(0.0001,T);g.gain.exponentialRampToValueAtTime(0.09,T+0.004);g.gain.exponentialRampToValueAtTime(0.0001,T+0.05);nz.connect(hf);hf.connect(g);g.connect(bus);nz.start(T);nz.stop(T+0.06);}}
+ window.__brumeBrule=brumeBrule;
  // invocation de l’aberration (le Masqué, ≈ 3,5 s, le temps de sa descente) : la brume gonfle, un chœur en triton s’affaisse, des chuchotements passent, puis un coup sourd
  function brumeAber(){if(!AC||muted)return;if(!throttle('brumeAber',2500))return;const t=AC.currentTime+0.03,bus=vbus(4.6,0.5);
   brume(bus,t,3.4,0.6,200,1200,280);
@@ -10020,7 +10027,8 @@ function demoBoot(cls){
  //    de l’écran ou le brouillard le plus proche (le plus près des deux), puis disparaît : ≈ 1 s, dans le DOM, sans rien bloquer.
  //    « Mouvements réduits » : un simple fondu, sur place. Le bruitage (souffle et voix chuchotée) vit dans le moteur de voix (__brumeOubli).
  const _sfx17=sfx;
- sfx=function(k){if(k==='oubli'){if(!AC||muted)return;if(window.__brumeOubli)window.__brumeOubli();return;}return _sfx17.apply(this,arguments);};
+ sfx=function(k){if(k==='oubli'){if(!AC||muted)return;if(window.__brumeOubli)window.__brumeOubli();return;}
+  if(k==='brule'){if(!AC||muted)return;if(window.__brumeBrule)window.__brumeBrule();return;}return _sfx17.apply(this,arguments);};
  const OUBLI_MS=1000,FONDU_MS=700;
  const reduit=()=>RM||!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
  // le plus proche : un bord de l’écran, ou un banc de brume de la salle (mêmes positions que drawMists) ; renvoie la direction et la distance
@@ -10155,6 +10163,7 @@ function demoBoot(cls){
   const fam=dsFam(a),gen=dsGenreDe(a),force=dsForceDe(a);
   const contre=enemies.some(e=>!e.dead&&e.type==='boss')?'gardien':enemies.some(e=>!e.dead&&e.asm)?'masque':'vague';
   const fel=consequences(a,null).map(x=>x.id);   // ce qui s'éteindra avec lui (D4)
+  try{dsTuileFx(a,portes().indexOf(a));sfx('brule');}catch(err){console.error(err);}   // avant que le HUD ne soit redessiné : la tuile est encore à sa place
   M.actifs.splice(M.actifs.indexOf(a),1);delete P.ranks[a.id];
   if(!opts.libre)M.braise=dsDepense(M.braise,RUN.act,DS);
   if(M.designe===a.id)M.designe=null;
@@ -10330,6 +10339,99 @@ function demoBoot(cls){
    else if(X.f==='ruee'||X.f==='fureur'||X.f==='ombre'){const D=X.f==='ruee'?(X.v.dureeS||3):X.f==='fureur'?(X.v.dureeS||5):(X.v.invisibleS||3),k=Math.min(1,(D-X.t)/0.4,X.t/0.15);
     const pu=rm?1:0.8+0.2*Math.sin(T*8);glow(c,P.x,P.y,(X.f==='fureur'?42:32)*pu,X.col,(X.f==='ombre'?0.18:0.32)*k);}}
   c.restore();};
+
+
+ // ── v17.23 (palier 5, action 4) · La touche : maintenir X en combat pour brûler le souvenir désigné (DS3, DS14, DS15)
+ //    0,35 s de maintien (dsMaintien) ; lâcher, la fin du combat, l'étourdissement ou la mort l'annulent. La désignation se fait au calme (pause).
+ //    HUD : l'icône de la braise sous la mémoire (allumée tant qu'elle n'est pas consumée), une jauge qui se remplit autour d'elle et autour
+ //    de la tuile désignée ; au-dessus du héros, un anneau qui se ferme. À la brûlure : la tuile s'embrase et s'envole en braises (fondu
+ //    simple en « mouvements réduits »), le chuchotement brisé (sfx('brule')). Rien de tout cela n'existe tant que dernier.actif est faux.
+ const DSH={on:false,t:0,fait:false,dit:0};
+ function dsDit(t){const n=performance.now();if(n-DSH.dit<1200)return;DSH.dit=n;try{toast(t,1.6);}catch(err){}}
+ const DS_DIT={relique:'Une relique ne se brûle pas.',trophee:'Un trophée ne se brûle pas.',genre:'Une compétence clé ne se brûle pas.',famille:'Ce souvenir ne se brûle pas.',
+  enCours:'Son effet est encore en cours, attends qu’il s’éteigne.'};
+ // la raison pour laquelle on ne peut pas commencer à brûler (chaîne vide : on peut)
+ function dsPourquoi(){
+  if(!dsActif()||!P||P.dead||state!=='play'||!overlayEl.hidden)return 'x';
+  const a=designe();if(!a)return 'Aucun souvenir désigné. Choisis-le dans la pause, d’un clic sur sa tuile.';
+  if(dsBraisesNow()<=0)return 'La braise de cet acte est consumée.';
+  if(!dsEnCombat())return 'On ne brûle qu’en plein combat.';
+  const w=dsRefusDe(a,true);return w?(DS_DIT[w]||'Impossible.'):'';}
+ function dsHoldStop(){DSH.on=false;DSH.t=0;dsHoldUI();}
+ function dsHoldUI(){
+  const f=DSH.on?dsMaintien(DSH.t,DS):0,h=$('#hBraise');
+  if(h){h.style.setProperty('--h',f.toFixed(3));h.classList.toggle('tient',DSH.on);}
+  const t=document.querySelector('#hMem .mt.ds');if(t){t.style.setProperty('--h',f.toFixed(3));t.classList.toggle('tient',DSH.on);}}
+ function dsHoldTick(dt){
+  if(!DSH.on)return;
+  if(!P||P.dead||!dsActif()||!keys.has('KeyX')||!dsEnCombat()||!designe()){dsHoldStop();return;}
+  DSH.t+=dt;dsHoldUI();
+  if(DSH.t>=(DS.maintienS||0.35)){const a=designe();dsHoldStop();DSH.fait=true;
+   const r=a?burn(a):{refus:'absent'};if(r&&r.refus)dsDit(DS_DIT[r.refus]||'Impossible.');}}
+ addEventListener('keydown',e=>{
+  if(e.code!=='KeyX'||e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(!DS||!on())return;
+  const w=dsPourquoi();if(w==='x')return;
+  if(w){dsDit(w);return;}
+  DSH.on=true;DSH.t=0;DSH.fait=false;dsHoldUI();});
+ addEventListener('keyup',e=>{if(e.code==='KeyX'){DSH.fait=false;if(DSH.on)dsHoldStop();}});
+ const _ooH=openOverlay;
+ openOverlay=function(){if(DSH.on)dsHoldStop();return _ooH.apply(this,arguments);};   // un écran qui s'ouvre (pause, guide…) coupe le maintien
+ addEventListener('blur',()=>{if(DSH.on)dsHoldStop();});
+ const _upH=updatePlayer;
+ updatePlayer=function(dt){_upH.apply(this,arguments);try{dsHoldTick(dt);}catch(err){console.error(err);DSH.on=false;}};
+ // au-dessus du héros : un anneau qui se ferme pendant le maintien, et la petite flamme de la braise
+ const _dppH=drawPproj;
+ drawPproj=function(){_dppH.apply(this,arguments);if(!DSH.on||!P||P.dead||!RUN||RUN.hub)return;
+  const c=ctx,f=dsMaintien(DSH.t,DS),R=P.r+16,rm=RM,pu=rm?1:0.85+0.15*Math.sin(T*18);
+  c.save();c.globalCompositeOperation='lighter';
+  glow(c,P.x,P.y,(R+10)*pu,'255,150,70',0.10+0.22*f);
+  c.lineCap='round';c.strokeStyle='rgba(255,176,84,.30)';c.lineWidth=3;c.beginPath();c.arc(P.x,P.y,R,0,TAU);c.stroke();
+  c.strokeStyle='rgba(255,226,170,.95)';c.lineWidth=4;c.beginPath();c.arc(P.x,P.y,R,-Math.PI/2,-Math.PI/2+TAU*f);c.stroke();
+  // la flamme (une goutte), au-dessus de la tête
+  const fx=P.x,fy=P.y-P.r-30,sz=7+5*f;
+  glow(c,fx,fy,sz*2.4,'255,150,70',0.35*pu);
+  c.fillStyle=`rgba(255,${190+Math.round(40*f)},120,${0.75+0.25*f})`;c.beginPath();c.moveTo(fx,fy-sz*1.5);c.quadraticCurveTo(fx+sz,fy-sz*0.2,fx,fy+sz*0.9);c.quadraticCurveTo(fx-sz,fy-sz*0.2,fx,fy-sz*1.5);c.fill();
+  c.restore();};
+ // la tuile s'embrase : elle s'éclaire, monte et se défait en braises
+ function dsTuileFx(a,i){
+  if(!document.body.animate||i<0)return;
+  const cell=document.querySelectorAll('#hMem .mcell')[i];if(!cell||!cell.firstElementChild)return;
+  const r=cell.getBoundingClientRect();if(!r.width||!r.height)return;
+  const box=document.createElement('div');box.className='oubli brulefx';box.setAttribute('aria-hidden','true');
+  box.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;--c:${cell.firstElementChild.style.getPropertyValue('--c')||'#cfc7b3'}`;
+  const ic=document.createElement('div');ic.className='of-t';ic.innerHTML=cell.innerHTML;box.appendChild(ic);
+  document.body.appendChild(box);
+  const fin=()=>box.remove();
+  if(reduit()){ic.animate([{opacity:1,filter:'brightness(2) sepia(1) saturate(2)'},{opacity:0,filter:'brightness(1.4) sepia(1) saturate(2)'}],{duration:FONDU_MS,easing:'ease-out',fill:'forwards'});setTimeout(fin,FONDU_MS+300);return;}
+  ic.animate([
+   {transform:'translate(0,0) scale(1)',filter:'brightness(1) sepia(0) saturate(1)',opacity:1,offset:0},
+   {transform:'translate(0,-2px) scale(1.18)',filter:'brightness(2.4) sepia(1) saturate(3) hue-rotate(-12deg)',opacity:1,offset:0.25},
+   {transform:'translate(0,-10px) scale(1.06)',filter:'brightness(1.7) sepia(1) saturate(3) blur(2px)',opacity:.8,offset:0.6},
+   {transform:'translate(0,-26px) scale(.7)',filter:'brightness(1.2) sepia(1) saturate(2) blur(8px)',opacity:0,offset:1}
+  ],{duration:900,easing:'cubic-bezier(.25,.1,.3,1)',fill:'forwards'});
+  for(let k=0;k<11;k++){const e=document.createElement('i');e.className='of-e';
+   const dx=(Math.random()-0.5)*r.width*1.2,dy=-(26+Math.random()*52),dl=Math.random()*260,du=620+Math.random()*420,sz=2+Math.random()*2.4;
+   e.style.cssText=`left:${25+Math.random()*50}%;top:${35+Math.random()*40}%;width:${sz}px;height:${sz}px`;box.appendChild(e);
+   e.animate([{transform:'translate(0,0) scale(1)',opacity:0,offset:0},{opacity:1,offset:0.15},{transform:`translate(${dx}px,${dy}px) scale(.3)`,opacity:0,offset:1}],{duration:du,delay:dl,easing:'ease-out',fill:'forwards'});}
+  setTimeout(fin,1500);
+ }
+ // la braise, sous la mémoire : allumée, éteinte ; une jauge l'entoure pendant le maintien
+ function dsHud(){
+  const mem=$('#hMem');if(!mem)return;let h=$('#hBraise');
+  if(!dsActif()){if(h)h.hidden=true;return;}
+  if(!h){h=document.createElement('div');h.id='hBraise';mem.insertAdjacentElement('afterend',h);}
+  h.hidden=false;const n=dsBraisesNow(),D=designe();
+  h.className=(n?'':'vide ')+(n&&D?'pret':'');
+  h.title=n?(D?`Dernier Souvenir : maintiens X en combat pour brûler ${nameOf(D)}`:'Dernier Souvenir : une braise pour cet acte. Désigne un souvenir dans la pause, puis maintiens X en combat.'):'Dernier Souvenir : braise consumée pour cet acte';
+  h.innerHTML=`<span class="hb-i">${icon('u_braise')}</span><kbd>X</kbd>`;
+  dsHoldUI();}
+ const _rmDS=renderMem;
+ renderMem=function(){_rmDS.apply(this,arguments);try{dsHud();}catch(err){console.error(err);}};
+ // la ligne d'aide du bas : seulement une fois un souvenir désigné
+ const _shDS=setHint;
+ setHint=function(){_shDS.apply(this,arguments);try{const h=$('#hHint');if(h&&P&&RUN&&!RUN.hub&&dsActif()&&designe()&&!h.querySelector('.hx'))h.insertAdjacentHTML('beforeend',' · <span class="hx"><kbd>X</kbd> maintenir : brûler</span>');}catch(err){}};
+ window.__dsAide=()=>!!(DS&&DS.actif);
 
  // ── Accès à l’arbre (D4) : voisinage et seuils sur les traces ; exclusions sur la mémoire ; une paire A/B tracée reste close ;
  //    un souvenir oublié ne se reprend pas en montant de niveau (il appartient à la Brume)
@@ -10549,10 +10651,10 @@ function demoBoot(cls){
    const tt=tipOf(a)+(!act?'':no?' · ne se brûle pas':a===D?' · désigné pour le Dernier Souvenir · clic : retirer':' · clic : désigner pour le Dernier Souvenir');
    return `<span class="mcell${act?(no?' dsno':' dsok'):''}"${act&&!no?` data-ds="${a.id}"`:''} title="${esc(tt)}">${tile(a,{ds:a===D,fel:F.includes(a.id)})}</span>`;};
   const n=act?dsBraisesNow():0;
-  return `<div class="pzmem" id="pzmem" aria-label="Mémoire">${L.map(cell).join('')}${Array.from({length:Math.max(0,CAP()-L.length)},()=>'<span class="mcell"><span class="mt empty"></span></span>').join('')}<span class="pzmem-n">${L.length} / ${CAP()}</span>${act?`<span class="pzbr${n?'':' vide'}" title="${n?'Dernier Souvenir : une braise pour cet acte':'Dernier Souvenir : braise utilisée pour cet acte'}">${icon('u_braise')}</span>`:''}${TL.length?`<span class="pztro" aria-label="Trophées">${TL.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}</span>`:''}</div>`;}
+  return `<div class="pzmem" id="pzmem" aria-label="Mémoire">${L.map(cell).join('')}${Array.from({length:Math.max(0,CAP()-L.length)},()=>'<span class="mcell"><span class="mt empty"></span></span>').join('')}<span class="pzmem-n">${L.length} / ${CAP()}</span>${act?`<span class="pzbr${n?'':' vide'}" title="${n?'Dernier Souvenir : une braise pour cet acte · maintiens X en combat':'Dernier Souvenir : braise utilisée pour cet acte'}">${icon('u_braise')}<kbd>X</kbd></span>`:''}${TL.length?`<span class="pztro" aria-label="Trophées">${TL.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}</span>`:''}</div>`;}
  function pzmemLier(){const box=overlayEl.querySelector('#pzmem');if(!box)return;
   box.querySelectorAll('[data-ds]').forEach(c=>c.addEventListener('click',()=>{designer(c.dataset.ds);sfx('pick');
-   const b=overlayEl.querySelector('#pzmem');if(b){b.outerHTML=pzmemHTML();pzmemLier();}renderMem();}));}
+   const b=overlayEl.querySelector('#pzmem');if(b){b.outerHTML=pzmemHTML();pzmemLier();}renderMem();try{setHint();}catch(err){}}));}
  const _oe=openEnd;
  openEnd=function(win,abandon){const M=on()&&MEM();const first=!!(RUN&&!RUN.final);const r=_oe.apply(this,arguments);
   try{if(M&&first)statRun(M,win,abandon);}catch(err){console.error(err);}
@@ -10783,14 +10885,25 @@ function demoBoot(cls){
 .pzmem .mcell.dsok{cursor:pointer}.pzmem .mcell.dsno{cursor:not-allowed}.pzmem .mcell.dsok:hover .mt{transform:translateY(-1px)}
 .pzmem .mcell.dsok:hover .mt.k-x{transform:rotate(45deg) translateY(-1px)}
 .pzbr{display:inline-grid;place-items:center;width:26px;height:26px;color:#ff9a4a;filter:drop-shadow(0 0 4px rgba(255,140,60,.6))}
-.pzbr .ic{width:20px;height:20px}.pzbr.vide{color:var(--ash);filter:none;opacity:.45}`;
+.pzbr .ic{width:20px;height:20px}.pzbr.vide{color:var(--ash);filter:none;opacity:.45}
+.pzbr{width:auto;grid-auto-flow:column;gap:4px}.pzbr kbd,#hBraise kbd{font-size:10px;line-height:1;padding:2px 4px;border-radius:3px;border:1px solid currentColor;background:rgba(8,10,16,.7);color:inherit;font-family:inherit}
+#hBraise{display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-top:5px;color:var(--ash);opacity:.5;pointer-events:auto}
+#hBraise.pret{color:#ff9a4a;opacity:1;filter:drop-shadow(0 0 4px rgba(255,140,60,.6))}
+#hBraise:not(.vide):not(.pret){opacity:.8;color:#d89a62}
+#hBraise .hb-i{position:relative;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:conic-gradient(#ffe2aa calc(var(--h,0)*360deg),rgba(255,255,255,.1) 0)}
+#hBraise .hb-i::before{content:'';position:absolute;inset:3px;border-radius:50%;background:#0b0d14}
+#hBraise .hb-i .ic{position:relative;width:17px;height:17px}
+#hBraise.tient{opacity:1;color:#ffb062}
+.mt.ds.tient{box-shadow:0 0 0 2px rgba(8,10,16,.95),0 0 0 3.5px #ffe2aa,0 0 calc(8px + 16px*var(--h,0)) calc(var(--h,0)*3px) rgba(255,160,70,.9)}
+.oubli.brulefx .of-e{position:absolute;display:block;border-radius:50%;opacity:0;pointer-events:none;background:#ffcf8a;box-shadow:0 0 6px 1px rgba(255,140,60,.85)}
+.hx kbd{font-size:inherit}`;
  document.head.appendChild(st);
 
  window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM,oubliFx,oubliCible,reserveHTML,offreReprise,restore};
  // v17.23 · Le Dernier Souvenir en console (tant que dernier.actif est faux : __dernier.activer() montre la désignation dans la pause)
  const dsA=id=>{const M=MEM();return M?(id==null?designe():M.actifs.find(x=>x.src==='t'&&x.id===id)):null;};
- window.__dernier={get DS(){return DS;},activer:(v=true)=>{DSDEV.on=!!v;if(on())renderMem();return DSDEV.on;},actif:()=>dsActif(),
-  designer:id=>{const r=designer(id);if(on())renderMem();return r;},designe:()=>{const a=designe();return a?a.id:null;},
+ window.__dernier={get DS(){return DS;},get tient(){return {on:DSH.on,t:DSH.t};},pourquoi:dsPourquoi,hud:dsHud,activer:(v=true)=>{DSDEV.on=!!v;if(on())renderMem();return DSDEV.on;},actif:()=>dsActif(),
+  designer:id=>{const r=designer(id);if(on())renderMem();try{setHint();}catch(err){}return r;},designe:()=>{const a=designe();return a?a.id:null;},
   bruler:(id,opts)=>burn(dsA(id),opts),refus:id=>{const a=dsA(id);return a?dsRefusDe(a,true):'absent';},force:id=>{const a=dsA(id);return a?dsForceDe(a):null;},
   braises:()=>dsBraisesNow(),enCombat:()=>dsEnCombat(),enCours:id=>dsEnCours(id),brules:()=>MEM()?MEM().brules:null,
   valeurs:(f,force,fort)=>dsValeurs(DS,f,force,fort),plafond:(force,pv)=>dsPlafond(DS,force,pv),__cours:Object.keys(DS_COURS),
