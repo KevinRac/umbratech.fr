@@ -5,6 +5,7 @@
  actuelle:'v17.22',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-10-29',h:'v17.22',t:'Correctifs du Glas Originel. Le Temps Suspendu fige aussi la silhouette qui sort du Cœur. Le signal du Cœur ne s’allume plus pendant qu’elle agit. Un anneau lancé juste avant un changement de temps ne peut plus arriver pendant l’une de ses zones.'},
  {d:'2026-10-27',h:'v17.22',t:'Le Glas Originel a de nouveaux gestes à partir de son deuxième temps. Quand l’un d’eux vient, le Cœur se tait le temps qu’il dure : une seule zone à la fois, annoncée en rouge, toujours avec une issue à pied. Il ne les joue pas à chaque descente.'},
  {d:'2026-10-27',h:'v17.21',t:'Le Masqué vient au contact. Avant un sort qu’il lance autour de lui (Lame, Explosion, et ses autres attaques au corps à corps), il fonce sur toi jusqu’à t’avoir dedans, même quand son corps préfère la distance (Spectre, Voilé). Il ne lance plus ces sorts dans le vide : s’il ne t’a pas atteint en 2 secondes, il y renonce. Fuir reste une défense.'},
  {d:'2026-10-27',h:'v17.20',t:'Le Masqué qui porte autre chose a un peu plus de place dès les actes I et II : deux attaques qu’on ne croisait qu’à l’acte III peuvent désormais apparaître plus tôt, et deux autres s’y montrent sous davantage de formes. Correctif : quand ta forme marche plus lentement que d’ordinaire (Gouffre lourd, ralentissements), ses attaques cherchent maintenant ta sortie à ta vraie vitesse ; si aucune n’est à ta portée, la zone n’est pas posée.'},

@@ -1396,7 +1396,7 @@ function hitEnemy(e,base,o={}){
  if(s.bourse)m*=1+Math.min(0.3,Math.floor(gold()/15)*0.01);
  if(P.cls==='gou'){const t=gouTier();m*=[1,1.25,1.55][t]+s.tierBonus*t;m*=1+P.feast;m*=1+0.06*P.roomMut;if(P.metaT>0)m*=1.5;if(mutHas('griffes'))m*=1.4;}
  let crit=false;
- if(!o.dot&&o.crit!==false){let c=s.crit+(o.critAdd||0)+(obs?s.obscurCrit:0)+(s.oeil?P.roomMut*(s.oeil>=2?0.12:0.08):0);if(P.nightT>0||o.forceCrit)c=1;if(Math.random()<c){crit=true;m*=(s.enfant&&obs)?s.critMult+1.2:s.critMult;if(s.enfant&&obs&&EVL('pen_k1'))heal(2,'enfant');if(s.oeil&&EVL('abe_s5'))o.stun=Math.max(o.stun||0,0.3);}}
+ if(!o.dot&&o.crit!==false){let c=s.crit+(o.critAdd||0)+(obs?s.obscurCrit:0)+(s.oeil?P.roomMut*(s.oeil>=2?0.12:0.08):0);if(P.nightT>0||o.forceCrit)c=1;if(Math.random()<c){crit=true;m*=(s.enfant&&obs)?s.critMult+1.2:s.critMult;if(s.enfant&&obs&&EVL('pen_k1'))heal(2,'enfant');if(s.oeil&&EVL('abe_s5')&&!o.dsCrit)o.stun=Math.max(o.stun||0,0.3);}}
  let dmg=base*m;if(e.type==='boss'){const fl=(e.phase===1?0.66:e.phase===2?0.33:0)*e.maxHp;if(fl>0&&e.hp-dmg<fl-1)dmg=Math.max(0,e.hp-(fl-1));}
  if(o.plaf)dmg=Math.max(0,o.plaf(e,dmg)||0);   // v17.23 : plafond posé par l'appelant (Dernier Souvenir, sur les gardiens et les Masqués)
  e.hp-=dmg;RUN.dmg+=dmg;e.lastHit=RUN.time;if(e.fixed)e.dmgLog.push([RUN.time,dmg]);
@@ -2645,7 +2645,7 @@ function updateHeart(e,dt,dP,touching){
  else if(e.state==='sweep'){e.t-=dt;const w=(e.phase===3?0.8:0.6)*e.spinDir;for(let i=0;i<e.beams.length;i++)e.beams[i]+=w*dt;for(const a of e.beams){if(segDist(P.x,P.y,e.x,e.y,e.x+Math.cos(a)*900,e.y+Math.sin(a)*900)<9+P.r)hurtPlayer(e.dmg*0.9);}if(e.t<=0){e.state='idle';e.beams=null;e.vuln=2.4;e.patT=gap+0.8;tuto('Le cœur s’épuise : frappe !',1.4);}}
  else if(e.state==='spiral'){e.t-=dt;e.shotT-=dt;if(e.shotT<=0){e.shotT=e.phase===3?0.09:0.11;for(let i=0;i<3;i++)bossShot(e,e.spinA+i*TAU/3,170);e.spinA+=0.22*e.spinDir;}if(e.t<=0){e.state='idle';e.patT=gap;}}
  else if(e.state==='drain'){e.t-=dt;room.drainT=e.t;if(e.t<=0){e.state='idle';e.patT=gap;room.drainT=0;}}
- else if(e.state==='ring'){e.t-=dt;if(e.t<=0){bossRing(e,Math.random());later(0.35,()=>{if(!e.dead)bossRing(e,Math.random());});e.state='idle';e.patT=gap;}}
+ else if(e.state==='ring'){e.t-=dt;if(e.t<=0){bossRing(e,Math.random());const rm=room;rm.prevus=(rm.prevus||0)+1;later(0.35,()=>{rm.prevus=Math.max(0,(rm.prevus||0)-1);if(!e.dead)bossRing(e,Math.random());});e.state='idle';e.patT=gap;}}
  else{e.patT-=dt;if(e.patT<=0)heartPattern(e);}
  if(touching)contact(e,e.dmg);}
 function heartPattern(e){const pools={1:['ring','spiral','summon'],2:['ring','spiral','summon','sweep','drain'],3:['spiral','summon','sweep','sweep','drain','ring']}[e.phase];if(!e.queue.length)e.queue=shuffle(pools.slice());const p=e.queue.shift();
@@ -7531,7 +7531,8 @@ details.fold>.chips{margin-top:8px}
   return n*C.intervalleS;}
  // ── Battement inverse : anneaux qui se resserrent vers le Cœur
  function implosion(e){const I=L3('implosion'),n=I.nombre[e.phase]||1;
-  for(let i=0;i<n;i++)later(i*I.ecartS,()=>{if(e.dead||!boss())return;HZ.push({k:'impl',x:e.x,y:e.y,r:I.rayon,v:I.vitesse,min:e.r+6,dmg:e.dmg*I.degats,hit:false,warn:0.5,tw:0.5});sfx('heart');});
+  const rm=room;rm.prevus=(rm.prevus||0)+n;   // v17.23 (relecture) : anneaux prévus, pas encore poussés ; le Reflet les attend (glasOccupe)
+  for(let i=0;i<n;i++)later(i*I.ecartS,()=>{rm.prevus=Math.max(0,(rm.prevus||0)-1);if(e.dead||!boss())return;HZ.push({k:'impl',x:e.x,y:e.y,r:I.rayon,v:I.vitesse,min:e.r+6,dmg:e.dmg*I.degats,hit:false,warn:0.5,tw:0.5});sfx('heart');});
   return n*I.ecartS+I.rayon/I.vitesse;}
  const _bp16=bossPattern;
  bossPattern=function(e){
@@ -9688,9 +9689,11 @@ function demoBoot(cls){
  function glasZone(){const G=room&&room.glas;return !!(G&&G.bulle&&G.bulle.ph!=='finie');}
  // ce qui fait attendre le Reflet avant chaque chargement, en plus de zoneAutre (anneaux du Battement, zones des invoqués) :
  // le Battement inverse et les cloches (HZ), les tirs du gardien (Spirale, Couronne), la Dévoreuse
- function glasOccupe(b){const hz=window.__glasHZ?window.__glasHZ():[];return hz.length>0||eproj.some(p=>p.boss&&!p.dead)||(room&&room.drainT>0)||!!(b&&b.state&&b.state!=='idle');}
+ function glasOccupe(b){const hz=window.__glasHZ?window.__glasHZ():[];return hz.length>0||eproj.some(p=>p.boss&&!p.dead)||(room&&room.drainT>0)||(room&&room.prevus>0)||!!(b&&b.state&&b.state!=='idle');}
  const EG=window.__glas={};   // console et mode d'essai
- const glasCopie=()=>EG.essai?!!EG.essai.copie:!!(SG&&SG.copie);
+ // relecture (v17.23) : un essai ne vaut que pour la descente qu'il a lancée (sinon tout gardien des descentes suivantes restait bloqué)
+ const essaiG=()=>{const E=EG.essai;if(E&&E.run&&E.run!==RUN){EG.essai=null;return null;}return E;};
+ const glasCopie=()=>essaiG()?!!EG.essai.copie:!!(SG&&SG.copie);
  // répertoire à l'entrée de la salle du Glas (la réserve de la run ; rien n'est persistant)
  function glasInit(b){const res=RUN.reserveBrume||[],rnd=res.length?asmRng((Math.random()*4294967296)>>>0):Math.random;   // réserve vide : aucun tirage
   const f=EG.forcer;EG.forcer=null;const rep=f?f():glasRepertoire(SG,SBJ,FAMS,A.souvenir,res,rnd);
@@ -9705,7 +9708,7 @@ function demoBoot(cls){
   if(!G||!e.c13||e.phase<2||RUN.act!==3){_hpG(e);return;}
   const n=glasEnJeu(SG,G.rep,e.phase);
   if(!G.q||!G.q.length||G.qph!==e.phase){G.qph=e.phase;G.q=glasMelange(glasFile(SG,GA_D.attaques[3].file,e.phase,n),G.prec,Math.random);
-   if(EG.essai&&!EG.essai.appel)G.q=G.q.filter(k=>k!=='summon');}
+   if(essaiG()&&!EG.essai.appel)G.q=G.q.filter(k=>k!=='summon');}
   const k=G.q.shift();G.prec=k;
   if(k==='brume'&&n>0){glasGeste(e,G,n);return;}
   e.q16ph=e.phase;e.q16=[k==='brume'?'spiral':k];
@@ -9774,10 +9777,13 @@ function demoBoot(cls){
  updateEnemies=function(dt){const b=glasBoss(),G=b&&room.glas;
   // la fenêtre « à nu » (Accoutumance) ne se déclenche pas pendant un geste : son signal attend, son minuteur aussi
   const gel=!!(G&&G.bulle&&b.adapt&&P.cls!=='tis');if(gel&&b.cutWarn>0)b.cutWarn+=dt;
+  // relecture (v17.23, action 8) : le minuteur est tenu sous le seuil AVANT l'image (sinon le signal partait à l'image suivante)
+  const tient=()=>{if(gel&&!(b.cutWarn>0)){const X=BOSSX[P.cls];if(X&&X.cd){const thr=X.cd-1.2*b.adapt+v9CdPlus();b.cutT=Math.min(b.cutT||0,thr-dt-1e-3);}}};
+  try{tient();}catch(err){console.error(err);}
   _ueG(dt);
   if(!b||!G)return;
-  try{if(gel&&!(b.cutWarn>0)){const X=BOSSX[P.cls];if(X&&X.cd){const thr=X.cd-1.2*b.adapt+v9CdPlus();b.cutT=Math.min(b.cutT||0,thr-1e-3);}}
-   glasTick(b,G,dt);}catch(err){console.error(err);}};
+  if(P&&P.stopT>0)return;   // relecture : le Temps Suspendu fige aussi le Reflet et la bulle (comme le Glas et ses invoqués)
+  try{tient();glasTick(b,G,dt);}catch(err){console.error(err);}};
  // Robuste et Blindé : le Cœur subit moins pendant un geste ; le Reflet, lui, ne se touche pas
  const _heG=hitEnemy;hitEnemy=function(e,dmg,o){if(e&&e.reflet)return 0;
   if(e&&e.type==='boss'&&room&&room.glas&&room.glas.bulle&&room.glas.reduit>0&&typeof dmg==='number')dmg*=1-room.glas.reduit;
@@ -9841,7 +9847,7 @@ function demoBoot(cls){
   const toks=(Array.isArray(liste)?liste:String(liste||'').split(',')).filter(Boolean),vars=(opt.vars||[]).filter(v=>SBJ.variantes[v]);
   const E=EG.essai=Object.assign({temps:temps===3?3:2,appel:true,copie:false,dieu:true,bot:false,subis:0,coups:0,coupsBulle:0,sup:0,images:0,imagesZone:0,journal:[]},opt,{vars});
   if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[cls]?cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
-  RUN.act=3;RUN.g=Math.max(RUN.g,24);RUN.roomIdx=ACTS[3].rooms;
+  E.run=RUN;RUN.act=3;RUN.g=Math.max(RUN.g,24);RUN.roomIdx=ACTS[3].rooms;
   const res=[],gestes=[];let salle=1;
   for(const t of toks){const id=NODES[t]?t:talentDe(t,vars);if(!id)continue;const x={id,source:'talent',rang:1,g:0,oublie:{acte:3,salle:salle++},porte:0};res.push(x);
    const fid=FAMS[id],Ent=glasEntree(SBJ,x);if(!fid||Ent.renfort||gestes.some(g=>g.fid===fid))continue;gestes.push({x,id,fid,vars:vars.length?vars.filter(v=>SBJ.variantes[v].formes.some(f=>SBJ.familles[fid].etapes.some(e=>e.f===f))):(Ent.v||[]).slice(),force:1});}
@@ -9854,12 +9860,12 @@ function demoBoot(cls){
   const opt={appel:q('appel')!=='0',copie:q('copie')==='1',dieu:q('dieu')!=='0',bot:q('bot')==='1',vars:(q('variante')||'').split(',').filter(Boolean),renf:(q('renfort')||'').split(',').filter(v=>SBJ.renforts[v])};
   addEventListener('load',()=>setTimeout(()=>{const n=EG.lancer(QG[1],+(q('temps')||2),q('classe'),opt);try{toast('Essai · '+n,3);}catch(x){}},400));}
  // le bilan de l'essai : coups reçus (pendant un geste ou non), images où une zone du Reflet est ouverte en même temps qu'une zone du Glas ou d'un invoqué
- const _lhG=loseHp;loseHp=function(n){if(EG.hookPerte)try{EG.hookPerte(n);}catch(err){}const E=EG.essai;if(E&&room&&room.type==='boss'&&P&&n>0){const G=room.glas,B=G&&G.bulle,rf=G&&G.reflet,Bs=rf&&rf.asm.sb;
+ const _lhG=loseHp;loseHp=function(n){if(EG.hookPerte)try{EG.hookPerte(n);}catch(err){}const E=essaiG();if(E&&room&&room.type==='boss'&&P&&n>0){const G=room.glas,B=G&&G.bulle,rf=G&&G.reflet,Bs=rf&&rf.asm.sb;
    E.subis+=n;E.coups++;if(B&&rf&&(Bs.st.ph==='charge'||Bs.st.ph==='effet'||(Bs.vivants||[]).some(f=>f())||rf.fin))E.coupsBulle++;
    E.journal.push({t:+RUN.time.toFixed(2),n:Math.round(n),bulle:B?B.ph:null,ph:Bs&&Bs.st.ph,i:Bs&&Bs.st.i,f:Bs&&Bs.dernier&&Bs.dernier.et.f,p:[P.x|0,P.y|0],q:Bs&&Bs.fuiteQ&&Bs.fuiteQ.map(v=>v|0),anneaux:rings.length,hz:(window.__glasHZ?window.__glasHZ().length:0),tirs:eproj.filter(p=>p.boss).length});if(E.journal.length>80)E.journal.shift();
    if(E.dieu){P.hp=Math.max(1,P.hp-n);return;}}
   return _lhG.apply(this,arguments);};
- const _stG=step;step=function(dt){_stG(dt);if(EG.hook&&state==='play')try{EG.hook(dt);}catch(err){console.error(err);}const E=EG.essai;try{if(!E||state!=='play'||!RUN||!room||room.type!=='boss')return;const b=room.boss;if(!b||b.dead)return;
+ const _stG=step;step=function(dt){_stG(dt);if(EG.hook&&state==='play')try{EG.hook(dt);}catch(err){console.error(err);}const E=essaiG();try{if(!E||state!=='play'||!RUN||!room||room.type!=='boss')return;const b=room.boss;if(!b||b.dead)return;
   if(!E.pv0){E.pv0=true;b.hp=b.maxHp*(E.temps===3?0.3:0.6);}
   // PV du Glas tenus dans le temps demandé
   const lo=E.temps===3?0.05:0.34,hi=E.temps===3?0.33:0.65;if(b.hp<b.maxHp*lo)b.hp=b.maxHp*lo;if(b.hp>b.maxHp*hi&&b.phase>=E.temps)b.hp=b.maxHp*hi;
@@ -10165,6 +10171,7 @@ function demoBoot(cls){
   const fel=consequences(a,null).map(x=>x.id);   // ce qui s'éteindra avec lui (D4)
   try{dsTuileFx(a,portes().indexOf(a));sfx('brule');DSI.ic=icOf(a);DSI.ev=!!((a.g||0)>=2&&EVD[a.id]);DSI.t=0.8;}catch(err){console.error(err);}   // avant que le HUD ne soit redessiné : la tuile est encore à sa place
   M.actifs.splice(M.actifs.indexOf(a),1);delete P.ranks[a.id];
+  if(a.id==='car_n4'&&bells.length){for(const b of bells)fx.push({k:'ring',x:b.x,y:b.y,r0:18,r1:42,w:4,t:0.4,max:0.4,col:'rgba(255,214,150,'});bells.length=0;}   // relecture : D4
   if(!opts.libre)M.braise=dsDepense(M.braise,RUN.act,DS);
   if(M.designe===a.id)M.designe=null;
   // v : valeurs contre un ennemi ordinaire ; vf : contre un gardien ou un Masqué (contrôles remplacés). Mesures remplies par l'effet.
@@ -10214,8 +10221,11 @@ function demoBoot(cls){
   const o2=Object.assign({},o);
   if(om&&!o.dot&&o.crit!==false){o2.forceCrit=true;cmB=om.v.critMult||0;
    // ce que la brûlure ajoute en moyenne : critique forcé et dégâts critiques en plus, contre ce que tu aurais fait sans elle
-   const cm=s.critMult;let c=Math.max(0,Math.min(1,s.crit+(o.critAdd||0)+(isObscur()?s.obscurCrit||0:0)));if(P.nightT>0||o.forceCrit)c=1;
-   parts.push([om.rec,(cm+cmB)/(1+c*(cm-1))]);}
+   // (même calcul que le cœur de hitEnemy : Enfant de la Nuit dans l'Obscur, Œil de la Bête)
+   const obs=isObscur(),cm=(s.enfant&&obs)?s.critMult+1.2:s.critMult;let c=Math.max(0,Math.min(1,s.crit+(o.critAdd||0)+(obs?s.obscurCrit||0:0)+(s.oeil?P.roomMut*(s.oeil>=2?0.12:0.08):0)));if(P.nightT>0||o.forceCrit)c=1;
+   parts.push([om.rec,(cm+cmB)/(1+c*(cm-1))]);if(fortE(e))o2.dsCrit=true;}
+  // relecture (action 8) : contre un fort, la cadence de Fureur donne des coups en plus ; leur part (vitesse / (1 + vitesse)) se paie sur le plafond
+  if(fortE(e)&&!o.dot)for(const x of DSX)if(x.f==='fureur'&&x.v.vitesse>0)parts.push([x.rec,1+x.v.vitesse]);
   if(!parts.length)return _heDS.apply(this,arguments);
   if(fortE(e)){const prev=o2.plaf;
    o2.plaf=(t,d)=>{let K=1,L=0;for(const [,k] of parts){K*=k;L+=Math.log(k);}const extra=d*(1-1/K);let ok=0;
@@ -10225,7 +10235,8 @@ function demoBoot(cls){
   try{return _heDS.call(this,e,base*mul,o2);}finally{if(cmB)s.critMult-=cmB;}};
  const _acDS=atkCooldown;
  atkCooldown=function(){let c=_acDS.apply(this,arguments);for(const x of DSX)if(x.f==='fureur'&&x.v.vitesse>0)c/=1+x.v.vitesse;return c;};
- function dsFin(){DSX.length=0;for(const e of enemies)if(e.dsExp)e.dsExp=null;}
+ // fin de salle : tout s'éteint, sauf le rempart qui continue de s'user (relecture, action 8) ; fin de descente ou mort : tout
+ function dsFin(tout){for(let i=DSX.length-1;i>=0;i--)if(tout||DSX[i].f!=='garde')DSX.splice(i,1);for(const e of enemies)if(e.dsExp)e.dsExp=null;}
  // ── L'effet, famille par famille
  function embraser(rec){
   if(!P||P.dead)return;
@@ -10346,7 +10357,7 @@ function demoBoot(cls){
  //    HUD : l'icône de la braise sous la mémoire (allumée tant qu'elle n'est pas consumée), une jauge qui se remplit autour d'elle et autour
  //    de la tuile désignée ; au-dessus du héros, un anneau qui se ferme. À la brûlure : la tuile s'embrase et s'envole en braises (fondu
  //    simple en « mouvements réduits »), le chuchotement brisé (sfx('brule')). Rien de tout cela n'existe tant que dernier.actif est faux.
- const DSH={on:false,t:0,fait:false,acte:0,sabT:0};
+ const DSH={on:false,t:0,acte:0,sabT:0,run:null};
  // un refus ne s'écrit pas, il se voit (DS2, DS13) : sans désignation, braise consumée ou hors combat, la braise du HUD palpite une fois ;
  // effet encore en cours (DS17), la tuile désignée porte un sablier et palpite. X ne fait rien d'autre.
  function dsPalpite(el){if(!el)return;el.classList.remove('palpite');void el.offsetWidth;el.classList.add('palpite');}
@@ -10365,22 +10376,22 @@ function demoBoot(cls){
   const t=document.querySelector('#hMem .mt.ds');if(t){t.style.setProperty('--h',f.toFixed(3));t.classList.toggle('tient',DSH.on);}}
  function dsHoldTick(dt){
   if(!DSH.on)return;
-  if(!P||P.dead||!dsActif()||!keys.has('KeyX')||!dsEnCombat()||!designe()){dsHoldStop();return;}
+  if(!P||P.dead||!dsActif()||!keys.has(DS.touche||'KeyX')||!dsEnCombat()||!designe()){dsHoldStop();return;}
   DSH.t+=dt;dsHoldUI();
-  if(DSH.t>=(DS.maintienS||0.35)){const a=designe();dsHoldStop();DSH.fait=true;
+  if(DSH.t>=(DS.maintienS||0.35)){const a=designe();dsHoldStop();
    const r=a?burn(a):{refus:'absent'};if(r&&r.refus)dsRefusFx(r.refus);}}
  addEventListener('keydown',e=>{
-  if(e.code!=='KeyX'||e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(!DS||e.code!==(DS.touche||'KeyX')||e.repeat||e.ctrlKey||e.metaKey||e.altKey)return;
   if(!DS||!on())return;
   const w=dsPourquoi();if(w==='x')return;
   if(w){dsRefusFx(w);return;}
-  DSH.on=true;DSH.t=0;DSH.fait=false;dsHoldUI();});
- addEventListener('keyup',e=>{if(e.code==='KeyX'){DSH.fait=false;if(DSH.on)dsHoldStop();}});
+  DSH.on=true;DSH.t=0;dsHoldUI();});
+ addEventListener('keyup',e=>{if(DS&&e.code===(DS.touche||'KeyX')&&DSH.on)dsHoldStop();});
  const _ooH=openOverlay;
  openOverlay=function(){if(DSH.on)dsHoldStop();return _ooH.apply(this,arguments);};   // un écran qui s'ouvre (pause, guide…) coupe le maintien
  addEventListener('blur',()=>{if(DSH.on)dsHoldStop();});
  const _upH=updatePlayer;
- updatePlayer=function(dt){_upH.apply(this,arguments);try{dsHoldTick(dt);dsVeille(dt);}catch(err){console.error(err);DSH.on=false;}};
+ updatePlayer=function(dt){_upH.apply(this,arguments);try{if(DSH.run!==RUN){DSH.run=RUN;DSH.acte=0;DSI.t=0;dsFin(true);}if(DSX.length&&(!RUN||RUN.hub||!P||P.dead))dsFin(true);dsHoldTick(dt);dsVeille(dt);}catch(err){console.error(err);DSH.on=false;}};
  function dsVeille(dt){
   if(DSI.t>0)DSI.t-=dt;
   if(!RUN||RUN.hub)return;
@@ -10935,13 +10946,13 @@ function demoBoot(cls){
  window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM,oubliFx,oubliCible,reserveHTML,offreReprise,restore};
  // v17.23 · Le Dernier Souvenir en console (tant que dernier.actif est faux : __dernier.activer() montre la désignation dans la pause)
  const dsA=id=>{const M=MEM();return M?(id==null?designe():M.actifs.find(x=>x.src==='t'&&x.id===id)):null;};
- window.__dernier={get DS(){return DS;},get icone(){return {t:DSI.t,ic:DSI.ic,ev:DSI.ev};},get tient(){return {on:DSH.on,t:DSH.t};},pourquoi:dsPourquoi,hud:dsHud,activer:(v=true)=>{DSDEV.on=!!v;if(on())renderMem();return DSDEV.on;},actif:()=>dsActif(),
+ window.__dernier={get DS(){return DS;},cloches:()=>bells.length,get icone(){return {t:DSI.t,ic:DSI.ic,ev:DSI.ev};},get tient(){return {on:DSH.on,t:DSH.t};},pourquoi:dsPourquoi,hud:dsHud,activer:(v=true)=>{DSDEV.on=!!v;if(on())renderMem();return DSDEV.on;},actif:()=>dsActif(),
   designer:id=>{const r=designer(id);if(on())renderMem();try{setHint();}catch(err){}return r;},designe:()=>{const a=designe();return a?a.id:null;},
   bruler:(id,opts)=>burn(dsA(id),opts),refus:id=>{const a=dsA(id);return a?dsRefusDe(a,true):'absent';},force:id=>{const a=dsA(id);return a?dsForceDe(a):null;},
   braises:()=>dsBraisesNow(),enCombat:()=>dsEnCombat(),enCours:id=>dsEnCours(id),brules:()=>MEM()?MEM().brules:null,
   valeurs:(f,force,fort)=>dsValeurs(DS,f,force,fort),plafond:(force,pv)=>dsPlafond(DS,force,pv),__cours:Object.keys(DS_COURS),
   // essais : porter un talent tout de suite (rang, gravures), sans écran ni soin ; lire un nœud de l'arbre
-  prendre:(id,rang=1,g=0)=>{if(!on()||!NODES[id]||inMem('t',id))return false;const x={id,source:'talent',rang,g,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0};RUN.reserveBrume.push(x);restore(x);return true;},
+  prendre:(id,rang=1,g=0)=>{if(!on()||!NODES[id]||inMem('t',id)||brule(id))return false;const x={id,source:'talent',rang,g,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0};RUN.reserveBrume.push(x);restore(x);return true;},
   noeud:id=>NODES[id]?{id,kind:NODES[id].kind,max:NODES[id].max,reqS:NODES[id].reqS||'',br:NODES[id].br}:null,dispo:id=>nodeAvailable(id),offres:()=>rollOffers([]),gravables:()=>gravables().map(a=>a.id),
   arbre:id=>treeState(id,[]),legende:()=>treeBlock([]).includes('Brûlé'),
   // action 3 : ce qui dure encore, la cadence d'attaque du moment, le plafond d'une brûlure sur un ennemi
@@ -10952,14 +10963,14 @@ function demoBoot(cls){
  //    (rang, gravures), le désigne, active le Dernier Souvenir et te garde en vie (toi jamais sous 1 PV, sauf dieu=0). Il ne reste plus qu'à
  //    maintenir X. En console : __dernier.essai('ray_n4',{acte:3,gardien:1}) ; __dernier.essaiEtat().
  const DSE={on:false,dieu:true,id:null};
- const _lhD=loseHp;loseHp=function(n){if(DSE.on&&DSE.dieu&&P&&n>0&&RUN&&!RUN.hub){P.hp=Math.max(1,P.hp-n);return;}return _lhD.apply(this,arguments);};
+ const _lhD=loseHp;loseHp=function(n){if(DSE.on&&DSE.run!==RUN)DSE.on=false;if(DSE.on&&DSE.dieu&&P&&n>0&&RUN&&!RUN.hub){P.hp=Math.max(1,P.hp-n);return;}return _lhD.apply(this,arguments);};
  window.__dernier.essai=function(id,opt){opt=opt||{};
   try{if(!DS)return 'Dernier Souvenir absent';
    if(!NODES[id])return 'talent inconnu : '+id;
    const n=NODES[id],cls=CLS[opt.classe]?opt.classe:n.cls;if(!CLS[cls]||n.cls!==cls)return 'ce talent est de la classe '+n.cls;
    const acte=[1,2,3].includes(+opt.acte)?+opt.acte:2;
    if(!RUN||RUN.hub||state!=='play'||P.cls!==cls){chosenCls=cls;startRun();}
-   DSDEV.on=true;DSE.on=true;DSE.dieu=opt.dieu!==false;DSE.id=id;
+   DSDEV.on=true;DSE.on=true;DSE.dieu=opt.dieu!==false;DSE.id=id;DSE.run=RUN;
    RUN.act=acte;RUN.g=Math.max(RUN.g||0,acte>=3?18:acte>=2?10:2);RUN.roomIdx=Math.max(1,RUN.roomIdx||1);
    const M=MEM();if(!M)return 'mémoire absente';
    if(!M.actifs.some(a=>a.src==='t'&&a.id===id))__dernier.prendre(id,Math.max(1,+opt.rang||1),Math.max(0,+opt.grave||0));

@@ -1489,6 +1489,33 @@ Tout est dans le bloc « v17.23 (palier 5, action 4) » d'index.html, avant « A
 - `reserveGlas` : le banc prend ses talents par la console (sans oubli), sa réserve est vide (0) ; la vraie mesure viendra des descentes exportées (avec et sans brûlure).
 - Gardiens et Masqués : plafond tenu partout (93 PV au Masqué de l'acte II, 212 / 460 / 720 aux gardiens à force 3) ; aucun contrôle posé par la brûlure.
 
+### Action 8 : relecture par deux agents séparés (29 octobre 2026)
+
+Deux relecteurs qui n'avaient pas vu le travail : l'un pour le Dernier Souvenir, l'autre pour le Glas (v17.22, relecture oubliée à l'époque). Lecture seule ; les correctifs ci-dessous sont les miens. Aucun bloquant.
+
+**Dernier Souvenir, corrigé :**
+- **Fureur contre un fort** : la cadence (+60 % à force 3) donnait des coups en plus hors plafond (≈ trois fois le plafond en 5 s au Masqué de l'acte I). Contre un fort, la part des coups due à la cadence (vitesse / (1 + vitesse)) se paie maintenant sur le plafond, comme le surplus de dégâts (parts de `o2.plaf`). Mesuré : 150 coups « de référence » contre 240 sous Fureur, surplus total = plafond pile.
+- **Rempart** : `dsFin` vidait l'entrée `garde` au changement de salle, et le bouclier des trois formes autres que le Gouffre ne s'usait plus jamais. `dsFin()` garde le rempart (il continue de s'user) ; `dsFin(true)` éteint tout (nouvelle descente, mort, hub).
+- **Fureur jusqu'au hub** : à la mort ou au hub, tout s'éteint (`dsFin(true)` dans `updatePlayer`) ; une nouvelle descente remet à zéro `DSH` (palpitation de l'acte I), `DSI` et `DSX`.
+- **Critiques forcés de l'Ombre** : l'estimation du surplus suit le cœur (Enfant de la Nuit dans l'Obscur : ×(critMult + 1,2) ; Œil de la Bête dans la chance) ; un critique forcé n'étourdit plus un fort (`o.dsCrit`, éveil `abe_s5`).
+- **Carillon brûlé** : ses cloches (12 s, 600 s éveillé, sans fin avec `car2A`) restaient. Elles n'existent que par lui : elles s'éteignent avec lui (D4). La Toile, elle, a des toiles venues d'autres sources (sous-classe, Piège, Point) : les siennes finissent leurs 6 s.
+- **Console et essai** : `__dernier.prendre` refuse un talent brûlé ; le mode d'essai (« dieu ») ne vaut que pour la descente qu'il a lancée ; la touche est lue dans `DS.touche` ; `DSH.fait` (jamais lu) retiré.
+
+**Dernier Souvenir, laissé tel quel (à trancher par l'auteur) :**
+- **L'Ombre contre un Masqué** : invisible, il perd ta trace 3 s (il vise ta lanterne ou erre). C'est un contrôle sur un fort ; le cadrage (DS6) ne le range pas parmi les contrôles retirés et dit seulement « leurs zones déjà posées te touchent toujours ». Les gardiens, eux, visent toujours `P.x`.
+- **Élan contre un fort** : les charges pleines nourrissent aussi tes esquives qui blessent (Gouffre, Pas d'ombre, Macabre) sans plafond. DS8 compte la Ruée parmi les effets de survie voulus contre un gardien.
+- Hors plafond, déjà connus : Destin Lié (`rawHit`), les explosions à la mort des ennemis achevés ou avalés, le vol de vie. Une brûlure de dégâts pendant la Furie d'un gardien (immunité) est perdue, comme pendant le montage du Masqué.
+
+**Glas (v17.22), corrigé :**
+- **Temps Suspendu** : le crochet du Glas enveloppait celui qui fige les ennemis ; le Reflet continuait de bouger et de lâcher ses zones pendant l'arrêt, et ses minuteurs avançaient. `glasTick` ne tourne plus pendant `P.stopT`.
+- **Fenêtre « à nu »** : le minuteur était tenu sous le seuil après l'image, si bien que le signal (anneau, son) partait à l'image suivante pendant un geste. Il est tenu avant et après, à `seuil − dt`.
+- **Marge implicite** : un Battement inverse lancé juste avant le passage au temps 3 n'était évité que parce que `naissanceS` (0,6 s) couvrait l'écart des anneaux. Les anneaux prévus mais pas encore poussés (`later`) sont comptés (`room.prevus`, Battement inverse et anneau double) et le Reflet les attend (`glasOccupe`).
+- **Mode d'essai** : `EG.essai` restait actif dans l'onglet, si bien que tout gardien des descentes suivantes avait ses PV bloqués. Il ne vaut plus que pour la descente qu'il a lancée (`essaiG`).
+
+**Glas, remarques sans changement :** `cutThreads` (Tisse-Destin) peut tracer son anneau pendant la bulle (assumé au § 26) ; `ZR` avance pendant le Temps Suspendu, comme pour le Masqué depuis toujours.
+
+**Vérifications** : `banc-relecture.mjs` (Fureur au plafond en temps de combat, rempart après changement de salle, Carillon, hub, console) : 12, 0 échec. `banc-glas-relecture.mjs` (40 s de combat au temps 2 et 3, trois formes, Temps Suspendu en plein geste, aucune zone du Glas pendant une zone du Reflet, aucun signal « à nu » pendant une bulle, essai oublié à la descente suivante) : 16, 0 échec. Le contrôle « à nu » est faible : l'essai n'a pas forcément d'Accoutumance. Simulateurs inchangés.
+
 ### Ce qui reste (DS19)
 
-Actions 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
+Action 9 (wiki, v17.23, journal, puis `actif:true`).

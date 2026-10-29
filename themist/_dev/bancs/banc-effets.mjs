@@ -23,7 +23,8 @@ async function ouvrir(url, attente) {
     const W = window.__T = {};
     W.B = B; W.X = X;
     // le talent de cette famille et de cette forme, le plus fort ou le plus faible
-    W.talent = (f, cls, fort) => { const L = (SV.familles[f].t || []).filter(k => BRs[k.split('_')[0]].cls === cls && N[k].k !== 'c');
+    // un talent jamais brûlé dans cette descente (un talent brûlé ne revient pas, même par la console)
+    W.talent = (f, cls, fort) => { const B0 = (X.brules() || []).map(b => b.id), L = (SV.familles[f].t || []).filter(k => BRs[k.split('_')[0]].cls === cls && N[k].k !== 'c' && !B0.includes(k));
       if (!L.length) return null; const w = k => /_sk$/.test(k) ? 3 : N[k].k === 'k' ? 3 : N[k].k === 'x' || N[k].k === 's' ? 2 : 1; L.sort((a, b) => fort ? w(b) - w(a) : w(a) - w(b)); return L[0]; };
     W.vider = () => { for (const e of B.enemies) if (!e.dead && !e.asm && e.type !== 'boss') e.dead = true; const r = B.room; if (r) { r.spawning = []; r.cleared = false; } };
     W.creer = (type, dx, dy, o) => { const P = B.P, e = B.create(type, P.x + dx, P.y + dy, !!(o && o.elite)); if (o && o.pv) { e.maxHp = o.pv; e.hp = o.pv; } if (o && o.hp != null) e.hp = e.maxHp * o.hp; return e; };
