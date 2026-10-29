@@ -1444,6 +1444,14 @@ Tout est dans le bloc « v17.23 (palier 5, action 4) » d'index.html, avant « A
 - **Embrasement** (`dsTuileFx`, avant le retrait de la tuile) : elle s'éclaire en orange, monte et se défait en braises (11 points) ; en « mouvements réduits », un simple fondu sans braises. Son : `sfx('brule')` → `__brumeBrule` (le chuchotement de l'oubli, brisé en trois éclats, avec des craquements de braise ; toujours sans grondement ni chœur).
 - Banc Chromium (`banc-touche.mjs`, 33 vérifications, 0 échec, aucune erreur de script) : inactif (X ne fait rien, aucun HUD) ; sans désignation ; maintien en cours et jauge ; lâcher qui annule ; maintien complet (brûlé, braise consumée, tuile qui s'embrase puis disparaît) ; seconde brûlure refusée ; pause en plein maintien ; salle purifiée ; mouvements réduits. Simulateurs et bancs des actions 1 à 3 inchangés (4 013, 46 602, 3 583 218, 117, 520).
 
+### Actions 5 et 6 : mode d'essai, chronique, statistiques, fin de run (29 octobre 2026, toujours pas actif)
+
+- **Mode d'essai** (action 5) : `index.html?dernier=<id de talent>[&acte=1|2|3][&gardien=1][&masque=1][&classe=lum|gou|her|tis][&rang=n][&grave=n][&dieu=0]`. Il lance une descente (la classe du talent, ou `classe=` si elle va avec), te donne le talent (rang, gravures), ouvre une salle d'essai (une vague ; `gardien=1` : la salle du gardien de l'acte ; `masque=1` : un Masqué via `__asm.essai`), désigne le talent, active le Dernier Souvenir (`DSDEV`) et te garde à 1 PV minimum (`dieu=0` pour l'enlever ; crochet sur `loseHp`). Il reste à maintenir X une fois la salle ouverte (~2 s d'annonce). Un talent qu'on ne peut pas brûler (racine, compétence clé, trophée) est donné mais pas désigné : le message le dit. Console : `__dernier.essai(id, {acte, gardien, masque, classe, rang, grave, dieu})`, `__dernier.essaiEtat()`.
+- **Chronique** (action 6) : la note « tu as brûlé … » existait ; elle a maintenant un poids de 3 (`CW.brule`), comme les événements rares, pour qu'elle passe dans le récit de l'Archiviste.
+- **Statistiques** : `SAVE.stats17` gagne `brules` (nombre) et `bruleDet` (une entrée par brûlure : `id:famille:f<force>:a<acte>:<contre>:<dégâts>/<dont sur un fort>[:plaf]`). `M.fin.brules` aussi.
+- **Fin de run** (onglet Build) : sous les souvenirs portés, les souvenirs brûlés, en tuiles pointillées, désaturées, avec la petite flamme (`tile(…, {bru:true})`) et l'infobulle « Brûlé · nom · acte ».
+- Banc Chromium (`banc-essai.mjs`, 42 vérifications, 0 échec, aucune erreur de script) : vague, gardien (actes 1 et 3), Masqué ; X brûle dans chacun ; Tisse-Destin avec rang et gravure ; racine refusée, id inconnu, mauvaise classe ; chronique, `stats17`, `M.fin`, tuile brûlée à la fin de run.
+
 ### Ce qui reste (DS19)
 
-Actions 5 (`?dernier=`), 6 (statistiques, fin de run), 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
+Actions 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).

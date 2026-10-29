@@ -6206,7 +6206,7 @@ function refreshSets(){if(!P)return;if(!P.sets)P.sets={};
 function ensure14(){if(!RUN)return;if(!RUN.ch)RUN.ch={notes:[],hits:0,kills:0,flawless:0,bluffs:0,bluffBait:0,bluffPunish:0,bluffDodged:0,rules:0,assist:0,left:0,lastPact:null};
  if(!RUN.as)RUN.as={offers:0,hitsT:[],lastOffer:-99,busy:false};}
 const fmtT=t=>{const m=Math.floor(t/60),s=Math.floor(t%60);return m?`${m} min ${s} s`:`${s} s`;};
-const CW={boss:3,phenix:3,set:3,pact:2,eq:2,rule:2,rulemut:1,ruleclear:2,assist:2,eqleft:1,refus:1,cmok:1,cmko:2,cmban:2};
+const CW={boss:3,phenix:3,set:3,brule:3,pact:2,eq:2,rule:2,rulemut:1,ruleclear:2,assist:2,eqleft:1,refus:1,cmok:1,cmko:2,cmban:2};
 function chron(k,d){if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch,a=ROM[RUN.act]||'I';let t='';d=d||{};
  switch(k){
   case 'pact':t=pick([`À l’acte ${a}, tu as scellé un pacte : ${PBOON[d.boon].n} contre ${PCONS[d.cons].n}.`,`Acte ${a} : la Brume t’a offert ${PBOON[d.boon].n}, au prix de ${PCONS[d.cons].n}. Tu as signé.`]);break;
@@ -10503,7 +10503,7 @@ function demoBoot(cls){
  function pips(a,rk){const mx=maxOf(a);if(mx<=1)return '';let h='<i class="pp">';for(let i=1;i<=mx;i++)h+=`<b${i<=rk?' class="on"':''}></b>`;return h+'</i>';}
  function tile(a,o){o=o||{};const g=genre(a),rk=o.rang!=null?o.rang:a.rang,off=o.off!=null?o.off:isOff(a);
   const gv=o.g!=null?o.g:(a.g||0);
-  return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}${gv?' gr':''}${a.trophee||o.tr?' tr':''}${o.ds?' ds':''}${o.fel?' fel':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${gv?`<i class="gv">${'<b></b>'.repeat(gv)}</i>`:''}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}${o.ds?`<i class="dsb">${icon('u_braise')}</i>`:''}</span>`;}
+  return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}${gv?' gr':''}${a.trophee||o.tr?' tr':''}${o.ds?' ds':''}${o.bru?' bru':''}${o.fel?' fel':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${gv?`<i class="gv">${'<b></b>'.repeat(gv)}</i>`:''}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}${o.ds||o.bru?`<i class="dsb">${icon('u_braise')}</i>`:''}</span>`;}
  const ROMG=['','I','II','III','IV'];
  function tipOf(a){const rk=a.rang,mx=maxOf(a);return `${nameOf(a)} · ${kindOf(a)}${branchOf(a)?' · '+branchOf(a):''}${mx>1?` · rang ${rk}/${mx}`:''}${a.g?' · gravure '+ROMG[a.g]:''}${isOff(a)?' · éteint : '+offWhy(a):''}${a.trophee?' · trophée : hors mémoire, figé':''} — ${descOf(a,rk)}`;}
 
@@ -10658,9 +10658,9 @@ function demoBoot(cls){
  const _oe=openEnd;
  openEnd=function(win,abandon){const M=on()&&MEM();const first=!!(RUN&&!RUN.final);const r=_oe.apply(this,arguments);
   try{if(M&&first)statRun(M,win,abandon);}catch(err){console.error(err);}
-  try{if(M){M.fin={niveau:P.level,souvenirs:M.actifs.length,traces:Object.keys(M.traces).length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),reliques:M.actifs.filter(a=>a.src==='r').length,oublis:M.oublis,renonces:M.renonces,gains:M.gains};
+  try{if(M){M.fin={niveau:P.level,souvenirs:M.actifs.length,traces:Object.keys(M.traces).length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),reliques:M.actifs.filter(a=>a.src==='r').length,oublis:M.oublis,renonces:M.renonces,gains:M.gains,brules:(M.brules||[]).length};
    const box=overlayEl.querySelector('.panel');
-   if(box&&!box.querySelector('.endmem')){const h=`<div class="endmem"><p class="h-sec">Mémoire</p><div class="pzmem">${M.actifs.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}</div></div>`;
+   if(box&&!box.querySelector('.endmem')){const h=`<div class="endmem"><p class="h-sec">Mémoire</p><div class="pzmem">${M.actifs.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}${(M.brules||[]).map(r=>{const b={src:'t',id:r.id,rang:r.rang,g:r.g};return `<span class="mcell" title="${esc('Brûlé · '+nameOf(b)+' · acte '+(ROM[r.acte]||r.acte))}">${tile(b,{bru:true,off:false})}</span>`;}).join('')}</div></div>`;
     const bp=box.querySelector('#ep1');if(bp)bp.insertAdjacentHTML('afterbegin',h);else box.insertAdjacentHTML('beforeend',h);}}}catch(err){console.error(err);}
   return r;};
 
@@ -10772,6 +10772,7 @@ function demoBoot(cls){
    fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':(R.lastSrc||''),acte:RUN.act,salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
    tues:RUN.kills||0,degats:Math.round(RUN.dmg||0),pvMax:Math.round(P.s.maxHp),
    talents:Object.keys(M.traces).length,portes:M.actifs.length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),oublis:M.oublis||0,renonces:M.renonces||0,ecransOubli:M.ecrans||0,
+   brules:(M.brules||[]).length,bruleDet:(M.brules||[]).map(r=>`${r.id}:${r.famille}:f${Math.round(r.force*100)/100}:a${r.acte}:${r.contre}:${Math.round(r.degats)}/${Math.round(r.surFort)}${r.plafonne?':plaf':''}`).join(' '),
    gravures:M.gravures||0,eveils:EVN,repris:M.repris||0,trophees:trophees().length,porteurs:Object.values((RUN.asm&&RUN.asm.porteurs)||{}).reduce((a,b)=>a+b,0),glas:RUN.glasStats||null,reliques:(P.relics||[]).length,accoutumance:R.tot>0?Math.round(R.sig/R.tot*100)/100:null,
    build:M.actifs.map(a=>a.id+':'+a.rang+(a.g?'+'+a.g:'')).join(' ')};
   const S=SAVE.stats17||(SAVE.stats17=[]);S.push(rec);if(S.length>80)S.splice(0,S.length-80);persist();
@@ -10880,6 +10881,7 @@ function demoBoot(cls){
 .mt .dsb{position:absolute;top:-7px;left:-7px;width:15px;height:15px;display:grid;place-items:center;border-radius:50%;background:#0b0d14;color:#ffb062}
 .mt .dsb .ic{width:12px;height:12px}.mt.big .dsb{width:20px;height:20px}.mt.big .dsb .ic{width:16px;height:16px}
 .mt.k-x .dsb{transform:rotate(-45deg)}
+.mt.bru .mt-in{filter:grayscale(.75) brightness(.75)}.mt.bru{border-style:dashed;opacity:.85}
 .mt.fel{filter:saturate(.5)}
 .mt.fel::after{content:'';position:absolute;inset:2px;border-radius:inherit;pointer-events:none;background:linear-gradient(118deg,transparent 45%,rgba(255,150,90,.9) 46.5%,rgba(255,150,90,.9) 49%,transparent 50.5%)}
 .pzmem .mcell.dsok{cursor:pointer}.pzmem .mcell.dsno{cursor:not-allowed}.pzmem .mcell.dsok:hover .mt{transform:translateY(-1px)}
@@ -10913,6 +10915,35 @@ function demoBoot(cls){
   arbre:id=>treeState(id,[]),legende:()=>treeBlock([]).includes('Brûlé'),
   // action 3 : ce qui dure encore, la cadence d'attaque du moment, le plafond d'une brûlure sur un ennemi
   effets:()=>DSX.map(x=>x.f),cadence:()=>atkCooldown(),plafondDe:(e,force)=>e?dsPlafond(DS,force,e.maxHp):null,fort:e=>fortE(e)};
+ // ── v17.23 (action 5) · Mode d'essai : index.html?dernier=<id de talent>[&acte=1|2|3][&gardien=1][&masque=1][&classe=lum|gou|her|tis]
+ //    [&rang=n][&grave=n][&dieu=0] (développement seulement, barre de développement, aucune touche en plus de X)
+ //    Ouvre une salle d'essai à l'acte demandé (une vague ; gardien=1 : la salle du gardien ; masque=1 : un Masqué), te donne le talent
+ //    (rang, gravures), le désigne, active le Dernier Souvenir et te garde en vie (toi jamais sous 1 PV, sauf dieu=0). Il ne reste plus qu'à
+ //    maintenir X. En console : __dernier.essai('ray_n4',{acte:3,gardien:1}) ; __dernier.essaiEtat().
+ const DSE={on:false,dieu:true,id:null};
+ const _lhD=loseHp;loseHp=function(n){if(DSE.on&&DSE.dieu&&P&&n>0&&RUN&&!RUN.hub){P.hp=Math.max(1,P.hp-n);return;}return _lhD.apply(this,arguments);};
+ window.__dernier.essai=function(id,opt){opt=opt||{};
+  try{if(!DS)return 'Dernier Souvenir absent';
+   if(!NODES[id])return 'talent inconnu : '+id;
+   const n=NODES[id],cls=CLS[opt.classe]?opt.classe:n.cls;if(!CLS[cls]||n.cls!==cls)return 'ce talent est de la classe '+n.cls;
+   const acte=[1,2,3].includes(+opt.acte)?+opt.acte:2;
+   if(!RUN||RUN.hub||state!=='play'||P.cls!==cls){chosenCls=cls;startRun();}
+   DSDEV.on=true;DSE.on=true;DSE.dieu=opt.dieu!==false;DSE.id=id;
+   RUN.act=acte;RUN.g=Math.max(RUN.g||0,acte>=3?18:acte>=2?10:2);RUN.roomIdx=Math.max(1,RUN.roomIdx||1);
+   const M=MEM();if(!M)return 'mémoire absente';
+   if(!M.actifs.some(a=>a.src==='t'&&a.id===id))__dernier.prendre(id,Math.max(1,+opt.rang||1),Math.max(0,+opt.grave||0));
+   closeOverlay();queue.length=0;trans=null;fade=0;
+   if(opt.masque&&window.__asm&&window.__asm.essai)window.__asm.essai(null,acte,true,null,cls);
+   else doEnter(opt.gardien?'boss':'combat');
+   const a=M.actifs.find(x=>x.src==='t'&&x.id===id);
+   const ok=a?designer(id):false;renderMem();try{setHint();}catch(err){}
+   const why=a?dsRefusDe(a,false):'absent';
+   return (nameOf(a||{src:'t',id}))+' · '+(ok?'désigné, maintiens X':'refus : '+(why||'désignation impossible'))+' · '+(opt.gardien?'gardien':opt.masque?'Masqué':'vague')+' · acte '+acte;}
+  catch(err){console.error(err);return String(err);}};
+ window.__dernier.essaiEtat=()=>({on:DSE.on,dieu:DSE.dieu,id:DSE.id,designe:designe()&&designe().id,braises:dsBraisesNow(),brules:(MEM()?MEM().brules:[]).length,combat:dsEnCombat(),effets:DSX.map(x=>x.f)});
+ const QD=/[?&]dernier=([a-z0-9_]+)/.exec(location.search);
+ if(QD&&!/[?&]demo=/.test(location.search)){const q=k=>(new RegExp(`[?&]${k}=([a-z0-9]+)`).exec(location.search)||[])[1];
+  addEventListener('load',()=>setTimeout(()=>{const t=window.__dernier.essai(QD[1],{acte:q('acte'),gardien:q('gardien')==='1',masque:q('masque')==='1',classe:q('classe'),rang:q('rang'),grave:q('grave'),dieu:q('dieu')!=='0'});try{toast('Essai · '+t,3.5);}catch(x){}},500));}
 })();
 
 // ═════════════════════════ v17.5 · chaque ennemi blesse, plus d’ennemis coincés, plus rien qui arrête le joueur
