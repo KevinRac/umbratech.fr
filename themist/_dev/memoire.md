@@ -1439,7 +1439,7 @@ Mesures de l'action 3 :
 ### Action 4 : la touche X (29 octobre 2026, toujours pas active)
 
 Tout est dans le bloc « v17.23 (palier 5, action 4) » d'index.html, avant « Accès à l'arbre (D4) ». `dernier.actif` reste faux : rien ne se voit, l'essai se fait par `__dernier.activer()`.
-- **Geste** : X maintenue 0,35 s (`dsMaintien`, `DS.maintienS`) en combat (`dsEnCombat`) avec un souvenir désigné et la braise de l'acte. État `DSH` ; le temps avance dans `updatePlayer` (la pause l'arrête). Lâcher, la pause ou tout écran qui s'ouvre (`openOverlay`), `blur`, la fin du combat, l'étourdissement ou la mort l'annulent ; une fois brûlé, il faut relâcher pour recommencer. Refus avec un message court (`dsPourquoi`, `DS_DIT`) : aucune désignation, braise consumée, pas en combat, trophée / compétence clé / effet en cours. Les messages n'ont pas de « : » (le bandeau y coupe son titre).
+- **Geste** : X maintenue 0,35 s (`dsMaintien`, `DS.maintienS`) en combat (`dsEnCombat`) avec un souvenir désigné et la braise de l'acte. État `DSH` ; le temps avance dans `updatePlayer` (la pause l'arrête). Lâcher, la pause ou tout écran qui s'ouvre (`openOverlay`), `blur`, la fin du combat, l'étourdissement ou la mort l'annulent ; une fois brûlé, il faut relâcher pour recommencer. Refus : d'abord un message court, remplacé à l'action 7 par une image (voir plus bas).
 - **HUD** : `#hBraise` sous la mémoire (icône `u_braise` + touche X) : éteinte si la braise est consumée, allumée si un souvenir est désigné, jauge conique autour de l'icône et halo qui grandit sur la tuile désignée pendant le maintien (`--h`). Au-dessus du héros (`drawPproj`) : un anneau qui se ferme et une petite flamme. La ligne d'aide du bas ajoute « X maintenir : brûler » une fois un souvenir désigné ; l'écran titre et le guide (page Commandes) listent X quand `dernier.actif` est vrai (`window.__dsAide`).
 - **Embrasement** (`dsTuileFx`, avant le retrait de la tuile) : elle s'éclaire en orange, monte et se défait en braises (11 points) ; en « mouvements réduits », un simple fondu sans braises. Son : `sfx('brule')` → `__brumeBrule` (le chuchotement de l'oubli, brisé en trois éclats, avec des craquements de braise ; toujours sans grondement ni chœur).
 - Banc Chromium (`banc-touche.mjs`, 33 vérifications, 0 échec, aucune erreur de script) : inactif (X ne fait rien, aucun HUD) ; sans désignation ; maintien en cours et jauge ; lâcher qui annule ; maintien complet (brûlé, braise consumée, tuile qui s'embrase puis disparaît) ; seconde brûlure refusée ; pause en plein maintien ; salle purifiée ; mouvements réduits. Simulateurs et bancs des actions 1 à 3 inchangés (4 013, 46 602, 3 583 218, 117, 520).
@@ -1448,10 +1448,47 @@ Tout est dans le bloc « v17.23 (palier 5, action 4) » d'index.html, avant « A
 
 - **Mode d'essai** (action 5) : `index.html?dernier=<id de talent>[&acte=1|2|3][&gardien=1][&masque=1][&classe=lum|gou|her|tis][&rang=n][&grave=n][&dieu=0]`. Il lance une descente (la classe du talent, ou `classe=` si elle va avec), te donne le talent (rang, gravures), ouvre une salle d'essai (une vague ; `gardien=1` : la salle du gardien de l'acte ; `masque=1` : un Masqué via `__asm.essai`), désigne le talent, active le Dernier Souvenir (`DSDEV`) et te garde à 1 PV minimum (`dieu=0` pour l'enlever ; crochet sur `loseHp`). Il reste à maintenir X une fois la salle ouverte (~2 s d'annonce). Un talent qu'on ne peut pas brûler (racine, compétence clé, trophée) est donné mais pas désigné : le message le dit. Console : `__dernier.essai(id, {acte, gardien, masque, classe, rang, grave, dieu})`, `__dernier.essaiEtat()`.
 - **Chronique** (action 6) : la note « tu as brûlé … » existait ; elle a maintenant un poids de 3 (`CW.brule`), comme les événements rares, pour qu'elle passe dans le récit de l'Archiviste.
-- **Statistiques** : `SAVE.stats17` gagne `brules` (nombre) et `bruleDet` (une entrée par brûlure : `id:famille:f<force>:a<acte>:<contre>:<dégâts>/<dont sur un fort>[:plaf]`). `M.fin.brules` aussi.
+- **Statistiques** : `SAVE.stats17` gagne `brules` (forme définitive à l'action 7, voir plus bas). `M.fin.brules` (nombre) aussi.
 - **Fin de run** (onglet Build) : sous les souvenirs portés, les souvenirs brûlés, en tuiles pointillées, désaturées, avec la petite flamme (`tile(…, {bru:true})`) et l'infobulle « Brûlé · nom · acte ».
 - Banc Chromium (`banc-essai.mjs`, 42 vérifications, 0 échec, aucune erreur de script) : vague, gardien (actes 1 et 3), Masqué ; X brûle dans chacun ; Tisse-Destin avec rang et gravure ; racine refusée, id inconnu, mauvaise classe ; chronique, `stats17`, `M.fin`, tuile brûlée à la fin de run.
 
+### Action 7 : banc complet, écarts, mesures (29 octobre 2026, toujours pas actif)
+
+**Écarts avec le cadrage trouvés et corrigés** (les actions 4 et 6 avaient pris des raccourcis) :
+- DS2, DS13 : un refus ne s'écrit plus. Sans désignation, braise consumée ou hors combat, la braise du HUD **palpite** une fois (`dsPalpite`, `dsRefusFx`) ; X ne fait rien d'autre. `dsPourquoi` rend un code (`designe`, `braise`, `combat`, ou le code de `dsRefus`).
+- DS17 : un souvenir désigné dont l'effet tourne encore porte un **sablier** (`u_hourglass`, `.mt.ds.attend .dsh`, suivi toutes les 0,2 s par `dsVeille`) ; au refus, la tuile palpite.
+- DS13 : la braise palpite à l'entrée de chaque acte (une braise neuve) ; un redessin du HUD ne coupe pas la palpitation. L'**icône de la famille** brûlée monte au-dessus du héros pendant 0,8 s (`DSI`, `drawIcon`), liseré d'or, lavande si le souvenir était éveillé. Les **braises de la tuile volent vers le héros** (position écran du héros, comme `oubliCible`) : l'inverse de la volute de l'oubli.
+- DS14 : `stats17.brules` est la **liste** des brûlures `{id, famille, genre, rang, g, force, acte, salle, contre, degats, surFort, plafonne}` (l'ancien `bruleDet` disparaît) ; `stats17.reserveGlas` = taille de la réserve à l'entrée de la salle du Glas (`M.reserveGlas`, mesurée même quand le Dernier Souvenir est éteint, pour comparer avant / après). En fin de run, les brûlés ont **leur propre ligne** (`.endbru`).
+- DS17 : mode `?demo=` : jamais de brûlure (`DSDEMO` dans `dsActif`), aucune braise affichée.
+- Le banc d'avant mesurait mal l'étourdi des gardiens : il lisait `e.stun` 5 s après, et les autres talents du Héraut (cloches, Volée sourde) étourdissent un gardien. Un espion sur `e.stun` ne retient plus que ce que pose la brûlure (pile d'appels dans `embraser`, `dsTick` ou `dsHit`) : **0 partout** ; l'étourdi « autre » vu (1,1 s) vient du jeu ordinaire.
+
+**Bancs** (Chromium sans affichage ; copies dans `_dev/bancs/`, serveur local sur `themist/`, `node <banc> 8765`) :
+- `banc-dernier.mjs` (actions 1-2) : 117 vérifications, 0 échec.
+- `banc-effets.mjs` (action 3, étendu) : **740, 0 échec** : les 14 familles × les formes contre une vague ; le Masqué **porteur et ordinaire** (quatre formes chacun, force max de chaque famille) ; Mère-Brume, Héraut Noyé, Glas temps 2 et 3, verrou de phase, Reflet intact ; changement de salle.
+- `banc-touche.mjs` (action 4) : 34, 0 échec. `banc-essai.mjs` (actions 5-6) : 43, 0 échec.
+- `banc-complet.mjs` (action 7) : A. les **14 effets en cours lancés pour de bon** (F ou E) : sablier, refus, palpitation, fin de l'effet, brûlure, icône, touche vidée et qui ne relance rien ; B. Nova brûlée : touche A vidée, ses majeurs liés (`ray_x2a`, `ray_x2b`) éteints ; C. démo ; D. oubli par Tab, mémoire pleine, la désignation tombe ; E. reprise au Masqué porteur ; F. **descente des quatre formes** jusqu'à la victoire (trois actes, braise rendue et palpitante à chaque acte, une brûlure par acte, `reserveGlas` mesurée, statistiques et ligne des brûlés en fin de run). **228 vérifications, 0 échec, aucune erreur de script.** Deux faux échecs du banc lui-même, corrigés : la touche « E » confondue avec « Espace », et l'écran d'oubli qui s'arme 0,4 s après son ouverture.
+- `mesure-vagues.mjs` : les mesures ci-dessous.
+
+**Mesures** :
+- Durée des effets qui bloquent la brûlure (de l'appui à la fin, en jeu) : Zénith 4,5 s, Nuit Éternelle 5, Phare Tournant 6,4, Absolution 0,3, Métamorphose 7,6, Gueule du Monde 2,2, Carapace 2,2, Glas Funèbre 3,7, Requiem 7,4, Bal des Morts 3,9, Point d'orgue 0,7, Grande Toile 5,2, Grand Guignol 4, Temps Suspendu 1,5 (mesures en temps réel, à ± 0,2 s).
+- **Une vague ordinaire de l'acte II** (6 ennemis, 37 à 44 PV chacun, 285 PV en tout ; la brûlure seule, 5 s ; base sans brûlure ≈ 8 à 11 % par la lanterne et le contact) :
+
+| Famille | Force 1 à 1,5 | Force max (2 à 3) |
+|---|---|---|
+| Onde | 92 à 100 % (5-6 morts) | 100 % |
+| Faisceau | 97 à 100 % | 100 % |
+| Projectile | 70 à 89 % | 95 à 100 % |
+| Sol | 65 à 85 %, 9-10 s de ralenti cumulé | 100 % |
+| Cloche | 73 %, 7 s d'étourdi cumulé | 100 % |
+| Lame | 34-37 % (2 morts : les achevés) | 34-37 % |
+| Fil | 3 %, 15 s d'immobilité cumulée (6 × 2,5) | idem |
+| Dévoration, Ruée, Lumière, Ombre, Fureur | ≈ la base (leur effet passe par tes coups, ton esquive, tes PV) | idem |
+| Garde | bouclier 30 % des PV max | 40 % (plafond) |
+
+  Lecture : à l'acte II, **Onde et Faisceau vident une vague dès la force 1** (50 et 60 dégâts contre des ennemis de 37 à 44 PV ; à l'acte III, 51 à 61 PV, l'Onde de force 1 ne tue plus). Le cadrage craignait Lumière, Fil et Cloche ; ce sont plutôt les dégâts de zone qui écrasent les vagues. Ce n'est pas corrigé : une brûlure par acte, et DS12 dit de juger sur les descentes réelles (familles choisies). Si besoin : des dégâts proportionnels à l'acte, ou plus bas pour Onde et Faisceau.
+- `reserveGlas` : le banc prend ses talents par la console (sans oubli), sa réserve est vide (0) ; la vraie mesure viendra des descentes exportées (avec et sans brûlure).
+- Gardiens et Masqués : plafond tenu partout (93 PV au Masqué de l'acte II, 212 / 460 / 720 aux gardiens à force 3) ; aucun contrôle posé par la brûlure.
+
 ### Ce qui reste (DS19)
 
-Actions 7 (banc complet), 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
+Actions 8 (relecture séparée), 9 (wiki, v17.23, journal, puis `actif:true`).
