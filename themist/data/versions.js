@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v17.23',
+ actuelle:'v17.24',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-10-29',h:'v17.24',t:'Équilibrage du Dernier Souvenir. La Dernière onde et le Dernier rayon frappent moins fort (26 au lieu de 50 et 60) : ils ne vident plus une vague à eux seuls, ils l’entament comme la Dernière salve ou le Dernier glas. Contre un Masqué, la Dernière ombre ne te cache plus : il garde ta trace, mais tes coups restent tous critiques. Contre un gardien ou un Masqué, le Dernier élan te laisse toujours esquiver sans compter ; les esquives qu’il t’offre en plus ne blessent pas au-delà de ce que permet la brûlure.'},
  {d:'2026-10-29',h:'v17.23',t:'Le Dernier Souvenir. En combat, maintiens X une fraction de seconde : un talent que tu portes brûle pour un effet unique, qui dépend de sa famille (salve, rayon, onde, soin, rempart, fureur…). Il est perdu pour de bon : ni mémoire, ni réserve, il ne reviendra pas. Une braise par acte. Contre un gardien ou un Masqué, les contrôles sont remplacés par des dégâts bornés. Ce que tu brûles, la Brume ne l’aura jamais.'},
  {d:'2026-10-29',h:'v17.22',t:'Correctifs du Glas Originel. Le Temps Suspendu fige aussi la silhouette qui sort du Cœur. Le signal du Cœur ne s’allume plus pendant qu’elle agit. Un anneau lancé juste avant un changement de temps ne peut plus arriver pendant l’une de ses zones.'},
  {d:'2026-10-27',h:'v17.22',t:'Le Glas Originel a de nouveaux gestes à partir de son deuxième temps. Quand l’un d’eux vient, le Cœur se tait le temps qu’il dure : une seule zone à la fois, annoncée en rouge, toujours avec une issue à pied. Il ne les joue pas à chaque descente.'},

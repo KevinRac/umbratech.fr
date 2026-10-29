@@ -1020,7 +1020,7 @@ function updatePlayer(dt){
  if(P.dashT>0){
   P.dashT-=dt;P.x+=P.dashVx*dt;P.y+=P.dashVy*dt;
   P.ghostT=(P.ghostT||0)-dt;if(P.ghostT<=0){P.ghostT=0.03;fx.push({k:'ghost',x:P.x,y:P.y,cls:P.cls,sc:P.cls==='gou'?gouScale():1,t:0.26,max:0.26,col:P.cls==='gou'?'150,225,110':P.cls==='her'?'140,190,255':P.cls==='tis'?'255,110,150':obs?'170,130,255':'255,200,120'});}if(P.cls==='gou'&&Math.random()<0.6)parts.push({x:P.x+rand(-8,8),y:P.y+12,vx:rand(-40,40),vy:rand(-30,0),life:0.4,max:0.4,size:rand(4,8),col:'#3a3a30',layer:'pre',drag:3,grow:1,a:0.6});
-  if(P.cls==='gou'||s.pasOmbre||P.macDash){for(const e of enemies){if(e.dead||P.dashHit.has(e))continue;if(hyp(e.x-P.x,e.y-P.y)<e.r+P.r+6){P.dashHit.add(e);if(P.cls==='gou')hitEnemy(e,14*s.dashDmg,{kb:300*Math.min(2,s.dashDmg),sx:P.x-P.dashVx,sy:P.y-P.dashVy,color:'#c8f08a'});else if(P.macDash)hitEnemy(e,14+3*P.cad,{kb:120,sx:P.x,sy:P.y,color:'#bcd8ff'});else hitEnemy(e,18,{mark:4,kb:80,sx:P.x,sy:P.y,color:'#c9b4ff'});}}}
+  if(P.cls==='gou'||s.pasOmbre||P.macDash){for(const e of enemies){if(e.dead||P.dashHit.has(e))continue;if(hyp(e.x-P.x,e.y-P.y)<e.r+P.r+6){P.dashHit.add(e);if(P.cls==='gou')hitEnemy(e,14*s.dashDmg,{kb:300*Math.min(2,s.dashDmg),sx:P.x-P.dashVx,sy:P.y-P.dashVy,color:'#c8f08a',dash:1});else if(P.macDash)hitEnemy(e,14+3*P.cad,{kb:120,sx:P.x,sy:P.y,color:'#bcd8ff',dash:1});else hitEnemy(e,18,{mark:4,kb:80,sx:P.x,sy:P.y,color:'#c9b4ff',dash:1});}}}
  }else{
   let sp=pMarche(obs);   // v17.20 : vitesse à pied, sans ce que tu tiens toi-même (faisceau tenu, Dévoration, Absolution)
   if(P.cls==='lum'){if(P.beam&&P.lan.state==='held')sp*=0.55;}
@@ -10213,7 +10213,9 @@ function demoBoot(cls){
   if(!e||!RUN||RUN.hub||!P||typeof base!=='number')return _heDS.apply(this,arguments);
   if(o&&o.ds){const R=RUN.mem;if(!R)return _heDS.apply(this,arguments);   // Accoutumance : la brûlure ne compte pas
    const t0=R.tot,s0=R.sig,r0=R.resisted;try{return _heDS.apply(this,arguments);}finally{R.tot=t0;R.sig=s0;R.resisted=r0;}}
-  if(!DSX.length&&!(e.dsExp&&e.dsExp.fin>RUN.time))return _heDS.apply(this,arguments);
+  // v17.24 : une esquive que seul le Dernier élan t'a donnée (P.dsElan, voir tryDash) paie ses coups de kit sur le plafond d'un fort
+  const el=o&&o.dash&&fortE(e)&&P.dashT>0&&P.dsElan?P.dsElan:null;
+  if(!el&&!DSX.length&&!(e.dsExp&&e.dsExp.fin>RUN.time))return _heDS.apply(this,arguments);
   o=o||{};const s=P.s,parts=[];let mul=1,cmB=0;
   for(const x of DSX)if(x.f==='fureur'&&x.v.dmg>0){mul*=1+x.v.dmg;parts.push([x.rec,1+x.v.dmg]);}
   if(e.dsExp&&e.dsExp.fin>RUN.time&&e.dsExp.v>0){mul*=1+e.dsExp.v;parts.push([e.dsExp.rec,1+e.dsExp.v]);}
@@ -10226,17 +10228,29 @@ function demoBoot(cls){
    parts.push([om.rec,(cm+cmB)/(1+c*(cm-1))]);if(fortE(e))o2.dsCrit=true;}
   // relecture (action 8) : contre un fort, la cadence de Fureur donne des coups en plus ; leur part (vitesse / (1 + vitesse)) se paie sur le plafond
   if(fortE(e)&&!o.dot)for(const x of DSX)if(x.f==='fureur'&&x.v.vitesse>0)parts.push([x.rec,1+x.v.vitesse]);
-  if(!parts.length)return _heDS.apply(this,arguments);
-  if(fortE(e)){const prev=o2.plaf;
+  if(!parts.length&&!el)return _heDS.apply(this,arguments);
+  if(fortE(e)&&parts.length){const prev=o2.plaf;
    o2.plaf=(t,d)=>{let K=1,L=0;for(const [,k] of parts){K*=k;L+=Math.log(k);}const extra=d*(1-1/K);let ok=0;
     if(extra>0&&L>0)for(const [rec,k] of parts){const share=extra*Math.log(k)/L,a=Math.min(share,reste(rec,t));charge(rec,t,a);rec.boost+=a;ok+=a;}
     const out=d-extra+ok;return prev?prev(t,out):out;};}
+  if(el){const prev=o2.plaf;o2.plaf=(t,d)=>{const x=prev?prev(t,d):d,a=Math.min(x,reste(el,t));charge(el,t,a);el.boost+=a;return a;};}
   if(cmB)s.critMult+=cmB;
   try{return _heDS.call(this,e,base*mul,o2);}finally{if(cmB)s.critMult-=cmB;}};
  const _acDS=atkCooldown;
  atkCooldown=function(){let c=_acDS.apply(this,arguments);for(const x of DSX)if(x.f==='fureur'&&x.v.vitesse>0)c/=1+x.v.vitesse;return c;};
+ // v17.24 (action 10) · Dernier élan contre un fort : une esquive faite sur une charge que tu n'aurais pas eue sans l'élan (X.nat, la recharge
+ //    ordinaire suivie à côté) est « offerte » : ses coups de kit (Gouffre, Pas d'Ombre, Danse Macabre : o.dash) sur un gardien ou un Masqué
+ //    passent sous le plafond de la brûlure. Tes esquives ordinaires blessent comme avant ; contre un ennemi ordinaire, rien ne change.
+ const _tdDS=tryDash;
+ tryDash=function(){const el=DSX.find(x=>x.f==='ruee'),c0=P?P.dashCh:0,t0=P?P.dashT:0,r=_tdDS.apply(this,arguments);
+  if(P&&P.dashT>0&&t0<=0){P.dsElan=null;if(el&&P.dashCh<c0){if(el.nat>=1)el.nat--;else P.dsElan=el.rec;}}
+  return r;};
+ // v17.24 (action 10) · Dernière ombre contre un Masqué : il garde ta trace (pas de contrôle sur un fort, DS6, comme les gardiens qui visent
+ //    toujours P.x). Seule l'invisibilité de la brûlure est concernée (P.dsOmbre) ; celle de ton kit (Nuit, Pas fantôme, Silhouette) le trompe toujours.
+ const _etDS=enemyTarget;
+ enemyTarget=function(e){if(e&&e.asm&&P&&P.dsOmbre&&!P.dead)return {x:P.x,y:P.y,pl:true};return _etDS.apply(this,arguments);};
  // fin de salle : tout s'éteint, sauf le rempart qui continue de s'user (relecture, action 8) ; fin de descente ou mort : tout
- function dsFin(tout){for(let i=DSX.length-1;i>=0;i--)if(tout||DSX[i].f!=='garde')DSX.splice(i,1);for(const e of enemies)if(e.dsExp)e.dsExp=null;}
+ function dsFin(tout){for(let i=DSX.length-1;i>=0;i--)if(tout||DSX[i].f!=='garde')DSX.splice(i,1);for(const e of enemies)if(e.dsExp)e.dsExp=null;if(P){P.dsOmbre=false;P.dsElan=null;}}
  // ── L'effet, famille par famille
  function embraser(rec){
   if(!P||P.dead)return;
@@ -10253,7 +10267,7 @@ function demoBoot(cls){
    fx.push({k:'ring',x:x0,y:y0,r0:30,r1:R,w:18,t:0.32,max:0.32,col:`rgba(${col},`,fill:false});fx.push({k:'star',x:x0,y:y0,s:46,t:0.18,max:0.18,col,rot:rand(0,TAU)});shake(6,0.18);
    for(const e of L){if(hyp(e.x-x0,e.y-y0)>R+e.r)continue;const V=VE(rec,e);dsHit(rec,e,V.degats,{kb:180,sx:x0,sy:y0});
     if(!e.dead&&!fortE(e)&&!e.elite&&V.acheve>0&&e.hp/e.maxHp<V.acheve){RUN.dmg+=Math.max(0,e.hp);rec.degats+=Math.max(0,e.hp);e.hp=0;impactFx(e.x,e.y,true,col);killEnemy(e);rec.acheves++;}}}
-  else if(f==='ruee'){P.dashCh=P.s.dashCharges;X.cur=null;DSX.push(X);}
+  else if(f==='ruee'){X.nat=P.dashCh;X.natT=P.dashRecT;P.dashCh=P.s.dashCharges;X.cur=null;DSX.push(X);}   // v17.24 : X.nat suit les charges que tu aurais eues sans l'élan
   else if(f==='onde'){let R=0;for(const [cx,cy] of [[AR.x0,AR.y0],[AR.x1,AR.y0],[AR.x0,AR.y1],[AR.x1,AR.y1]])R=Math.max(R,hyp(cx-x0,cy-y0));
    X.x=x0;X.y=y0;X.R=R;X.T=0.7;X.hit=new Set();fx.push({k:'ring',x:x0,y:y0,r0:20,r1:R,w:22,t:X.T,max:X.T,col:`rgba(${col},`,fill:false});shake(5,0.2);DSX.push(X);}
   else if(f==='sol'){X.tick=0;X.patches=L.map(e=>({x:e.x,y:e.y,r:Math.max(42,e.r+26),s:Math.random()*10}));DSX.push(X);}
@@ -10274,7 +10288,7 @@ function demoBoot(cls){
    for(const e of L){const V=VE(rec,e);if(V.expose>0){e.dsExp={fin:RUN.time+(V.exposeS||4),v:V.expose,rec};rec.touches++;}}
    if(v.dissipe)for(const p of eproj){if(p.dead||p.boss||p.sbL!=null)continue;const fr=p.from;if(fr&&(fr.asm||fr.reflet||fr.type==='boss'))continue;p.dead=true;sparks(p.x,p.y,4,'#fff6dc');rec.dissipes++;}
    eproj=eproj.filter(p=>!p.dead);}
-  else if(f==='ombre'){mist(x0,y0,22,'#2a2440');P.invisible=true;DSX.push(X);}
+  else if(f==='ombre'){mist(x0,y0,22,'#2a2440');P.dsOmbre=!P.invisible;P.invisible=true;DSX.push(X);}   // v17.24 : P.dsOmbre, invisible par la brûlure seule (le Masqué te voit)
   else if(f==='soin'){const h0=P.hp;heal(P.s.maxHp*(v.soin||0),'boss');rec.soin+=P.hp-h0;
    fx.push({k:'ring',x:x0,y:y0,r0:60,r1:14,w:12,t:0.45,max:0.45,col:`rgba(${col},`,fill:true});sparks(x0,y0,12,'#d8ffd8');}
   else if(f==='garde'){const b=P.s.maxHp*(v.bouclier||0),s0=P.shield||0;P.shield=Math.min(P.s.maxHp,s0+b);P.shieldT=Math.max(P.shieldT||0,v.dureeS||5);rec.bouclier+=P.shield-s0;
@@ -10302,7 +10316,9 @@ function demoBoot(cls){
     X.ap=a1;const ex=P.x+Math.cos(a1)*R,ey=P.y+Math.sin(a1)*R;
     fx.push({k:'line',x1:P.x,y1:P.y,x2:ex,y2:ey,w:12,t:0.09,max:0.09,col:`rgba(${X.col},`});tlights.push({x:(P.x+ex)/2,y:(P.y+ey)/2,r:220,t:0.08,max:0.08,c:'warm'});
     fini=X.t>=T0;}
-   else if(X.f==='ruee'){P.dashCh=s.dashCharges;
+   else if(X.f==='ruee'){
+    if(X.nat<s.dashCharges){X.natT-=dt;if(X.natT<=0){X.nat++;X.natT=s.dashCd;}}else X.natT=s.dashCd;   // la recharge ordinaire, à côté
+    P.dashCh=s.dashCharges;
     if(P.dashT>0){if(!X.cur)X.cur=new Set();for(const e of dsCibles()){if(X.cur.has(e))continue;if(hyp(e.x-P.x,e.y-P.y)<P.r+e.r+8){X.cur.add(e);dsHit(rec,e,VE(rec,e).degats,{kb:150,sx:P.x,sy:P.y});}}
      if(!RM&&Math.random()<dt*40)parts.push({x:P.x+rand(-6,6),y:P.y+rand(-6,6),vx:rand(-20,20),vy:rand(-40,-10),life:0.35,max:0.35,size:2.2,col:'#ffc878',layer:'post',drag:2});}
     else X.cur=null;
@@ -10315,7 +10331,7 @@ function demoBoot(cls){
      dsHit(rec,e,(V.dps||0)*0.25,{dot:true});if(V.ralenti>0&&!e.dead){e.slowT=Math.max(e.slowT||0,0.35);e.slowK=Math.max(e.slowK||0,V.ralenti);}}}
     fini=X.t>=(v.dureeS||3);}
    else if(X.f==='fil'){for(const l of X.liens)l.t-=dt;X.liens=X.liens.filter(l=>l.t>0&&!l.e.dead);fini=!X.liens.length;}
-   else if(X.f==='ombre'){P.invisible=true;fini=X.t>=(v.invisibleS||3);}
+   else if(X.f==='ombre'){P.dsOmbre=!P.invisible;P.invisible=true;fini=X.t>=(v.invisibleS||3);if(fini)P.dsOmbre=false;}
    // le rempart tient dureeS, puis s'use (25 PV par seconde, comme le bouclier du Gouffre, qui s'use déjà de lui-même)
    else if(X.f==='garde'){X.reste=Math.min(X.reste,P.shield||0);
     if(X.t>=(v.dureeS||5)&&X.reste>0){const d=Math.min(X.reste,25*dt);X.reste-=d;if(P.cls!=='gou')P.shield=Math.max(0,P.shield-d);}

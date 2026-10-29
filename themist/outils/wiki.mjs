@@ -160,7 +160,7 @@ function memoire(D) {
 <li>Plus le talent est haut, plus l’effet est fort : ${Math.round(DSV.force.parRang * 100)} % par rang, ${Math.round(DSV.force.parGravure * 100)} % par gravure.</li>
 <li>Pendant la brûlure tu es intouchable ${nfr(DSV.invulS)} s. Les effets les plus longs durent ${DSV.dureeMaxS} s au plus.</li>
 <li>Les nœuds de racine de voie et les trophées ne se brûlent pas ; les reliques et l’équipement non plus.</li>
-<li>Contre un gardien ou un Masqué, les contrôles ne marchent pas (ni étourdissement, ni immobilisation, ni attraction, ni recul) : l’effet est remplacé par des dégâts, bornés à ${Math.round(DSV.plafonds.gardienPv * 100)} % de ses PV max (${Math.round(DSV.plafonds.gardienPvMax * 100)} % au plus).</li>
+<li>Contre un gardien ou un Masqué, les contrôles ne marchent pas (ni étourdissement, ni immobilisation, ni attraction, ni recul) : l’effet est remplacé par des dégâts, bornés à ${Math.round(DSV.plafonds.gardienPv * 100)} % de ses PV max (${Math.round(DSV.plafonds.gardienPvMax * 100)} % au plus). La Dernière ombre ne te cache pas d’un Masqué (tes coups restent critiques), et les esquives en plus que t’offre le Dernier élan passent sous la même borne.</li>
 </ul>
 <dl class="kv">${Object.values(DSV.familles).map(f => `<dt>${esc(f.n)}</dt><dd>${esc(f.d)}</dd>`).join('')}</dl>
 <p>Ce que tu brûles, la Brume ne l’aura jamais.</p>` : '';

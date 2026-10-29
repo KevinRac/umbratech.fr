@@ -25,12 +25,13 @@
   force:{parRang:0.15,parGravure:0.25},
   plafonds:{gardienPv:0.04,gardienPvMax:0.08,soinMax:0.4,bouclierMax:0.4},
   controles:['acheve','etourdiS','immobileS','attire','avale','recul','ralenti'],
+  // v17.24 : Onde et Faisceau 50 et 60 → 26 (ils vidaient une vague de l’acte II ou III dès la force 1 ; mesure : _dev/bancs/mesure-vagues.mjs, memoire.md § 27).
   familles:{
    projectile:{n:'Dernière salve',d:'Des traits chercheurs partent de toi et se répartissent sur les ennemis.',v:{traits:12,degats:14},monte:['degats']},
-   faisceau:{n:'Dernier rayon',d:'Un rayon fait un tour complet autour de toi.',v:{degats:60,portee:420,tourS:0.8},monte:['degats']},
+   faisceau:{n:'Dernier rayon',d:'Un rayon fait un tour complet autour de toi.',v:{degats:26,portee:420,tourS:0.8},monte:['degats']},
    lame:{n:'Dernière taille',d:'Un coup tout autour de toi, qui achève les ennemis ordinaires affaiblis.',v:{degats:70,rayon:140,acheve:0.2},monte:['degats']},
    ruee:{n:'Dernier élan',d:'Tes esquives sont pleines et sans recharge, et chacune blesse ce qu’elle traverse.',v:{dureeS:3,degats:25},monte:['degats']},
-   onde:{n:'Dernière onde',d:'Une onde part de toi jusqu’au bord de la salle et repousse les ennemis.',v:{degats:50,recul:200},monte:['degats']},
+   onde:{n:'Dernière onde',d:'Une onde part de toi jusqu’au bord de la salle et repousse les ennemis.',v:{degats:26,recul:200},monte:['degats']},
    sol:{n:'Dernière terre',d:'Le sol brûle sous chaque ennemi et le ralentit.',v:{dps:20,dureeS:3,ralenti:0.4},monte:['dps']},
    fil:{n:'Dernier fil',d:'Tous les ennemis de la salle sont attachés et immobiles.',v:{immobileS:2.5},monte:['degats'],fort:{degats:40}},
    cloche:{n:'Dernier glas',d:'Une cloche sonne sur toute la salle et étourdit les ennemis ordinaires.',v:{degats:30,etourdiS:1.2},monte:['degats']},

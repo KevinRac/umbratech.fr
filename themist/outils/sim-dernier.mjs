@@ -11,6 +11,7 @@
 //    aucun contrôle contre un gardien ou un Masqué (remplacé par des dégâts), plafond de dégâts sur leurs PV ;
 //  - le jeu : la table des effets en cours (DS_COURS) couvre les 12 ultimes et ne cite que des talents qui existent ;
 //    l’embrasement (action 3) a un effet par famille, le crochet de plafond de hitEnemy est en place, l’Accoutumance est épargnée.
+//  - l’équilibrage (action 10, v17.24) : Onde, Faisceau et Glas ≤ 30 à force 1 ; l’Ombre ne cache pas le joueur au Masqué ; l’élan plafonne ses esquives offertes.
 //   node themist/outils/sim-dernier.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -180,6 +181,18 @@ ok(/try\{embraser\(r\);\}catch\(err\)\{console\.error\(err\);\}/.test(html) && h
 // le plafond par brûlure ne doit jamais dépasser gardienPvMax, quelle que soit la force (rappel sur la plage réelle)
 for (const fo of [1, 1.5, 2, 2.25, 2.6, 3]) ok(F.dsPlafond(DS, fo, 1000) <= DS.plafonds.gardienPvMax * 1000 + 1e-9, `plafond à la force ${fo}`);
 ok(!/function burn[\s\S]{0,1500}reserveBrume\.push/.test(html), 'index.html : burn ne doit rien pousser dans la réserve');
+// 10. Équilibrage (action 10, v17.24)
+// a. Un effet qui frappe une fois chaque ennemi de la salle (ou d'un grand rayon) ne dépasse pas, à force 1, le Dernier glas (30) :
+//    à 50 et 60, l'Onde et le Faisceau vidaient une vague de l'acte II ou III (mesure-vagues.mjs). La Salve (12 traits) répartit les siens.
+for (const f of ['onde', 'faisceau', 'cloche']) ok(DS.familles[f].v.degats <= 30, `équilibrage : ${f} frappe tout le monde, ${DS.familles[f].v.degats} > 30 à force 1`);
+// b. La Dernière ombre ne cache pas le joueur au Masqué (pas de contrôle sur un fort, DS6) : seule l'invisibilité de la brûlure (P.dsOmbre)
+ok(/enemyTarget=function\(e\)\{if\(e&&e\.asm&&P&&P\.dsOmbre&&!P\.dead\)return \{x:P\.x,y:P\.y,pl:true\};/.test(html), 'Ombre : le Masqué doit garder ta trace pendant l\'invisibilité de la brûlure');
+ok(/f==='ombre'\)\{mist\([^\n]*P\.dsOmbre=!P\.invisible;P\.invisible=true;/.test(html) && /X\.f==='ombre'\)\{P\.dsOmbre=!P\.invisible;/.test(html), 'Ombre : P.dsOmbre ne marque que l\'invisibilité due à la brûlure');
+// c. Dernier élan contre un fort : les esquives offertes (au-delà de la recharge ordinaire, X.nat) paient leurs coups de kit sur le plafond
+const dashHits = html.match(/if\(P\.cls==='gou'\|\|s\.pasOmbre\|\|P\.macDash\)\{[^\n]*/);
+ok(dashHits && (dashHits[0].match(/dash:1\}/g) || []).length === 3, 'Élan : les trois coups d\'esquive du kit doivent porter dash:1');
+ok(/const el=o&&o\.dash&&fortE\(e\)&&P\.dashT>0&&P\.dsElan\?P\.dsElan:null;/.test(html) && /if\(el\)\{const prev=o2\.plaf;o2\.plaf=\(t,d\)=>\{const x=prev\?prev\(t,d\):d,a=Math\.min\(x,reste\(el,t\)\);/.test(html), 'Élan : le crochet du plafond doit couvrir les esquives offertes');
+ok(/tryDash=function\(\)\{[^\n]*\n[^\n]*if\(el&&P\.dashCh<c0\)\{if\(el\.nat>=1\)el\.nat--;else P\.dsElan=el\.rec;\}/.test(html), 'Élan : tryDash doit distinguer les charges ordinaires (X.nat) des charges offertes');
 
 // Tableau de lecture
 console.log(`Dernier Souvenir : ${DS.actif ? 'actif' : 'pas encore actif (données et logique prêtes)'} · touche ${DS.touche.replace('Key', '')} maintenue ${fr(DS.maintienS)} s · ${DS.parActe} braise par acte`);

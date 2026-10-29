@@ -1367,7 +1367,7 @@ Le Reflet est hors de la liste `enemies` : rien ne le vise, ne l'attache ni ne l
 - Le pilote n'esquive pas et ne frappe pas ; un joueur qui frappe le Cœur pendant un geste n'a pas été mesuré.
 - Une relecture du code par un second agent, prévue au découpage (action 7), n'a pas été faite.
 
-## 27. Palier 5 : le Dernier Souvenir, actions 1 à 3 (28 octobre 2026, pas encore actif)
+## 27. Palier 5 : le Dernier Souvenir (28-29 octobre 2026, actif depuis v17.23, équilibré en v17.24)
 
 Cadrage : document `claude/la-brume-v17-23-dernier-souvenir-cadrage.md` du projet claude.ai (décisions DS1 à DS19). L'auteur a demandé les actions 1 et 2, puis 3, du découpage (DS19) ; les recommandations du cadrage sont appliquées telles quelles. **Le jeu ne montre encore rien** : `dernier.actif` est faux dans `souvenirs.js` tant que la touche X (action 4) n'est pas branchée ; les effets existent, mais seule la console peut brûler (`__dernier.bruler`). Pas de numéro de version ni de ligne de journal : rien ne change pour le joueur.
 
@@ -1485,7 +1485,7 @@ Tout est dans le bloc « v17.23 (palier 5, action 4) » d'index.html, avant « A
 | Dévoration, Ruée, Lumière, Ombre, Fureur | ≈ la base (leur effet passe par tes coups, ton esquive, tes PV) | idem |
 | Garde | bouclier 30 % des PV max | 40 % (plafond) |
 
-  Lecture : à l'acte II, **Onde et Faisceau vident une vague dès la force 1** (50 et 60 dégâts contre des ennemis de 37 à 44 PV ; à l'acte III, 51 à 61 PV, l'Onde de force 1 ne tue plus). Le cadrage craignait Lumière, Fil et Cloche ; ce sont plutôt les dégâts de zone qui écrasent les vagues. Ce n'est pas corrigé : une brûlure par acte, et DS12 dit de juger sur les descentes réelles (familles choisies). Si besoin : des dégâts proportionnels à l'acte, ou plus bas pour Onde et Faisceau.
+  Lecture : à l'acte II, **Onde et Faisceau vident une vague dès la force 1** (50 et 60 dégâts contre des ennemis de 37 à 44 PV ; à l'acte III, 51 à 61 PV, l'Onde de force 1 ne tue plus). Le cadrage craignait Lumière, Fil et Cloche ; ce sont plutôt les dégâts de zone qui écrasent les vagues. Ce n'est pas corrigé : une brûlure par acte, et DS12 dit de juger sur les descentes réelles (familles choisies). Si besoin : des dégâts proportionnels à l'acte, ou plus bas pour Onde et Faisceau. **Tranché à l'action 10 (v17.24)** : 26 dégâts pour les deux, voir plus bas.
 - `reserveGlas` : le banc prend ses talents par la console (sans oubli), sa réserve est vide (0) ; la vraie mesure viendra des descentes exportées (avec et sans brûlure).
 - Gardiens et Masqués : plafond tenu partout (93 PV au Masqué de l'acte II, 212 / 460 / 720 aux gardiens à force 3) ; aucun contrôle posé par la brûlure.
 
@@ -1501,7 +1501,7 @@ Deux relecteurs qui n'avaient pas vu le travail : l'un pour le Dernier Souvenir,
 - **Carillon brûlé** : ses cloches (12 s, 600 s éveillé, sans fin avec `car2A`) restaient. Elles n'existent que par lui : elles s'éteignent avec lui (D4). La Toile, elle, a des toiles venues d'autres sources (sous-classe, Piège, Point) : les siennes finissent leurs 6 s.
 - **Console et essai** : `__dernier.prendre` refuse un talent brûlé ; le mode d'essai (« dieu ») ne vaut que pour la descente qu'il a lancée ; la touche est lue dans `DS.touche` ; `DSH.fait` (jamais lu) retiré.
 
-**Dernier Souvenir, laissé tel quel (à trancher par l'auteur) :**
+**Dernier Souvenir, laissé tel quel (à trancher par l'auteur ; Ombre et Élan tranchés à l'action 10, v17.24) :**
 - **L'Ombre contre un Masqué** : invisible, il perd ta trace 3 s (il vise ta lanterne ou erre). C'est un contrôle sur un fort ; le cadrage (DS6) ne le range pas parmi les contrôles retirés et dit seulement « leurs zones déjà posées te touchent toujours ». Les gardiens, eux, visent toujours `P.x`.
 - **Élan contre un fort** : les charges pleines nourrissent aussi tes esquives qui blessent (Gouffre, Pas d'ombre, Macabre) sans plafond. DS8 compte la Ruée parmi les effets de survie voulus contre un gardien.
 - Hors plafond, déjà connus : Destin Lié (`rawHit`), les explosions à la mort des ennemis achevés ou avalés, le vol de vie. Une brûlure de dégâts pendant la Furie d'un gardien (immunité) est perdue, comme pendant le montage du Masqué.
@@ -1516,6 +1516,40 @@ Deux relecteurs qui n'avaient pas vu le travail : l'un pour le Dernier Souvenir,
 
 **Vérifications** : `banc-relecture.mjs` (Fureur au plafond en temps de combat, rempart après changement de salle, Carillon, hub, console) : 12, 0 échec. `banc-glas-relecture.mjs` (40 s de combat au temps 2 et 3, trois formes, Temps Suspendu en plein geste, aucune zone du Glas pendant une zone du Reflet, aucun signal « à nu » pendant une bulle, essai oublié à la descente suivante) : 16, 0 échec. Le contrôle « à nu » est faible : l'essai n'a pas forcément d'Accoutumance. Simulateurs inchangés.
 
+### Action 10 : équilibrage, les trois points ouverts (v17.24, 29 octobre 2026)
+
+L'auteur a demandé de trancher, mesures à l'appui, les trois points laissés par l'action 8. Recommandations appliquées.
+
+**1. Onde et Faisceau vident une vague.** Mesure élargie (`mesure-vagues.mjs` prend maintenant l'acte, les familles et des valeurs d'essai posées dans la page ; il mesure aussi la force max quand une forme n'a qu'un talent dans la famille, ce que l'ancien banc refusait : talent déjà brûlé). Vague de 6 ennemis, brûlure seule, 5 s ; base sans brûlure ≈ 3 à 14 %.
+
+| Acte (PV de la vague) | Onde / Faisceau avant (50 / 60) | Onde / Faisceau après (26) | Repères inchangés : Salve · Glas |
+|---|---|---|---|
+| I (180, ennemis de 23 à 49 PV) | force 1 : 100 %, force 1,5 : 100 % | force 1 : 88-90 %, 1,5 : 97-99 % | force 1 : 89-90 % · 91-92 % |
+| II (285, 37 à 78) | force 1 : 92-96 % (5 morts), 1,5 : 100 % | force 1 : 70-73 % (2 morts), 1,5 : 83-89 % | force 1 : 64-72 % · 68-73 % ; force 1,5 : 86-89 % |
+| III (390, 51 à 106) | force 1 : 86-90 %, 1,5 : 94-98 % | force 1 : 52-53 %, 1,5 : 70-74 % | force 1 : 49-56 % · 51-54 % ; force 1,5 : 74 % |
+| Force max (2,25 à 3) | 100 % partout | 89 à 100 % | 87 à 100 % |
+
+Lecture : l'écart n'était **pas** propre à l'acte II (il restait entier à l'acte III, les PV montent comme les dégâts de base) ; c'était la valeur. Essais à 26, 30 et 34 : 26 met les deux familles exactement au niveau de la Salve et du Glas, à chaque acte et à chaque force (34 laissait 79 % et 94 % à l'acte II). **Retenu : `degats` 26 pour l'Onde et le Faisceau** (`souvenirs.js`) ; portée, rayon et plafond par acte inchangés (inutiles une fois la valeur alignée). L'acte I reste vidé par toutes les familles de dégâts de zone, Salve et Glas compris : une braise par acte, c'est le grand moment voulu. Contre un fort, l'effet était déjà borné : à force 3, 78 dégâts de base au lieu de 150, sous le plafond du Masqué de l'acte II (93) et très loin de celui des gardiens (212 à 720) ; au Masqué de l'acte I (plafond 29 à 59), rien ne change.
+
+**2. L'Ombre contre un Masqué.** `mesure-forts.mjs` A (Dernière ombre force 3, lanterne immobile qui « attaque » pour que l'invisibilité de son kit n'entre pas en jeu, 12 fenêtres de 3 s, Masqué entre 50 et 60 % de PV) :
+- avant : **0 sort lancé en 3 s** (1,25 à 1,67 sans brûlure à l'acte II, 2,2 à l'acte III), dégâts reçus divisés par deux (58 contre 123). L'invisibilité fait passer `tg.pl` à faux, et `autre:!tg.pl` suspend toute la file du Masqué : c'est un silence complet, donc un contrôle sur un fort.
+- après : 2 sorts en 3 s à l'acte II (1,25 sans), 2,3 à l'acte III (2,2 sans) ; dégâts reçus 98 contre 115 (l'écart restant : l'invulnérabilité de 0,5 s).
+
+Choix : **exclure plutôt que raccourcir**. Toute durée d'invisibilité arrête la file du Masqué (raccourcir à 1 s, c'est encore 1 s de silence garanti), les gardiens visent toujours `P.x`, et DS6 veut qu'un fort ne subisse aucun contrôle. Le Masqué garde ta trace pendant l'invisibilité **due à la brûlure** (`P.dsOmbre`, posé quand tu n'étais pas déjà invisible ; `enemyTarget` enveloppé pour `e.asm`). L'invisibilité de ton kit (Nuit Éternelle, Pas fantôme, Silhouette) le trompe toujours ; les ennemis ordinaires (escorte comprise) perdent toujours ta trace ; les critiques forcés restent, sous le plafond.
+
+**3. Dernier élan contre un fort.** `mesure-forts.mjs` B (Gouffre, Charge brutale rang 3, aller-retour à travers le Masqué en esquive pendant 3 s) :
+
+| | Plafond | Sans brûlure | Avec, avant | Avec, après |
+|---|---|---|---|---|
+| Acte II, force 1 | 48 | 57 PV (3 esquives) | 345 (17 esquives) : **+288** | 103 : **+45** |
+| Acte II, force 2,25 | 97 | 55 | 387 : **+332** | 153 : **+100** |
+| Acte III, force 1 | 65 | 58 | — | 122 : **+64** |
+| Acte III, force 2,25 | 131 | 53 | — | 188 : **+135** |
+
+Avant, les coups de kit des esquives en plus dépassaient le plafond jusqu'à 6 fois. Choix : **plafonner, mais seulement les esquives offertes**. Une recharge ordinaire est suivie à côté (`X.nat`, `X.natT`, depuis tes charges au moment de la brûlure) ; une esquive prise sur une charge que tu n'aurais pas eue sans l'élan est marquée (`tryDash` enveloppé → `P.dsElan`), et ses coups de kit (`o.dash`, posé sur les trois coups d'esquive : Gouffre, Pas d'Ombre, Danse Macabre) sur un gardien ou un Masqué passent par `o.plaf`, sur le même budget que la brûlure (`reste`, `charge`, comptés dans `rec.boost`). Tes esquives ordinaires blessent comme avant ; contre un ennemi ordinaire, rien ne change. Le surplus mesuré tombe sur le plafond (l'écart de 3 ou 4 PV vient du bruit de la référence sans brûlure). DS8 (l'élan comme effet de survie contre un gardien) est intact : les charges restent pleines.
+
+**Vérifications** : `sim-dernier.mjs` **4 021, 0 échec** (section 10 : Onde, Faisceau et Glas ≤ 30 à force 1 ; enveloppe d'`enemyTarget` et `P.dsOmbre` ; `dash:1` sur les trois coups ; crochet de l'élan ; `tryDash` qui distingue `X.nat` ; contre-épreuve : l'Onde remise à 50 est attrapée). `sim-brume.mjs --vite` : 46 602, 0 échec. `banc-effets.mjs` : 740, 0 échec. `banc-complet.mjs` : 228, 0 échec (un premier passage lancé en même temps que `banc-effets` a raté une fois le sablier de Nuit Éternelle, attente en temps réel de 450 ms sous charge ; seul, trois fois sur trois puis le banc entier : 0 échec). `banc-relecture.mjs` : 12, 0 échec. Aucune erreur de script. `wiki.mjs --check` : à jour (la puce « contre un gardien ou un Masqué » du gabarit dit les deux nouvelles règles).
+
 ### Ce qui reste (DS19)
 
-Action 9 faite (v17.23) : section générée du wiki, journal, `actif:true`.
+Action 9 faite (v17.23) : section générée du wiki, journal, `actif:true`. Action 10 faite (v17.24) : les trois points ouverts de l'action 8. Restent à juger sur les descentes exportées : `reserveGlas` avec et sans brûlure, les familles réellement brûlées (`stats17.brules`).

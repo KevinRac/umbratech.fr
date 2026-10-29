@@ -16,6 +16,7 @@ Les chemins de Playwright (`/opt/npm-tools/node_modules/`) et de Chromium (`/opt
 | `banc-complet.mjs` | action 7 : 14 effets en cours, touches vidées, démo, oubli par Tab, reprise au Masqué, descente des quatre formes (sections A à F en argument : `node banc-complet.mjs 8765 AB`) |
 | `banc-relecture.mjs` | action 8 : correctifs de la relecture du Dernier Souvenir (Fureur au plafond, rempart, Carillon, hub) |
 | `banc-glas-relecture.mjs` | action 8 : correctifs de la relecture du Glas v17.22 (Temps Suspendu, « à nu », justice, essai) |
-| `mesure-vagues.mjs` | mesure : ce que chaque brûlure fait à une vague de l'acte II |
+| `mesure-vagues.mjs` | mesure : ce que chaque brûlure fait à une vague (`node mesure-vagues.mjs 8765 [acte] [familles] ['{"onde":{"degats":26}}']` : acte 1 à 3, familles séparées par des virgules, valeurs d'essai posées dans la page sans toucher aux données) |
+| `mesure-forts.mjs` | mesure (action 10) : Dernière ombre et Dernier élan contre un Masqué, avec et sans brûlure (`node mesure-forts.mjs 8765 [acte] [essais]`) |
 
 Détail et résultats : `../memoire.md`, § 27.
