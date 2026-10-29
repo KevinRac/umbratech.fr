@@ -28,6 +28,7 @@ const toastTxt = (page) => page.evaluate(() => (document.querySelector('#toast')
 // ── 1. dernier.actif faux : rien ne se passe, rien n'est visible
 {
   const { page, errs, ctx } = await scene();
+  await page.evaluate(() => { window.BRUME_DATA.souvenirs.dernier.actif = false; });   // v17.23 : actif par défaut, on force l'état inactif
   const id = await choisir(page);
   ok(!!id, 'un talent brûlable existe');
   await page.keyboard.down('KeyX'); await page.waitForTimeout(600); await page.keyboard.up('KeyX');
@@ -145,7 +146,7 @@ const toastTxt = (page) => page.evaluate(() => (document.querySelector('#toast')
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(`http://127.0.0.1:${PORT}/index.html`);
   await page.waitForTimeout(1500);
-  ok(await page.evaluate(() => !/Brûler le souvenir/.test(document.body.innerText)), 'écran titre : pas d\'aide tant que c\'est inactif');
+  ok(await page.evaluate(() => !/Brûler le souvenir/.test(document.body.innerText) && window.__dsAide() === true), 'écran titre : pas d\'aide parasite, __dsAide actif (v17.23)');
   ok(errs.length === 0, 'écran titre : aucune erreur ' + errs.join('|'));
   await ctx.close();
 }

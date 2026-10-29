@@ -1518,4 +1518,4 @@ Deux relecteurs qui n'avaient pas vu le travail : l'un pour le Dernier Souvenir,
 
 ### Ce qui reste (DS19)
 
-Action 9 (wiki, v17.23, journal, puis `actif:true`).
+Action 9 faite (v17.23) : section générée du wiki, journal, `actif:true`.

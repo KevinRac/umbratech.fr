@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v17.22',
+ actuelle:'v17.23',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-10-29',h:'v17.23',t:'Le Dernier Souvenir. En combat, maintiens X une fraction de seconde : un talent que tu portes brûle pour un effet unique, qui dépend de sa famille (salve, rayon, onde, soin, rempart, fureur…). Il est perdu pour de bon : ni mémoire, ni réserve, il ne reviendra pas. Une braise par acte. Contre un gardien ou un Masqué, les contrôles sont remplacés par des dégâts bornés. Ce que tu brûles, la Brume ne l’aura jamais.'},
  {d:'2026-10-29',h:'v17.22',t:'Correctifs du Glas Originel. Le Temps Suspendu fige aussi la silhouette qui sort du Cœur. Le signal du Cœur ne s’allume plus pendant qu’elle agit. Un anneau lancé juste avant un changement de temps ne peut plus arriver pendant l’une de ses zones.'},
  {d:'2026-10-27',h:'v17.22',t:'Le Glas Originel a de nouveaux gestes à partir de son deuxième temps. Quand l’un d’eux vient, le Cœur se tait le temps qu’il dure : une seule zone à la fois, annoncée en rouge, toujours avec une issue à pied. Il ne les joue pas à chaque descente.'},
  {d:'2026-10-27',h:'v17.21',t:'Le Masqué vient au contact. Avant un sort qu’il lance autour de lui (Lame, Explosion, et ses autres attaques au corps à corps), il fonce sur toi jusqu’à t’avoir dedans, même quand son corps préfère la distance (Spectre, Voilé). Il ne lance plus ces sorts dans le vide : s’il ne t’a pas atteint en 2 secondes, il y renonce. Fuir reste une défense.'},

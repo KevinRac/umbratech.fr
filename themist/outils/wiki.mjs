@@ -151,6 +151,19 @@ function memoire(D) {
     const cles = ids.filter(id => N[id].k !== 's'), comp = ids.filter(id => N[id].k === 's');
     return `<article class="ent mev"><h4 style="color:${FO[c].color}">${esc(FO[c].short)}</h4>${cles.length ? `<p class="mevg">Nœuds clés et ultimes</p><dl>${li(cles)}</dl>` : ''}${comp.length ? `<p class="mevg">Compétences</p><dl>${li(comp)}</dl>` : ''}</article>`;
   }).join('')}</div>`;
+  // v17.23 : Le Dernier Souvenir (data/souvenirs.js, dernier) ; seulement quand il est actif
+  const DSV = S.dernier;
+  const dernier = DSV && DSV.actif ? `<h3 class="sub" id="dernier">Le Dernier Souvenir</h3>
+<p>En combat, maintiens <kbd>${esc(String(DSV.touche).replace('Key', ''))}</kbd> ${nfr(DSV.maintienS)} s : un talent que tu portes <b>brûle</b> pour un effet unique, puissant, qui dépend de sa famille. Le talent est <b>perdu pour de bon</b> : ni mémoire ni réserve, il ne reviendra pas de la descente, et sa place se libère. Tu peux aussi le désigner depuis la pause.</p>
+<ul>
+<li><b>Une braise par acte</b>, non cumulable (${DSV.parActe} par acte). Elle se voit au-dessus de ta barre de vie.</li>
+<li>Plus le talent est haut, plus l’effet est fort : ${Math.round(DSV.force.parRang * 100)} % par rang, ${Math.round(DSV.force.parGravure * 100)} % par gravure.</li>
+<li>Pendant la brûlure tu es intouchable ${nfr(DSV.invulS)} s. Les effets les plus longs durent ${DSV.dureeMaxS} s au plus.</li>
+<li>Les nœuds de racine de voie et les trophées ne se brûlent pas ; les reliques et l’équipement non plus.</li>
+<li>Contre un gardien ou un Masqué, les contrôles ne marchent pas (ni étourdissement, ni immobilisation, ni attraction, ni recul) : l’effet est remplacé par des dégâts, bornés à ${Math.round(DSV.plafonds.gardienPv * 100)} % de ses PV max (${Math.round(DSV.plafonds.gardienPvMax * 100)} % au plus).</li>
+</ul>
+<dl class="kv">${Object.values(DSV.familles).map(f => `<dt>${esc(f.n)}</dt><dd>${esc(f.d)}</dd>`).join('')}</dl>
+<p>Ce que tu brûles, la Brume ne l’aura jamais.</p>` : '';
   const fams = Object.entries(S.familles).map(([k, f]) => {
     if (!(f.t || []).length) return '';
     const parForme = Object.keys(FO).map(c => {
@@ -189,6 +202,7 @@ function memoire(D) {
 <h3 class="sub" id="eveils">Les éveils</h3>
 <p>Les <b>compétences, nœuds clés et ultimes</b> ne s’intensifient pas : à la Gravure ${ROMG[1]}, ils reçoivent le bonus de leur famille ; à la Gravure ${ROMG[2]}, ils <b>s’éveillent</b> et changent de comportement (${Object.keys(EVS).length} éveils). La carte d’éveil a une bordure de braise et dit ce qui change.</p>
 ${eveils}
+${dernier}
 <h3 class="sub">Les familles de souvenirs</h3>
 <p>Chaque talent appartient à une famille, rangée selon ce qu’il <b>fait</b> (pas selon ce qui le déclenche). Elle donne son icône à la tuile.</p>
 <div class="grid g2">${fams}</div>

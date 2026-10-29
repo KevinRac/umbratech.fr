@@ -10,7 +10,7 @@
  trophees:{parActe:1},
  // Le Dernier Souvenir (palier 5, cadrage v17.23 : décisions DS1 à DS19) : en combat, brûler un talent porté pour un effet unique.
  // Il est perdu pour de bon : ni mémoire, ni réserve de la Brume ; sa place se libère ; ce qui en dépendait s’éteint (D4) ; sa trace reste.
- // actif : faux tant que les effets (action 3) et la touche (action 4) ne sont pas branchés ; en console : __dernier.
+ // actif : vrai depuis v17.23 (le Dernier Souvenir est visible en jeu) ; en console : __dernier.
  // parActe : braises par acte, rendues à l’entrée de chaque acte, non cumulables ; maintienS : durée du maintien de la touche ;
  // invulS : invulnérabilité à l’embrasement ; interdits : genres de nœud qu’on ne brûle pas (c : racine de voie) et les trophées.
  // force = poids du genre (gravure.poids) × (1 + parRang × (rang − 1)) × (1 + parGravure × gravures) : de 1 à 3.
@@ -20,7 +20,7 @@
  // familles : n nom, d texte (jeu et wiki), v valeurs à la force 1 (durées en s : clés finissant par S, jamais plus de dureeMaxS),
  //  monte : clés multipliées par la force (les durées ne montent jamais), max : bornes après la force, fort : ce qui remplace
  //  les contrôles contre un gardien ou un Masqué. Fortune n’a aucun talent : rien à brûler.
- dernier:{actif:false,parActe:1,touche:'KeyX',maintienS:0.35,invulS:0.5,dureeMaxS:5,
+ dernier:{actif:true,parActe:1,touche:'KeyX',maintienS:0.35,invulS:0.5,dureeMaxS:5,
   interdits:{genres:['c'],trophee:true},
   force:{parRang:0.15,parGravure:0.25},
   plafonds:{gardienPv:0.04,gardienPvMax:0.08,soinMax:0.4,bouclierMax:0.4},
