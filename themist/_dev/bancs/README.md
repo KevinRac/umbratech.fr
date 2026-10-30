@@ -19,5 +19,6 @@ Les chemins de Playwright (`/opt/npm-tools/node_modules/`) et de Chromium (`/opt
 | `mesure-vagues.mjs` | mesure : ce que chaque brûlure fait à une vague (`node mesure-vagues.mjs 8765 [acte] [familles] ['{"onde":{"degats":26}}']` : acte 1 à 3, familles séparées par des virgules, valeurs d'essai posées dans la page sans toucher aux données) |
 | `mesure-forts.mjs` | mesure (action 10) : Dernière ombre et Dernier élan contre un Masqué, avec et sans brûlure (`node mesure-forts.mjs 8765 [acte] [essais]`) |
 | `banc-nemesis.mjs` | némésis (v17.25), actions 1-4 (revanche : souvenir repris, laissé, Éclats, rang, mémoire pleine, brûlé) : promotion à la mort, porteur et ordinaire, une par acte, refus (brisé, absent, essai, démo, Phénix), sauvegarde versionnée ; retour à sa salle (une fois, son acte, halte), assemblage, souvenir, force et PV de ses points, répit, fiche périmée |
+| `capture-crane.mjs` | captures du crâne de la némésis (action 5a) : planche des tailles et crânes posés sur les trois corps (`node capture-crane.mjs 8765 <dossier> [zoom]`) ; références : `crane-*.png` |
 
 Détail et résultats : `../memoire.md`, § 27 (Dernier Souvenir) et § 28 (némésis).

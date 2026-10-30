@@ -10056,6 +10056,21 @@ function demoBoot(cls){
   if(R&&R.nem===uid)R.nemFiche=f;(RUN.nemBrisees=RUN.nemBrisees||{})[uid]=f?f.points:0;return f;}
  const _keN=killEnemy;killEnemy=function(e){const was=e&&e.dead,r=_keN.apply(this,arguments);
   try{if(!was&&e&&e.dead&&e.asm&&e.asm.nem&&RUN&&!RUN.hub)nemBrise(e.asm.nem.uid);}catch(err){console.error(err);}return r;};
+ // ── Action 5a (N10a) : le crâne, peint une fois hors écran par hauteur (× 2 pour la netteté) avec MQ.peindreCrane, puis posé (drawImage).
+ // Le trousseau (place à la hanche, côté, balancement) est l'action 5b ; ici, seulement l'image et un aperçu de développement.
+ const CRI={};
+ function craneImg(h){h=Math.max(6,Math.round(h));if(CRI[h])return CRI[h];const k=2,C=MQ.crane,cv=document.createElement('canvas');
+  cv.width=Math.ceil((C.vb[0]+6)/C.vb[1]*h*k);cv.height=Math.ceil(h*1.16*k);const c=cv.getContext('2d');c.scale(k,k);MQ.peindreCrane(c,cv.width/k/2,h*0.53,h);return CRI[h]={cv,k,h};}
+ function poseCrane(c,x,y,h){const I=craneImg(h),w=I.cv.width/I.k,hh=I.cv.height/I.k;c.drawImage(I.cv,x-w/2,y-I.h*0.53,w,hh);}
+ const craneTaille=e=>{const C=MQ.crane;return clamp(e.r*C.taille,C.min,C.maxPx);};
+ // aperçu (développement) : __nemesis.crane.essai(n, px) pose n crânes en éventail à la hanche de chaque Masqué, sans balancement
+ const NCE={on:false,n:3,px:null};
+ const _depN=drawEnemyPost;drawEnemyPost=function(e){_depN.apply(this,arguments);
+  try{if(!NCE.on||!e||e.dead||!e.asm||e.asm.reflet)return;const C=MQ.crane,h=NCE.px||craneTaille(e),n=Math.min(C.max,NCE.n),hx=e.x+e.r*C.hanche[0],hy=e.y+e.r*C.hanche[1];
+   ctx.save();ctx.strokeStyle='rgba(20,14,12,.9)';ctx.lineWidth=1.4;ctx.fillStyle='rgba(20,14,12,.95)';ctx.beginPath();ctx.arc(hx,hy,2.2,0,TAU);ctx.fill();
+   for(let i=0;i<n;i++){const a=Math.PI/2-(i-(n-1)/2)*C.eventail*Math.PI/180,L=C.chaine+h*(0.55+(i%2)*0.8),x=hx+Math.cos(a)*L,y=hy+Math.sin(a)*L;   // en quinconce : deux voisins ne se cachent pas
+    ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(hx+Math.cos(a)*(L-h*0.45),hy+Math.sin(a)*(L-h*0.45));ctx.stroke();poseCrane(ctx,x,y,h);}
+   ctx.restore();}catch(err){}};
  const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}return _oeN.apply(this,arguments);};
  // console : voir et effacer la fiche, essayer sans toucher aux données
  window.__nemesis={
@@ -10070,6 +10085,7 @@ function demoBoot(cls){
   conditions:()=>RUN?nemConditions(true,false,false):null,
   valider:()=>{const S=nemLire(SAVE.nemesis);return S?S.liste.map(f=>nemValide(A,NM,SBJ,f,nemInfo)):null;},
   stats:f=>nemStats(A,NM,SBJ,f),
+  crane:{essai:(n=3,px=null)=>{NCE.on=true;NCE.n=n;NCE.px=px;return true;},arret:()=>{NCE.on=false;return true;},img:craneImg,taille:e=>craneTaille(e)},
   F:{nemRefus,nemDecision,nemArrache,nemCombo,nemPromotion,nemPoint,nemStats,nemSalle,nemFin,nemReprise,nemLire,nemEcrire,nemValide}};
 })();
 

@@ -62,6 +62,17 @@ if (CR) {
   ok(r <= Math.max(g, b), `crane.lueur ${CR.lueur} : jamais de rouge (réservé aux zones)`);
   ok(CR.balancement >= 0 && CR.balancement <= 15, 'crane.balancement : borné');
 }
+if (CR) {   // action 5a : le dessin du crâne
+  ok(CR.tete && CR.machoire && CR.nez && CR.orbites && CR.orbites.length === 2 && CR.vb && CR.vb.length === 2, 'crane : tête, mâchoire séparée, deux orbites, nez, repère');
+  ok(CR.min >= 12, `crane.min ${CR.min} : sous 12 px, un crâne se lit comme une tache (essais de l’action 5a)`);
+  for (const [k, c] of Object.entries(CR.couleurs || {})) { const v = parseInt(c.slice(1), 16), r = v >> 16, g = v >> 8 & 255, b = v & 255; ok(r - Math.max(g, b) < 30, `crane.couleurs.${k} ${c} : jamais de rouge`); }
+  const sv = MQ.svgCrane('t1', 'Crâne'), sv2 = MQ.svgCrane('t2');
+  ok(/^<svg [^>]*viewBox="[^"]+"/.test(sv) && sv.endsWith('</svg>'), 'svgCrane : un SVG');
+  ok((sv.match(/<path /g) || []).length >= 6 && /id="t1o"/.test(sv) && /url\(#t1o\)/.test(sv) && !/t1o/.test(sv2), 'svgCrane : ses dégradés portent l’identifiant donné');
+  ok(/role="img" aria-label="Crâne"/.test(sv) && /aria-hidden="true"/.test(sv2), 'svgCrane : étiquette pour les lecteurs d’écran, sinon décoratif');
+  ok(!/#[0-9a-f]{0,2}(?:f[0-9a-f]|e[0-9a-f])0000|rgb\(2[0-9]{2},\s*[0-9]{1,2},/.test(sv), 'svgCrane : aucun rouge');
+  ok(typeof MQ.peindreCrane === 'function', 'peindreCrane : le même dessin pour le jeu');
+}
 ok(Array.isArray(MQ.coutures) && MQ.coutures.length === 6, 'masque.js : le masque garde ses 6 points de couture (N10b)');
 
 // 1. Qui est promu (N2) : toutes les combinaisons
@@ -303,6 +314,9 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/if\(r\.type==='eclats'\)\{RUN\.sh\.elites\+=r\.eclats;/, 'Éclats : comptés dans les éclats du run');
   has(/else if\(ctx==='nem'\)rendre\(g\.entry\);/, 'mémoire pleine : l’écran d’oubli rend le souvenir (contexte nem)');
   ok(!/function rendre\(x\)\{[^\n]*reserveBrume/.test(html), 'index.html : le souvenir rendu ne passe jamais par la réserve');
+  // action 5a : le crâne du jeu
+  has(/function craneImg\(h\)\{[^\n]*\n[^\n]*MQ\.peindreCrane\(/, 'craneImg : peint une fois hors écran par hauteur (MQ.peindreCrane)');
+  has(/const craneTaille=e=>\{const C=MQ\.crane;return clamp\(e\.r\*C\.taille,C\.min,C\.maxPx\);\};/, 'taille du crâne : rayon × taille, de min à maxPx');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);
