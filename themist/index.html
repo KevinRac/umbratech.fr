@@ -9101,7 +9101,8 @@ function demoBoot(cls){
   const RF=S.sv&&S.sv.renfort&&SBJ.renforts[S.sv.renfort],SF=S.sb&&S.sb.seul&&SBJ.familles[S.sb.fid];
   const caps=SF?`<i class="sv" title="${esc(SF.n)}">${icon(SF.ic)}</i>`:S.st.caps.map(ic).join('')+(S.st.eveil?'':`<i class="dort">${icon('u_sleep')}</i>`)+ic(S.st.sig)+(RF?`<i class="sv et" title="${esc(RF.n)}">${icon(RF.ic)}</i>`:'');
   card.className=(eveil?'eveil':'')+(S.sv?' porte':'');
-  card.innerHTML=`<span class="mq" aria-hidden="true">${MQ.svg(COL,eveil?'fissure':'calme','asmc'+(++cardN))}</span><div><b>${esc(A.n)}${eveil?' · ▲':''}</b><span class="nm">${esc(S.nom)}</span><span class="ics">${caps}</span>${S.sv?`<span class="svn">${esc(S.sv.n)}</span>`:''}</div>`;
+  const TRS=S.nem&&window.__nemesisUI&&!S.reflet?window.__nemesisUI.trousseauSvg(S.nem.points||1,'asmt'+cardN,22):'';   // v17.25 : le trousseau de la némésis, les crânes en SVG (N10c)
+ card.innerHTML=`<span class="mq" aria-hidden="true">${MQ.svg(COL,eveil?'fissure':'calme','asmc'+(++cardN))}</span>${TRS}<div><b>${esc(A.n)}${eveil?' · ▲':''}</b><span class="nm">${esc(S.nom)}</span><span class="ics">${caps}</span>${S.sv?`<span class="svn">${esc(S.sv.n)}</span>`:''}</div>`;
   try{stackBelow(card,toastEl);}catch(x){}
   void card.offsetWidth;card.classList.add('show');cardHide=RUN.time+(eveil?2:S.sv?3.6:2.8);}
  function hideCard(){if(card)card.classList.remove('show');cardHide=0;}
@@ -10133,11 +10134,56 @@ function demoBoot(cls){
    const k=z.t/z.max;ctx.save();ctx.globalAlpha=clamp(1.6-1.6*k,0,1);poseCrane(ctx,z.x,z.y,z.h,z.yaw,z.fond,z.rot);ctx.restore();
    if(k>=1&&!z.brume){z.brume=true;if(!RM)mist(z.x,z.y,6,'#3a2f5a');}}
   ZC=ZC.filter(z=>z.t<z.max);}catch(err){console.error(err);ZC=[];}};
+ // ── Action 5b (suite · N10c, N11) : le crâne sur la porte, le trousseau en SVG (carte d'arrivée, infobulle, écran de mort). Aucun texte.
+ // Le trousseau en SVG : n crânes en quinconce (un sur deux plus bas, plus petit). px : hauteur d'un crâne.
+ const trousseauSvg=(n,id,px,nouveau)=>{let h='';n=Math.min(MQ.crane.max,Math.max(0,n|0));
+  for(let i=0;i<n;i++){const bas=i%2===1,s=bas?0.86:1,nw=nouveau&&i===n-1;
+   h+=`<i class="trk${nw?' nw':''}" style="height:${Math.round(px*s)}px;margin-top:${bas?Math.round(px*0.32):0}px">${MQ.svgCrane(id+'k'+i)}</i>`;}
+  return `<span class="trs" aria-hidden="true">${h}</span>`;};
+ (function(){const st=document.createElement('style');st.textContent=`
+.trs{display:inline-flex;align-items:flex-start;gap:0}.trs .trk{display:block;width:auto;aspect-ratio:46/52;margin-left:-2px}.trs .trk svg{height:100%;width:100%;display:block}
+#asmCard .trs{align-self:flex-start;margin:2px 0 0 -8px}#asmCard .trs .trk{filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+#nemTip{position:fixed;z-index:60;display:none;gap:6px;align-items:flex-start;padding:7px 12px 7px 8px;background:linear-gradient(90deg,rgba(36,26,62,.97),rgba(12,9,22,.96));border:1px solid #6a5aa0;border-radius:6px;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.6);transform:translate(-50%,0)}
+#nemTip.show{display:flex}#nemTip .mq{width:34px;height:42px;display:block}#nemTip .mq svg{width:100%;height:100%;display:block}
+.nemFin{position:absolute;right:clamp(18px,3vw,40px);top:20px;display:flex;gap:2px;align-items:flex-start;pointer-events:none}.nemFin .mq{width:48px;height:60px;display:block}.nemFin .mq svg{width:100%;height:100%;display:block}
+.nemFin .trk.nw{opacity:0}.nemFin.on .trk.nw{opacity:1}
+@media (prefers-reduced-motion:no-preference){.nemFin .trk.nw{transform:translateY(-14px)}.nemFin.on .trk.nw{transform:none;transition:opacity .25s,transform .4s cubic-bezier(.3,1.5,.5,1)}.nemFin .mq{animation:tbpop .4s cubic-bezier(.2,1.6,.4,1)}}
+@media (prefers-reduced-motion:reduce){.nemFin.on .trk.nw{transition:opacity .8s}}
+.demo #nemTip,.demo .nemFin{display:none!important}`;document.head.appendChild(st);})();
+ // la porte : à quelle porte vient-elle ? (la salle suivante est la première salle de combat, d'élite ou Brèche de son acte au rang de son attente)
+ function nemPorte(d){if(!nemActif()||!RUN||RUN.hub||RUN.essai||ESSAI_URL||!room||!d)return null;
+  if(!(d.type==='combat'||d.type==='elite'||d.type==='breche'))return null;
+  const S=nemLire(SAVE.nemesis);if(!S||!S.liste.length)return null;const next=RUN.roomIdx+1,AA=ACTS[RUN.act];
+  for(const f of S.liste)if(nemSalle(NM,f,{acte:RUN.act,salle:next,actRooms:AA.rooms,type:d.type==='breche'?'combat':d.type,breche:d.type==='breche',demo:DEMO,essai:false,deja:!!(RUN.nemVenus&&RUN.nemVenus[f.uid])},()=>0))return f;
+  return null;}
+ let tipEl=null,tipUid=null;
+ const tipHide=()=>{if(tipEl)tipEl.classList.remove('show');tipUid=null;};
+ const _ddN=drawDoorsPost;drawDoorsPost=function(){_ddN.apply(this,arguments);
+  try{if(!nemActif()||!room||!room.doors||!room.doors.length){if(tipUid)tipHide();return;}
+   const c=ctx,yb=AR.y0+2;let surv=null,fs=null;
+   for(const d of room.doors){if(d.nemF===undefined)d.nemF=nemPorte(d)||0;if(!d.nemF)continue;
+    const k=d.open,yaw=RM?0:0.3*Math.sin(T*1.3+d.x);c.save();c.globalAlpha=0.5+0.5*k;poseCrane(c,d.x+27,yb-50,17,yaw,false,0);c.restore();
+    if(!paused&&Math.abs(mouse.x-d.x)<40&&mouse.y>yb-92&&mouse.y<yb+44){surv=d;fs=d.nemF;}}
+   if(!surv){if(tipUid)tipHide();return;}
+   if(!tipEl){tipEl=document.createElement('div');tipEl.id='nemTip';tipEl.setAttribute('aria-hidden','true');document.body.appendChild(tipEl);}
+   if(tipUid!==fs.uid){tipUid=fs.uid;tipEl.innerHTML=`<span class="mq">${MQ.svg(COL,'calme','nmt')}</span>${trousseauSvg(fs.points||1,'nmtk',22)}`;}
+   const r=cv.getBoundingClientRect(),sc=r.width/W;tipEl.style.left=(r.left+surv.x*sc)+'px';tipEl.style.top=(r.top+(yb+50)*sc)+'px';tipEl.classList.add('show');
+  }catch(err){console.error(err);}};
+ // l'écran de mort : son masque et son trousseau à côté du titre ; le crâne gagné s'y accroche (même son, puis le rire du Brumeux).
+ // Au plus de points, le trousseau ne s'allonge plus : il tinte. En mouvements réduits, le crâne apparaît en fondu.
+ window.__nemEcran=function(){const B=RUN&&RUN.nemBilan;if(!B||B.refus||!B.uid)return;
+  const S=nemLire(SAVE.nemesis),f=S&&S.liste.find(x=>x.uid===B.uid);if(!f)return;
+  const panel=document.querySelector('#overlay .panel');if(!panel)return;
+  const n=Math.min(MQ.crane.max,f.points||1),neuf=B.decision==='nouveau'||(B.decision==='point'&&B.point===true),box=document.createElement('div');
+  box.className='nemFin';box.innerHTML=`<span class="mq">${MQ.svg(COL,'calme','nme')}</span>${trousseauSvg(n,'nme',30,neuf)}`;panel.appendChild(box);
+  setTimeout(()=>{try{if(!document.body.contains(box))return;box.classList.add('on');sfx(neuf?'asm_crane':'crane_tic');if(window.__rire&&!RM)window.__rire(0.1);}catch(e){}},RM?200:900);
+  return box;};
+ window.__nemesisUI={porte:nemPorte,trousseauSvg,get tip(){return tipEl;}};
  const _sfxN=sfx;sfx=function(k){
   if(k==='asm_crane'){if(!AC||muted)return;tone(2350,0.05,'triangle',0.028,1750);tone(3500,0.03,'sine',0.012,null,0.012);noise(0.045,0.035,5200,'highpass');return;}   // un crâne s'accroche : un cliquetis d'os, sans grave
   if(k==='crane_tic'){if(!AC||muted)return;tone(2800+Math.random()*700,0.022,'triangle',0.01);return;}   // deux crânes qui se touchent : presque rien
   return _sfxN.apply(this,arguments);};
- const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}return _oeN.apply(this,arguments);};
+ const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}const r=_oeN.apply(this,arguments);try{if(window.__nemEcran)window.__nemEcran();}catch(err){console.error(err);}return r;};   // l'écran de fin est ouvert : la némésis promue y paraît (N10c)
  // console : voir et effacer la fiche, essayer sans toucher aux données
  window.__nemesis={
   activer:(v=true)=>{NDEV.on=!!v;return nemActif();},

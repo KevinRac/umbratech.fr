@@ -339,6 +339,15 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/function crane3d\(h,yaw,fond\)\{[^\n]*\n  if\(CRI\[key\]\)return CRI\[key\];/, 'crâne en volume : chaque cadre peint une seule fois');
   has(/drawEnemyPost=function\(e\)\{_depN\.apply\(this,arguments\);try\{if\(e&&!e\.dead&&e\.asm&&trouN\(e\)\)\{trouDessin\(e,true\);trouDessin\(e,false\);\}/, 'trousseau : le fond d’abord, jamais caché par le corps, puis le devant');
   has(/trouN=e=>!e\|\|!e\.asm\|\|e\.asm\.reflet\?0:NCE\.on\?Math\.min\(MQ\.crane\.max,NCE\.n\):e\.asm\.nem\?Math\.min\(MQ\.crane\.max,e\.asm\.nem\.points\|\|1\):0;/, 'trousseau : un crâne par point, au plus crane.max, seulement la némésis');
+  // 5b (suite) : la porte, la carte d'arrivée, l'écran de mort
+  has(/function nemPorte\(d\)\{if\(!nemActif\(\)\|\|!RUN\|\|RUN\.hub\|\|RUN\.essai\|\|ESSAI_URL\|\|!room\|\|!d\)return null;/, 'porte : rien hors descente réelle (hub, essai, démo)');
+  has(/if\(!\(d\.type==='combat'\|\|d\.type==='elite'\|\|d\.type==='breche'\)\)return null;/, 'porte : seulement combat, élite, Brèche (comme nemSalle)');
+  has(/nemSalle\(NM,f,\{acte:RUN\.act,salle:next,actRooms:AA\.rooms/, 'porte : la même règle que la salle (nemSalle)');
+  has(/drawDoorsPost=function\(\)\{_ddN\.apply\(this,arguments\);/, 'porte : le crâne se pose après le dessin des portes');
+  has(/const TRS=S\.nem&&window\.__nemesisUI&&!S\.reflet\?/, 'carte d\'arrivée : le trousseau pour la némésis seulement');
+  has(/const r=_oeN\.apply\(this,arguments\);try\{if\(window\.__nemEcran\)window\.__nemEcran\(\)/, 'écran de mort : après l\'ouverture de l\'écran de fin');
+  has(/sfx\(neuf\?'asm_crane':'crane_tic'\);if\(window\.__rire&&!RM\)window\.__rire\(0\.1\)/, 'écran de mort : le crâne s\'accroche (ou tinte au maximum), puis le rire');
+  has(/#nemTip\{[^}]*pointer-events:none/, 'infobulle : sans souris');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);

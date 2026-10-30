@@ -1650,6 +1650,13 @@ Demande de l'auteur : « un système d'animation en 3D, un trousseau de crânes 
 - Console : `__nemesis.crane.essai(n)` donne un trousseau de n crânes à chaque Masqué ; `etat()`, `chutes()`, `img3d(h, yaw, fond)`.
 - Vidéo : `_dev/bancs/capture-trousseau.mjs <port> <dossier> [n] [corps]` (marche, arrêt, ruée, arrêt, puis mort) ; référence `trousseau-etapes.png`.
 
-Reste de l'action 5b : le crâne sur la porte de sa salle et son survol, l'écran de mort (un crâne s'accroche, rire du Brumeux), la carte d'arrivée avec le trousseau en SVG.
+### Action 5b, suite : la porte, la carte d'arrivée, l'écran de mort (30 octobre 2026, toujours pas active)
+
+Fait avec Sonnet 5.5, effort moyen (comme prévu). Aucun texte, nulle part.
+- **Porte** (N11) : `nemPorte(d)` applique **la même règle que la salle** (`nemSalle`, chance 100) à la salle suivante : porte de combat, d'élite ou Brèche, son acte, rang d'attente atteint, pas déjà venue, pas en répit. Le résultat est gardé sur la porte (`d.nemF`). Un seul crâne (17 px, léger balancement du yaw, fixe en mouvements réduits) à droite du sigil, posé après `drawDoorsPost`. Survol : `#nemTip` (DOM, en dessous de la porte) montre son masque et son trousseau en SVG, sans texte.
+- **Carte d'arrivée** : `showCard` ajoute `trousseauSvg` (n crânes en quinconce) entre le masque et le nom, pour la némésis seulement (jamais le Reflet).
+- **Écran de mort** : `window.__nemEcran`, appelé par le wrapper `openEnd` de la némésis *après* l'ouverture de l'écran de fin (celui-ci est refait par `tidyEnd` : l'écran se construit dans plusieurs wrappers, ne pas s'accrocher à un autre). Masque + trousseau en haut à droite du panneau ; le crâne gagné (`decision==='nouveau'`, ou `'point'` avec point gagné) apparaît après 0,9 s avec `asm_crane` puis `__rire`. Au maximum : un tintement (`crane_tic`), pas de rire. Mouvements réduits : fondu, sans rire.
+- Bancs : `_dev/bancs/capture-5b.mjs` (mort, porte + survol, carte) ; sim-nemesis : 46 107 contrôles, banc-nemesis 92, essai 43, relecture 12, sim-masque 3 583 218, wiki à jour.
+- Reste du palier : action 6 (mode d'essai `?nemesis=`), 7 (statistiques), 8 (mesures, bancs complets), 9 (revue par un autre agent), 10 (journal du wiki, version v17.25, `actif:true`, CLAUDE.md).
 
 Mesures : `sim-nemesis.mjs` 46 099, 0 échec (volume, cadres, écart et souffle bornés, pendule simulé qui revient à sa place en 4 s après la secousse d'une ruée, branchements) ; `banc-nemesis` 92, `banc-complet` F 60, `banc-glas-relecture` 16 : 0 échec ; `sim-masque`, `wiki.mjs --check` à jour ; aucune erreur de script pendant la vidéo (chute comprise).
