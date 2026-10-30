@@ -9993,8 +9993,8 @@ function demoBoot(cls){
  // (action 3) : tant qu'assemble.nemesis.actif est faux, rien n'est écrit, sauf essai de console (__nemesis.activer(), jamais gardé au rechargement).
  // Jamais en démo, ni dans une descente d'essai (RUN.essai, ou ?masque= ?brume= ?glas= ?dernier= ?nemesis=).
  var NEMSRC=null;   // projectile de la Brume qui touche (navette, perçant) : de qui il vient
- const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis)=/.test(location.search),NDEV={on:false};
- const nemActif=()=>!!(NM&&(NM.actif||NDEV.on))&&!DEMO;
+ const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis)=/.test(location.search),NDEV={on:null};   // console : activer(true) force, activer(false) éteint, activer(null) rend la main aux données
+ const nemActif=()=>!!(NM&&(NDEV.on==null?NM.actif:NDEV.on))&&!DEMO;
  const nemInfo=id=>{const n=NODES[id];return n?{cls:n.cls,genre:/_sk$/.test(id)?'u':(n.kind||'m')}:null;};
  // qui a porté le dernier coup qui t'a blessé (pour les statistiques : la promotion n'en dépend pas, N2). Sans changer les arguments de
  // hurtPlayer (une source passée en plus déclencherait les épines du Gouffre sur un projectile) : la source, sinon un projectile ou une onde
@@ -10200,7 +10200,7 @@ function demoBoot(cls){
  const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}const r=_oeN.apply(this,arguments);try{if(window.__nemEcran)window.__nemEcran();}catch(err){console.error(err);}return r;};   // l'écran de fin est ouvert : la némésis promue y paraît (N10c)
  // console : voir et effacer la fiche, essayer sans toucher aux données
  window.__nemesis={
-  activer:(v=true)=>{NDEV.on=!!v;return nemActif();},
+  activer:(v=true)=>{NDEV.on=v===null?null:!!v;return nemActif();},
   actif:nemActif,
   voir:()=>nemLire(SAVE.nemesis),
   effacer:()=>{delete SAVE.nemesis;persist();return true;},

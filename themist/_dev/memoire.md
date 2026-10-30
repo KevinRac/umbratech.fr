@@ -1668,7 +1668,7 @@ Fait avec Sonnet 5.5, effort moyen. `index.html?nemesis=<id de talent>[&points=1
 - La descente est d'essai (`RUN.essai`) : aucune promotion à ta mort. Toi : jamais sous 1 PV (`dieu`, sauf `dieu=0`). `points=0` vaut 1 (le minimum d'une promue). Pas de `bot=1` : il n'y a rien à conduire ici. Salle de combat de l'acte, rang d'attente 3 ; elle n'est pas écartée par `?demo=`.
 - Refus clairs : talent inconnu ou sans arme de la Brume, aucun assemblage pour ce corps/cette clé à l'acte.
 - Banc : `_dev/bancs/banc-essai-nemesis.mjs` (15 contrôles). Sim-nemesis : 46 113.
-- Reste : 9, 10.
+- Reste : 10.
 
 ### Action 7 : les statistiques (30 octobre 2026)
 
@@ -1701,3 +1701,11 @@ Relecture par un agent séparé (Opus 5.5, effort moyen) qui n'avait pas vu le t
 - **Laissé tel quel, noté** : le mode d'essai `?nemesis=` n'écrit jamais `SAVE.nemesis`, mais écrit comme les autres modes d'essai (`runs`, Éclats, `stats17` marquée `essai:true`, `asm18.vaincus`) : le texte de N15 est corrigé en conséquence. `reprise.relique` (bestiaire.js) n'est lu nulle part : la relique est toujours donnée. Le repli « renfort du souvenir le plus fort » de N3 donne un souvenir sans geste, sans renfort (noté depuis l'action 1).
 - Bancs : `banc-nemesis-revue.mjs` (17 contrôles : R1 à R5). Sim-nemesis : 46 129.
 - Reste : 10 (journal du wiki, version v17.25, `actif:true`, CLAUDE.md).
+
+### Action 10 : l'activation (30 octobre 2026)
+
+Fait avec Sonnet 5.5, effort faible. `assemble.nemesis.actif:true` ; version v17.25 (`data/versions.js`), une seule ligne au journal du wiki : « Certains Masqués portent un trousseau. » (aucun texte ne décrit la mécanique) ; `wiki.html` régénéré, `wiki.mjs --check` à jour ; ligne de `CLAUDE.md`.
+- La console reste maîtresse : `__nemesis.activer(true)` force, `activer(false)` éteint, `activer(null)` rend la main aux données (`NDEV.on` vaut `null` par défaut ; les bancs éteignent la némésis par `activer(false)`).
+- Contrôle final : une vraie mort contre un Masqué, sans rien activer en console, écrit une fiche et ouvre l'écran avec le masque et le crâne.
+- Régressions : sim-nemesis 46 129, sim-masque 3 583 218, sim-brume 46 602, sim-dernier 4 021 ; bancs némésis 99, complet 46, revue 17, essai 15, banc-complet 228, essai 43, relecture 12, Glas 16, touche 34. `banc-dernier.mjs` : les 4 échecs d'avant, inchangés.
+- À lire sur de vraies descentes (export de l'Archiviste) : la part des morts face à un Masqué (`par:'asm:…'`), le taux de victoire contre elle selon ses points, combien la contournent par les portes, la valeur de la reprise en trophée à l'acte I.

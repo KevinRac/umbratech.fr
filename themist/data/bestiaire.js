@@ -188,7 +188,7 @@
   // repit (N7) : après morts morts de suite face à lui, il ne vient pas à la descente suivante. retour (N5) : chance en %, dans son acte,
   // à la première salle de combat, d'élite ou Brèche dont le numéro est ≥ celui de sa salle. reprise (N8) : ses gravures restent au masque ;
   // la relique reste en plus ; une autre forme (ou un talent brûlé) rend des Éclats : base + parPoint × points.
-  nemesis:{actif:false,parActe:1,
+  nemesis:{actif:true,parActe:1,
    souvenir:{exclus:['c'],attaque:true},
    points:{max:5,pv:0.08,force:0.15,renforts:{2:'pv',4:'degats'}},
    repit:{morts:3},
