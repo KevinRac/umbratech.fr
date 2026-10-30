@@ -309,7 +309,7 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   // action 3 : le retour en salle
   const pr = html.indexOf('if(nemIci(r,w,M,ap))return w;'), tir = html.indexOf('const force=window.__asm.forcer>0;');
   ok(pr > 0 && tir > pr, 'index.html : la némésis passe avant le tirage ordinaire du Masqué (planRoom)');
-  has(/function nemIci\(r,w,M,ap\)\{if\(!nemActif\(\)\|\|!RUN\|\|RUN\.hub\|\|r\.demo\|\|RUN\.essai\|\|ESSAI_URL\)return false;/, 'nemIci : jamais inactif, au hub, en démo ni en essai');
+  has(/function nemIci\(r,w,M,ap\)\{[^\n]*\n  if\(!E&&\(!nemActif\(\)\|\|!RUN\|\|RUN\.hub\|\|r\.demo\|\|RUN\.essai\|\|ESSAI_URL\)\)return false;/, 'nemIci : jamais inactif, au hub, en démo ni en essai');
   has(/const f=nemValide\(A,NM,SBJ,f0,nemInfo\);/, 'nemIci : chaque fiche relue par nemValide');
   has(/nemSalle\(NM,f,Object\.assign\(\{deja:!!venus\[f\.uid\]\},rr\),Math\.random\)/, 'nemIci : la salle décidée par nemSalle, une fois par descente');
   has(/v\.unshift\(\{type:co\.corps,elite:true,asm:true\}\);\n  if\(w\.length>1\)w\[1\]=v;else w\.push\(v\);/, 'nemIci : avec la deuxième vague, comme tout Masqué');
@@ -320,7 +320,7 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/nemFin\(f,\{passee,mortContre:false/, 'fin de descente : nemFin (répit, compte des morts)');
   ok(!/sv\.x\.porte=\(sv\.x\.porte\|\|0\)\+1;[^\n]*nem/.test(html), 'index.html : la némésis ne compte pas comme porteur de la réserve');
   // action 4 : la revanche
-  has(/function nemBrise\(uid\)\{[\s\S]{0,200}?S\.liste=S\.liste\.filter\(x=>x\.uid!==uid\);SAVE\.nemesis=nemEcrire\(S\.liste\);persist\(\);/, 'brisée : sa fiche est effacée');
+  has(/function nemBrise\(uid\)\{[\s\S]{0,420}?S\.liste=S\.liste\.filter\(x=>x\.uid!==uid\);SAVE\.nemesis=nemEcrire\(S\.liste\);persist\(\);/, 'brisée : sa fiche est effacée');
   has(/killEnemy=function\(e\)\{const was=e&&e\.dead,r=_keN\.apply\(this,arguments\);\n  try\{if\(!was&&e&&e\.dead&&e\.asm&&e\.asm\.trou\)trouChute\(e\);\}[^\n]*\n  try\{if\(!was&&e&&e\.dead&&e\.asm&&e\.asm\.nem&&RUN&&!RUN\.hub\)nemBrise\(e\.asm\.nem\.uid\);/, 'à sa mort, pas à la purge de la salle (et son trousseau tombe)');
   has(/if\(i===0&&R\.sv&&!R\.nem&&window\.__memoire&&window\.__memoire\.offreReprise\)/, 'la reprise ordinaire ne vaut pas pour la némésis');
   has(/if\(i===0&&R\.nem&&R\.nemFiche&&window\.__memoire&&window\.__memoire\.offreNemesis\)\{const f=R\.nemFiche;enqueue\(\(\)=>window\.__memoire\.offreNemesis\(f,A\.recompense\.titre\)\);\}[^\n]*\n     enqueue\(rel\);/, 'son souvenir, puis la relique : deux récompenses');
@@ -348,6 +348,13 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/const r=_oeN\.apply\(this,arguments\);try\{if\(window\.__nemEcran\)window\.__nemEcran\(\)/, 'écran de mort : après l\'ouverture de l\'écran de fin');
   has(/sfx\(neuf\?'asm_crane':'crane_tic'\);if\(window\.__rire&&!RM\)window\.__rire\(0\.1\)/, 'écran de mort : le crâne s\'accroche (ou tinte au maximum), puis le rire');
   has(/#nemTip\{[^}]*pointer-events:none/, 'infobulle : sans souris');
+  // action 6 : le mode d'essai ?nemesis= (fiche en mémoire, jamais dans SAVE)
+  has(/const E=NES\.on&&NES\.f&&NES\.run===RUN&&RUN&&!RUN\.hub&&!DEMO&&/, 'essai : nemIci prend la fiche en mémoire (pas en démo, une fois par descente)');
+  has(/if\(ecrire&&!E\)\{SAVE\.nemesis=nemEcrire/, 'essai : rien n\u2019est écrit dans SAVE');
+  has(/function nemBrise\(uid\)\{[\s\S]{0,120}?if\(NES\.on&&NES\.f&&NES\.f\.uid===uid\)\{[\s\S]{0,200}?return NES\.f;\}/, 'essai : sa mort ne touche pas SAVE');
+  has(/window\.__nemesis\.essai=function\(id,opt\)/, 'essai : __nemesis.essai');
+  has(/RUN\.essai=1;RUN\.act=acte;/, 'essai : la descente est d\u2019essai (aucune promotion)');
+  has(/const QN=\/\[\?&\]nemesis=/, 'essai : ?nemesis= dans l\u2019URL');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);

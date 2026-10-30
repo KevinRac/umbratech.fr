@@ -10000,6 +10000,7 @@ function demoBoot(cls){
  // hurtPlayer (une source passée en plus déclencherait les épines du Gouffre sur un projectile) : la source, sinon un projectile ou une onde
  // du Masqué qui te touche à cet instant.
  const NC={masque:false,t:-1};
+ const NES={on:false,run:null,f:null,dieu:true,brisee:false};   // mode d'essai ?nemesis= : sa fiche vit ici, en mémoire, jamais dans SAVE
  const _hpN=hurtPlayer;hurtPlayer=function(dmg,src){const R=room&&room.asm,e=R&&R.e;let m=false;
   try{if(e&&!e.dead&&P)m=src===e||NEMSRC===e||(!src&&(eproj.some(p=>!p.dead&&p.from===e&&hyp(p.x-P.x,p.y-P.y)<p.r+P.r-3)||ZR.some(g=>g.src===e&&Math.abs(hyp(P.x-g.x,P.y-g.y)-g.r)<10+P.r*0.6)));}catch(err){}
   const h0=P?P.hp:0,r=_hpN.apply(this,arguments);if(P&&P.hp<h0){NC.masque=m;NC.t=RUN?RUN.time:0;}return r;};
@@ -10031,16 +10032,17 @@ function demoBoot(cls){
  // son assemblage est figé (relu par nemValide : si les données ont changé, il est refait avec le même corps, et la fiche réécrite) ;
  // son souvenir garde ses variantes, sa force monte avec ses points (sbForce la borne au début de chaque attaque). Une fois par descente ;
  // elle compte comme une apparition de Masqué (écart, dernière base), pas comme un porteur de la réserve (parActe).
- function nemIci(r,w,M,ap){if(!nemActif()||!RUN||RUN.hub||r.demo||RUN.essai||ESSAI_URL)return false;
-  const S=nemLire(SAVE.nemesis);if(!S||!S.liste.length)return false;
+ function nemIci(r,w,M,ap){const E=NES.on&&NES.f&&NES.run===RUN&&RUN&&!RUN.hub&&!DEMO&&!(RUN.nemVenus&&RUN.nemVenus[NES.f.uid])?NES.f:null;   // l'essai : sa fiche en mémoire, rien d'écrit
+  if(!E&&(!nemActif()||!RUN||RUN.hub||r.demo||RUN.essai||ESSAI_URL))return false;
+  const S=E?{liste:[]}:nemLire(SAVE.nemesis);if(!S||(!E&&!S.liste.length))return false;
   const venus=RUN.nemVenus=RUN.nemVenus||{},rr={acte:r.act,salle:r.roomIdx,type:r.type,actRooms:r.actRooms,breche:r.breche,demo:DEMO,essai:false};
-  let ecrire=false,vient=null;
+  let ecrire=false,vient=E;
   for(let i=0;i<S.liste.length;i++){const f0=S.liste[i];if(f0.attend.acte!==r.act)continue;
    const f=nemValide(A,NM,SBJ,f0,nemInfo);
    if(!f){S.liste.splice(i--,1);ecrire=true;continue;}   // corps inconnu des données : elle est abandonnée
    if(JSON.stringify(f)!==JSON.stringify(f0)){S.liste[i]=f;ecrire=true;}
    if(!vient&&nemSalle(NM,f,Object.assign({deja:!!venus[f.uid]},rr),Math.random)){vient=f;f.vu=(f.vu||0)+1;S.liste[i]=f;ecrire=true;}}
-  if(ecrire){SAVE.nemesis=nemEcrire(S.liste);persist();}
+  if(ecrire&&!E){SAVE.nemesis=nemEcrire(S.liste);persist();}
   if(!vient)return false;
   const f=vient,co=f.co,st=nemStats(A,NM,SBJ,f),sv=f.sv,seed=(Math.random()*4294967296)>>>0;
   const svR=sv?{x:{id:sv.id,rang:sv.rang||1,g:sv.g||0,nem:f.uid},fid:sv.fid,cap:sv.renfort||sv.sansGeste?null:'sb:'+sv.fid,vars:(sv.vars||[]).slice(),renfort:sv.renfort||null,force:st.force}:null;
@@ -10052,7 +10054,9 @@ function demoBoot(cls){
   return true;}
  // ── Action 4 (N8) : brisée, sa fiche est effacée (même si tu meurs ensuite dans sa salle : elle ne revient pas) ; la salle purgée,
  // offreNemesis (bloc de la Mémoire) rend son souvenir, en plus de la relique. room.asm.nemFiche garde la fiche pour la récompense.
- function nemBrise(uid){const R=room&&room.asm;const S=nemLire(SAVE.nemesis);if(!S)return null;const f=S.liste.find(x=>x.uid===uid)||null;
+ function nemBrise(uid){const R=room&&room.asm;
+  if(NES.on&&NES.f&&NES.f.uid===uid){if(R&&R.nem===uid)R.nemFiche=NES.f;(RUN.nemBrisees=RUN.nemBrisees||{})[uid]=NES.f.points;NES.brisee=true;return NES.f;}   // l'essai : rien à effacer
+  const S=nemLire(SAVE.nemesis);if(!S)return null;const f=S.liste.find(x=>x.uid===uid)||null;
   if(f){S.liste=S.liste.filter(x=>x.uid!==uid);SAVE.nemesis=nemEcrire(S.liste);persist();}
   if(R&&R.nem===uid)R.nemFiche=f;(RUN.nemBrisees=RUN.nemBrisees||{})[uid]=f?f.points:0;return f;}
  const _keN=killEnemy;killEnemy=function(e){const was=e&&e.dead,r=_keN.apply(this,arguments);
@@ -10200,6 +10204,31 @@ function demoBoot(cls){
   crane:{essai:(n=3,px=null)=>{NCE.on=true;NCE.n=n;NCE.px=px;for(const x of enemies)if(x.asm)x.asm.trou=null;return true;},arret:()=>{NCE.on=false;return true;},img:craneImg,img3d:crane3d,taille:e=>craneTaille(e),
    etat:()=>enemies.filter(x=>x.asm&&x.asm.trou).map(x=>({n:x.asm.trou.n,vu:x.asm.trou.vu,cote:x.asm.trou.cote,it:x.asm.trou.it.map(i=>({th:i.th,yaw:i.yaw,fond:i.fond}))})),chutes:()=>ZC.length},
   F:{nemRefus,nemDecision,nemArrache,nemCombo,nemPromotion,nemPoint,nemStats,nemSalle,nemFin,nemReprise,nemLire,nemEcrire,nemValide}};
+ // ── Action 6 · Mode d'essai : index.html?nemesis=<id de talent>[&points=1..5][&acte=1|2|3][&corps=brute|spectre|voile][&combo=<clé>][&classe=lum|gou|her|tis][&dieu=0]
+ // (développement seulement). Ouvre une salle de combat de l'acte avec une némésis construite EN MÉMOIRE (jamais écrite dans SAVE), qui porte ce souvenir
+ // (rang 1) avec ce nombre de points, montage compris ; sa mort donne la reprise (« Reprendre » / « Le laisser »). Toi : jamais sous 1 PV (dieu), sauf dieu=0.
+ // La descente est d'essai (RUN.essai) : aucune promotion, aucune statistique de la némésis. points=0 vaut 1 (le minimum d'une promue). Pas de bot=1 (rien à conduire ici).
+ // En console : __nemesis.essai('ray_n4',{points:3,acte:2}) ; __nemesis.essaiEtat().
+ const _lhE=loseHp;loseHp=function(n){if(NES.on&&NES.run!==RUN)NES.on=false;if(NES.on&&NES.dieu&&P&&n>0&&RUN&&!RUN.hub){P.hp=Math.max(1,P.hp-n);return;}return _lhE.apply(this,arguments);};
+ window.__nemesis.essai=function(id,opt){opt=opt||{};
+  try{const n=NODES[id];if(!n)return 'talent inconnu : '+id;if(!nemInfo(id)||!FAMS[id])return 'ce talent n\u2019a pas d\u2019arme de la Brume : '+id;
+   const cls=CLS[opt.classe]?opt.classe:n.cls,acte=[1,2,3].includes(+opt.acte)?+opt.acte:2,pts=Math.max(1,Math.min((NM.points&&NM.points.max)||5,Math.round(+opt.points)||1));
+   if(!RUN||RUN.hub||state!=='play'||P.cls!==cls){chosenCls=cls;startRun();}
+   RUN.essai=1;RUN.act=acte;RUN.g=Math.max(RUN.g||0,acte>=3?18:acte>=2?10:2);RUN.roomIdx=2;RUN.nemVenus={};
+   const ctx={act:Math.max(1,acte),salle:G(),J:SBJ};let L=asmCombos(A,ctx).filter(c=>!opt.corps||c.corps===opt.corps);if(opt.combo)L=L.filter(c=>c.cle===opt.combo);
+   if(!L.length)return 'aucun assemblage'+(opt.corps?' de corps '+opt.corps:'')+(opt.combo?' « '+opt.combo+' »':'');
+   const co=L[Math.floor(Math.random()*L.length)];
+   const f=nemPromotion(A,NM,NSV,SBJ,{co,sv:null},{acte,salle:3,run:0,palier:0,cls},[{id,src:'t',rang:1,g:0}],nemInfo,FAMS,ctx,Math.random);
+   f.points=pts;f.attend={acte,salle:3};
+   Object.assign(NES,{on:true,run:RUN,f,dieu:opt.dieu!==false,brisee:false});
+   closeOverlay();queue.length=0;trans=null;fade=0;doEnter('combat');
+   const R=room.asm;if(!R||R.nem!==f.uid){NES.on=false;return 'elle ne vient pas ici (salle '+RUN.roomIdx+')';}
+   return f.nom+' · '+(f.sv?(NODES[f.sv.id]?NODES[f.sv.id].name:f.sv.id)+(f.sv.sansGeste?' (sans geste)':f.sv.renfort?' (renfort)':''):'sans souvenir')+' · '+pts+' point'+(pts>1?'s':'')+' · acte '+acte;}
+  catch(err){console.error(err);return String(err);}};
+ window.__nemesis.essaiEtat=()=>({on:NES.on,fiche:NES.f&&JSON.parse(JSON.stringify(NES.f)),brisee:NES.brisee,dieu:NES.dieu,sauve:!!SAVE.nemesis&&nemLire(SAVE.nemesis).liste.length});
+ const QN=/[?&]nemesis=([a-z0-9_]+)/.exec(location.search);
+ if(QN&&!DEMO){const q=k=>{const m=new RegExp(`[?&]${k}=([^&]+)`).exec(location.search);return m?decodeURIComponent(m[1]):undefined;};
+  addEventListener('load',()=>setTimeout(()=>{const t=window.__nemesis.essai(QN[1],{acte:q('acte'),points:q('points'),corps:q('corps'),combo:q('combo'),classe:q('classe'),dieu:q('dieu')!=='0'});try{toast('Essai · '+t,3.5);}catch(x){}},600));}
 })();
 
 // ═════════════════════════════════════════════════════════════════════════════

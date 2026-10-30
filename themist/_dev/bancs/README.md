@@ -23,3 +23,4 @@ Les chemins de Playwright (`/opt/npm-tools/node_modules/`) et de Chromium (`/opt
 | `capture-trousseau.mjs` | vidéo du trousseau animé (action 5b) : marche, arrêt, ruée, mort (`node capture-trousseau.mjs 8765 <dossier> [n] [corps]`) ; référence : `trousseau-etapes.png` |
 
 Détail et résultats : `../memoire.md`, § 27 (Dernier Souvenir) et § 28 (némésis).
+- `banc-essai-nemesis.mjs` : le mode d'essai `?nemesis=` (némésis en mémoire, rien d'écrit dans SAVE, reprise à sa mort). `capture-5b.mjs` : captures de la porte, de la carte d'arrivée et de l'écran de mort.

@@ -1657,6 +1657,15 @@ Fait avec Sonnet 5.5, effort moyen (comme prévu). Aucun texte, nulle part.
 - **Carte d'arrivée** : `showCard` ajoute `trousseauSvg` (n crânes en quinconce) entre le masque et le nom, pour la némésis seulement (jamais le Reflet).
 - **Écran de mort** : `window.__nemEcran`, appelé par le wrapper `openEnd` de la némésis *après* l'ouverture de l'écran de fin (celui-ci est refait par `tidyEnd` : l'écran se construit dans plusieurs wrappers, ne pas s'accrocher à un autre). Masque + trousseau en haut à droite du panneau ; le crâne gagné (`decision==='nouveau'`, ou `'point'` avec point gagné) apparaît après 0,9 s avec `asm_crane` puis `__rire`. Au maximum : un tintement (`crane_tic`), pas de rire. Mouvements réduits : fondu, sans rire.
 - Bancs : `_dev/bancs/capture-5b.mjs` (mort, porte + survol, carte) ; sim-nemesis : 46 107 contrôles, banc-nemesis 92, essai 43, relecture 12, sim-masque 3 583 218, wiki à jour.
-- Reste du palier : action 6 (mode d'essai `?nemesis=`), 7 (statistiques), 8 (mesures, bancs complets), 9 (revue par un autre agent), 10 (journal du wiki, version v17.25, `actif:true`, CLAUDE.md).
+- Reste du palier : 7 (statistiques), 8 (mesures, bancs complets), 9 (revue par un autre agent), 10 (journal du wiki, version v17.25, `actif:true`, CLAUDE.md).
 
 Mesures : `sim-nemesis.mjs` 46 099, 0 échec (volume, cadres, écart et souffle bornés, pendule simulé qui revient à sa place en 4 s après la secousse d'une ruée, branchements) ; `banc-nemesis` 92, `banc-complet` F 60, `banc-glas-relecture` 16 : 0 échec ; `sim-masque`, `wiki.mjs --check` à jour ; aucune erreur de script pendant la vidéo (chute comprise).
+
+### Action 6 : le mode d'essai `?nemesis=` (30 octobre 2026, développement seulement)
+
+Fait avec Sonnet 5.5, effort moyen. `index.html?nemesis=<id de talent>[&points=1..5][&acte=1|2|3][&corps=…][&combo=<clé>][&classe=…][&dieu=0]` ; console : `__nemesis.essai(id, opt)`, `__nemesis.essaiEtat()`.
+- La fiche est construite **en mémoire** (`NES.f`, par `nemPromotion` avec ton souvenir seul comme réserve) : `nemIci` la prend à la place de `SAVE.nemesis` (aucune écriture, pas de `vu++`) ; `nemBrise` ne touche pas non plus à `SAVE`. Sa mort donne la reprise et l'offre « Reprendre / Le laisser » comme en vrai.
+- La descente est d'essai (`RUN.essai`) : aucune promotion à ta mort. Toi : jamais sous 1 PV (`dieu`, sauf `dieu=0`). `points=0` vaut 1 (le minimum d'une promue). Pas de `bot=1` : il n'y a rien à conduire ici. Salle de combat de l'acte, rang d'attente 3 ; elle n'est pas écartée par `?demo=`.
+- Refus clairs : talent inconnu ou sans arme de la Brume, aucun assemblage pour ce corps/cette clé à l'acte.
+- Banc : `_dev/bancs/banc-essai-nemesis.mjs` (15 contrôles). Sim-nemesis : 46 113.
+- Reste : 7 (statistiques), 8, 9, 10.
