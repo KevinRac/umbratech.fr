@@ -1668,7 +1668,7 @@ Fait avec Sonnet 5.5, effort moyen. `index.html?nemesis=<id de talent>[&points=1
 - La descente est d'essai (`RUN.essai`) : aucune promotion à ta mort. Toi : jamais sous 1 PV (`dieu`, sauf `dieu=0`). `points=0` vaut 1 (le minimum d'une promue). Pas de `bot=1` : il n'y a rien à conduire ici. Salle de combat de l'acte, rang d'attente 3 ; elle n'est pas écartée par `?demo=`.
 - Refus clairs : talent inconnu ou sans arme de la Brume, aucun assemblage pour ce corps/cette clé à l'acte.
 - Banc : `_dev/bancs/banc-essai-nemesis.mjs` (15 contrôles). Sim-nemesis : 46 113.
-- Reste : 8, 9, 10.
+- Reste : 9, 10.
 
 ### Action 7 : les statistiques (30 octobre 2026)
 
@@ -1689,3 +1689,15 @@ Fait avec Opus 5.5, effort élevé (prévu). Nouveau banc `banc-nemesis-complet.
 - **À lire sur des descentes exportées** (le bot ne les donne pas) : part des morts face à un Masqué (`par:'asm:…'`), taux de victoire contre elle selon ses points, combien la contournent par les portes, ce que vaut la reprise en trophée à l'acte I. Les mesures de justice (§ 23 à 25) : `sim-brume.mjs --vite` inchangé, 0 échec ; le plafond de force est vérifié par `sim-nemesis.mjs`.
 - Régressions : banc-complet 228, sim-nemesis 46 118, sim-masque 3 583 218, sim-brume 46 602, sim-dernier 4 021, wiki à jour ; bancs némésis 99, essai némésis 15, essai 43, relecture 12, Glas relecture 16, touche 34. `banc-dernier.mjs` : les 4 échecs d'avant (il attend un Dernier Souvenir inactif), inchangés.
 - Reste : 9 (revue par un autre agent), 10 (journal du wiki, version v17.25, `actif:true`, CLAUDE.md).
+
+### Action 9 : la relecture indépendante et ses corrections (30 octobre 2026)
+
+Relecture par un agent séparé (Opus 5.5, effort moyen) qui n'avait pas vu le travail : rien de bloquant (promotion, sauvegarde, ordre des enveloppes d'`openEnd`, retour, mode d'essai : corrects). Corrigé avec Sonnet 5.5, effort moyen :
+- **Talent en double** : `rendre` retire le talent repris de `RUN.reserveBrume` (il ne peut plus être à la fois en mémoire et dans la réserve, puis rendu une seconde fois par un Masqué porteur).
+- **Statistiques de reprise** : `pris` est posé pour les Éclats, la gravure et le rang ; pour le talent, seulement une fois reçu (`x.nemr`, dans `rendre`) : renoncer à l'écran d'oubli n'est plus noté.
+- **Infobulle de la porte** : placée avec le cadrage de l'écran (`offX`, `offY`, `scale`, `dpr`) ; la lettre-boîte la décalait de 40 à 90 px hors 16:9. Banc en 1280×900 et 1920×900.
+- **Coup mortel** : `ncM()` : le dernier coup reçu doit venir d'un Masqué et dater de moins de 1,5 s (un drain qui t'achève ensuite n'est plus de sa main). `mortContre` ne dépend plus de `NC`.
+- **Protections** : fiche dont `sv.vars` n'est pas un tableau écartée à la lecture ; `nemPorte` passe par `nemValide` (pas de crâne pour une fiche que `nemIci` abandonnerait) ; crânes qui tombent liés à leur descente (`z.run`) ; un `data/masque.js` en cache sans `crane` efface le trousseau sans casser le reste du bloc.
+- **Laissé tel quel, noté** : le mode d'essai `?nemesis=` n'écrit jamais `SAVE.nemesis`, mais écrit comme les autres modes d'essai (`runs`, Éclats, `stats17` marquée `essai:true`, `asm18.vaincus`) : le texte de N15 est corrigé en conséquence. `reprise.relique` (bestiaire.js) n'est lu nulle part : la relique est toujours donnée. Le repli « renfort du souvenir le plus fort » de N3 donne un souvenir sans geste, sans renfort (noté depuis l'action 1).
+- Bancs : `banc-nemesis-revue.mjs` (17 contrôles : R1 à R5). Sim-nemesis : 46 129.
+- Reste : 10 (journal du wiki, version v17.25, `actif:true`, CLAUDE.md).

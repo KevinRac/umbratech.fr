@@ -9773,7 +9773,7 @@ function demoBoot(cls){
  // N1 · lecture et écriture de SAVE.nemesis (versionnée). Une fiche abîmée est ignorée ; une version future rend null (on n'y touche pas).
  function nemForme(f){const ent=(x,a,b)=>Number.isInteger(x)&&x>=a&&x<=b;
   return!!(f&&typeof f.uid==='string'&&f.uid&&typeof f.corps==='string'&&f.co&&Array.isArray(f.co.depart)&&f.co.depart.length===2&&typeof f.co.eveil==='string'
-   &&f.attend&&ent(f.attend.acte,1,3)&&ent(f.attend.salle,1,99)&&ent(f.points,1,99)&&(f.sv==null||(typeof f.sv.id==='string'&&typeof f.sv.fid==='string')));}
+   &&f.attend&&ent(f.attend.acte,1,3)&&ent(f.attend.salle,1,99)&&ent(f.points,1,99)&&(f.sv==null||(typeof f.sv.id==='string'&&typeof f.sv.fid==='string'&&(f.sv.vars==null||Array.isArray(f.sv.vars)))));}
  function nemLire(raw){if(raw==null)return{v:NEM_V,liste:[]};if(typeof raw!=='object'||typeof raw.v!=='number')return{v:NEM_V,liste:[]};
   if(raw.v>NEM_V)return null;return{v:NEM_V,liste:(Array.isArray(raw.liste)?raw.liste:[]).filter(nemForme).map(f=>JSON.parse(JSON.stringify(f)))};}
  function nemEcrire(liste){return{v:NEM_V,liste:(liste||[]).filter(nemForme).map(f=>JSON.parse(JSON.stringify(f)))};}
@@ -10000,6 +10000,7 @@ function demoBoot(cls){
  // hurtPlayer (une source passée en plus déclencherait les épines du Gouffre sur un projectile) : la source, sinon un projectile ou une onde
  // du Masqué qui te touche à cet instant.
  const NC={masque:false,t:-1};
+ const ncM=()=>!!(NC.masque&&RUN&&RUN.time-NC.t>=0&&RUN.time-NC.t<1.5);   // le dernier coup reçu venait d'un Masqué, il y a moins de 1,5 s (un drain qui t'achève plus tard n'est pas de sa main)
  const NES={on:false,run:null,f:null,dieu:true,brisee:false};   // mode d'essai ?nemesis= : sa fiche vit ici, en mémoire, jamais dans SAVE
  const _hpN=hurtPlayer;hurtPlayer=function(dmg,src){const R=room&&room.asm,e=R&&R.e;let m=false;
   try{if(e&&!e.dead&&P)m=src===e||NEMSRC===e||(!src&&(eproj.some(p=>!p.dead&&p.from===e&&hyp(p.x-P.x,p.y-P.y)<p.r+P.r-3)||ZR.some(g=>g.src===e&&Math.abs(hyp(P.x-g.x,P.y-g.y)-g.r)<10+P.r*0.6)));}catch(err){}
@@ -10009,9 +10010,9 @@ function demoBoot(cls){
   const S=nemLire(SAVE.nemesis);if(!S){B.refus='version';return B;}   // sauvegarde d'une version future : on n'y touche pas
   const R=room.asm,acte=RUN.act,salle=RUN.roomIdx;B.decision=nemDecision(NM,S.liste,acte,R.nem||null);
   if(B.decision==='occupe')return B;
-  if(B.decision==='point'){const f=S.liste.find(x=>x.uid===R.nem);B.uid=f.uid;B.point=nemPoint(NM,f,{salle,coup:NC.masque});}
+  if(B.decision==='point'){const f=S.liste.find(x=>x.uid===R.nem);B.uid=f.uid;B.point=nemPoint(NM,f,{salle,coup:ncM()});}
   else{const M=RUN.memoire,sv=R.sv&&R.sv.x?{id:R.sv.x.id,rang:R.sv.x.rang,g:R.sv.x.g||0,fid:R.sv.fid,vars:R.sv.vars,renfort:R.sv.renfort}:null;
-   const f=nemPromotion(A,NM,NSV,SBJ,{co:R.co,sv},{acte,salle,run:SAVE.runs||0,palier:RUN.palier||0,cls:P&&P.cls,coup:NC.masque},M?M.actifs:[],nemInfo,FAMS,{act:Math.max(1,acte),salle:G(),J:SBJ},Math.random);
+   const f=nemPromotion(A,NM,NSV,SBJ,{co:R.co,sv},{acte,salle,run:SAVE.runs||0,palier:RUN.palier||0,cls:P&&P.cls,coup:ncM()},M?M.actifs:[],nemInfo,FAMS,{act:Math.max(1,acte),salle:G(),J:SBJ},Math.random);
    S.liste.push(f);B.uid=f.uid;B.sv=f.sv&&f.sv.id;}
   SAVE.nemesis=nemEcrire(S.liste);persist();return B;}
  function nemConditions(mort,win,abandon){const R=room&&room.asm,e=R&&R.e;
@@ -10065,7 +10066,7 @@ function demoBoot(cls){
  // ── Actions 5a et 5b (N10a) : le trousseau de crânes, en volume et animé.
  // Le crâne est peint en volume (MQ.peindreCrane3d) une fois par hauteur, par angle (anim.cadres, de -yawMax à +yawMax) et par plan
  // (devant, ou au fond, assombri), hors écran (× 2), puis posé (drawImage) : aucun dégradé par image. craneImg(h) garde l'image fixe (5a).
- const CRI={},CA=MQ.crane.anim;
+ const CRI={},CA=(MQ.crane&&MQ.crane.anim)||{cadres:13,yawMax:0.62,ecartMax:0.85,accrocheS:0.2,chuteS:0.75,tic:1.6,gravite:900,amorti:2.4,torsion:16,torsionAmorti:3.4,couplage:0.5,souffle:0.07};   // sans data/masque.js à jour (cache), le trousseau s'efface sans casser le reste
  function craneImg(h){h=Math.max(6,Math.round(h));if(CRI[h])return CRI[h];const k=2,C=MQ.crane,cv=document.createElement('canvas');
   cv.width=Math.ceil((C.vb[0]+6)/C.vb[1]*h*k);cv.height=Math.ceil(h*1.16*k);const c=cv.getContext('2d');c.scale(k,k);MQ.peindreCrane(c,cv.width/k/2,h*0.53,h);return CRI[h]={cv,k,h};}
  function crane3d(h,yaw,fond){h=Math.max(6,Math.round(h));const F=CA.cadres,i=Math.round((clamp(yaw,-CA.yawMax,CA.yawMax)/CA.yawMax+1)/2*(F-1)),key=h+':'+i+':'+(fond?1:0);
@@ -10077,7 +10078,7 @@ function demoBoot(cls){
  const craneTaille=e=>{const C=MQ.crane;return clamp(e.r*C.taille,C.min,C.maxPx);};
  // aperçu (développement) : __nemesis.crane.essai(n, px) donne un trousseau de n crânes à chaque Masqué
  const NCE={on:false,n:3,px:null};
- const trouN=e=>!e||!e.asm||e.asm.reflet?0:NCE.on?Math.min(MQ.crane.max,NCE.n):e.asm.nem?Math.min(MQ.crane.max,e.asm.nem.points||1):0;
+ const trouN=e=>!MQ.crane||!e||!e.asm||e.asm.reflet?0:NCE.on?Math.min(MQ.crane.max,NCE.n):e.asm.nem?Math.min(MQ.crane.max,e.asm.nem.points||1):0;
  // ── Le trousseau d'un Masqué (e.asm.trou). L'anneau est à sa hanche, du côté opposé à sa marche (il traîne derrière lui ; bascule amortie).
  // Chaque crâne est un pendule au bout de sa chaîne : rappelé vers sa place dans l'éventail, mené par les secousses de la hanche (marche,
  // ruée, arrêt), amorti. Il tourne aussi sur lui-même : entraîné par son balancement, rappelé vers son angle de repos, avec un souffle lent.
@@ -10129,10 +10130,10 @@ function demoBoot(cls){
  // à sa mort, le trousseau tombe, rebondit une fois, se défait en brume
  let ZC=[];
  function trouChute(e){const T=e&&e.asm&&e.asm.trou;if(!T||!T.vu||T.px==null)return;
-  for(let i=0;i<T.vu;i++){const it=T.it[i];ZC.push({x:T.px+Math.sin(it.th)*it.L,y:T.py+Math.cos(it.th)*it.L,vx:(Math.random()-0.5)*60+it.w*20,vy:-40-Math.random()*40,
+  for(let i=0;i<T.vu;i++){const it=T.it[i];ZC.push({run:RUN,x:T.px+Math.sin(it.th)*it.L,y:T.py+Math.cos(it.th)*it.L,vx:(Math.random()-0.5)*60+it.w*20,vy:-40-Math.random()*40,
    sol:T.py+it.L+18+Math.random()*8,rot:-it.th*0.6,vr:(Math.random()-0.5)*6,yaw:it.yaw,wy:(Math.random()-0.5)*5,h:T.h,fond:it.fond,t:0,max:CA.chuteS,rb:false,tn:RUN?RUN.time:0});}
   e.asm.trou=null;}
- const _dfxN=drawFx;drawFx=function(){_dfxN.apply(this,arguments);if(!ZC.length)return;try{const now=RUN?RUN.time:0;
+ const _dfxN=drawFx;drawFx=function(){_dfxN.apply(this,arguments);if(!ZC.length)return;try{ZC=ZC.filter(z=>z.run===RUN);if(!ZC.length)return;const now=RUN?RUN.time:0;
   for(const z of ZC){let dt=Math.min(0.05,Math.max(0,now-z.tn));z.tn=now;z.t+=dt;
    if(!RM){z.vy+=900*dt;z.x+=z.vx*dt;z.y+=z.vy*dt;z.rot+=z.vr*dt;z.yaw=clamp(z.yaw+z.wy*dt,-CA.yawMax,CA.yawMax);if(z.y>z.sol&&z.vy>0){z.y=z.sol;if(!z.rb){z.rb=true;z.vy*=-0.35;z.vx*=0.5;z.vr*=0.5;sfx('crane_tic');}else{z.vy=0;z.vx*=0.8;}}}
    const k=z.t/z.max;ctx.save();ctx.globalAlpha=clamp(1.6-1.6*k,0,1);poseCrane(ctx,z.x,z.y,z.h,z.yaw,z.fond,z.rot);ctx.restore();
@@ -10140,7 +10141,7 @@ function demoBoot(cls){
   ZC=ZC.filter(z=>z.t<z.max);}catch(err){console.error(err);ZC=[];}};
  // ── Action 5b (suite · N10c, N11) : le crâne sur la porte, le trousseau en SVG (carte d'arrivée, infobulle, écran de mort). Aucun texte.
  // Le trousseau en SVG : n crânes en quinconce (un sur deux plus bas, plus petit). px : hauteur d'un crâne.
- const trousseauSvg=(n,id,px,nouveau)=>{let h='';n=Math.min(MQ.crane.max,Math.max(0,n|0));
+ const trousseauSvg=(n,id,px,nouveau)=>{let h='';if(!MQ.crane||!MQ.svgCrane)return '';n=Math.min(MQ.crane.max,Math.max(0,n|0));
   for(let i=0;i<n;i++){const bas=i%2===1,s=bas?0.86:1,nw=nouveau&&i===n-1;
    h+=`<i class="trk${nw?' nw':''}" style="height:${Math.round(px*s)}px;margin-top:${bas?Math.round(px*0.32):0}px">${MQ.svgCrane(id+'k'+i)}</i>`;}
   return `<span class="trs" aria-hidden="true">${h}</span>`;};
@@ -10158,7 +10159,7 @@ function demoBoot(cls){
  function nemPorte(d){if(!nemActif()||!RUN||RUN.hub||RUN.essai||ESSAI_URL||!room||!d)return null;
   if(!(d.type==='combat'||d.type==='elite'||d.type==='breche'))return null;
   const S=nemLire(SAVE.nemesis);if(!S||!S.liste.length)return null;const next=RUN.roomIdx+1,AA=ACTS[RUN.act];
-  for(const f of S.liste)if(nemSalle(NM,f,{acte:RUN.act,salle:next,actRooms:AA.rooms,type:d.type==='breche'?'combat':d.type,breche:d.type==='breche',demo:DEMO,essai:false,deja:!!(RUN.nemVenus&&RUN.nemVenus[f.uid])},()=>0))return f;
+  for(const f0 of S.liste){const f=nemValide(A,NM,SBJ,f0,nemInfo);if(f&&nemSalle(NM,f,{acte:RUN.act,salle:next,actRooms:AA.rooms,type:d.type==='breche'?'combat':d.type,breche:d.type==='breche',demo:DEMO,essai:false,deja:!!(RUN.nemVenus&&RUN.nemVenus[f.uid])},()=>0))return f;}
   return null;}
  let tipEl=null,tipUid=null;
  const tipHide=()=>{if(tipEl)tipEl.classList.remove('show');tipUid=null;};
@@ -10171,7 +10172,7 @@ function demoBoot(cls){
    if(!surv){if(tipUid)tipHide();return;}
    if(!tipEl){tipEl=document.createElement('div');tipEl.id='nemTip';tipEl.setAttribute('aria-hidden','true');document.body.appendChild(tipEl);}
    if(tipUid!==fs.uid){tipUid=fs.uid;tipEl.innerHTML=`<span class="mq">${MQ.svg(COL,'calme','nmt')}</span>${trousseauSvg(fs.points||1,'nmtk',22)}`;}
-   const r=cv.getBoundingClientRect(),sc=r.width/W;tipEl.style.left=(r.left+surv.x*sc)+'px';tipEl.style.top=(r.top+(yb+50)*sc)+'px';tipEl.classList.add('show');
+   const r=cv.getBoundingClientRect();tipEl.style.left=(r.left+(offX+surv.x*scale)/dpr)+'px';tipEl.style.top=(r.top+(offY+(yb+50)*scale)/dpr)+'px';tipEl.classList.add('show');
   }catch(err){console.error(err);}};
  // l'écran de mort : son masque et son trousseau à côté du titre ; le crâne gagné s'y accroche (même son, puis le rire du Brumeux).
  // Au plus de points, le trousseau ne s'allonge plus : il tinte. En mouvements réduits, le crâne apparaît en fondu.
@@ -10185,12 +10186,12 @@ function demoBoot(cls){
  // Action 7 · statistiques de la descente (SAVE.stats17, export de l'Archiviste). par : 'asm:<corps>' quand un Masqué t'a tué (le dernier coup venait de lui).
  // nemesis : null si rien ne s'est passé avec une némésis ; sinon {promu:'nouveau'|'point'|null, points, coup, rencontree, vaincue, mortContre, reprise, eclats}.
  // Les valeurs viennent de RUN (nemBilan, nemVenus, nemBrisees, nemRevanche), jamais d'un état écrit en plus.
- function nemParAsm(){try{const R=room&&room.asm,e=R&&R.e;return P&&P.dead&&NC.masque&&e&&e.asm&&!e.asm.reflet&&!R.test?'asm:'+(e.type||R.co.corps):'';}catch(err){return '';}}
+ function nemParAsm(){try{const R=room&&room.asm,e=R&&R.e;return P&&P.dead&&ncM()&&e&&e.asm&&!e.asm.reflet&&!R.test?'asm:'+(e.type||R.co.corps):'';}catch(err){return '';}}
  function nemStatsRun(){try{if(!RUN)return null;const B=RUN.nemBilan,pro=B&&!B.refus&&B.uid?B.decision:null,vue=Object.keys(RUN.nemVenus||{}).length>0,bri=Object.keys(RUN.nemBrisees||{}).length>0,V=RUN.nemRevanche;
   if(!pro&&!vue&&!bri)return null;
   let pts=null;if(pro){const S=nemLire(SAVE.nemesis),f=S&&S.liste.find(x=>x.uid===B.uid);pts=f?f.points:null;}else if(bri)pts=Object.values(RUN.nemBrisees)[0];else if(V)pts=V.points;
-  const R=room&&room.asm,mc=!!(P&&P.dead&&R&&R.nem&&NC.masque);
-  return{promu:pro,points:pts,coup:pro?!!NC.masque:null,rencontree:vue,vaincue:bri,mortContre:mc,reprise:V?(V.pris?V.type:V.laisse?'laisse':null):null,eclats:V&&V.pris&&V.type==='eclats'?V.eclats:0,essai:!!(RUN.essai||ESSAI_URL)};}catch(err){return null;}}
+  const R=room&&room.asm,mc=!!(P&&P.dead&&R&&R.nem);
+  return{promu:pro,points:pts,coup:pro?ncM():null,rencontree:vue,vaincue:bri,mortContre:mc,reprise:V?(V.pris?V.type:V.laisse?'laisse':null):null,eclats:V&&V.pris&&V.type==='eclats'?V.eclats:0,essai:!!(RUN.essai||ESSAI_URL)};}catch(err){return null;}}
  window.__nemesisUI={porte:nemPorte,trousseauSvg,get tip(){return tipEl;}};
  const _sfxN=sfx;sfx=function(k){
   if(k==='asm_crane'){if(!AC||muted)return;tone(2350,0.05,'triangle',0.028,1750);tone(3500,0.03,'sine',0.012,null,0.012);noise(0.045,0.035,5200,'highpass');return;}   // un crâne s'accroche : un cliquetis d'os, sans grave
@@ -11049,6 +11050,8 @@ function demoBoot(cls){
  // forme, talent brûlé dans cette descente ou disparu des données, trophée figé, rien à graver). « Le laisser » : rien de plus que la relique.
  const NMD=()=>((window.BRUME_DATA.bestiaire||{}).assemble||{}).nemesis||null;
  function rendre(x){const M=MEM();if(!x||!NODES[x.id]||inMem('t',x.id))return;
+  if(RUN&&RUN.reserveBrume){const i=RUN.reserveBrume.findIndex(r=>r.id===x.id);if(i>=0)RUN.reserveBrume.splice(i,1);}   // un talent repris n'est plus oublié : jamais à la fois en mémoire et dans la réserve
+  if(x.nemr&&RUN&&RUN.nemRevanche)RUN.nemRevanche.pris=true;   // la reprise de la némésis n'est notée qu'une fois reçue (pas si tu renonces à l'écran d'oubli)
   if(x.tro){(M.trophees||(M.trophees={}))[RUN.act]=((M.trophees||{})[RUN.act]||0)+1;}
   P.ranks[x.id]=x.rang;M.actifs.push(Object.assign({id:x.id,src:'t',rang:x.rang,g:x.g||0,depuis:{acte:RUN.act,salle:RUN.roomIdx},repris:1,nem:1},x.tro?{trophee:1}:{}));
   M.traces[x.id]=Math.max(M.traces[x.id]||0,x.rang);M.gains++;M.repris=(M.repris||0)+1;
@@ -11061,20 +11064,20 @@ function demoBoot(cls){
   if(!on()||!f||!window.__nemesis||!NMD())return;
   const sv=f.sv,r=window.__nemesis.F.nemReprise(NMD(),f,nemJoueur(sv)),M=MEM();
   RUN.nemRevanche={uid:f.uid,points:f.points,type:r.type,id:sv&&sv.id||null,eclats:r.eclats||0};
-  if(r.type==='eclats'){RUN.sh.elites+=r.eclats;toast(`+${r.eclats} éclats pour ce run.`,2.4);sfx('pick');return;}
-  if(r.type==='gravure'){grave(sv.id);return;}
-  if(r.type==='rang'){const a=M.actifs.find(y=>y.src==='t'&&y.id===sv.id);if(!a)return;a.rang=r.rang;P.ranks[a.id]=r.rang;M.traces[a.id]=Math.max(M.traces[a.id]||0,r.rang);
+  if(r.type==='eclats'){RUN.nemRevanche.pris=true;RUN.sh.elites+=r.eclats;toast(`+${r.eclats} éclats pour ce run.`,2.4);sfx('pick');return;}
+  if(r.type==='gravure'){RUN.nemRevanche.pris=true;grave(sv.id);return;}
+  if(r.type==='rang'){const a=M.actifs.find(y=>y.src==='t'&&y.id===sv.id);if(!a)return;a.rang=r.rang;P.ranks[a.id]=r.rang;M.traces[a.id]=Math.max(M.traces[a.id]||0,r.rang);RUN.nemRevanche.pris=true;
    resync();renderMem();toast(`${nameOf(a)} · rang ${r.rang}/${maxOf(a)}`,1.8);sfx('level');return;}
   // le talent : un choix, comme la reprise d'un Masqué porteur
-  const x={id:sv.id,rang:r.rang,g:r.g||0,tro:r.trophee},a={id:x.id,src:'t',rang:x.rang,g:x.g},tro=x.tro,plein=full()&&!tro;
+  const x={id:sv.id,rang:r.rang,g:r.g||0,tro:r.trophee,nemr:1},a={id:x.id,src:'t',rang:x.rang,g:x.g},tro=x.tro,plein=full()&&!tro;
   openOverlay(`<div class="panel narrow mrp"><p class="eyebrow">${esc(titre||'Le masque se brise')}</p><h2>Sous ses éclats, un souvenir</h2>
    <div class="mrp-c">
     <button type="button" class="card mrp-s" id="mrps" style="--c:${colOf(a)}"><span class="meta"><span class="br">● ${esc(branchOf(a))}</span><span>${esc(kindOf(a))}</span></span><div class="gc-h">${tile(a,{big:true,off:false,tr:tro})}<div><h3>${esc(nameOf(a))}</h3><p>${esc(descOf(a,a.rang))}</p></div></div><span class="k">${tro?'Trophée · sans place · ':''}Reprendre · touche 1${maxOf(a)>1?` · rang ${a.rang}/${maxOf(a)}`:''}</span>${tro?`<i class="mbadge tro" title="Trophée : il ne prend pas de place">${icon('u_mask')}</i>`:badge(plein?'swap':'')}</button>
     <button type="button" class="card mrp-r" id="mrpr"><span class="meta"><span>Souvenir</span></span><div class="gc-h"><span class="mrp-ic">${icon('u_mask')}</span><div><h3>Le laisser</h3><p>Il retourne à la Brume.</p></div></div><span class="k">Touche 2</span></button>
    </div></div>`,'mrpo');
-  const take=()=>{if(!armed())return;RUN.nemRevanche.pris=true;
+  const take=()=>{if(!armed())return;
    if(tro||!full()){rendre(x);closeOverlay();return;}
-   MEM().pending={src:'t',id:x.id,ctx:'nem',rang:x.rang,g:0,entry:{id:x.id,rang:x.rang,g:0,tro:false}};closeOverlay();};
+   MEM().pending={src:'t',id:x.id,ctx:'nem',rang:x.rang,g:0,entry:{id:x.id,rang:x.rang,g:0,tro:false,nemr:1}};closeOverlay();};
   const leave=()=>{if(!armed())return;RUN.nemRevanche.laisse=true;closeOverlay();};
   $('#mrps').addEventListener('click',take);$('#mrpr').addEventListener('click',leave);
   overlayKeys=(c,e)=>{if(c==='Digit1'||c==='Numpad1'||c==='Enter'||c==='NumpadEnter'){if(e)e.preventDefault();take();}else if(c==='Digit2'||c==='Numpad2')leave();};

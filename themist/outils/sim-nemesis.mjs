@@ -326,7 +326,7 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/if\(i===0&&R\.nem&&R\.nemFiche&&window\.__memoire&&window\.__memoire\.offreNemesis\)\{const f=R\.nemFiche;enqueue\(\(\)=>window\.__memoire\.offreNemesis\(f,A\.recompense\.titre\)\);\}[^\n]*\n     enqueue\(rel\);/, 'son souvenir, puis la relique : deux récompenses');
   has(/const sv=f\.sv,r=window\.__nemesis\.F\.nemReprise\(NMD\(\),f,nemJoueur\(sv\)\)/, 'offreNemesis : la matrice de nemReprise');
   has(/porte:a\?\{rang:a\.trophee\?99:a\.rang\}:null,brule:!!\(id&&brule\(id\)\),gravable:!!\(a&&gravables\(\)\.includes\(a\)\),trophee:peutTrophee\(\),connu:!!\(id&&NODES\[id\]\)/, 'nemJoueur : porté (un trophée figé ne monte pas), brûlé, gravable, trophée libre, connu');
-  has(/if\(r\.type==='eclats'\)\{RUN\.sh\.elites\+=r\.eclats;/, 'Éclats : comptés dans les éclats du run');
+  has(/if\(r\.type==='eclats'\)\{RUN\.nemRevanche\.pris=true;RUN\.sh\.elites\+=r\.eclats;/, 'Éclats : comptés dans les éclats du run');
   has(/else if\(ctx==='nem'\)rendre\(g\.entry\);/, 'mémoire pleine : l’écran d’oubli rend le souvenir (contexte nem)');
   ok(!/function rendre\(x\)\{[^\n]*reserveBrume/.test(html), 'index.html : le souvenir rendu ne passe jamais par la réserve');
   // action 5a : le crâne du jeu
@@ -338,7 +338,7 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/if\(vx>25\)T\.cote=-1;else if\(vx<-25\)T\.cote=1;/, 'trousseau : du côté opposé à sa marche');
   has(/function crane3d\(h,yaw,fond\)\{[^\n]*\n  if\(CRI\[key\]\)return CRI\[key\];/, 'crâne en volume : chaque cadre peint une seule fois');
   has(/drawEnemyPost=function\(e\)\{_depN\.apply\(this,arguments\);try\{if\(e&&!e\.dead&&e\.asm&&trouN\(e\)\)\{trouDessin\(e,true\);trouDessin\(e,false\);\}/, 'trousseau : le fond d’abord, jamais caché par le corps, puis le devant');
-  has(/trouN=e=>!e\|\|!e\.asm\|\|e\.asm\.reflet\?0:NCE\.on\?Math\.min\(MQ\.crane\.max,NCE\.n\):e\.asm\.nem\?Math\.min\(MQ\.crane\.max,e\.asm\.nem\.points\|\|1\):0;/, 'trousseau : un crâne par point, au plus crane.max, seulement la némésis');
+  has(/trouN=e=>!MQ\.crane\|\|!e\|\|!e\.asm\|\|e\.asm\.reflet\?0:NCE\.on\?Math\.min\(MQ\.crane\.max,NCE\.n\):e\.asm\.nem\?Math\.min\(MQ\.crane\.max,e\.asm\.nem\.points\|\|1\):0;/, 'trousseau : un crâne par point, au plus crane.max, seulement la némésis');
   // 5b (suite) : la porte, la carte d'arrivée, l'écran de mort
   has(/function nemPorte\(d\)\{if\(!nemActif\(\)\|\|!RUN\|\|RUN\.hub\|\|RUN\.essai\|\|ESSAI_URL\|\|!room\|\|!d\)return null;/, 'porte : rien hors descente réelle (hub, essai, démo)');
   has(/if\(!\(d\.type==='combat'\|\|d\.type==='elite'\|\|d\.type==='breche'\)\)return null;/, 'porte : seulement combat, élite, Brèche (comme nemSalle)');
@@ -359,9 +359,21 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/par:win\|\|abandon\?'':\(\(window\.__nemesis&&window\.__nemesis\.parAsm&&window\.__nemesis\.parAsm\(\)\)\|\|R\.lastSrc\|\|''\)/, 'stats : par = asm:<corps> quand un Masqué t\u2019a tué');
   has(/nemesis:window\.__nemesis&&window\.__nemesis\.statsRun\?window\.__nemesis\.statsRun\(\):null,/, 'stats : le champ nemesis dans la fiche de descente');
   has(/function nemParAsm\(\)\{[\s\S]{0,260}?!R\.test\?'asm:'/, 'stats : ni Reflet ni Masqué d\u2019essai pour par');
-  has(/return\{promu:pro,points:pts,coup:pro\?!!NC\.masque:null,rencontree:vue,vaincue:bri,mortContre:mc,reprise:/, 'stats : promu, points, coup, rencontrée, vaincue, mort contre elle, reprise');
+  has(/return\{promu:pro,points:pts,coup:pro\?ncM\(\):null,rencontree:vue,vaincue:bri,mortContre:mc,reprise:/, 'stats : promu, points, coup, rencontrée, vaincue, mort contre elle, reprise');
   // action 8 : le côté du trousseau suit la marche de l'ENNEMI (e.x), pas la hanche (la comparaison hanche/ennemi verrouillait le côté)
   has(/if\(T\.ex!=null&&dt>0\)\{const vx=\(e\.x-T\.ex\)\/dt;if\(vx>25\)T\.cote=-1;else if\(vx<-25\)T\.cote=1;\}T\.ex=e\.x;/, 'trousseau : le côté suit la vitesse de l\u2019ennemi');
+  // action 9 : les défauts de la relecture indépendante
+  has(/function rendre\(x\)\{[^\n]*\n  if\(RUN&&RUN\.reserveBrume\)\{const i=RUN\.reserveBrume\.findIndex\(r=>r\.id===x\.id\);if\(i>=0\)RUN\.reserveBrume\.splice\(i,1\);\}/, 'reprise : un talent repris sort de la réserve (jamais en double)');
+  has(/if\(x\.nemr&&RUN&&RUN\.nemRevanche\)RUN\.nemRevanche\.pris=true;/, 'stats : reprise notée une fois reçue (talent)');
+  has(/RUN\.nemRevanche\.pris=true;grave\(sv\.id\)/, 'stats : gravure notée');
+  has(/a\.rang=r\.rang;P\.ranks\[a\.id\]=r\.rang;M\.traces\[a\.id\]=Math\.max\(M\.traces\[a\.id\]\|\|0,r\.rang\);RUN\.nemRevanche\.pris=true;/, 'stats : rang noté');
+  has(/tipEl\.style\.left=\(r\.left\+\(offX\+surv\.x\*scale\)\/dpr\)/, 'infobulle : le cadrage de l\u2019écran (offX, scale, dpr)');
+  has(/const f=nemValide\(A,NM,SBJ,f0,nemInfo\);if\(f&&nemSalle\(/, 'porte : la fiche est validée comme à l\u2019apparition');
+  has(/ZC=ZC\.filter\(z=>z\.run===RUN\)/, 'crânes qui tombent : seulement ceux de la descente');
+  has(/const ncM=\(\)=>!!\(NC\.masque&&RUN&&RUN\.time-NC\.t>=0&&RUN\.time-NC\.t<1\.5\)/, 'coup mortel : le dernier coup du Masqué date de moins de 1,5 s');
+  ok(!/NC\.masque\)?[,;]|:NC\.masque\b/.test(html.replace(/const ncM=[^\n]*\n/, '')), 'coup mortel : plus aucun usage direct de NC.masque');
+  has(/\(f\.sv\.vars==null\|\|Array\.isArray\(f\.sv\.vars\)\)/, 'fiche : sv.vars est un tableau ou absent');
+  has(/CA=\(MQ\.crane&&MQ\.crane\.anim\)\|\|\{/, 'données anciennes : le trousseau s\u2019efface sans casser le reste');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);
