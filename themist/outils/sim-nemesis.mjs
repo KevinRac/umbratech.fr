@@ -355,6 +355,11 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/window\.__nemesis\.essai=function\(id,opt\)/, 'essai : __nemesis.essai');
   has(/RUN\.essai=1;RUN\.act=acte;/, 'essai : la descente est d\u2019essai (aucune promotion)');
   has(/const QN=\/\[\?&\]nemesis=/, 'essai : ?nemesis= dans l\u2019URL');
+  // action 7 : statistiques de la descente
+  has(/par:win\|\|abandon\?'':\(\(window\.__nemesis&&window\.__nemesis\.parAsm&&window\.__nemesis\.parAsm\(\)\)\|\|R\.lastSrc\|\|''\)/, 'stats : par = asm:<corps> quand un Masqué t\u2019a tué');
+  has(/nemesis:window\.__nemesis&&window\.__nemesis\.statsRun\?window\.__nemesis\.statsRun\(\):null,/, 'stats : le champ nemesis dans la fiche de descente');
+  has(/function nemParAsm\(\)\{[\s\S]{0,260}?!R\.test\?'asm:'/, 'stats : ni Reflet ni Masqué d\u2019essai pour par');
+  has(/return\{promu:pro,points:pts,coup:pro\?!!NC\.masque:null,rencontree:vue,vaincue:bri,mortContre:mc,reprise:/, 'stats : promu, points, coup, rencontrée, vaincue, mort contre elle, reprise');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);

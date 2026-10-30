@@ -1668,4 +1668,12 @@ Fait avec Sonnet 5.5, effort moyen. `index.html?nemesis=<id de talent>[&points=1
 - La descente est d'essai (`RUN.essai`) : aucune promotion à ta mort. Toi : jamais sous 1 PV (`dieu`, sauf `dieu=0`). `points=0` vaut 1 (le minimum d'une promue). Pas de `bot=1` : il n'y a rien à conduire ici. Salle de combat de l'acte, rang d'attente 3 ; elle n'est pas écartée par `?demo=`.
 - Refus clairs : talent inconnu ou sans arme de la Brume, aucun assemblage pour ce corps/cette clé à l'acte.
 - Banc : `_dev/bancs/banc-essai-nemesis.mjs` (15 contrôles). Sim-nemesis : 46 113.
-- Reste : 7 (statistiques), 8, 9, 10.
+- Reste : 7, 8, 9, 10.
+
+### Action 7 : les statistiques (30 octobre 2026)
+
+Fait avec Sonnet 5.5, effort faible. `SAVE.stats17` (80 dernières descentes, export de l'Archiviste) reçoit :
+- `par:'asm:<corps>'` quand un Masqué t'a tué (dernier coup de lui, ni Reflet ni Masqué d'essai) ; avant, il tombait dans le type d'ennemi le plus proche. Les autres valeurs de `par` ne changent pas.
+- `nemesis` : `null` si aucune némésis ne s'est montrée ; sinon `{promu:'nouveau'|'point'|null, points, coup, rencontree, vaincue, mortContre, reprise:'talent'|'rang'|'gravure'|'eclats'|'laisse'|null, eclats, essai}`. `mortContre` : tu es mort dans sa salle, elle déjà promue (une promue neuve n'est pas « contre »). `coup` : le coup mortel venait d'elle (promue seulement). Lu dans `RUN` (`nemBilan`, `nemVenus`, `nemBrisees`, `nemRevanche`) à l'écriture de la fiche ; rien d'autre n'est écrit.
+- Hooks : `__nemesis.parAsm()`, `__nemesis.statsRun()`. Banc : cas S1 à S3 de `banc-nemesis.mjs` (99 contrôles). Sim-nemesis : 46 117.
+- Reste : 8 (mesures, bancs complets), 9 (revue par un autre agent), 10 (journal du wiki, version, `actif:true`).

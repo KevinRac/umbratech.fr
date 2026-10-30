@@ -10182,6 +10182,15 @@ function demoBoot(cls){
   box.className='nemFin';box.innerHTML=`<span class="mq">${MQ.svg(COL,'calme','nme')}</span>${trousseauSvg(n,'nme',30,neuf)}`;panel.appendChild(box);
   setTimeout(()=>{try{if(!document.body.contains(box))return;box.classList.add('on');sfx(neuf?'asm_crane':'crane_tic');if(window.__rire&&!RM)window.__rire(0.1);}catch(e){}},RM?200:900);
   return box;};
+ // Action 7 · statistiques de la descente (SAVE.stats17, export de l'Archiviste). par : 'asm:<corps>' quand un Masqué t'a tué (le dernier coup venait de lui).
+ // nemesis : null si rien ne s'est passé avec une némésis ; sinon {promu:'nouveau'|'point'|null, points, coup, rencontree, vaincue, mortContre, reprise, eclats}.
+ // Les valeurs viennent de RUN (nemBilan, nemVenus, nemBrisees, nemRevanche), jamais d'un état écrit en plus.
+ function nemParAsm(){try{const R=room&&room.asm,e=R&&R.e;return P&&P.dead&&NC.masque&&e&&e.asm&&!e.asm.reflet&&!R.test?'asm:'+(e.type||R.co.corps):'';}catch(err){return '';}}
+ function nemStatsRun(){try{if(!RUN)return null;const B=RUN.nemBilan,pro=B&&!B.refus&&B.uid?B.decision:null,vue=Object.keys(RUN.nemVenus||{}).length>0,bri=Object.keys(RUN.nemBrisees||{}).length>0,V=RUN.nemRevanche;
+  if(!pro&&!vue&&!bri)return null;
+  let pts=null;if(pro){const S=nemLire(SAVE.nemesis),f=S&&S.liste.find(x=>x.uid===B.uid);pts=f?f.points:null;}else if(bri)pts=Object.values(RUN.nemBrisees)[0];else if(V)pts=V.points;
+  const R=room&&room.asm,mc=!!(P&&P.dead&&R&&R.nem&&NC.masque);
+  return{promu:pro,points:pts,coup:pro?!!NC.masque:null,rencontree:vue,vaincue:bri,mortContre:mc,reprise:V?(V.pris?V.type:V.laisse?'laisse':null):null,eclats:V&&V.pris&&V.type==='eclats'?V.eclats:0,essai:!!(RUN.essai||ESSAI_URL)};}catch(err){return null;}}
  window.__nemesisUI={porte:nemPorte,trousseauSvg,get tip(){return tipEl;}};
  const _sfxN=sfx;sfx=function(k){
   if(k==='asm_crane'){if(!AC||muted)return;tone(2350,0.05,'triangle',0.028,1750);tone(3500,0.03,'sine',0.012,null,0.012);noise(0.045,0.035,5200,'highpass');return;}   // un crâne s'accroche : un cliquetis d'os, sans grave
@@ -10203,6 +10212,7 @@ function demoBoot(cls){
   stats:f=>nemStats(A,NM,SBJ,f),
   crane:{essai:(n=3,px=null)=>{NCE.on=true;NCE.n=n;NCE.px=px;for(const x of enemies)if(x.asm)x.asm.trou=null;return true;},arret:()=>{NCE.on=false;return true;},img:craneImg,img3d:crane3d,taille:e=>craneTaille(e),
    etat:()=>enemies.filter(x=>x.asm&&x.asm.trou).map(x=>({n:x.asm.trou.n,vu:x.asm.trou.vu,cote:x.asm.trou.cote,it:x.asm.trou.it.map(i=>({th:i.th,yaw:i.yaw,fond:i.fond}))})),chutes:()=>ZC.length},
+  parAsm:nemParAsm,statsRun:nemStatsRun,
   F:{nemRefus,nemDecision,nemArrache,nemCombo,nemPromotion,nemPoint,nemStats,nemSalle,nemFin,nemReprise,nemLire,nemEcrire,nemValide}};
  // ── Action 6 · Mode d'essai : index.html?nemesis=<id de talent>[&points=1..5][&acte=1|2|3][&corps=brute|spectre|voile][&combo=<clé>][&classe=lum|gou|her|tis][&dieu=0]
  // (développement seulement). Ouvre une salle de combat de l'acte avec une némésis construite EN MÉMOIRE (jamais écrite dans SAVE), qui porte ce souvenir
@@ -11208,11 +11218,12 @@ function demoBoot(cls){
  function statRun(M,win,abandon){
   const R=RUN.mem||{},EVN=M.actifs.filter(a=>a.src==='t'&&(a.g||0)>=2&&EVD[a.id]).length;
   const rec={n:SAVE.runs,d:new Date().toISOString().slice(0,16),v:(window.BRUME_DATA.versions||{}).actuelle||'',cls:P.cls,voie:P.s.sub||'',palier:RUN.palier||0,
-   fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':(R.lastSrc||''),acte:RUN.act,salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
+   fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':((window.__nemesis&&window.__nemesis.parAsm&&window.__nemesis.parAsm())||R.lastSrc||''),acte:RUN.act,salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
    tues:RUN.kills||0,degats:Math.round(RUN.dmg||0),pvMax:Math.round(P.s.maxHp),
    talents:Object.keys(M.traces).length,portes:M.actifs.length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),oublis:M.oublis||0,renonces:M.renonces||0,ecransOubli:M.ecrans||0,
    brules:(M.brules||[]).map(r=>({id:r.id,famille:r.famille,genre:r.genre,rang:r.rang,g:r.g,force:Math.round(r.force*100)/100,acte:r.acte,salle:r.salle,contre:r.contre,degats:Math.round(r.degats),surFort:Math.round(r.surFort+r.boost),plafonne:!!r.plafonne})),reserveGlas:M.reserveGlas==null?null:M.reserveGlas,
    gravures:M.gravures||0,eveils:EVN,repris:M.repris||0,trophees:trophees().length,porteurs:Object.values((RUN.asm&&RUN.asm.porteurs)||{}).reduce((a,b)=>a+b,0),glas:RUN.glasStats||null,reliques:(P.relics||[]).length,accoutumance:R.tot>0?Math.round(R.sig/R.tot*100)/100:null,
+   nemesis:window.__nemesis&&window.__nemesis.statsRun?window.__nemesis.statsRun():null,
    build:M.actifs.map(a=>a.id+':'+a.rang+(a.g?'+'+a.g:'')).join(' ')};
   const S=SAVE.stats17||(SAVE.stats17=[]);S.push(rec);if(S.length>80)S.splice(0,S.length-80);persist();
  }

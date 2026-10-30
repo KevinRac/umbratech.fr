@@ -372,6 +372,25 @@ await cas('V6-V7', '', async page => {
   ok(r.k7.bilan && r.k7.bilan.refus === 'brise' && r.k7.n === 0, 'V7 : brisée puis mort dans sa salle : aucune fiche (' + JSON.stringify(r.k7) + ')');
 });
 
+// S1-S3 (action 7) : statistiques de la descente. S1 : tué par le Masqué = promu, par:'asm:<corps>' ; S2 : tué par un autre (elle est promue quand même, sans le coup mortel) ;
+// S3 : sa revanche (rencontrée, vaincue, reprise prise) dans la descente suivante.
+await cas('S1', '', async page => {
+  const r = await page.evaluate(() => { T.lancer('lum', { acte: 2, souv: 'ray_n1' }); T.attendre(true); const k = T.tuer('masque'); const S = window.__memoire.stats(); return { k, st: S[S.length - 1] }; });
+  console.log('S1', JSON.stringify({ par: r.st && r.st.par, nem: r.st && r.st.nemesis }));
+  ok(r.st && /^asm:(brute|spectre|voile)$/.test(r.st.par), 'S1 : par = asm:<corps> (' + (r.st && r.st.par) + ')');
+  ok(r.st && r.st.nemesis && r.st.nemesis.promu === 'nouveau' && r.st.nemesis.points === 1 && r.st.nemesis.coup === true && r.st.nemesis.mortContre === false && r.st.nemesis.rencontree === false, 'S1 : promue, 1 point, coup mortel de sa main (neuve : pas de mort « contre » elle)');
+});
+await cas('S2', '', async page => {
+  const r = await page.evaluate(() => { T.lancer('lum', { acte: 2, souv: 'ray_n1' }); T.attendre(true); T.tuer('autre'); const S = window.__memoire.stats(); return S[S.length - 1]; });
+  console.log('S2', JSON.stringify({ par: r.par, nem: r.nemesis }));
+  ok(r && !/^asm:/.test(r.par) && r.nemesis && r.nemesis.promu === 'nouveau' && r.nemesis.coup === false, 'S2 : tué par un autre : pas de par asm:, promue, coup:false');
+});
+await cas('S3', '', async page => {
+  const r = await page.evaluate(() => { const p = T.preparer('lum', 'lum', { souv: 'ray_n1' }); T.briser(); window.__brume.step(1 / 60, 30); const R = window.__glas.dbg().RUN; return { v: Object.keys(R.nemVenus || {}).length, b: Object.keys(R.nemBrisees || {}).length, s: window.__nemesis.statsRun() }; });
+  console.log('S3', JSON.stringify(r));
+  ok(r.s && r.s.rencontree === true && r.s.vaincue === true && r.s.promu === null && r.s.mortContre === false, 'S3 : rencontrée et vaincue, pas promue (' + JSON.stringify(r.s) + ')');
+});
+
 await browser.close();
 console.log(`${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
 process.exit(fails ? 1 : 0);
