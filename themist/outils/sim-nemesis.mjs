@@ -360,6 +360,8 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/nemesis:window\.__nemesis&&window\.__nemesis\.statsRun\?window\.__nemesis\.statsRun\(\):null,/, 'stats : le champ nemesis dans la fiche de descente');
   has(/function nemParAsm\(\)\{[\s\S]{0,260}?!R\.test\?'asm:'/, 'stats : ni Reflet ni Masqué d\u2019essai pour par');
   has(/return\{promu:pro,points:pts,coup:pro\?!!NC\.masque:null,rencontree:vue,vaincue:bri,mortContre:mc,reprise:/, 'stats : promu, points, coup, rencontrée, vaincue, mort contre elle, reprise');
+  // action 8 : le côté du trousseau suit la marche de l'ENNEMI (e.x), pas la hanche (la comparaison hanche/ennemi verrouillait le côté)
+  has(/if\(T\.ex!=null&&dt>0\)\{const vx=\(e\.x-T\.ex\)\/dt;if\(vx>25\)T\.cote=-1;else if\(vx<-25\)T\.cote=1;\}T\.ex=e\.x;/, 'trousseau : le côté suit la vitesse de l\u2019ennemi');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);

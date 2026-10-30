@@ -1668,7 +1668,7 @@ Fait avec Sonnet 5.5, effort moyen. `index.html?nemesis=<id de talent>[&points=1
 - La descente est d'essai (`RUN.essai`) : aucune promotion à ta mort. Toi : jamais sous 1 PV (`dieu`, sauf `dieu=0`). `points=0` vaut 1 (le minimum d'une promue). Pas de `bot=1` : il n'y a rien à conduire ici. Salle de combat de l'acte, rang d'attente 3 ; elle n'est pas écartée par `?demo=`.
 - Refus clairs : talent inconnu ou sans arme de la Brume, aucun assemblage pour ce corps/cette clé à l'acte.
 - Banc : `_dev/bancs/banc-essai-nemesis.mjs` (15 contrôles). Sim-nemesis : 46 113.
-- Reste : 7, 8, 9, 10.
+- Reste : 8, 9, 10.
 
 ### Action 7 : les statistiques (30 octobre 2026)
 
@@ -1677,3 +1677,15 @@ Fait avec Sonnet 5.5, effort faible. `SAVE.stats17` (80 dernières descentes, ex
 - `nemesis` : `null` si aucune némésis ne s'est montrée ; sinon `{promu:'nouveau'|'point'|null, points, coup, rencontree, vaincue, mortContre, reprise:'talent'|'rang'|'gravure'|'eclats'|'laisse'|null, eclats, essai}`. `mortContre` : tu es mort dans sa salle, elle déjà promue (une promue neuve n'est pas « contre »). `coup` : le coup mortel venait d'elle (promue seulement). Lu dans `RUN` (`nemBilan`, `nemVenus`, `nemBrisees`, `nemRevanche`) à l'écriture de la fiche ; rien d'autre n'est écrit.
 - Hooks : `__nemesis.parAsm()`, `__nemesis.statsRun()`. Banc : cas S1 à S3 de `banc-nemesis.mjs` (99 contrôles). Sim-nemesis : 46 117.
 - Reste : 8 (mesures, bancs complets), 9 (revue par un autre agent), 10 (journal du wiki, version, `actif:true`).
+
+### Action 8 : bancs complets et mesures (30 octobre 2026)
+
+Fait avec Opus 5.5, effort élevé (prévu). Nouveau banc `banc-nemesis-complet.mjs` (46 contrôles) pour ce que N18 demande en plus de `banc-nemesis.mjs` :
+- **P** : promue par contact, tir du Masqué, tir d'un autre, perte sans source, contact d'un escorte ; le coup mortel n'est noté (`coup`) que pour les deux premiers.
+- **Q / Q-RM** (en temps réel : le trousseau se met à jour au dessin) : à 5 points, 5 crânes, accrochés un par un (0 → 5, sans saut) après la couture ; le trousseau bouge ; figé pendant un chargement ; côté opposé à la marche ; en mouvements réduits, aucun mouvement.
+- **X** : points 1 → 5 puis plafond. **M** : `?brume=`, `?glas=`, `?dernier=` : aucune fiche, aucune apparition. **Z** : les quatre formes, trois salles chacune, némésis active sans fiche : aucune fiche, aucune erreur de script.
+- **Bogue trouvé et corrigé** : le côté du trousseau comparait la position de l'ennemi à celle de la *hanche* au lieu de sa position précédente : il se verrouillait du côté où il était et ne suivait jamais la marche. Maintenant `T.ex` (position précédente de l'ennemi). Sans le banc en temps réel, il aurait passé.
+- **Mesures** (`mesure-nemesis.mjs`, brute / spectre / voile, souvenir ray_n1 qui porte déjà un renfort de dégâts) : PV d'une némésis, acte III : brute 2 286 → 3 852 de 1 à 5 points (Masqué ordinaire : 2 048) ; spectre 2 111 → 3 490 (1 902) ; voilé 2 745 → 4 475 (2 482). Soit × 1,12 au premier point et × 1,88 au cinquième face à un Masqué ordinaire du même souvenir, sous le pire cas du simulateur (× 2,25). À 120 PV/s : 19 à 32 s pour briser une brute (14 à 25 s à l'acte I/II). Force de son souvenir : 1,15 → 1,75 (plafond 3,6 jamais approché avec ce souvenir). Renfort Robuste dès 2 points. Acte I et acte II donnent les mêmes PV avec l'essai (le profil d'acte II est le minimum de `__asm.essai`) ; à lire sur de vraies descentes. Voilé : aucun assemblage aux actes I et II.
+- **À lire sur des descentes exportées** (le bot ne les donne pas) : part des morts face à un Masqué (`par:'asm:…'`), taux de victoire contre elle selon ses points, combien la contournent par les portes, ce que vaut la reprise en trophée à l'acte I. Les mesures de justice (§ 23 à 25) : `sim-brume.mjs --vite` inchangé, 0 échec ; le plafond de force est vérifié par `sim-nemesis.mjs`.
+- Régressions : banc-complet 228, sim-nemesis 46 118, sim-masque 3 583 218, sim-brume 46 602, sim-dernier 4 021, wiki à jour ; bancs némésis 99, essai némésis 15, essai 43, relecture 12, Glas relecture 16, touche 34. `banc-dernier.mjs` : les 4 échecs d'avant (il attend un Dernier Souvenir inactif), inchangés.
+- Reste : 9 (revue par un autre agent), 10 (journal du wiki, version v17.25, `actif:true`, CLAUDE.md).

@@ -10093,7 +10093,7 @@ function demoBoot(cls){
   return T;}
  function trouMaj(e){const T=trouEtat(e);if(!T)return null;const C=MQ.crane,now=RUN?RUN.time:0;let dt=now-T.t;T.t=now;if(!(dt>0))dt=0;dt=Math.min(dt,0.05);
   // côté : opposé à sa marche horizontale, bascule amortie (0,3 s)
-  if(T.px!=null&&dt>0){const vx=(e.x-T.px)/dt;if(vx>25)T.cote=-1;else if(vx<-25)T.cote=1;}
+  if(T.ex!=null&&dt>0){const vx=(e.x-T.ex)/dt;if(vx>25)T.cote=-1;else if(vx<-25)T.cote=1;}T.ex=e.x;
   T.cs+=(T.cote-T.cs)*Math.min(1,dt/0.3);
   const hx=e.x+e.r*C.hanche[0]*T.cs,hy=e.y+e.r*C.hanche[1];
   // accroche : après la couture, un crâne toutes les accrocheS

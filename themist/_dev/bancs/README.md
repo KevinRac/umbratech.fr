@@ -24,3 +24,4 @@ Les chemins de Playwright (`/opt/npm-tools/node_modules/`) et de Chromium (`/opt
 
 Détail et résultats : `../memoire.md`, § 27 (Dernier Souvenir) et § 28 (némésis).
 - `banc-essai-nemesis.mjs` : le mode d'essai `?nemesis=` (némésis en mémoire, rien d'écrit dans SAVE, reprise à sa mort). `capture-5b.mjs` : captures de la porte, de la carte d'arrivée et de l'écran de mort.
+- `banc-nemesis-complet.mjs` : N18 en temps réel (promotion par chaque chemin, trousseau accroché/côté/figé, mouvements réduits, plafond, modes d'essai, régressions des quatre formes). `mesure-nemesis.mjs <port> [acte] [dps]` : PV, temps pour la briser et force selon les points.
