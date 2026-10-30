@@ -9113,6 +9113,7 @@ function demoBoot(cls){
    const M=RUN.asm=RUN.asm||{dernier:null,vaincus:[],salle:-99},R=PR();
    const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTS[RUN.act].rooms,breche:!!(room.breche||RUN.brecheNow||RUN.asmBr),demo:DEMO,hub:!!RUN.hub,depuis:RUN.g-M.salle-1};
    const ap=asmAppel(A,{salles:R.rooms||0,tempsS:R.clearT||0,sansDegatsS:RUN.time-(RUN.asmHit||0)});
+   if(nemIci(r,w,M,ap))return w;   // v17.25 · la némésis de cet acte t'attend ici : elle passe avant tout tirage (cadrage N5)
    const force=window.__asm.forcer>0;
    if(force||(asmEligible(A,r)&&(r.breche||ap.ok||!A.exigeDomination)&&Math.random()*100<(r.breche&&A.chanceBreche!=null?A.chanceBreche:A.chance))){   // exigeDomination faux : une chance sur deux partout
     if(force)window.__asm.forcer--;
@@ -9155,7 +9156,10 @@ function demoBoot(cls){
    e.asm={co:R.co,nom:R.nom,rnd:R.rnd,st:asmNouveau(A,R.co,R.sv&&R.sv.vars),z:null,flash:null,dash:null,sv:R.sv?{cap:R.sv.cap,fid:R.sv.fid,vars:R.sv.vars||[],renfort:R.sv.renfort||null,force:R.sv.force,id:R.sv.x.id,n:(NODES[R.sv.x.id]||{}).name||R.sv.x.id}:null};
    // v17.19 : l'arme de la Brume portée (sa file d'étapes vit dans st.sb, la géométrie et les zones ici), ou le renfort du porteur
    if(e.asm.sv&&e.asm.sv.cap)e.asm.sb={fid:e.asm.sv.fid,vars:e.asm.sv.vars,st:SB_REPOS,k:1,recu:0,sauts:0};
-   if(e.asm.sv&&e.asm.sv.renfort)sbRenfort(e,[e.asm.sv.renfort]);
+   // v17.25 · la némésis (N4) : PV de ses points, renforts de ses points (avec celui de son souvenir, un seul appel : au plus renfortMax)
+   if(R.nem&&R.nemStats){e.maxHp*=R.nemStats.pv;e.hp=e.maxHp;e.asm.nem={uid:R.nem,points:R.nemPoints||1,pv:R.nemStats.pv,renforts:R.nemStats.renforts.slice()};}
+   const rfs=[...(e.asm.sv&&e.asm.sv.renfort?[e.asm.sv.renfort]:[]),...(R.nem&&R.nemStats?R.nemStats.renforts:[])];
+   if(rfs.length)sbRenfort(e,rfs);
    if(MO){e.asm.mont={t:0,tot:MT(),n:0};e.asm.st.t=Math.max(e.asm.st.t,MT());}
    showCard(e,false);sfx('asm_in');}}catch(err){console.error(err);}
   return e;};
@@ -10010,9 +10014,40 @@ function demoBoot(cls){
  function nemConditions(mort,win,abandon){const R=room&&room.asm,e=R&&R.e;
   return{mort,victoire:!!win,abandon:!!abandon,demo:DEMO,essai:!!(RUN.essai||ESSAI_URL),hub:!!RUN.hub,asm:!!R,test:!!(R&&R.test),
    reflet:!!(e&&e.asm&&e.asm.reflet),present:!!e,brise:!!(R&&(R.vaincu||(e&&e.dead)))};}
- // à la fin de la descente (mort seulement), une fois, avant le reste de l'écran de fin (Tombe d'Écho, statistiques)
+ // à la fin de la descente, une fois, avant le reste de l'écran de fin (Tombe d'Écho, statistiques) : la promotion (mort seulement),
+ // puis, pour chaque némésis qui n'a rien gagné cette fois, le répit qui passe et le compte des morts (N7, nemFin)
  function nemFinRun(win,abandon){if(!RUN||RUN.hub||RUN.nemFait)return;RUN.nemFait=true;if(!nemActif())return;
-  RUN.nemBilan=nemPromo(nemConditions(!win&&!abandon&&!!(P&&P.dead),win,abandon));}
+  RUN.nemBilan=nemPromo(nemConditions(!win&&!abandon&&!!(P&&P.dead),win,abandon));
+  if(DEMO||RUN.essai||ESSAI_URL)return;
+  const S=nemLire(SAVE.nemesis);if(!S||!S.liste.length)return;const touche=RUN.nemBilan&&!RUN.nemBilan.refus&&RUN.nemBilan.uid,avant=JSON.stringify(S.liste);
+  for(const f of S.liste){if(f.uid===touche)continue;
+   const passee=RUN.act>f.attend.acte||(RUN.act===f.attend.acte&&RUN.roomIdx>f.attend.salle)||!!win;
+   nemFin(f,{passee,mortContre:false,rencontree:!!(RUN.nemVenus&&RUN.nemVenus[f.uid])});}
+  if(JSON.stringify(S.liste)!==avant){SAVE.nemesis=nemEcrire(S.liste);persist();}}
+ // ── Action 3 (N5) : vient-elle dans cette salle ? Appelé par le tirage du Masqué (planRoom), avant tout tirage. r : la salle (asmEligible) ;
+ // w : les vagues prévues ; M : RUN.asm ; ap : l'appel. Elle arrive comme tout Masqué, avec la deuxième vague, à la place du champion ;
+ // son assemblage est figé (relu par nemValide : si les données ont changé, il est refait avec le même corps, et la fiche réécrite) ;
+ // son souvenir garde ses variantes, sa force monte avec ses points (sbForce la borne au début de chaque attaque). Une fois par descente ;
+ // elle compte comme une apparition de Masqué (écart, dernière base), pas comme un porteur de la réserve (parActe).
+ function nemIci(r,w,M,ap){if(!nemActif()||!RUN||RUN.hub||r.demo||RUN.essai||ESSAI_URL)return false;
+  const S=nemLire(SAVE.nemesis);if(!S||!S.liste.length)return false;
+  const venus=RUN.nemVenus=RUN.nemVenus||{},rr={acte:r.act,salle:r.roomIdx,type:r.type,actRooms:r.actRooms,breche:r.breche,demo:DEMO,essai:false};
+  let ecrire=false,vient=null;
+  for(let i=0;i<S.liste.length;i++){const f0=S.liste[i];if(f0.attend.acte!==r.act)continue;
+   const f=nemValide(A,NM,SBJ,f0,nemInfo);
+   if(!f){S.liste.splice(i--,1);ecrire=true;continue;}   // corps inconnu des données : elle est abandonnée
+   if(JSON.stringify(f)!==JSON.stringify(f0)){S.liste[i]=f;ecrire=true;}
+   if(!vient&&nemSalle(NM,f,Object.assign({deja:!!venus[f.uid]},rr),Math.random)){vient=f;f.vu=(f.vu||0)+1;S.liste[i]=f;ecrire=true;}}
+  if(ecrire){SAVE.nemesis=nemEcrire(S.liste);persist();}
+  if(!vient)return false;
+  const f=vient,co=f.co,st=nemStats(A,NM,SBJ,f),sv=f.sv,seed=(Math.random()*4294967296)>>>0;
+  const svR=sv?{x:{id:sv.id,rang:sv.rang||1,g:sv.g||0,nem:f.uid},fid:sv.fid,cap:sv.renfort||sv.sansGeste?null:'sb:'+sv.fid,vars:(sv.vars||[]).slice(),renfort:sv.renfort||null,force:st.force}:null;
+  const n=A.escorte[RUN.act]!=null?A.escorte[RUN.act]:3,v=(w[1]||[]).filter(x=>!x.elite);if(!v.length)v.push(...row('rampant',n,'rand'));v.unshift({type:co.corps,elite:true,asm:true});
+  if(w.length>1)w[1]=v;else w.push(v);
+  RUN.seen.add(co.corps);venus[f.uid]=1;
+  room.asm={seed,rnd:asmRng(seed),co:{corps:co.corps,depart:co.depart.slice(),eveil:co.eveil,menace:co.menace,base:co.base,cle:co.cle},nom:f.nom,e:null,vaincu:false,wi:1,appel:ap,sv:svR,nem:f.uid,nemPoints:f.points,nemStats:st};
+  M.dernier=co.base;M.salle=RUN.g;
+  return true;}
  const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}return _oeN.apply(this,arguments);};
  // console : voir et effacer la fiche, essayer sans toucher aux données
  window.__nemesis={

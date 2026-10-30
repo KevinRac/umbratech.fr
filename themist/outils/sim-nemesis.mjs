@@ -280,6 +280,22 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   ok(!/SAVE\.nemesis=(?!nemEcrire)/.test(html), 'index.html : aucune autre écriture de SAVE.nemesis');
   has(/NEMSRC=p\.from\|\|null;try\{hurtPlayer\(p\.dmg\);\}finally\{NEMSRC=null;\}/, 'les projectiles de la Brume (navette, perçant) disent de qui vient le coup');
   ok(/hurtPlayer=function\(dmg,src\)\{const R=room&&room\.asm/.test(html), 'index.html : attribution du coup sans toucher aux arguments de hurtPlayer');
+  // action 3 : le retour en salle
+  const pr = html.indexOf('if(nemIci(r,w,M,ap))return w;'), tir = html.indexOf('const force=window.__asm.forcer>0;');
+  ok(pr > 0 && tir > pr, 'index.html : la némésis passe avant le tirage ordinaire du Masqué (planRoom)');
+  has(/function nemIci\(r,w,M,ap\)\{if\(!nemActif\(\)\|\|!RUN\|\|RUN\.hub\|\|r\.demo\|\|RUN\.essai\|\|ESSAI_URL\)return false;/, 'nemIci : jamais inactif, au hub, en démo ni en essai');
+  has(/const f=nemValide\(A,NM,SBJ,f0,nemInfo\);/, 'nemIci : chaque fiche relue par nemValide');
+  has(/nemSalle\(NM,f,Object\.assign\(\{deja:!!venus\[f\.uid\]\},rr\),Math\.random\)/, 'nemIci : la salle décidée par nemSalle, une fois par descente');
+  has(/v\.unshift\(\{type:co\.corps,elite:true,asm:true\}\);\n  if\(w\.length>1\)w\[1\]=v;else w\.push\(v\);/, 'nemIci : avec la deuxième vague, comme tout Masqué');
+  has(/force:st\.force\}/, 'nemIci : la force de ses points va au souvenir (sbForce la borne à chaque attaque)');
+  has(/B\.k=sbForce\(SBJ,B\.st\.etapes,RUN\.act,S\.sv&&S\.sv\.force\)/, 'index.html : la force du souvenir passe par sbForce');
+  has(/if\(R\.nem&&R\.nemStats\)\{e\.maxHp\*=R\.nemStats\.pv;/, 'createEnemy : PV de ses points');
+  has(/const rfs=\[\.\.\.\(e\.asm\.sv&&e\.asm\.sv\.renfort\?\[e\.asm\.sv\.renfort\]:\[\]\),\.\.\.\(R\.nem&&R\.nemStats\?R\.nemStats\.renforts:\[\]\)\];\n   if\(rfs\.length\)sbRenfort\(e,rfs\);/, 'createEnemy : un seul appel de sbRenfort (au plus renfortMax)');
+  has(/nemFin\(f,\{passee,mortContre:false/, 'fin de descente : nemFin (répit, compte des morts)');
+  ok(!/sv\.x\.porte=\(sv\.x\.porte\|\|0\)\+1;[^\n]*nem/.test(html), 'index.html : la némésis ne compte pas comme porteur de la réserve');
+  // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
+  const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
+  console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);
 }
 
 console.log(`${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);

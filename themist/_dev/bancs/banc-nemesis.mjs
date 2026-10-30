@@ -27,8 +27,8 @@ async function ouvre(qs = '') {
         for (const [id, rang, gr] of opt.talents || []) window.__dernier.prendre(id, rang || 1, gr || 0);
         if (opt.souv) R.reserveBrume.push({ id: opt.souv, source: 'talent', rang: opt.rangSouv || 1, g: opt.gSouv || 0, oublie: { acte: R.act, salle: 1 }, porte: 0 });
         if (opt.sansMasque) { g.entrer('combat'); G().room.asm = null; return { ok: true }; }
-        AS.forcer = 1; AS.souv = opt.souv || null;
-        try { g.entrer('elite'); } finally { AS.forcer = 0; AS.souv = null; }
+        AS.forcer = 1; AS.souv = opt.souv || null; AS.combo = opt.combo || null;
+        try { g.entrer('elite'); } finally { AS.forcer = 0; AS.souv = null; AS.combo = null; }
         const r = G().room; if (r.asm && r.waves.length > 1) r.waves.shift();
         return { ok: !!r.asm, nom: r.asm && r.asm.nom, sv: r.asm && r.asm.sv && r.asm.sv.x.id };
       },
@@ -39,6 +39,11 @@ async function ouvre(qs = '') {
         return { ok: false };
       },
       masque: () => { const R = G().room.asm; return R && R.e; },
+      // action 3 : une descente neuve à cet acte, salle 0 ; puis entrer dans une salle (sans rien forcer) et voir qui l'attend
+      nouvelle(cls, acte) { NE.activer(true); B.cls(cls); B.start(); const R = G().RUN; R.act = acte; R.g = acte >= 3 ? 14 : acte >= 2 ? 7 : 0; R.roomIdx = 0; return R; },
+      entrer(type) { G().entrer(type); const rm = G().room, a = rm.asm, vague = a ? (rm.waves[1] || []).some(x => x.asm) : false; if (a && rm.waves.length > 1) rm.waves.shift();
+        return { s: G().RUN.roomIdx, nem: a && a.nem || null, asm: !!a, vague }; },
+      fiche: uid => (NE.voir().liste || []).find(f => f.uid === uid),
       // par : 'masque' (un tir du Masqué sur toi), 'autre' (un tir d'un autre ennemi), 'perte' (PV perdus sans source)
       // une : un seul tir (pour la Mèche de Phénix) ; masque : l'escorte est retirée d'abord, pour que le coup mortel vienne bien de lui
       tuer(par, une) {
@@ -94,7 +99,7 @@ await cas('C-D', '', async page => {
   const r = await page.evaluate(() => {
     T.lancer('her', { acte: 1, talents: [['car_n1', 1, 0]] }); T.attendre(true); const k1 = T.tuer('masque'); const uid = k1.save.liste[0].uid;
     T.lancer('her', { acte: 1, salle: 4 }); T.attendre(true); window.__glas.dbg().room.asm.nem = uid; const k2 = T.tuer('masque');
-    T.lancer('her', { acte: 1, salle: 5 }); T.attendre(true); const k3 = T.tuer('masque');
+    T.lancer('her', { acte: 1, salle: 1 }); T.attendre(true); const k3 = T.tuer('masque');   // salle 2 : avant la sienne, un autre Masqué
     T.lancer('her', { acte: 3, salle: 3 }); T.attendre(true); const k4 = T.tuer('masque');
     return { uid, s2: k2.salle, k2: { bilan: k2.bilan, f: k2.save.liste }, k3: { bilan: k3.bilan, n: k3.save.liste.length }, k4: { bilan: k4.bilan, n: k4.save.liste.length, actes: k4.save.liste.map(f => f.attend.acte) } };
   });
@@ -159,6 +164,120 @@ await cas('N', '', async page => {
   });
   ok(r.meme && r.connu === true, 'N : la fiche écrite repasse la relecture telle quelle');
   ok(r.futur && r.futur.refus === 'version' && r.garde === '{"v":99,"liste":[{"futur":true}]}', 'N : version future : rien écrit, rien effacé');
+});
+
+// ── Action 3 : le retour en salle
+// R1. Née à l'acte III, salle 4 : à la descente suivante, elle t'attend salle 4 de l'acte III, pas avant, pas après (une fois), pas dans les autres actes
+await cas('R1', '', async page => {
+  const r = await page.evaluate(() => {
+    T.lancer('lum', { acte: 3, salle: 3, talents: [['ray_k1', 1, 1]] }); T.attendre(true); const k = T.tuer('masque'); const f = k.save.liste[0];
+    const o = { f: { uid: f.uid, attend: f.attend, cle: f.co.cle, nom: f.nom, sv: f.sv && f.sv.id }, actes: {} };
+    for (const acte of [1, 2, 3]) { T.nouvelle('gou', acte); const L = []; for (let s = 1; s < (acte === 2 ? 6 : 7); s++) L.push(T.entrer('combat')); o.actes[acte] = L; }
+    o.vu = T.fiche(f.uid).vu;
+    return o;
+  });
+  console.log('R1', JSON.stringify(r.f), JSON.stringify(r.actes[3]));
+  const ici = r.actes[3].filter(x => x.nem === r.f.uid).map(x => x.s);
+  ok(r.f.attend.acte === 3 && ici.length === 1 && ici[0] === r.f.attend.salle, `R1 : une seule fois, à sa salle (${r.f.attend.salle}) : ${ici.join(',')}`);
+  ok(r.actes[1].every(x => !x.nem) && r.actes[2].every(x => !x.nem), 'R1 : jamais dans les autres actes');
+  const sa = r.actes[3].find(x => x.nem); ok(sa && sa.asm, 'R1 : room.asm posé');
+  ok(r.vu === 1, 'R1 : vu une fois (' + r.vu + ')');
+});
+// R2. Une boutique à sa salle : il attend la salle de combat suivante ; R3. son assemblage, son souvenir, sa force, ses PV ; il se bat
+await cas('R2-R3', '', async page => {
+  const r = await page.evaluate(() => {
+    const B = window.__brume, NE = window.__nemesis, G = () => window.__glas.dbg();
+    T.lancer('her', { acte: 1, salle: 3, talents: [['car_x1a', 1, 0], ['cad_k1', 1, 2]] }); T.attendre(true); const k = T.tuer('masque'); const f = k.save.liste[0];
+    const o = { f: { uid: f.uid, attend: f.attend, cle: f.co.cle, nom: f.nom, sv: f.sv } };
+    T.nouvelle('tis', 1); const L = []; for (let s = 1; s < f.attend.salle; s++) L.push(T.entrer('combat'));
+    L.push(T.entrer('halte')); const nx = T.entrer('combat'); o.boutique = L[L.length - 1]; o.suivante = nx;
+    // il arrive
+    const a = T.attendre(true); const e = T.masque(); o.arrive = a.ok;
+    if (e) { o.e = { uid: e.asm.nem && e.asm.nem.uid, points: e.asm.nem && e.asm.nem.points, sv: e.asm.sv && e.asm.sv.id, force: e.asm.sv && e.asm.sv.force, cle: e.asm.co.cle, nom: e.asm.nom, sb: e.asm.sb && e.asm.sb.fid, hp: e.maxHp };
+      o.attendu = NE.stats(T.fiche(f.uid));
+      // il se bat : 30 s, toi intouchable ; on compte ses sorts et ses attaques de souvenir
+      let sbVu = 0, n0 = e.asm.st.n; const P = B.P; for (let i = 0; i < 60 * 30 && !e.dead; i++) { P.iT = 99; P.hp = P.s.maxHp; B.step(1 / 60); if (e.asm.st.sb) sbVu++; }
+      o.sorts = e.asm.st.n - n0; o.sbVu = sbVu; o.k = e.asm.sb && e.asm.sb.k; }
+    return o;
+  });
+  console.log('R2-R3', JSON.stringify({ boutique: r.boutique, suivante: r.suivante, e: r.e, attendu: r.attendu, sorts: r.sorts, sbVu: r.sbVu, k: r.k }));
+  ok(!r.boutique.nem && r.suivante.nem === r.f.uid && r.suivante.s === r.f.attend.salle + 1, 'R2 : boutique à sa salle, il vient à la suivante');
+  ok(r.suivante.vague, 'R2 : il arrive avec la deuxième vague');
+  ok(r.arrive && r.e && r.e.uid === r.f.uid && r.e.points === 1, 'R3 : la némésis est là (uid, 1 point)');
+  ok(r.e && r.e.cle === r.f.cle && r.e.nom === r.f.nom, 'R3 : même assemblage, même nom (' + (r.e && r.e.nom) + ')');
+  ok(r.e && r.f.sv && r.e.sv === r.f.sv.id, 'R3 : son souvenir');
+  ok(r.e && Math.abs(r.e.force - r.attendu.force) < 1e-9, `R3 : force ${r.e && r.e.force} = ${r.attendu && r.attendu.force}`);
+  if (r.f.sv && !r.f.sv.renfort && !r.f.sv.sansGeste) { ok(r.e.sb === r.f.sv.fid, 'R3 : son arme de la Brume'); ok(r.sbVu > 0 && r.k > 0, `R3 : il joue ton souvenir (${r.sbVu} images, force bornée ${r.k})`); }
+  ok(r.sorts >= 3, `R3 : il se bat (${r.sorts} sorts en 30 s)`);
+});
+// R4. PV et force : la némésis contre un porteur ordinaire de même assemblage et même souvenir, même salle ; puis point 2 (Robuste)
+await cas('R4', '', async page => {
+  const r = await page.evaluate(() => {
+    const G = () => window.__glas.dbg(), NE = window.__nemesis;
+    T.lancer('lum', { acte: 2, salle: 3, souv: 'fan_n2', rangSouv: 2, gSouv: 1 }); T.attendre(true); const k1 = T.tuer('masque'); const f = k1.save.liste[0];
+    const mesure = () => { const e = T.masque(); return { hp: e.maxHp, force: e.asm.sv.force, nem: e.asm.nem, red: e.asm.sbReduit || 0, dmg: e.dmg }; };
+    // la némésis, point 1
+    T.nouvelle('lum', 2); for (let s = 1; s < f.attend.salle; s++) T.entrer('combat'); T.entrer('combat'); T.attendre(true); const n1 = mesure(); const g1 = G().RUN.g;
+    // elle te tue : point 2
+    const k2 = T.tuer('masque'); const b2 = k2.bilan;
+    T.nouvelle('lum', 2); for (let s = 1; s < f.attend.salle; s++) T.entrer('combat'); T.entrer('combat'); T.attendre(true); const n2 = mesure();
+    // le même porteur, ordinaire (némésis coupée), même salle
+    NE.activer(false); window.__nemesis.activer(false);
+    const R0 = { cls: 'lum' }; window.__brume.cls('lum'); window.__brume.start(); const R = G().RUN; R.act = 2; R.g = g1 - 1; R.roomIdx = f.attend.salle - 1;
+    R.reserveBrume.push({ id: 'fan_n2', source: 'talent', rang: 2, g: 1, oublie: { acte: 2, salle: 1 }, porte: 0 });
+    window.__asm.forcer = 1; window.__asm.souv = 'fan_n2'; window.__asm.combo = f.co.cle;
+    try { G().entrer('combat'); } finally { window.__asm.forcer = 0; window.__asm.souv = null; window.__asm.combo = null; }
+    const rr = G().room; if (rr.asm && rr.waves.length > 1) rr.waves.shift(); T.attendre(true); const o0 = mesure(); o0.cle = rr.asm.co.cle;
+    return { f: { cle: f.co.cle, attend: f.attend }, n1, b2, n2, o0, g1, g0: G().RUN.g };
+  });
+  console.log('R4', JSON.stringify(r));
+  ok(r.o0.cle === r.f.cle, 'R4 : le porteur de comparaison a le même assemblage');
+  ok(r.g0 === r.g1, `R4 : même salle (${r.g0} / ${r.g1})`);
+  ok(Math.abs(r.n1.hp / r.o0.hp - 1.08) < 0.005, `R4 : point 1, PV × ${(r.n1.hp / r.o0.hp).toFixed(3)} (× 1,08)`);
+  ok(Math.abs(r.n1.force - r.o0.force - 0.15) < 1e-9, `R4 : point 1, force + 0,15 (${r.n1.force} / ${r.o0.force})`);
+  ok(r.b2 && r.b2.decision === 'point' && r.b2.point, 'R4 : elle te tue dans sa salle : un point');
+  ok(r.n2.nem && r.n2.nem.points === 2 && r.n2.nem.renforts.includes('pv'), 'R4 : point 2, renfort Robuste');
+  ok(Math.abs(r.n2.hp / r.o0.hp - 1.16 * 1.15) < 0.006, `R4 : point 2, PV × ${(r.n2.hp / r.o0.hp).toFixed(3)} (× 1,16 × 1,15)`);
+  ok(Math.abs(r.n2.dmg - r.o0.dmg) < 1e-9, 'R4 : point 2, pas de renfort de dégâts (il vient au point 4)');
+});
+// R5. Répit : troisième mort de suite, il saute une descente, puis revient ; R6. passer sa salle sans mourir contre lui remet le compte à zéro
+await cas('R5-R6', '', async page => {
+  const r = await page.evaluate(() => {
+    const NE = window.__nemesis, o = {};
+    T.lancer('gou', { acte: 1, salle: 3 }); T.attendre(true); const f = T.tuer('masque').save.liste[0]; const s = f.attend.salle;
+    const aSaSalle = () => { T.nouvelle('gou', 1); let x = null; for (let i = 1; i <= s; i++) x = T.entrer('combat'); return x; };
+    let x = aSaSalle(); T.attendre(true); o.m2 = T.tuer('masque').bilan;                    // 2e mort
+    x = aSaSalle(); T.attendre(true); o.m3 = T.tuer('masque').bilan; o.f3 = T.fiche(f.uid);   // 3e mort : répit
+    x = aSaSalle(); o.repitSalle = x.nem; T.tuer('perte'); o.f4 = T.fiche(f.uid);            // il ne vient pas ; la descente passe
+    x = aSaSalle(); o.revient = x.nem === f.uid;
+    // il est là ; tu passes sa salle (salle suivante) puis tu meurs ailleurs : compte remis à zéro
+    const fx = T.fiche(f.uid); const S = window.__brume.SAVE; S.nemesis.liste.find(y => y.uid === f.uid).morts = 2;
+    T.entrer('combat'); T.tuer('perte'); o.f6 = T.fiche(f.uid);
+    o.uid = f.uid; return o;
+  });
+  console.log('R5-R6', JSON.stringify({ m2: r.m2, m3: r.m3, f3: r.f3 && { p: r.f3.points, m: r.f3.morts, r: r.f3.repit }, f4: r.f4 && { m: r.f4.morts, r: r.f4.repit }, revient: r.revient, f6: r.f6 && { m: r.f6.morts } }));
+  ok(r.m2.decision === 'point' && r.m3.decision === 'point', 'R5 : deuxième et troisième morts face à elle : des points');
+  ok(r.f3.points === 3 && r.f3.repit === 1 && r.f3.morts === 0, 'R5 : trois morts de suite : répit');
+  ok(!r.repitSalle && r.f4.repit === 0, 'R5 : la descente suivante, pas là ; le répit passe');
+  ok(r.revient, 'R5 : puis elle revient');
+  ok(r.f6.morts === 0, 'R6 : sa salle franchie, mort ailleurs : compte remis à zéro');
+});
+// R7. Inactive, descente d'essai : elle ne vient pas ; R8. fiche périmée (capacité retirée) : réassemblée à la lecture, sauvegarde réécrite
+await cas('R7-R8', '', async page => {
+  const r = await page.evaluate(() => {
+    const NE = window.__nemesis, G = () => window.__glas.dbg(), S = () => window.__brume.SAVE, o = {};
+    T.lancer('tis', { acte: 2, salle: 3 }); T.attendre(true); const f = T.tuer('masque').save.liste[0]; const s = f.attend.salle;
+    T.nouvelle('tis', 2); NE.activer(false); let x; for (let i = 1; i <= s; i++) x = T.entrer('combat'); o.inactif = x.nem;
+    NE.activer(true); window.__asm.essai(null, 2, true, null, 'tis'); const R = G().RUN; R.act = 2; R.roomIdx = s - 1; x = T.entrer('combat'); o.essai = x.nem; o.essaiRun = R.essai;
+    // fiche périmée
+    const L = S().nemesis.liste, g = L.find(y => y.uid === f.uid); o.cle0 = g.co.cle; g.co = Object.assign({}, g.co, { depart: ['taches', g.co.depart[1]], cle: 'vieux' });
+    T.nouvelle('tis', 2); for (let i = 1; i <= s; i++) x = T.entrer('combat'); o.perimee = x.nem; T.attendre(true); const e = T.masque(); o.cle = e && e.asm.co.cle; o.save = T.fiche(f.uid).co.cle;
+    o.uid = f.uid; return o;
+  });
+  console.log('R7-R8', JSON.stringify(r));
+  ok(!r.inactif, 'R7 : inactive : elle ne vient pas');
+  ok(r.essaiRun === 1 && !r.essai, 'R7 : descente d’essai : elle ne vient pas');
+  ok(r.perimee === r.uid && r.cle && r.cle !== 'vieux' && !r.cle.includes('taches') && r.save === r.cle, `R8 : réassemblée (${r.cle}) et réécrite`);
 });
 
 await browser.close();
