@@ -72,6 +72,21 @@ if (CR) {   // action 5a : le dessin du crâne
   ok(/role="img" aria-label="Crâne"/.test(sv) && /aria-hidden="true"/.test(sv2), 'svgCrane : étiquette pour les lecteurs d’écran, sinon décoratif');
   ok(!/#[0-9a-f]{0,2}(?:f[0-9a-f]|e[0-9a-f])0000|rgb\(2[0-9]{2},\s*[0-9]{1,2},/.test(sv), 'svgCrane : aucun rouge');
   ok(typeof MQ.peindreCrane === 'function', 'peindreCrane : le même dessin pour le jeu');
+  // action 5b : le crâne en volume et l'animation
+  const AN = CR.anim || {}, FA = CR.face || {};
+  ok(typeof MQ.peindreCrane3d === 'function' && FA.orbites && FA.orbites.length === 2 && FA.nez && FA.R > 0, 'peindreCrane3d : la face posée sur une sphère');
+  ok(Number.isInteger(AN.cadres) && AN.cadres >= 7 && AN.cadres % 2 === 1 && AN.cadres <= 25, 'anim.cadres : impair (un cadre de face), 7 à 25');
+  ok(AN.yawMax > 0.2 && AN.yawMax < 1.2, 'anim.yawMax : il tourne sans montrer son dos');
+  ok(Math.max(...FA.orbites.map(([a]) => Math.abs(a))) + AN.yawMax < Math.PI / 2 - 0.3, 'anim : à l’angle maximal, l’orbite la plus loin reste visible');
+  ok(AN.gravite > 0 && AN.amorti >= 1 && AN.torsion > 0 && AN.torsionAmorti >= 1, 'anim : pendule et rotation amortis');
+  ok(AN.ecartMax > 0 && AN.ecartMax <= 1.2 && AN.souffle >= 0 && AN.souffle <= 0.15, 'anim : mouvements légers (écart ≤ 1,2 rad, souffle ≤ 0,15 rad)');
+  ok(AN.accrocheS > 0 && AN.accrocheS <= 0.4 && AN.chuteS > 0 && AN.chuteS <= 1.2, 'anim : accroche et chute courtes');
+  // le pendule simulé seul : secoué puis laissé, il revient à sa place (amorti) sans dépasser ecartMax
+  { let th = 0, w = 0; const L = CR.chaine + CR.maxPx * 1.35; let pire = 0;
+    for (let t = 0; t < 4; t += 1 / 120) { const ax = t < 0.25 ? 2500 : 0; const acc = -(AN.gravite * Math.sin(th) + ax * Math.cos(th)) / L - AN.amorti * w; w += acc / 120; th += w / 120;
+      if (Math.abs(th) > AN.ecartMax) { th = Math.sign(th) * AN.ecartMax; w *= -0.3; } pire = Math.max(pire, Math.abs(th)); }
+    ok(Math.abs(th) < 0.03 && Math.abs(w) < 0.1, `anim : secoué puis laissé, il revient à sa place en 4 s (${th.toFixed(3)} rad)`);
+    console.log(`  trousseau : secousse d’une ruée, écart au pire ${pire.toFixed(2)} rad (max ${AN.ecartMax})`); }
 }
 ok(Array.isArray(MQ.coutures) && MQ.coutures.length === 6, 'masque.js : le masque garde ses 6 points de couture (N10b)');
 
@@ -306,7 +321,7 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   ok(!/sv\.x\.porte=\(sv\.x\.porte\|\|0\)\+1;[^\n]*nem/.test(html), 'index.html : la némésis ne compte pas comme porteur de la réserve');
   // action 4 : la revanche
   has(/function nemBrise\(uid\)\{[\s\S]{0,200}?S\.liste=S\.liste\.filter\(x=>x\.uid!==uid\);SAVE\.nemesis=nemEcrire\(S\.liste\);persist\(\);/, 'brisée : sa fiche est effacée');
-  has(/killEnemy=function\(e\)\{const was=e&&e\.dead,r=_keN\.apply\(this,arguments\);\n  try\{if\(!was&&e&&e\.dead&&e\.asm&&e\.asm\.nem&&RUN&&!RUN\.hub\)nemBrise\(e\.asm\.nem\.uid\);/, 'à sa mort, pas à la purge de la salle');
+  has(/killEnemy=function\(e\)\{const was=e&&e\.dead,r=_keN\.apply\(this,arguments\);\n  try\{if\(!was&&e&&e\.dead&&e\.asm&&e\.asm\.trou\)trouChute\(e\);\}[^\n]*\n  try\{if\(!was&&e&&e\.dead&&e\.asm&&e\.asm\.nem&&RUN&&!RUN\.hub\)nemBrise\(e\.asm\.nem\.uid\);/, 'à sa mort, pas à la purge de la salle (et son trousseau tombe)');
   has(/if\(i===0&&R\.sv&&!R\.nem&&window\.__memoire&&window\.__memoire\.offreReprise\)/, 'la reprise ordinaire ne vaut pas pour la némésis');
   has(/if\(i===0&&R\.nem&&R\.nemFiche&&window\.__memoire&&window\.__memoire\.offreNemesis\)\{const f=R\.nemFiche;enqueue\(\(\)=>window\.__memoire\.offreNemesis\(f,A\.recompense\.titre\)\);\}[^\n]*\n     enqueue\(rel\);/, 'son souvenir, puis la relique : deux récompenses');
   has(/const sv=f\.sv,r=window\.__nemesis\.F\.nemReprise\(NMD\(\),f,nemJoueur\(sv\)\)/, 'offreNemesis : la matrice de nemReprise');
@@ -317,6 +332,13 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   // action 5a : le crâne du jeu
   has(/function craneImg\(h\)\{[^\n]*\n[^\n]*MQ\.peindreCrane\(/, 'craneImg : peint une fois hors écran par hauteur (MQ.peindreCrane)');
   has(/const craneTaille=e=>\{const C=MQ\.crane;return clamp\(e\.r\*C\.taille,C\.min,C\.maxPx\);\};/, 'taille du crâne : rayon × taille, de min à maxPx');
+  // action 5b : le trousseau en jeu
+  has(/const fige=RM\|\|!dt\|\|e\.asm\.st\.ph==='charge'\|\|!!\(e\.asm\.sb&&e\.asm\.sb\.st&&e\.asm\.sb\.st\.ph==='charge'\);/, 'trousseau : figé pendant ses chargements et en mouvements réduits');
+  has(/if\(e\.asm\.mont\)\{T\.vu=0;T\.acc=0;\}/, 'trousseau : rien avant la fin de la couture');
+  has(/if\(vx>25\)T\.cote=-1;else if\(vx<-25\)T\.cote=1;/, 'trousseau : du côté opposé à sa marche');
+  has(/function crane3d\(h,yaw,fond\)\{[^\n]*\n  if\(CRI\[key\]\)return CRI\[key\];/, 'crâne en volume : chaque cadre peint une seule fois');
+  has(/drawEnemyPost=function\(e\)\{_depN\.apply\(this,arguments\);try\{if\(e&&!e\.dead&&e\.asm&&trouN\(e\)\)\{trouDessin\(e,true\);trouDessin\(e,false\);\}/, 'trousseau : le fond d’abord, jamais caché par le corps, puis le devant');
+  has(/trouN=e=>!e\|\|!e\.asm\|\|e\.asm\.reflet\?0:NCE\.on\?Math\.min\(MQ\.crane\.max,NCE\.n\):e\.asm\.nem\?Math\.min\(MQ\.crane\.max,e\.asm\.nem\.points\|\|1\):0;/, 'trousseau : un crâne par point, au plus crane.max, seulement la némésis');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);

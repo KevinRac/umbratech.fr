@@ -1633,3 +1633,23 @@ Régressions : `sim-masque`, `sim-brume --vite`, `sim-dernier`, `wiki.mjs --chec
 - **Captures** : `_dev/bancs/capture-crane.mjs <port> <dossier> [zoom]` ; références dans `_dev/bancs/` : `crane-planche.png` (SVG et rendu du jeu de 10 à 16 px, deux fonds), `crane-brute-5.png`, `crane-spectre-3.png` (loupe × 3).
 
 Mesures : `sim-nemesis.mjs` 46 085, 0 échec (dessin : parties, couleurs sans rouge, identifiants de dégradés, étiquette, taille minimale ; branchements de `craneImg`) ; `sim-masque` ; `wiki.mjs --check` à jour (la galerie des masques du wiki n'utilise pas le crâne) ; `banc-nemesis` 92, `banc-complet` F 60, `banc-touche` 34 : 0 échec, aucune erreur de script.
+
+### Action 5b, première partie : le trousseau en volume et animé (30 octobre 2026, toujours pas active)
+
+Demande de l'auteur : « un système d'animation en 3D, un trousseau de crânes 3D avec des mouvements légers ». Fait avec Opus 5.5, effort élevé (le découpage prévoyait Sonnet moyen pour 5b ; la physique et le volume le justifiaient).
+
+- **Le crâne en volume** (`masque.js`, `peindreCrane3d`, `crane.face`) : la calotte est une sphère ; orbites, nez et dents y sont posés à leur angle et glissent quand il tourne (`x = 20 + R sin(a + yaw)`, largeur × `cos(a + yaw)`, cachés de l'autre côté) ; la lumière reste en haut à gauche, le côté qui s'en détourne s'assombrit, le reflet glisse. 13 cadres de -0,62 à +0,62 rad, peints une fois par hauteur et par plan (`crane3d`), puis posés : aucun dégradé par image.
+- **Le trousseau** (`index.html`, `trouEtat`, `trouMaj`, `trouDessin`, réglages `crane.anim`) :
+  - un anneau à la hanche, **du côté opposé à sa marche** (bascule amortie, 0,3 s) ; un crâne par point (au plus 5), seulement sur la némésis (ou l'aperçu de console) ;
+  - chaque crâne est un **pendule** au bout de sa chaîne (pas de 1/120 s) : rappelé vers sa place dans l'éventail (19°), mené par les secousses de la hanche (marche, arrêt, ruée), amorti, écart borné (0,85 rad) ; il **tourne sur lui-même**, entraîné par son balancement, rappelé, avec un souffle lent au repos (0,07 rad) ;
+  - un crâne sur deux pend plus bas, **au fond** : dessiné d'abord, plus petit (× 0,88) et assombri ; jamais derrière le corps (une première version les cachait derrière la Brute : on ne pouvait plus compter) ;
+  - deux crânes du même plan se repoussent ; heurtés assez vite, un **tic d'os** à peine audible (`crane_tic`, au plus un toutes les 0,12 s) ;
+  - **figé pendant ses chargements** (on lit sa zone) et en mouvements réduits ;
+  - après la couture du montage, les crânes **s'accrochent un par un** (0,2 s, `asm_crane`, cliquetis sans grave) ;
+  - à sa mort, le trousseau **tombe**, rebondit une fois et se défait en brume (0,75 s ; fondu sur place en mouvements réduits).
+- Console : `__nemesis.crane.essai(n)` donne un trousseau de n crânes à chaque Masqué ; `etat()`, `chutes()`, `img3d(h, yaw, fond)`.
+- Vidéo : `_dev/bancs/capture-trousseau.mjs <port> <dossier> [n] [corps]` (marche, arrêt, ruée, arrêt, puis mort) ; référence `trousseau-etapes.png`.
+
+Reste de l'action 5b : le crâne sur la porte de sa salle et son survol, l'écran de mort (un crâne s'accroche, rire du Brumeux), la carte d'arrivée avec le trousseau en SVG.
+
+Mesures : `sim-nemesis.mjs` 46 099, 0 échec (volume, cadres, écart et souffle bornés, pendule simulé qui revient à sa place en 4 s après la secousse d'une ruée, branchements) ; `banc-nemesis` 92, `banc-complet` F 60, `banc-glas-relecture` 16 : 0 échec ; `sim-masque`, `wiki.mjs --check` à jour ; aucune erreur de script pendant la vidéo (chute comprise).

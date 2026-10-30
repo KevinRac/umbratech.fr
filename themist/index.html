@@ -10055,22 +10055,88 @@ function demoBoot(cls){
   if(f){S.liste=S.liste.filter(x=>x.uid!==uid);SAVE.nemesis=nemEcrire(S.liste);persist();}
   if(R&&R.nem===uid)R.nemFiche=f;(RUN.nemBrisees=RUN.nemBrisees||{})[uid]=f?f.points:0;return f;}
  const _keN=killEnemy;killEnemy=function(e){const was=e&&e.dead,r=_keN.apply(this,arguments);
+  try{if(!was&&e&&e.dead&&e.asm&&e.asm.trou)trouChute(e);}catch(err){console.error(err);}
   try{if(!was&&e&&e.dead&&e.asm&&e.asm.nem&&RUN&&!RUN.hub)nemBrise(e.asm.nem.uid);}catch(err){console.error(err);}return r;};
- // ── Action 5a (N10a) : le crâne, peint une fois hors écran par hauteur (× 2 pour la netteté) avec MQ.peindreCrane, puis posé (drawImage).
- // Le trousseau (place à la hanche, côté, balancement) est l'action 5b ; ici, seulement l'image et un aperçu de développement.
- const CRI={};
+ // ── Actions 5a et 5b (N10a) : le trousseau de crânes, en volume et animé.
+ // Le crâne est peint en volume (MQ.peindreCrane3d) une fois par hauteur, par angle (anim.cadres, de -yawMax à +yawMax) et par plan
+ // (devant, ou au fond, assombri), hors écran (× 2), puis posé (drawImage) : aucun dégradé par image. craneImg(h) garde l'image fixe (5a).
+ const CRI={},CA=MQ.crane.anim;
  function craneImg(h){h=Math.max(6,Math.round(h));if(CRI[h])return CRI[h];const k=2,C=MQ.crane,cv=document.createElement('canvas');
   cv.width=Math.ceil((C.vb[0]+6)/C.vb[1]*h*k);cv.height=Math.ceil(h*1.16*k);const c=cv.getContext('2d');c.scale(k,k);MQ.peindreCrane(c,cv.width/k/2,h*0.53,h);return CRI[h]={cv,k,h};}
- function poseCrane(c,x,y,h){const I=craneImg(h),w=I.cv.width/I.k,hh=I.cv.height/I.k;c.drawImage(I.cv,x-w/2,y-I.h*0.53,w,hh);}
+ function crane3d(h,yaw,fond){h=Math.max(6,Math.round(h));const F=CA.cadres,i=Math.round((clamp(yaw,-CA.yawMax,CA.yawMax)/CA.yawMax+1)/2*(F-1)),key=h+':'+i+':'+(fond?1:0);
+  if(CRI[key])return CRI[key];const k=2,C=MQ.crane,cv=document.createElement('canvas');cv.width=Math.ceil((C.vb[0]+6)/C.vb[1]*h*k);cv.height=Math.ceil(h*1.16*k);
+  const c=cv.getContext('2d');c.scale(k,k);MQ.peindreCrane3d(c,cv.width/k/2,h*0.53,h,(i/(F-1)*2-1)*CA.yawMax,fond?0.32:0);return CRI[key]={cv,k,h};}
+ // pose un crâne : (x, y) son centre, roll : son inclinaison (celle de sa chaîne)
+ function poseCrane(c,x,y,h,yaw,fond,roll){const I=yaw==null?craneImg(h):crane3d(h,yaw,fond),w=I.cv.width/I.k,hh=I.cv.height/I.k;
+  if(roll){c.save();c.translate(x,y);c.rotate(roll);c.drawImage(I.cv,-w/2,-I.h*0.53,w,hh);c.restore();}else c.drawImage(I.cv,x-w/2,y-I.h*0.53,w,hh);}
  const craneTaille=e=>{const C=MQ.crane;return clamp(e.r*C.taille,C.min,C.maxPx);};
- // aperçu (développement) : __nemesis.crane.essai(n, px) pose n crânes en éventail à la hanche de chaque Masqué, sans balancement
+ // aperçu (développement) : __nemesis.crane.essai(n, px) donne un trousseau de n crânes à chaque Masqué
  const NCE={on:false,n:3,px:null};
- const _depN=drawEnemyPost;drawEnemyPost=function(e){_depN.apply(this,arguments);
-  try{if(!NCE.on||!e||e.dead||!e.asm||e.asm.reflet)return;const C=MQ.crane,h=NCE.px||craneTaille(e),n=Math.min(C.max,NCE.n),hx=e.x+e.r*C.hanche[0],hy=e.y+e.r*C.hanche[1];
-   ctx.save();ctx.strokeStyle='rgba(20,14,12,.9)';ctx.lineWidth=1.4;ctx.fillStyle='rgba(20,14,12,.95)';ctx.beginPath();ctx.arc(hx,hy,2.2,0,TAU);ctx.fill();
-   for(let i=0;i<n;i++){const a=Math.PI/2-(i-(n-1)/2)*C.eventail*Math.PI/180,L=C.chaine+h*(0.55+(i%2)*0.8),x=hx+Math.cos(a)*L,y=hy+Math.sin(a)*L;   // en quinconce : deux voisins ne se cachent pas
-    ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(hx+Math.cos(a)*(L-h*0.45),hy+Math.sin(a)*(L-h*0.45));ctx.stroke();poseCrane(ctx,x,y,h);}
-   ctx.restore();}catch(err){}};
+ const trouN=e=>!e||!e.asm||e.asm.reflet?0:NCE.on?Math.min(MQ.crane.max,NCE.n):e.asm.nem?Math.min(MQ.crane.max,e.asm.nem.points||1):0;
+ // ── Le trousseau d'un Masqué (e.asm.trou). L'anneau est à sa hanche, du côté opposé à sa marche (il traîne derrière lui ; bascule amortie).
+ // Chaque crâne est un pendule au bout de sa chaîne : rappelé vers sa place dans l'éventail, mené par les secousses de la hanche (marche,
+ // ruée, arrêt), amorti. Il tourne aussi sur lui-même : entraîné par son balancement, rappelé vers son angle de repos, avec un souffle lent.
+ // Un crâne sur deux pend plus bas et au fond (dessiné en premier, plus petit et assombri, mais jamais caché par le corps : on doit pouvoir
+ // compter) : la profondeur se lit, deux voisins ne se cachent pas.
+ // Deux crânes du même plan qui se rapprochent se repoussent ; s'ils se heurtent assez vite, un petit tic d'os (au plus un tous les 0,12 s).
+ // Rien ne bouge pendant ses chargements (on lit sa zone) ; en mouvements réduits, le trousseau est figé. Après la couture du montage, les
+ // crânes s'accrochent un par un (asm_crane) ; à sa mort, ils tombent et se défont en brume.
+ function trouEtat(e){const n=trouN(e);let T=e.asm.trou;if(!n){e.asm.trou=null;return null;}
+  if(!T||T.n!==n){const C=MQ.crane,h=NCE.px||craneTaille(e),ec=C.eventail*Math.PI/180,vu=T?Math.min(T.vu,n):0;
+   T=e.asm.trou={n,h,vu,acc:T?T.acc:0,cote:T?T.cote:1,cs:T?T.cs:1,px:null,py:null,vx:0,vy:0,t:RUN?RUN.time:0,tic:0,
+    it:Array.from({length:n},(_,i)=>{const th0=(i-(n-1)/2)*ec,fond=i%2===1;return{th0,th:th0,w:0,L:C.chaine+h*(fond?1.35:0.55),fond,y0:(i-(n-1)/2)*0.16,yaw:(i-(n-1)/2)*0.16,wy:0};})};}
+  return T;}
+ function trouMaj(e){const T=trouEtat(e);if(!T)return null;const C=MQ.crane,now=RUN?RUN.time:0;let dt=now-T.t;T.t=now;if(!(dt>0))dt=0;dt=Math.min(dt,0.05);
+  // côté : opposé à sa marche horizontale, bascule amortie (0,3 s)
+  if(T.px!=null&&dt>0){const vx=(e.x-T.px)/dt;if(vx>25)T.cote=-1;else if(vx<-25)T.cote=1;}
+  T.cs+=(T.cote-T.cs)*Math.min(1,dt/0.3);
+  const hx=e.x+e.r*C.hanche[0]*T.cs,hy=e.y+e.r*C.hanche[1];
+  // accroche : après la couture, un crâne toutes les accrocheS
+  if(e.asm.mont){T.vu=0;T.acc=0;}else if(T.vu<T.n){T.acc-=dt;if(T.acc<=0){T.vu++;T.acc=CA.accrocheS;if(!NCE.on||T.vu<=T.n)sfx('asm_crane');}}
+  // la hanche : vitesse et accélération (secousses)
+  let ax=0,ay=0;if(T.px!=null&&dt>0){const vx=(hx-T.px)/dt,vy=(hy-T.py)/dt;ax=clamp((vx-T.vx)/dt,-5000,5000);ay=clamp((vy-T.vy)/dt,-5000,5000);T.vx=vx;T.vy=vy;}
+  T.px=hx;T.py=hy;
+  const fige=RM||!dt||e.asm.st.ph==='charge'||!!(e.asm.sb&&e.asm.sb.st&&e.asm.sb.st.ph==='charge');
+  if(RM){for(const it of T.it){it.th=it.th0;it.w=0;it.yaw=it.y0;it.wy=0;}}
+  else if(!fige){const pas=Math.ceil(dt/(1/120)),h=dt/pas;
+   for(let s=0;s<pas;s++){
+    for(let i=0;i<T.it.length;i++){const it=T.it[i],L=it.L;
+     // pendule : rappel vers sa place dans l'éventail (gravité), mené par l'accélération de la hanche, amorti
+     const acc=-(CA.gravite*Math.sin(it.th-it.th0)+ax*Math.cos(it.th)-ay*Math.sin(it.th))/L-CA.amorti*it.w;
+     it.w+=acc*h;it.th+=it.w*h;const d=it.th-it.th0;if(Math.abs(d)>CA.ecartMax){it.th=it.th0+Math.sign(d)*CA.ecartMax;it.w*=-0.3;}
+     // rotation sur lui-même : entraînée par le balancement, rappelée, un souffle lent au repos
+     const cible=it.y0+T.cs*0.12+CA.souffle*Math.sin(now*1.3+i*1.7);
+     it.wy+=(-CA.torsion*(it.yaw-cible)-CA.torsionAmorti*it.wy+CA.couplage*acc*0.02)*h;it.yaw=clamp(it.yaw+it.wy*h,-CA.yawMax,CA.yawMax);}
+    // contacts entre crânes du même plan
+    for(let i=0;i<T.it.length;i++)for(let j=i+2;j<T.it.length;j+=2){const a=T.it[i],b=T.it[j],sep=0.95*T.h/Math.min(a.L,b.L),d=b.th-a.th;
+     if(Math.abs(d)<sep){const m=(sep-Math.abs(d))/2*Math.sign(d||1);a.th-=m;b.th+=m;const rv=b.w-a.w;
+      if(rv*Math.sign(d||1)<0){const v=(a.w+b.w)/2;a.w=v-rv*0.15;b.w=v+rv*0.15;if(Math.abs(rv)>CA.tic&&now-T.tic>0.12){T.tic=now;sfx('crane_tic');}}}}}}
+  return{T,hx,hy};}
+ // un plan du trousseau : le fond (avant le corps) ou le devant (après)
+ function trouDessin(e,fond){const R=fond?trouMaj(e):(e.asm.trou?{T:e.asm.trou,hx:e.asm.trou.px,hy:e.asm.trou.py}:null);if(!R||!R.T.vu)return;
+  const {T,hx,hy}=R,c=ctx;c.save();
+  if(fond){c.fillStyle='rgba(16,11,20,.95)';c.strokeStyle='rgba(205,180,255,.35)';c.lineWidth=1;c.beginPath();c.arc(hx,hy,2.6,0,TAU);c.fill();c.stroke();}
+  for(let i=0;i<T.vu;i++){const it=T.it[i];if(it.fond!==fond)continue;const x=hx+Math.sin(it.th)*it.L,y=hy+Math.cos(it.th)*it.L,top=it.L-T.h*0.5;
+   c.strokeStyle=fond?'rgba(14,10,18,.75)':'rgba(18,12,22,.95)';c.lineWidth=1.3;c.setLineDash([2.2,1.4]);c.beginPath();c.moveTo(hx,hy);c.lineTo(hx+Math.sin(it.th)*top,hy+Math.cos(it.th)*top);c.stroke();c.setLineDash([]);
+   poseCrane(c,x,y,fond?T.h*0.88:T.h,it.yaw,fond,-it.th*0.6);}
+  c.restore();}
+ const _depN=drawEnemyPost;drawEnemyPost=function(e){_depN.apply(this,arguments);try{if(e&&!e.dead&&e.asm&&trouN(e)){trouDessin(e,true);trouDessin(e,false);}}catch(err){console.error(err);}};
+ // à sa mort, le trousseau tombe, rebondit une fois, se défait en brume
+ let ZC=[];
+ function trouChute(e){const T=e&&e.asm&&e.asm.trou;if(!T||!T.vu||T.px==null)return;
+  for(let i=0;i<T.vu;i++){const it=T.it[i];ZC.push({x:T.px+Math.sin(it.th)*it.L,y:T.py+Math.cos(it.th)*it.L,vx:(Math.random()-0.5)*60+it.w*20,vy:-40-Math.random()*40,
+   sol:T.py+it.L+18+Math.random()*8,rot:-it.th*0.6,vr:(Math.random()-0.5)*6,yaw:it.yaw,wy:(Math.random()-0.5)*5,h:T.h,fond:it.fond,t:0,max:CA.chuteS,rb:false,tn:RUN?RUN.time:0});}
+  e.asm.trou=null;}
+ const _dfxN=drawFx;drawFx=function(){_dfxN.apply(this,arguments);if(!ZC.length)return;try{const now=RUN?RUN.time:0;
+  for(const z of ZC){let dt=Math.min(0.05,Math.max(0,now-z.tn));z.tn=now;z.t+=dt;
+   if(!RM){z.vy+=900*dt;z.x+=z.vx*dt;z.y+=z.vy*dt;z.rot+=z.vr*dt;z.yaw=clamp(z.yaw+z.wy*dt,-CA.yawMax,CA.yawMax);if(z.y>z.sol&&z.vy>0){z.y=z.sol;if(!z.rb){z.rb=true;z.vy*=-0.35;z.vx*=0.5;z.vr*=0.5;sfx('crane_tic');}else{z.vy=0;z.vx*=0.8;}}}
+   const k=z.t/z.max;ctx.save();ctx.globalAlpha=clamp(1.6-1.6*k,0,1);poseCrane(ctx,z.x,z.y,z.h,z.yaw,z.fond,z.rot);ctx.restore();
+   if(k>=1&&!z.brume){z.brume=true;if(!RM)mist(z.x,z.y,6,'#3a2f5a');}}
+  ZC=ZC.filter(z=>z.t<z.max);}catch(err){console.error(err);ZC=[];}};
+ const _sfxN=sfx;sfx=function(k){
+  if(k==='asm_crane'){if(!AC||muted)return;tone(2350,0.05,'triangle',0.028,1750);tone(3500,0.03,'sine',0.012,null,0.012);noise(0.045,0.035,5200,'highpass');return;}   // un crâne s'accroche : un cliquetis d'os, sans grave
+  if(k==='crane_tic'){if(!AC||muted)return;tone(2800+Math.random()*700,0.022,'triangle',0.01);return;}   // deux crânes qui se touchent : presque rien
+  return _sfxN.apply(this,arguments);};
  const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}return _oeN.apply(this,arguments);};
  // console : voir et effacer la fiche, essayer sans toucher aux données
  window.__nemesis={
@@ -10085,7 +10151,8 @@ function demoBoot(cls){
   conditions:()=>RUN?nemConditions(true,false,false):null,
   valider:()=>{const S=nemLire(SAVE.nemesis);return S?S.liste.map(f=>nemValide(A,NM,SBJ,f,nemInfo)):null;},
   stats:f=>nemStats(A,NM,SBJ,f),
-  crane:{essai:(n=3,px=null)=>{NCE.on=true;NCE.n=n;NCE.px=px;return true;},arret:()=>{NCE.on=false;return true;},img:craneImg,taille:e=>craneTaille(e)},
+  crane:{essai:(n=3,px=null)=>{NCE.on=true;NCE.n=n;NCE.px=px;for(const x of enemies)if(x.asm)x.asm.trou=null;return true;},arret:()=>{NCE.on=false;return true;},img:craneImg,img3d:crane3d,taille:e=>craneTaille(e),
+   etat:()=>enemies.filter(x=>x.asm&&x.asm.trou).map(x=>({n:x.asm.trou.n,vu:x.asm.trou.vu,cote:x.asm.trou.cote,it:x.asm.trou.it.map(i=>({th:i.th,yaw:i.yaw,fond:i.fond}))})),chutes:()=>ZC.length},
   F:{nemRefus,nemDecision,nemArrache,nemCombo,nemPromotion,nemPoint,nemStats,nemSalle,nemFin,nemReprise,nemLire,nemEcrire,nemValide}};
 })();
 

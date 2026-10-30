@@ -20,5 +20,6 @@ Les chemins de Playwright (`/opt/npm-tools/node_modules/`) et de Chromium (`/opt
 | `mesure-forts.mjs` | mesure (action 10) : Dernière ombre et Dernier élan contre un Masqué, avec et sans brûlure (`node mesure-forts.mjs 8765 [acte] [essais]`) |
 | `banc-nemesis.mjs` | némésis (v17.25), actions 1-4 (revanche : souvenir repris, laissé, Éclats, rang, mémoire pleine, brûlé) : promotion à la mort, porteur et ordinaire, une par acte, refus (brisé, absent, essai, démo, Phénix), sauvegarde versionnée ; retour à sa salle (une fois, son acte, halte), assemblage, souvenir, force et PV de ses points, répit, fiche périmée |
 | `capture-crane.mjs` | captures du crâne de la némésis (action 5a) : planche des tailles et crânes posés sur les trois corps (`node capture-crane.mjs 8765 <dossier> [zoom]`) ; références : `crane-*.png` |
+| `capture-trousseau.mjs` | vidéo du trousseau animé (action 5b) : marche, arrêt, ruée, mort (`node capture-trousseau.mjs 8765 <dossier> [n] [corps]`) ; référence : `trousseau-etapes.png` |
 
 Détail et résultats : `../memoire.md`, § 27 (Dernier Souvenir) et § 28 (némésis).

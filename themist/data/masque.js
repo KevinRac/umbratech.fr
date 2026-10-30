@@ -24,7 +24,7 @@
  // (essais de l'action 5a : sous 12 px il se lit comme une tache, d'où 12 à 16 px) ;
  // hanche : point d'attache en rayons du corps (côté, bas) ; eventail : écart entre deux crânes (degrés) ; chaine : longueur (px) ;
  // balancement : amplitude (degrés, figé pendant ses chargements et en mouvements réduits) ; lueur : orbites (r,g,b), jamais de rouge.
- crane:{max:5,taille:0.5,min:12,maxPx:16,hanche:[0.85,0.25],eventail:24,chaine:6,balancement:8,lueur:'205,180,255',
+ crane:{max:5,taille:0.5,min:12,maxPx:16,hanche:[0.85,0.25],eventail:19,chaine:6,balancement:8,lueur:'205,180,255',
   // v17.25 (action 5a) · le dessin du crâne, repère 40 × 46 (centre 20, 23), un peu de trois quarts : orbite gauche plus grande, nez décalé.
   // Ivoire ombré (lumière en haut à gauche, comme le jeu), creux sombres, mâchoire séparée par un trait, lueur lavande au fond des orbites.
   // Jamais de rouge. Le même dessin sert au SVG (svgCrane : carte, porte, écran de mort) et au jeu (peindreCrane, posé une fois hors écran).
@@ -35,7 +35,18 @@
   nez:'M19.4 25.4L16.9 30.9Q19.2 32.2 21.8 31Z',
   dents:[[14.6,35.6,14.6,42.2],[17.6,36,17.6,43.4],[20.6,36,20.6,43.6],[23.6,36,23.6,43.2],[26.4,35.6,26.4,42]],
   reflet:'M10.5 9.5C13 5.5 17 4.2 20.5 4.4',
-  couleurs:{clair:'#fbf4e2',os:'#d9cdac',ombre:'#7a6d57',trait:'#17110d',creux:'#120d0b',nez:'#2a1f17'}},
+  couleurs:{clair:'#fbf4e2',os:'#d9cdac',ombre:'#7a6d57',trait:'#17110d',creux:'#120d0b',nez:'#2a1f17'},
+  // v17.25 (action 5b) · le crâne en volume, pour le trousseau animé. La calotte est une sphère de rayon R : chaque trait de la face y est
+  // posé à l'angle a (orbites ±0,44 rad, nez 0, dents) ; tourné de yaw, il glisse à x = 20 + R sin(a + yaw) et s'amincit de cos(a + yaw),
+  // et disparaît quand il passe de l'autre côté. La lumière reste en haut à gauche (le dégradé ne tourne pas avec lui).
+  face:{R:15.5,orbite:'M-4.6 0C-4.8 -4 -1.5 -5.2 1.4 -4.4C4.6 -3.4 5 0.8 3.6 3.2C1.8 5.6 -4.4 4.6 -4.6 0Z',orbites:[[-0.44,19.4],[0.44,19.4]],
+   nez:'M0 -3L-2.4 2.6Q0 3.8 2.5 2.7Z',nezY:28,dents:[-0.34,-0.17,0,0.17,0.34]},
+  // l'animation du trousseau (index.html, section « v17.25 · La némésis ») : cadres (images pré-peintes par taille, de -yawMax à +yawMax) ;
+  // gravite (px/s²), amorti (/s) : le balancement au bout de la chaîne, mené par les mouvements de la hanche ; torsion, torsionAmorti,
+  // couplage : la rotation sur lui-même, entraînée par le balancement ; souffle : rotation lente au repos (rad), pour qu'il vive sans bouger ;
+  // ecartMax : écart au repos permis (rad) ; tic : vitesse relative (rad/s) au-delà de laquelle deux crânes qui se touchent font un petit bruit ;
+  // accrocheS : délai entre deux crânes accrochés après la couture ; chuteS : à sa mort, le trousseau tombe et se défait en brume.
+  anim:{cadres:13,yawMax:0.62,gravite:900,amorti:2.4,torsion:16,torsionAmorti:3.4,couplage:0.5,souffle:0.07,ecartMax:0.85,tic:1.6,accrocheS:0.2,chuteS:0.75}},
  // éclats quand il se brise : quatre morceaux qui recouvrent le contour, et la direction où chacun part
  eclats:[
   {d:'M9 42C10 24 24 13 40 12L50 1L50 39L45 46L28 44L9 46Z',dir:[-1,-1]},
@@ -70,6 +81,32 @@
   c.fillStyle=K.nez;c.fill(P.nez);
   if(h>=12){c.strokeStyle=K.trait;c.globalAlpha=0.7;c.lineWidth=Math.max(1,0.8/s);c.beginPath();for(const [x1,y1,x2,y2] of C.dents){c.moveTo(x1,y1);c.lineTo(x2,y2);}c.stroke();c.globalAlpha=1;}
   c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=Math.max(1.4,0.9/s);c.lineCap='round';c.stroke(P.reflet);
+  c.restore();},
+ // v17.25 (5b) · le crâne en volume, tourné de yaw (rad, 0 : de face) ; sombre (0 à 1) : assombri (crâne du fond du trousseau)
+ peindreCrane3d(c,x,y,h,yaw,sombre){const C=this.crane,K=C.couleurs,F=C.face,[w,H]=C.vb,s=h/H,
+   P=this._crane3d||(this._crane3d={tete:new Path2D(C.tete),machoire:new Path2D(C.machoire),orbite:new Path2D(F.orbite),nez:new Path2D(F.nez),reflet:new Path2D(C.reflet)});
+  const sy=Math.sin(yaw),sx=0.9+0.1*Math.cos(yaw);
+  c.save();c.translate(x-w/2*s,y-H/2*s);c.scale(s,s);
+  c.fillStyle='rgba(0,0,0,.32)';c.beginPath();c.ellipse(20,46.5,11*sx,2,0,0,Math.PI*2);c.fill();
+  // la calotte et la mâchoire, un peu plus étroites de profil ; le dégradé reste éclairé en haut à gauche
+  c.save();c.translate(20,0);c.scale(sx,1);c.translate(-20,0);
+  const g=c.createRadialGradient(13.6-3*sy,12,1,13.6-3*sy,12,34);g.addColorStop(0,K.clair);g.addColorStop(0.5,K.os);g.addColorStop(1,K.ombre);
+  c.lineJoin='round';c.strokeStyle=K.trait;c.lineWidth=Math.max(1.6,1.15/s);
+  for(const p of [P.machoire,P.tete]){c.fillStyle=g;c.fill(p);}
+  // la face tournée vers la droite assombrit la gauche, et inversement : le volume se lit pendant qu'il tourne
+  c.save();c.clip(P.tete);const lg=c.createLinearGradient(3.5,0,36.5,0),k=Math.min(0.32,Math.abs(sy)*0.45);
+  lg.addColorStop(0,sy>0?`rgba(30,20,12,${k})`:'rgba(30,20,12,0)');lg.addColorStop(0.5,'rgba(30,20,12,0)');lg.addColorStop(1,sy<0?`rgba(30,20,12,${k})`:'rgba(30,20,12,0)');
+  c.fillStyle=lg;c.fillRect(0,0,40,40);c.restore();
+  for(const p of [P.machoire,P.tete])c.stroke(p);
+  c.restore();
+  const au=(a,yy,fn)=>{const b=a+yaw,v=Math.cos(b);if(v<=0.08)return;c.save();c.translate(20+F.R*Math.sin(b)*sx,yy);fn(v);c.restore();};
+  for(const [a,yy] of F.orbites)au(a,yy,v=>{c.scale(v*(a<0?1:-1),1);c.fillStyle=K.creux;c.fill(P.orbite);
+   const l=c.createRadialGradient(0,0.6,0,0,0.6,3.8);l.addColorStop(0,`rgba(${C.lueur},${0.85*v})`);l.addColorStop(1,`rgba(${C.lueur},0)`);c.fillStyle=l;c.beginPath();c.arc(0,0.6,3.8,0,Math.PI*2);c.fill();});
+  au(0,F.nezY,v=>{c.scale(v,1);c.fillStyle=K.nez;c.fill(P.nez);});
+  if(h>=12){c.strokeStyle=K.trait;c.globalAlpha=0.7;c.lineWidth=Math.max(1,0.8/s);c.beginPath();
+   for(const a of F.dents){const b=a+yaw;if(Math.cos(b)<0.3)continue;const xx=20+F.R*0.86*Math.sin(b)*sx;c.moveTo(xx,35.8);c.lineTo(xx,43);}c.stroke();c.globalAlpha=1;}
+  c.save();c.translate(-2.2*sy,0);c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=Math.max(1.4,0.9/s);c.lineCap='round';c.stroke(P.reflet);c.restore();
+  if(sombre>0){c.save();c.translate(20,0);c.scale(sx,1);c.translate(-20,0);c.fillStyle=`rgba(12,8,18,${sombre})`;c.fill(P.tete);c.fill(P.machoire);c.restore();}
   c.restore();},
  svg(col,etat,id,label){
   const M=this,k=id||'msq',lit=etat==='charge',fis=etat==='fissure'||etat==='brise',oeil=lit?col.oeilVif:col.oeil;
