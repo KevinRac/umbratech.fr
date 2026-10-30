@@ -44,6 +44,27 @@ async function ouvre(qs = '') {
       entrer(type) { G().entrer(type); const rm = G().room, a = rm.asm, vague = a ? (rm.waves[1] || []).some(x => x.asm) : false; if (a && rm.waves.length > 1) rm.waves.shift();
         return { s: G().RUN.roomIdx, nem: a && a.nem || null, asm: !!a, vague }; },
       fiche: uid => (NE.voir().liste || []).find(f => f.uid === uid),
+      // action 4 : une némésis née dans une descente (forme clsA, porteur de souv), puis une descente (forme clsB) jusqu'à sa salle
+      preparer(clsA, clsB, opt) {
+        opt = opt || {};
+        T.lancer(clsA, { acte: 2, salle: 3, souv: opt.souv, rangSouv: opt.rangSouv, gSouv: opt.gSouv, talents: opt.talentsA || [] }); T.attendre(true);
+        const f = T.tuer('masque').save.liste[0];
+        T.nouvelle(clsB, 2); for (const [id, rang, gr] of opt.talents || []) window.__dernier.prendre(id, rang || 1, gr || 0);
+        if (opt.avant) opt.avant();
+        for (let i = 1; i < f.attend.salle; i++) T.entrer('combat');
+        const x = T.entrer('combat'); T.attendre(true); return { f, x };
+      },
+      // briser la némésis, puis purger la salle ; on laisse la file d'écrans s'ouvrir
+      briser() {
+        const g = G(), e = T.masque(), d = window.__asm.dbg(), sh0 = g.RUN.sh.elites; d.kill(e); B.step(1 / 60, 2);
+        const apresMort = NE.voir();
+        for (const x of g.enemies) if (!x.dead && !x.fixed) d.kill(x); g.room.waves = []; g.room.spawning = [];
+        for (let i = 0; i < 40; i++) { B.P.iT = 99; B.step(1 / 60); }
+        T.sh0 = sh0; return { apresMort: apresMort.liste.length };
+      },
+      ecran() { const o = document.getElementById('overlay') || document.querySelector('.overlay'); const t = document.body.innerText;
+        return document.querySelector('#mrps') ? (/Le laisser/.test(t) && /Il retourne à la Brume/.test(t) ? 'nemesis' : 'reprise') : /une relique de plus/.test(t) ? 'relique' : /Prendre ou oublier/.test(t) ? 'oubli' : 'aucun'; },
+      memoire() { const M = window.__memoire.M; return M.actifs.map(a => ({ id: a.id, rang: a.rang, g: a.g || 0, tro: !!a.trophee })); },
       // par : 'masque' (un tir du Masqué sur toi), 'autre' (un tir d'un autre ennemi), 'perte' (PV perdus sans source)
       // une : un seul tir (pour la Mèche de Phénix) ; masque : l'escorte est retirée d'abord, pour que le coup mortel vienne bien de lui
       tuer(par, une) {
@@ -278,6 +299,77 @@ await cas('R7-R8', '', async page => {
   ok(!r.inactif, 'R7 : inactive : elle ne vient pas');
   ok(r.essaiRun === 1 && !r.essai, 'R7 : descente d’essai : elle ne vient pas');
   ok(r.perimee === r.uid && r.cle && r.cle !== 'vieux' && !r.cle.includes('taches') && r.save === r.cle, `R8 : réassemblée (${r.cle}) et réécrite`);
+});
+
+// ── Action 4 : la revanche
+// la file d'écrans avance dans la boucle du jeu (requestAnimationFrame) : on rend la main au navigateur avant de lire
+const lire = async page => { await page.waitForTimeout(700); return page.evaluate(() => ({ ecran: T.ecran(), rev: window.__glas.dbg().RUN.nemRevanche || null, mem: T.memoire(), sh: window.__glas.dbg().RUN.sh.elites - T.sh0 })); };
+const appuie = async (page, k) => { await page.waitForTimeout(650); await page.keyboard.press(k); await page.waitForTimeout(700); return page.evaluate(() => { return { ecran: T.ecran(), mem: T.memoire(), rev: window.__glas.dbg().RUN.nemRevanche }; }); };
+// V1. Même forme, talent absent : son souvenir à son rang, sans gravures, en trophée ; puis la relique ; la fiche est effacée à sa mort
+await cas('V1', '', async page => {
+  const r = await page.evaluate(() => { const p = T.preparer('lum', 'lum', { souv: 'fan_n2', rangSouv: 2, gSouv: 1 }); return { p: { nem: p.x.nem, uid: p.f.uid }, b: T.briser() }; });
+  Object.assign(r.b, await lire(page));
+  ok(r.p.nem === r.p.uid, 'V1 : la némésis est là');
+  ok(r.b.apresMort === 0, 'V1 : brisée, sa fiche est effacée tout de suite');
+  ok(r.b.ecran === 'nemesis', 'V1 : l’écran de son souvenir (' + r.b.ecran + ')');
+  const k = await appuie(page, '1');
+  const a = k.mem.find(x => x.id === 'fan_n2');
+  ok(a && a.rang === 2 && a.g === 0 && a.tro, 'V1 : repris au rang 2, sans gravure, en trophée (' + JSON.stringify(a) + ')');
+  ok(k.ecran === 'relique', 'V1 : puis la relique (' + k.ecran + ')');
+  ok(k.rev && k.rev.type === 'talent' && k.rev.pris, 'V1 : revanche notée');
+});
+// V2. « Le laisser » : rien de plus que la relique
+await cas('V2', '', async page => {
+  await page.evaluate(() => { T.preparer('her', 'her', { talentsA: [['car_x1a', 1, 0]] }); return T.briser(); }); await lire(page);
+  const id = await page.evaluate(() => window.__glas.dbg().RUN.nemRevanche && window.__glas.dbg().RUN.nemRevanche.id);
+  const k = await appuie(page, '2');
+  ok(id && !k.mem.some(x => x.id === id), 'V2 : laissé, pas dans ta mémoire');
+  ok(k.ecran === 'relique' && k.rev.laisse, 'V2 : la relique reste');
+});
+// V3. Autre forme : des Éclats pour ce run (base + parPoint × points), aucun écran de souvenir ; V4. tu le portes plus bas : ton rang monte
+await cas('V3-V4', '', async page => {
+  const r = await page.evaluate(() => { const A = window.BRUME_DATA.bestiaire.assemble.nemesis;
+    T.preparer('lum', 'gou', { souv: 'fan_n2', rangSouv: 2 }); T.briser();
+    return { att: A.reprise.eclats.base + A.reprise.eclats.parPoint * 1, type: window.__glas.dbg().room.type }; });
+  r.b3 = await lire(page);
+  await page.evaluate(() => { T.preparer('lum', 'lum', { souv: 'fan_n2', rangSouv: 3, talents: [['fan_n2', 1, 0]] }); T.briser(); });
+  r.b4 = await lire(page); r.mem4 = r.b4.mem.find(x => x.id === 'fan_n2');
+  const bonus = r.type === 'elite' ? 0 : 6;
+  ok(r.b3.ecran === 'relique' && r.b3.rev && r.b3.rev.type === 'eclats', 'V3 : autre forme : pas d’écran de souvenir, la relique');
+  ok(r.b3.sh === r.att + bonus, `V3 : +${r.att} éclats (+${bonus} du Masqué) : ${r.b3.sh}`);
+  ok(r.b4.rev && r.b4.rev.type === 'rang' && r.mem4 && r.mem4.rang === 3, 'V4 : tu le portais au rang 1, il passe au rang 3 (' + JSON.stringify(r.mem4) + ')');
+  ok(r.b4.ecran === 'relique', 'V4 : puis la relique');
+});
+// V5. Mémoire pleine, trophée de l'acte déjà pris : l'écran d'oubli s'ouvre, oublier rend le souvenir (une place, pas un trophée)
+await cas('V5', '', async page => {
+  const r = await page.evaluate(() => {
+    const NO = window.__brume.nodes(), ids = Object.keys(NO).filter(id => NO[id].cls === 'lum' && NO[id].kind !== 'c' && !/_sk$/.test(id) && id !== 'fan_n2').slice(0, 10);
+    window.__brume.SAVE.flags.b_memoire = 1;   // la présentation de la Mémoire (une fois par sauvegarde) est déjà vue
+    T.preparer('lum', 'lum', { souv: 'fan_n2', rangSouv: 2, talents: ids.map(id => [id, 1, 0]), avant: () => { const M = window.__memoire.M; M.trophees = Object.assign({}, M.trophees, { 2: 1 }); } });
+    return { plein: window.__memoire.M.actifs.length, b: T.briser() };
+  });
+  Object.assign(r.b, await lire(page));
+  ok(r.plein >= 10 && r.b.ecran === 'nemesis', `V5 : mémoire pleine (${r.plein}), écran du souvenir`);
+  const k1 = await appuie(page, '1');
+  ok(k1.ecran === 'oubli', 'V5 : reprendre, mémoire pleine : écran d’oubli (' + k1.ecran + ')');
+  const k2 = await appuie(page, '1');
+  const a = k2.mem.find(x => x.id === 'fan_n2');
+  ok(a && a.rang === 2 && !a.tro && k2.mem.length === r.plein, 'V5 : un souvenir oublié, le sien repris à sa place (' + JSON.stringify(a) + ')');
+  ok(k2.ecran === 'relique', 'V5 : puis la relique (' + k2.ecran + ')');
+});
+// V6. Brûlé dans cette descente : Éclats ; V7. tu la brises puis tu meurs dans sa salle : pas de nouvelle némésis, l'ancienne est partie
+await cas('V6-V7', '', async page => {
+  await page.evaluate(() => {
+    T.preparer('lum', 'lum', { souv: 'fan_n2', rangSouv: 2, talents: [['fan_n2', 1, 0]], avant: () => window.__dernier.bruler('fan_n2', { libre: true }) });
+    T.briser(); return null; });
+  const b6 = await lire(page);
+  const r = await page.evaluate(() => {
+    T.preparer('tis', 'tis', {}); const e = T.masque(); window.__asm.dbg().kill(e); window.__brume.step(1 / 60, 2);
+    const k = T.tuer('autre');
+    return { k7: { bilan: k.bilan, n: (k.save.liste || []).length } };
+  }); r.b6 = b6;
+  ok(r.b6.rev && r.b6.rev.type === 'eclats', 'V6 : brûlé dans la descente : Éclats (' + JSON.stringify(r.b6.rev) + ')');
+  ok(r.k7.bilan && r.k7.bilan.refus === 'brise' && r.k7.n === 0, 'V7 : brisée puis mort dans sa salle : aucune fiche (' + JSON.stringify(r.k7) + ')');
 });
 
 await browser.close();

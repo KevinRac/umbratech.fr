@@ -1608,3 +1608,18 @@ Cadrage : document `claude/la-brume-v17-25-nemesis-cadrage.md` du projet claude.
 - Le cas D a changé avec l'action 3 : un Masqué forcé à sa salle ou après est désormais **elle** ; l'« autre Masqué » se teste avant sa salle.
 
 Régressions : `sim-masque` 3 583 218 contrôles ; `banc-essai` 43, `banc-relecture` 12, `banc-glas-relecture` 16, `banc-touche` 34, `banc-complet` F 60 : 0 échec. `wiki.mjs --check` : à jour.
+
+### Action 4 : la revanche (30 octobre 2026, toujours pas active)
+
+- **Brisée** : à sa mort (`killEnemy`, pas à la purge de la salle), sa fiche est effacée de `SAVE.nemesis` (`nemBrise`) et gardée dans `room.asm.nemFiche` pour la récompense. Si tu meurs ensuite dans sa salle (escorte), elle ne revient pas et personne n'est promu (`brise`).
+- **Deux récompenses** (N8) : la salle purgée, la reprise ordinaire ne joue pas (`!R.nem`) ; à la place, `offreNemesis` (bloc de la Mémoire), **puis** la relique ordinaire, toujours.
+- **Ce que rend `offreNemesis`** (matrice de `nemReprise`, joueur décrit par `nemJoueur`) :
+  - même forme, talent absent de ta mémoire : un écran « Sous ses éclats, un souvenir » ; « Reprendre » le rend **à son rang, sans ses gravures**, en trophée si celui de l'acte est libre, sinon dans une place (mémoire pleine : écran d'oubli, contexte `nem`, `rendre`) ; « Le laisser » (« Il retourne à la Brume. ») : rien de plus que la relique. Il arrive éteint si sa voie ou sa compétence n'est pas prise (D4). Chronique : la ligne existante « tu as repris … », rien de plus (N10). Il ne passe jamais par la réserve ;
+  - tu le portes plus bas : ton rang monte à son rang (sans écran, une bulle) ;
+  - tu le portes aussi haut et il est gravable : une gravure (`grave`) ;
+  - sinon (autre forme, brûlé dans cette descente, disparu des données, trophée figé, rien à graver) : **des Éclats pour ce run**, 15 + 10 par point, ajoutés à `RUN.sh.elites` (ligne « Champions vaincus » de la fin de run), avec la bulle déjà utilisée ailleurs, « +N éclats pour ce run. ».
+- Choix de cette action, non tranchés par le cadrage : « Le laisser » ne donne rien (la relique reste) ; un trophée ne monte pas de rang (il est figé) ; rang, gravure et Éclats sans écran. `RUN.nemRevanche` (`uid`, `points`, `type`, `id`, `eclats`, `pris`, `laisse`) attend les statistiques (action 7).
+
+**Mesures** : `sim-nemesis.mjs` 46 070, 0 échec (branchements de l'action 4). `banc-nemesis.mjs` **92 vérifications, 0 échec**, aucune erreur de script. Nouveaux cas : V1 même forme (Lanterne brûlante rang 2 gravée une fois → reprise au rang 2, sans gravure, en trophée ; fiche effacée dès sa mort ; puis la relique) ; V2 « Le laisser » (rien en mémoire, la relique) ; V3 autre forme (aucun écran de souvenir, +25 éclats en plus des 6 du Masqué, puis la relique) ; V4 porté au rang 1, son rang 3 : ton rang passe à 3 ; V5 mémoire pleine et trophée de l'acte pris : écran d'oubli, un souvenir oublié, le sien à sa place, puis la relique ; V6 brûlé dans la descente : Éclats ; V7 brisée puis mort dans sa salle : aucune fiche. (Le banc marque la présentation de la Mémoire comme vue : sur une sauvegarde neuve, elle passe avant le premier écran d'oubli.)
+
+Régressions : `sim-masque`, `sim-brume --vite`, `sim-dernier`, `wiki.mjs --check` ; `banc-essai` 43, `banc-relecture` 12, `banc-glas-relecture` 16, `banc-touche` 34, `banc-complet` D, E (reprise au Masqué porteur) et F : 68 : 0 échec.

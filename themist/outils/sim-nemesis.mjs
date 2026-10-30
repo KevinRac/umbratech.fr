@@ -293,6 +293,16 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/const rfs=\[\.\.\.\(e\.asm\.sv&&e\.asm\.sv\.renfort\?\[e\.asm\.sv\.renfort\]:\[\]\),\.\.\.\(R\.nem&&R\.nemStats\?R\.nemStats\.renforts:\[\]\)\];\n   if\(rfs\.length\)sbRenfort\(e,rfs\);/, 'createEnemy : un seul appel de sbRenfort (au plus renfortMax)');
   has(/nemFin\(f,\{passee,mortContre:false/, 'fin de descente : nemFin (répit, compte des morts)');
   ok(!/sv\.x\.porte=\(sv\.x\.porte\|\|0\)\+1;[^\n]*nem/.test(html), 'index.html : la némésis ne compte pas comme porteur de la réserve');
+  // action 4 : la revanche
+  has(/function nemBrise\(uid\)\{[\s\S]{0,200}?S\.liste=S\.liste\.filter\(x=>x\.uid!==uid\);SAVE\.nemesis=nemEcrire\(S\.liste\);persist\(\);/, 'brisée : sa fiche est effacée');
+  has(/killEnemy=function\(e\)\{const was=e&&e\.dead,r=_keN\.apply\(this,arguments\);\n  try\{if\(!was&&e&&e\.dead&&e\.asm&&e\.asm\.nem&&RUN&&!RUN\.hub\)nemBrise\(e\.asm\.nem\.uid\);/, 'à sa mort, pas à la purge de la salle');
+  has(/if\(i===0&&R\.sv&&!R\.nem&&window\.__memoire&&window\.__memoire\.offreReprise\)/, 'la reprise ordinaire ne vaut pas pour la némésis');
+  has(/if\(i===0&&R\.nem&&R\.nemFiche&&window\.__memoire&&window\.__memoire\.offreNemesis\)\{const f=R\.nemFiche;enqueue\(\(\)=>window\.__memoire\.offreNemesis\(f,A\.recompense\.titre\)\);\}[^\n]*\n     enqueue\(rel\);/, 'son souvenir, puis la relique : deux récompenses');
+  has(/const sv=f\.sv,r=window\.__nemesis\.F\.nemReprise\(NMD\(\),f,nemJoueur\(sv\)\)/, 'offreNemesis : la matrice de nemReprise');
+  has(/porte:a\?\{rang:a\.trophee\?99:a\.rang\}:null,brule:!!\(id&&brule\(id\)\),gravable:!!\(a&&gravables\(\)\.includes\(a\)\),trophee:peutTrophee\(\),connu:!!\(id&&NODES\[id\]\)/, 'nemJoueur : porté (un trophée figé ne monte pas), brûlé, gravable, trophée libre, connu');
+  has(/if\(r\.type==='eclats'\)\{RUN\.sh\.elites\+=r\.eclats;/, 'Éclats : comptés dans les éclats du run');
+  has(/else if\(ctx==='nem'\)rendre\(g\.entry\);/, 'mémoire pleine : l’écran d’oubli rend le souvenir (contexte nem)');
+  ok(!/function rendre\(x\)\{[^\n]*reserveBrume/.test(html), 'index.html : le souvenir rendu ne passe jamais par la réserve');
   // PV au pire : bonus de porteur (rang, gravures) × points × renfort Robuste
   const S0 = A.souvenir, pvMax = (1 + S0.pv * (3 - 1 + 2)) * (1 + PT.pv * PT.max) * (1 + ((J.renforts.pv || {}).pv || 0));
   console.log(`  PV au pire d’une némésis : × ${pvMax.toFixed(2)} un Masqué (porteur rang 3 gravé deux fois × ${PT.max} points × Robuste)`);

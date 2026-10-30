@@ -9570,8 +9570,9 @@ function demoBoot(cls){
   try{if(R&&R.vaincu&&RUN&&!RUN.hub){if(t!=='elite'){RUN.sh.elites+=6;addGold(18+2*G(),true);}
    // v17.9 (D9) : s'il portait un souvenir, la première relique devient un choix : le reprendre, ou le laisser et choisir une relique
    for(let i=0;i<(A.recompense.reliques||0);i++){const rel=()=>openRelics(A.recompense.titre,A.recompense.texte);
-    if(i===0&&R.sv&&window.__memoire&&window.__memoire.offreReprise){const x=R.sv.x;enqueue(()=>window.__memoire.offreReprise(x,rel,A.recompense.titre));}
-    else enqueue(rel);}}}catch(err){console.error(err);}};
+    if(i===0&&R.sv&&!R.nem&&window.__memoire&&window.__memoire.offreReprise){const x=R.sv.x;enqueue(()=>window.__memoire.offreReprise(x,rel,A.recompense.titre));}
+    else{if(i===0&&R.nem&&R.nemFiche&&window.__memoire&&window.__memoire.offreNemesis){const f=R.nemFiche;enqueue(()=>window.__memoire.offreNemesis(f,A.recompense.titre));}   // v17.25 : la némésis rend son souvenir EN PLUS de la relique (N8)
+     enqueue(rel);}}}}catch(err){console.error(err);}};
  // D5 : les dégâts infligés à un Masqué qui porte un souvenir ne comptent pas dans l'Accoutumance (ni dans la part de mécanique)
  const _hsv=hitEnemy;hitEnemy=function(e){const R=RUN&&RUN.mem;if(!(e&&e.asm&&e.asm.sv&&R))return _hsv.apply(this,arguments);
   const t0=R.tot,s0=R.sig,r0=R.resisted;const d=_hsv.apply(this,arguments);R.tot=t0;R.sig=s0;R.resisted=r0;return d;};
@@ -10048,6 +10049,13 @@ function demoBoot(cls){
   room.asm={seed,rnd:asmRng(seed),co:{corps:co.corps,depart:co.depart.slice(),eveil:co.eveil,menace:co.menace,base:co.base,cle:co.cle},nom:f.nom,e:null,vaincu:false,wi:1,appel:ap,sv:svR,nem:f.uid,nemPoints:f.points,nemStats:st};
   M.dernier=co.base;M.salle=RUN.g;
   return true;}
+ // ── Action 4 (N8) : brisée, sa fiche est effacée (même si tu meurs ensuite dans sa salle : elle ne revient pas) ; la salle purgée,
+ // offreNemesis (bloc de la Mémoire) rend son souvenir, en plus de la relique. room.asm.nemFiche garde la fiche pour la récompense.
+ function nemBrise(uid){const R=room&&room.asm;const S=nemLire(SAVE.nemesis);if(!S)return null;const f=S.liste.find(x=>x.uid===uid)||null;
+  if(f){S.liste=S.liste.filter(x=>x.uid!==uid);SAVE.nemesis=nemEcrire(S.liste);persist();}
+  if(R&&R.nem===uid)R.nemFiche=f;(RUN.nemBrisees=RUN.nemBrisees||{})[uid]=f?f.points:0;return f;}
+ const _keN=killEnemy;killEnemy=function(e){const was=e&&e.dead,r=_keN.apply(this,arguments);
+  try{if(!was&&e&&e.dead&&e.asm&&e.asm.nem&&RUN&&!RUN.hub)nemBrise(e.asm.nem.uid);}catch(err){console.error(err);}return r;};
  const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}return _oeN.apply(this,arguments);};
  // console : voir et effacer la fiche, essayer sans toucher aux données
  window.__nemesis={
@@ -10792,7 +10800,7 @@ function demoBoot(cls){
   const opts=portes().slice(0,CAP());
   let sel=-1,armedRoot=-1;
   const pre=opts.findIndex(a=>isOff(a));if(pre>=0)sel=pre;
-  const eyebrow=ctx==='asc'?'Rituel d’Ascension · mémoire pleine':ctx==='rep'?'Souvenir repris · mémoire pleine':'Talent · mémoire pleine';
+  const eyebrow=ctx==='asc'?'Rituel d’Ascension · mémoire pleine':ctx==='rep'||ctx==='nem'?'Souvenir repris · mémoire pleine':'Talent · mémoire pleine';
   const h2=ctx==='asc'?'Ta nature change : quelque chose doit partir':'Prendre ou oublier';
   const lostHTML=i=>{
    if(i<0)return `<div class="mfd mfd-empty"><p class="h-sec">Oublié</p><div class="mfd-h"><span class="mt big empty"></span><div><h3 class="muted">?</h3><p class="mfd-m"><kbd>1</kbd>–<kbd>${CAP()%10}</kbd></p></div></div></div>`;
@@ -10818,7 +10826,7 @@ function demoBoot(cls){
    const a=opts[i];finish();
    L.classList.add('gone');
    forget(a);
-   if(ctx==='asc')doAsc(g.br);else if(ctx==='rep')restore(g.entry);else{_tk(g.id);afterTalent(g.id);}
+   if(ctx==='asc')doAsc(g.br);else if(ctx==='rep')restore(g.entry);else if(ctx==='nem')rendre(g.entry);else{_tk(g.id);afterTalent(g.id);}
    toast(`Oublié : ${nameOf(a)}`,1.8);
    after();};
   const renounce=()=>{if(!armed()||!canNo)return;finish();M.renonces++;
@@ -10863,6 +10871,43 @@ function demoBoot(cls){
    if(!full()){restore(x);closeOverlay();return;}
    MEM().pending={src:'t',id:x.id,ctx:'rep',rang:x.rang,g:x.g||0,entry:x};closeOverlay();};
   const leave=()=>{if(!armed())return;closeOverlay();relique();};
+  $('#mrps').addEventListener('click',take);$('#mrpr').addEventListener('click',leave);
+  overlayKeys=(c,e)=>{if(c==='Digit1'||c==='Numpad1'||c==='Enter'||c==='NumpadEnter'){if(e)e.preventDefault();take();}else if(c==='Digit2'||c==='Numpad2')leave();};
+ }
+ // ── v17.25 · La némésis brisée (action 4, cadrage N8) : ce qu'elle rend, EN PLUS de la relique ordinaire. Son souvenir vient d'une autre
+ // descente : il ne passe jamais par la réserve. nemReprise décide (bloc /*nem:pur*/) : le talent (même forme, absent de ta mémoire) à son
+ // rang, sans ses gravures (elles restent au masque), trophée si celui de l'acte est libre, sinon une place (écran d'oubli si la mémoire
+ // est pleine) ; ton rang qui monte (tu le portes plus bas) ; une gravure (tu le portes aussi haut) ; sinon des Éclats pour ce run (autre
+ // forme, talent brûlé dans cette descente ou disparu des données, trophée figé, rien à graver). « Le laisser » : rien de plus que la relique.
+ const NMD=()=>((window.BRUME_DATA.bestiaire||{}).assemble||{}).nemesis||null;
+ function rendre(x){const M=MEM();if(!x||!NODES[x.id]||inMem('t',x.id))return;
+  if(x.tro){(M.trophees||(M.trophees={}))[RUN.act]=((M.trophees||{})[RUN.act]||0)+1;}
+  P.ranks[x.id]=x.rang;M.actifs.push(Object.assign({id:x.id,src:'t',rang:x.rang,g:x.g||0,depuis:{acte:RUN.act,salle:RUN.roomIdx},repris:1,nem:1},x.tro?{trophee:1}:{}));
+  M.traces[x.id]=Math.max(M.traces[x.id]||0,x.rang);M.gains++;M.repris=(M.repris||0)+1;
+  resync();renderMem();
+  const a={id:x.id,src:'t'};toast(x.tro?`Trophée : ${nameOf(a)}`:`Repris : ${nameOf(a)}`,1.8);sfx(x.tro?'level':'pick');
+  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'repris',t:`Acte ${ROM[RUN.act]||'I'} : tu as repris ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
+ function nemJoueur(sv){const M=MEM(),id=sv&&sv.id,a=id?M.actifs.find(y=>y.src==='t'&&y.id===id):null;
+  return{cls:P.cls,porte:a?{rang:a.trophee?99:a.rang}:null,brule:!!(id&&brule(id)),gravable:!!(a&&gravables().includes(a)),trophee:peutTrophee(),connu:!!(id&&NODES[id])};}
+ function offreNemesis(f,titre){
+  if(!on()||!f||!window.__nemesis||!NMD())return;
+  const sv=f.sv,r=window.__nemesis.F.nemReprise(NMD(),f,nemJoueur(sv)),M=MEM();
+  RUN.nemRevanche={uid:f.uid,points:f.points,type:r.type,id:sv&&sv.id||null,eclats:r.eclats||0};
+  if(r.type==='eclats'){RUN.sh.elites+=r.eclats;toast(`+${r.eclats} éclats pour ce run.`,2.4);sfx('pick');return;}
+  if(r.type==='gravure'){grave(sv.id);return;}
+  if(r.type==='rang'){const a=M.actifs.find(y=>y.src==='t'&&y.id===sv.id);if(!a)return;a.rang=r.rang;P.ranks[a.id]=r.rang;M.traces[a.id]=Math.max(M.traces[a.id]||0,r.rang);
+   resync();renderMem();toast(`${nameOf(a)} · rang ${r.rang}/${maxOf(a)}`,1.8);sfx('level');return;}
+  // le talent : un choix, comme la reprise d'un Masqué porteur
+  const x={id:sv.id,rang:r.rang,g:r.g||0,tro:r.trophee},a={id:x.id,src:'t',rang:x.rang,g:x.g},tro=x.tro,plein=full()&&!tro;
+  openOverlay(`<div class="panel narrow mrp"><p class="eyebrow">${esc(titre||'Le masque se brise')}</p><h2>Sous ses éclats, un souvenir</h2>
+   <div class="mrp-c">
+    <button type="button" class="card mrp-s" id="mrps" style="--c:${colOf(a)}"><span class="meta"><span class="br">● ${esc(branchOf(a))}</span><span>${esc(kindOf(a))}</span></span><div class="gc-h">${tile(a,{big:true,off:false,tr:tro})}<div><h3>${esc(nameOf(a))}</h3><p>${esc(descOf(a,a.rang))}</p></div></div><span class="k">${tro?'Trophée · sans place · ':''}Reprendre · touche 1${maxOf(a)>1?` · rang ${a.rang}/${maxOf(a)}`:''}</span>${tro?`<i class="mbadge tro" title="Trophée : il ne prend pas de place">${icon('u_mask')}</i>`:badge(plein?'swap':'')}</button>
+    <button type="button" class="card mrp-r" id="mrpr"><span class="meta"><span>Souvenir</span></span><div class="gc-h"><span class="mrp-ic">${icon('u_mask')}</span><div><h3>Le laisser</h3><p>Il retourne à la Brume.</p></div></div><span class="k">Touche 2</span></button>
+   </div></div>`,'mrpo');
+  const take=()=>{if(!armed())return;RUN.nemRevanche.pris=true;
+   if(tro||!full()){rendre(x);closeOverlay();return;}
+   MEM().pending={src:'t',id:x.id,ctx:'nem',rang:x.rang,g:0,entry:{id:x.id,rang:x.rang,g:0,tro:false}};closeOverlay();};
+  const leave=()=>{if(!armed())return;RUN.nemRevanche.laisse=true;closeOverlay();};
   $('#mrps').addEventListener('click',take);$('#mrpr').addEventListener('click',leave);
   overlayKeys=(c,e)=>{if(c==='Digit1'||c==='Numpad1'||c==='Enter'||c==='NumpadEnter'){if(e)e.preventDefault();take();}else if(c==='Digit2'||c==='Numpad2')leave();};
  }
@@ -11146,7 +11191,7 @@ function demoBoot(cls){
 .hx kbd{font-size:inherit}`;
  document.head.appendChild(st);
 
- window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM,oubliFx,oubliCible,reserveHTML,offreReprise,restore};
+ window.__memoire={get M(){return MEM();},stats:()=>SAVE.stats17||[],exportStats,grave,gravables,__gp:gravePropre,__gt:graveTxt,get reserve(){return RUN&&RUN.reserveBrume;},effOf,replay,recalc:()=>{const M=MEM();recalc(effOf(M.actifs));},forget:i=>{const a=MEM().actifs[i];if(a){forget(a);renderMem();}},familles:FAM,oubliFx,oubliCible,reserveHTML,offreReprise,restore,offreNemesis,rendre,nemJoueur};
  // v17.23 · Le Dernier Souvenir en console (tant que dernier.actif est faux : __dernier.activer() montre la désignation dans la pause)
  const dsA=id=>{const M=MEM();return M?(id==null?designe():M.actifs.find(x=>x.src==='t'&&x.id===id)):null;};
  window.__dernier={get DS(){return DS;},cloches:()=>bells.length,get icone(){return {t:DSI.t,ic:DSI.ic,ev:DSI.ev};},get tient(){return {on:DSH.on,t:DSH.t};},pourquoi:dsPourquoi,hud:dsHud,activer:(v=true)=>{DSDEV.on=!!v;if(on())renderMem();return DSDEV.on;},actif:()=>dsActif(),
