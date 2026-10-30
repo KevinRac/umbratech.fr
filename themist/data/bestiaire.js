@@ -179,7 +179,21 @@
   // Le masque. couleurs : jamais de rouge (les zones le sont) ; taille : hauteur du masque en rayons du corps, bornée en px.
   // Ses états : calme, yeux allumés pendant un chargement, fissures sous fissurePV % de PV, brisé à la mort (brisureS secondes).
   masque:{couleurs:{haut:'#e4dcf4',bas:'#8f7fb8',trait:'#120c20',creux:'#160f28',oeil:'#b892ff',oeilVif:'#f1e6ff',fissure:'#c9a8ff',fil:'#cdb4ff'},
-   taille:1.3,min:36,max:50,fissurePV:50,brisureS:0.7}},
+   taille:1.3,min:36,max:50,fissurePV:50,brisureS:0.7},
+  // La némésis (v17.25, cadrage N1–N19) : le Masqué qui t'a tué est promu, garde ton souvenir et t'attend à la descente suivante.
+  // Rien n'est visible tant qu'actif est faux (actions 1 et 2 : logique pure, promotion et sauvegarde SAVE.nemesis seulement).
+  // parActe : némésis par acte (N6). souvenir : ce qu'un Masqué ordinaire t'arrache en mourant (N3) : ni racine de voie (exclus),
+  // une attaque de préférence (attaque). points (N4) : un par mort face à lui, max ; chaque point : PV × (1 + pv × points), force + force
+  // × points (toujours sous le plafond des armes, sbForce) ; renforts : à partir de ce point, ce renfort (au plus renfortMax en tout).
+  // repit (N7) : après morts morts de suite face à lui, il ne vient pas à la descente suivante. retour (N5) : chance en %, dans son acte,
+  // à la première salle de combat, d'élite ou Brèche dont le numéro est ≥ celui de sa salle. reprise (N8) : ses gravures restent au masque ;
+  // la relique reste en plus ; une autre forme (ou un talent brûlé) rend des Éclats : base + parPoint × points.
+  nemesis:{actif:false,parActe:1,
+   souvenir:{exclus:['c'],attaque:true},
+   points:{max:5,pv:0.08,force:0.15,renforts:{2:'pv',4:'degats'}},
+   repit:{morts:3},
+   retour:{chance:100},
+   reprise:{gravures:false,relique:true,eclats:{base:15,parPoint:10}}}},
  // Mutations du talent Mutation Instable (Gouffre)
  mutationsInstables:[{id:'griffes',n:'Griffes',d:'+40 % de dégâts'},{id:'membres',n:'Membres allongés',d:'+35 % de portée'},{id:'pierre',n:'Peau de pierre',d:'−40 % de dégâts subis'},{id:'fievre',n:'Fièvre',d:'+30 % de vitesse'}]
 };})(window.BRUME_DATA=window.BRUME_DATA||{});

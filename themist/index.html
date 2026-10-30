@@ -9058,6 +9058,7 @@ function demoBoot(cls){
  // Pour essayer en jeu, depuis la console : __asm.essai() ; __asm.essai('voile:onde+cone>charge', 3) ; troisième argument vrai : sans la première vague
  // quatrième argument (v17.9) : id d'un talent de la réserve qu'il doit porter (__memoire.reserve), par exemple __asm.essai(null,2,true,'fan_n2')
  window.__asm.essai=function(cle,acte,direct,souv,cls){try{if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[cls]?cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+  RUN.essai=1;   // v17.25 : une descente d'essai ne promeut aucune némésis
   // v17.13 · outil de test : si le souvenir demandé n'est pas dans la réserve, on l'y met (rang 1, jamais porté)
   if(souv&&NODES[souv]&&!(RUN.reserveBrume=RUN.reserveBrume||[]).some(x=>x.id===souv))RUN.reserveBrume.push({id:souv,source:'talent',rang:1,g:0,oublie:{acte:RUN.act||1,salle:RUN.roomIdx||1},porte:0});
   RUN.act=Math.max(A.desActe,acte||2);RUN.g=Math.max(RUN.g,RUN.act>=3?18:10);RUN.roomIdx=Math.max(1,(A.premiereSalle||1)-1);window.__asm.forcer=1;window.__asm.combo=cle||null;window.__asm.souv=souv||null;
@@ -9368,7 +9369,7 @@ function demoBoot(cls){
    if(p.sbD>=p.sbL){if(p.sbNav&&!p.retour){p.retour=true;p.sbD=0;p.vx=-p.vx;p.vy=-p.vy;p.touche=false;}else{p.dead=true;continue;}}
    const mur=p.x<AR.x0+p.r*0.5||p.x>AR.x1-p.r*0.5||p.y<AR.y0+p.r*0.5||p.y>AR.y1-p.r*0.5;
    if(mur||(!p.sbTrav&&hitsWall(p.x,p.y,p.r*0.5))){p.dead=true;continue;}
-   if(!p.touche&&!P.dead&&hyp(p.x-P.x,p.y-P.y)<p.r+P.r-3&&P.iT<=0&&P.dashT<=0){hurtPlayer(p.dmg);if(p.sbNav)p.touche=true;else p.dead=true;}}
+   if(!p.touche&&!P.dead&&hyp(p.x-P.x,p.y-P.y)<p.r+P.r-3&&P.iT<=0&&P.dashT<=0){NEMSRC=p.from||null;try{hurtPlayer(p.dmg);}finally{NEMSRC=null;}if(p.sbNav)p.touche=true;else p.dead=true;}}
   for(const p of M)if(!p.dead)eproj.push(p);return r;};
  // Renforts (souvenirs purement statistiques, palier 3b) : PV, dégâts, vitesse de déplacement, dégâts subis en moins. Au plus renfortMax ; jamais le chargement.
  function sbRenfort(e,keys){const L=(keys||[]).filter(k=>SBJ.renforts[k]).slice(0,SBJ.renfortMax);let red=0;
@@ -9682,6 +9683,109 @@ function demoBoot(cls){
   if(b.ph==='entracte'){if(env.etourdi){b.t=J.justice.entracteS;return ev;}b.t-=env.dt;if(b.t<=0){b.ph='finie';ev.push(['libere']);}return ev;}
   return ev;}
  /*/glas:pur*/
+ /*nem:pur*/
+ // ── v17.25 · La némésis (cadrage N1–N19) : logique pure, sans P, RUN, room ni SAVE ; vérifiée par outils/sim-nemesis.mjs.
+ // Réglages : data/bestiaire.js (assemble.nemesis, N) ; souvenirs.js (SV : poids des genres, force du Dernier Souvenir) ; armes de la Brume (J).
+ // Une fiche (SAVE.nemesis.liste) : {uid, corps, co:{corps, depart, eveil, menace, base, cle}, nom, sv:{id, cls, rang, g, fid, vars, renfort}|null,
+ //  points, morts, ne:{run, acte, salle, palier, cls}, attend:{acte, salle}, vu, repit, coup}.
+ const NEM_V=1;
+ // N2 · pourquoi ce Masqué n'est pas promu ('' : il l'est). c : {mort, victoire, abandon, demo, essai, hub, asm (un Masqué dans la salle),
+ //  test (Masqué d'essai), reflet, present (il est arrivé, montage compris), brise (mort ou vaincu)}. Une mort évitée (Phénix…) n'arrive pas ici.
+ function nemRefus(c){
+  if(!c||!c.mort||c.victoire||c.abandon)return 'pasMort';
+  if(c.demo)return 'demo';
+  if(c.essai||c.test)return 'essai';
+  if(c.hub)return 'hub';
+  if(!c.asm)return 'sansMasque';
+  if(c.reflet)return 'reflet';
+  if(!c.present)return 'absent';
+  if(c.brise)return 'brise';
+  return '';}
+ // N6 · ce que vaut cette mort : 'point' (c'est la némésis de cet acte qui t'a eu), 'nouveau' (promu), 'occupe' (un autre l'est déjà : rien)
+ function nemDecision(N,liste,acte,uid){const L=(liste||[]).filter(f=>f&&f.attend&&f.attend.acte===acte);
+  if(uid&&L.some(f=>f.uid===uid))return 'point';
+  return L.length<(N.parActe||1)?'nouveau':'occupe';}
+ // N3 · force d'un souvenir, celle du Dernier Souvenir (DS7) : poids du genre × (1 + parRang × (rang − 1)) × (1 + parGravure × gravures)
+ function nemForce(SV,genre,rang,g){const F=(SV.dernier&&SV.dernier.force)||{parRang:0.15,parGravure:0.25},w=((SV.gravure&&SV.gravure.poids)||{})[genre]||1;
+  return w*(1+(F.parRang||0)*Math.max(0,(rang||1)-1))*(1+(F.parGravure||0)*Math.max(0,g||0));}
+ // N3 · ce qu'un Masqué ordinaire t'arrache en te tuant. actifs : ta mémoire ({id, src, rang, g, trophee}) dans l'ordre où tu l'as prise ;
+ // info(id) → {cls, genre} ; fam : id → famille ; J : armes de la Brume ; porte(fid) : vrai si son corps peut porter l'arme de cette famille.
+ // Le plus fort (égalité : le plus récent), ni racine de voie ; une attaque qu'il peut porter de préférence, sinon un renfort, sinon le plus fort
+ // sans geste (sansGeste : il le garde pour la reprise, ses capacités ne changent pas). Rend {id, cls, rang, g, fid, vars, renfort} ou null.
+ function nemArrache(N,SV,J,actifs,info,fam,porte){const S=N.souvenir||{},ex=S.exclus||[],L=[];
+  (actifs||[]).forEach((a,i)=>{if(!a||a.src!=='t')return;const I=info(a.id);if(!I||ex.includes(I.genre))return;const fid=fam[a.id];if(!fid||!J.familles[fid])return;
+   const E=(J.talents||{})[a.id]||{};L.push({a,i,I,fid,rf:!!(E.renfort&&J.renforts[E.renfort]),E,f:nemForce(SV,I.genre,a.rang,a.g)});});
+  if(!L.length)return null;
+  L.sort((x,y)=>(y.f-x.f)||(y.i-x.i));
+  const fiche=o=>({id:o.a.id,cls:o.I.cls,rang:o.a.rang||1,g:o.a.g||0,fid:o.fid,vars:o.rf?[]:(o.E.v||[]).slice(),renfort:o.rf?o.E.renfort:null});
+  const nu=o=>Object.assign(fiche(o),{vars:[],renfort:null,sansGeste:true});
+  if(S.attaque){const x=L.find(o=>!o.rf&&porte(o.fid));if(x)return fiche(x);const r=L.find(o=>o.rf);return r?fiche(r):nu(L[0]);}
+  const o=L[0];return o.rf||porte(o.fid)?fiche(o):nu(o);}
+ // N3 · son assemblage avec l'arme de cette famille : même corps, sous le budget de l'acte (budgetPorteur compris), celui qui garde le plus de
+ // ses capacités (puis son éveil), puis par clé. co : son assemblage ; ctx : {act, salle, J}. null : son corps ne peut pas la porter.
+ function nemCombo(A,co,fid,ctx){const k='sb:'+fid;if(co.depart.includes(k))return co;
+  const L=asmCombos(A,Object.assign({},ctx,{porte:k})).filter(c=>c.corps===co.corps);if(!L.length)return null;
+  const garde=c=>c.depart.filter(x=>co.depart.includes(x)||x===co.eveil).length*2+(c.eveil===co.eveil?1:0);
+  L.sort((a,b)=>(garde(b)-garde(a))||(a.cle<b.cle?-1:a.cle>b.cle?1:0));return L[0];}
+ function nemUid(rnd){let s='';for(let i=0;i<10;i++)s+='0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(rnd()*36)%36];return s;}
+ // N1 · la fiche d'un Masqué promu. m : {co (son assemblage), sv (souvenir du porteur {id, rang, g, fid, vars, renfort}, ou null)} ;
+ // o : {acte, salle, run, palier, cls (ta forme), coup} ; actifs : ta mémoire au moment de la mort (pour un Masqué ordinaire) ; ctx : {act, salle, J}.
+ function nemPromotion(A,N,SV,J,m,o,actifs,info,fam,ctx,rnd){let co=m.co,sv=null;
+  if(m.sv&&m.sv.id){const I=info(m.sv.id);sv={id:m.sv.id,cls:I?I.cls:null,rang:m.sv.rang||1,g:m.sv.g||0,fid:m.sv.fid,vars:(m.sv.vars||[]).slice(),renfort:m.sv.renfort||null};}
+  else{sv=nemArrache(N,SV,J,actifs,info,fam,fid=>!!nemCombo(A,co,fid,ctx));
+   if(sv&&!sv.renfort&&!sv.sansGeste){const c2=nemCombo(A,co,sv.fid,ctx);if(c2)co=c2;else Object.assign(sv,{vars:[],sansGeste:true});}}
+  const c={corps:co.corps,depart:co.depart.slice(),eveil:co.eveil,menace:co.menace,base:co.base,cle:co.cle};
+  return{uid:nemUid(rnd),corps:co.corps,co:c,nom:asmNom(A,c,J),sv,points:1,morts:1,
+   ne:{run:o.run||0,acte:o.acte,salle:o.salle,palier:o.palier||0,cls:o.cls||null},attend:{acte:o.acte,salle:o.salle},vu:0,repit:0,coup:!!o.coup};}
+ // N4, N7 · il t'a encore eu : un point (au plus points.max), une mort de suite de plus ; il t'attend là où il t'a tué ; à repit.morts morts
+ // de suite, il saute la descente suivante (une fois) et le compte repart. Rend vrai si un point est gagné.
+ function nemPoint(N,f,o){const P0=f.points,mx=(N.points&&N.points.max)||5;f.points=Math.min(mx,(f.points||1)+1);f.morts=(f.morts||0)+1;
+  if(o&&o.salle)f.attend.salle=o.salle;if(o&&o.coup)f.coup=true;
+  const rm=(N.repit&&N.repit.morts)||Infinity;if(f.morts>=rm){f.repit=1;f.morts=0;}
+  return f.points>P0;}
+ // N4 · ce que ses points lui donnent : PV × pv, force de son souvenir (celle du porteur + force × points ; le jeu la passe à sbForce, sous le
+ // plafond des armes), renforts gagnés (sans doublon de son propre renfort, au plus J.renfortMax en tout)
+ function nemStats(A,N,J,f){const p=Math.max(1,f.points||1),P2=N.points||{},S=A.souvenir||{},sv=f.sv;
+  const base=sv?1+(S.parRang||0)*Math.max(0,(sv.rang||1)-1)+(S.parGravure||0)*(sv.g||0):1;
+  const mx=J.renfortMax||2,rf=[];if(sv&&sv.renfort)rf.push(sv.renfort);
+  for(const k of Object.keys(P2.renforts||{}).map(Number).sort((a,b)=>a-b)){const r=P2.renforts[k];if(p>=k&&J.renforts[r]&&!rf.includes(r)&&rf.length<mx)rf.push(r);}
+  return{pv:1+(P2.pv||0)*p,force:base+(P2.force||0)*p,renforts:rf.filter(r=>!(sv&&r===sv.renfort))};}
+ // N5 · vient-il dans cette salle ? r : {acte, salle, type, actRooms, breche, demo, essai, deja (déjà venu dans cette descente)} ; rnd : retour.chance
+ function nemSalle(N,f,r,rnd){if(!f||!r||r.demo||r.essai||r.deja||f.repit)return false;
+  if(!f.attend||f.attend.acte!==r.acte||r.salle<f.attend.salle||r.salle>=r.actRooms)return false;
+  if(!(r.type==='combat'||r.type==='elite'||r.breche))return false;
+  const ch=N.retour&&N.retour.chance!=null?N.retour.chance:100;return ch>=100||(rnd?rnd():Math.random())*100<ch;}
+ // N7 · fin d'une descente où il n'a gagné aucun point : le répit passe ; avoir franchi sa salle sans mourir contre lui remet le compte à zéro
+ function nemFin(f,b){if(!f)return f;if(f.repit){f.repit=0;f.morts=0;return f;}if(b&&b.passee&&!b.mortContre)f.morts=0;return f;}
+ // N8 · ce que « Reprendre » donne quand il est brisé. j : {cls (ta forme), porte ({rang} si tu portes déjà ce talent), brule (brûlé dans cette
+ // descente), gravable (ton exemplaire peut recevoir une gravure), trophee (le trophée de l'acte est libre), connu (le talent existe encore)}.
+ // Rend {type:'talent'|'rang'|'gravure'|'eclats', rang, g, trophee, eclats}.
+ function nemReprise(N,f,j){const R=N.reprise||{},E=R.eclats||{},ecl={type:'eclats',eclats:(E.base||0)+(E.parPoint||0)*Math.max(1,f.points||1)};
+  const sv=f.sv;if(!sv||!j||j.connu===false||!sv.cls||sv.cls!==j.cls||j.brule)return ecl;
+  if(j.porte){if((j.porte.rang||1)<(sv.rang||1))return{type:'rang',rang:sv.rang};return j.gravable?{type:'gravure'}:ecl;}
+  return{type:'talent',rang:sv.rang||1,g:R.gravures?(sv.g||0):0,trophee:!!j.trophee};}
+ // N1 · lecture et écriture de SAVE.nemesis (versionnée). Une fiche abîmée est ignorée ; une version future rend null (on n'y touche pas).
+ function nemForme(f){const ent=(x,a,b)=>Number.isInteger(x)&&x>=a&&x<=b;
+  return!!(f&&typeof f.uid==='string'&&f.uid&&typeof f.corps==='string'&&f.co&&Array.isArray(f.co.depart)&&f.co.depart.length===2&&typeof f.co.eveil==='string'
+   &&f.attend&&ent(f.attend.acte,1,3)&&ent(f.attend.salle,1,99)&&ent(f.points,1,99)&&(f.sv==null||(typeof f.sv.id==='string'&&typeof f.sv.fid==='string')));}
+ function nemLire(raw){if(raw==null)return{v:NEM_V,liste:[]};if(typeof raw!=='object'||typeof raw.v!=='number')return{v:NEM_V,liste:[]};
+  if(raw.v>NEM_V)return null;return{v:NEM_V,liste:(Array.isArray(raw.liste)?raw.liste:[]).filter(nemForme).map(f=>JSON.parse(JSON.stringify(f)))};}
+ function nemEcrire(liste){return{v:NEM_V,liste:(liste||[]).filter(nemForme).map(f=>JSON.parse(JSON.stringify(f)))};}
+ // N1 · la fiche relue contre les données du moment : corps inconnu → null ; assemblage qui ne tient plus (capacité retirée, budget, famille)
+ // → retiré avec le même corps (et la même arme s'il en a une) ; talent disparu → il garde son arme de famille (connu:false) ; points bornés.
+ function nemValide(A,N,J,f,info){if(!nemForme(f)||!A.corps[f.corps])return null;const g=JSON.parse(JSON.stringify(f)),sv=g.sv;
+  const mx=(N.points&&N.points.max)||5;g.points=Math.max(1,Math.min(mx,g.points));g.morts=Math.max(0,g.morts|0);g.repit=g.repit?1:0;
+  if(sv){sv.connu=!!info(sv.id);if(!J.familles[sv.fid]){sv.vars=[];sv.renfort=null;sv.sansGeste=true;}
+   if(sv.renfort&&!J.renforts[sv.renfort])sv.renfort=null;sv.vars=(sv.vars||[]).filter(v=>J.variantes&&J.variantes[v]);}
+  let arme=sv&&!sv.renfort&&!sv.sansGeste?'sb:'+sv.fid:null;const ctx={act:g.attend.acte,salle:Infinity,J};
+  let L=asmCombos(A,arme?Object.assign({porte:arme},ctx):ctx).filter(c=>c.corps===g.corps);
+  if(!L.length&&arme){sv.vars=[];sv.sansGeste=true;arme=null;L=asmCombos(A,ctx).filter(c=>c.corps===g.corps);}   // son corps ne la porte plus : il la garde sans geste
+  let c=L.find(x=>x.cle===g.co.cle);
+  if(!c&&L.length){const garde=x=>x.depart.filter(k=>g.co.depart.includes(k)||k===g.co.eveil).length*2+(x.eveil===g.co.eveil?1:0);
+   L.sort((a,b)=>(garde(b)-garde(a))||(a.cle<b.cle?-1:a.cle>b.cle?1:0));c=L[0];}
+  if(!c)return null;
+  g.co={corps:c.corps,depart:c.depart.slice(),eveil:c.eveil,menace:c.menace,base:c.base,cle:c.cle};g.nom=asmNom(A,g.co,J);return g;}
+ /*/nem:pur*/
  const SG=(GA_D&&GA_D.attaques&&GA_D.attaques[3]&&GA_D.attaques[3].souvenirs)||null;
  const glasBoss=()=>RUN&&!RUN.hub&&RUN.act===3&&room&&room.type==='boss'&&room.boss&&!room.boss.dead&&room.boss.type==='boss'?room.boss:null;
  const glasEtat=()=>room&&room.glas&&room.glas.rep.gestes.length?room.glas:null;
@@ -9847,7 +9951,7 @@ function demoBoot(cls){
   const toks=(Array.isArray(liste)?liste:String(liste||'').split(',')).filter(Boolean),vars=(opt.vars||[]).filter(v=>SBJ.variantes[v]);
   const E=EG.essai=Object.assign({temps:temps===3?3:2,appel:true,copie:false,dieu:true,bot:false,subis:0,coups:0,coupsBulle:0,sup:0,images:0,imagesZone:0,journal:[]},opt,{vars});
   if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[cls]?cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
-  E.run=RUN;RUN.act=3;RUN.g=Math.max(RUN.g,24);RUN.roomIdx=ACTS[3].rooms;
+  E.run=RUN;RUN.essai=1;RUN.act=3;RUN.g=Math.max(RUN.g,24);RUN.roomIdx=ACTS[3].rooms;
   const res=[],gestes=[];let salle=1;
   for(const t of toks){const id=NODES[t]?t:talentDe(t,vars);if(!id)continue;const x={id,source:'talent',rang:1,g:0,oublie:{acte:3,salle:salle++},porte:0};res.push(x);
    const fid=FAMS[id],Ent=glasEntree(SBJ,x);if(!fid||Ent.renfort||gestes.some(g=>g.fid===fid))continue;gestes.push({x,id,fid,vars:vars.length?vars.filter(v=>SBJ.variantes[v].formes.some(f=>SBJ.familles[fid].etapes.some(e=>e.f===f))):(Ent.v||[]).slice(),force:1});}
@@ -9876,6 +9980,54 @@ function demoBoot(cls){
    if(autre){E.sup++;if((E.supJ=E.supJ||[]).length<20)E.supJ.push({t:+RUN.time.toFixed(2),anneaux:rings.length,hz:window.__glasHZ?window.__glasHZ().length:0,tirs:eproj.filter(p=>p.boss&&!p.dead).length,noir:room.drainT>0,etat:b.state});}}
   if(E.bot&&Bs&&Bs.fuiteQ&&(Bs.st.ph==='charge'||Bs.st.ph==='effet'||Bs.dash||(Bs.vivants||[]).some(f=>f()))&&!P.dead&&!sbEtourdi()){const [qx,qy]=Bs.fuiteQ,dx=qx-P.x,dy=qy-P.y,d=hyp(dx,dy),v=Math.min(SBJ.justice.joueur.vitesse,pMarche())*dt;if(d>0.5){P.x+=dx/d*Math.min(d,v);P.y+=dy/d*Math.min(d,v);collidePlayer();}}}catch(err){console.error(err);}};
  const stG=document.createElement('style');stG.textContent=`#asmCard.reflet{padding:8px 18px 8px 12px}#asmCard.reflet .svn{margin-top:4px;font-size:16px}`;document.head.appendChild(stG);
+
+ // ═══════════════════ v17.25 · La némésis (cadrage N1–N19), actions 1 et 2 : promotion et sauvegarde
+ // Le Masqué de la salle où tu meurs, vivant et arrivé (montage compris), est promu (N2) : sa fiche va dans SAVE.nemesis (N1), avec son souvenir
+ // (porteur) ou celui qu'il t'arrache (ordinaire, N3). S'il était déjà la némésis de l'acte : un point (N4, N7). Rien ne revient encore en salle
+ // (action 3) : tant qu'assemble.nemesis.actif est faux, rien n'est écrit, sauf essai de console (__nemesis.activer(), jamais gardé au rechargement).
+ // Jamais en démo, ni dans une descente d'essai (RUN.essai, ou ?masque= ?brume= ?glas= ?dernier= ?nemesis=).
+ var NEMSRC=null;   // projectile de la Brume qui touche (navette, perçant) : de qui il vient
+ const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis)=/.test(location.search),NDEV={on:false};
+ const nemActif=()=>!!(NM&&(NM.actif||NDEV.on))&&!DEMO;
+ const nemInfo=id=>{const n=NODES[id];return n?{cls:n.cls,genre:/_sk$/.test(id)?'u':(n.kind||'m')}:null;};
+ // qui a porté le dernier coup qui t'a blessé (pour les statistiques : la promotion n'en dépend pas, N2). Sans changer les arguments de
+ // hurtPlayer (une source passée en plus déclencherait les épines du Gouffre sur un projectile) : la source, sinon un projectile ou une onde
+ // du Masqué qui te touche à cet instant.
+ const NC={masque:false,t:-1};
+ const _hpN=hurtPlayer;hurtPlayer=function(dmg,src){const R=room&&room.asm,e=R&&R.e;let m=false;
+  try{if(e&&!e.dead&&P)m=src===e||NEMSRC===e||(!src&&(eproj.some(p=>!p.dead&&p.from===e&&hyp(p.x-P.x,p.y-P.y)<p.r+P.r-3)||ZR.some(g=>g.src===e&&Math.abs(hyp(P.x-g.x,P.y-g.y)-g.r)<10+P.r*0.6)));}catch(err){}
+  const h0=P?P.hp:0,r=_hpN.apply(this,arguments);if(P&&P.hp<h0){NC.masque=m;NC.t=RUN?RUN.time:0;}return r;};
+ // la promotion. c : conditions (nemRefus) ; rend le bilan {refus, decision, uid, point}
+ function nemPromo(c){const B={refus:nemRefus(c)};if(B.refus)return B;
+  const S=nemLire(SAVE.nemesis);if(!S){B.refus='version';return B;}   // sauvegarde d'une version future : on n'y touche pas
+  const R=room.asm,acte=RUN.act,salle=RUN.roomIdx;B.decision=nemDecision(NM,S.liste,acte,R.nem||null);
+  if(B.decision==='occupe')return B;
+  if(B.decision==='point'){const f=S.liste.find(x=>x.uid===R.nem);B.uid=f.uid;B.point=nemPoint(NM,f,{salle,coup:NC.masque});}
+  else{const M=RUN.memoire,sv=R.sv&&R.sv.x?{id:R.sv.x.id,rang:R.sv.x.rang,g:R.sv.x.g||0,fid:R.sv.fid,vars:R.sv.vars,renfort:R.sv.renfort}:null;
+   const f=nemPromotion(A,NM,NSV,SBJ,{co:R.co,sv},{acte,salle,run:SAVE.runs||0,palier:RUN.palier||0,cls:P&&P.cls,coup:NC.masque},M?M.actifs:[],nemInfo,FAMS,{act:Math.max(1,acte),salle:G(),J:SBJ},Math.random);
+   S.liste.push(f);B.uid=f.uid;B.sv=f.sv&&f.sv.id;}
+  SAVE.nemesis=nemEcrire(S.liste);persist();return B;}
+ function nemConditions(mort,win,abandon){const R=room&&room.asm,e=R&&R.e;
+  return{mort,victoire:!!win,abandon:!!abandon,demo:DEMO,essai:!!(RUN.essai||ESSAI_URL),hub:!!RUN.hub,asm:!!R,test:!!(R&&R.test),
+   reflet:!!(e&&e.asm&&e.asm.reflet),present:!!e,brise:!!(R&&(R.vaincu||(e&&e.dead)))};}
+ // à la fin de la descente (mort seulement), une fois, avant le reste de l'écran de fin (Tombe d'Écho, statistiques)
+ function nemFinRun(win,abandon){if(!RUN||RUN.hub||RUN.nemFait)return;RUN.nemFait=true;if(!nemActif())return;
+  RUN.nemBilan=nemPromo(nemConditions(!win&&!abandon&&!!(P&&P.dead),win,abandon));}
+ const _oeN=openEnd;openEnd=function(win,abandon){try{nemFinRun(win,abandon);}catch(err){console.error(err);}return _oeN.apply(this,arguments);};
+ // console : voir et effacer la fiche, essayer sans toucher aux données
+ window.__nemesis={
+  activer:(v=true)=>{NDEV.on=!!v;return nemActif();},
+  actif:nemActif,
+  voir:()=>nemLire(SAVE.nemesis),
+  effacer:()=>{delete SAVE.nemesis;persist();return true;},
+  bilan:()=>RUN&&RUN.nemBilan||null,
+  coup:()=>Object.assign({},NC),
+  // comme si tu mourais ici, maintenant (sans mourir) : la décision et la fiche écrite, si actif
+  promouvoir:()=>{if(!nemActif())return{refus:'inactif'};if(!RUN||RUN.hub)return{refus:'hub'};return nemPromo(nemConditions(true,false,false));},
+  conditions:()=>RUN?nemConditions(true,false,false):null,
+  valider:()=>{const S=nemLire(SAVE.nemesis);return S?S.liste.map(f=>nemValide(A,NM,SBJ,f,nemInfo)):null;},
+  stats:f=>nemStats(A,NM,SBJ,f),
+  F:{nemRefus,nemDecision,nemArrache,nemCombo,nemPromotion,nemPoint,nemStats,nemSalle,nemFin,nemReprise,nemLire,nemEcrire,nemValide}};
 })();
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -10986,7 +11138,7 @@ function demoBoot(cls){
    const n=NODES[id],cls=CLS[opt.classe]?opt.classe:n.cls;if(!CLS[cls]||n.cls!==cls)return 'ce talent est de la classe '+n.cls;
    const acte=[1,2,3].includes(+opt.acte)?+opt.acte:2;
    if(!RUN||RUN.hub||state!=='play'||P.cls!==cls){chosenCls=cls;startRun();}
-   DSDEV.on=true;DSE.on=true;DSE.dieu=opt.dieu!==false;DSE.id=id;DSE.run=RUN;
+   DSDEV.on=true;DSE.on=true;DSE.dieu=opt.dieu!==false;DSE.id=id;DSE.run=RUN;RUN.essai=1;
    RUN.act=acte;RUN.g=Math.max(RUN.g||0,acte>=3?18:acte>=2?10:2);RUN.roomIdx=Math.max(1,RUN.roomIdx||1);
    const M=MEM();if(!M)return 'mémoire absente';
    if(!M.actifs.some(a=>a.src==='t'&&a.id===id))__dernier.prendre(id,Math.max(1,+opt.rang||1),Math.max(0,+opt.grave||0));

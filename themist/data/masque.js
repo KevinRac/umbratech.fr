@@ -19,6 +19,11 @@
  fissures:['M40 11L36 21L41 28L34 36L37 43','M29 57L24 64L28 71L25 76','M75 70L68 76L71 84'],
  // points de couture : le masque est cousu de force sur la tête (tempes, joues, menton). [x, y, angle du point en degrés]
  coutures:[[12,44,-20],[88,44,20],[24,70,-40],[76,70,40],[50,113,90],[50,4,90]],
+ // v17.25 · le trousseau de la némésis (cadrage N10a) : un crâne par mort face à lui, au plus max, pendus à sa hanche en éventail.
+ // Réglages seulement : le dessin du crâne viendra à l'action 5a. taille : hauteur d'un crâne en rayons du corps, bornée de min à maxPx ;
+ // hanche : point d'attache en rayons du corps (côté, bas) ; eventail : écart entre deux crânes (degrés) ; chaine : longueur (px) ;
+ // balancement : amplitude (degrés, figé pendant ses chargements et en mouvements réduits) ; lueur : orbites (r,g,b), jamais de rouge.
+ crane:{max:5,taille:0.35,min:9,maxPx:14,hanche:[0.85,0.25],eventail:22,chaine:6,balancement:8,lueur:'205,180,255'},
  // éclats quand il se brise : quatre morceaux qui recouvrent le contour, et la direction où chacun part
  eclats:[
   {d:'M9 42C10 24 24 13 40 12L50 1L50 39L45 46L28 44L9 46Z',dir:[-1,-1]},

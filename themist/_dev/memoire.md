@@ -1553,3 +1553,39 @@ Avant, les coups de kit des esquives en plus dépassaient le plafond jusqu'à 6 
 ### Ce qui reste (DS19)
 
 Action 9 faite (v17.23) : section générée du wiki, journal, `actif:true`. Action 10 faite (v17.24) : les trois points ouverts de l'action 8. Restent à juger sur les descentes exportées : `reserveGlas` avec et sans brûlure, les familles réellement brûlées (`stats17.brules`).
+
+## 28. La némésis, actions 1 et 2 : promotion et sauvegarde (30 octobre 2026, pas encore active)
+
+Cadrage : document `claude/la-brume-v17-25-nemesis-cadrage.md` du projet claude.ai (décisions N1 à N19 ; révision du 30 octobre : le trousseau de crânes, N10). L'auteur a demandé les actions 1 et 2 du découpage (N19) ; les recommandations du cadrage sont appliquées telles quelles. **Le jeu ne montre rien** : `assemble.nemesis.actif` est faux, aucune fiche n'est écrite hors essai de console (`__nemesis.activer()`, jamais gardé au rechargement). Pas de numéro de version ni de ligne de journal : rien ne change pour le joueur ; le wiki est inchangé (`wiki.mjs --check` à jour).
+
+### Ce qui est construit
+
+| Où | Quoi |
+|---|---|
+| `data/bestiaire.js`, `assemble.nemesis` | `actif`, `parActe` 1 (N6), `souvenir` (racine exclue, attaque de préférence, N3), `points` (max 5, PV +8 %, force +0,15 par point, renforts Robuste au point 2 et Brutal au point 4, N4), `repit` (3 morts de suite, N7), `retour` (100 %, N5), `reprise` (gravures gardées par le masque, relique en plus, Éclats 15 + 10 par point, N8). |
+| `data/masque.js`, `crane` | Réglages du trousseau (N10a) : 5 crânes au plus, taille 0,35 rayon (9 à 14 px), hanche, éventail, chaîne, balancement, lueur lavande. Le dessin du crâne viendra à l'action 5a. Le masque garde ses 6 points de couture. |
+| `index.html`, bloc `/*nem:pur*/` (dans le bloc du Masqué, après `/*glas:pur*/`) | `nemRefus` (N2), `nemDecision` (N6), `nemForce` (DS7), `nemArrache` (N3), `nemCombo` (son assemblage avec l'arme : même corps, budget de l'acte, le plus de capacités gardées), `nemPromotion` (la fiche, N1), `nemPoint` (N4, N7), `nemStats` (N4), `nemSalle` (N5), `nemFin` (N7), `nemReprise` (N8), `nemLire` / `nemEcrire` / `nemForme` (sauvegarde versionnée), `nemValide` (relecture contre les données du moment). |
+| `index.html`, section « v17.25 · La némésis » (fin du bloc du Masqué) | Promotion dans une enveloppe d'`openEnd` (`nemFinRun`, une fois par descente, avant la Tombe d'Écho et les statistiques) ; `SAVE.nemesis` ; attribution du coup (`NC`, pour les statistiques) ; console `__nemesis`. |
+| Branchements ailleurs | `RUN.essai` posé par `__asm.essai` (donc `?masque=` et `__dernier.essai(…,{masque})`), le Glas d'essai (`EG.lancer`) et `__dernier.essai` ; la navette et le perçant des armes de la Brume posent `NEMSRC` le temps de leur coup. |
+| `outils/sim-nemesis.mjs` | Vérification hors navigateur (voir Mesures). |
+| `_dev/bancs/banc-nemesis.mjs` | Banc Chromium de la promotion. |
+
+### Les règles telles que codées
+
+- **Promu** (N2, N17) : mort réelle (`openEnd(false)` avec `P.dead` : Phénix, Seconde flamme, Rançon et Larme n'y arrivent pas), ni victoire ni abandon, ni démo, ni descente d'essai (`RUN.essai`, ou une adresse `?masque=`, `?brume=`, `?glas=`, `?dernier=`, `?nemesis=`), ni Masqué d'essai (`room.asm.test`), ni Reflet ; le Masqué de la salle est **arrivé** (`room.asm.e`, montage compris) et n'est pas brisé. Le cadrage disait « monté » en N2 et « mort pendant son montage : promu » en N17 ; c'est N17 qui est appliqué (il est là, son masque à moitié cousu).
+- **Une par acte** (N6) : la némésis de l'acte qui t'a eu (`room.asm.nem`, posé par l'action 3) gagne un point ; un autre Masqué dans un acte occupé n'est pas promu.
+- **Le souvenir** (N3) : un porteur garde le sien (id, rang, gravures, variantes ou renfort) et son assemblage. Un Masqué ordinaire t'arrache ton talent le plus fort au sens de DS7 (égalité : le plus récent), jamais une racine de voie ; d'abord une attaque que son corps peut porter, et son assemblage est refait avec l'arme (`nemCombo`), sinon un renfort, sinon le plus fort sans geste (`sansGeste` : il le garde pour la reprise, ses capacités ne bougent pas). Le nom composé suit (« Brute hurlante et tranchante » → « Brute tranchante et radieuse »).
+- **La fiche** : `{uid, corps, co, nom, sv, points, morts, ne, attend, vu, repit, coup}` dans `SAVE.nemesis = {v:1, liste}`. Une sauvegarde d'une version future n'est ni lue ni écrasée (`nemLire` → null) ; une fiche abîmée est ignorée.
+- **Le coup mortel** (`coup`) : la source du coup, sinon un projectile du Masqué ou une de ses ondes qui te touche à cet instant ; il n'entre pas dans la décision. Le jeu ne passe toujours pas de source sur les projectiles : en passer une déclencherait les épines du Gouffre sur un tir.
+
+### Ce que les actions suivantes trouveront
+
+- Action 3 : `nemSalle` (première salle de combat, d'élite ou Brèche ≥ `attend.salle` dans son acte, jamais le gardien, pas en répit, une fois par descente), `nemValide` à la lecture, `nemStats` (PV, force à passer à `sbForce`, renforts), et poser `room.asm.nem = uid` pour que sa victoire suivante soit un point.
+- Action 4 : `nemReprise` (talent sans gravures, trophée si libre ; rang ou gravure si tu le portes ; Éclats pour une autre forme, un talent brûlé ou disparu), puis effacer la fiche ; `nemFin` en fin de descente (répit, compte des morts).
+
+### Mesures
+
+- `sim-nemesis.mjs` : **46 050 vérifications, 0 échec**. Données ; les 2 048 combinaisons de conditions de promotion (une seule promeut) ; une par acte ; souvenir arraché sur 3 982 morts tirées au hasard (3 889 attaques, 51 renforts, 42 sans geste ; jamais une racine, toujours le plus fort, égalité au plus récent) ; assemblage avec l'arme sur 495 cas (3 actes × 33 assemblages × 15 familles ; 423 portés, chacun permis sous le budget, même corps, le plus de capacités gardées) ; 600 promotions ; points, répit et plafond ; force au pire 3,60 sous `sbForce` (plafond 3,6) pour chaque famille, variante, rang, gravure, point et acte, PV × 1,40 au plus ; salle du retour ; matrice de reprise ; sauvegarde (aller-retour, abîmée, version future) ; relecture (33 assemblages gardés, capacité retirée réassemblée, corps inconnu abandonné, talent disparu) ; branchements du jeu.
+- `sim-masque.mjs` : 3 583 218 contrôles, tout est bon. `sim-brume.mjs --vite` : 46 602, 0 échec. `sim-dernier.mjs` : 4 021, 0 échec. `wiki.mjs --check` : à jour.
+- `banc-nemesis.mjs` (Chromium, descentes ordinaires, une page neuve par cas) : **35 vérifications, 0 échec, aucune erreur de script**. Masqué ordinaire tué par son tir : promu, nœud clé gravé arraché et porté en arme, rendez-vous à la salle de la mort, coup mortel attribué ; porteur : il garde son souvenir et son assemblage ; deuxième mort face à la même némésis : point 2 ; autre Masqué dans un acte occupé : rien ; un autre acte a la sienne ; Masqué brisé, salle sans Masqué : rien ; mort pendant son montage : promu ; tué par son escorte : promu, coup pas de lui ; inactif : rien écrit ; descente d'essai et `?masque=` : refus ; Mèche de Phénix : pas de mort, rien ; démo : jamais actif ; relecture de la fiche écrite inchangée ; version future intacte.
+- Régressions : `banc-essai` 43, `banc-relecture` 12, `banc-glas-relecture` 16, `banc-touche` 34, `banc-complet` F (descente des quatre formes jusqu'à la victoire) 60 : 0 échec. `banc-dernier` : 4 échecs, **les mêmes sur v17.24 sans ce travail** (ce banc des actions 1-2 du Dernier Souvenir attend encore `dernier.actif` faux, vrai depuis v17.23).
