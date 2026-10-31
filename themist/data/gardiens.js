@@ -75,10 +75,15 @@
  // La couleur de temps (failles.p1 / p3) ne sert plus qu'aux reflets ; le rouge du troisième temps reste sur le point faible.
  dessin:{
   version:1,
-  actif:{1:false,2:false,3:true},
+  actif:{1:false,2:true,3:true},
   echelle:{solide:1.15,silhouette:3.5,prolongements:0.35},
   1:{matiere:{brume:[150,160,180],os:[222,214,190],or:[196,170,110]},lueur:[245,240,230],enfant:true},
-  2:{matiere:{bronze:[110,96,60],eau:[70,190,150],chair:[120,140,130]},lueur:[255,190,110]},
+  // Héraut Noyé (G7) : Élias sous sa cloche. La cloche est sa tête, fondue sur ses épaules ; sa robe ruisselle ; il tire les cordes qui montent au
+  // haut de la salle ; à sa ceinture, la lampe d'Ismène (lueur, ambre). eau : vert d'algue, loin du cyan de la saisie. reflets : les trois yeux sous
+  // la lèvre (eyePts, même place). fente : ouverture des deux moitiés de la cloche au troisième temps (radians). transS : durée d'une transformation.
+  2:{matiere:{bronze:[110,96,60],eau:[70,190,150],chair:[104,130,116],patine:[84,128,100],robe:[28,44,38],corde:[134,116,80]},lueur:[255,200,120],
+   reflets:[214,236,196],fente:0.15,transS:0.6,
+   lecture:'Élias sous sa cloche : elle est devenue sa tête, il en tire encore les cordes, la lampe d’Ismène à la ceinture. Au deuxième temps, une corde casse ; au troisième, la cloche se fend sur son visage noyé et le battant pend à nu.'},
   // Glas Originel (G8) : la cloche devenue cœur. plaques : morceaux de bronze (2 éclatent au deuxième temps, les autres tombent au troisième et
   // restent au sol, éteints, jusqu'à sa mort). arteres : nombre d'artères qui le suspendent au haut de la salle. transS : durée d'une transformation.
   3:{matiere:{bronze:[90,70,40],chair:[110,24,40],sang:[34,6,12],os:[220,206,180],patine:[86,124,104]},lueur:[200,40,60],oeil:[238,232,218],
