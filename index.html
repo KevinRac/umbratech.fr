@@ -237,14 +237,14 @@
 
     /* ---------- Catégories ---------- */
     .category { scroll-margin-top: 24px; }
-    .category + .category { margin-top: clamp(52px, 7vw, 88px); }
+    .category + .category { margin-top: clamp(36px, 5vw, 56px); }
 
     .category-head {
       display: flex;
       align-items: baseline;
       flex-wrap: wrap;
       gap: 6px 18px;
-      margin-bottom: 26px;
+      margin-bottom: 18px;
     }
 
     .category-head h2 {
@@ -273,14 +273,14 @@
     .tiles {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 24px;
+      gap: 18px;
     }
 
     .tile {
       --tile-color: #fff;
       position: relative;
       isolation: isolate;
-      min-height: 560px;
+      min-height: 340px;
       border-radius: var(--radius);
       overflow: hidden;
       display: flex;
@@ -342,8 +342,8 @@
 
     .tile-index {
       position: absolute;
-      top: 22px;
-      right: 24px;
+      top: 16px;
+      right: 20px;
       font-family: var(--serif);
       font-size: 0.95rem;
       letter-spacing: 0.12em;
@@ -352,7 +352,7 @@
 
     .tile-content {
       width: 100%;
-      padding: 34px 30px 28px;
+      padding: 24px 26px 20px;
     }
 
     .game-tag {
@@ -381,10 +381,10 @@
     }
 
     .tile h3 {
-      margin: 18px 0 12px;
+      margin: 12px 0 8px;
       font-family: var(--serif);
       font-weight: 700;
-      font-size: clamp(1.8rem, 2.6vw, 2.25rem);
+      font-size: clamp(1.45rem, 2.1vw, 1.85rem);
       line-height: 1.08;
       letter-spacing: -0.02em;
     }
@@ -392,8 +392,8 @@
     .tile p {
       margin: 0;
       color: #c4cbd8;
-      font-size: 0.95rem;
-      line-height: 1.65;
+      font-size: 0.9rem;
+      line-height: 1.55;
     }
 
     .tile-footer {
@@ -401,8 +401,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin-top: 24px;
-      padding-top: 20px;
+      margin-top: 16px;
+      padding-top: 14px;
       border-top: 1px solid rgba(255, 255, 255, 0.14);
     }
 
@@ -412,9 +412,9 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-radius: 999px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
       white-space: nowrap;
       color: #0b0d12;
@@ -449,14 +449,14 @@
     @media (max-width: 1020px) {
       .category { max-width: 640px; margin-left: auto; margin-right: auto; }
       .tiles { grid-template-columns: 1fr; }
-      .tile { min-height: 460px; }
+      .tile { min-height: 320px; }
     }
 
     @media (max-width: 560px) {
       .page { width: calc(100% - 28px); }
       .nav-links { display: none; }
-      .tile { min-height: 430px; }
-      .tile-content { padding: 26px 22px 22px; }
+      .tile { min-height: 300px; }
+      .tile-content { padding: 20px 18px 18px; }
       .tile-footer { flex-direction: column; align-items: flex-start; }
     }
 
