@@ -351,6 +351,9 @@ function gardiens(G, F) {
   const actifD = n => { const D = G.dessin; return !!(D && D.actif && (typeof D.actif === 'object' ? D.actif[n] : D.actif)); };
   const lecture = a => actifD(+a) && G.dessin[a] && G.dessin[a].lecture ? `<p class="k">${esc(G.dessin[a].lecture)}</p>` : '';
   const failles = Object.entries(G.failles).map(([a, f]) => `<article class="ent"><h4>${esc(A[a - 1].boss)}</h4><p><b>${esc(f.l1)}.</b></p><p><b>${esc(f.l3)}.</b> ${esc(f.t3)}</p>${lecture(a)}</article>`).join('');
+  // v17.27 (G5) : le même anneau ivoire entoure le point faible de chaque gardien dont le nouveau dessin est actif, quand il est à nu (fenêtre ou sonné)
+  const faibles = [1, 2, 3].filter(n => actifD(n) && G.dessin[n] && G.dessin[n].faible).map(n => G.dessin[n].faible);
+  const anneau = faibles.length ? ` Pendant la fenêtre (et quand le gardien est sonné), un <b>anneau ivoire</b> palpite autour de son point faible : ${faibles.map(esc).join(', ')}.` : '';
   const fen = Object.entries(G.fenetres).map(([c, x]) => `<article class="ent" data-cls="${c}"><h4 style="color:${F[c].col}">${esc(F[c].n)}</h4><p><b>Avertissement :</b> ${esc(x.warn)}.</p><p><b>Fenêtre :</b> ${esc(x.label)}.</p></article>`).join('');
   const titre2 = Object.keys(G.failles).map((a, i) => `${esc(i ? lower(A[a - 1].boss) : A[a - 1].boss)} · Acte ${ROM[a]}`).join(' et ');
   return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Chaque acte se termine par un gardien. Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux du palier 0 ; les paliers de Brume les augmentent.</p>' : ''}${survieGouffre(G)}</div></header>
@@ -367,7 +370,7 @@ function gardiens(G, F) {
 ${[2, 3].map(a => attaquesGardien(G, a)).join('\n')}
 
 <h3 class="sub">Fenêtres de vulnérabilité</h3>
-<p>Selon ta forme, le gardien expose périodiquement une faiblesse. Un message te prévient ; tu as <b>${num(G.aNu.dureeS)} secondes</b> pour frapper avec <b>+${Math.round((G.aNu.mult - 1) * 100)} %</b> de dégâts. L’intervalle diminue avec le niveau d’Accoutumance.</p>
+<p>Selon ta forme, le gardien expose périodiquement une faiblesse. Un message te prévient ; tu as <b>${num(G.aNu.dureeS)} secondes</b> pour frapper avec <b>+${Math.round((G.aNu.mult - 1) * 100)} %</b> de dégâts. L’intervalle diminue avec le niveau d’Accoutumance.${anneau}</p>
 <div class="grid g4">${fen}</div>
 <aside class="note ">Pendant le changement de phase, le gardien est brièvement verrouillé (${num(G.verrouPhase.dureeS)} s). Prends ce temps pour te replacer et te soigner.</aside>
 </section>`;

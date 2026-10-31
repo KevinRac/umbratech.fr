@@ -11517,7 +11517,16 @@ const G27=(function(){
  function poser(c,I){c.drawImage(I.cv,I.x0,I.y0,I.w,I.h);}
  const rgb=a=>a[0]+','+a[1]+','+a[2],mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
  const ease=k=>1-Math.pow(1-clamp(k,0,1),3);
- return{image,poser,densite,vider:()=>CACHE.clear(),taille:()=>CACHE.size,rgb,mix,ease};
+ // ── G5 · le point faible, partout le même signe : un anneau ivoire qui palpite autour de lui tant que la fenêtre « à nu » est ouverte (sonné : vuln ; fenêtre
+ // de l'Accoutumance : rawT). Les trois gardiens l'appellent par G27.anneau (le banc peut donc l'observer) ; masqué pendant un fondu d'esquive (fd ≤ 0,3).
+ const aNu=(e,fd)=>(e.vuln>0||e.rawT>0)&&fd>0.3;
+ function anneau(c,x,y,r){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(x,y,r*0.3+(RM?0:3.5*Math.sin(T*12)),0,TAU);c.stroke();}
+ // ── G13 · la couleur de ta forme pendant une copie. G3 : deux formes (Lumière, Héraut) tombaient à moins de ΔE 25 d'un télégraphe (orange des zones, cyan de
+ // saisie) ; dessin.copie donne leur teinte éclaircie, même famille de couleur. Les autres gardent la couleur de la forme (CRGB).
+ function copie(){const D=((GA_D.dessin||{}).copie||{})[P.cls];return D?rgb(D):(CRGB[P.cls]||'255,250,240');}
+ // ── banc : tous les halos dessinés pendant fn (le halo est la lueur du jeu : rien d'autre ne passe par là)
+ function espion(fn){const g0=glow,L=[];glow=function(c,x,y,r,col,a){L.push({x,y,r,col,a});return g0.apply(this,arguments);};try{fn();}finally{glow=g0;}return L;}
+ return{image,poser,densite,vider:()=>CACHE.clear(),taille:()=>CACHE.size,rgb,mix,ease,aNu,anneau,copie,espion};
 })();
 
 // ── G8 · Le Glas Originel : la cloche devenue cœur. Une grande cloche de bronze fendue, suspendue par ses artères au haut de la salle ; dans la
@@ -11704,10 +11713,10 @@ const G27=(function(){
   glow(c,e.x,e.y,r*[0,0.36,0.5,0.62][ph]*(1+(RM?0:0.2*b)),L,([0,0.12,0.15,0.2][ph]+0.3*b)*fd);
   // la fente suinte à chaque battement (au-dessus et au-dessous de l'œil)
   if(ph<3){c.strokeStyle=`rgba(235,80,90,${(0.18+0.5*b)*fd})`;c.lineWidth=1.4;c.beginPath();for(const [y0,y1] of[[-0.76,-0.24],[0.24,0.56]])for(let i=0;i<=10;i++){const y=y0+(y1-y0)*i/10,x=fenteX(y);if(i)c.lineTo(e.x+x*r,e.y+y*r);else c.moveTo(e.x+x*r,e.y+y*r);}c.stroke();}
-  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.3,L,0.4*(1-(T-g.t)/0.35));
-  const copie=COPIE.includes(e.state)&&e.copy,oc=copie?(CRGB[P.cls]||'255,250,240'):'255,248,236',open=[0,0.42,0.75,1][ph];
+  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.3,L,0.4*(1-(T-g.t)/0.35)*fd);
+  const copie=COPIE.includes(e.state)&&e.copy,oc=copie?G27.copie():'255,248,236',open=[0,0.42,0.75,1][ph];
   glow(c,e.x,e.y,r*(0.12+0.16*open),oc,(copie?0.5:0.22+0.12*b)*fd);
-  if((e.vuln>0||e.rawT>0)&&fd>0.3){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(e.x,e.y,r*0.32+(RM?0:4*Math.sin(T*12)),0,TAU);c.stroke();}
+  if(G27.aNu(e,fd))G27.anneau(c,e.x,e.y,r);   // G5 : l'œil est son point faible
   try{const G=room&&room.glas,rf=G&&G.reflet,R=((GA_D.attaques[3]||{}).souvenirs||{}).reflet||{};
    if(rf&&!rf.fin&&rf.boss===e){const u=(RUN.time-rf.nait)/(R.naissanceS||0.6);
     if(u<1.3){const a=clamp(1-u/1.3,0,1);glow(c,e.x,e.y,r*0.55,'180,160,255',0.75*a);c.strokeStyle=`rgba(215,200,255,${0.8*a})`;c.lineWidth=2.4;c.beginPath();for(let i=0;i<=16;i++){const y=-0.7+1.26*i/16;if(i)c.lineTo(e.x+fenteX(y)*r,e.y+y*r);else c.moveTo(e.x+fenteX(y)*r,e.y+y*r);}c.stroke();
@@ -11731,7 +11740,10 @@ const G27=(function(){
   const rien=()=>{},tour=(body,post)=>{const t0=performance.now();for(let i=0;i<n;i++){o.setTransform(scale,0,0,scale,offX,offY);o.save();o.translate(e.x,e.y);body(o,e);o.restore();o.save();o.globalCompositeOperation='lighter';post(e);o.restore();o.getImageData(0,0,1,1);}return(performance.now()-t0)/n;};
   try{ctx=o;for(let k=0;k<7;k++){L.vide.push(tour(rien,rien));L.avant.push(tour(_dh27,_dbp27));L.apres.push(tour(corps,lueurs));}}finally{ctx=keep;}
   const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],v=med(L.vide);return{avant:+(med(L.avant)-v).toFixed(3),apres:+(med(L.apres)-v).toFixed(3),vide:+v.toFixed(3)};}
- window.__gardiens=Object.assign(window.__gardiens||{},{G27,glas:{etat,PLQ,CTR,SOL,ECLATENT,TOMBENT,imgTemps,imgCoeur,imgPlaque,imgDos,mesure}});
+ // aperçu (banc) : le corps puis les lueurs sur un canevas donné, origine au centre de touche
+ function apercu(o,e,part){const keep=ctx;try{ctx=o;if(part!=='lueurs'){o.save();corps(o,e);o.restore();}if(part!=='corps'){o.save();o.globalCompositeOperation='lighter';o.translate(-e.x,-e.y);lueurs(e);o.restore();}}finally{ctx=keep;}}
+ window.__gardiens=Object.assign(window.__gardiens||{},{G27,TINT,EYE,glas:{etat,PLQ,CTR,SOL,ECLATENT,TOMBENT,imgTemps,imgCoeur,imgPlaque,imgDos,corps,lueurs,mesure,apercu}});
+ Object.defineProperty(window.__gardiens,'T',{get:()=>T,configurable:true});   // banc : le temps du jeu (les halos de transformation en dépendent)
 })();
 
 // ── G7 · Le Héraut Noyé (action 3) : Élias sous sa cloche. La cloche est sa tête, fondue sur ses épaules ; sa robe de sonneur ruisselle dessous ; ses
@@ -11966,12 +11978,12 @@ const G27=(function(){
   const lp=g.lamp||[e.x+0.27*r,e.y+0.82*r],bp=g.batt||[e.x,e.y+0.72*r];
   glow(c,lp[0],lp[1],r*0.6*(0.85+0.15*f),L,0.24*f*fd);glow(c,lp[0],lp[1],r*0.14,L,0.55*f*fd);
   const copie=COPIE.includes(e.state)&&e.copy,pul=RM?0.7:0.6+0.4*Math.sin(T*(2.2+ph));
-  const bc=copie?(CRGB[P.cls]||'255,250,240'):ph>=3?rgb(P3):rgb(mix(Lu,[255,240,210],0.3));
+  const bc=copie?G27.copie():ph>=3?rgb(P3):rgb(mix(Lu,[255,240,210],0.3));
   glow(c,bp[0],bp[1],r*(ph>=3?0.36:0.2)*(0.85+0.2*pul),bc,(copie?0.5:ph>=3?0.42+0.25*pul:0.14+0.08*pul)*fd);
   if(ph>=3||copie){c.fillStyle=`rgba(255,244,232,${(0.45+0.35*pul)*fd})`;c.beginPath();c.arc(bp[0],bp[1],r*0.045,0,TAU);c.fill();}
-  if((e.vuln>0||e.rawT>0)&&fd>0.3){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(bp[0],bp[1],r*0.3+(RM?0:3*Math.sin(T*12)),0,TAU);c.stroke();}
+  if(G27.aNu(e,fd))G27.anneau(c,bp[0],bp[1],r);   // G5 : le battant est son point faible
   if(e.state==='chant'||e.state==='ring'){c.strokeStyle=`rgba(${TELE.proj},${0.3+0.25*Math.sin(T*30)})`;c.lineWidth=3;c.beginPath();c.arc(e.x,e.y,r*1.25,0,TAU);c.stroke();}
-  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.2,L,0.32*(1-(T-g.t)/0.35));
+  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.2,L,0.32*(1-(T-g.t)/0.35)*fd);
   const Rf=GD().reflets||[214,236,196];EYE.boss=ph>=3?rgb(mix(Rf,P3,0.55)):rgb(Rf);}
 
  // ── branchement : à la place de l'ancien dessin quand dessin.actif[2] est vrai (l'interrupteur est relu à chaque image)
@@ -11983,7 +11995,9 @@ const G27=(function(){
   const rien=()=>{},tour=(body,post)=>{const t0=performance.now();for(let i=0;i<n;i++){o.setTransform(scale,0,0,scale,offX,offY);o.save();o.translate(e.x,e.y);body(o,e);o.restore();o.save();o.globalCompositeOperation='lighter';post(e);o.restore();o.getImageData(0,0,1,1);}return(performance.now()-t0)/n;};
   try{ctx=o;for(let k=0;k<7;k++){L.vide.push(tour(rien,rien));L.avant.push(tour(_dhr27,_dbpr27));L.apres.push(tour(corps,lueurs));}}finally{ctx=keep;}
   const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],v=med(L.vide);return{avant:+(med(L.avant)-v).toFixed(3),apres:+(med(L.apres)-v).toFixed(3),vide:+v.toFixed(3)};}
- window.__gardiens=Object.assign(window.__gardiens||{},{heraut:{etat,corps,lueurs,imgCloche,imgMoitie,imgVisage,imgRobe,imgOmbre,mesure}});
+ // aperçu (banc) : le corps puis les lueurs sur un canevas donné, origine au centre de touche
+ function apercu(o,e,part){const keep=ctx;try{ctx=o;if(part!=='lueurs'){o.save();corps(o,e);o.restore();}if(part!=='corps'){o.save();o.globalCompositeOperation='lighter';o.translate(-e.x,-e.y);lueurs(e);o.restore();}}finally{ctx=keep;}}
+ window.__gardiens=Object.assign(window.__gardiens||{},{heraut:{etat,corps,lueurs,imgCloche,imgMoitie,imgVisage,imgRobe,imgOmbre,mesure,apercu}});
 })();
 
 // ── G6 · La Mère-Brume (action 4) : Mahaut et son enfant. Elle garde sa silhouette (robe en cloche faite de brume, bras articulés, tête voilée,
@@ -12201,7 +12215,7 @@ const G27=(function(){
   else if(cls==='gou'){c.beginPath();for(let i=0;i<=24;i++){const a=i/24*TAU*1.6,q=s*(0.15+0.85*i/24);if(i)c.lineTo(Math.cos(a)*q,Math.sin(a)*q);else c.moveTo(Math.cos(a)*q,Math.sin(a)*q);}L();}
   else if(cls==='her'){c.beginPath();c.moveTo(-0.8*s,0.5*s);c.quadraticCurveTo(-0.62*s,-s,0,-s);c.quadraticCurveTo(0.62*s,-s,0.8*s,0.5*s);c.closePath();c.fill();encre(c,1.2);c.beginPath();c.arc(0,0.78*s,0.24*s,0,TAU);c.fill();encre(c,1);}
   else{c.beginPath();c.moveTo(-0.8*s,0.8*s);c.lineTo(0.62*s,-0.62*s);L();ell(c,0.68*s,-0.68*s,0.24*s,0.14*s,-Math.PI/4);encre(c,1.1);c.beginPath();c.moveTo(0.68*s,-0.68*s);c.quadraticCurveTo(1.0*s,0.3*s,0.05*s,0.55*s);L();}}
- function masqueCopie(c,r,R,cop,fd){const col=CRGB[P.cls]||'255,250,240';
+ function masqueCopie(c,r,R,cop,fd){const col=G27.copie();
   c.save();c.globalAlpha=fd*cop*0.5;ell(c,R.hx,R.hy+0.03*r,0.19*r,0.23*r);c.fillStyle=`rgb(${col})`;c.fill();c.restore();
   c.globalAlpha=fd*cop;c.fillStyle='#07050b';for(const [u,v] of EYP){ell(c,R.hx+u*r,R.hy+v*r,3,2.5);c.fill();}
   c.save();c.translate(R.hx,R.hy-0.1*r);embleme(c,P.cls,0.075*r,col);c.restore();c.globalAlpha=fd;}
@@ -12237,7 +12251,7 @@ const G27=(function(){
    const qq=ease(q),x=V.x0+(V.S.x-V.x0)*qq,y=V.y0+(V.S.y-V.y0)*qq-Math.sin(Math.PI*q)*r*0.5;c.save();c.globalAlpha=1-(1-pro)*q*q;c.translate(x,y);c.rotate(V.r0+(V.S.rot-V.r0)*qq+q*5*(V.i<3?-1:1));c.scale(1,1-0.4*qq);poser(c,imgPointe(r));c.restore();}c.restore();}
   brume(c,e,r,mk,fd,true);c.globalAlpha=1;
   // ses sept yeux (eyePts) : pâles ; à ta couleur pendant une copie ; rougis au troisième temps
-  const Lu=GD().lueur||[245,240,230];EYE.boss=g.cop>0.5?(CRGB[P.cls]||rgb(Lu)):ph>=3?rgb(mix(Lu,nu(),0.55)):rgb(GD().yeux||mix(Lu,C.B,0.22));}
+  const Lu=GD().lueur||[245,240,230];EYE.boss=g.cop>0.5?G27.copie():ph>=3?rgb(mix(Lu,nu(),0.55)):rgb(GD().yeux||mix(Lu,C.B,0.22));}
 
  // ── les lueurs (après les télégraphes, en mode additif) : le cœur-cloche nacré (rouge au troisième temps, G3), petit ; le ballot, à peine ; l'anneau
  // ivoire du point faible (G5) ; le reflet de ta forme sur le masque pendant une copie (G13) ; la main qui saisit (cyan, inchangé)
@@ -12247,12 +12261,12 @@ const G27=(function(){
   const pul=RM?0.75:0.6+0.4*Math.sin(T*(2.2+ph)),cx=e.x+R.core.x,cy=e.y+R.core.y,big=ph>=3?1.45:1,cc=ph>=3?rgb(nu()):rgb(Lu);
   glow(c,cx,cy,r*0.42*big*(0.85+0.2*pul),cc,(ph>=3?0.42+0.25*pul:0.18+0.12*pul)*fd);
   const s=r*0.1*big;c.beginPath();c.moveTo(cx-s*0.9,cy+s);c.quadraticCurveTo(cx-s*0.85,cy-s*0.9,cx,cy-s*1.1);c.quadraticCurveTo(cx+s*0.85,cy-s*0.9,cx+s*0.9,cy+s);c.closePath();
-  c.fillStyle=`rgba(255,248,240,${(0.5+0.35*pul)*fd})`;c.fill();c.strokeStyle=ph>=3?`rgba(${cc},.95)`:`rgba(${rgb(mix(Lu,C.B,0.45))},.9)`;c.lineWidth=1.6;c.stroke();
+  c.fillStyle=`rgba(255,248,240,${(0.5+0.35*pul)*fd})`;c.fill();c.strokeStyle=ph>=3?`rgba(${cc},${0.95*fd})`:`rgba(${rgb(mix(Lu,C.B,0.45))},${0.9*fd})`;c.lineWidth=1.6;c.stroke();   // G13 : le contour du cœur-cloche suit le fondu de l'esquive
   if(ph>=3){c.strokeStyle=`rgba(${cc},${0.45*fd})`;c.lineWidth=1.4;for(let i=0;i<7;i++){const a=i/7*TAU+0.3;c.beginPath();c.moveTo(cx,cy);c.quadraticCurveTo(cx+Math.cos(a+0.4)*r*0.22,cy+Math.sin(a+0.4)*r*0.22,cx+Math.cos(a)*r*0.4,cy+Math.sin(a)*r*0.36);c.stroke();}}
-  if((e.vuln>0||e.rawT>0)&&fd>0.3){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(cx,cy,r*0.3+(RM?0:4*Math.sin(T*12)),0,TAU);c.stroke();}
-  if(g.cop>0.02){const col=CRGB[P.cls]||'255,250,240';glow(c,e.x+R.hx,e.y+R.hy,r*0.42,col,0.22*g.cop*fd);glow(c,e.x+R.hx,e.y+R.hy-0.1*r,r*0.16,col,0.5*g.cop*fd);}
+  if(G27.aNu(e,fd))G27.anneau(c,cx,cy,r);   // G5 : le cœur-cloche est son point faible
+  if(g.cop>0.02){const col=G27.copie();glow(c,e.x+R.hx,e.y+R.hy,r*0.42,col,0.22*g.cop*fd);glow(c,e.x+R.hx,e.y+R.hy-0.1*r,r*0.16,col,0.5*g.cop*fd);}
   if(e.grabbing||e.state==='mgrab'){const A=R.arms.find(a=>a.s===e.reachSide);if(A)glow(c,e.x+A.hx,e.y+A.hy,r*0.45,TELE.grab,0.35);}
-  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.25,rgb(Lu),0.3*(1-(T-g.t)/0.35));}
+  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.25,rgb(Lu),0.3*(1-(T-g.t)/0.35)*fd);}
 
  // ── branchement : à la place de l'ancien dessin quand dessin.actif[1] est vrai (l'interrupteur est relu à chaque image)
  const ici=e=>RUN&&RUN.act===1&&e&&e.m12&&!e.reflet&&g27Actif(1);
@@ -12266,7 +12280,7 @@ const G27=(function(){
   try{ctx=o;for(let k=0;k<7;k++){L.vide.push(tour(rien,rien));L.avant.push(tour(_dm27,_dbpm27));L.apres.push(tour(corps,lueurs));}}finally{ctx=keep;}
   const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],v=med(L.vide);return{avant:+(med(L.avant)-v).toFixed(3),apres:+(med(L.apres)-v).toFixed(3),vide:+v.toFixed(3)};}
  // aperçu (banc) : le corps puis les lueurs sur un canevas donné, origine au centre de touche
- function apercu(o,e){const keep=ctx;try{ctx=o;o.save();corps(o,e);o.restore();o.save();o.globalCompositeOperation='lighter';o.translate(-e.x,-e.y);lueurs(e);o.restore();}finally{ctx=keep;}}
+ function apercu(o,e,part){const keep=ctx;try{ctx=o;if(part!=='lueurs'){o.save();corps(o,e);o.restore();}if(part!=='corps'){o.save();o.globalCompositeOperation='lighter';o.translate(-e.x,-e.y);lueurs(e);o.restore();}}finally{ctx=keep;}}
  window.__gardiens=Object.assign(window.__gardiens||{},{mere:{etat,rig,corps,lueurs,imgRobe,imgBuste,imgTete,imgEnfant,EYP,mesure,apercu}});
 })();
 
