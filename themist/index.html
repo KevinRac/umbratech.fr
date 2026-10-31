@@ -711,13 +711,13 @@ N('aig','k2','k','Aiguille du Destin',1,'Une aiguille sur 7 est une Aiguille du 
 // ── Tisse-Destin : Pantins
 N('pnt','n1','m','Main ferme',3,'+12 % de dégâts d’Arracher.',s=>{s.yankDmg*=1.12;});
 N('pnt','n2','m','Choc',3,'+15 % de dégâts quand un ennemi arraché en percute un autre.',s=>{s.collideDmg*=1.15;});
-N('pnt','n3','s','Pantin',2,'Un ennemi attaché qui passe sous 30 % de PV devient ton pantin pendant 6 s : il attaque ses alliés, puis s’effondre.',(s,r)=>{s.pantin=r;},'Le pantin tient 10 s.');
+N('pnt','n3','s','Pantin',2,'Un ennemi attaché qui passe sous 40 % de PV devient ton pantin pendant 8 s : il attaque ses alliés, puis s’effondre.',(s,r)=>{s.pantin=r;},'Le pantin tient 12 s.');
 N('pnt','n4','s','Étranglement',2,'Les ennemis attachés sont ralentis de 50 % au lieu de 20 %.',(s,r)=>{s.etrangle=r;if(r===2)s.yankStun+=0.4;},'Arracher étourdit 0,4 s de plus.');
 N('pnt','n5','m','Rembobinage',3,'Arracher se recharge 12 % plus vite.',s=>{s.yankCd*=0.88;});
 N('pnt','n6','s','Bouclier de Chair',2,'Quand tu es touché, un pantin ou un ennemi attaché encaisse 50 % des dégâts à ta place.',(s,r)=>{s.chair=r;},'Il encaisse 70 % des dégâts.');
 N('pnt','n7','m','Corde raide',3,'Arracher étourdit 0,2 s de plus.',s=>{s.yankStun+=0.2;});
 N('pnt','n8','m','Ficelles solides',3,'Tes pantins tiennent 2 s de plus.',s=>{s.pupDur+=2;});
-N('pnt','k1','k','Danse des Pendus',1,'Les ennemis arrachés tournoient 2 s autour de leur point de chute et frappent tout ce qu’ils touchent (20).',s=>{s.pendus=1;});
+N('pnt','k1','k','Danse des Pendus',1,'Les ennemis arrachés tournoient 2 s autour de leur point de chute et frappent tout ce qu’ils touchent (28). Après 3 danses d’affilée, l’ennemi s’en libère 6 s.',s=>{s.pendus=1;});
 N('pnt','k2','k','Contrôle Total',1,'Arracher ne coupe plus les fils : tu peux tirer encore et encore. Recharge d’Arracher portée à 2,5 s.',s=>{s.controle=1;});
 // ── Tisse-Destin : sous-classes
 N('gts','s1','c','Grande Tisseuse',1,'Là où Arracher fait atterrir les ennemis, une toile se tisse (rayon 80, 4 s). +20 % de dégâts contre les ennemis pris dans une toile.',s=>{s.sub='gts';s.webBonus=0.2;});
@@ -2675,7 +2675,7 @@ function v6DmgMul(e,o){const s=P.s;let m=1;
  return m;}
 function v6AfterHit(e,dmg,o){if(P.cls!=='tis')return;const s=P.s;
  if(s.destin&&e.tethered&&!o.shared&&dmg>0)for(const th of P.threads){const t=th.e;if(t!==e&&!t.dead)rawHit(t,dmg*0.4);}
- if(s.pantin&&e.tethered&&e.hp>0&&e.hp<e.maxHp*(EVL('pnt_n3')?0.5:0.3)&&e.type!=='boss'&&!e.fixed)makePuppet(e,(s.pantin>=2?10:6)+s.pupDur,'die');}
+ if(s.pantin&&e.tethered&&e.hp>0&&e.hp<e.maxHp*(EVL('pnt_n3')?0.6:0.4)&&e.type!=='boss'&&!e.fixed)makePuppet(e,(s.pantin>=2?12:8)+s.pupDur,'die');}
 function v6OnKill(e){const s=P.s;
  if(P.cls==='her'){if(s.resKill)P.res=Math.min(resCap(),P.res+s.resKill);if(s.ames)P.souls=Math.min(10,P.souls+1);if(s.chant){P.echoQ.push({x:e.x,y:e.y,idx:P.beatN+1,n:1,r:s.chant>=2?100:80,dmg:20*(s.chant>=2?1.6:1)*s.waveDmg,col:'180,140,255'});if(EVL('req_n3')&&e.type!=='boss'&&Math.random()<0.25)addChorister(e.x,e.y);}}
  else if(P.cls==='tis'){if(s.filVie&&e.tethered){heal(s.filVie>=2?8:4,'fil');P.bob=Math.min(100,P.bob+(s.filVie>=2?25:15));}}}
@@ -2690,7 +2690,7 @@ function v6EnemyPre(e,dt){
   if(d<=st||crashed(e)){if(d<=st){e.x=y.tx;e.y=y.ty;}landYank(e);}else{e.x+=dx/d*st;e.y+=dy/d*st;}
   return true;}
  if(e.orbitT>0){e.orbitT-=dt;e.orbA+=dt*7;e.x=e.orbC.x+Math.cos(e.orbA)*62;e.y=e.orbC.y+Math.sin(e.orbA)*50;
-  for(const o of enemies){if(o===e||o.dead||o.puppet>0||e.orbHit.has(o))continue;if(hyp(o.x-e.x,o.y-e.y)<o.r+e.r){e.orbHit.add(o);hitEnemy(o,20*P.s.collideDmg,{kb:240,sx:e.x,sy:e.y,color:'#ff9ec0'});later(0.5,()=>e.orbHit&&e.orbHit.delete(o));}}
+  for(const o of enemies){if(o===e||o.dead||o.puppet>0||e.orbHit.has(o))continue;if(hyp(o.x-e.x,o.y-e.y)<o.r+e.r){e.orbHit.add(o);hitEnemy(o,PENDUS.degats*P.s.collideDmg,{kb:240,sx:e.x,sy:e.y,color:'#ff9ec0'});later(0.5,()=>e.orbHit&&e.orbHit.delete(o));}}
   if(Math.random()<0.5)parts.push({shape:'streak',x:e.x,y:e.y,vx:rand(-60,60),vy:rand(-60,60),life:0.2,max:0.2,size:1.6,col:'#ff8fab',layer:'post',drag:4});return true;}
  if(e.puppet>0){updatePuppet(e,dt);return true;}
  if(e.rootT>0){e.rootT-=dt;return true;}
@@ -2823,11 +2823,17 @@ function tisYank(){const s=P.s;if(P.rCd>0)return;const list=P.threads.map(t=>t.e
   fx.push({k:'line',x1:P.x,y1:P.y,x2:e.x,y2:e.y,w:5,t:0.25,max:0.25,col:'rgba(255,90,130,'});}
  if(!s.controle){for(const e of list)e.tethered=false;P.threads=[];}
  P.rCd=s.controle?2.5*s.yankCd/1.2:s.yankCd;P.lastAtk=RUN.time;sfx('yank');shake(4,0.15);}
-function landYank(e){const s=P.s,y=e.yank;e.yank=null;hitEnemy(e,25*s.yankDmg,{stun:0.6+s.yankStun+(s.controle&&EVL('pnt_k2')?1:0),kb:0,color:'#ff9ec0'});
+// v17.26 · Danse des Pendus : au bout de PENDUS.danses danses d’affilée (moins de PENDUS.fenetre s entre deux atterrissages),
+// l’ennemi s’en libère PENDUS.immu s après la dernière : ni tournoiement ni étourdissement d’atterrissage (les dégâts restent).
+const PENDUS={danses:3,fenetre:6,immu:6,degats:28};
+const pdLibre=e=>!!(P&&P.s&&P.s.pendus&&e&&(e.pdImm||0)>RUN.time);
+function landYank(e){const s=P.s,y=e.yank;e.yank=null;const libre=pdLibre(e);hitEnemy(e,25*s.yankDmg,{stun:libre?0:0.6+s.yankStun+(s.controle&&EVL('pnt_k2')?1:0),kb:0,color:'#ff9ec0'});
  fx.push({k:'ring',x:e.x,y:e.y,r0:6,r1:e.r+40,w:7,t:0.3,max:0.3,col:'rgba(255,120,160,'});impactFx(e.x,e.y,true,'255,150,180');
  if(s.sub==='gts')addWeb(e.x,e.y,80,4+s.webDur-6);
  if(e.dead)return;
- if(s.pendus){e.orbitT=EVL('pnt_k1')?3.5:2;e.orbC={x:e.x,y:e.y};e.orbA=rand(0,TAU);e.orbHit=new Set();}
+ if(s.pendus&&!libre){const dur=EVL('pnt_k1')?3.5:2;if(RUN.time-(e.pdT==null?-99:e.pdT)>PENDUS.fenetre)e.pdN=0;e.pdN=(e.pdN||0)+1;e.pdT=RUN.time;
+  e.orbitT=dur;e.orbC={x:e.x,y:e.y};e.orbA=rand(0,TAU);e.orbHit=new Set();
+  if(e.pdN>=PENDUS.danses){e.pdN=0;e.pdImm=RUN.time+dur+PENDUS.immu;e.pdMax=dur+PENDUS.immu;}}
  if(y.conv)makePuppet(e,EVL('mdp_s4')?600:8+s.pupDur,'die');}
 function addWeb(x,y,r,dur){webs.push({id:++webId,x,y,r,t:dur,max:dur,root:P.s.webRoot,seed:Math.random()*TAU});if(webs.length>8)webs.shift();sfx('web');}
 function tisToile(){const s=P.s;if(!s.toile||P.aCd>0)return;addWeb(clamp(mouse.x,AR.x0+20,AR.x1-20),clamp(mouse.y,AR.y0+20,AR.y1-20),s.webR*(s.toile>=2?1.3:1),s.webDur);P.aCd=s.toile>=2?6:9;}
@@ -2836,7 +2842,7 @@ function makePuppet(e,dur,mode){if(e.dead||e.type==='boss'||e.fixed)return;e.pup
 function updatePuppet(e,dt){const s=P.s;e.puppet-=dt;e.pupCd-=dt;if(e.puppet<=0){endPuppet(e);return;}
  const t=nearestFoe(e.x,e.y,900,o=>o!==e&&!o.fixed);
  if(t){const d=hyp(t.x-e.x,t.y-e.y);if(d>e.r+t.r+2)moveTo(e,t.x,t.y,e.spd*1.15*(1+s.troupe),dt);else e.ang=Math.atan2(t.y-e.y,t.x-e.x);
-  if(d<e.r+t.r+8&&e.pupCd<=0){e.pupCd=0.6;hitEnemy(t,Math.max(10,e.dmg*1.6)*s.pupDmg,{kb:170,sx:e.x,sy:e.y,color:'#ff9ec0'});fx.push({k:'slash',x:e.x,y:e.y-4,a:e.ang,r:e.r+16,arc:1.8,dir:1,style:'shadow',t:0.16,max:0.16});}}
+  if(d<e.r+t.r+8&&e.pupCd<=0){e.pupCd=0.5;hitEnemy(t,Math.max(14,e.dmg*2)*s.pupDmg,{kb:170,sx:e.x,sy:e.y,color:'#ff9ec0'});fx.push({k:'slash',x:e.x,y:e.y-4,a:e.ang,r:e.r+16,arc:1.8,dir:1,style:'shadow',t:0.16,max:0.16});}}
  else if(hyp(P.x-e.x,P.y-e.y)>90)moveTo(e,P.x,P.y,e.spd,dt);}
 function endPuppet(e){const s=P.s;if(e.pupMode==='revert'){e.puppet=0;mist(e.x,e.y,e.r*0.6,'#2a1424');return;}
  if(s.sacrifice){const x=e.x,y=e.y;explosion(x,y,100,0,s.sacrifice>=2?90:50,{col:'rgba(255,110,160,',spark:'#ff9ec0',light:'blood'});if(EVL('mdp_s5'))for(const o of enemies)if(!o.dead&&o!==e&&!(o.puppet>0)&&hyp(o.x-x,o.y-y)<100+o.r)tether(o,true);}
@@ -3028,6 +3034,10 @@ function drawV6World(){const c=ctx;c.save();c.globalCompositeOperation='lighter'
    ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,b.x,b.y-2,26+20*rk,'235,190,110',0.25+0.4*rk);ctx.strokeStyle=`rgba(235,190,110,${0.15+0.2*Math.min(1,b.t/2)})`;ctx.lineWidth=1;ctx.setLineDash([3,6]);ell(ctx,b.x,b.y,70,56);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
   if(P.glasQ){const q=P.glasQ,rem=Math.max(0,(q.idx-P.beatN-P.beatPh)*herPeriod()),tot=Math.max(0.3,(q.idx-q.set)*herPeriod()),k=clamp(1-rem/tot,0,1);shadowAt(ctx,q.x,q.y+4,18+14*k,6+5*k,0.25+0.3*k);bellShape(ctx,q.x,q.y-12-300*(1-k)*(1-k),2.4,Math.sin(T*5)*0.05);}}}
 function drawV6EnemyPost(e){const c=ctx,r=e.r;
+ if(pdLibre(e)&&!(e.orbitT>0)){const k=clamp((e.pdImm-RUN.time)/(e.pdMax||1),0,1),y0=e.y-r*1.55-18;c.save();c.globalAlpha=0.35+0.55*Math.min(1,k*3);c.lineCap='round';
+  c.strokeStyle='rgba(205,190,215,.9)';c.lineWidth=1.6;c.setLineDash([3,3]);c.beginPath();c.arc(e.x,e.y,r+9,-Math.PI/2,-Math.PI/2+TAU*k);c.stroke();c.setLineDash([]);
+  c.strokeStyle=INK;c.lineWidth=4;c.beginPath();c.arc(e.x,y0,5,0.9,TAU-0.9);c.moveTo(e.x,y0-5);c.lineTo(e.x,y0-11);c.moveTo(e.x+5,y0+3);c.lineTo(e.x+9,y0+7);c.stroke();
+  c.strokeStyle='#d8c2e6';c.lineWidth=1.8;c.stroke();c.restore();}
  if(e.rootT>0){c.save();c.strokeStyle='rgba(255,232,240,.75)';c.lineWidth=1.2;for(let i=0;i<4;i++){const y0=e.y-r*0.6+i*r*0.4;c.beginPath();c.moveTo(e.x-r*0.9,y0-3);c.quadraticCurveTo(e.x,y0+4,e.x+r*0.9,y0-1);c.stroke();}c.restore();}
  if(e.puppet>0){const bx=e.x+Math.sin(T*2+e.wob)*4,by=e.y-r*1.6-34+Math.sin(T*3+e.wob)*2,al=Math.min(1,e.puppet);
   c.save();c.globalCompositeOperation='lighter';c.strokeStyle=`rgba(255,170,200,${0.55*al})`;c.lineWidth=1;for(const [dx,px,py] of[[-14,e.x-r*0.6,e.y-r*0.2],[0,e.x,e.y-r*0.9],[14,e.x+r*0.6,e.y-r*0.2]]){c.beginPath();c.moveTo(bx+dx,by);c.lineTo(px,py);c.stroke();}
@@ -4301,7 +4311,7 @@ mk10('trm',[
 
 mk10('pnt',[
  {n:'Soie vive',m:3,fl:'soie',d:'La Toile se recharge 12 % plus vite par rang et immobilise 0,15 s de plus par rang.'},
- {n:'Pantin tenace',m:3,fl:'tenace',d:'Tes pantins durent 2 s de plus et frappent 10 % plus fort, par rang.',f:(s,r)=>{s.pupDur+=2;s.pupDmg*=1.1;}},
+ {n:'Pantin tenace',m:3,fl:'tenace',d:'Tes pantins durent 2 s de plus et frappent 20 % plus fort, par rang.',f:(s,r)=>{s.pupDur+=2;s.pupDmg*=1.2;}},
  {keep:'n3'},
  {from:['trm','n4']},
  {from:['pnt','n4']},
@@ -4311,8 +4321,8 @@ mk10('pnt',[
   A:{n:'Toile aimantée',mod:'Les aiguilles qui traversent une Toile sont guidées vers l’ennemi le plus faible.',syn:'Elles s’y multiplient par 2.'},
   B:{n:'Toile-piège',mod:'Quand 2 ennemis sont pris dans une Toile, elle détone (45 dégâts, étourdit 0,6 s) puis se retisse.',syn:'Les ennemis touchés sont attachés gratuitement.'}},
  {tg:'Pantins',req:'pantin',
-  A:{n:'Théâtre de marionnettes',mod:'Tes pantins tirent des aiguilles sur l’ennemi le plus proche (toutes les 0,7 s).',syn:'Les aiguilles de pantin profitent de ta Tension et de ta Saignée.'},
-  B:{n:'Pantin explosif',mod:'Chaque pantin explose en fin de vie (rayon 90, 45 dégâts).',syn:'Les ennemis touchés sont attachés gratuitement.'}},
+  A:{n:'Théâtre de marionnettes',mod:'Tes pantins tirent des aiguilles sur l’ennemi le plus proche (toutes les 0,5 s).',syn:'Les aiguilles de pantin profitent de ta Tension et de ta Saignée.'},
+  B:{n:'Pantin explosif',mod:'Chaque pantin explose en fin de vie (rayon 90, 70 dégâts).',syn:'Les ennemis touchés sont attachés gratuitement.'}},
  {tg:'Toile et Arracher',req:'toile',
   A:{n:'Atterrissage tissé',mod:'Là où un ennemi arraché atterrit, une Toile se tisse (rayon 90, 4 s).',syn:'Il est immobilisé 0,6 s de plus.'},
   B:{n:'Toile mortelle',mod:'Les ennemis restés 2 s dans une Toile deviennent enchevêtrés : +25 % de dégâts subis et 10 dégâts par seconde.',syn:'Ils sont aussi exposés.'}}
@@ -4924,7 +4934,7 @@ tisToile=function(){
 const _endPup10=endPuppet;
 endPuppet=function(e){
  const s=P.s,f=s.v10;
- if(f&&f.pnt2B&&e.pupMode!=='revert'&&!s.sacrifice){const x=e.x,y=e.y;explosion(x,y,90,0,45,{col:'rgba(255,110,160,',spark:'#ff9ec0',light:'blood'});for(const o of enemies)if(!o.dead&&o!==e&&hyp(o.x-x,o.y-y)<90+o.r)tether(o,true);}
+ if(f&&f.pnt2B&&e.pupMode!=='revert'&&!s.sacrifice){const x=e.x,y=e.y;explosion(x,y,90,0,70,{col:'rgba(255,110,160,',spark:'#ff9ec0',light:'blood'});for(const o of enemies)if(!o.dead&&o!==e&&hyp(o.x-x,o.y-y)<90+o.r)tether(o,true);}
  _endPup10(e);
 };
 
@@ -5015,7 +5025,7 @@ function tickTis(dt,s,f,v){
  if(f.pnt2A)for(const e of enemies){
   if(e.dead||!(e.puppet>0))continue;
   e.psT=(e.psT||0)-dt;
-  if(e.psT<=0){e.psT=0.7;const t=nearestFoe(e.x,e.y,520,o=>o!==e&&!o.fixed);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),8*s.pupDmg,{skip:e});}
+  if(e.psT<=0){e.psT=0.5;const t=nearestFoe(e.x,e.y,520,o=>o!==e&&!o.fixed);if(t)needleAt(e.x,e.y,Math.atan2(t.y-e.y,t.x-e.x),12*s.pupDmg,{skip:e});}
  }
  // Toile aimantée / Éventail : les aiguilles qui traversent une toile se multiplient
  if((f.aig1A||f.pnt1A)&&webs.length){
@@ -6266,7 +6276,7 @@ function holesTick(dt){room.holeT-=dt;
    if(!P.dead&&hyp(P.x-h.x,P.y-h.y)<h.r)hurtPlayer(10,null);}}
  room.holes=room.holes.filter(h=>h.o>0);}
 function drawRuleWorld(){if(!room||!room.rule)return;const c=ctx;
- if(room.rule==='sol'){for(const h of room.holes||[]){const warn=h.w>0,k=warn?1-h.w/1.3:1;c.save();
+ if(room.rule==='sol'&&!room.cleared){for(const h of room.holes||[]){const warn=h.w>0,k=warn?1-h.w/1.3:1;c.save();
   c.fillStyle=warn?`rgba(20,14,30,${0.25+0.3*k})`:'rgba(4,2,8,.92)';c.beginPath();c.arc(h.x,h.y,h.r,0,TAU);c.fill();
   c.strokeStyle=warn?`rgba(${TELE.zone},${0.5+0.4*Math.sin(T*24)})`:'rgba(150,120,210,.7)';c.lineWidth=2;c.setLineDash(warn?[6,6]:[]);c.stroke();c.restore();}}
  if(room.rule==='braseros'){for(const b of room.braz||[]){c.save();c.strokeStyle='rgba(255,170,80,.22)';c.setLineDash([6,8]);c.lineDashOffset=-T*10;c.beginPath();c.arc(b.x,b.y,190,0,TAU);c.stroke();c.setLineDash([]);
@@ -6274,7 +6284,7 @@ function drawRuleWorld(){if(!room||!room.rule)return;const c=ctx;
 const _cl14=computeLights;
 computeLights=function(){_cl14();if(room&&room.rule==='braseros'&&room.braz)for(const b of room.braz)lights.push({x:b.x,y:b.y,r:210,c:'warm'});};
 const _dv14=drawVignette;
-drawVignette=function(){_dv14();if(!room||room.rule!=='brume'||!P)return;const c=ctx;c.save();c.beginPath();c.rect(room.veil<0?0:W/2,0,W/2,H);c.clip();
+drawVignette=function(){_dv14();if(!room||room.rule!=='brume'||room.cleared||!P)return;   // v17.26 : le voile se lève quand la salle est purgéeconst c=ctx;c.save();c.beginPath();c.rect(room.veil<0?0:W/2,0,W/2,H);c.clip();
  const g=c.createRadialGradient(P.x,P.y,60,P.x,P.y,200);g.addColorStop(0,'rgba(5,6,12,0)');g.addColorStop(1,'rgba(5,6,12,.84)');c.fillStyle=g;c.fillRect(0,0,W,H);c.restore();
  c.save();c.strokeStyle='rgba(180,160,230,.25)';c.setLineDash([8,10]);c.beginPath();c.moveTo(W/2,AR.y0);c.lineTo(W/2,AR.y1);c.stroke();c.restore();};
 let ruleTagEl=null,ruleTagTxt='';

@@ -88,7 +88,7 @@
   trm_k2:{n:'Fil de sang',d:'Quand l’ennemi au Fil Rouge meurt, le fil saute sur l’ennemi le plus robuste de la salle.'},
   aig_k1:{n:'Pluie d’acier',d:'Chaque aiguille qui touche rend 1 Bobine, que l’ennemi soit attaché ou non.'},
   aig_k2:{n:'Éventail du destin',d:'L’Aiguille du Destin part en éventail de trois.'},
-  pnt_k1:{n:'Chute des pendus',d:'Les pendus tournoient 3,5 s, puis s’écrasent : 40 dégâts autour d’eux.'},
+  pnt_k1:{n:'Chute des pendus',d:'Les pendus tournoient 3,5 s, puis s’écrasent : 40 dégâts autour d’eux. La libération vient toujours après 3 danses.'},
   pnt_k2:{n:'Main de fer',d:'Les ennemis arrachés restent étourdis 1 s de plus.'},
   bro_sk:{n:'Éternité',d:'Le temps reste figé 4 s.'},
   // Compétences (v17.6)
@@ -143,7 +143,7 @@
   aig_n6:{n:'Traque',d:'Tes aiguilles chercheuses volent deux fois plus longtemps : elles finissent par trouver leur cible.'},
   trm_n3:{n:'Fil acéré',d:'Tes fils blessent aussi les ennemis qu’ils traversent.'},
   trm_n6:{n:'Fil nourricier',d:'Chaque ennemi attaché te soigne de 1 PV par seconde.'},
-  pnt_n3:{n:'Pantin docile',d:'Un ennemi attaché devient ton pantin dès 50 % de PV.'},
+  pnt_n3:{n:'Pantin docile',d:'Un ennemi attaché devient ton pantin dès 60 % de PV.'},
   pnt_n4:{n:'Toile double',d:'La Toile se tisse aussi sous tes pieds.'},
   pnt_n5:{n:'Garrot',d:'Les ennemis attachés sous 15 % de PV sont étranglés (sauf élites et gardiens).'},
   pnt_n6:{n:'Chair vive',d:'L’ennemi qui encaisse à ta place éclate : 25 dégâts autour de lui.'},

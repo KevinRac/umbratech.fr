@@ -269,15 +269,15 @@
   trm_x3b:{k:'x',name:'Tisserand fou',max:1,mod:'À Bobine pleine : +40 % de dégâts d’aiguille.',syn:'Et 15 % de chances que l’aiguille noue sa cible gratuitement.'},
   // Pantins (Tisse-Destin)
   pnt_n1:{k:'m',name:'Soie vive',max:3,desc:'Toile : +12 % recharge, +0,15 s d’immobilisation par rang.'},
-  pnt_n2:{k:'m',name:'Pantin tenace',max:3,desc:'Pantins : +2 s et +10 % de dégâts par rang.'},
-  pnt_n3:{k:'s',name:'Pantin',max:2,desc:'Attaché sous 30 % PV : ton pantin 6 s.',up:'Le pantin tient 10 s.'},
+  pnt_n2:{k:'m',name:'Pantin tenace',max:3,desc:'Pantins : +2 s et +20 % de dégâts par rang.'},
+  pnt_n3:{k:'s',name:'Pantin',max:2,desc:'Attaché sous 40 % PV : ton pantin 8 s.',up:'Le pantin tient 12 s.'},
   pnt_n4:{k:'s',name:'Toile',max:2,desc:'[A] Toile au curseur (r. 110, 6 s) : immobilise, puis −60 %. Rech. 9 s.',up:'Rayon +30 %, recharge 6 s.'},
   pnt_n5:{k:'s',name:'Étranglement',max:2,desc:'Les ennemis attachés sont ralentis de 50 % au lieu de 20 %.',up:'Arracher étourdit 0,4 s de plus.'},
   pnt_n6:{k:'s',name:'Bouclier de Chair',max:2,desc:'Touché : un pantin ou attaché prend 50 % à ta place.',up:'Il encaisse 70 % des dégâts.'},
   pnt_x1a:{k:'x',name:'Toile aimantée',max:1,mod:'Aiguilles via une Toile : guidées vers le plus faible.',syn:'Elles s’y multiplient par 2.'},
   pnt_x1b:{k:'x',name:'Toile-piège',max:1,mod:'2 ennemis dans la Toile : elle détone (45, étourdit 0,6 s).',syn:'Les ennemis touchés sont attachés gratuitement.'},
-  pnt_x2a:{k:'x',name:'Théâtre de marionnettes',max:1,mod:'Pantins : une aiguille toutes les 0,7 s.',syn:'Leurs aiguilles profitent de Tension et Saignée.'},
-  pnt_x2b:{k:'x',name:'Pantin explosif',max:1,mod:'Chaque pantin explose en fin de vie (rayon 90, 45 dégâts).',syn:'Les ennemis touchés sont attachés gratuitement.'},
+  pnt_x2a:{k:'x',name:'Théâtre de marionnettes',max:1,mod:'Pantins : une aiguille toutes les 0,5 s.',syn:'Leurs aiguilles profitent de Tension et Saignée.'},
+  pnt_x2b:{k:'x',name:'Pantin explosif',max:1,mod:'Chaque pantin explose en fin de vie (rayon 90, 70 dégâts).',syn:'Les ennemis touchés sont attachés gratuitement.'},
   pnt_x3a:{k:'x',name:'Atterrissage tissé',max:1,mod:'Atterrissage d’un arraché : Toile (r. 90, 4 s).',syn:'Il est immobilisé 0,6 s de plus.'},
   pnt_x3b:{k:'x',name:'Toile mortelle',max:1,mod:'2 s dans une Toile : +25 % subis, 10/s.',syn:'Ils sont aussi exposés.'},
   // Rayonnement (Lumenarque)
@@ -314,7 +314,7 @@
   aig_k1:{k:'k',name:'Mille Points',max:1,desc:'Cadence ×1,8, dégâts −40 %. Touche un attaché : +1 Bobine.'},
   aig_k2:{k:'k',name:'Aiguille du Destin',max:1,desc:'1 aiguille sur 7 : perçante, ×4, attache.'},
   // Pantins (Tisse-Destin)
-  pnt_k1:{k:'k',name:'Danse des Pendus',max:1,desc:'Arrachés : tournoient 2 s et frappent tout (20).'},
+  pnt_k1:{k:'k',name:'Danse des Pendus',max:1,desc:'Arrachés : tournoient 2 s et frappent tout (28). Après 3 danses d’affilée, l’ennemi s’en libère 6 s.'},
   pnt_k2:{k:'k',name:'Contrôle Total',max:1,desc:'Arracher garde les fils, rech. 2,5 s.'}},
  // Talents qui s'excluent (la liste est lue telle quelle ; l'arbre bloque aussi l'autre sens)
  exclusions:{
