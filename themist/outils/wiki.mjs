@@ -5,10 +5,11 @@
 // Le reste du wiki (textes d'explication, FAQ, conseils) s'écrit à la main dans wiki.html.
 //
 //   node themist/outils/wiki.mjs           met wiki.html à jour
-//   node themist/outils/wiki.mjs --check   échoue (code 1) si wiki.html n'est pas à jour
+//   node themist/outils/wiki.mjs --check   échoue (code 1) si wiki.html n'est pas à jour, ou si les portraits des gardiens
+//                                          de la version courante du dessin (data/gardiens.js, dessin.version) manquent
 //
 // Aucune dépendance : Node 18 ou plus suffit.
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -329,6 +330,22 @@ ${AS.passive ? `<p><b>${ico(AS.passive.ic)}Attaque passive · ${esc(AS.passive.n
 </section>`;
 }
 
+// ── Portraits des gardiens (v17.27, G11) : une image par gardien et par temps (3 × 3), capturée (WebP) par _dev/bancs/capture-portraits.mjs et posée dans
+// img/gardiens/. Le nom porte dessin.version : un nouveau dessin passe la version à n+1, et --check réclame les nouvelles captures.
+const PORTRAITS = join(ROOT, 'img', 'gardiens');
+const portraitNom = (G, n, t) => `gardien-${n}-t${t}-v${G.dessin.version}.webp`;
+const dessinActif = (G, n) => { const D = G.dessin; return !!(D && D.actif && (typeof D.actif === 'object' ? D.actif[n] : D.actif)); };
+export function portraitsManquants(G) {
+  const m = [];
+  if (!G.dessin || G.dessin.version == null) return m;
+  for (const n of [1, 2, 3]) if (dessinActif(G, n)) for (const t of [1, 2, 3]) if (!existsSync(join(PORTRAITS, portraitNom(G, n, t)))) m.push(`img/gardiens/${portraitNom(G, n, t)}`);
+  return m;
+}
+// taille d'une image WebP lue dans son en-tête, VP8X (celui de Chromium) ou VP8 (évite un saut de mise en page ; absente si le fichier manque ou n'est pas lu)
+function tailleImg(f) { try { const b = readFileSync(f); if (b.toString('latin1', 8, 12) !== 'WEBP') return ''; const t = b.toString('latin1', 12, 16);
+  const w = t === 'VP8X' ? 1 + b.readUIntLE(24, 3) : t === 'VP8 ' ? b.readUInt16LE(26) & 0x3fff : 0, h = t === 'VP8X' ? 1 + b.readUIntLE(27, 3) : t === 'VP8 ' ? b.readUInt16LE(28) & 0x3fff : 0;
+  return w && h ? ` width="${w}" height="${h}"` : ''; } catch { return ''; } }
+
 // ── Section « Les gardiens »
 function attaquesGardien(G, a) {
   const X = G.attaques[a], TEMPS = ['', 'premier', 'deuxième', 'troisième'];
@@ -345,7 +362,12 @@ function attaquesGardien(G, a) {
 function gardiens(G, F) {
   const A = G.actes;
   const pv = i => (G.pv && G.pvMul) ? Math.round(G.pv[i + 1] * G.pvMul[i + 1]).toLocaleString('fr-FR') : '';
-  const cartes = A.map((a, i) => `<article class="ent boss"><span class="num">${ROM[i + 1]}</span><h3>${esc(a.boss)}</h3><p class="k">${esc(a.name)} · ${a.rooms} salles${pv(i) ? ` · ${pv(i)} PV` : ''}</p><p>${esc(a.done)}.</p></article>`).join('');
+  // v17.27 (G11) : le glyphe du gardien devant son nom, et ses portraits (premier temps ; le troisième au survol), seulement pour un gardien dont le nouveau dessin est actif
+  const gly = n => dessinActif(G, n) && G.dessin.glyphes && G.dessin.glyphes[n] ? `<span class="gly" aria-hidden="true">${G.dessin.glyphes[n]}</span>` : '';
+  const portrait = (n, nom) => { if (!dessinActif(G, n) || G.dessin.version == null) return '';
+    const img = (t, cls, alt) => `<img class="${cls}" src="img/gardiens/${portraitNom(G, n, t)}" alt="${esc(alt)}" loading="lazy" decoding="async"${tailleImg(join(PORTRAITS, portraitNom(G, n, t)))}>`;
+    return `<figure class="ptr" tabindex="0">${img(1, 'p1', `${nom}, premier temps`)}${img(3, 'p3', `${nom}, troisième temps`)}<figcaption><span class="c1">Premier temps · le troisième au survol</span><span class="c3">Troisième temps</span></figcaption></figure>`; };
+  const cartes = A.map((a, i) => `<article class="ent boss"><span class="num">${ROM[i + 1]}</span>${portrait(i + 1, a.boss)}<h3>${gly(i + 1)}${esc(a.boss)}</h3><p class="k">${esc(a.name)} · ${a.rooms} salles${pv(i) ? ` · ${pv(i)} PV` : ''}</p><p>${esc(a.done)}.</p></article>`).join('');
   const copies = Object.values(G.copies).map(c => `<article class="ent"><h4>Si tu abuses de ${esc(c.what)}</h4><p>${esc(c.hint)}</p></article>`).join('');
   // v17.27 · les gardiens redessinés : ce qu'on lit à l'œil (dessin[n].lecture), seulement pour un gardien dont le nouveau dessin est actif
   const actifD = n => { const D = G.dessin; return !!(D && D.actif && (typeof D.actif === 'object' ? D.actif[n] : D.actif)); };
@@ -533,7 +555,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const after = build(before);
   if (process.argv.includes('--check')) {
     if (after !== before) { console.error('wiki.html n’est pas à jour : lance « node themist/outils/wiki.mjs ».'); process.exit(1); }
-    console.log('wiki.html est à jour.');
+    const manque = portraitsManquants(loadData().gardiens);
+    if (manque.length) { console.error(`Portraits des gardiens manquants pour la version ${loadData().gardiens.dessin.version} du dessin (lance _dev/bancs/capture-portraits.mjs) :\n  ${manque.join('\n  ')}`); process.exit(1); }
+    console.log('wiki.html est à jour (portraits des gardiens compris).');
   } else if (after !== before) { writeFileSync(WIKI, after); console.log('wiki.html mis à jour.'); }
   else console.log('wiki.html déjà à jour.');
+  if (!process.argv.includes('--check')) { const manque = portraitsManquants(loadData().gardiens); if (manque.length) console.warn(`Attention : ${manque.length} portrait(s) des gardiens manquent (capture-portraits.mjs).`); }
 }

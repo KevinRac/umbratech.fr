@@ -74,7 +74,7 @@
  // matiere / lueur (G3) : couleurs [r,g,b] loin des télégraphes (orange zone, violet tirs, cyan saisie) et de la lavande des souvenirs.
  // La couleur de temps (failles.p1 / p3) ne sert plus qu'aux reflets ; le rouge du troisième temps reste sur le point faible.
  dessin:{
-  version:1,
+  version:2,
   actif:{1:true,2:true,3:true},
   echelle:{solide:1.15,silhouette:3.5,prolongements:0.35},
   // copie (G13, G3) : la couleur de ta forme que prend la lueur d'un gardien quand il te copie (masque de la Mère-Brume, battant du Héraut, œil du Glas). Par défaut
@@ -84,6 +84,14 @@
   // scène (action 6, G9, G10, G14) : mortS = durée de la mort d'un gardien, en secondes (la purge de la salle et l'écran de victoire ne l'attendent pas). L'entrée tient dans la bannière
   // (2,2 s, 0,3 s en mode d'essai), rien de plus. Mouvements réduits : fondu seul.
   scene:{mortS:1.5},
+  // glyphes (action 7, G11) : un SVG par gardien, 24 × 24, lisible à 16 px (trait d'encre épais, aplats, aucun détail fin ni identifiant ni filtre : il sert de
+  // balise inline dans le wiki et d'image dans le HUD, donc XML valide et autonome). 1 : couronne-masque (Mère-Brume) ; 2 : cloche-tête (Héraut Noyé : la cloche
+  // sur une robe verte, la lampe d'Ismène dessous) ; 3 : cloche-cœur (Glas Originel : la cloche fendue, la chair dans la fente, l'œil). Ils servent à trois
+  // endroits : la porte du gardien (à la place de l'icône), la barre de vie du gardien (à gauche du nom) et les cartes « Les gardiens » du wiki.
+  glyphes:{
+   1:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M4.6 10.4L5.4 3.2L9 6.6L12 2.2L15 6.6L18.6 3.2L19.4 10.4Z" fill="#c4aa6e" stroke="#0a0810" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.6 10.2Q12 8.4 18.4 10.2L17.4 17Q16.6 21.4 12 22.6Q7.4 21.4 6.6 17Z" fill="#ded6be" stroke="#0a0810" stroke-width="1.4" stroke-linejoin="round"/><path d="M8.2 12.6H10.9L10.4 16.2H8.8ZM13.1 12.6H15.8L15.2 16.2H13.6Z" fill="#161220"/><path d="M12 17.6V20.4" fill="none" stroke="#161220" stroke-width="1.2" stroke-linecap="round"/><path d="M7.4 11.4Q12 10 16.6 11.4" fill="none" stroke="#fff8e8" stroke-opacity=".7" stroke-width=".8" stroke-linecap="round"/></svg>',
+   2:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M10.2 4.4a1.8 1.8 0 1 1 3.6 0" fill="none" stroke="#0a0810" stroke-width="2.8" stroke-linecap="round"/><path d="M10.2 4.4a1.8 1.8 0 1 1 3.6 0" fill="none" stroke="#b08a4a" stroke-width="1.2" stroke-linecap="round"/><path d="M12 4.6C8.2 4.6 7 8.2 7 11.6C7 14.4 5.8 15.8 4.4 17.4H19.6C18.2 15.8 17 14.4 17 11.6C17 8.2 15.8 4.6 12 4.6Z" fill="#a88a52" stroke="#0a0810" stroke-width="1.4" stroke-linejoin="round"/><path d="M4.4 17.4H19.6V19.4H4.4Z" fill="#6e5a34" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.2 7.6C8.5 9 8.4 11 8.5 13" fill="none" stroke="#54806a" stroke-width="1.3" stroke-linecap="round"/><path d="M10.6 6.4C9.9 6.9 9.4 7.6 9.2 8.4" fill="none" stroke="#f1e2b0" stroke-opacity=".8" stroke-width=".9" stroke-linecap="round"/><path d="M6 19.4Q12 22 18 19.4L19.6 22.4Q12 23.6 4.4 22.4Z" fill="#2c4a3e" stroke="#0a0810" stroke-width="1.2" stroke-linejoin="round"/><circle cx="12" cy="20.7" r="1.5" fill="#ffc878" stroke="#0a0810" stroke-width=".8"/></svg>',
+   3:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M12 2.4C8 2.4 6.8 6.4 6.8 10.4C6.8 13.8 4.8 15.8 3.4 17.6H20.6C19.2 15.8 17.2 13.8 17.2 10.4C17.2 6.4 16 2.4 12 2.4Z" fill="#6a5430" stroke="#0a0810" stroke-width="1.4" stroke-linejoin="round"/><path d="M3.4 17.6H20.6V20.2Q12 22 3.4 20.2Z" fill="#43331a" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 3.6C14.8 7.4 15.4 12.4 12 20.4C8.6 12.4 9.2 7.4 12 3.6Z" fill="#b02848" stroke="#0a0810" stroke-width="1" stroke-linejoin="round"/><circle cx="12" cy="11.2" r="2.5" fill="#eee8da" stroke="#0a0810" stroke-width="1.1"/><circle cx="12" cy="11.2" r="1" fill="#0a0810"/><path d="M8.2 6.8C7.8 8.4 7.9 10 8 11.4" fill="none" stroke="#caa56a" stroke-opacity=".7" stroke-width=".9" stroke-linecap="round"/></svg>'},
   // Mère-Brume (G6) : Mahaut et son enfant. brume : sa matière (gris-bleu perle, plus de mauve : loin du violet de ses tirs) ; os : masque, côtes,
   // doigts ; or : la couronne, or pâle terni. lueur : nacrée, seulement le cœur-cloche et le ballot ; yeux : ses sept yeux, perle froide ; nu : le rouge du troisième temps (cœur-cloche
   // et ses fissures). enfant : le ballot de brume sans visage, bercé au premier temps (faux : sans enfant). pointes : les deux pointes de couronne
