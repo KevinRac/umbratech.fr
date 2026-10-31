@@ -75,9 +75,14 @@
  // La couleur de temps (failles.p1 / p3) ne sert plus qu'aux reflets ; le rouge du troisième temps reste sur le point faible.
  dessin:{
   version:1,
-  actif:{1:false,2:true,3:true},
+  actif:{1:true,2:true,3:true},
   echelle:{solide:1.15,silhouette:3.5,prolongements:0.35},
-  1:{matiere:{brume:[150,160,180],os:[222,214,190],or:[196,170,110]},lueur:[245,240,230],enfant:true},
+  // Mère-Brume (G6) : Mahaut et son enfant. brume : sa matière (gris-bleu perle, plus de mauve : loin du violet de ses tirs) ; os : masque, côtes,
+  // doigts ; or : la couronne, or pâle terni. lueur : nacrée, seulement le cœur-cloche et le ballot ; yeux : ses sept yeux, perle froide ; nu : le rouge du troisième temps (cœur-cloche
+  // et ses fissures). enfant : le ballot de brume sans visage, bercé au premier temps (faux : sans enfant). pointes : les deux pointes de couronne
+  // qui tombent au troisième temps (0 à 6, de gauche à droite) et restent au sol. transS : durée d'une transformation.
+  1:{matiere:{brume:[150,160,180],os:[222,214,190],or:[196,170,110]},lueur:[245,240,230],yeux:[214,226,250],nu:[255,96,96],enfant:true,pointes:[1,5],transS:0.6,
+   lecture:'Mahaut berce son enfant, un ballot de brume sans visage. Au deuxième temps, le voile tombe et l’enfant se défait en filets de brume autour d’elle ; quand elle te copie, son masque prend la couleur et l’emblème de ta forme. Au troisième, les bras vides, la couronne brisée : son cœur-cloche est à nu.'},
   // Héraut Noyé (G7) : Élias sous sa cloche. La cloche est sa tête, fondue sur ses épaules ; sa robe ruisselle ; il tire les cordes qui montent au
   // haut de la salle ; à sa ceinture, la lampe d'Ismène (lueur, ambre). eau : vert d'algue, loin du cyan de la saisie. reflets : les trois yeux sous
   // la lèvre (eyePts, même place). fente : ouverture des deux moitiés de la cloche au troisième temps (radians). transS : durée d'une transformation.

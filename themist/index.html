@@ -1237,7 +1237,7 @@ function computeLights(){
   if(P.zenithT>0)lights.push({x:W/2,y:H/2,r:760,ex:false,c:'none'});
  }
  for(const e of enemies)if(!e.dead&&e.type==='hurleur'&&e.state==='sing')lights.push({x:e.x,y:e.y,r:70,ex:false,c:'cold'});
- for(const e of enemies)if(!e.dead&&e.type==='boss')lights.push({x:e.x,y:e.y,r:e.r*2.4*(RUN.act===3?1+0.35*beatK():1),ex:false,c:RUN.act===2?(g27Actif(2)?'lampe':'cold'):RUN.act===3&&g27Actif(3)?'glas':'violet'});   // v17.27 : la lumière du gardien suit sa lueur (G3 : la lampe d'Ismène, le battement du Glas), rayon inchangé
+ for(const e of enemies)if(!e.dead&&e.type==='boss')lights.push({x:e.x,y:e.y,r:e.r*2.4*(RUN.act===3?1+0.35*beatK():1),ex:false,c:RUN.act===2?(g27Actif(2)?'lampe':'cold'):RUN.act===3&&g27Actif(3)?'glas':RUN.act===1&&g27Actif(1)?'perle':'violet'});   // v17.27 : la lumière du gardien suit sa lueur (G3 : la lampe d'Ismène, le battement du Glas, la brume perle de la Mère-Brume), rayon inchangé
  if(room&&room.pillars)for(const q of room.pillars)if(q.kind==='crystal')lights.push({x:q.x,y:q.y-10,r:95,ex:false,c:'violet'});
  if(room&&room.candles)for(const k of room.candles)lights.push({x:k.x,y:k.y,r:k.wall?60:88,ex:false,c:'warm'});
  if(room&&room.npcs)for(const n of room.npcs)if(n.light)lights.push({x:n.lx||n.x,y:n.ly||n.y,r:n.light,ex:false,c:n.tint});
@@ -11500,7 +11500,7 @@ function demoBoot(cls){
  window.__v175={FF,ffDir,losClear};
 })();
 
-// ═════════════════════════ v17.27 · Les gardiens (cadrage G1–G18) : action 1 (socle), action 2 (le Glas Originel), action 3 (le Héraut Noyé)
+// ═════════════════════════ v17.27 · Les gardiens (cadrage G1–G18) : action 1 (socle), action 2 (le Glas Originel), action 3 (le Héraut Noyé), action 4 (la Mère-Brume)
 // Dessin seulement : rien du combat ne passe ici (PV, attaques, temps, rayon de touche, états restent ceux d'avant). Réglages : data/gardiens.js, dessin.
 // Chaque gardien a son interrupteur (dessin.actif[n]) ; éteint, l'ancien dessin reste (drawMere, drawHeraut, drawHeart et leurs lueurs), jusqu'à l'action 9.
 function g27Actif(n){const D=GA_D.dessin;if(!D||!D.actif)return false;return typeof D.actif==='object'?!!D.actif[n]:!!D.actif;}
@@ -11984,6 +11984,290 @@ const G27=(function(){
   try{ctx=o;for(let k=0;k<7;k++){L.vide.push(tour(rien,rien));L.avant.push(tour(_dhr27,_dbpr27));L.apres.push(tour(corps,lueurs));}}finally{ctx=keep;}
   const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],v=med(L.vide);return{avant:+(med(L.avant)-v).toFixed(3),apres:+(med(L.apres)-v).toFixed(3),vide:+v.toFixed(3)};}
  window.__gardiens=Object.assign(window.__gardiens||{},{heraut:{etat,corps,lueurs,imgCloche,imgMoitie,imgVisage,imgRobe,imgOmbre,mesure}});
+})();
+
+// ── G6 · La Mère-Brume (action 4) : Mahaut et son enfant. Elle garde sa silhouette (robe en cloche faite de brume, bras articulés, tête voilée,
+// masque d'os aux sept yeux, couronne de sept pointes, cœur-cloche dans la poitrine) et retrouve ce qui manquait : l'enfant, un ballot de brume
+// sans visage, tenu par le bras opposé à celui qui saisit (reachSide) et pressé contre sa poitrine pendant une étreinte ou une ruée.
+// Temps 1 : voilée, droite, le ballot serré contre elle. Temps 2 : le voile tombe sur ses épaules ; le ballot se défait en filets de brume qui
+// s'enroulent autour d'elle. Temps 3 : les bras vides, levés ; la couronne brisée (deux pointes tombent et restent au sol) ; la robe se retire
+// jusqu'aux côtes ; le cœur-cloche nu et rouge. Pendant une copie, son masque prend la couleur et l'emblème de ta forme (G6, G13).
+// Matière gris-bleu perle, os ivoire, or pâle terni (G3, plus de mauve) ; la lueur nacrée ne sert qu'au cœur-cloche et au ballot.
+// Coordonnées en × rayon, origine = centre de touche ; le corps plein tient dans 1,15 × r (G2) : ce qui dépasse (brume, traînes, filets, un bras qui
+// s'étire pour saisir ou balayer, au-delà de RIN) devient brume, sous echelle.prolongements d'opacité. Le dessin ne lit que des états du combat
+// (phase, state, t, tt, ang, reach, reachSide, armT, grabbing, vuln, fade, mk, copy, dodgeCd, wob) et n'en écrit aucun.
+(function(){
+ const GD=()=>(GA_D.dessin||{})[1]||{},PRO=()=>((GA_D.dessin||{}).echelle||{}).prolongements||0.35,MT=()=>GD().matiere;
+ const {image,poser,rgb,mix,ease}=G27;
+ const RIN=1.06;   // rayon (× r) où un bras cesse d'être plein ; au-delà, il s'étire en brume
+ const COPIE=['mvolley','msweepIn','msweep','mblink'];
+ // les sept yeux (MERE_EYES, même dessin qu'avant) sur le masque, un peu plus bas pour laisser le front à l'emblème de la copie
+ const EYP=MERE_EYES.map(([u,v])=>[u*0.42,0.04+(v+0.45)*0.42]);
+ function encre(o,w){o.strokeStyle=INK;o.lineWidth=w;o.stroke();}
+ function teintes(){const M=MT(),B=M.brume;return{B,clair:mix(B,[236,240,248],0.4),robe:mix(B,[34,40,56],0.42),sombre:mix(B,[12,14,20],0.82),voile:mix(B,[20,24,34],0.7),os:M.os,or:M.or};}
+ const nu=()=>GD().nu||[255,96,96];
+
+ // les lambeaux du troisième temps : de longues pointes de brume, l'ourlet déchiré jusqu'à la taille
+ const LAMBEAUX=[[-0.38,0.5],[-0.31,0.74],[-0.23,0.48],[-0.14,0.88],[-0.05,0.52],[0.04,0.76],[0.12,0.46],[0.22,0.86],[0.31,0.52],[0.38,0.7],[0.46,0.62]];
+ // ── la robe : temps 1 et 2, en cloche jusqu'au sol ; temps 3, retirée jusqu'aux côtes, en lambeaux (la brume dessous)
+ function robe(o,r,ph){o.beginPath();
+  if(ph<3){o.moveTo(-0.24*r,-0.06*r);o.bezierCurveTo(-0.32*r,0.25*r,-0.62*r,0.5*r,-0.7*r,0.8*r);
+   for(let i=0;i<=10;i++){const x=-0.7+1.4*i/10,y=0.8+0.12*(1-(x/0.7)**2)+(i%2?0.04:0);o.lineTo(x*r,y*r);}
+   o.bezierCurveTo(0.62*r,0.5*r,0.32*r,0.25*r,0.24*r,-0.06*r);}
+  else{o.moveTo(-0.22*r,0.04*r);o.bezierCurveTo(-0.3*r,0.2*r,-0.42*r,0.4*r,-0.46*r,0.66*r);
+   let px=-0.46,py=0.66;for(const [x,y] of LAMBEAUX){o.quadraticCurveTo(px*r,(Math.max(py,y)+0.02)*r,((px+x)/2)*r,((py+y)/2+0.03)*r);px=x;py=y;}o.lineTo(0.46*r,0.62*r);
+   o.bezierCurveTo(0.42*r,0.4*r,0.3*r,0.2*r,0.22*r,0.04*r);}
+  o.closePath();}
+ function peindreRobe(o,r,ph){const C=teintes(),bas=ph<3?0.94:0.88;
+  robe(o,r,ph);const g=o.createLinearGradient(0,-0.06*r,0,bas*r);g.addColorStop(0,`rgb(${rgb(mix(C.robe,C.clair,0.22))})`);g.addColorStop(0.55,`rgb(${rgb(C.robe)})`);
+  g.addColorStop(1,`rgba(${rgb(C.sombre)},${ph===2?0.78:ph>=3?0.55:0.88})`);o.fillStyle=g;o.fill();
+  o.save();robe(o,r,ph);o.clip();
+  // plis de brume (sombres) et reflets nacrés
+  for(let i=-2;i<=2;i++){const q=()=>{o.beginPath();o.moveTo(i*0.07*r,0.02*r);o.quadraticCurveTo(i*0.2*r,0.48*bas*r,i*0.31*r,bas*r);};
+   q();o.strokeStyle=`rgba(${rgb(C.sombre)},.55)`;o.lineWidth=1.6;o.stroke();o.save();o.translate(2.2,0);q();o.strokeStyle=`rgba(${rgb(C.clair)},.16)`;o.lineWidth=1.1;o.stroke();o.restore();}
+  // temps 2 : la brume se défait dans le tissu (volutes claires)
+  if(ph===2){o.strokeStyle=`rgba(${rgb(C.clair)},.22)`;o.lineWidth=1.3;for(const [x,y,s] of[[-0.36,0.5,1],[0.28,0.62,-1],[-0.08,0.74,1],[0.44,0.34,-1]]){o.beginPath();o.arc(x*r,y*r,0.07*r,0,4.4*s>0?4.4:-4.4,s<0);o.stroke();}}
+  // l'ourlet s'efface en brume
+  const gh=o.createLinearGradient(0,(bas-0.22)*r,0,bas*r);gh.addColorStop(0,`rgba(${rgb(C.B)},0)`);gh.addColorStop(1,`rgba(${rgb(C.B)},.38)`);o.fillStyle=gh;o.fillRect(-r,(bas-0.22)*r,2*r,0.3*r);
+  o.restore();robe(o,r,ph);encre(o,2);}
+
+ // ── le buste : épaules, côtes (la brume se retire, l'os apparaît), logement du cœur ; temps 2 et 3, le voile tombé sur les épaules.
+ // Temps 3 : elle s'affaisse (0,05 × r, compris dans l'image), la cage thoracique est à nu.
+ function peindreBuste(o,r,ph){const C=teintes();o.save();o.translate(0,ph>=3?0.05*r:0);
+  const tr=()=>{o.beginPath();o.moveTo(-0.38*r,-0.44*r);o.quadraticCurveTo(0,-0.54*r,0.38*r,-0.44*r);o.quadraticCurveTo(0.32*r,-0.24*r,0.22*r,-0.04*r);o.lineTo(-0.22*r,-0.04*r);o.quadraticCurveTo(-0.32*r,-0.24*r,-0.38*r,-0.44*r);o.closePath();};
+  tr();const g=o.createRadialGradient(-0.06*r,-0.38*r,0.02*r,0,-0.28*r,0.5*r);
+  if(ph<3){g.addColorStop(0,`rgb(${rgb(mix(C.robe,C.clair,0.34))})`);g.addColorStop(1,`rgb(${rgb(C.sombre)})`);}else{g.addColorStop(0,'#1d2029');g.addColorStop(1,'#07080c');}
+  o.fillStyle=g;o.fill();encre(o,2.2);
+  o.save();tr();o.clip();
+  const ca=[0,0.24,0.42,1][ph],cote=s=>{for(let i=0;i<4;i++){const y=(-0.41+i*0.085)*r;o.moveTo(s*0.05*r,y);o.quadraticCurveTo(s*0.28*r,y+0.04*r,s*0.26*r,y+0.12*r);}};
+  o.beginPath();cote(-1);cote(1);if(ph>=3){o.moveTo(0,-0.5*r);o.lineTo(0,-0.38*r);encre(o,3.8);}
+  o.strokeStyle=`rgba(${rgb(C.os)},${ca})`;o.lineWidth=ph>=3?2.2:1.8;o.stroke();
+  o.restore();
+  // logement du cœur
+  ell(o,0,-0.24*r,0.12*r,0.14*r);o.fillStyle='#07050b';o.fill();encre(o,1.8);
+  if(ph>=2){// le voile tombé sur les épaules (déchiré au troisième temps)
+   o.beginPath();o.moveTo(-0.45*r,-0.47*r);o.quadraticCurveTo(0,-0.6*r,0.45*r,-0.47*r);o.lineTo(0.43*r,-0.3*r);
+   const bord=ph>=3?[[0.34,-0.38],[0.26,-0.31],[0.14,-0.39],[0,-0.36],[-0.14,-0.41],[-0.25,-0.32],[-0.34,-0.39]]:[[0.3,-0.36],[0.17,-0.35],[0,-0.41],[-0.17,-0.35],[-0.3,-0.36]];
+   for(const [x,y] of bord)o.lineTo(x*r,y*r);o.lineTo(-0.43*r,-0.3*r);o.closePath();
+   const gv=o.createLinearGradient(0,-0.58*r,0,-0.3*r);gv.addColorStop(0,`rgb(${rgb(mix(C.voile,C.clair,0.18))})`);gv.addColorStop(1,`rgb(${rgb(C.voile)})`);o.fillStyle=gv;o.fill();encre(o,1.8);
+   o.strokeStyle=`rgba(${rgb(C.sombre)},.7)`;o.lineWidth=1.2;for(const x of[-0.28,-0.12,0.08,0.24]){o.beginPath();o.moveTo(x*r,-0.5*r);o.quadraticCurveTo((x+0.02)*r,-0.44*r,(x+0.01)*r,-0.37*r);o.stroke();}}
+  o.restore();}
+
+ // ── la couronne (or pâle terni) : sept pointes sur un bandeau ; au troisième temps, deux sont brisées (dessin[1].pointes)
+ const BRISEES=()=>GD().pointes||[1,5];
+ function angPointe(i){return -Math.PI+0.55+i*(Math.PI-1.1)/6;}
+ function hautPointe(i){return [0.27,0.31,0.33,0.38,0.33,0.31,0.27][i];}
+ function pointe(o,r,bx,by,tx,ty,pa,w){const C=teintes();o.beginPath();o.moveTo(bx+Math.cos(pa)*w,by+Math.sin(pa)*w);o.lineTo(tx,ty);o.lineTo(bx-Math.cos(pa)*w,by-Math.sin(pa)*w);o.closePath();
+  const g=o.createLinearGradient(bx,by,tx,ty);g.addColorStop(0,`rgb(${rgb(mix(C.or,[40,30,14],0.35))})`);g.addColorStop(0.6,`rgb(${rgb(C.or)})`);g.addColorStop(1,`rgb(${rgb(mix(C.or,[255,246,220],0.4))})`);
+  o.fillStyle=g;o.fill();encre(o,1.3);}
+ function couronne(o,r,ph){const C=teintes(),cy=-0.1*r,b=0.17*r,br=ph>=3?BRISEES():[];
+  for(let i=0;i<7;i++){const a=angPointe(i),pa=a+Math.PI/2,bx=Math.cos(a)*b,by=cy+Math.sin(a)*b,w=0.034*r;
+   if(br.includes(i)){// le moignon, cassé net
+    const h=0.22*r;o.beginPath();o.moveTo(bx+Math.cos(pa)*w,by+Math.sin(pa)*w);o.lineTo(Math.cos(a)*h+Math.cos(pa)*w*0.5,cy+Math.sin(a)*h+Math.sin(pa)*w*0.5);
+    o.lineTo(Math.cos(a)*(h-0.02*r),cy+Math.sin(a)*(h-0.02*r));o.lineTo(Math.cos(a)*(h+0.01*r)-Math.cos(pa)*w*0.4,cy+Math.sin(a)*(h+0.01*r)-Math.sin(pa)*w*0.4);
+    o.lineTo(bx-Math.cos(pa)*w,by-Math.sin(pa)*w);o.closePath();o.fillStyle=`rgb(${rgb(mix(C.or,[40,30,14],0.25))})`;o.fill();encre(o,1.3);continue;}
+   const h=hautPointe(i)*r;pointe(o,r,bx,by,Math.cos(a)*h,cy+Math.sin(a)*h,pa,w);}
+  // le bandeau
+  const band=()=>{o.beginPath();o.arc(0,cy,b,-Math.PI+0.45,-0.45);};
+  band();o.lineCap='round';o.strokeStyle=INK;o.lineWidth=0.05*r+2.4;o.stroke();band();o.strokeStyle=`rgb(${rgb(mix(C.or,[30,22,10],0.2))})`;o.lineWidth=0.05*r;o.stroke();
+  o.beginPath();o.arc(0,cy,b-0.012*r,-Math.PI+0.5,-0.5);o.strokeStyle=`rgba(${rgb(mix(C.or,[255,246,220],0.5))},.5)`;o.lineWidth=1;o.stroke();
+  if(ph>=3){o.strokeStyle='rgba(20,14,6,.9)';o.lineWidth=1.3;for(const a of[-2.3,-0.95]){o.beginPath();o.moveTo(Math.cos(a)*(b-0.03*r),cy+Math.sin(a)*(b-0.03*r));o.lineTo(Math.cos(a+0.06)*(b+0.03*r),cy+Math.sin(a+0.06)*(b+0.03*r));o.stroke();}}}
+ // ── la tête (origine : centre de la tête) : temps 1, le voile ; temps 2 et 3, la tête découverte (cheveux de brume) ; la couronne ; le masque d'os
+ function peindreTete(o,r,ph){const C=teintes();
+  if(ph===1){o.beginPath();o.moveTo(0,-0.3*r);o.bezierCurveTo(0.31*r,-0.27*r,0.3*r,0.1*r,0.28*r,0.27*r);o.quadraticCurveTo(0,0.31*r,-0.28*r,0.27*r);o.bezierCurveTo(-0.3*r,0.1*r,-0.31*r,-0.27*r,0,-0.3*r);o.closePath();
+   const g=o.createRadialGradient(-0.1*r,-0.16*r,0.02*r,0,0,0.38*r);g.addColorStop(0,`rgb(${rgb(mix(C.voile,C.clair,0.22))})`);g.addColorStop(1,`rgb(${rgb(mix(C.voile,[0,0,0],0.3))})`);o.fillStyle=g;o.fill();encre(o,2.2);
+   o.strokeStyle=`rgba(${rgb(C.clair)},.14)`;o.lineWidth=1.1;for(const s of[-1,1]){o.beginPath();o.moveTo(s*0.2*r,-0.18*r);o.quadraticCurveTo(s*0.27*r,0.05*r,s*0.24*r,0.25*r);o.stroke();}
+   ell(o,0,0.04*r,0.225*r,0.27*r);o.fillStyle='rgba(6,6,10,.75)';o.fill();}
+  else{// le voile est tombé : ses cheveux, de la brume pâle qui coule sur ses épaules
+   ell(o,0,0.0,0.215*r,0.24*r);o.fillStyle=`rgb(${rgb(mix(C.sombre,C.B,0.25))})`;o.fill();encre(o,1.6);
+   for(const [x0,x1,y1,b,w] of[[-0.17,-0.27,0.3,-0.08,3.2],[-0.12,-0.2,0.33,-0.04,2.4],[0.17,0.27,0.3,0.08,3.2],[0.12,0.2,0.33,0.04,2.4],[-0.2,-0.29,0.18,-0.1,2]]){
+    const q=()=>{o.beginPath();o.moveTo(x0*r,-0.12*r);o.quadraticCurveTo((x0+b)*r,0.08*r,x1*r,y1*r);};q();o.strokeStyle=INK;o.lineWidth=w+2;o.stroke();q();o.strokeStyle=`rgb(${rgb(C.clair)})`;o.lineWidth=w;o.stroke();}}
+  couronne(o,r,ph);
+  // le masque d'os, ses sept yeux (orbites sombres : les lueurs passent par eyePts), la bouche
+  ell(o,0,0.03*r,0.19*r,0.23*r);const gm=o.createRadialGradient(-0.05*r,-0.03*r,0.02*r,0,0.03*r,0.26*r);gm.addColorStop(0,`rgb(${rgb(mix(C.os,[255,252,244],0.2))})`);gm.addColorStop(1,`rgb(${rgb(mix(C.os,C.sombre,0.45))})`);
+  o.fillStyle=gm;o.fill();encre(o,1.8);
+  o.fillStyle='#07050b';for(const [u,v] of EYP){ell(o,u*r,v*r,3,2.5);o.fill();}
+  o.strokeStyle='rgba(0,0,0,.55)';o.lineWidth=1.4;o.beginPath();o.moveTo(-0.08*r,0.19*r);o.quadraticCurveTo(0,0.14*r,0.08*r,0.19*r);o.stroke();
+  o.strokeStyle='rgba(0,0,0,.35)';o.lineWidth=1.1;for(const s of[-1,1]){o.beginPath();o.moveTo(s*0.11*r,0.08*r);o.quadraticCurveTo(s*0.13*r,0.14*r,s*0.11*r,0.2*r);o.stroke();}
+  if(ph>=3){o.strokeStyle='rgba(10,6,8,.8)';o.lineWidth=1.2;o.beginPath();o.moveTo(0.04*r,-0.19*r);o.lineTo(0.02*r,-0.1*r);o.lineTo(0.06*r,-0.04*r);o.lineTo(0.03*r,0.02*r);o.stroke();}}
+ // ── l'enfant : un ballot de brume pâle, emmailloté, sans visage (origine : son centre ; la tête vers +x)
+ function peindreEnfant(o,r){const C=teintes(),L=GD().lueur||[245,240,230],pale=mix(C.clair,L,0.35);
+  o.beginPath();o.moveTo(-0.15*r,0.02*r);o.quadraticCurveTo(-0.22*r,0.07*r,-0.26*r,0.01*r);o.strokeStyle=`rgba(${rgb(pale)},.35)`;o.lineWidth=3;o.lineCap='round';o.stroke();
+  ell(o,-0.02*r,0.005*r,0.15*r,0.088*r);const g=o.createRadialGradient(0.0,-0.03*r,0.01*r,-0.02*r,0,0.17*r);g.addColorStop(0,`rgb(${rgb(pale)})`);g.addColorStop(1,`rgb(${rgb(mix(C.B,C.sombre,0.2))})`);
+  o.fillStyle=g;o.fill();encre(o,1.5);
+  o.save();ell(o,-0.02*r,0.005*r,0.15*r,0.088*r);o.clip();o.strokeStyle=`rgba(${rgb(C.sombre)},.4)`;o.lineWidth=1.2;
+  for(const x of[-0.1,-0.03,0.04]){o.beginPath();o.moveTo(x*r,-0.1*r);o.quadraticCurveTo((x+0.05)*r,0,(x-0.01)*r,0.1*r);o.stroke();}o.restore();
+  ell(o,0.12*r,-0.006*r,0.07*r,0.066*r);const gt=o.createRadialGradient(0.1*r,-0.03*r,0.01*r,0.12*r,0,0.08*r);gt.addColorStop(0,`rgb(${rgb(pale)})`);gt.addColorStop(1,`rgb(${rgb(mix(pale,C.B,0.6))})`);
+  o.fillStyle=gt;o.fill();encre(o,1.5);
+  ell(o,0.135*r,0,0.04*r,0.043*r);const gc=o.createRadialGradient(0.135*r,0,0.005*r,0.135*r,0,0.045*r);gc.addColorStop(0,`rgba(${rgb(mix(C.B,C.sombre,0.55))},.95)`);gc.addColorStop(1,`rgba(${rgb(mix(C.B,C.sombre,0.25))},.6)`);o.fillStyle=gc;o.fill();}
+ // une pointe de couronne tombée (origine : sa base)
+ function peindrePointe(o,r){pointe(o,r,0,0,0,-0.12*r,0,0.034*r);}
+ // ── images (cache hors écran, à la densité de l'écran)
+ const imgRobe=(ph,r)=>image(`mere-robe${ph<3?ph:3}-${r}`,-0.76*r,-0.12*r,1.52*r,1.12*r,o=>peindreRobe(o,r,ph));
+ const imgBuste=(ph,r)=>image(`mere-buste${ph}-${r}`,-0.5*r,-0.64*r,1.0*r,0.7*r,o=>peindreBuste(o,r,ph));
+ const imgTete=(ph,r)=>image(`mere-tete${ph}-${r}`,-0.36*r,-0.52*r,0.72*r,0.9*r,o=>peindreTete(o,r,ph));
+ const imgEnfant=r=>image('mere-enfant-'+r,-0.28*r,-0.12*r,0.52*r,0.24*r,o=>peindreEnfant(o,r));
+ const imgPointe=r=>image('mere-pointe-'+r,-0.06*r,-0.15*r,0.12*r,0.18*r,o=>peindrePointe(o,r));
+
+ // ── l'état de dessin, posé sur la gardienne (rien du combat ne le lit) : temps vu, transformation, copie et étreinte lissées, pointes tombées
+ function etat(e){let g=e.g27;if(g&&g.mere)return g;g=e.g27={mere:1,ph:e.phase||1,de:e.phase||1,t:-9,cop:0,serre:0,tl:T,dcd:e.dodgeCd||0,esq:-9,vole:[],sol:[]};
+  if(g.ph>=3)for(const i of BRISEES())g.sol.push(posSol(e,i));return g;}
+ function dureeT(){return GD().transS||0.6;}
+ const SOL={0:[-0.5,1.0,-1.2],1:[-0.62,1.04,-1.1],2:[-0.4,1.12,-0.6],3:[0.1,1.15,0.4],4:[0.4,1.1,0.7],5:[0.66,1.06,0.85],6:[0.55,1.0,1.2]};
+ function posSol(e,i){const r=e.r,[sx,sy,rot]=SOL[i]||[0,1.1,0];return{i,x:clamp(e.x+sx*r,AR.x0+20,AR.x1-20),y:clamp(e.y+sy*r,AR.y0+20,AR.y1-12),rot};}
+ function changeTemps(e,g){g.de=g.ph;g.ph=e.phase;g.t=T;
+  if(g.de<3&&e.phase>=3){const R=g.R||rig(e,g,0,0),r=e.r;
+   for(const i of BRISEES()){const a=angPointe(i),d=0.3*r,S=posSol(e,i),x0=e.x+R.hx+Math.cos(a)*d,y0=e.y+R.hy-0.1*r+Math.sin(a)*d;
+    if(RM)g.sol.push(S);else g.vole.push({i,x0,y0,r0:a+Math.PI/2,S,t0:T});}}}
+ // ── le squelette (coordonnées relatives au centre) : mêmes gestes que mereRig, à l'échelle du nouveau corps ; le bras opposé à reachSide berce
+ // l'enfant (enf), pressé contre la poitrine pendant une étreinte ou une ruée (g.serre) ; au troisième temps, les bras vides se lèvent (leve)
+ function rig(e,g,enf,leve){const r=e.r,ph=e.phase||1,br=RM?0:Math.sin(T*1.6+(e.wob||0))*0.025,lean=(P?clamp((P.x-e.x)/400,-1,1):0)*0.08*r,slump=ph>=3?0.05*r:0;
+  const hx=lean*0.6,hy=(-0.6+br)*r+slump,core={x:lean*0.3,y:-0.24*r+slump};
+  const hs=-(e.reachSide||1),sw=e.state==='msweep'||e.state==='msweepIn',fa=e.ang||0,lv=e.state==='mwind'||e.state==='mcharge',S=g.serre||0,ws=RM?0:1;
+  const Cb=[hs*(0.12-0.06*S)*r+lean*0.3,(0.02-0.05*S)*r],Ca=-0.3-0.45*S,Cs=1.5-0.1*S;
+  const arms=[-1,1].map(s=>{const sx=s*0.34*r+lean*0.4,sy=-0.44*r+slump;
+   let tx=s*(0.7+0.05*ws*Math.sin(T*1.3+s))*r,ty=(0.2+0.07*ws*Math.sin(T*1.1+s*2))*r;
+   if(leve>0){const ux=s*(0.56+0.04*ws*Math.sin(T*1.7+s))*r,uy=(-0.66+0.05*ws*Math.sin(T*1.2+s*2))*r;tx+=(ux-tx)*leve;ty+=(uy-ty)*leve;}
+   if(sw){const kk=e.state==='msweep'?clamp(1-e.t/e.tt,0,1):0.3,a=fa+s*(0.9-1.6*kk);tx=Math.cos(a)*1.5*r;ty=Math.sin(a)*1.5*r-0.2*r;}
+   else if(e.armT&&e.reachSide===s&&e.reach>0.01){tx+=(e.armT.x-e.x-tx)*e.reach;ty+=(e.armT.y-e.y-ty)*e.reach;}
+   else if(lv){tx=s*0.56*r;ty=-0.74*r;}
+   if(enf>0&&s===hs){const cx=Cb[0]-hs*0.2*r,cy=Cb[1]+0.15*r;tx+=(cx-tx)*enf;ty+=(cy-ty)*enf;}
+   const dx=tx-sx,dy=ty-sy,d=Math.hypot(dx,dy)||1,L=Math.max(d/2+2,0.42*r),h=Math.sqrt(Math.max(0,L*L-d*d/4)),nx=-dy/d,ny=dx/d;
+   let ex=sx+dx/2+nx*h,ey=sy+dy/2+ny*h;if((ex-sx)*s<(sx+dx/2-nx*h-sx)*s){ex=sx+dx/2-nx*h;ey=sy+dy/2-ny*h;}
+   return{s,sx,sy,ex,ey,hx:tx,hy:ty};});
+  return{hx,hy,core,arms,lean,slump,hs,Cb,Ca,Cs};}
+
+ // ── le corps (avant le brouillard et les télégraphes)
+ function trait(c,A){c.beginPath();c.moveTo(A.sx,A.sy);c.quadraticCurveTo(A.ex,A.ey,A.hx,A.hy);}
+ function doigts(c,A,r,w1,w2,col){const a=Math.atan2(A.hy-A.ey,A.hx-A.ex);
+  for(const k of[-0.55,0,0.55]){const ca=a+k,L=0.22*r,mx=A.hx+Math.cos(ca)*L*0.6,my=A.hy+Math.sin(ca)*L*0.6,bx=A.hx+Math.cos(ca+0.5*A.s)*L,by=A.hy+Math.sin(ca+0.5*A.s)*L;
+   c.beginPath();c.moveTo(A.hx,A.hy);c.quadraticCurveTo(mx,my,bx,by);if(w1){c.strokeStyle=INK;c.lineWidth=w1;c.stroke();}c.strokeStyle=col;c.lineWidth=w2;c.stroke();}}
+ function brasPlein(c,A,r,C){c.lineCap='round';c.lineJoin='round';trait(c,A);c.strokeStyle=INK;c.lineWidth=0.2*r;c.stroke();c.strokeStyle=`rgb(${rgb(mix(C.robe,C.os,0.14))})`;c.lineWidth=0.13*r;c.stroke();
+  doigts(c,A,r,4,2.2,`rgb(${rgb(C.os)})`);}
+ // (sous globalAlpha = prolongements : le bras à 0,7, chaque doigt à 0,45, pour que leurs couches empilées à la main restent sous l'opaque)
+ function brasBrume(c,A,r,C){const a=c.globalAlpha;c.lineCap='round';trait(c,A);c.globalAlpha=a*0.35;c.strokeStyle=`rgb(${rgb(C.B)})`;c.lineWidth=0.2*r;c.stroke();c.globalAlpha=a*0.6;c.strokeStyle=`rgb(${rgb(C.clair)})`;c.lineWidth=0.07*r;c.stroke();c.globalAlpha=a*0.45;doigts(c,A,r,0,2,`rgb(${rgb(C.os)})`);c.globalAlpha=a;}
+ // un bras : plein dans le disque RIN × r ; au-delà, il s'étire en brume (prolongement)
+ function bras(c,r,A,fd,C){const far=Math.max(Math.hypot(A.hx,A.hy),Math.hypot(A.ex,A.ey))+0.3*r;
+  if(far<=RIN*r){brasPlein(c,A,r,C);return;}
+  c.save();c.beginPath();c.arc(0,0,RIN*r,0,TAU);c.clip();brasPlein(c,A,r,C);c.restore();
+  c.save();c.beginPath();c.rect(-60*r,-60*r,120*r,120*r);c.arc(0,0,RIN*r,0,TAU);c.clip('evenodd');c.globalAlpha=fd*PRO();brasBrume(c,A,r,C);c.restore();c.globalAlpha=fd;}
+ // la brume autour d'elle (derrière : la robe se prolonge en brume jusqu'au sol ; devant : un voile léger)
+ const NAPPES=[[-0.42,0.78,0.6],[0.42,0.8,0.6],[0,1.06,0.66],[0,0.36,0.72]];
+ function brume(c,e,r,mk,fd,devant){const B=rgb(teintes().B),a0=devant?0.08*mk:PRO()*0.42*(0.4+0.6*mk);
+  for(const [x0,y0,s] of devant?[[0,0.55,0.7]]:NAPPES){const x=(x0+(RM?0:Math.sin(T*0.7+y0*5+(e.wob||0))*0.05))*r,y=y0*r,rad=s*r*(0.6+0.4*mk);
+   const g=c.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,`rgba(${B},${a0*fd})`);g.addColorStop(1,`rgba(${B},0)`);c.fillStyle=g;c.beginPath();c.arc(x,y,rad,0,TAU);c.fill();}}
+ // le manteau de brume : sa robe d'avant, en cloche jusqu'au sol, devenue prolongement (G2 : la stature d'une gardienne, sans rien de plein
+ // au-delà du disque de touche). Peint une fois ; il ondule par un léger étirement. Il se dissipe à mesure que la brume se retire (mk).
+ const OURLET_M=[[-1.36,1.12],[-1.18,1.3],[-1.02,1.16],[-0.8,1.36],[-0.56,1.22],[-0.3,1.42],[-0.04,1.28],[0.22,1.44],[0.48,1.24],[0.74,1.38],[0.98,1.18],[1.18,1.3],[1.36,1.1]];
+ function manteau(o,r){o.beginPath();o.moveTo(-0.24*r,-0.62*r);o.bezierCurveTo(-0.7*r,-0.3*r,-0.9*r,0.3*r,-1.36*r,1.12*r);
+  let px=-1.36,py=1.12;for(const [x,y] of OURLET_M.slice(1)){o.quadraticCurveTo(((px+x)/2)*r,(Math.max(py,y)+0.08)*r,x*r,y*r);px=x;py=y;}
+  o.bezierCurveTo(0.9*r,0.3*r,0.7*r,-0.3*r,0.24*r,-0.62*r);o.closePath();}
+ function peindreManteau(o,r){const C=teintes();manteau(o,r);
+  const g=o.createRadialGradient(0,0.2*r,0.2*r,0,0.5*r,1.45*r);g.addColorStop(0,`rgba(${rgb(C.robe)},1)`);g.addColorStop(0.62,`rgba(${rgb(mix(C.robe,C.B,0.5))},.8)`);g.addColorStop(1,`rgba(${rgb(C.B)},.1)`);
+  o.fillStyle=g;o.fill();
+  // plis qui coulent, plus pâles vers le bas, et qui s'effacent avant le bord
+  o.save();manteau(o,r);o.clip();const gp=o.createLinearGradient(0,-0.3*r,0,1.4*r);gp.addColorStop(0,`rgba(${rgb(C.clair)},0)`);gp.addColorStop(0.5,`rgba(${rgb(C.clair)},.3)`);gp.addColorStop(1,`rgba(${rgb(C.clair)},0)`);
+  o.strokeStyle=gp;o.lineWidth=1.3;for(let i=-5;i<=5;i++){o.beginPath();o.moveTo(i*0.04*r,-0.3*r);o.bezierCurveTo(i*0.12*r,0.3*r,(i*0.2+0.05*Math.sin(i*1.7))*r,0.8*r,i*0.25*r,1.36*r);o.stroke();}o.restore();
+  // le bord, comme une fumée : un trait qui n'est franc que sur les côtés
+  manteau(o,r);const gb=o.createLinearGradient(0,-0.6*r,0,1.45*r);gb.addColorStop(0,`rgba(${rgb(C.clair)},0)`);gb.addColorStop(0.45,`rgba(${rgb(C.clair)},.85)`);gb.addColorStop(1,`rgba(${rgb(C.clair)},.4)`);
+  o.strokeStyle=gb;o.lineWidth=1.6;o.stroke();}
+ const imgManteau=r=>image('mere-manteau-'+r,-1.44*r,-0.66*r,2.88*r,2.2*r,o=>peindreManteau(o,r));
+ // les volutes : la brume coule de l'ourlet jusqu'au sol (fines, jamais des jambes)
+ function traines(c,e,r,ph,mk,fd){const B=rgb(teintes().clair),hem=ph<3?0.86:0.6;c.lineCap='round';
+  for(let i=0;i<5;i++){const x0=(i-2)*0.26*r*(ph<3?1:0.8),len=r*(0.3+0.12*Math.sin((e.wob||0)*1.3+i*2)),w=RM?0:T*1.4+i*1.9;
+   c.beginPath();c.moveTo(x0,hem*r);for(let k=1;k<=6;k++){const u=k/6;c.lineTo(x0+Math.sin(w+u*4)*0.06*r*u,hem*r+len*u);}
+   c.strokeStyle=`rgba(${B},${PRO()*0.6*(0.4+0.6*mk)*fd})`;c.lineWidth=1.6;c.stroke();}}
+ // la couronne de brume : les pointes se prolongent en rayons fins, pâles (prolongement) ; les brisées n'en ont plus
+ function rayons(c,r,R,ph,fd){const C=teintes(),br=ph>=3?BRISEES():[],cx=R.hx,cy=R.hy-0.1*r,col=rgb(mix(C.or,[255,246,220],0.4));
+  for(let i=0;i<7;i++){if(br.includes(i))continue;const a=angPointe(i),pa=a+Math.PI/2,h0=0.17*r,f=RM?1:0.9+0.1*Math.sin(T*1.7+i*1.3),h1=(hautPointe(i)+(i===3?0.36:i%2?0.22:0.28)*(ph>=3?0.6:1))*r*f,w=0.05*r;
+   const x0=cx+Math.cos(a)*h0,y0=cy+Math.sin(a)*h0,x1=cx+Math.cos(a)*h1,y1=cy+Math.sin(a)*h1,g=c.createLinearGradient(x0,y0,x1,y1);
+   g.addColorStop(0,`rgba(${col},${PRO()*0.7*fd})`);g.addColorStop(1,`rgba(${col},0)`);c.fillStyle=g;
+   c.beginPath();c.moveTo(x0+Math.cos(pa)*w,y0+Math.sin(pa)*w);c.lineTo(x1,y1);c.lineTo(x0-Math.cos(pa)*w,y0-Math.sin(pa)*w);c.closePath();c.fill();}}
+ // les filets : l'enfant défait en brume, qui s'enroule autour d'elle (temps 2) ; ils partent du ballot pendant la transformation et se dissipent
+ // au troisième temps. Une passe derrière le corps (moitié haute de l'orbite), une devant (moitié basse).
+ function filets(c,r,g,R,ph,k,trans,fd,devant){const s=ph===2?(g.de<2&&trans?k:1):ph>=3?(g.de<3&&trans?1-k:0):0;if(s<=0.01)return;
+  const B=rgb(teintes().clair),de=ph===2&&g.de<2&&trans?R.Cb:null;c.lineCap='round';
+  for(let j=0;j<3;j++){const rx=(0.9+0.12*j)*r,ry=(0.27+0.04*j)*r,ti=(j-1)*0.22,cy=(0.12-0.1*j)*r,ct=Math.cos(ti),st=Math.sin(ti),phi=(RM?0:T*(0.55+0.18*j))*(j%2?-1:1)+j*2.1;
+   c.beginPath();let on=false;
+   for(let i=0;i<=22;i++){const th=phi+2.6*i/22,sn=Math.sin(th);if((sn>0)!==devant){on=false;continue;}
+    let px=rx*Math.cos(th),py=ry*sn+(RM?0:Math.sin(th*2+T*1.3)*0.04*r);const qx=px*ct-py*st,qy=px*st+py*ct+cy;px=qx;py=qy;
+    if(de){px=de[0]+(px-de[0])*k;py=de[1]+(py-de[1])*k;}
+    if(on)c.lineTo(px,py);else{c.moveTo(px,py);on=true;}}
+   c.strokeStyle=`rgba(${B},${fd*PRO()*0.9*s})`;c.lineWidth=4-0.8*j;c.stroke();}}
+ // l'emblème de ta forme, au front du masque pendant une copie : lanterne (flamme), gouffre (spirale), glas (cloche), fil (aiguille)
+ function embleme(c,cls,s,col){c.lineCap='round';c.lineJoin='round';const L=()=>{c.strokeStyle=INK;c.lineWidth=2.6;c.stroke();c.strokeStyle=`rgb(${col})`;c.lineWidth=1.3;c.stroke();};
+  c.fillStyle=`rgb(${col})`;
+  if(cls==='lum'){c.beginPath();c.moveTo(0,-s);c.quadraticCurveTo(s*0.95,-0.05*s,0,s);c.quadraticCurveTo(-s*0.95,-0.05*s,0,-s);c.closePath();c.fill();encre(c,1.2);}
+  else if(cls==='gou'){c.beginPath();for(let i=0;i<=24;i++){const a=i/24*TAU*1.6,q=s*(0.15+0.85*i/24);if(i)c.lineTo(Math.cos(a)*q,Math.sin(a)*q);else c.moveTo(Math.cos(a)*q,Math.sin(a)*q);}L();}
+  else if(cls==='her'){c.beginPath();c.moveTo(-0.8*s,0.5*s);c.quadraticCurveTo(-0.62*s,-s,0,-s);c.quadraticCurveTo(0.62*s,-s,0.8*s,0.5*s);c.closePath();c.fill();encre(c,1.2);c.beginPath();c.arc(0,0.78*s,0.24*s,0,TAU);c.fill();encre(c,1);}
+  else{c.beginPath();c.moveTo(-0.8*s,0.8*s);c.lineTo(0.62*s,-0.62*s);L();ell(c,0.68*s,-0.68*s,0.24*s,0.14*s,-Math.PI/4);encre(c,1.1);c.beginPath();c.moveTo(0.68*s,-0.68*s);c.quadraticCurveTo(1.0*s,0.3*s,0.05*s,0.55*s);L();}}
+ function masqueCopie(c,r,R,cop,fd){const col=CRGB[P.cls]||'255,250,240';
+  c.save();c.globalAlpha=fd*cop*0.5;ell(c,R.hx,R.hy+0.03*r,0.19*r,0.23*r);c.fillStyle=`rgb(${col})`;c.fill();c.restore();
+  c.globalAlpha=fd*cop;c.fillStyle='#07050b';for(const [u,v] of EYP){ell(c,R.hx+u*r,R.hy+v*r,3,2.5);c.fill();}
+  c.save();c.translate(R.hx,R.hy-0.1*r);embleme(c,P.cls,0.075*r,col);c.restore();c.globalAlpha=fd;}
+ function corps(c,e){const r=e.r,g=etat(e),fd=e.fade==null?1:e.fade,ph=e.phase||1,D=dureeT(),mk=e.mk==null?1:e.mk,C=teintes(),pro=PRO();
+  if(ph>g.ph)changeTemps(e,g);
+  const dt=clamp(T-(g.tl==null?T:g.tl),0,0.1);g.tl=T;
+  const u=clamp((T-g.t)/D,0,1),k=RM?1:ease(u),trans=u<1;
+  // copie (ses salves, son balayage, son esquive) : le masque prend ta couleur ; l'esquive copiée se lit au saut de sa recharge
+  if((e.dodgeCd||0)>g.dcd+0.5)g.esq=T;g.dcd=e.dodgeCd||0;
+  const copie=(COPIE.includes(e.state)&&e.copy)||T-g.esq<0.7?1:0;g.cop+=(copie-g.cop)*(RM?1:Math.min(1,dt*8));
+  const serre=e.state==='mwind'||e.state==='mcharge'||e.state==='mgrab'||e.state==='mgrabEnd'||e.grabbing?1:0;g.serre+=(serre-g.serre)*(RM?1:Math.min(1,dt*7));
+  const enf=GD().enfant===false?0:ph<2?1:(ph===2&&g.de<2&&trans?1-k:0),leve=ph<3?0:(g.de<3&&trans?k:1);
+  const R=rig(e,g,enf,leve);g.R=R;g.enfA=enf;
+  // les pointes tombées, au sol (coordonnées du monde : elles restent où elles sont tombées)
+  if(g.sol.length){c.save();c.translate(-e.x,-e.y);for(const S of g.sol){c.save();c.globalAlpha=pro;c.translate(S.x,S.y);c.rotate(S.rot);c.scale(1,0.6);poser(c,imgPointe(r));c.restore();}c.restore();}
+  c.globalAlpha=fd;shadowAt(c,0,r*0.98,r*(0.6+0.3*mk),r*0.24,0.45);
+  c.globalAlpha=fd*PRO()*(0.1+0.9*mk);poser(c,imgManteau(r));c.globalAlpha=fd;rayons(c,r,R,ph,fd);
+  brume(c,e,r,mk,fd,false);traines(c,e,r,ph,mk,fd);filets(c,r,g,R,ph,k,trans,fd,false);
+  c.globalAlpha=fd;poser(c,imgRobe(ph,r));if(trans&&g.de<ph){c.globalAlpha=fd*(1-k);poser(c,imgRobe(g.de,r));c.globalAlpha=fd;}
+  // les bras derrière le buste (sauf celui qui berce l'enfant)
+  for(const A of R.arms)if(!(enf>0&&A.s===R.hs))bras(c,r,A,fd,C);
+  c.save();c.translate(R.lean*0.3,0);poser(c,imgBuste(ph,r));if(trans&&g.de<ph){c.globalAlpha=fd*(1-k);poser(c,imgBuste(g.de,r));c.globalAlpha=fd;}c.restore();
+  // le bras qui berce, l'enfant posé dessus, puis ses doigts refermés sur lui
+  if(enf>0){const A=R.arms.find(a=>a.s===R.hs),sc=R.Cs*(0.45+0.55*enf);if(A)bras(c,r,A,fd,C);
+   c.save();c.globalAlpha=fd*enf;c.translate(R.Cb[0],R.Cb[1]);c.scale(R.hs,1);c.rotate(R.Ca);c.scale(sc,sc);poser(c,imgEnfant(r));c.restore();c.globalAlpha=fd;
+   if(A&&enf>0.5)doigts(c,A,r,4,2.2,`rgb(${rgb(C.os)})`);}
+  // la tête ; au deuxième temps, le voile glisse sur les épaules
+  c.save();c.translate(R.hx,R.hy);poser(c,imgTete(ph,r));if(trans&&g.de<ph){c.globalAlpha=fd*(1-k);if(g.de===1)c.translate(0,k*0.14*r);poser(c,imgTete(g.de,r));c.globalAlpha=fd;}c.restore();
+  if(g.cop>0.02)masqueCopie(c,r,R,g.cop,fd);
+  filets(c,r,g,R,ph,k,trans,fd,true);
+  // les pointes en vol (transformation du troisième temps, pendant le verrou)
+  if(g.vole.length){c.save();c.translate(-e.x,-e.y);for(let j=g.vole.length-1;j>=0;j--){const V=g.vole[j],q=(T-V.t0)/D;if(q>=1){g.sol.push(V.S);g.vole.splice(j,1);continue;}
+   const qq=ease(q),x=V.x0+(V.S.x-V.x0)*qq,y=V.y0+(V.S.y-V.y0)*qq-Math.sin(Math.PI*q)*r*0.5;c.save();c.globalAlpha=1-(1-pro)*q*q;c.translate(x,y);c.rotate(V.r0+(V.S.rot-V.r0)*qq+q*5*(V.i<3?-1:1));c.scale(1,1-0.4*qq);poser(c,imgPointe(r));c.restore();}c.restore();}
+  brume(c,e,r,mk,fd,true);c.globalAlpha=1;
+  // ses sept yeux (eyePts) : pâles ; à ta couleur pendant une copie ; rougis au troisième temps
+  const Lu=GD().lueur||[245,240,230];EYE.boss=g.cop>0.5?(CRGB[P.cls]||rgb(Lu)):ph>=3?rgb(mix(Lu,nu(),0.55)):rgb(GD().yeux||mix(Lu,C.B,0.22));}
+
+ // ── les lueurs (après les télégraphes, en mode additif) : le cœur-cloche nacré (rouge au troisième temps, G3), petit ; le ballot, à peine ; l'anneau
+ // ivoire du point faible (G5) ; le reflet de ta forme sur le masque pendant une copie (G13) ; la main qui saisit (cyan, inchangé)
+ function lueurs(e){const c=ctx,r=e.r,g=etat(e),R=g.R||rig(e,g,0,0),fd=e.fade==null?1:e.fade,ph=e.phase||1,mk=e.mk==null?1:e.mk,Lu=GD().lueur||[245,240,230],C=teintes();
+  glow(c,e.x,e.y+r*0.3,r*1.5,rgb(C.B),0.06*mk*fd);
+  if(g.enfA>0.02)glow(c,e.x+R.Cb[0],e.y+R.Cb[1],r*0.32,rgb(Lu),0.16*g.enfA*fd);
+  const pul=RM?0.75:0.6+0.4*Math.sin(T*(2.2+ph)),cx=e.x+R.core.x,cy=e.y+R.core.y,big=ph>=3?1.45:1,cc=ph>=3?rgb(nu()):rgb(Lu);
+  glow(c,cx,cy,r*0.42*big*(0.85+0.2*pul),cc,(ph>=3?0.42+0.25*pul:0.18+0.12*pul)*fd);
+  const s=r*0.1*big;c.beginPath();c.moveTo(cx-s*0.9,cy+s);c.quadraticCurveTo(cx-s*0.85,cy-s*0.9,cx,cy-s*1.1);c.quadraticCurveTo(cx+s*0.85,cy-s*0.9,cx+s*0.9,cy+s);c.closePath();
+  c.fillStyle=`rgba(255,248,240,${(0.5+0.35*pul)*fd})`;c.fill();c.strokeStyle=ph>=3?`rgba(${cc},.95)`:`rgba(${rgb(mix(Lu,C.B,0.45))},.9)`;c.lineWidth=1.6;c.stroke();
+  if(ph>=3){c.strokeStyle=`rgba(${cc},${0.45*fd})`;c.lineWidth=1.4;for(let i=0;i<7;i++){const a=i/7*TAU+0.3;c.beginPath();c.moveTo(cx,cy);c.quadraticCurveTo(cx+Math.cos(a+0.4)*r*0.22,cy+Math.sin(a+0.4)*r*0.22,cx+Math.cos(a)*r*0.4,cy+Math.sin(a)*r*0.36);c.stroke();}}
+  if((e.vuln>0||e.rawT>0)&&fd>0.3){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(cx,cy,r*0.3+(RM?0:4*Math.sin(T*12)),0,TAU);c.stroke();}
+  if(g.cop>0.02){const col=CRGB[P.cls]||'255,250,240';glow(c,e.x+R.hx,e.y+R.hy,r*0.42,col,0.22*g.cop*fd);glow(c,e.x+R.hx,e.y+R.hy-0.1*r,r*0.16,col,0.5*g.cop*fd);}
+  if(e.grabbing||e.state==='mgrab'){const A=R.arms.find(a=>a.s===e.reachSide);if(A)glow(c,e.x+A.hx,e.y+A.hy,r*0.45,TELE.grab,0.35);}
+  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.25,rgb(Lu),0.3*(1-(T-g.t)/0.35));}
+
+ // ── branchement : à la place de l'ancien dessin quand dessin.actif[1] est vrai (l'interrupteur est relu à chaque image)
+ const ici=e=>RUN&&RUN.act===1&&e&&e.m12&&!e.reflet&&g27Actif(1);
+ const _dm27=drawMere;drawMere=function(c,e){if(ici(e)){try{corps(c,e);}catch(err){console.error(err);}return;}return _dm27(c,e);};
+ const _dbpm27=drawBossPost;drawBossPost=function(e){if(ici(e)){try{lueurs(e);}catch(err){console.error(err);}return;}return _dbpm27(e);};
+ const _epm27=eyePts;eyePts=function(e){if(e&&e.type==='boss'&&ici(e)){const g=e.g27&&e.g27.mere?e.g27:null,R=g&&g.R;if(R)return EYP.map(([u,v],i)=>[e.x+R.hx+u*e.r,e.y+R.hy+v*e.r,i<5?1.4:1.1]);}return _epm27(e);};
+ TINT.perle=rgb(mix(MT()?MT().brume:[150,160,180],[255,255,255],0.12));
+ // mesure (banc, G14) : comme celle du Glas
+ function mesure(e,n){n=n||100;const cv2=document.createElement('canvas');cv2.width=cv.width;cv2.height=cv.height;const o=cv2.getContext('2d'),keep=ctx,L={vide:[],avant:[],apres:[]};
+  const rien=()=>{},tour=(body,post)=>{const t0=performance.now();for(let i=0;i<n;i++){o.setTransform(scale,0,0,scale,offX,offY);o.save();o.translate(e.x,e.y);body(o,e);o.restore();o.save();o.globalCompositeOperation='lighter';post(e);o.restore();o.getImageData(0,0,1,1);}return (performance.now()-t0)/n;};
+  try{ctx=o;for(let k=0;k<7;k++){L.vide.push(tour(rien,rien));L.avant.push(tour(_dm27,_dbpm27));L.apres.push(tour(corps,lueurs));}}finally{ctx=keep;}
+  const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],v=med(L.vide);return{avant:+(med(L.avant)-v).toFixed(3),apres:+(med(L.apres)-v).toFixed(3),vide:+v.toFixed(3)};}
+ // aperçu (banc) : le corps puis les lueurs sur un canevas donné, origine au centre de touche
+ function apercu(o,e){const keep=ctx;try{ctx=o;o.save();corps(o,e);o.restore();o.save();o.globalCompositeOperation='lighter';o.translate(-e.x,-e.y);lueurs(e);o.restore();}finally{ctx=keep;}}
+ window.__gardiens=Object.assign(window.__gardiens||{},{mere:{etat,rig,corps,lueurs,imgRobe,imgBuste,imgTete,imgEnfant,EYP,mesure,apercu}});
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

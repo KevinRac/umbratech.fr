@@ -358,7 +358,7 @@ function gardiens(G, F) {
 
 <h3 class="sub">${esc(A[0].boss)} · Acte I</h3>
 <p>Elle se déroule en trois temps : <b>Observation</b>, <b>Adaptation</b>, <b>Désespoir</b>. Elle copie ce que tu fais le plus :</p>
-<div class="grid g3">${copies}</div>
+<div class="grid g3">${copies}</div>${lecture(1) ? `\n${lecture(1)}` : ''}
 
 <h3 class="sub">${titre2}</h3>
 <p>Ces deux gardiens passent par trois temps. Lors de la troisième phase, une <b>faille</b> s’ouvre :</p>
