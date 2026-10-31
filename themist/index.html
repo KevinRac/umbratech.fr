@@ -1431,7 +1431,7 @@ function bossDefeated(e){
  room.bossDead=true;gainXp(e.xp);addElan(100);RUN.sh.bosses+=[0,12,20,30][RUN.act];SAVE.bossKills++;persist();
  for(const o of enemies)if(!o.dead&&o!==e){o.dead=true;mist(o.x,o.y,o.r);}
  eproj=[];rings=[];room.spawning=[];
- for(let i=0;i<5;i++)later(i*0.16,()=>explosion(e.x+rand(-50,50),e.y+rand(-50,50),110,0,0,{col:'rgba(255,90,90,',spark:'#ffb0a0'}));
+ if(!SC27.debut(e))for(let i=0;i<5;i++)later(i*0.16,()=>explosion(e.x+rand(-50,50),e.y+rand(-50,50),110,0,0,{col:'rgba(255,90,90,',spark:'#ffb0a0'}));
  mist(e.x,e.y,e.r*1.5);shake(12,0.6);freezeT=0.12;heal(P.s.maxHp,'boss');toast(`${ACTS[RUN.act].done}. Tes PV sont restaurés.`,3);
 }
 function explosion(x,y,rad,pDmg,eDmg,o={}){
@@ -1509,11 +1509,13 @@ function render(){
  drawMists();drawDecals();
  drawDoorsPre();drawParts('pre');
  for(const e of enemies)if(!e.dead)drawEnemyBody(e);
+ drawScene27('body');
  if(room.npcs)drawNpcsBody();
  if(!P.dead){if(P.cls==='lum'){drawLanternBody();drawPlayerBody();}else if(P.cls==='gou')drawGouBody();else drawV6Body();}
  drawFog();
  drawRoomPost();drawDoorsPost();drawPools();drawTelegraphs();drawSpectralPost();
  for(const e of enemies)if(!e.dead)drawEnemyPost(e);
+ drawScene27('post');
  drawRings();drawDevour();drawV6World();drawBeam();drawFx();drawPproj();drawEproj();drawCoins();
  if(!P.dead){if(P.cls==='lum'){drawLanternPost();drawPlayerPost();drawCrown();}else if(P.cls==='gou')drawGouPost();else drawV6Post();}
  drawParts('post');drawNums();spawnMotes();drawVignette();if(room&&room.drainT>0){ctx.fillStyle='rgba(6,0,12,.28)';ctx.fillRect(0,0,W,H);}
@@ -12283,6 +12285,74 @@ const G27=(function(){
  function apercu(o,e,part){const keep=ctx;try{ctx=o;if(part!=='lueurs'){o.save();corps(o,e);o.restore();}if(part!=='corps'){o.save();o.globalCompositeOperation='lighter';o.translate(-e.x,-e.y);lueurs(e);o.restore();}}finally{ctx=keep;}}
  window.__gardiens=Object.assign(window.__gardiens||{},{mere:{etat,rig,corps,lueurs,imgRobe,imgBuste,imgTete,imgEnfant,EYP,mesure,apercu}});
 })();
+
+// ═════════════════════════ v17.27 · action 6 · Entrées (G9) et morts (G10) des gardiens, mouvements réduits (G14)
+// Un état de dessin seulement : rien du combat ne passe par ici. Entrée : pendant la bannière (room.bannerT, 2,2 s ; 0,3 s en mode d'essai) le gardien n'existe pas
+// encore (createBoss est appelé à la même seconde qu'avant) ; un fantôme (même position, même rayon, aucun tirage au hasard, jamais dans `enemies`) est dessiné par
+// les mêmes fonctions que le vrai, et s'efface au moment où le vrai naît (progression 1 = dessin plein, rien ne saute). Mort : bossDefeated garde tout (gel, secousse,
+// soin, purge, porte) et ne remplace que les cinq explosions ; le gardien mort, déjà sorti de `enemies`, est redessiné ~1,5 s par la même voie, dans la salle qui reste ouverte.
+// Mouvements réduits : fondu seul, sans déplacement, sans échelle, sans brume ni secousse.
+const SC27=(function(){
+ const DS=()=>GA_D.dessin||{},SC=()=>DS().scene||{},mortS=()=>SC().mortS||1.5;
+ const ease=G27.ease,MORTS=[];
+ const GL=act=>(DS()[act]||{}).lueur||[255,250,240];
+ function fantome(act){const e={type:'boss',x:W/2,y:AR.y0+(act===3?180:170),r:act===3?62:ED.boss.r,hp:1,maxHp:1,phase:1,state:'idle',t:1,wob:0,flash:0,stun:0,marked:0,vuln:0,rawT:0,ang:0,kbx:0,kby:0,mk:1,fade:1,patT:1,queue:[],spinA:0,spinDir:1,shotT:0,ringT:0,chantN:0,burnT:0,exposed:false,dmg:0,spd:0,elite:false,fantome:true};
+  if(act===3){e.hx=W/2;e.hy=AR.y0+180;e.beatT=1.6;}if(act===1)mereInit(e);return e;}
+ // k : 0 → 1 pendant la bannière
+ function entree(act,k,e,ev){const o={dx:0,dy:0,sx:1,sy:1,a:ease(RM?k:k/0.7)};
+  if(RM)return o;
+  if(act===1){o.clip=ease(k/0.9);o.a=0.35+0.65*ease(k);if(!ev.m1&&k>0.04){ev.m1=1;mist(e.x,e.y+e.r*0.7,e.r);}if(!ev.m2&&k>0.5){ev.m2=1;mist(e.x,e.y,e.r*1.2);}}
+  else if(act===2){o.dy=(1-ease(k/0.85))*e.r*1.5;if(!ev.c&&k>=0.85){ev.c=1;fx.push({k:'ring',x:e.x,y:e.y,r0:e.r*0.5,r1:e.r*2,w:6,t:0.5,max:0.5,col:'rgba(120,200,160,',fill:false});}}
+  else{o.dy=-(1-ease(k/0.8))*(e.y-AR.y0+e.r*2.4);if(!ev.c&&k>=0.8){ev.c=1;shake(3,0.2);fx.push({k:'ring',x:e.x,y:e.y,r0:e.r*0.5,r1:e.r*2.2,w:7,t:0.5,max:0.5,col:'rgba(200,40,60,',fill:false});}}
+  return o;}
+ // u : 0 → 1 pendant la mort
+ function mort(act,u,e,ev){const o={dx:0,dy:0,sx:1,sy:1,a:1};
+  if(RM){o.a=1-ease(u);return o;}
+  if(act===1){o.sy=1-0.22*ease(u/0.45);o.dy=(1-o.sy)*e.r*1.3;o.a=1-ease((u-0.3)/0.7);for(const [i,t] of [0.25,0.5,0.75].entries())if(!ev['m'+i]&&u>=t){ev['m'+i]=1;mist(e.x,e.y+e.r*(0.5-i*0.35),e.r);}}
+  else if(act===2){o.dy=ease(u)*e.r*1.1;o.sy=1-0.1*ease(u);o.a=1-ease((u-0.2)/0.8);}
+  else{let p=0;for(const b of [0.12,0.42,0.78]){const x=(u-b)/0.14;if(x>0&&x<1)p=Math.max(p,Math.sin(x*Math.PI));}o.p=p;o.sx=o.sy=1+0.07*p;o.a=1-ease((u-0.8)/0.2);}
+  return o;}
+ function jouer(pass,e,o){const c=ctx,f0=e.fade;e.fade=(f0==null?1:f0)*o.a;c.save();
+  if(o.clip!=null){const y1=e.y+e.r*1.9,h=e.r*3.8*o.clip;c.beginPath();c.rect(e.x-e.r*3,y1-h,e.r*6,h+2);c.clip();}
+  c.translate(e.x+o.dx,e.y+o.dy);c.scale(o.sx,o.sy);c.translate(-e.x,-e.y);
+  try{if(pass==='body')drawEnemyBody(e);else{c.globalAlpha=o.a;drawEnemyPost(e);}}catch(err){console.error(err);}
+  c.restore();e.fade=f0;}
+ function actif(){return !!(RUN&&room&&g27Actif(RUN.act));}
+ function scene(pass){
+  if(!actif())return;const act=RUN.act;
+  // entrée
+  if(room.type==='boss'&&!room.started&&room.bannerT>0){const S=room.g27in||(room.g27in={e:fantome(act),max:0,ev:{},k:0,o:null});
+   if(pass==='body'){S.max=Math.max(S.max,room.bannerT);S.k=S.max>0?clamp(1-room.bannerT/S.max,0,1):1;S.e.wob=T;S.o=entree(act,S.k,S.e,S.ev);}
+   if(S.o)jouer(pass,S.e,S.o);}
+  // morts
+  for(let i=MORTS.length-1;i>=0;i--){const m=MORTS[i];if(m.room!==room||T-m.t0>=mortS()||T<m.t0){if(m.room!==room||T-m.t0>=mortS())MORTS.splice(i,1);continue;}
+   const u=clamp((T-m.t0)/mortS(),0,1),e=m.e;
+   if(pass==='body')m.o=mort(m.act,u,e,m.ev);
+   if(!m.o)continue;jouer(pass,e,m.o);
+   if(pass==='post'){const c=ctx;c.save();c.globalCompositeOperation='lighter';
+    if(m.act===2){const L=G27.rgb(GL(2));glow(c,e.x+e.r*0.55,e.y+e.r*0.95,e.r*0.5,L,(0.75-0.12*(RM?0:Math.sin(T*17)))*(1-ease((u-0.5)/0.5)));}
+    else if(m.act===3&&!RM)glow(c,e.x,e.y,e.r*1.7,G27.rgb(GL(3)),0.55*(m.o.p||0)*m.o.a);
+    c.restore();}}}
+ // appelé par bossDefeated : vrai si le dessin prend la mort en charge (alors seulement les cinq explosions sont omises)
+ function debut(e){try{if(!actif()||e.reflet||e.fantome||(RUN.act===1&&!e.m12))return false;MORTS.push({room,e,act:RUN.act,t0:T,ev:{},o:null});return true;}catch(err){console.error(err);return false;}}
+ // mesure (banc, G14) : coût d'une image de scène (corps + lueurs) sur un canevas caché ; l'ancien coût est celui du même gardien vivant par drawEnemyBody + drawEnemyPost
+ function mesure(e,n){n=n||100;const cv2=document.createElement('canvas');cv2.width=cv.width;cv2.height=cv.height;const o=cv2.getContext('2d'),keep=ctx,id={dx:0,dy:0,sx:1,sy:1,a:1};ctx=o;
+  const tour=f=>{const t0=performance.now();for(let i=0;i<n;i++){o.setTransform(scale,0,0,scale,offX,offY);f();o.getImageData(0,0,1,1);}return(performance.now()-t0)/n;};
+  try{const vif=tour(()=>{drawEnemyBody(e);drawEnemyPost(e);}),scene=tour(()=>{jouer('body',e,id);jouer('post',e,id);});return{vif:+vif.toFixed(3),scene:+scene.toFixed(3)};}finally{ctx=keep;}}
+ // encre (banc) : somme des opacités de la scène à k (entrée, fantôme) ou u (mort, gardien donné), sur un canevas caché transparent
+ function encre(genre,v,e){const cv2=document.createElement('canvas');cv2.width=cv.width;cv2.height=cv.height;const o=cv2.getContext('2d',{willReadFrequently:true}),keep=ctx,act=RUN.act;ctx=o;
+  try{o.setTransform(scale,0,0,scale,offX,offY);const f=genre==='entree'?fantome(act):e,ev={m0:1,m1:1,m2:1,c:1},p=genre==='entree'?entree(act,v,f,ev):mort(act,v,f,ev);
+   jouer('body',f,p);jouer('post',f,p);o.setTransform(1,0,0,1,0,0);const d=o.getImageData(0,0,cv2.width,cv2.height).data;let n=0;for(let i=3;i<d.length;i+=4)n+=d[i];return Math.round(n/255);}
+  finally{ctx=keep;}}
+ // vignette (banc) : la scène à k ou u, sur le fond de la salle, autour du gardien, en PNG (les captures d'écran sont couvertes par la bannière et les fenêtres du HUD)
+ function vignette(genre,v,e){const cv2=document.createElement('canvas'),Wd=380,Hd=420;cv2.width=Wd;cv2.height=Hd;const o=cv2.getContext('2d'),keep=ctx,act=RUN.act;ctx=o;
+  try{const f=genre==='entree'?fantome(act):e,ev={m0:1,m1:1,m2:1,c:1};o.fillStyle='#0b0d12';o.fillRect(0,0,Wd,Hd);o.setTransform(1,0,0,1,Wd/2-f.x,Hd/2-f.y);
+   const p=genre==='entree'?entree(act,v,f,ev):mort(act,v,f,ev);jouer('body',f,p);jouer('post',f,p);}
+  finally{ctx=keep;}return cv2.toDataURL('image/png');}
+ window.__scenes=Object.assign(window.__scenes||{},{fantome,entree,mort,morts:MORTS,mortS,mesure,encre,vignette,ecran:()=>({scale,offX,offY,W,H,cw:cv.width,rw:cv.getBoundingClientRect().width,T}),etat:()=>room&&room.g27in});
+ return{scene,debut};
+})();
+function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}}
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];
 if(DEMO_CLS&&CLS[DEMO_CLS])demoBoot(DEMO_CLS);

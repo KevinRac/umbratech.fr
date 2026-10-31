@@ -349,7 +349,7 @@ function gardiens(G, F) {
   const copies = Object.values(G.copies).map(c => `<article class="ent"><h4>Si tu abuses de ${esc(c.what)}</h4><p>${esc(c.hint)}</p></article>`).join('');
   // v17.27 · les gardiens redessinés : ce qu'on lit à l'œil (dessin[n].lecture), seulement pour un gardien dont le nouveau dessin est actif
   const actifD = n => { const D = G.dessin; return !!(D && D.actif && (typeof D.actif === 'object' ? D.actif[n] : D.actif)); };
-  const lecture = a => actifD(+a) && G.dessin[a] && G.dessin[a].lecture ? `<p class="k">${esc(G.dessin[a].lecture)}</p>` : '';
+  const lecture = a => actifD(+a) && G.dessin[a] && G.dessin[a].lecture ? `<p class="k">${esc(G.dessin[a].lecture)}${G.dessin[a].entree ? ` Entrée : ${esc(G.dessin[a].entree)}. Mort : ${esc(G.dessin[a].mort)} (${esc(String(G.dessin.scene.mortS).replace('.', ','))} s, sans retarder ni la salle ni les récompenses ; mouvements réduits : simple fondu).` : ''}</p>` : '';
   const failles = Object.entries(G.failles).map(([a, f]) => `<article class="ent"><h4>${esc(A[a - 1].boss)}</h4><p><b>${esc(f.l1)}.</b></p><p><b>${esc(f.l3)}.</b> ${esc(f.t3)}</p>${lecture(a)}</article>`).join('');
   // v17.27 (G5) : le même anneau ivoire entoure le point faible de chaque gardien dont le nouveau dessin est actif, quand il est à nu (fenêtre ou sonné)
   const faibles = [1, 2, 3].filter(n => actifD(n) && G.dessin[n] && G.dessin[n].faible).map(n => G.dessin[n].faible);

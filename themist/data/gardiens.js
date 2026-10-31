@@ -81,24 +81,33 @@
   // la couleur de la forme (CRGB). Deux formes tombaient à moins de ΔE 25 d'un télégraphe : Lumière (or, 23,5 de l'orange des zones) et Héraut (bleu clair, 20,7 du cyan
   // de saisie) ; leur teinte est éclaircie (même famille de couleur, ΔE ≈ 26 de chaque télégraphe). Le banc vérifie les quatre (capture-lisibilite.mjs).
   copie:{lum:[244,191,91],her:[190,215,255]},
+  // scène (action 6, G9, G10, G14) : mortS = durée de la mort d'un gardien, en secondes (la purge de la salle et l'écran de victoire ne l'attendent pas). L'entrée tient dans la bannière
+  // (2,2 s, 0,3 s en mode d'essai), rien de plus. Mouvements réduits : fondu seul.
+  scene:{mortS:1.5},
   // Mère-Brume (G6) : Mahaut et son enfant. brume : sa matière (gris-bleu perle, plus de mauve : loin du violet de ses tirs) ; os : masque, côtes,
   // doigts ; or : la couronne, or pâle terni. lueur : nacrée, seulement le cœur-cloche et le ballot ; yeux : ses sept yeux, perle froide ; nu : le rouge du troisième temps (cœur-cloche
   // et ses fissures). enfant : le ballot de brume sans visage, bercé au premier temps (faux : sans enfant). pointes : les deux pointes de couronne
   // qui tombent au troisième temps (0 à 6, de gauche à droite) et restent au sol. transS : durée d'une transformation.
   // faible (les trois gardiens, G5) : le point faible, tel que le wiki le nomme ; un même anneau ivoire l'entoure quand le gardien est à nu.
   1:{matiere:{brume:[150,160,180],os:[222,214,190],or:[196,170,110]},lueur:[245,240,230],yeux:[214,226,250],nu:[255,96,96],enfant:true,pointes:[1,5],transS:0.6,
+   entree:'la brume se condense et la silhouette se forme de bas en haut',
+   mort:'elle tombe à genoux, bras vides, et se défait en brume qui monte',
    faible:'le cœur-cloche de la Mère-Brume',
    lecture:'Mahaut berce son enfant, un ballot de brume sans visage. Au deuxième temps, le voile tombe et l’enfant se défait en filets de brume autour d’elle ; quand elle te copie, son masque prend la couleur et l’emblème de ta forme. Au troisième, les bras vides, la couronne brisée : son cœur-cloche est à nu.'},
   // Héraut Noyé (G7) : Élias sous sa cloche. La cloche est sa tête, fondue sur ses épaules ; sa robe ruisselle ; il tire les cordes qui montent au
   // haut de la salle ; à sa ceinture, la lampe d'Ismène (lueur, ambre). eau : vert d'algue, loin du cyan de la saisie. reflets : les trois yeux sous
   // la lèvre (eyePts, même place). fente : ouverture des deux moitiés de la cloche au troisième temps (radians). transS : durée d'une transformation.
   2:{matiere:{bronze:[110,96,60],eau:[70,190,150],chair:[104,130,116],patine:[84,128,100],robe:[28,44,38],corde:[134,116,80]},lueur:[255,200,120],
+   entree:'il est hissé de l’ombre, cloche en avant, un coup de cloche sourd à l’arrivée',
+   mort:'il s’enfonce ; la lampe d’Ismène reste allumée un instant, puis s’éteint doucement',
    faible:'le battant du Héraut Noyé',
    reflets:[214,236,196],fente:0.15,transS:0.6,
    lecture:'Élias sous sa cloche : elle est devenue sa tête, il en tire encore les cordes, la lampe d’Ismène à la ceinture. Au deuxième temps, une corde casse ; au troisième, la cloche se fend sur son visage noyé et le battant pend à nu. Quand il te copie, le battant luit de la couleur de ta forme.'},
   // Glas Originel (G8) : la cloche devenue cœur. plaques : morceaux de bronze (2 éclatent au deuxième temps, les autres tombent au troisième et
   // restent au sol, éteints, jusqu'à sa mort). arteres : nombre d'artères qui le suspendent au haut de la salle. transS : durée d'une transformation.
   3:{matiere:{bronze:[90,70,40],chair:[110,24,40],sang:[34,6,12],os:[220,206,180],patine:[86,124,104]},lueur:[200,40,60],oeil:[238,232,218],
+   entree:'la cloche descend du haut de la salle au premier battement',
+   mort:'le cœur bat trois fois, de plus en plus lentement, et s’arrête',
    faible:'l’œil du Glas Originel',
    plaques:7,arteres:4,transS:0.6,
    // wiki (section « Les gardiens », carte de la faille) : ce qu'on lit à l'œil, temps par temps ; affiché seulement si actif
