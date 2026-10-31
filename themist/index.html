@@ -1237,7 +1237,7 @@ function computeLights(){
   if(P.zenithT>0)lights.push({x:W/2,y:H/2,r:760,ex:false,c:'none'});
  }
  for(const e of enemies)if(!e.dead&&e.type==='hurleur'&&e.state==='sing')lights.push({x:e.x,y:e.y,r:70,ex:false,c:'cold'});
- for(const e of enemies)if(!e.dead&&e.type==='boss')lights.push({x:e.x,y:e.y,r:e.r*2.4*(RUN.act===3?1+0.35*beatK():1),ex:false,c:RUN.act===2?'cold':'violet'});
+ for(const e of enemies)if(!e.dead&&e.type==='boss')lights.push({x:e.x,y:e.y,r:e.r*2.4*(RUN.act===3?1+0.35*beatK():1),ex:false,c:RUN.act===2?'cold':RUN.act===3&&g27Actif(3)?'glas':'violet'});   // v17.27 : la lumière du Glas suit sa lueur (G3), rayon inchangé
  if(room&&room.pillars)for(const q of room.pillars)if(q.kind==='crystal')lights.push({x:q.x,y:q.y-10,r:95,ex:false,c:'violet'});
  if(room&&room.candles)for(const k of room.candles)lights.push({x:k.x,y:k.y,r:k.wall?60:88,ex:false,c:'warm'});
  if(room&&room.npcs)for(const n of room.npcs)if(n.light)lights.push({x:n.lx||n.x,y:n.ly||n.y,r:n.light,ex:false,c:n.tint});
@@ -6284,7 +6284,8 @@ function drawRuleWorld(){if(!room||!room.rule)return;const c=ctx;
 const _cl14=computeLights;
 computeLights=function(){_cl14();if(room&&room.rule==='braseros'&&room.braz)for(const b of room.braz)lights.push({x:b.x,y:b.y,r:210,c:'warm'});};
 const _dv14=drawVignette;
-drawVignette=function(){_dv14();if(!room||room.rule!=='brume'||room.cleared||!P)return;   // v17.26 : le voile se lève quand la salle est purgéeconst c=ctx;c.save();c.beginPath();c.rect(room.veil<0?0:W/2,0,W/2,H);c.clip();
+drawVignette=function(){_dv14();if(!room||room.rule!=='brume'||room.cleared||!P)return;   // v17.26 : le voile se lève quand la salle est purgée
+ const c=ctx;c.save();c.beginPath();c.rect(room.veil<0?0:W/2,0,W/2,H);c.clip();
  const g=c.createRadialGradient(P.x,P.y,60,P.x,P.y,200);g.addColorStop(0,'rgba(5,6,12,0)');g.addColorStop(1,'rgba(5,6,12,.84)');c.fillStyle=g;c.fillRect(0,0,W,H);c.restore();
  c.save();c.strokeStyle='rgba(180,160,230,.25)';c.setLineDash([8,10]);c.beginPath();c.moveTo(W/2,AR.y0);c.lineTo(W/2,AR.y1);c.stroke();c.restore();};
 let ruleTagEl=null,ruleTagTxt='';
@@ -11497,6 +11498,240 @@ function demoBoot(cls){
    if(room.pillars&&room.pillars.length){FF.t-=dt;if(FF.t<=0||FF.room!==room){FF.t=0.15;try{ffBuild();}catch(x){FF.ok=false;}}}else FF.ok=false;}
   return _ue(dt);};
  window.__v175={FF,ffDir,losClear};
+})();
+
+// ═════════════════════════ v17.27 · Les gardiens (cadrage G1–G18) : action 1 (socle) et action 2 (le Glas Originel)
+// Dessin seulement : rien du combat ne passe ici (PV, attaques, temps, rayon de touche, états restent ceux d'avant). Réglages : data/gardiens.js, dessin.
+// Chaque gardien a son interrupteur (dessin.actif[n]) ; éteint, l'ancien dessin reste (drawMere, drawHeraut, drawHeart et leurs lueurs), jusqu'à l'action 9.
+function g27Actif(n){const D=GA_D.dessin;if(!D||!D.actif)return false;return typeof D.actif==='object'?!!D.actif[n]:!!D.actif;}
+const G27=(function(){
+ // ── G1 · Cache hors écran : ce qui ne bouge pas est peint une fois (par temps), à la densité de l'écran (scale = pixels de l'appareil par unité
+ // du monde, devicePixelRatio compris), arrondie au quart pour ne pas repeindre à chaque redimensionnement. Une image est une boîte en unités du
+ // monde (x0, y0, w, h) autour du centre de touche ; le peintre dessine en unités du monde, origine au centre.
+ const CACHE=new Map();
+ function densite(){return clamp(Math.ceil((scale||1)*4)/4,1,3);}
+ function image(cle,x0,y0,w,h,peindre){const k=densite(),K=cle+'@'+k;let I=CACHE.get(K);if(I)return I;
+  const cv=document.createElement('canvas');cv.width=Math.max(1,Math.ceil(w*k));cv.height=Math.max(1,Math.ceil(h*k));const o=cv.getContext('2d');
+  o.setTransform(k,0,0,k,-x0*k,-y0*k);o.lineCap='round';o.lineJoin='round';peindre(o);
+  I={cv,x0,y0,w,h,k};CACHE.set(K,I);if(CACHE.size>80)CACHE.delete(CACHE.keys().next().value);return I;}
+ function poser(c,I){c.drawImage(I.cv,I.x0,I.y0,I.w,I.h);}
+ const rgb=a=>a[0]+','+a[1]+','+a[2],mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+ const ease=k=>1-Math.pow(1-clamp(k,0,1),3);
+ return{image,poser,densite,vider:()=>CACHE.clear(),taille:()=>CACHE.size,rgb,mix,ease};
+})();
+
+// ── G8 · Le Glas Originel : la cloche devenue cœur. Une grande cloche de bronze fendue, suspendue par ses artères au haut de la salle ; dans la
+// fente, la chair qui bat et l'œil qui te suit. Temps 1 : une seule fente. Temps 2 : le bronze éclate en plaques (deux tombent), la chair se voit.
+// Temps 3 : les plaques tombent et restent au sol, éteintes ; il reste un cœur nu dans la lèvre et l'anse. Le Reflet sort par la fente (l'œil,
+// au centre de touche : son origine n'a pas bougé). Coordonnées en × rayon, origine = centre de touche ; le corps plein tient dans 1,15 × r (G2).
+(function(){
+ const GD=()=>(GA_D.dessin||{})[3]||{},PRO=()=>((GA_D.dessin||{}).echelle||{}).prolongements||0.35;
+ const {image,poser,rgb,mix,ease}=G27;
+ const B=0.98;   // la cloche, réduite d'un poil pour que son trait d'encre reste dans le disque de touche × 1,15
+ // profil de la cloche (côté droit ; le gauche en miroir) et largeur à une hauteur donnée (gravures)
+ function cloche(o,r,suite){const s=r*B;if(!suite)o.beginPath();o.moveTo(0,-0.92*s);
+  o.bezierCurveTo(0.3*s,-0.92*s,0.52*s,-0.84*s,0.56*s,-0.6*s);o.bezierCurveTo(0.6*s,-0.36*s,0.58*s,-0.1*s,0.64*s,0.14*s);o.bezierCurveTo(0.7*s,0.38*s,0.8*s,0.52*s,0.9*s,0.62*s);
+  o.quadraticCurveTo(0.92*s,0.68*s,0.86*s,0.72*s);o.bezierCurveTo(0.5*s,0.8*s,-0.5*s,0.8*s,-0.86*s,0.72*s);o.quadraticCurveTo(-0.92*s,0.68*s,-0.9*s,0.62*s);
+  o.bezierCurveTo(-0.8*s,0.52*s,-0.7*s,0.38*s,-0.64*s,0.14*s);o.bezierCurveTo(-0.58*s,-0.1*s,-0.6*s,-0.36*s,-0.56*s,-0.6*s);o.bezierCurveTo(-0.52*s,-0.84*s,-0.3*s,-0.92*s,0,-0.92*s);o.closePath();}
+ const PROFIL=[[-0.92,0],[-0.86,0.36],[-0.6,0.56],[-0.25,0.59],[0.14,0.64],[0.4,0.75],[0.62,0.9]];
+ function demi(y){for(let i=1;i<PROFIL.length;i++)if(y<=PROFIL[i][0]){const [y0,w0]=PROFIL[i-1],[y1,w1]=PROFIL[i];return (w0+(w1-w0)*(y-y0)/(y1-y0))*B;}return 0.9*B;}
+ // la lèvre : bande de bronze au bas de la cloche (temps 1 et 2)
+ function levre(o,r){const s=r*B;o.beginPath();o.moveTo(0.9*s,0.62*s);o.bezierCurveTo(0.5*s,0.57*s,-0.5*s,0.57*s,-0.9*s,0.62*s);o.quadraticCurveTo(-0.92*s,0.68*s,-0.86*s,0.72*s);
+  o.bezierCurveTo(-0.5*s,0.8*s,0.5*s,0.8*s,0.86*s,0.72*s);o.quadraticCurveTo(0.92*s,0.68*s,0.9*s,0.62*s);o.closePath();}
+ // au-dessus de la lèvre (pour couper les plaques)
+ function dessusLevre(o,r){const s=r*B;o.beginPath();o.moveTo(-1.4*r,-1.4*r);o.lineTo(1.4*r,-1.4*r);o.lineTo(1.4*r,0.62*s);o.lineTo(0.9*s,0.62*s);o.bezierCurveTo(0.5*s,0.57*s,-0.5*s,0.57*s,-0.9*s,0.62*s);o.lineTo(-1.4*r,0.62*s);o.closePath();}
+ // la fente : ligne brisée, plus large autour de l'œil (au centre). ph : temps (sa largeur)
+ const FENTE=[[0.02,-0.8],[0.07,-0.6],[-0.02,-0.42],[0.04,-0.26],[0,-0.12],[0,0],[0,0.12],[0.05,0.26],[-0.02,0.42],[0.03,0.6]];
+ function fenteX(y){for(let i=1;i<FENTE.length;i++)if(y<=FENTE[i][1]){const [x0,y0]=FENTE[i-1],[x1,y1]=FENTE[i];return x0+(x1-x0)*(y-y0)/(y1-y0);}return FENTE[FENTE.length-1][0];}
+ function fenteL(y,ph){const w0=ph>=2?0.05:0.03,lw=ph>=2?0.1:0.06,tp=Math.min(1,(y+0.8)/0.14,(0.6-y)/0.1);return Math.max(0,(w0+lw*Math.sqrt(Math.max(0,1-(y/0.24)**2)))*tp);}
+ function fente(o,r,ph){const N=48,L=[],R=[];for(let i=0;i<=N;i++){const y=-0.8+1.4*i/N,x=fenteX(y),w=fenteL(y,ph);L.push([(x-w)*r,y*r]);R.push([(x+w)*r,y*r]);}
+  o.moveTo(L[0][0],L[0][1]);for(const q of L)o.lineTo(q[0],q[1]);for(let i=R.length-1;i>=0;i--)o.lineTo(R[i][0],R[i][1]);o.closePath();}
+ // les plaques : 0 couronne, 1 et 4 contre la fente (elles éclatent au deuxième temps), 2 et 5 dehors, 3 et 6 en bas ; les coutures partent de la fente
+ const PLQ=[
+  [[-1.2,-1.3],[1.2,-1.3],[1.2,-0.6],[0.62,-0.56],[0.28,-0.62],[0.2,-0.66],[0.07,-0.6],[-0.02,-0.42],[-0.16,-0.36],[-0.22,-0.4],[-0.4,-0.5],[-0.62,-0.54],[-1.2,-0.56]],
+  [[0.07,-0.6],[0.2,-0.66],[0.28,-0.62],[0.34,0],[0.2,-0.1],[0,-0.12],[0.04,-0.26],[-0.02,-0.42]],
+  [[0.28,-0.62],[0.62,-0.56],[1.2,-0.6],[1.2,0.02],[0.7,-0.02],[0.34,0]],
+  [[0,-0.12],[0.2,-0.1],[0.34,0],[0.7,-0.02],[1.2,0.02],[1.2,1],[0.03,1],[0.03,0.6],[-0.02,0.42],[0.05,0.26],[0,0.12]],
+  [[-0.02,-0.42],[-0.16,-0.36],[-0.22,-0.4],[-0.32,0.22],[-0.2,0.16],[-0.03,0.18],[0,0.12],[0,-0.12],[0.04,-0.26]],
+  [[-0.22,-0.4],[-0.4,-0.5],[-0.62,-0.54],[-1.2,-0.56],[-1.2,0.2],[-0.7,0.18],[-0.32,0.22]],
+  [[-0.03,0.18],[-0.2,0.16],[-0.32,0.22],[-0.7,0.18],[-1.2,0.2],[-1.2,1],[0.03,1],[0.03,0.6],[-0.02,0.42],[0.05,0.26],[0,0.12]]];
+ const ECLATENT=[1,4],TOMBENT=[0,2,3,5,6];
+ // centre de chaque plaque (dans la cloche) et son écart au deuxième temps (poussée vers l'extérieur)
+ const CTR=PLQ.map(p=>{let sx=0,sy=0,n=0;for(const [x,y] of p){const yy=clamp(y,-0.92,0.6),xx=clamp(x,-demi(yy),demi(yy));sx+=xx;sy+=yy;n++;}return[sx/n,sy/n];});
+ const ECART=CTR.map(([x,y],i)=>{const d=Math.hypot(x,y+0.1)||1;return{dx:x/d*0.045,dy:(y+0.1)/d*0.045,rot:(i%2?1:-1)*0.05};});
+ // où chaque plaque tombe (× r autour du centre au moment de la chute) et son angle au sol
+ const SOL=[[0.12,1.42,0.25],[0.78,1.0,0.6],[1.38,0.7,1.05],[1.05,1.35,-0.3],[-0.72,1.05,-0.5],[-1.38,0.66,-0.9],[-1.08,1.4,0.35]];
+ function plaque(o,i,r){o.beginPath();PLQ[i].forEach(([x,y],k)=>{if(k)o.lineTo(x*r,y*r);else o.moveTo(x*r,y*r);});o.closePath();}
+
+ // ── matières (G3) : bronze sombre, chair bordeaux et sang noir, os ; la lueur rouge sombre ne sert qu'au battement et au point faible
+ function bronze(o,r,eteint){const M=GD().matiere,Bz=M.bronze;
+  const hi=eteint?mix(Bz,[150,120,80],0.15):mix(Bz,[176,140,84],0.42),lo=mix(Bz,[8,6,3],eteint?0.8:0.7),mid=eteint?mix(Bz,[0,0,0],0.25):mix(Bz,[0,0,0],0.12);
+  const g=o.createRadialGradient(-0.38*r,-0.55*r,0.05*r,0,-0.1*r,1.15*r);g.addColorStop(0,`rgb(${rgb(hi)})`);g.addColorStop(0.45,`rgb(${rgb(mid)})`);g.addColorStop(1,`rgb(${rgb(lo)})`);
+  o.fillStyle=g;o.fillRect(-1.4*r,-1.4*r,2.8*r,2.8*r);
+  const gx=o.createLinearGradient(-0.95*r,0,0.95*r,0);gx.addColorStop(0,'rgba(0,0,0,.5)');gx.addColorStop(0.3,'rgba(0,0,0,0)');gx.addColorStop(0.62,`rgba(255,220,160,${eteint?0:0.07})`);gx.addColorStop(1,'rgba(0,0,0,.55)');
+  o.fillStyle=gx;o.fillRect(-1.4*r,-1.4*r,2.8*r,2.8*r);
+  // gravures : les anneaux du profil, comme sur toute cloche, et une ligne d'inscription entre les deux du haut
+  for(const y of[-0.68,-0.57,0.33,0.44]){const w=demi(y)*r;o.strokeStyle='rgba(18,10,4,.6)';o.lineWidth=1.6;o.beginPath();o.ellipse(0,y*r,w,0.07*r,0,0.06,Math.PI-0.06);o.stroke();
+   if(!eteint){o.strokeStyle='rgba(235,195,125,.22)';o.lineWidth=1;o.beginPath();o.ellipse(0,y*r+1.4,w,0.07*r,0,0.1,Math.PI-0.1);o.stroke();}}
+  o.strokeStyle='rgba(18,10,4,.5)';o.lineWidth=1.1;for(let i=0;i<15;i++){const u=-0.42+i*0.06,a=Math.acos(clamp(u/0.47,-1,1)),x=Math.cos(a)*demi(-0.62)*r,y=-0.625*r+Math.sin(a)*0.07*r;
+   o.beginPath();if(i%3===0){o.moveTo(x,y-2.4);o.lineTo(x,y+2.4);}else if(i%3===1){o.arc(x,y,1.5,0,TAU);}else{o.moveTo(x-1.8,y+1.6);o.lineTo(x,y-2.2);o.lineTo(x+1.8,y+1.6);}o.stroke();}
+  // vert-de-gris
+  o.fillStyle=`rgba(${rgb(M.patine)},${eteint?0.18:0.34})`;for(const [x,y,s,a] of[[-0.42,-0.3,0.13,0.4],[0.38,0.2,0.1,-0.3],[-0.2,0.48,0.12,0.1],[0.18,-0.76,0.08,0.2],[0.5,-0.4,0.06,0.8],[-0.55,0.3,0.07,1.2]]){ell(o,x*r,y*r,s*r,s*r*0.6,a);o.fill();}}
+ function encre(o,w){o.strokeStyle=INK;o.lineWidth=w;o.stroke();}
+ function bandeLevre(o,r){levre(o,r);const g=o.createLinearGradient(0,0.56*r,0,0.8*r),M=GD().matiere;g.addColorStop(0,`rgb(${rgb(mix(M.bronze,[190,150,90],0.32))})`);g.addColorStop(1,`rgb(${rgb(mix(M.bronze,[8,5,2],0.62))})`);
+  o.fillStyle=g;o.fill();encre(o,2.4);const s=r*B;o.strokeStyle='rgba(240,205,140,.32)';o.lineWidth=1.2;o.beginPath();o.moveTo(0.84*s,0.64*s);o.bezierCurveTo(0.5*s,0.6*s,-0.5*s,0.6*s,-0.84*s,0.64*s);o.stroke();}
+ // l'anse, au sommet, et les fermoirs d'os où les artères s'accrochent
+ const ACCROCHES=[[-0.2,-0.94],[-0.07,-1.07],[0.07,-1.07],[0.2,-0.94]];
+ function anse(o,r){const M=GD().matiere;o.lineCap='round';o.strokeStyle=INK;o.lineWidth=0.075*r+3;o.beginPath();o.arc(0,-0.98*r,0.1*r,Math.PI*1.05,Math.PI*1.95);o.stroke();
+  o.strokeStyle=`rgb(${rgb(mix(M.bronze,[190,150,90],0.22))})`;o.lineWidth=0.075*r;o.stroke();
+  rr(o,-0.2*r,-0.98*r,0.4*r,0.1*r,0.04*r);const g=o.createLinearGradient(0,-0.98*r,0,-0.88*r);g.addColorStop(0,`rgb(${rgb(mix(M.bronze,[190,150,90],0.3))})`);g.addColorStop(1,`rgb(${rgb(mix(M.bronze,[8,5,2],0.6))})`);o.fillStyle=g;o.fill();encre(o,2);
+  for(const [x,y] of ACCROCHES){ell(o,x*r,y*r,0.038*r,0.032*r);o.fillStyle=`rgb(${rgb(M.os)})`;o.fill();encre(o,1.4);}}
+ // la chair : un cœur (pas un ♥), ses gros vaisseaux qui montent vers l'anse, le sillon et les coronaires ; stylisé à l'encre, rien ne coule (G8)
+ function coeur(o,r){o.beginPath();o.moveTo(-0.08*r,-0.6*r);o.bezierCurveTo(-0.3*r,-0.72*r,-0.6*r,-0.55*r,-0.6*r,-0.25*r);o.bezierCurveTo(-0.6*r,0.05*r,-0.42*r,0.38*r,-0.1*r,0.62*r);
+  o.bezierCurveTo(0.12*r,0.5*r,0.42*r,0.32*r,0.55*r,0.05*r);o.bezierCurveTo(0.66*r,-0.2*r,0.56*r,-0.55*r,0.32*r,-0.62*r);o.bezierCurveTo(0.18*r,-0.66*r,0.04*r,-0.56*r,-0.08*r,-0.6*r);o.closePath();}
+ function peindreCoeur(o,r){const M=GD().matiere,C=M.chair,S=M.sang;
+  // gros vaisseaux (derrière le cœur) : ils montent vers l'anse
+  o.lineCap='butt';for(const [p,w] of[[[[-0.42,-0.48],[-0.34,-0.74],[-0.2,-0.88]],0.08],[[[0.2,-0.56],[0.24,-0.76],[0.07,-0.9]],0.1],[[[-0.1,-0.56],[-0.14,-0.8],[-0.07,-0.92]],0.13]]){
+   const ln=()=>{o.beginPath();o.moveTo(p[0][0]*r,p[0][1]*r);o.quadraticCurveTo(p[1][0]*r,p[1][1]*r,p[2][0]*r,p[2][1]*r);};
+   ln();o.strokeStyle=INK;o.lineWidth=w*r+3;o.stroke();ln();o.strokeStyle=`rgb(${rgb(mix(C,S,0.25))})`;o.lineWidth=w*r;o.stroke();ln();o.strokeStyle=`rgba(${rgb(mix(C,[255,200,190],0.35))},.5)`;o.lineWidth=1.2;o.stroke();}
+  o.lineCap='round';coeur(o,r);const g=o.createRadialGradient(-0.25*r,-0.32*r,0.04*r,0,0,0.72*r);g.addColorStop(0,`rgb(${rgb(mix(C,[255,150,140],0.35))})`);g.addColorStop(0.5,`rgb(${rgb(C)})`);g.addColorStop(1,`rgb(${rgb(S)})`);
+  o.fillStyle=g;o.fill();
+  o.save();coeur(o,r);o.clip();
+  // fibres du muscle
+  o.strokeStyle=`rgba(${rgb(S)},.32)`;o.lineWidth=1.2;for(let i=0;i<7;i++){o.beginPath();o.arc(-0.9*r,0.9*r,(0.75+i*0.11)*r,-1.25,-0.15);o.stroke();}
+  // sillon et coronaires (sang noir, liseré clair)
+  const sillon=()=>{o.beginPath();o.moveTo(0.14*r,-0.6*r);o.bezierCurveTo(0.04*r,-0.24*r,0.12*r,0.18*r,-0.08*r,0.6*r);};
+  sillon();o.strokeStyle=`rgb(${rgb(S)})`;o.lineWidth=0.05*r;o.stroke();sillon();o.strokeStyle=`rgba(${rgb(mix(C,[255,190,170],0.4))},.45)`;o.lineWidth=1;o.stroke();
+  o.strokeStyle=`rgb(${rgb(S)})`;o.lineWidth=1.8;for(const [x0,y0,x1,y1,x2,y2] of[[0.09,-0.32,-0.2,-0.3,-0.42,-0.12],[0.08,-0.05,-0.18,0.05,-0.34,0.28],[0.1,-0.18,0.3,-0.12,0.44,0.02],[0.06,0.22,0.22,0.24,0.3,0.36],[-0.24,-0.3,-0.3,-0.12,-0.46,0.0]]){o.beginPath();o.moveTo(x0*r,y0*r);o.quadraticCurveTo(x1*r,y1*r,x2*r,y2*r);o.stroke();}
+  // éclat (humide, sans couler)
+  o.fillStyle='rgba(255,226,214,.16)';ell(o,-0.3*r,-0.32*r,0.16*r,0.09*r,-0.5);o.fill();o.fillStyle='rgba(255,236,226,.4)';ell(o,-0.34*r,-0.36*r,0.05*r,0.025*r,-0.5);o.fill();
+  o.restore();coeur(o,r);encre(o,2.6);}
+ // ── images (G1) : une par temps pour le bronze, une pour le cœur, une par plaque (debout et éteinte au sol)
+ const imgCoeur=r=>image('glas-coeur-'+r,-0.75*r,-1.1*r,1.5*r,1.8*r,o=>peindreCoeur(o,r));
+ function imgPlaque(i,r,eteint){const p=PLQ[i];let x0=9,x1=-9,y0=9,y1=-9;for(const [x,y] of p){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  x0=Math.max(x0,-0.95)-0.04;x1=Math.min(x1,0.95)+0.04;y0=Math.max(y0,-0.96)-0.04;y1=Math.min(y1,0.66)+0.04;
+  return image(`glas-plq${i}-${eteint?'e':'d'}-${r}`,x0*r,y0*r,(x1-x0)*r,(y1-y0)*r,o=>{
+   o.save();plaque(o,i,r);o.clip();cloche(o,r);o.clip();dessusLevre(o,r);o.clip();o.beginPath();o.rect(-1.5*r,-1.5*r,3*r,3*r);fente(o,r,2);o.clip('evenodd');
+   bronze(o,r,eteint);
+   // ses bords : la cassure (encre), coupée à la plaque
+   o.lineWidth=3.4;o.strokeStyle=INK;plaque(o,i,r);o.stroke();cloche(o,r);o.stroke();o.beginPath();fente(o,r,2);o.stroke();dessusLevre(o,r);o.stroke();
+   if(!eteint){o.strokeStyle='rgba(240,200,130,.18)';o.lineWidth=1.2;plaque(o,i,r);o.stroke();}
+   o.restore();});}
+ function imgTemps(ph,r){
+  if(ph===1)return image('glas-t1-'+r,-1.0*r,-1.2*r,2.0*r,2.05*r,o=>{
+   o.save();cloche(o,r);o.clip();o.beginPath();o.rect(-1.5*r,-1.5*r,3*r,3*r);fente(o,r,1);o.clip('evenodd');bronze(o,r,false);
+   // fêlures qui annoncent les plaques
+   o.strokeStyle='rgba(10,6,3,.7)';o.lineWidth=1.3;for(const L of[[[0.07,-0.6],[0.2,-0.66],[0.28,-0.62],[0.36,-0.6]],[[-0.02,-0.42],[-0.16,-0.36],[-0.22,-0.4],[-0.28,-0.44]],[[0,-0.12],[0.14,-0.1],[0.22,-0.06]],[[-0.03,0.18],[-0.16,0.16],[-0.24,0.2]]]){o.beginPath();L.forEach(([x,y],k)=>{if(k)o.lineTo(x*r,y*r);else o.moveTo(x*r,y*r);});o.stroke();}
+   o.restore();
+   o.save();cloche(o,r);o.clip();o.beginPath();fente(o,r,1);encre(o,2.2);o.restore();
+   cloche(o,r);encre(o,3);bandeLevre(o,r);anse(o,r);});
+  if(ph===2)return image('glas-t2-'+r,-1.05*r,-1.2*r,2.1*r,2.1*r,o=>{
+   for(const i of TOMBENT){const [cx,cy]=CTR[i],E=ECART[i];o.save();o.translate((cx+E.dx)*r,(cy+E.dy)*r);o.rotate(E.rot);o.translate(-cx*r,-cy*r);poser(o,imgPlaque(i,r,false));o.restore();}
+   bandeLevre(o,r);anse(o,r);});
+  // temps 3 : la lèvre seule, en anneau, avec ses éclats ; l'anse ; le dos de l'anneau est une autre image, dessinée sous le cœur
+  return image('glas-t3-'+r,-1.0*r,-1.2*r,2.0*r,2.1*r,o=>{anneauDevant(o,r);anse(o,r);});}
+ const imgDos=r=>image('glas-dos-'+r,-1.0*r,0.4*r,2.0*r,0.4*r,o=>{const M=GD().matiere,s=r*B;o.save();o.beginPath();o.rect(-1.2*r,0.3*r,2.4*r,0.36*s);o.clip();
+  ell(o,0,0.66*s,0.9*s,0.15*s);o.fillStyle=`rgb(${rgb(mix(M.bronze,[10,6,2],0.55))})`;o.fill();encre(o,2.2);ell(o,0,0.66*s,0.78*s,0.09*s);o.fillStyle='#0b0507';o.fill();encre(o,1.6);o.restore();});
+ function anneauDevant(o,r){const M=GD().matiere,s=r*B;
+  // éclats de la paroi restés debout sur la lèvre, devant le cœur
+  o.beginPath();const N=22;for(let i=0;i<=N;i++){const a=i/N*Math.PI,h=[0.05,0.15,0.08,0.2,0.04,0.11,0.17,0.05,0.09,0.03,0.12,0.06,0.18,0.07,0.04,0.14,0.08,0.19,0.05,0.1,0.13,0.06,0.04][i];
+   const x=Math.cos(a)*0.86*s,y=0.66*s+Math.sin(a)*0.13*s-h*s;if(i)o.lineTo(x,y);else o.moveTo(x,y);}
+  for(let i=N;i>=0;i--){const a=i/N*Math.PI;o.lineTo(Math.cos(a)*0.9*s,0.66*s+Math.sin(a)*0.15*s);}o.closePath();
+  o.save();o.clip();bronze(o,r,false);o.restore();encre(o,2.2);
+  ell(o,0,0.66*s,0.9*s,0.15*s);o.save();o.beginPath();o.rect(-1.2*r,0.66*s,2.4*r,0.4*r);o.clip();ell(o,0,0.66*s,0.9*s,0.15*s);encre(o,2.6);o.restore();
+  o.strokeStyle='rgba(240,205,140,.3)';o.lineWidth=1.1;o.beginPath();o.ellipse(0,0.66*s,0.88*s,0.135*s,0,0.25,Math.PI-0.25);o.stroke();}
+
+ // ── l'état de dessin, posé sur le gardien (rien du combat ne le lit) : temps vu, transformation en cours, plaques en vol et au sol
+ function etat(e){let g=e.g27;if(g)return g;g=e.g27={ph:e.phase||1,t:-9,vole:[],sol:[]};
+  // né à un temps avancé (mode d'essai) : ses plaques sont déjà au sol
+  if(g.ph>=2)for(const i of ECLATENT)g.sol.push(posSol(e,i));if(g.ph>=3)for(const i of TOMBENT)g.sol.push(posSol(e,i));return g;}
+ function posSol(e,i){const r=e.r,[sx,sy,rot]=SOL[i];return{i,x:clamp(e.x+sx*r,AR.x0+24,AR.x1-24),y:clamp(e.y+sy*r,AR.y0+20,AR.y1-14),rot};}
+ function changeTemps(e,g){const de=g.ph,a=e.phase;g.ph=a;g.t=T;g.de=de;
+  const part=[];if(de<2&&a>=2)part.push(...ECLATENT);if(a>=3)part.push(...TOMBENT);
+  for(const i of part){const [cx,cy]=CTR[i],E=de>=2?ECART[i]:{dx:0,dy:0,rot:0},S=posSol(e,i);
+   if(RM)g.sol.push(S);else g.vole.push({i,x0:e.x+(cx+E.dx)*e.r,y0:e.y+(cy+E.dy)*e.r,r0:E.rot,S,t0:T});}}
+ function dureeT(){return GD().transS||0.6;}
+
+ // ── le corps (avant le brouillard et les télégraphes)
+ function arteres(c,e,g,fd){const r=e.r,M=GD().matiere,b=beatK(),ph=e.phase,top=-e.y-14,arc=[0,26,8,14][ph]||14;
+  const ends=[-150,-46,46,150];c.lineCap='round';
+  ACCROCHES.forEach(([ax,ay],i)=>{const sw=RM?0:Math.sin(T*0.9+i*1.7)*(ph===2?4:9),x0=ax*r,y0=ay*r-2,x1=ends[i]+sw*1.5,y1=top,mx=(x0+x1)/2+(i<2?-1:1)*arc+sw,my=(y0+y1)/2;
+   const ln=()=>{c.beginPath();c.moveTo(x0,y0);c.quadraticCurveTo(mx,my,x1,y1);};
+   // G2 : prolongement, sous l'opacité maximale (deux couches dont la somme reste sous le plafond)
+   const P=PRO()*fd;c.globalAlpha=P*0.74;ln();c.strokeStyle=`rgb(${rgb(mix(M.chair,[255,140,140],0.22))})`;c.lineWidth=(i===1||i===2?10:7);c.stroke();
+   c.globalAlpha=P*0.26;ln();c.strokeStyle=`rgb(${rgb(mix(M.chair,[255,200,190],0.55))})`;c.lineWidth=2.5;c.stroke();
+   // le battement remonte le long de l'artère
+   if(!RM){const u=((T*1.15+i*0.07)%1)*1.6;if(u<1){const q=1-u,x=q*q*x0+2*q*u*mx+u*u*x1,y=q*q*y0+2*q*u*my+u*u*y1;c.globalAlpha=P*0.6*(1-u);c.fillStyle=`rgb(${rgb(mix(M.chair,[255,160,150],0.4))})`;c.beginPath();c.arc(x,y,(i===1||i===2?5:4),0,TAU);c.fill();}}});
+  c.globalAlpha=fd;}
+ function oeil(c,e,b){const r=e.r,ph=e.phase,M=GD().matiere,O=GD().oeil||[238,232,218];
+  const open=clamp([0,0.42,0.75,1][ph]+(RM?0:0.12*b),0.15,1.1),eh=0.2*r,ew=0.11*r*open,px=clamp((P.x-e.x)/70,-1,1),py=clamp((P.y-e.y)/90,-1,1);
+  const am=()=>{c.beginPath();c.moveTo(0,-eh);c.quadraticCurveTo(ew*2,0,0,eh);c.quadraticCurveTo(-ew*2,0,0,-eh);c.closePath();};
+  if(ph>=3){am();c.strokeStyle=`rgb(${rgb(M.sang)})`;c.lineWidth=5;c.stroke();}
+  am();const g=c.createRadialGradient(-ew*0.3,-eh*0.3,1,0,0,eh);g.addColorStop(0,`rgb(${rgb(mix(O,[255,255,255],0.4))})`);g.addColorStop(1,`rgb(${rgb(mix(O,[90,40,40],0.45))})`);c.fillStyle=g;c.fill();
+  c.save();am();c.clip();const ix=px*ew*0.5,iy=py*eh*0.32,ir=0.075*r;
+  ell(c,ix,iy,ir,ir*1.15);const gi=c.createRadialGradient(ix,iy,ir*0.2,ix,iy,ir*1.1);gi.addColorStop(0,'rgb(176,40,46)');gi.addColorStop(0.7,'rgb(110,16,26)');gi.addColorStop(1,'rgb(30,4,8)');c.fillStyle=gi;c.fill();
+  c.fillStyle='#050203';ell(c,ix,iy,0.018*r,0.065*r);c.fill();c.fillStyle='rgba(255,250,240,.85)';ell(c,ix-ir*0.35,iy-ir*0.45,1.6,1.3);c.fill();c.restore();
+  am();encre(c,1.8);}
+ function corps(c,e){const r=e.r,g=etat(e),fd=e.fade==null?1:e.fade,b=beatK(),D=dureeT();
+  if(e.phase>g.ph)changeTemps(e,g);
+  // les plaques tombées, au sol (en coordonnées du monde : elles restent où elles sont tombées, même s'il se téléporte)
+  c.save();c.translate(-e.x,-e.y);for(const S of g.sol){const I=imgPlaque(S.i,r,true),[cx,cy]=CTR[S.i];c.save();c.globalAlpha=PRO();c.translate(S.x,S.y);c.rotate(S.rot);c.scale(1,0.55);c.translate(-cx*r,-cy*r);poser(c,I);c.restore();}
+  c.restore();
+  c.globalAlpha=fd;shadowAt(c,0,r*0.92,r*1.2,r*0.36,0.5);
+  shroud(c,e,'46,28,36',PRO()*(e.mk==null?1:e.mk),false);
+  arteres(c,e,g,fd);
+  const ph=e.phase,k=RM?1:clamp((T-g.t)/D,0,1);
+  if(ph>=3)poser(c,imgDos(r));
+  // la chair : sous le bronze, coupée à la cloche tant qu'il y a du bronze
+  const s=ph>=3?1.06:1,bt=RM?1:1+0.045*b;c.save();if(ph<3){cloche(c,r);c.clip();}c.translate(0,-0.05*r);c.scale(s*bt,s*bt);c.translate(0,0.05*r);poser(c,imgCoeur(r));c.restore();
+  if(ph<3){const sg=GD().lueur;c.save();cloche(c,r);c.clip();c.beginPath();fente(c,r,ph);c.fillStyle=`rgba(${rgb(sg)},${0.12+0.3*b})`;c.fill();c.restore();}
+  poser(c,imgTemps(ph,r));
+  // mouvements réduits : fondu enchaîné depuis l'image du temps d'avant
+  if(RM&&g.de&&g.de<ph&&T-g.t<D){c.globalAlpha=fd*(1-(T-g.t)/D);poser(c,imgTemps(g.de,r));c.globalAlpha=fd;}
+  oeil(c,e,b);
+  // les plaques en vol (transformation, 0,6 s pendant le verrou du changement de temps)
+  if(g.vole.length){c.save();c.translate(-e.x,-e.y);for(let j=g.vole.length-1;j>=0;j--){const V=g.vole[j],u=(T-V.t0)/D;if(u>=1){g.sol.push(V.S);g.vole.splice(j,1);continue;}
+   const q=ease(u),x=V.x0+(V.S.x-V.x0)*q,y=V.y0+(V.S.y-V.y0)*q-Math.sin(Math.PI*u)*r*0.55,[cx,cy]=CTR[V.i];
+   c.save();c.globalAlpha=1-(1-PRO())*u*u;c.translate(x,y);c.rotate(V.r0+(V.S.rot-V.r0)*q+Math.sin(Math.PI*u)*(V.i%2?0.8:-0.8));c.scale(1,1-0.45*q);c.translate(-cx*r,-cy*r);poser(c,imgPlaque(V.i,r,u>0.75));c.restore();}
+   c.restore();}
+  shroud(c,e,'120,84,92',0.05*(e.mk==null?1:e.mk),true);c.globalAlpha=1;}
+
+ // ── les lueurs (après les télégraphes, en mode additif) : battement rouge sombre, petit (G3) ; œil blanc (couleur de ta forme quand il te copie,
+ // G13) ; anneau ivoire du point faible quand il est à nu (G5) ; le Reflet qui sort par la fente (lavande, la seule) ; puis, inchangés, l'annonce
+ // de la Couronne et les faisceaux (ils partent de l'œil, au centre)
+ const COPIE=['mvolley','msweep','mblink'];
+ function lueurs(e){const c=ctx,r=e.r,b=beatK(),ph=e.phase,fd=e.fade==null?1:e.fade,L=rgb(GD().lueur),g=etat(e);
+  glow(c,e.x,e.y,r*[0,0.36,0.5,0.62][ph]*(1+(RM?0:0.2*b)),L,([0,0.12,0.15,0.2][ph]+0.3*b)*fd);
+  // la fente suinte à chaque battement (au-dessus et au-dessous de l'œil)
+  if(ph<3){c.strokeStyle=`rgba(235,80,90,${(0.18+0.5*b)*fd})`;c.lineWidth=1.4;c.beginPath();for(const [y0,y1] of[[-0.76,-0.24],[0.24,0.56]])for(let i=0;i<=10;i++){const y=y0+(y1-y0)*i/10,x=fenteX(y);if(i)c.lineTo(e.x+x*r,e.y+y*r);else c.moveTo(e.x+x*r,e.y+y*r);}c.stroke();}
+  if(!RM&&g.t>0&&T-g.t<0.35)glow(c,e.x,e.y,r*1.3,L,0.4*(1-(T-g.t)/0.35));
+  const copie=COPIE.includes(e.state)&&e.copy,oc=copie?(CRGB[P.cls]||'255,250,240'):'255,248,236',open=[0,0.42,0.75,1][ph];
+  glow(c,e.x,e.y,r*(0.12+0.16*open),oc,(copie?0.5:0.22+0.12*b)*fd);
+  if((e.vuln>0||e.rawT>0)&&fd>0.3){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(e.x,e.y,r*0.32+(RM?0:4*Math.sin(T*12)),0,TAU);c.stroke();}
+  try{const G=room&&room.glas,rf=G&&G.reflet,R=((GA_D.attaques[3]||{}).souvenirs||{}).reflet||{};
+   if(rf&&!rf.fin&&rf.boss===e){const u=(RUN.time-rf.nait)/(R.naissanceS||0.6);
+    if(u<1.3){const a=clamp(1-u/1.3,0,1);glow(c,e.x,e.y,r*0.55,'180,160,255',0.75*a);c.strokeStyle=`rgba(215,200,255,${0.8*a})`;c.lineWidth=2.4;c.beginPath();for(let i=0;i<=16;i++){const y=-0.7+1.26*i/16;if(i)c.lineTo(e.x+fenteX(y)*r,e.y+y*r);else c.moveTo(e.x+fenteX(y)*r,e.y+y*r);}c.stroke();
+     if(!RM&&u<1){const q=ease(u),hx=e.x+(rf.x-e.x)*q,hy=e.y+(rf.y-e.y)*q;for(let i=0;i<10;i++){const v=q*(1-i/10);glow(c,e.x+(rf.x-e.x)*v,e.y+(rf.y-e.y)*v,12+14*(1-i/10),'180,160,255',0.5*(1-i/10)*a);}glow(c,hx,hy,26,'215,200,255',0.7*a);}}}}catch(err){}
+  if(e.state==='ring'){const k=1-e.t/0.55;c.strokeStyle=`rgba(230,200,255,${0.7*k})`;c.lineWidth=4;c.beginPath();c.arc(e.x,e.y,r+12+22*k,0,TAU);c.stroke();}
+  if(e.beams){c.save();c.beginPath();c.rect(AR.x0,AR.y0,AR.x1-AR.x0,AR.y1-AR.y0);c.clip();const act=e.state==='sweep';for(const a of e.beams){const ex=e.x+Math.cos(a)*900,ey=e.y+Math.sin(a)*900;const ln=()=>{c.beginPath();c.moveTo(e.x,e.y);c.lineTo(ex,ey);c.stroke();};
+   if(!act){c.strokeStyle=`rgba(${TELE.zone},${0.45+0.3*Math.sin(T*30)})`;c.lineWidth=2;c.setLineDash([12,9]);c.lineDashOffset=-T*60;ln();c.setLineDash([]);}
+   else{c.strokeStyle='rgba(150,100,255,.28)';c.lineWidth=30;ln();c.strokeStyle='rgba(215,185,255,.7)';c.lineWidth=11;ln();c.strokeStyle='rgba(255,250,255,.95)';c.lineWidth=3;ln();for(let k=0;k<5;k++){const d=((T*500+k*180)%900);glow(c,e.x+Math.cos(a)*d,e.y+Math.sin(a)*d,14,'230,210,255',0.5);}}}c.restore();}}
+
+ // ── branchement : à la place de l'ancien dessin quand dessin.actif[3] est vrai (l'interrupteur est relu à chaque image)
+ const _dh27=drawHeart;drawHeart=function(c,e){if(RUN&&RUN.act===3&&!e.reflet&&g27Actif(3)){try{corps(c,e);}catch(err){console.error(err);}return;}return _dh27(c,e);};
+ const _dbp27=drawBossPost;drawBossPost=function(e){if(RUN&&RUN.act===3&&!e.reflet&&g27Actif(3)){try{lueurs(e);}catch(err){console.error(err);}return;}return _dbp27(e);};
+ TINT.glas=rgb(mix(GD().lueur||[200,40,60],[0,0,0],0.15));
+ // G8 / G12 : les vaisseaux du sol (décor du Cœur, dessinés après les corps) partent de sous sa lèvre : ils ne passent plus par-dessus la cloche
+ const _dcp27=drawCoeurPost;drawCoeurPost=function(){const b=RUN&&RUN.act===3&&enemies.find(x=>x.type==='boss'&&!x.dead&&!x.reflet);if(!(b&&!b.dead&&RUN&&RUN.act===3&&g27Actif(3)))return _dcp27.apply(this,arguments);
+  const c=ctx;c.save();c.beginPath();c.rect(-50,-50,W+100,H+100);c.translate(b.x,b.y);cloche(c,b.r,true);c.translate(-b.x,-b.y);c.clip('evenodd');
+  try{return _dcp27.apply(this,arguments);}finally{c.restore();}};
+ // mesure (banc, G14) : temps de dessin du Glas par image, ancien et nouveau, sur un canevas caché à la taille de l'écran (lecture d'un pixel à chaque
+ // image : le navigateur dessine vraiment, au lieu de seulement noter les ordres)
+ function mesure(e,n){n=n||100;const cv2=document.createElement('canvas');cv2.width=cv.width;cv2.height=cv.height;const o=cv2.getContext('2d'),keep=ctx,L={vide:[],avant:[],apres:[]};
+  const rien=()=>{},tour=(body,post)=>{const t0=performance.now();for(let i=0;i<n;i++){o.setTransform(scale,0,0,scale,offX,offY);o.save();o.translate(e.x,e.y);body(o,e);o.restore();o.save();o.globalCompositeOperation='lighter';post(e);o.restore();o.getImageData(0,0,1,1);}return(performance.now()-t0)/n;};
+  try{ctx=o;for(let k=0;k<7;k++){L.vide.push(tour(rien,rien));L.avant.push(tour(_dh27,_dbp27));L.apres.push(tour(corps,lueurs));}}finally{ctx=keep;}
+  const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],v=med(L.vide);return{avant:+(med(L.avant)-v).toFixed(3),apres:+(med(L.apres)-v).toFixed(3),vide:+v.toFixed(3)};}
+ window.__gardiens=Object.assign(window.__gardiens||{},{G27,glas:{etat,PLQ,CTR,SOL,ECLATENT,TOMBENT,imgTemps,imgCoeur,imgPlaque,imgDos,mesure}});
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

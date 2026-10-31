@@ -347,7 +347,10 @@ function gardiens(G, F) {
   const pv = i => (G.pv && G.pvMul) ? Math.round(G.pv[i + 1] * G.pvMul[i + 1]).toLocaleString('fr-FR') : '';
   const cartes = A.map((a, i) => `<article class="ent boss"><span class="num">${ROM[i + 1]}</span><h3>${esc(a.boss)}</h3><p class="k">${esc(a.name)} · ${a.rooms} salles${pv(i) ? ` · ${pv(i)} PV` : ''}</p><p>${esc(a.done)}.</p></article>`).join('');
   const copies = Object.values(G.copies).map(c => `<article class="ent"><h4>Si tu abuses de ${esc(c.what)}</h4><p>${esc(c.hint)}</p></article>`).join('');
-  const failles = Object.entries(G.failles).map(([a, f]) => `<article class="ent"><h4>${esc(A[a - 1].boss)}</h4><p><b>${esc(f.l1)}.</b></p><p><b>${esc(f.l3)}.</b> ${esc(f.t3)}</p></article>`).join('');
+  // v17.27 · les gardiens redessinés : ce qu'on lit à l'œil (dessin[n].lecture), seulement pour un gardien dont le nouveau dessin est actif
+  const actifD = n => { const D = G.dessin; return !!(D && D.actif && (typeof D.actif === 'object' ? D.actif[n] : D.actif)); };
+  const lecture = a => actifD(+a) && G.dessin[a] && G.dessin[a].lecture ? `<p class="k">${esc(G.dessin[a].lecture)}</p>` : '';
+  const failles = Object.entries(G.failles).map(([a, f]) => `<article class="ent"><h4>${esc(A[a - 1].boss)}</h4><p><b>${esc(f.l1)}.</b></p><p><b>${esc(f.l3)}.</b> ${esc(f.t3)}</p>${lecture(a)}</article>`).join('');
   const fen = Object.entries(G.fenetres).map(([c, x]) => `<article class="ent" data-cls="${c}"><h4 style="color:${F[c].col}">${esc(F[c].n)}</h4><p><b>Avertissement :</b> ${esc(x.warn)}.</p><p><b>Fenêtre :</b> ${esc(x.label)}.</p></article>`).join('');
   const titre2 = Object.keys(G.failles).map((a, i) => `${esc(i ? lower(A[a - 1].boss) : A[a - 1].boss)} · Acte ${ROM[a]}`).join(' et ');
   return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Chaque acte se termine par un gardien. Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux du palier 0 ; les paliers de Brume les augmentent.</p>' : ''}${survieGouffre(G)}</div></header>

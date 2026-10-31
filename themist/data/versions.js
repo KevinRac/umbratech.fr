@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v17.26',
+ actuelle:'v17.27',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-10-31',h:'v17.27',t:'Le Glas Originel a un nouveau visage : une grande cloche de bronze fendue, suspendue par ses artères, où bat un cœur et veille un œil. Ses trois temps se lisent à sa silhouette : une fente, puis le bronze éclate, puis les plaques tombent et le cœur est à nu. Ses lueurs ne sont plus violettes : ses tirs et ses anneaux se détachent mieux. Quand il est à nu, un anneau ivoire entoure son œil, comme pour les deux autres gardiens. Rien ne change dans le combat (PV, attaques, rayon de touche). Correctif : le voile de la Brume plombée s’affiche de nouveau.'},
  {d:'2026-10-31',h:'v17.26',t:'Corrections et équilibrage. Brume plombée : le voile qui couvre la moitié de la salle se lève dès qu’elle est purgée (et les dalles effondrées du Sol qui se dérobe disparaissent). Danse des Pendus : après 3 danses d’affilée, l’ennemi s’en libère 6 s (ni tournoiement ni étourdissement à l’atterrissage, les dégâts restent ; un nœud coulant tranché flotte au-dessus de lui), fini le contrôle permanent ; ses coups passent de 20 à 28. Pantins renforcés : ils frappent plus souvent (0,5 s) et plus fort, Pantin se déclenche sous 40 % de PV (éveil : 60 %) et tient 8 s / 12 s, Pantin tenace +20 % de dégâts par rang, Théâtre de marionnettes tire toutes les 0,5 s (12 dégâts), Pantin explosif inflige 70 dégâts.'},
  {d:'2026-10-30',h:'v17.25',t:'Certains Masqués portent un trousseau.'},
  {d:'2026-10-29',h:'v17.24',t:'Équilibrage du Dernier Souvenir. La Dernière onde et le Dernier rayon frappent moins fort (26 au lieu de 50 et 60) : ils ne vident plus une vague à eux seuls, ils l’entament comme la Dernière salve ou le Dernier glas. Contre un Masqué, la Dernière ombre ne te cache plus : il garde ta trace, mais tes coups restent tous critiques. Contre un gardien ou un Masqué, le Dernier élan te laisse toujours esquiver sans compter ; les esquives qu’il t’offre en plus ne blessent pas au-delà de ce que permet la brûlure.'},

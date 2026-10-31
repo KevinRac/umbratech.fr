@@ -66,5 +66,24 @@
  pvMul:[1,2.65,2.5,2.5],
  // v17.12 · Survie du Gouffre, seulement quand un gardien ou un Masqué est en vie dans la salle (son corps à corps l'expose à leurs zones).
  // degatsRecus : × les dégâts qu'il reçoit ; vol : part des dégâts qu'il inflige à un gardien ou à un Masqué qui lui revient en PV (pas sur les dégâts sur la durée).
- survieGouffre:{degatsRecus:0.8,vol:0.05}
+ survieGouffre:{degatsRecus:0.8,vol:0.05},
+ // v17.27 · Les gardiens redessinés (cadrage G1–G18, G15). Dessin seulement : rien du combat ne lit cette clé (PV, attaques, rayon de touche inchangés).
+ // actif : gardien par gardien (1 Mère-Brume, 2 Héraut Noyé, 3 Glas Originel) ; faux = l'ancien dessin. version : change quand un portrait doit être refait (G11).
+ // echelle (G2, × le rayon de touche) : solide = le corps plein tient dans ce disque ; silhouette = hauteur visée ; prolongements = opacité maximale
+ // de ce qui dépasse du corps (artères, cordes, brume, plaques tombées), pour qu'on ne le prenne jamais pour le corps.
+ // matiere / lueur (G3) : couleurs [r,g,b] loin des télégraphes (orange zone, violet tirs, cyan saisie) et de la lavande des souvenirs.
+ // La couleur de temps (failles.p1 / p3) ne sert plus qu'aux reflets ; le rouge du troisième temps reste sur le point faible.
+ dessin:{
+  version:1,
+  actif:{1:false,2:false,3:true},
+  echelle:{solide:1.15,silhouette:3.5,prolongements:0.35},
+  1:{matiere:{brume:[150,160,180],os:[222,214,190],or:[196,170,110]},lueur:[245,240,230],enfant:true},
+  2:{matiere:{bronze:[110,96,60],eau:[70,190,150],chair:[120,140,130]},lueur:[255,190,110]},
+  // Glas Originel (G8) : la cloche devenue cœur. plaques : morceaux de bronze (2 éclatent au deuxième temps, les autres tombent au troisième et
+  // restent au sol, éteints, jusqu'à sa mort). arteres : nombre d'artères qui le suspendent au haut de la salle. transS : durée d'une transformation.
+  3:{matiere:{bronze:[90,70,40],chair:[110,24,40],sang:[34,6,12],os:[220,206,180],patine:[86,124,104]},lueur:[200,40,60],oeil:[238,232,218],
+   plaques:7,arteres:4,transS:0.6,
+   // wiki (section « Les gardiens », carte de la faille) : ce qu'on lit à l'œil, temps par temps ; affiché seulement si actif
+   lecture:'Une cloche de bronze fendue, l’œil dans la fente. Au deuxième temps, le bronze éclate et la chair se voit ; au troisième, les plaques tombent : le cœur est à nu.'}
+ }
 };})(window.BRUME_DATA=window.BRUME_DATA||{});
