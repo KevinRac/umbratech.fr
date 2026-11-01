@@ -1,0 +1,87 @@
+# La Brume · reprendre le projet (à lire en premier)
+
+Ce document permet à un Claude qui ne connaît pas le projet (autre compte, autre projet claude.ai, Claude Code) de reprendre le développement **sans rien perdre** : ce qu'est le jeu, où vit quoi, comment l'auteur veut qu'on travaille, où en est le chantier, et le prompt de reprise. Il complète `CLAUDE.md` (racine du dépôt, conventions détaillées par système) et `memoire.md` (journal de conception, § 0 à § 34). Mis à jour le 1er novembre 2026, à la v18.4.
+
+## 1. Le jeu
+**La Brume** est un roguelite d'action en vue de dessus, jouable dans le navigateur (clavier et souris), écrit en un seul fichier HTML et canevas 2D, sans moteur ni dépendance. Quatre formes jouables (le Lumenarque `lum`, le Gouffre `gou`, le Héraut du Glas `her`, le Tisse-Destin `tis`), chacune avec trois sous-classes et un arbre de talents. Le public visé : des joueurs **hardcore et rapides**, qui veulent relancer après une victoire comme après une mort ; le jeu se veut **unique par son gameplay**, pas par la collection.
+
+Idée centrale (depuis v17) : **« ce que tu oublies, la Brume s'en souvient »**. Le joueur porte au plus 10 talents ; ce qu'il oublie part dans la réserve de la Brume, qui le retourne contre lui (le Masqué, élite assemblé qui porte tes souvenirs ; le Glas Originel ; la némésis, le Masqué qui t'a tué et revient). Le Brumeux est l'entité qui observe le joueur et adapte la descente ; il **garde ses secrets**.
+
+Depuis v18 : une **descente de 10 actes** en trois paliers (Normal, Difficile, Extrême, débloqués par victoire). Actes I à III : Mère-Brume, Héraut Noyé, Glas Originel (redessinés en v17.27, intouchables). Actes IV à IX : six gardiens **à créer** (places tenues par un Masqué renforcé). Acte X : deux miniboss puis **le Brumeux** en boss final (5 phases, ~5 min, arène plus grande que l'écran), **à créer**.
+
+## 2. Où vit quoi
+- Dépôt GitHub **`KevinRac/umbratech.fr`** (public), dossier **`themist/`**. Site : `https://umbratech.fr/themist/` (jeu) et `https://umbratech.fr/themist/wiki.html` (wiki).
+- Publication : **push direct sur `main`**. Le workflow `.github/workflows/deploy.yml` régénère le wiki (`node themist/outils/wiki.mjs`), le committe s'il a changé, puis déploie sur IONOS (git pull de tout le dépôt). `_dev/` n'est pas servi (`.htaccess` : `RedirectMatch 404 /_dev/`).
+- `themist/index.html` : **le jeu** (~13 000 lignes, une fermeture `(()=>{…})()`). Le « socle » est en tête ; chaque évolution vit dans un **bloc daté en fin de fichier** (« v18.3 · Les règles mutantes », « v18.4 · L'arène »…), qui **enveloppe** les fonctions du socle (`render=function(){…_render()…}`), le plus récent étant le plus extérieur. La logique qui doit être vérifiée hors navigateur est isolée dans des **blocs purs** `/*nom:pur*/ … /*/nom:pur*/` (sans accès au jeu), extraits par les simulateurs.
+- `themist/data/*.js` : **toutes les données** (talents, bestiaire, gardiens, descente, arène, souvenirs, icônes, versions…), lues par le jeu **et** par le générateur du wiki. `data/versions.js` : version actuelle et journal (une ligne en tête à chaque évolution).
+- `themist/outils/` : `wiki.mjs` (génère les sections du wiki ; `--check` vérifie qu'il est à jour) et les **simulateurs** purs `sim-*.mjs` (Node seul).
+- `themist/_dev/` : `memoire.md` (**journal de conception** : décisions, écarts, mesures, points ouverts, une section par livraison), `bancs/` (**bancs Chromium**, Playwright ; mode d'emploi dans `bancs/README.md`), `cadrages/` (documents de cadrage du chantier en cours), ce fichier.
+- `CLAUDE.md` (racine) : une entrée par système, avec ses fichiers, ses fonctions, ses règles et son « détail : § n ». **Le lire avant de toucher un système.**
+
+### Index de `memoire.md`
+§ 0–7 cadrage de la Mémoire · § 8–12 Mémoire livrée (v17.0–v17.8) · § 13–18 le Masqué porte un souvenir (v17.9–v17.14) · § 19–25 armes de la Brume (v17.15–v17.21) · § 26 le Glas se souvient (v17.22) · § 27 Dernier Souvenir (v17.23–v17.24) · § 28 némésis (v17.25) · § 29–30 gardiens redessinés (v17.27) · § 31 grande descente (v18.0–v18.1) · § 32 règles des paliers (v18.2) · § 33 règles mutantes (v18.3) · § 34 arène large (v18.4).
+
+## 3. Comment l'auteur veut qu'on travaille
+**Langue** : tout en **français** (réponses, documents, commentaires, commits). L'auteur a dû le redemander quand une réponse était partie en anglais.
+
+**Modèle et effort** : à **chaque** action (et à la fin de chaque réponse), dire quel modèle et quel niveau d'effort il faut pour la suite (par ex. « Opus 5.5, élevé » ; « Sonnet 5.5, moyen »).
+
+**Wiki** : **toute modification du jeu met à jour le wiki dans le même commit** (exemple : un talent modifié → sa fiche du wiki suit dès la fin du traitement). Si la modification touche `data/`, lancer `node themist/outils/wiki.mjs` puis `--check` ; sinon, modifier la section du wiki à la main. Ne jamais éditer à la main un fragment `<!-- gen:… -->`.
+
+**Méthode par chantier** (toujours la même) :
+1. **Cadrage** : un document (options, conséquences, une recommandation par question numérotée Q1…Qn, modèle et effort de l'étape suivante), **sans toucher au jeu**. Il se range dans `_dev/cadrages/` (et dans le projet claude.ai s'il y en a un).
+2. L'auteur **valide** (souvent « toutes les recommandations »).
+3. **Implémentation dans une autre conversation**, dans cet ordre : données (`data/`) ; logique pure dans un bloc `/*x:pur*/` + son **simulateur** (`outils/sim-x.mjs`, avec contre-épreuves : une erreur introduite exprès doit être attrapée) ; bloc de jeu daté en fin d'`index.html` (enveloppes) ; mode d'essai par l'adresse (`index.html?x=…`, qui pose `RUN.essai=1` et s'ajoute aux gardes `ESSAI18` et `ESSAI_URL`) et console `window.__x` ; **banc Chromium** (`_dev/bancs/banc-x.mjs`, sections A, B, C…, **captures relues** à l'œil) ; ligne de journal (`data/versions.js`) ; wiki ; nouvelle section de `memoire.md` (décisions, écarts au cadrage, mesures, régression, points ouverts) ; ligne dans `CLAUDE.md` ; ligne dans `bancs/README.md` ; statut du cadrage mis à jour.
+4. **Régression** : tous les simulateurs, tous les bancs, puis `banc-gardiens-final` **seul** (il mesure des coûts de rendu).
+5. **Commit** avec les trailers habituels (`Co-Authored-By: Claude …` et le lien de session), **push sur `main`**, **sans** les captures que les bancs réécrivent dans `_dev/bancs/` (`git checkout --` sur ces PNG avant de committer).
+6. **Réponse brève** en français : résultat, mesures, points ouverts, modèle et effort pour la suite.
+
+**Règles de conception à respecter** :
+- **Règle d'or** de chaque chantier : ce qui n'est pas visé ne change pas, au bit ou à l'image près (prouvé par le simulateur et par un banc qui compare avant / après, image par image).
+- **Image d'abord** : icônes plutôt que texte, informations lisibles d'un coup d'œil, survol pour le détail ; **aucune bulle ni fenêtre qui arrête le joueur** en descente.
+- **Aucune mort sans signe** : tout ce qui frappe est télégraphié dans la **grammaire de couleurs** (orange `TELE.zone` = zone de boss, rouge `FOE` = ennemis ordinaires, violet `TELE.proj` = tirs, cyan `TELE.grab` = saisie, lavande = souvenirs / armes de la Brume, ivoire = point faible) ; une nouvelle couleur reste à **ΔE ≥ 25** (CIE76) des autres.
+- **Secrets** : le Brumeux (sa feinte, ce qu'il invente), la némésis, l'origine des capacités du Masqué ne sont **jamais expliqués** (ni wiki, ni chronique, ni texte), au plus une ligne de journal. Le Brumeux se montre en image, mystérieux, avec un petit rire court quand il agit.
+- **Chaque palier ajoute des mécaniques lisibles, jamais un mur de PV.**
+- Mouvements réduits (`RM`) respectés partout (pas de secousse, pas de pulsation).
+- Les dessins sont **vectoriels au canevas**, dans le style du jeu (pas d'images générées).
+
+## 4. Environnement de travail
+- Node 22. Simulateurs : `node themist/outils/sim-<x>.mjs` (aucune dépendance). `sim-masque` est long (~3,6 millions de contrôles).
+- Bancs : servir `themist/` (`cd themist && python3 -m http.server 8765`), puis `node themist/_dev/bancs/<banc>.mjs 8765 [sections] [dossier de captures hors dépôt]`. Ils chargent Playwright depuis `/opt/npm-tools/node_modules/` et Chromium depuis `/opt/pw-browsers/chromium-1243/chrome-linux64/chrome` (chemins de l'environnement de Claude : **à adapter ailleurs** ; quelques bancs de gardiens utilisent aussi `sharp`). Sans Chromium, faire au moins les simulateurs et `wiki.mjs --check`, et le dire.
+- Durées indicatives : `banc-arene` complet ~25 min (dont la règle d'or ~7–10 min), `banc-gardiens-final` ~40 min, la régression complète ~1 h 30.
+- Les mesures de coût de rendu (ms) sont bruitées sur une machine chargée : rejouer seul, ou sur le commit d'avant, avant de conclure.
+
+## 5. Où en est le projet (1er novembre 2026, v18.4, commit `c5d888d`)
+**Fait** : base technique (données séparées, wiki généré) ; Mémoire et réserve (v17) ; volute de l'oubli ; armes de la Brume ; Masqué porteur ; Glas qui se souvient ; Dernier Souvenir (brûler un talent en combat) ; némésis et trousseau de crânes ; trois gardiens redessinés (v17.27) ; chantier v18 : charpente des 10 actes (v18.0–v18.1), règles des paliers (v18.2), règles mutantes de l'Extrême (v18.3), arène large, caméra et signes de bord, **éteints** (v18.4).
+
+**Prochaine étape** (plan dans `cadrages/la-brume-v18-descente-10-actes-cadrage.md`) :
+- **Action 5 : le Brumeux.** D'abord un **document de conception des 5 phases** (socle appris + part improvisée par phase, D5 ; état d'arène de chaque phase avec `data/arene.js` ; ce que dit le wiki ; durée ~5 min ; mesure par bots), validé par l'auteur ; puis une action par phase ; puis l'enchaînement. L'action 5 allume l'arène (`actif:true`), remplace le boss final provisoire, et reprend les points ouverts du § 34. **Opus 5.5, élevé.**
+- Action 6 : six gardiens (IV à IX) et deux miniboss (X), un par un. Opus 5.5 élevé pour le premier de chaque sorte, Sonnet 5.5 moyen ensuite.
+- Action 7 : équilibrage, lisibilité, emblèmes par palier et par forme (D4), wiki, journal. Sonnet 5.5, moyen.
+
+**Résultats connus des tests** (à ne pas prendre pour des régressions) : `banc-dernier` a 4 échecs anciens (« inerte tant que dernier.actif est faux » : le banc date d'avant l'activation) ; la mesure de coût du Glas ×2 dans `banc-gardiens-final` (section C) échoue par intermittence, aussi sur les commits d'avant ; la section C de `banc-arene` (coût) est au ras de son budget selon la charge.
+
+**Points ouverts principaux** (détail en fin des § 31 à § 34) : durée réelle de la descente à mesurer sur des parties exportées ; pression des paliers au-dessus des cibles du modèle (à recaler sur des parties réelles) ; quatrième capacité du Masqué impossible pour les corps actuels ; icône « cœur fêlé » du palier au HUD ; trophées par acte ; coût de l'arène à mesurer en jeu réel ; zones du Masqué à rendre « sources de signe » une à une ; une fosse arrête les tirs ; légende des signes de bord au wiki (à l'activation).
+
+**Idées gardées pour plus tard** (de l'auteur, non cadrées) : deuils de Valsonne après chaque victoire (la ville oublie définitivement quelque chose), progression par le savoir et fin véritable, horloge du Glas, Partition du jour (graine quotidienne partageable), un Brumeux qui génère lui-même décors et ennemis cohérents avec le thème de la carte.
+
+## 6. Reprendre sur un autre compte Claude
+1. Donner au nouveau Claude l'accès au dépôt `KevinRac/umbratech.fr` (connecteur GitHub de claude.ai, ou Claude Code avec le dépôt).
+2. (Conseillé) Créer un projet claude.ai « La Brume » avec ces **instructions de projet** :
+
+   > Projet La Brume (dépôt GitHub KevinRac/umbratech.fr, dossier themist/). Réponds toujours en français. Avant tout travail, lis CLAUDE.md, puis themist/_dev/REPRISE.md, puis les sections utiles de themist/_dev/memoire.md. Chaque modification du jeu doit mettre à jour la partie correspondante du wiki (themist/wiki.html, via node themist/outils/wiki.mjs) dans le même commit, dès la fin du traitement. Pour chaque action, précise quel modèle et quel effort il faut. Méthode : cadrage (sans toucher au jeu) → validation par l'auteur → implémentation dans une autre conversation (données, logique pure et simulateur, bloc de jeu, mode d'essai, banc Chromium, journal, wiki, mémoire de dev, CLAUDE.md), régression complète, commit avec trailers, push direct sur main.
+
+3. Ouvrir une conversation et coller le **prompt de reprise** :
+
+```text
+Tu reprends le développement de « La Brume », mon roguelite d'action web (un seul index.html, canevas 2D), dans le dépôt GitHub KevinRac/umbratech.fr, dossier themist/ (site : umbratech.fr/themist/, wiki : umbratech.fr/themist/wiki.html). Tu ne connais pas encore le projet.
+
+1. Clone le dépôt (ou ouvre-le), puis lis dans cet ordre : CLAUDE.md (racine), themist/_dev/REPRISE.md, themist/_dev/cadrages/README.md et le cadrage v18 (la-brume-v18-descente-10-actes-cadrage.md), puis les sections 31 à 34 de themist/_dev/memoire.md. Ne modifie rien pour l'instant.
+2. Vérifie que l'environnement tourne : node themist/outils/wiki.mjs --check, node themist/outils/sim-arene.mjs et node themist/outils/sim-descente.mjs (et, si Chromium et Playwright sont disponibles, sers themist/ sur le port 8765 et lance node themist/_dev/bancs/banc-arene.mjs 8765 AE). Dis-moi ce qui manque s'il manque quelque chose.
+3. Fais-moi en quelques lignes le point : où en est le projet, ce qui est éteint ou provisoire, les points ouverts, et la prochaine étape du plan.
+4. Propose de lancer la prochaine étape selon ma méthode (d'abord un document de cadrage, sans toucher au jeu, avec une recommandation par question), sans la commencer avant mon accord.
+
+Règles permanentes : réponds en français ; pour chaque action, indique le modèle et l'effort nécessaires ; toute modification du jeu met à jour le wiki dans le même commit ; respecte la règle d'or (ce qui n'est pas visé ne change pas, prouvé par simulateur et banc), l'image d'abord, « aucune mort sans signe », et les secrets du Brumeux et de la némésis ; push direct sur main avec les trailers habituels, sans les captures réécrites par les bancs.
+```
+
+4. Ensuite, chaque étape suit la méthode du § 3 ; garder ce fichier, `CLAUDE.md`, `memoire.md` et `cadrages/` à jour à chaque livraison : **ce sont eux, et non la mémoire d'un compte Claude, qui portent le projet.**

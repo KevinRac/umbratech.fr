@@ -5,7 +5,7 @@ Outils de développement, pas du jeu. Ils ouvrent `index.html` dans Chromium san
 1. Servir `themist/` : `python3 -m http.server 8765` (depuis `themist/`).
 2. Lancer un banc : `node themist/_dev/bancs/<banc>.mjs 8765`.
 
-Les chemins de Playwright (`/opt/npm-tools/node_modules/`) et de Chromium (`/opt/pw-browsers/…`) sont ceux de l'environnement de travail de Claude : à adapter ailleurs.
+Les chemins de Playwright (`/opt/npm-tools/node_modules/`) et de Chromium (`/opt/pw-browsers/…`) sont ceux de l'environnement de travail de Claude : à adapter ailleurs (voir aussi `../REPRISE.md`, § 4 : environnement, durées, résultats connus).
 
 | Banc | Ce qu'il vérifie |
 |---|---|

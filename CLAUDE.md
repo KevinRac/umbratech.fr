@@ -2,6 +2,7 @@
 
 ## La Brume (`themist/`)
 
+- **Nouveau sur le projet (autre compte, autre conversation) : lire d'abord `themist/_dev/REPRISE.md`** (le jeu, la carte du dépôt, la méthode de travail et les préférences de l'auteur, l'état du chantier, le prompt de reprise), puis les cadrages du chantier en cours (`themist/_dev/cadrages/`) et les sections utiles de `themist/_dev/memoire.md`. Répondre en français ; indiquer à chaque action le modèle et l'effort nécessaires.
 - `themist/index.html` : le jeu. `themist/wiki.html` : son wiki.
 - Les données du jeu (noms, raretés, textes, taux) vivent dans `themist/data/*.js`. Le jeu et le wiki les lisent tous les deux.
 - Toute modification du jeu doit être reflétée dans le wiki :
