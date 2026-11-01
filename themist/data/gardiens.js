@@ -74,7 +74,7 @@
  // matiere / lueur (G3) : couleurs [r,g,b] loin des télégraphes (orange zone, violet tirs, cyan saisie) et de la lavande des souvenirs.
  // La couleur de temps (failles.p1 / p3) ne sert plus qu'aux reflets ; le rouge du troisième temps reste sur le point faible.
  dessin:{
-  version:3,
+  version:4,
   actif:{1:true,2:true,3:true},
   echelle:{solide:1.15,silhouette:3.5,prolongements:0.35},
   // copie (G13, G3) : la couleur de ta forme que prend la lueur d'un gardien quand il te copie (masque de la Mère-Brume, battant du Héraut, œil du Glas). Par défaut
@@ -113,7 +113,7 @@
    lecture:'Élias sous sa cloche : elle est devenue sa tête, il en tire encore les cordes, la lampe d’Ismène à la ceinture. Au deuxième temps, une corde casse ; au troisième, la cloche se fend sur son visage noyé et le battant pend à nu. Quand il te copie, le battant luit de la couleur de ta forme.'},
   // Glas Originel (G8) : la cloche devenue cœur. plaques : morceaux de bronze (2 éclatent au deuxième temps, les autres tombent au troisième et
   // restent au sol, éteints, jusqu'à sa mort). arteres : nombre d'artères qui le suspendent au haut de la salle. transS : durée d'une transformation.
-  3:{matiere:{bronze:[90,70,40],chair:[110,24,40],sang:[34,6,12],os:[220,206,180],patine:[86,124,104]},lueur:[200,40,60],oeil:[238,232,218],
+  3:{matiere:{bronze:[90,70,40],chair:[136,34,52],sang:[40,8,16],os:[220,206,180],patine:[86,124,104]},lueur:[200,40,60],oeil:[238,232,218],
    entree:'la cloche descend du haut de la salle au premier battement',
    mort:'le cœur bat trois fois, de plus en plus lentement, et s’arrête',
    faible:'l’œil du Glas Originel',
