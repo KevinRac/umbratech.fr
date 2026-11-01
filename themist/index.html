@@ -445,6 +445,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/masque.js"></script>
 <script src="data/gardiens.js"></script>
 <script src="data/descente.js"></script>
+<script src="data/arene.js"></script>
 <script src="data/resonances.js"></script>
 <script src="data/talents.js"></script>
 <script src="data/arbre.js"></script>
@@ -463,6 +464,112 @@ const dataMerge=(D,F)=>{const o={};for(const k in D)o[k]=Object.assign({},D[k],F
 // ───────────────────────── Constantes & utilitaires
 const W=1280,H=720,TAU=Math.PI*2;
 const AR={x0:56,y0:92,x1:W-56,y1:H-44};
+// v18.4 · L'arène (cadrage Q1–Q12). Deux repères : le monde (MONDE : la taille de la salle) et la vue (l'écran, W × H, inchangé). CAM est le coin
+// haut-gauche de la vue dans le monde. Hors de l'arène, CAM vaut 0, 0 (on : faux), MONDE vaut l'écran et AR vaut AR0 : les retouches de base
+// (render, updMouse, ECR, sbOrigine, la carte de distances FF) redonnent alors exactement les valeurs d'avant. Le reste vit dans le bloc
+// « v18.4 · L'arène » en fin de fichier (enveloppes) ; données : data/arene.js ; logique pure ci-dessous, vérifiée par outils/sim-arene.mjs.
+const AR0=Object.freeze(Object.assign({},AR)),MONDE={w:W,h:H},CAM={x:0,y:0,on:false,sol:null,sbAr:null,ff:0};
+const ECR=()=>({x:CAM.x+W/2,y:CAM.y+H/2});   // le centre de la vue (lumières « plein écran ») : W/2, H/2 hors de l'arène
+/*arene:pur*/
+// Réglages de la caméra d'un mode (normal ou mouvements réduits)
+function arCamR(C,rm){const m=(rm&&C.rm)||{};return{zone:m.zone||C.zone,tau:m.tau!=null?m.tau:C.tau,avance:m.avance!=null?m.avance:C.avance.px,tauAvance:C.avance.tau,vRef:C.avance.vRef,
+ vise:rm?0:(C.avance.vise||0),biais:m.biais!=null?m.biais:C.biaisBoss,garde:C.garde};}
+// Le monde d'une salle d'arène (S : data/arene.js, salles.<clé> ; V : la vue ; mur : marges des bornes dures ; o : w, h en écrans pour l'essai)
+function arMonde(S,V,mur,o){o=o||{};const w=Math.round(V.w*(o.w||S.w)),h=Math.round(V.h*(o.h||S.h));
+ return{w,h,bornes:{x0:mur.g,y0:mur.h,x1:w-mur.d,y1:h-mur.b},entree:{x:Math.round(w*S.entree.fx),y:Math.round(h*S.entree.fy)}};}
+// Un état d'arène (fractions des bornes dures) en px : bornes de la phase, obstacles, fosses, calque de sol, brume de décor
+function arEtat(E,M){const B=M.bornes,lx=v=>B.x0+(B.x1-B.x0)*v,ly=v=>B.y0+(B.y1-B.y0)*v,b=E.bornes||{fx0:0,fy0:0,fx1:1,fy1:1};
+ const pt=(o,kind)=>({x:Math.round(lx(o.fx)),y:Math.round(ly(o.fy)),r:o.r,kind,cle:kind+':'+o.fx+','+o.fy+','+o.r});
+ return{bornes:{x0:Math.round(lx(b.fx0)),y0:Math.round(ly(b.fy0)),x1:Math.round(lx(b.fx1)),y1:Math.round(ly(b.fy1))},
+  obstacles:(E.obstacles||[]).map(o=>pt(o,'pilier')),vides:(E.vides||[]).map(o=>pt(o,'fosse')),sol:E.sol||'pierre',brume:(E.brume||[]).map(o=>Object.assign(pt(o,'brume'),{a:o.a}))};}
+function arVue(c,V){return{x0:c.x,y0:c.y,x1:c.x+V.w,y1:c.y+V.h};}
+function arSure(v,s){return{x0:v.x0+s.g,y0:v.y0+s.h,x1:v.x1-s.d,y1:v.y1-s.b};}
+function versEcran(c,x,y){return{x:x-c.x,y:y-c.y};}
+function versMonde(c,x,y){return{x:x+c.x,y:y+c.y};}
+// Ce que la vue peut montrer : les bornes de la phase et leurs murs, dans le monde (bornes = AR0 et monde = écran : exactement l'écran)
+function arLimites(b,M,mur){return{x0:Math.max(0,b.x0-mur.g),y0:Math.max(0,b.y0-mur.h),x1:Math.min(M.w,b.x1+mur.d),y1:Math.min(M.h,b.y1+mur.b)};}
+function arBorner(x,a,b,v){return b-a>=v?Math.min(Math.max(x,a),b-v):(a+b)/2-v/2;}
+// La cible : le joueur, son avance lissée, la visée (position écran de la souris, -1 à 1), le biais vers le boss (cadrage partagé)
+function arCible(j,c,R,o){let x=j.x+c.ax,y=j.y+c.ay;
+ if(o.vise&&R.vise>0){x+=o.vise.x*R.vise;y+=o.vise.y*R.vise;}
+ if(o.boss&&R.biais>0){x+=R.biais*(o.boss.x-j.x);y+=R.biais*(o.boss.y-j.y);}return{x,y};}
+// Un pas de caméra : avance, zone morte, lissage exponentiel (jamais de dépassement), garde-fou dur (vue sûre), limites de la phase.
+// c : {x, y, ax, ay} ; j : joueur {x, y, vx, vy} ; o : {V (vue), lim (arLimites), sure (marges du HUD), boss, vise, saut}. Rend un nouvel état.
+function arPas(c,j,dt,R,o){const V=o.V,n={x:c.x,y:c.y,ax:c.ax||0,ay:c.ay||0};
+ if(R.avance>0&&!o.saut){const vx=j.vx||0,vy=j.vy||0,sp=Math.hypot(vx,vy),k=1-Math.exp(-dt/R.tauAvance),m=sp>1?R.avance*Math.min(1,sp/R.vRef)/sp:0;
+  n.ax+=(vx*m-n.ax)*k;n.ay+=(vy*m-n.ay)*k;}
+ else{n.ax=0;n.ay=0;}
+ const t=arCible(j,n,R,o);
+ if(o.saut){n.x=t.x-V.w/2;n.y=t.y-V.h/2;}
+ else{const cx=n.x+V.w/2,cy=n.y+V.h/2,zx=R.zone.w/2,zy=R.zone.h/2,k=1-Math.exp(-dt/R.tau);
+  const tx=t.x>cx+zx?t.x-zx:t.x<cx-zx?t.x+zx:cx,ty=t.y>cy+zy?t.y-zy:t.y<cy-zy?t.y+zy:cy;
+  n.x+=(tx-cx)*k;n.y+=(ty-cy)*k;}
+ const s=o.sure,G=R.garde;
+ n.x=Math.min(Math.max(n.x,j.x+s.d+G.x-V.w),j.x-s.g-G.x);n.y=Math.min(Math.max(n.y,j.y+s.b+G.y-V.h),j.y-s.h-G.y);
+ n.x=arBorner(n.x,o.lim.x0,o.lim.x1,V.w);n.y=arBorner(n.y,o.lim.y0,o.lim.y1,V.h);
+ return n;}
+// Distance d'un point à un rectangle (0 dedans) ; plus proche approche d'un projectile (p : x, y, vx, vy) du joueur dans les h secondes
+function arDistRect(r,x,y){return Math.hypot(Math.max(r.x0-x,0,x-r.x1),Math.max(r.y0-y,0,y-r.y1));}
+function arApproche(p,j,h){const vx=p.vx||0,vy=p.vy||0,v2=vx*vx+vy*vy,rx=p.x-j.x,ry=p.y-j.y;let t=v2>0?-(rx*vx+ry*vy)/v2:0;t=Math.min(Math.max(t,0),h);return{t,d:Math.hypot(rx+vx*t,ry+vy*t)};}
+// La place d'un signe de bord : sur le bord de la vue sûre rentré de I.retrait, sur le rayon joueur → source, jamais à moins de I.coin d'un coin,
+// glissé hors des blocs du HUD (I.blocs : rectangles en coordonnées de la vue sûre déjà dans le monde) le long de son bord.
+function arBord(s,de,vers,I){const q={x0:s.x0+I.retrait,y0:s.y0+I.retrait,x1:s.x1-I.retrait,y1:s.y1-I.retrait};
+ const px=Math.min(Math.max(de.x,q.x0),q.x1),py=Math.min(Math.max(de.y,q.y0),q.y1),dx=vers.x-px,dy=vers.y-py;
+ const tx=dx>0?(q.x1-px)/dx:dx<0?(q.x0-px)/dx:Infinity,ty=dy>0?(q.y1-py)/dy:dy<0?(q.y0-py)/dy:Infinity;
+ let x,y,cote;
+ if(tx<=ty){cote=dx>0?'d':'g';x=dx>0?q.x1:q.x0;y=Math.min(Math.max(py+dy*(isFinite(tx)?tx:0),q.y0+I.coin),q.y1-I.coin);}
+ else{cote=dy>0?'b':'h';y=dy>0?q.y1:q.y0;x=Math.min(Math.max(px+dx*(isFinite(ty)?ty:0),q.x0+I.coin),q.x1-I.coin);}
+ const glisse=(v,a,b,lo,hi)=>{const ca=a>=lo?a:null,cb=b<=hi?b:null;return ca==null?(cb==null?v:cb):cb==null?ca:(v-ca<=cb-v?ca:cb);};
+ for(const B of I.blocs||[]){const m=I.retrait;if(x<B.x0-m||x>B.x1+m||y<B.y0-m||y>B.y1+m)continue;
+  // pas de place le long du bord (petit écran : le HUD couvre tout ce côté) : juste devant le bloc, du côté de l'écran
+  if(cote==='g'||cote==='d'){const v=glisse(y,B.y0-m,B.y1+m,q.y0+I.coin,q.y1-I.coin);if(v!==y)y=v;else x=cote==='d'?B.x0-m:B.x1+m;}
+  else{const v=glisse(x,B.x0-m,B.x1+m,q.x0+I.coin,q.x1-I.coin);if(v!==x)x=v;else y=cote==='h'?B.y1+m:B.y0-m;}}
+ return{x,y,a:Math.atan2(vers.y-de.y,vers.x-de.x),cote};}
+// Les signes de bord. L : sources {id, k (tele, proj, saisie, boss, elite, ord), x, y, r, vx, vy, vise, rempli, c} ; c : {vue, sure, joueur}.
+// Une source à l'écran (même en partie) n'a pas de signe. Classe, place, regroupe les ordinaires par segment de bord, trie par danger, fusionne
+// les signes trop proches (le plus dangereux devant), plafonne. Rend [{k, x, y, a, cote, n, taille, rempli, c, ids}].
+const AR_RANG={tele:0,proj:1,saisie:2,boss:3,elite:4,ord:5};
+function arIndic(L,c,I){const out=[],ord={};
+ for(const s of L){const r=s.r||0,dv=arDistRect(c.vue,s.x,s.y),K=I.cat[s.k];if(dv<=r||!K)continue;let tca=null;
+  if(s.k==='tele'){if(!(s.vise||dv<=r+I.marge))continue;}
+  else if(s.k==='proj'||s.k==='saisie'){const a=arApproche(s,c.joueur,I.horizon);if(a.d>I.frole+r)continue;tca=a.t;}
+  else if(s.k!=='boss'&&dv>K.dist)continue;
+  const b=arBord(c.sure,c.joueur,s,I),taille=tca!=null?K.min+(K.max-K.min)*(1-tca/I.horizon):K.min;
+  const x={k:s.k,ks:[s.k],x:b.x,y:b.y,a:b.a,cote:b.cote,n:1,taille,rempli:s.rempli!=null?s.rempli:null,c:s.c||K.c,ids:[s.id],rang:AR_RANG[s.k],d:Math.hypot(s.x-c.joueur.x,s.y-c.joueur.y)};
+  if(s.k==='ord'){const cle=b.cote+Math.floor((b.cote==='g'||b.cote==='d'?b.y:b.x)/I.segment),g=ord[cle];
+   if(g){g.ids.push(s.id);g.ks.push('ord');g.n++;g.sx+=b.x;g.sy+=b.y;g.d=Math.min(g.d,x.d);continue;}x.sx=b.x;x.sy=b.y;ord[cle]=x;}
+  out.push(x);}
+ for(const k in ord){const g=ord[k];g.x=g.sx/g.n;g.y=g.sy/g.n;delete g.sx;delete g.sy;}
+ out.sort((a,b)=>a.rang-b.rang||a.d-b.d);
+ const res=[];for(const x of out){const f=res.find(y=>Math.hypot(y.x-x.x,y.y-x.y)<I.fusion);if(f){f.ids.push(...x.ids);f.ks.push(...x.ks);f.n+=x.n;continue;}res.push(x);}
+ return res.slice(0,I.max);}
+// Aucun coup sans signe : E.debut[id] = depuis quand la source est signalée sans interruption (à l'écran ou par un signe de bord).
+function arSignes(E,t,ids){const n={};for(const id of ids)n[id]=E.debut[id]!=null?E.debut[id]:t;E.debut=n;return E;}
+// un coup est juste si l'un des maillons de sa chaîne (le projectile, puis son tireur…) est signalé depuis au moins le préavis (0,6 s ; 0,8 s : boss)
+function arJuge(E,t,chaine,boss,Pv){let best=-Infinity;for(const id of chaine){const t0=E.debut[id];if(t0!=null)best=Math.max(best,t-t0);}
+ const lim=boss?Pv.boss:Pv.coup;return{ok:best>=lim-1e-6,depuis:best,lim};}
+// La transformation entre deux états (de, vers : arEtat) : annonce → bascule (bornes à vitesse px/s au plus ; un obstacle ne sort pas sous une créature :
+// il attend, au plus attenteMax s, puis pousse) → fondu → fini. ff : la carte de distances est à refaire ; calme : le boss ne lance rien.
+function arTransNouveau(de,vers){const tous=e=>e.obstacles.concat(e.vides),dv=tous(de),vv=tous(vers),gard=new Set(vv.map(o=>o.cle)),avant=new Set(dv.map(o=>o.cle));
+ return{ph:'annonce',t:0,de,vers,bornes:Object.assign({},de.bornes),restent:dv.filter(o=>gard.has(o.cle)),partent:dv.filter(o=>!gard.has(o.cle)),
+  viennent:vv.filter(o=>!avant.has(o.cle)),poses:[],attente:{},pousse:[],fondu:0,ff:false,calme:true,journal:['annonce']};}
+function arTransPas(T,dt,cre,R){const N=Object.assign({},T,{bornes:Object.assign({},T.bornes),poses:T.poses.slice(),attente:Object.assign({},T.attente),pousse:T.pousse.slice(),journal:T.journal.slice(),ff:false});
+ if(N.ph==='annonce'){N.t+=dt;if(N.t>=R.annonceS){N.ph='bascule';N.t=0;N.ff=N.partent.length>0;N.journal.push('bascule');}}
+ else if(N.ph==='bascule'){N.t+=dt;const v=R.vitesse*dt,B=N.vers.bornes;
+  for(const k of ['x0','y0','x1','y1']){const d=B[k]-N.bornes[k];if(!d)continue;N.bornes[k]=Math.abs(d)<=v?B[k]:N.bornes[k]+Math.sign(d)*v;N.ff=true;}
+  for(const o of N.viennent){if(N.poses.some(p=>p.cle===o.cle))continue;
+   if(!cre.some(c=>Math.hypot(c.x-o.x,c.y-o.y)<o.r+c.r)){N.poses.push(o);N.ff=true;continue;}
+   N.attente[o.cle]=(N.attente[o.cle]||0)+dt;if(N.attente[o.cle]>=R.attenteMax){N.poses.push(o);N.pousse.push(o.cle);N.ff=true;}}
+  if(['x0','y0','x1','y1'].every(k=>N.bornes[k]===B[k])&&N.poses.length===N.viennent.length){N.ph='fondu';N.t=0;N.calme=false;N.journal.push('fondu');}}
+ else if(N.ph==='fondu'){N.t+=dt;N.fondu=Math.min(1,N.t/R.fonduS);if(N.fondu>=1){N.ph='fini';N.journal.push('fini');}}
+ return N;}
+// les obstacles en place : pendant l'annonce, ceux d'avant ; ensuite, ceux qui restent et ceux déjà posés
+function arTransObstacles(T){return T.ph==='annonce'?T.restent.concat(T.partent):T.restent.concat(T.poses);}
+// Les tuiles du sol qui coupent la vue (au plus 3 × 3 avec des tuiles d'un demi-écran)
+function arTuiles(v,M,T){const nx=Math.ceil(M.w/T.w),ny=Math.ceil(M.h/T.h),o=[];
+ const i0=Math.max(0,Math.floor(v.x0/T.w)),i1=Math.min(nx-1,Math.floor((v.x1-1e-6)/T.w)),j0=Math.max(0,Math.floor(v.y0/T.h)),j1=Math.min(ny-1,Math.floor((v.y1-1e-6)/T.h));
+ for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)o.push({i,j,k:j*nx+i,x:i*T.w,y:j*T.h});return o;}
+/*/arene:pur*/
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $=s=>document.querySelector(s);
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -1345,7 +1452,7 @@ function computeLights(){
   for(const sp of spectrals)lights.push({x:sp.x,y:sp.y,r:100*k,ex:!night,c:'cold'});
   if(P.beam){for(const r of P.beam.rays)for(let d=40;d<P.beam.len;d+=85)lights.push({x:P.beam.x+Math.cos(P.beam.a+r)*d,y:P.beam.y+Math.sin(P.beam.a+r)*d,r:72,ex:false,c:s.sub==='sol'?'sol':'warm'});}
   if(s.couronne){const n=s.couronne>=2?5:3;for(let i=0;i<n;i++){const a=P.couronneA+i*TAU/n;lights.push({x:P.x+Math.cos(a)*80,y:P.y+Math.sin(a)*80,r:46,ex:false,c:'sol'});}}
-  if(P.zenithT>0)lights.push({x:W/2,y:H/2,r:760,ex:false,c:'none'});
+  if(P.zenithT>0)lights.push({...ECR(),r:760,ex:false,c:'none'});
  }
  for(const e of enemies)if(!e.dead&&e.type==='hurleur'&&e.state==='sing')lights.push({x:e.x,y:e.y,r:70,ex:false,c:'cold'});
  for(const e of enemies)if(!e.dead&&e.type==='boss')lights.push({x:e.x,y:e.y,r:e.r*2.4*(RUN.act===3?1+(RM&&g27Actif(3)?0:0.35*beatK()):1),ex:false,c:RUN.act===2?(g27Actif(2)?'lampe':'cold'):RUN.act===3&&g27Actif(3)?'glas':RUN.act===1&&g27Actif(1)?'perle':'violet'});   // v17.27 : la lumière du gardien suit sa lueur (G3 : la lampe d'Ismène, le battement du Glas, la brume perle de la Mère-Brume), rayon inchangé
@@ -1614,9 +1721,10 @@ function frame(now){
 function render(){
  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#030406';ctx.fillRect(0,0,cv.width,cv.height);if(!room||!P)return;
  let sx=0,sy=0;if(shakeT>0&&!RM){sx=rand(-1,1)*shakeMag;sy=rand(-1,1)*shakeMag;}
- ctx.setTransform(scale,0,0,scale,offX+sx*scale,offY+sy*scale);
- ctx.save();ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip();
- ctx.drawImage(room.canvas,0,0);
+ // v18.4 · la vue retire CAM (0, 0 hors de l'arène : la même transformation qu'avant) ; la secousse reste un décalage d'écran, après la caméra
+ ctx.setTransform(scale,0,0,scale,offX+(sx-CAM.x)*scale,offY+(sy-CAM.y)*scale);
+ ctx.save();ctx.beginPath();ctx.rect(CAM.x,CAM.y,W,H);ctx.clip();
+ if(CAM.on)CAM.sol();else ctx.drawImage(room.canvas,0,0);
  drawMists();drawDecals();
  drawDoorsPre();drawParts('pre');
  for(const e of enemies)if(!e.dead)drawEnemyBody(e);
@@ -1629,7 +1737,7 @@ function render(){
  drawScene27('post');
  drawRings();drawDevour();drawV6World();drawBeam();drawFx();drawPproj();drawEproj();drawCoins();
  if(!P.dead){if(P.cls==='lum'){drawLanternPost();drawPlayerPost();drawCrown();}else if(P.cls==='gou')drawGouPost();else drawV6Post();}
- drawParts('post');drawNums();spawnMotes();drawVignette();if(room&&room.drainT>0){ctx.fillStyle='rgba(6,0,12,.28)';ctx.fillRect(0,0,W,H);}
+ drawParts('post');drawNums();spawnMotes();if(CAM.on){ctx.save();ctx.translate(CAM.x,CAM.y);}drawVignette();if(room&&room.drainT>0){ctx.fillStyle='rgba(6,0,12,.28)';ctx.fillRect(0,0,W,H);}if(CAM.on)ctx.restore();
  ctx.restore();
  ctx.setTransform(1,0,0,1,0,0);
  const cw=cv.width,ch=cv.height,mn=Math.min(cw,ch),mx=Math.max(cw,ch);
@@ -2072,7 +2180,7 @@ function buyItem(key){
 }
 
 // ───────────────────────── Entrées
-function updMouse(e){const r=cv.getBoundingClientRect();mouse.x=((e.clientX-r.left)*dpr-offX)/scale;mouse.y=((e.clientY-r.top)*dpr-offY)/scale;}
+function updMouse(e){const r=cv.getBoundingClientRect();mouse.sx=((e.clientX-r.left)*dpr-offX)/scale;mouse.sy=((e.clientY-r.top)*dpr-offY)/scale;mouse.x=mouse.sx+CAM.x;mouse.y=mouse.sy+CAM.y;}   // v18.4 : position écran gardée (sx, sy) ; dans l'arène, le monde est recalculé à chaque image
 cv.addEventListener('mousemove',updMouse);
 cv.addEventListener('mousedown',e=>{updMouse(e);initAudio();if(e.button===0){mouse.l=true;if(P){P.clickQ=1;P.clickT=0.16;}}if(e.button===2){mouse.r=true;if(P){P.rclickQ=1;P.rclickT=0.16;}}});
 addEventListener('mouseup',e=>{if(e.button===0)mouse.l=false;if(e.button===2)mouse.r=false;});
@@ -2965,7 +3073,7 @@ function tisAbsorb(dmg){const s=P.s;if(s.dea&&P.threads.length)dmg*=0.8;if(!s.ch
 function v6Ult(){const s=P.s;
  if(s.glasFun){P.funN=8;P.ultCd=24;toast('Glas Funèbre');sfx('bigbell');}
  else if(s.requiem){for(let i=0;i<6;i++){const a=i/6*TAU;chorus.push({x:P.x+Math.cos(a)*72,y:P.y+Math.sin(a)*52,req:true,t:8,a,sing:0,n:1});}P.ultCd=26;toast('Requiem');sfx('bigbell');}
- else if(s.gtoile){P.gtoileT=6;P.ultCd=22;toast('Grande Toile');sfx('web');tlights.push({x:W/2,y:H/2,r:700,t:0.6,max:0.6,c:'blood'});}
+ else if(s.gtoile){P.gtoileT=6;P.ultCd=22;toast('Grande Toile');sfx('web');tlights.push({...ECR(),r:700,t:0.6,max:0.6,c:'blood'});}
  else if(s.guignol){let n=0;for(const e of enemies){if(e.dead||e.type==='boss'||e.fixed||e.puppet>0)continue;makePuppet(e,5,'revert');n++;}P.ultCd=28;toast(n?'Grand Guignol':'Grand Guignol : personne à manipuler');sfx('puppet');}}
 // ───────────────────────── Projectiles v6
 function homeProj(p,dt){const t=nearestFoe(p.x,p.y,260,e=>!p.hit.has(e));if(!t)return;const a=Math.atan2(p.vy,p.vx),b=Math.atan2(t.y-p.y,t.x-p.x);let d=b-a;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=TAU;const na=a+clamp(d,-7*dt,7*dt),sp=hyp(p.vx,p.vy);p.vx=Math.cos(na)*sp;p.vy=Math.sin(na)*sp;}
@@ -2989,7 +3097,7 @@ function v6Lights(){const s=P.s;
   for(const th of P.threads){const e=th.e;if(e.dead)continue;lights.push({x:e.x,y:e.y,r:66,ex:true,c:'blood'});lights.push({x:(e.x+P.x)/2,y:(e.y+P.y)/2+14,r:34,ex:false,c:'blood'});}
   for(const w of webs)lights.push({x:w.x,y:w.y,r:w.r*1.05,ex:true,c:'none'});
   for(const e of enemies)if(!e.dead&&e.puppet>0)lights.push({x:e.x,y:e.y,r:55,ex:false,c:'blood'});
-  if(P.gtoileT>0)lights.push({x:W/2,y:H/2,r:520,ex:false,c:'none'});}}
+  if(P.gtoileT>0)lights.push({...ECR(),r:520,ex:false,c:'none'});}}
 function v6HudRes(){if(P.cls==='her'){const cap=resCap();sW(HUD.hRes,P.res/cap*100);sT(HUD.hResV,`${Math.floor(P.res)} / ${cap}`);}else{sW(HUD.hRes,P.bob);sT(HUD.hResV,String(Math.floor(P.bob)));}}
 function v6State(){if(P.cls==='her'){if(P.orgueN>0)return[`Point d’orgue · ${P.orgueN}`,'h2'];if(P.funN>0)return['Glas Funèbre','h2'];const c=P.cad,mx=P.s.cadMax;return[`Cadence ${c} / ${mx}${P.s.ames&&P.souls?' · '+P.souls+' âme'+(P.souls>1?'s':''):''}`,c>=mx?'h2':c>=Math.ceil(mx/2)?'h1':'h0'];}
  const n=P.threads.length,pp=enemies.filter(e=>!e.dead&&e.puppet>0).length;if(P.gtoileT>0)return['Grande Toile','t0'];let st=`Fils ${n} / ${P.s.filRouge?1:P.s.filMax}`;if(pp)st+=` · ${pp} pantin${pp>1?'s':''}`;return[st,'t0'];}
@@ -5633,12 +5741,12 @@ function showMur(title,text,d,pause,who){
  if(!murEl){murEl=document.createElement('div');murEl.id='murmur';murEl.setAttribute('role','status');murEl.setAttribute('aria-live','polite');toastEl.parentNode.appendChild(murEl);}
  murEl.innerHTML=`<svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12c3-5 7-7 10-7s7 2 10 7c-3 5-7 7-10 7s-7-2-10-7z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg><div><b>${esc(title)}</b><span>${esc(text)}</span>${pause?'<em class="sub">Espace · Entrée · clic pour continuer</em>':''}</div>`;
  stackBelow(murEl,toastEl);murEl.classList.toggle('pause',!!pause);murEl.classList.add('show');clearTimeout(murTimer);if(!pause)murTimer=setTimeout(()=>murEl.classList.remove('show'),(d||4.5)*1000);
- if(who!=='joueur'){sfx('scream_'+(who||'brumeux'));tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}}
+ if(who!=='joueur'){sfx('scream_'+(who||'brumeux'));tlights.push({...ECR(),r:760,t:0.7,max:0.7,c:'violet'});}}
 // le texte violet fige le jeu le temps de lire et s’accompagne d’un cri propre au PNJ qui parle
 let lastScream=-9;
 function murmur(title,text,d,who){who=who||murWho(title);
  // v16.3 · palier 0, puis v17.5 · tous les paliers : plus de texte violet en descente, le Brumeux pousse seulement un cri (au plus un toutes les 1,2 s)
- if(RUN&&!RUN.hub){if(state==='play'&&who!=='joueur'&&RUN.time-lastScream>1.2){lastScream=RUN.time;sfx('scream_'+who);tlights.push({x:W/2,y:H/2,r:760,t:0.7,max:0.7,c:'violet'});}return;}
+ if(RUN&&!RUN.hub){if(state==='play'&&who!=='joueur'&&RUN.time-lastScream>1.2){lastScream=RUN.time;sfx('scream_'+who);tlights.push({...ECR(),r:760,t:0.7,max:0.7,c:'violet'});}return;}
  if(!P||!RUN||RUN.hub||state!=='play'){showMur(title,text,d||4.5,false,who);return;}
  msgPush({k:'m',title,text,who,secs:clamp(1.8+text.length*0.04,3,6.5)});}
 function announceCm(){
@@ -5646,7 +5754,7 @@ function announceCm(){
  if(room.cmRelax){murmur('Le Brumeux relâche son étreinte','Il te sent vaciller et retient ses contre-mesures. Reprends ton souffle.',4.2);sfx('murmur');return;}
  const c=CMS[room.cm];if(!c)return;room.cmShown=true;
  murmur(`Le Brumeux · ${c.n}`,`Il a vu que ${c.why}. ${c.what}`,5);sfx('murmur');
- tlights.push({x:W/2,y:H/2,r:760,t:0.9,max:0.9,c:'violet'});updateRoomHud();}
+ tlights.push({...ECR(),r:760,t:0.9,max:0.9,c:'violet'});updateRoomHud();}
 const _sw12=spawnWave;
 spawnWave=function(w,last){const n0=room.spawning.length;_sw12(w,last);for(let i=0;i<w.length;i++){const sp=room.spawning[n0+i];if(sp&&w[i]&&w[i].cm)sp.cm=true;}};
 const _er12=enterRoom;
@@ -8254,7 +8362,7 @@ details.fold>.chips{margin-top:8px}
  computeLights=function(){_cl();if(state!=='play'||!P)return;
   const F=P.phare;if(F){lights.push({x:F.x,y:F.y,r:180,ex:true,c:'warm'});for(const k of[0,Math.PI]){const a=F.a+k;for(let d=80;d<F.L;d+=75)lights.push({x:F.x+Math.cos(a)*d,y:F.y+Math.sin(a)*d,r:58+d*0.09,ex:true,c:'warm'});}}
   if(P.gm)lights.push({x:P.gm.x,y:P.gm.y,r:P.gm.R*1.15,ex:false,c:'bile'});
-  if(P.balN>0||P.balFl>0)lights.push({x:W/2,y:H/2,r:780,ex:false,c:'none'});
+  if(P.balN>0||P.balFl>0)lights.push({...ECR(),r:780,ex:false,c:'none'});
   for(const q of P.pistes||[])lights.push({x:q.x,y:q.y,r:q.R*1.35,ex:false,c:'violet'});
   if(P.stopT>0)lights.push({x:P.x,y:P.y,r:300,ex:false,c:'none'});};
 
@@ -9404,7 +9512,7 @@ function demoBoot(cls){
  // Pas d'accélération de salle (spdMul) sur ses projectiles, son onde et sa ruée : leurs vitesses sont celles que la vérification a jugées.
  const SB={J:SBJ,essai:null};
  function sbOrigine(e){const gb=room&&room.type==='boss'&&room.boss&&!room.boss.dead?room.boss:null;   // v17.22 : le corps du gardien bloque la sortie
-  return{lx:e.x,ly:e.y,er:e.r,pr:P.r,pv:pMarche(),arene:AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)||!!(gb&&hyp(x-gb.x,y-gb.y)<gb.r+P.r)};}
+  return{lx:e.x,ly:e.y,er:e.r,pr:P.r,pv:pMarche(),arene:CAM.on&&CAM.sbAr?CAM.sbAr():AR,bloque:(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+P.r)||!!(gb&&hyp(x-gb.x,y-gb.y)<gb.r+P.r)};}
  function sbCtx(e,B,et){return{lx:e.x,ly:e.y,er:e.r,px:P.x,py:P.y,ax:B.anc?B.anc[0]:null,ay:B.anc?B.anc[1]:null,a:Math.atan2(P.y-e.y,P.x-e.x),prec:B.prec,rnd:e.asm.rnd};}
  // fixer la géométrie d'une étape (au chargement si elle ne suit pas, au figement sinon) ; null : aucune sortie, l'étape saute
  function sbFixe(e,B,et){const pc=sbPlacer(SBJ,A,et,sbCtx(e,B,et),sbOrigine(e),RUN.act);
@@ -10129,7 +10237,7 @@ function demoBoot(cls){
  // (action 3) : tant qu'assemble.nemesis.actif est faux, rien n'est écrit, sauf essai de console (__nemesis.activer(), jamais gardé au rechargement).
  // Jamais en démo, ni dans une descente d'essai (RUN.essai, ou ?masque= ?brume= ?glas= ?dernier= ?nemesis=).
  var NEMSRC=null;   // projectile de la Brume qui touche (navette, perçant) : de qui il vient
- const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis)=/.test(location.search),NDEV={on:null};   // console : activer(true) force, activer(false) éteint, activer(null) rend la main aux données
+ const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|arene)=/.test(location.search),NDEV={on:null};   // console : activer(true) force, activer(false) éteint, activer(null) rend la main aux données
  const nemActif=()=>!!(NM&&(NDEV.on==null?NM.actif:NDEV.on))&&!DEMO;
  const nemInfo=id=>{const n=NODES[id];return n?{cls:n.cls,genre:/_sk$/.test(id)?'u':(n.kind||'m')}:null;};
  // qui a porté le dernier coup qui t'a blessé (pour les statistiques : la promotion n'en dépend pas, N2). Sans changer les arguments de
@@ -11571,16 +11679,19 @@ function demoBoot(cls){
 
  // ── 3. Ennemis coincés derrière le décor : carte de distances (pas de 20 px) recalculée autour du joueur,
  // suivie dès qu’un obstacle coupe la ligne droite ; détection d’ennemi bloqué en dernier recours.
- const CS=20,COLS=Math.ceil(W/CS),ROWS=Math.ceil(H/CS),INF=1e9,PAD=15;
+ // v18.4 : la grille suit le monde (MONDE : l'écran hors de l'arène, donc les mêmes tableaux qu'avant) ; CAM.ff force le recalcul (bornes qui bougent)
+ const CS=20,INF=1e9,PAD=15;let COLS=Math.ceil(W/CS),ROWS=Math.ceil(H/CS);
  const FF={room:null,n:-1,blk:new Uint8Array(COLS*ROWS),dist:new Float64Array(COLS*ROWS),t:0,ok:false};
  const cellOf=(x,y)=>[clamp(Math.floor(x/CS),0,COLS-1),clamp(Math.floor(y/CS),0,ROWS-1)];
- function ffBlk(){const P_=room.pillars||[];FF.blk.fill(0);
+ function ffBlk(){const P_=room.pillars||[];
+  const cw=Math.ceil(MONDE.w/CS),rh=Math.ceil(MONDE.h/CS);if(cw!==COLS||rh!==ROWS){COLS=cw;ROWS=rh;FF.blk=new Uint8Array(COLS*ROWS);FF.dist=new Float64Array(COLS*ROWS);}
+  FF.blk.fill(0);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const x=(c+0.5)*CS,y=(r+0.5)*CS;let b=x<AR.x0+PAD||x>AR.x1-PAD||y<AR.y0+PAD||y>AR.y1-PAD;
    if(!b)for(const p of P_)if(hyp(x-p.x,y-p.y)<p.r+PAD){b=true;break;}FF.blk[r*COLS+c]=b?1:0;}
   FF.room=room;FF.n=P_.length;}
  const NB=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
  function ffBuild(){
-  if(FF.room!==room||FF.n!==(room.pillars||[]).length)ffBlk();
+  if(FF.room!==room||FF.n!==(room.pillars||[]).length||CAM.ff){CAM.ff=0;ffBlk();}
   const D=FF.dist;D.fill(INF);let [c0,r0]=cellOf(P.x,P.y);
   if(FF.blk[r0*COLS+c0]){let best=null,bd=INF;for(let dr=-3;dr<=3;dr++)for(let dc=-3;dc<=3;dc++){const c=c0+dc,r=r0+dr;if(c<0||r<0||c>=COLS||r>=ROWS||FF.blk[r*COLS+c])continue;const d=dc*dc+dr*dr;if(d<bd){bd=d;best=[c,r];}}if(!best)return;[c0,r0]=best;}
   // Dijkstra sur une petite grille (≈ 2 300 cases) : un tas binaire suffit
@@ -12509,7 +12620,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
 // Essai : index.html?descente=<acte>[&fin=1][&classe=…] ; console : __descente.
 (function(){
  const PA=DES_D.paliers,ORD=DES_D.ordre;
- const ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente)=/.test(location.search);
+ const ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene)=/.test(location.search);
  // garde : la place d'un gardien qui n'existe pas encore (actes IV à IX) ; mini : un miniboss (acte X) ; final : le boss final (acte X). Tous trois
  // sont, pour l'instant, un Masqué imposé et renforcé (data/descente.js, provisoire). t : la phrase du message de salle purifiée.
  Object.assign(DOOR,{acte:{l:'Acte IV',c:'225,205,255',g:'IV'},garde:{l:'Gardien',c:'255,77,77',g:'G',t:'Le gardien de l’acte t’attend.'},mini:{l:'Miniboss',c:'255,138,92',g:'M',t:'Un miniboss t’attend.'},final:{l:'Boss final',c:'255,60,90',g:'F',t:'Le boss final t’attend.'}});
@@ -12859,6 +12970,279 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  window.__mutations={frapper:(e,b)=>hitEnemy(e,b,{crit:false,kb:0}),rejouer:(g,n)=>desMutDescente(desRegles(DES_D,'extreme').mutations,g,n)[n].liste,etat:()=>RUN&&RUN.mut18,actives:()=>room&&room.mut18A||[],regles:MU,attente:enAttente,
   forcer:liste=>{const S=etat();if(S){S.liste=liste.slice();S.hist[S.acte]=S.liste.slice();majHud(true);}return S;},
   salle:()=>room&&{z:(room.z18||[]).map(z=>({k:z.k,t:z.t,r:z.r})),serre:room.serre18||0,ombre:room.ombre18?{age:room.ombre18.age,touche:room.ombre18.touche}:null,cour:!!room.cour18,diff:room.diff18||null,waveI:room.waveI,waves:room.waves&&room.waves.length}};
+})();
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v18.4 · L'arène (chantier v18, action 4 ; cadrage Q1–Q12). Le terrain du boss final : une salle plus grande que l'écran, une caméra qui suit,
+// des signes au bord de l'écran pour ce qui arrive hors de vue, une arène qui se transforme entre les phases. Données : data/arene.js (actif:false :
+// en jeu, aucune salle ne change ; seul le mode d'essai l'ouvre). Logique pure : bloc /*arene:pur*/ (près d'AR), outils/sim-arene.mjs.
+// Repères : MONDE (taille de l'arène), vue = W × H, CAM = coin de la vue. Hors de l'arène, makeRoom remet AR = AR0, MONDE = écran, CAM = 0.
+// Essai : index.html?arene=final[&etat=0..n][&w=2][&h=1.5][&foule=n][&boss=1][&tirs=1][&bot=1][&dieu=1][&classe=…] ; console : __arene.
+// ═════════════════════════════════════════════════════════════════════════════
+(()=>{
+ const DA=window.BRUME_DATA&&window.BRUME_DATA.arene;if(!DA)return;
+ const V={w:W,h:H},IC=DA.indicateurs,COL=IC.couleurs,HV=DA.horsVue;
+ // l'état de l'arène en cours (null hors de l'arène)
+ const A={on:false,cle:null,M:null,etats:[],ie:0,etat:null,trans:null,cam:{x:0,y:0,ax:0,ay:0},indic:[],sig:{debut:{}},
+  j:{coups:0,sansSigne:0,liste:[],horsVue:0,assertions:0,cibles:0},sol:{},peintureMs:0,tuilesPosees:0,hud:{m:Object.assign({},DA.vue.marges),blocs:[],t:-9},
+  essai:null,ouvrir:null,zoneCourante:null,px:null,py:null,ids:new WeakMap(),parent:new WeakMap(),nid:1,actif:null};
+ const actif=()=>A.actif!=null?A.actif:!!DA.actif;
+ const id=o=>{let v=A.ids.get(o);if(!v){v=A.nid++;A.ids.set(o,v);}return v;};
+ const vue=()=>arVue(CAM,V);
+ const memeAR=()=>AR.x0===AR0.x0&&AR.y0===AR0.y0&&AR.x1===AR0.x1&&AR.y1===AR0.y1;
+ // ── tout remettre comme un écran (toute nouvelle salle, Sanctuaire, titre, nouvelle descente)
+ function remettre(){Object.assign(AR,AR0);MONDE.w=W;MONDE.h=H;CAM.x=0;CAM.y=0;CAM.on=false;CAM.ff=1;A.on=false;A.trans=null;A.indic=[];A.etat=null;A.essai=null;}
+ // ── le sol : tuiles peintes à l'entrée (un calque par sol d'état), posées seulement là où la vue passe
+ const SOLS={pierre:['#15131c','#1d1a27','90,80,120'],cendre:['#17161a','#201e24','140,130,140'],braise:['#1a1214','#251719','170,80,60']};
+ // un calque par état : son sol et sa brume de décor, cuits dans les tuiles (le fondu passe d'un calque à l'autre ; rien n'est peint pendant le combat)
+ function peindre(M,etats){const t0=performance.now(),T=DA.tuiles,nx=Math.ceil(M.w/T.w),ny=Math.ceil(M.h/T.h),out={};
+  for(const [ie,E] of etats.entries()){const s=E.sol,p=SOLS[s]||SOLS.pierre,L=[];
+   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const c=document.createElement('canvas');c.width=T.w;c.height=T.h;const g=c.getContext('2d'),ox=i*T.w,oy=j*T.h;
+    let r=(i*73856093^j*19349663^s.length*83492791)>>>0;const rnd=()=>{r=r+0x6D2B79F5|0;let t=Math.imul(r^r>>>15,1|r);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+    g.fillStyle=p[0];g.fillRect(0,0,T.w,T.h);
+    for(let k=0;k<180;k++){g.fillStyle=`rgba(${p[2]},${0.03+rnd()*0.05})`;const w=4+rnd()*26;g.fillRect(rnd()*T.w,rnd()*T.h,w,w*0.5);}
+    g.strokeStyle=p[1];g.lineWidth=2;g.beginPath();for(let x=(80-ox%80)%80;x<T.w;x+=80){g.moveTo(x+0.5,0);g.lineTo(x+0.5,T.h);}for(let y=(64-oy%64)%64;y<T.h;y+=64){g.moveTo(0,y+0.5);g.lineTo(T.w,y+0.5);}g.stroke();
+    // au-delà des bornes dures : le mur
+    const B=M.bornes;g.fillStyle='#07060a';
+    if(ox<B.x0)g.fillRect(0,0,B.x0-ox,T.h);if(ox+T.w>B.x1)g.fillRect(B.x1-ox,0,ox+T.w-B.x1,T.h);if(oy<B.y0)g.fillRect(0,0,T.w,B.y0-oy);if(oy+T.h>B.y1)g.fillRect(0,B.y1-oy,T.w,oy+T.h-B.y1);
+    g.strokeStyle='#3a3346';g.lineWidth=3;g.strokeRect(B.x0-ox-1.5,B.y0-oy-1.5,B.x1-B.x0+3,B.y1-B.y0+3);
+    for(const b of E.brume){if(b.x+b.r<ox||b.x-b.r>ox+T.w||b.y+b.r<oy||b.y-b.r>oy+T.h)continue;const gr=g.createRadialGradient(b.x-ox,b.y-oy,0,b.x-ox,b.y-oy,b.r);gr.addColorStop(0,`rgba(150,140,175,${b.a})`);gr.addColorStop(1,'rgba(150,140,175,0)');g.fillStyle=gr;g.beginPath();g.arc(b.x-ox,b.y-oy,b.r,0,TAU);g.fill();}
+    L.push(c);}
+   out[ie]=L;}
+  A.peintureMs=performance.now()-t0;return out;}
+ function solCalque(ie,a){const L=A.sol[ie];if(!L)return;const T=DA.tuiles,ts=arTuiles(vue(),A.M,T);A.tuilesPosees=ts.length;
+  // seule la part visible de chaque tuile est posée (rectangle source recadré sur la vue)
+  const v=vue();if(a<1)ctx.globalAlpha=a;
+  for(const t of ts){const x0=Math.max(t.x,Math.floor(v.x0)),y0=Math.max(t.y,Math.floor(v.y0)),x1=Math.min(t.x+T.w,Math.ceil(v.x1)),y1=Math.min(t.y+T.h,Math.ceil(v.y1));
+   if(x1>x0&&y1>y0)ctx.drawImage(L[t.k],x0-t.x,y0-t.y,x1-x0,y1-y0,x0,y0,x1-x0,y1-y0);}
+  ctx.globalAlpha=1;}
+ function rond(c,x,y,r){c.beginPath();c.arc(x,y,r,0,TAU);}
+ CAM.sol=function(){const c=ctx,T=A.trans,E=A.etat;
+  // le calque de l'état (sol et brume de décor, au sol : elle ne cache ni télégraphe ni signe), puis celui d'arrivée pendant le fondu
+  solCalque(A.ie0,1);if(T&&T.ph==='fondu')solCalque(A.ie,T.fondu);
+  // hors des bornes de la phase (quand elles sont plus petites que les bornes dures) : la brume prend la place
+  const b=AR,M=A.M,BD=M.bornes;if(b.x0!==BD.x0||b.y0!==BD.y0||b.x1!==BD.x1||b.y1!==BD.y1){const v=vue();c.fillStyle='rgba(8,6,14,.86)';
+   if(b.y0>v.y0)c.fillRect(v.x0,v.y0,W,b.y0-v.y0);if(b.y1<v.y1)c.fillRect(v.x0,b.y1,W,v.y1-b.y1);if(b.x0>v.x0)c.fillRect(v.x0,b.y0,b.x0-v.x0,b.y1-b.y0);if(b.x1<v.x1)c.fillRect(b.x1,b.y0,v.x1-b.x1,b.y1-b.y0);
+   c.strokeStyle='rgba(90,80,120,.7)';c.lineWidth=2;c.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);}
+  // obstacles et fosses en place
+  for(const p of room.pillars){if(p.kind==='fosse18'){c.fillStyle='#020104';rond(c,p.x,p.y,p.r);c.fill();c.strokeStyle='rgba(150,120,210,.45)';c.lineWidth=2;c.stroke();}
+   else{c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(p.x+6,p.y+p.r*0.55,p.r*1.05,p.r*0.45,0,0,TAU);c.fill();c.fillStyle='#2a2533';rond(c,p.x,p.y,p.r);c.fill();c.strokeStyle='#4a4258';c.lineWidth=2;c.stroke();
+    c.fillStyle='rgba(255,255,255,.05)';rond(c,p.x-p.r*0.3,p.y-p.r*0.3,p.r*0.45);c.fill();}}
+  // annonce : la nouvelle forme, en contour ivoire neutre (jamais orange ni rouge : rien ne frappe)
+  if(T&&(T.ph==='annonce'||T.ph==='bascule')){const k=RM?0.6:0.45+0.2*Math.sin(T.t*8);c.strokeStyle=`rgba(${COL.ivoire},${k})`;c.lineWidth=2;c.setLineDash([10,8]);
+   const B=T.vers.bornes;c.strokeRect(B.x0,B.y0,B.x1-B.x0,B.y1-B.y0);
+   for(const o of T.viennent)if(!T.poses.includes(o)){rond(c,o.x,o.y,o.r);c.stroke();}c.setLineDash([]);}};
+ // ── ouvrir une arène : appelé par makeRoom (avant la salle : layoutFor, makeMists et renderFloor lisent AR)
+ function ouvrir(cle,o){const S=DA.salles[cle];o=o||{};
+  const M=A.M=arMonde(S,V,DA.mur,o);MONDE.w=M.w;MONDE.h=M.h;
+  A.etats=S.etats.map(E=>arEtat(E,M));A.ie=Math.max(0,Math.min(A.etats.length-1,o.etat|0));A.etat=A.etats[A.ie];A.trans=null;A.cle=cle;
+  Object.assign(AR,A.etat.bornes);A.ie0=A.ie;A.sol=peindre(M,A.etats);}
+ function piliers(L){return L.map(o=>({x:o.x,y:o.y,r:o.r,kind:o.kind==='fosse'?'fosse18':'pilier18',cle:o.cle}));}
+ const _mr184=makeRoom;
+ makeRoom=function(type){const ouv=A.ouvrir||(actif()&&RUN&&!RUN.hub&&!ESSAI_U&&RUN.gardeNow==='final'&&type==='elite'?{cle:'final',o:{}}:null);A.ouvrir=null;
+  remettre();
+  if(!ouv)return _mr184.apply(this,arguments);
+  ouvrir(ouv.cle,ouv.o);const rm=_mr184.apply(this,arguments);
+  rm.arene=ouv.cle;rm.pillars=piliers(A.etat.obstacles.concat(A.etat.vides));rm.mists=[];for(let i=0;i<3;i++)rm.mists.push(...makeMists());rm.rule=null;
+  A.on=true;A.essai=ouv.o.essai||null;CAM.on=true;CAM.ff=1;A.sig={debut:{}};A.indic=[];
+  return rm;};
+ const ESSAI_U=/[?&]arene=/.test(location.search);
+ // à chaque entrée de salle : hors de l'arène, AR est celui d'un écran (assertion de développement)
+ const _er184=enterRoom;
+ enterRoom=function(){const r=_er184.apply(this,arguments);
+  try{if(room&&room.arene&&A.on){P.x=A.M.entree.x;P.y=A.M.entree.y;P.vx=P.vy=0;resetLantern();A.px=P.x;A.py=P.y;camera(0,true);}
+   else if(!memeAR()||CAM.on||MONDE.w!==W||MONDE.h!==H||CAM.x||CAM.y){A.j.assertions++;console.error('Arène : la salle hors arène garde l’AR, le monde ou la caméra de l’arène',JSON.stringify(AR),MONDE,CAM.x,CAM.y);remettre();}}
+  catch(err){console.error(err);}return r;};
+ // ── la caméra
+ function camera(dt,saut){const R=arCamR(DA.camera,RM),b=essaiBoss(),vx=dt>0&&A.px!=null?(P.x-A.px)/dt:0,vy=dt>0&&A.py!=null?(P.y-A.py)/dt:0;A.px=P.x;A.py=P.y;
+  const vise=mouse.sx!=null?{x:Math.max(-1,Math.min(1,(mouse.sx-W/2)/(W/2))),y:Math.max(-1,Math.min(1,(mouse.sy-H/2)/(H/2)))}:null;
+  A.cam=arPas(A.cam,{x:P.x,y:P.y,vx,vy},dt,R,{V,lim:arLimites(AR,A.M,DA.mur),sure:DA.vue.marges,boss:b?{x:b.x,y:b.y}:null,vise,saut:!!saut});
+  CAM.x=A.cam.x;CAM.y=A.cam.y;
+  if(mouse.sx!=null&&!A.pilote){mouse.x=mouse.sx+CAM.x;mouse.y=mouse.sy+CAM.y;}}
+ // les sorties du Masqué et des armes de la Brume : toujours à l'écran (AR ∩ vue sûre)
+ CAM.sbAr=()=>{const s=arSure(vue(),DA.vue.marges);return{x0:Math.max(AR.x0,s.x0),y0:Math.max(AR.y0,s.y0),x1:Math.min(AR.x1,s.x1),y1:Math.min(AR.y1,s.y1)};};
+ // ── le HUD remesuré (sa taille suit la fenêtre) : bandes du haut et du bas, bloc de droite
+ function hudMesure(){if(RUN&&RUN.time-A.hud.t<0.5)return;A.hud.t=RUN?RUN.time:0;
+  try{const cr=cv.getBoundingClientRect(),gy=y=>((y-cr.top)*dpr-offY)/scale,gx=x=>((x-cr.left)*dpr-offX)/scale,m=Object.assign({},DA.vue.marges),blocs=[];
+   const R=s=>{const e=document.querySelector(s);if(!e||e.hidden||hudEl.hidden)return null;const r=e.getBoundingClientRect();return r.width&&r.height?r:null;};
+   const tl=R('#hud .hud-tl');if(tl)m.h=Math.max(m.h,gy(tl.bottom)+6);
+   for(const s of ['#hud .hud-bl','#hSkills','#hState']){const r=R(s);if(r)m.b=Math.max(m.b,H-gy(r.top)+6);}
+   const tr=R('#hud .hud-tr');if(tr&&gy(tr.bottom)+6>m.h)blocs.push({x0:gx(tr.left)-6,y0:0,x1:W,y1:gy(tr.bottom)+6});
+   const G=DA.camera.garde,lim=H-2*G.y-40;if(m.h+m.b>lim){const k=lim/(m.h+m.b);m.h*=k;m.b*=k;}
+   A.hud.m=m;A.hud.blocs=blocs;}catch(err){}}
+ // ── les sources : ennemis, projectiles, boss d'essai et ses télégraphes
+ function sources(){const L=[];
+  for(const e of enemies){if(e.dead)continue;L.push({id:id(e),o:e,k:e.type==='boss'?'boss':(e.elite||e.asm)?'elite':'ord',x:e.x,y:e.y,r:e.r});}
+  for(const p of eproj){if(p.dead)continue;L.push({id:id(p),o:p,k:'proj',x:p.x,y:p.y,r:p.r||6,vx:p.vx,vy:p.vy});}
+  // le cercle d'apparition (violet) est le signe d'un ennemi qui va naître : vu à l'écran, il compte (pas de signe de bord : il ne frappe pas)
+  for(const sp of room.spawning)L.push({id:id(sp),o:sp,k:'naissance',x:sp.x,y:sp.y,r:24});
+  for(const g of rings){if(!A.parent.has(g)){let e0=g.src||null,ed=120;if(!e0)for(const e of enemies){if(e.dead)continue;const d=Math.hypot(e.x-g.x,e.y-g.y);if(d<ed){ed=d;e0=e;}}A.parent.set(g,e0);}
+   const d=Math.hypot(P.x-g.x,P.y-g.y)||1,q={x:g.x+(P.x-g.x)/d*g.r,y:g.y+(P.y-g.y)/d*g.r};L.push({id:id(g),o:g,k:'tele',x:q.x,y:q.y,r:12,vise:true,c:'zone'});}
+  const E=A.essai,b=E&&E.boss;
+  if(b){L.push({id:id(b),o:b,k:'boss',x:b.x,y:b.y,r:b.r,charge:b.zones.length>0});
+   for(const z of b.zones){const q=zonePoint(z);L.push({id:id(z),o:z,k:'tele',x:q.x,y:q.y,r:q.r,vise:!!z.vise,rempli:Math.min(1,z.t/z.charge),c:'zone'});}}
+  return L;}
+ function indicateurs(){const v=vue(),m=A.hud.m,sure=arSure(v,m),I=Object.assign({},IC,{blocs:A.hud.blocs.map(B=>({x0:B.x0+CAM.x,y0:B.y0+CAM.y,x1:B.x1+CAM.x,y1:B.y1+CAM.y}))});
+  const L=sources();A.indic=arIndic(L,{vue:v,sure,joueur:{x:P.x,y:P.y}},I);
+  const ids=[];for(const s of L)if(arDistRect(v,s.x,s.y)<=(s.r||0))ids.push(s.id);for(const x of A.indic)ids.push(...x.ids);
+  arSignes(A.sig,RUN.time,ids);}
+ // ── la transformation entre deux états
+ function vers(n){if(!A.on||!A.etats[n]||A.trans)return false;A.trans=arTransNouveau(A.etat,A.etats[n]);A.ie=n;return true;}   // A.ie0 : le calque en place jusqu'à la fin du fondu
+ function transPas(dt){const T0=A.trans;if(!T0)return;const cre=[{x:P.x,y:P.y,r:P.r},...enemies.filter(e=>!e.dead).map(e=>({x:e.x,y:e.y,r:e.r}))];
+  const T=A.trans=arTransPas(T0,dt,cre,DA.transformation);Object.assign(AR,T.bornes);
+  if(T.ph!=='annonce'&&(T0.ph==='annonce'||T.poses.length!==T0.poses.length))room.pillars=piliers(arTransObstacles(T));
+  if(T.ff)CAM.ff=1;if(T.ph==='fini'){A.etat=T.vers;A.ie0=A.ie;A.trans=null;Object.assign(AR,A.etat.bornes);}}
+ // ── le boss d'essai : un fantôme (hors de enemies : rien ne le vise, on ne le frappe pas) qui charge des télégraphes de la grammaire
+ function essaiBoss(){return A.essai&&A.essai.boss;}
+ function zonePoint(z){if(z.k!=='couloir')return{x:z.x,y:z.y,r:z.r};const dx=z.x1-z.x0,dy=z.y1-z.y0,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((P.x-z.x0)*dx+(P.y-z.y0)*dy)/l2));return{x:z.x0+dx*t,y:z.y0+dy*t,r:z.w/2};}
+ function dansZone(z,x,y,r){if(z.k!=='couloir')return Math.hypot(x-z.x,y-z.y)<z.r+r*0.5;return segDist(x,y,z.x0,z.y0,z.x1,z.y1)<z.w/2+r*0.5;}
+ function bossPas(dt){const E=A.essai,b=E.boss,BD=DA.essai.boss;if(!b)return;
+  if(!b.wp||Math.hypot(b.wp.x-b.x,b.wp.y-b.y)<20)b.wp={x:rand(AR.x0+120,AR.x1-120),y:rand(AR.y0+120,AR.y1-120)};
+  const dx=b.wp.x-b.x,dy=b.wp.y-b.y,d=Math.hypot(dx,dy)||1;b.x+=dx/d*Math.min(d,BD.vitesse*dt);b.y+=dy/d*Math.min(d,BD.vitesse*dt);
+  for(const z of b.zones){z.t+=dt;if(z.t>=z.charge&&!z.fait){z.fait=true;z.flash=0.15;
+    if(!P.dead&&P.dashT<=0&&dansZone(z,P.x,P.y,P.r)){A.zoneCourante=z;try{hurtPlayer(BD.degats*dmgMul(),b);}finally{A.zoneCourante=null;}}}
+   if(z.fait)z.flash-=dt;}
+  b.zones=b.zones.filter(z=>!z.fait||z.flash>0);
+  if(A.trans&&A.trans.calme)return;   // annonce et bascule : une respiration, le boss ne lance rien
+  b.t-=dt;if(b.t>0||b.zones.length)return;b.t=BD.pause;const n=b.n=(b.n||0)+1,ch=BD.charge;
+  if(n%3===1)b.zones.push({k:'disque',x:P.x,y:P.y,r:90,t:0,charge:ch,vise:true});
+  else if(n%3===2){const a=Math.atan2(P.y-b.y,P.x-b.x);b.zones.push({k:'couloir',x0:b.x,y0:b.y,x1:b.x+Math.cos(a)*900,y1:b.y+Math.sin(a)*900,w:70,t:0,charge:ch,vise:true});}
+  else for(let i=0;i<3;i++){const a=i/3*TAU+rand(0,1);b.zones.push({k:'disque',x:clamp(b.x+Math.cos(a)*160,AR.x0+70,AR.x1-70),y:clamp(b.y+Math.sin(a)*160,AR.y0+70,AR.y1-70),r:70,t:0,charge:ch,vise:false});}}
+ function dessinBoss(){const E=A.essai,b=E&&E.boss;if(!b)return;const c=ctx;c.save();
+  for(const z of b.zones){const k=Math.min(1,z.t/z.charge),al=z.fait?0.5*z.flash/0.15:1;
+   c.globalAlpha=al;c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
+   if(z.k==='couloir'){const a=Math.atan2(z.y1-z.y0,z.x1-z.x0),l=Math.hypot(z.x1-z.x0,z.y1-z.y0);c.save();c.translate(z.x0,z.y0);c.rotate(a);c.fillRect(0,-z.w/2,l,z.w);c.fillStyle=`rgba(${TELE.zone},0.26)`;c.fillRect(0,-z.w/2,l*k,z.w);c.strokeRect(0,-z.w/2,l,z.w);c.restore();}
+   else{rond(c,z.x,z.y,z.r);c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;rond(c,z.x,z.y,z.r*k);c.fill();}}
+  c.globalAlpha=1;const g=c.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*1.4);g.addColorStop(0,'rgba(30,24,44,.85)');g.addColorStop(1,'rgba(30,24,44,0)');c.fillStyle=g;rond(c,b.x,b.y,b.r*1.4);c.fill();
+  c.strokeStyle=`rgba(${COL.ivoire},.55)`;c.lineWidth=2;rond(c,b.x,b.y,b.r);c.stroke();oeil(c,b.x,b.y,b.r*0.42);c.restore();}
+ function oeil(c,x,y,s){c.save();c.strokeStyle=`rgba(${COL.ivoire},.9)`;c.fillStyle=`rgba(${COL.ivoire},.9)`;c.lineWidth=Math.max(1.5,s*0.14);c.beginPath();c.moveTo(x-s,y);c.quadraticCurveTo(x,y-s*0.85,x+s,y);c.quadraticCurveTo(x,y+s*0.85,x-s,y);c.closePath();c.stroke();rond(c,x,y,s*0.32);c.fill();c.restore();}
+ // ── tirs depuis le hors-champ (essai) : un projectile violet né juste hors de la vue, vers toi
+ function tirsPas(dt){const E=A.essai,TD=DA.essai.tirs;E.tirT=(E.tirT==null?TD.toutes:E.tirT)-dt;if(E.tirT>0)return;E.tirT=TD.toutes;
+  const v=vue(),cotes=[['g',v.x0-260,rand(v.y0,v.y1)],['d',v.x1+260,rand(v.y0,v.y1)],['h',rand(v.x0,v.x1),v.y0-220],['b',rand(v.x0,v.x1),v.y1+220]].filter(q=>q[1]>AR.x0+20&&q[1]<AR.x1-20&&q[2]>AR.y0+20&&q[2]<AR.y1-20);
+  if(!cotes.length)return;const q=cotes[(E.ti=(E.ti||0)+1)%cotes.length],a=Math.atan2(P.y-q[2],P.x-q[1]);
+  eproj.push({x:q[1],y:q[2],vx:Math.cos(a)*TD.vitesse,vy:Math.sin(a)*TD.vitesse,r:7,dmg:TD.degats*dmgMul(),life:6,col:TELE.proj,essai18:1});}
+ // ── la foule d'essai : des ennemis ordinaires répartis dans tout le monde, loin de toi
+ function foule(n){const al=allowedTypes().filter(t=>t!=='nourrice'),w=[];
+  for(let i=0;i<n;i++){let x,y,k=0;do{x=rand(AR.x0+60,AR.x1-60);y=rand(AR.y0+60,AR.y1-60);}while(k++<40&&(Math.hypot(x-P.x,y-P.y)<450||room.pillars.some(p=>Math.hypot(x-p.x,y-p.y)<p.r+40)));w.push({type:al[i%al.length],x,y});}
+  return w;}
+ // ── le pilote (bot=1) : il traverse l'arène d'un coin à l'autre, sort des zones qui chargent, vise l'ennemi le plus proche
+ function pilote(){const E=A.essai;for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);if(P.dead)return;A.pilote=true;
+  const b=essaiBoss();let tx,ty;const z=b&&b.zones.find(z=>!z.fait&&dansZone(z,P.x,P.y,P.r+30));
+  if(z){const q=zonePoint(z),dx=P.x-q.x,dy=P.y-q.y,d=Math.hypot(dx,dy)||1;tx=P.x+dx/d*200;ty=P.y+dy/d*200;if(z.k==='couloir'){const a=Math.atan2(z.y1-z.y0,z.x1-z.x0);tx=P.x-Math.sin(a)*200*(Math.sign((P.x-z.x0)*-Math.sin(a)+(P.y-z.y0)*Math.cos(a))||1);ty=P.y+Math.cos(a)*200*(Math.sign((P.x-z.x0)*-Math.sin(a)+(P.y-z.y0)*Math.cos(a))||1);}}
+  else{const W_=[[0.15,0.2],[0.85,0.2],[0.85,0.8],[0.15,0.8],[0.5,0.5]];E.wi=E.wi||0;const p=W_[E.wi%W_.length];tx=AR.x0+(AR.x1-AR.x0)*p[0];ty=AR.y0+(AR.y1-AR.y0)*p[1];if(Math.hypot(tx-P.x,ty-P.y)<60)E.wi++;}
+  if(P.x<tx-14)keys.add('KeyD');else if(P.x>tx+14)keys.add('KeyA');if(P.y<ty-14)keys.add('KeyS');else if(P.y>ty+14)keys.add('KeyW');
+  let best=null,bd=1e9;for(const e of enemies){if(e.dead)continue;const d=Math.hypot(e.x-P.x,e.y-P.y);if(d<bd){bd=d;best=e;}}
+  if(best&&bd<520){mouse.x=best.x;mouse.y=best.y;mouse.sx=mouse.x-CAM.x;mouse.sy=mouse.y-CAM.y;mouse.l=true;}else mouse.l=false;}
+ // ── chaque pas de jeu : pilote avant, puis transformation, essai, caméra, signes de bord
+ const _st184=step;
+ step=function(dt){if(A.on&&A.essai&&A.essai.bot&&state==='play'&&!paused&&P)try{pilote();}catch(err){console.error(err);}
+  _st184.apply(this,arguments);
+  if(!A.on||!room||!room.arene||!P)return;
+  try{transPas(dt);const E=A.essai;
+   if(E){bossPas(dt);if(E.tirs)tirsPas(dt);if(E.dieu&&!P.dead)P.hp=Math.max(P.hp,P.s.maxHp*0.5);
+    const vivants=enemies.reduce((n,e)=>n+(e.dead?0:1),0)+room.spawning.length;if(E.foule>0&&room.waveI>=room.waves.length&&vivants===0){room.waves.push(foule(E.foule));room.sinceWave=0;}}
+   camera(dt,false);hudMesure();indicateurs();}catch(err){console.error(err);}};
+ // ── apparitions : dans la vue élargie, loin de toi ; règles de salle v14 : aucune ; jetons : pas hors de vue
+ const avecAR=(r,fn)=>{const s={x0:AR.x0,y0:AR.y0,x1:AR.x1,y1:AR.y1};Object.assign(AR,r);try{return fn();}finally{Object.assign(AR,s);}};
+ const zoneApp=()=>{const v=vue(),m=HV.apparition;return{x0:Math.max(AR.x0,v.x0-m),y0:Math.max(AR.y0,v.y0-m),x1:Math.min(AR.x1,v.x1+m),y1:Math.min(AR.y1,v.y1+m)};};
+ const _fs184=findSpawn;findSpawn=function(minD){if(!CAM.on)return _fs184.apply(this,arguments);return avecAR(zoneApp(),()=>_fs184(Math.max(minD==null?230:minD,HV.minD)));};
+ const _tp184=themePos;themePos=function(sp,pc){if(!CAM.on||sp.x!=null)return _tp184.apply(this,arguments);return avecAR(zoneApp(),()=>_tp184(sp,pc));};
+ const _sr184=setRule;setRule=function(){if(room&&room.arene)return;return _sr184.apply(this,arguments);};
+ const _tt184=tryTok;tryTok=function(e,k){if(CAM.on&&e&&e.type!=='boss'&&arDistRect(vue(),e.x,e.y)>HV.jeton)return false;return _tt184.apply(this,arguments);};
+ // ── le joueur frappe ce qu'il voit : aucun coup (hors brûlures et poisons) sur un ennemi au-delà de la vue + horsVue.coup
+ const _he184=hitEnemy;hitEnemy=function(e,base,o){if(CAM.on&&e&&!(o&&o.dot)&&arDistRect(vue(),e.x,e.y)>HV.coup+(e.r||0)){A.j.horsVue++;return 0;}return _he184.apply(this,arguments);};
+ // ── aucun coup sans signe : chaque coup reçu dans l'arène est jugé (sa source signalée depuis au moins 0,6 s, 0,8 s pour le boss)
+ const _hp184=hurtPlayer;
+ hurtPlayer=function(dmg,src){if(!CAM.on||!P)return _hp184.apply(this,arguments);const h0=P.hp,s0=P.shield||0;const r=_hp184.apply(this,arguments);
+  try{if(P.hp<h0||(P.shield||0)<s0){const ch=[],b=essaiBoss();let boss=false,sorte='?';
+    if(A.zoneCourante){ch.push(id(A.zoneCourante));sorte='zone';}
+    // une explosion (le Bouffi, mort à cet instant) : l'ennemi qui l'a portée
+    if(!src&&A.explo){let e0=null,ed=40;for(const e of enemies){const d=Math.hypot(e.x-A.explo.x,e.y-A.explo.y);if(d<ed){ed=d;e0=e;}}if(e0){ch.push(id(e0));sorte='explosion:'+e0.type;}}
+    // la source : celle que donne le coup, sinon le projectile qui te touche, l'anneau qui passe, l'ennemi au contact, et enfin le Masqué (ses zones)
+    if(src&&!ch.length){ch.push(id(src));boss=src===b||src.type==='boss';if(sorte==='?')sorte=src===b?'boss':src.type;}
+    else if(!ch.length){let best=null,bd=1e9;for(const p of eproj){const d=Math.hypot(p.x-P.x,p.y-P.y)-(p.r||6)-P.r;if(d<bd){bd=d;best=p;}}
+     if(best&&bd<14){ch.push(id(best));if(best.from)ch.push(id(best.from));if(best.boss)boss=true;sorte=best.essai18?'tir':best.from?'proj:'+best.from.type:'proj';}
+     else{const g=rings.find(g=>Math.abs(Math.hypot(P.x-g.x,P.y-g.y)-g.r)<14+P.r);
+      if(g){ch.push(id(g));const pa=g.src||A.parent.get(g);if(pa)ch.push(id(pa));sorte='anneau';}
+      else{let e0=null,ed=1e9;for(const e of enemies){if(e.dead)continue;const d=Math.hypot(e.x-P.x,e.y-P.y)-e.r-P.r;if(d<ed){ed=d;e0=e;}}
+       if(e0&&ed<24){ch.push(id(e0));boss=e0.type==='boss';sorte='contact:'+e0.type;}else if(room.asm&&room.asm.e&&!room.asm.e.dead){ch.push(id(room.asm.e));sorte='masque';}}}}
+    const J=arJuge(A.sig,RUN.time,ch,boss,DA.preavis);A.j.coups++;
+    if(!J.ok){A.j.sansSigne++;A.j.liste.push({t:+RUN.time.toFixed(2),depuis:isFinite(J.depuis)?+J.depuis.toFixed(2):null,boss,src:sorte,p:[P.x|0,P.y|0],cam:[CAM.x|0,CAM.y|0]});if(A.j.liste.length>60)A.j.liste.shift();}}}
+  catch(err){console.error(err);}return r;};
+ // un ennemi né d'un cercle d'apparition signalé hérite de son signe (même endroit, sans interruption)
+ const _ce184=createEnemy;createEnemy=function(type,x,y){const e=_ce184.apply(this,arguments);
+  try{if(CAM.on&&e&&room){const sp=room.spawning.find(q=>q.x===x&&q.y===y&&q.t<=0);const t0=sp&&A.sig.debut[id(sp)];if(t0!=null)A.sig.debut[id(e)]=t0;}}catch(err){}return e;};
+ const _ex184=explosion;explosion=function(x,y){if(!CAM.on)return _ex184.apply(this,arguments);const k=A.explo;A.explo={x,y};try{return _ex184.apply(this,arguments);}finally{A.explo=k;}};
+ const _lh184=loseHp;loseHp=function(n){if(CAM.on&&A.essai&&A.essai.dieu&&P&&n>0){P.hp=Math.max(1,P.hp-n);return;}return _lh184.apply(this,arguments);};
+ const _orc184=onRoomCleared;onRoomCleared=function(){if(room&&room.arene&&A.essai){room.cleared=false;return;}return _orc184.apply(this,arguments);};
+ // ── dessin : brouillard à la taille de l'écran (lumières hors vue sautées), télégraphes et fantôme du boss d'essai, signes de bord par-dessus tout
+ const _df184=drawFog;
+ drawFog=function(){if(!CAM.on)return _df184.apply(this,arguments);
+  const g=fctx,fw=fogCv.width,fh=fogCv.height,night=P.nightT>0,v=vue();
+  const a=state==='title'?0:night?0.975:room.type==='sanctuaire'?0:([0,0.75,0.8,0.8][RUN.act]||0.8)+(RUN.fogBoost||0);
+  g.globalCompositeOperation='source-over';g.clearRect(0,0,fw,fh);g.fillStyle=`rgba(4,5,11,${Math.max(0,a)})`;g.fillRect(0,0,fw,fh);
+  g.globalCompositeOperation='destination-out';
+  for(const l of lights){if(l.r<=2||arDistRect(v,l.x,l.y)>l.r*1.02)continue;const fl=1+Math.sin(T*9+l.x*0.01)*0.015;const r=l.r*FS*fl,x=(l.x-CAM.x)*FS,y=(l.y-CAM.y)*FS;const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(0.5,'rgba(0,0,0,0.85)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();}
+  g.globalCompositeOperation='source-over';
+  ctx.drawImage(fogCv,CAM.x,CAM.y,W,H);
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(const l of lights){const col=TINT[l.c];if(!col||l.r<20||arDistRect(v,l.x,l.y)>l.r)continue;const gr=ctx.createRadialGradient(l.x,l.y,0,l.x,l.y,l.r);gr.addColorStop(0,`rgba(${col},0.13)`);gr.addColorStop(1,`rgba(${col},0)`);ctx.fillStyle=gr;ctx.beginPath();ctx.arc(l.x,l.y,l.r,0,TAU);ctx.fill();}
+  ctx.restore();};
+ const _dt184=drawTelegraphs;drawTelegraphs=function(){_dt184.apply(this,arguments);if(CAM.on&&A.essai)try{dessinBoss();}catch(err){console.error(err);}};
+ // particules et nombres : mis à jour partout, dessinés dans la vue ; ennemis ordinaires hors vue : pas dessinés
+ const dansVue=(x,y,m)=>x>CAM.x-m&&x<CAM.x+W+m&&y>CAM.y-m&&y<CAM.y+H+m;
+ // brumes de passage (makeMists, trois fois plus dans l'arène) : seules celles qui touchent la vue sont tracées (même position que drawMists)
+ const _dm184=drawMists;drawMists=function(){if(!CAM.on||!room||!room.mists)return _dm184.apply(this,arguments);const all=room.mists,span=AR.x1-AR.x0+400;
+  room.mists=all.filter(m=>{const x=((m.x-AR.x0+T*m.v)%span+span)%span+AR.x0-200;return dansVue(x,m.y,m.r+12);});try{return _dm184.apply(this,arguments);}finally{room.mists=all;}};
+ const _dp184=drawParts;drawParts=function(){if(!CAM.on)return _dp184.apply(this,arguments);const all=parts;parts=all.filter(p=>dansVue(p.x,p.y,80+(p.size||0)*3));try{return _dp184.apply(this,arguments);}finally{parts=all;}};
+ const _dn184=drawNums;drawNums=function(){if(!CAM.on)return _dn184.apply(this,arguments);const all=nums;nums=all.filter(n=>dansVue(n.x,n.y,60));try{return _dn184.apply(this,arguments);}finally{nums=all;}};
+ const ORD=new Set(['rampant','spectre','brute','bouffi','hurleur','voile','nourrice']),cache=e=>CAM.on&&!e.elite&&!e.asm&&ORD.has(e.type)&&!dansVue(e.x,e.y,e.r+90);
+ const _deb184=drawEnemyBody;drawEnemyBody=function(e){if(cache(e))return;return _deb184.apply(this,arguments);};
+ const _dep184=drawEnemyPost;drawEnemyPost=function(e){if(cache(e))return;return _dep184.apply(this,arguments);};
+ // les bulles d'aide (flèche vers un point du monde) : monde → écran par versEcran
+ const _ap184=arrowPos;arrowPos=function(tg){if(!CAM.on||!tg||typeof tg==='function'||tg.el)return _ap184.apply(this,arguments);const p=versEcran(CAM,tg.x,tg.y);return _ap184.call(this,Object.assign({},tg,{x:p.x+0,y:p.y+0}));};
+ // ── les signes de bord, dans le repère de l'écran (drawVignette est appelé après translate(CAM) dans l'arène)
+ function signe(c,s){const x=s.x-CAM.x,y=s.y-CAM.y,col=COL[s.c]||COL.foe,t=s.taille,ca=Math.cos(s.a),sa=Math.sin(s.a);c.save();c.translate(x,y);
+  c.fillStyle='rgba(6,5,10,.55)';rond(c,0,0,t*0.95);c.fill();
+  if(s.k==='tele'){c.strokeStyle=`rgba(${col},.95)`;c.lineWidth=3;c.beginPath();c.arc(0,0,t*0.75,s.a-1.1,s.a+1.1);c.stroke();
+   if(s.rempli!=null){c.fillStyle=`rgba(${col},.75)`;c.beginPath();c.moveTo(0,0);c.arc(0,0,t*0.6,-Math.PI/2,-Math.PI/2+TAU*s.rempli);c.closePath();c.fill();}}
+  else if(s.k==='proj'){c.rotate(s.a);c.fillStyle=`rgba(${col},.95)`;c.beginPath();c.moveTo(t*0.8,0);c.lineTo(-t*0.5,-t*0.45);c.lineTo(-t*0.2,0);c.lineTo(-t*0.5,t*0.45);c.closePath();c.fill();}
+  else if(s.k==='saisie'){c.rotate(s.a);c.strokeStyle=`rgba(${col},.95)`;c.lineWidth=3;c.beginPath();c.moveTo(-t*0.6,0);c.lineTo(t*0.3,0);c.arc(t*0.3,-t*0.3,t*0.3,Math.PI/2,-Math.PI/2,true);c.stroke();}
+  else if(s.k==='boss'){const b=essaiBoss(),pul=!RM&&b&&b.zones.length?0.15*Math.sin(T*10):0;c.strokeStyle=`rgba(${col},.95)`;c.lineWidth=2.5;rond(c,0,0,t*(0.85+pul));c.stroke();oeil(c,0,0,t*0.45);
+   c.fillStyle=`rgba(${col},.95)`;c.beginPath();c.moveTo(ca*t*1.3,sa*t*1.3);c.lineTo(ca*t*0.95-sa*5,sa*t*0.95+ca*5);c.lineTo(ca*t*0.95+sa*5,sa*t*0.95-ca*5);c.closePath();c.fill();}
+  else if(s.k==='elite'){c.rotate(s.a);c.strokeStyle=`rgba(${col},.95)`;c.lineWidth=4;c.lineJoin='round';c.beginPath();c.moveTo(-t*0.3,-t*0.55);c.lineTo(t*0.35,0);c.lineTo(-t*0.3,t*0.55);c.stroke();}
+  else{c.rotate(s.a);c.strokeStyle=`rgba(${col},.6)`;c.lineWidth=2;c.beginPath();c.moveTo(-t*0.45,0);c.lineTo(t*0.45,0);c.moveTo(t*0.15,-t*0.3);c.lineTo(t*0.45,0);c.lineTo(t*0.15,t*0.3);c.stroke();}
+  c.restore();
+  if(s.n>1){c.save();c.font='700 12px "Alegreya Sans", sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=3;c.strokeStyle='rgba(0,0,0,.85)';const tx=x-ca*(t+10),ty=y-sa*(t+10);c.strokeText(String(s.n),tx,ty);c.fillStyle=`rgba(${col},1)`;c.fillText(String(s.n),tx,ty);c.restore();}}
+ const _dv184=drawVignette;drawVignette=function(){_dv184.apply(this,arguments);if(CAM.on&&state==='play'&&P&&!P.dead)try{for(let i=A.indic.length-1;i>=0;i--)signe(ctx,A.indic[i]);}catch(err){console.error(err);}};
+ // ── essai
+ function essai(cle,o){o=o||{};cle=DA.salles[cle]?cle:'final';
+  if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[o.cls]?o.cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+  RUN.essai=1;closeOverlay();queue.length=0;trans=null;fade=0;
+  RUN.acteD=ACTES_N;RUN.roomIdx=ACTD[ACTES_N].rooms-1;RUN.g=0;for(let k=1;k<ACTES_N;k++)RUN.g+=ACTD[k].rooms;RUN.g+=ACTD[ACTES_N].rooms-1;
+  const E={foule:o.foule!=null?o.foule|0:DA.essai.foule,boss:null,tirs:!!o.tirs,bot:!!o.bot,dieu:!!o.dieu};
+  A.ouvrir={cle,o:Object.assign({},o,{essai:E})};const AS=window.__asm,f0=AS?AS.forcer:0;if(AS&&o.masque!==false)AS.forcer=1;
+  try{doEnter('elite');}finally{if(AS)AS.forcer=f0;A.ouvrir=null;}
+  if(!room.arene)return null;
+  room.wtheme=null;room.annT=0;room.bl=null;room.blT=1e9;room.rule=null;
+  const w2=(room.waves[1]||[]).filter(x=>x.asm).map(x=>Object.assign({},x,{x:clamp(P.x+rand(-500,500),AR.x0+80,AR.x1-80),y:AR.y0+160}));
+  room.waves=[foule(E.foule),...(w2.length?[w2]:[])];room.waveI=0;room.sinceWave=0;room.spawning=[];
+  if(o.boss)E.boss={x:(AR.x0+AR.x1)/2,y:AR.y0+200,r:DA.essai.boss.r,zones:[],t:2,wp:null};
+  showBanner('Arène · essai','Le terrain du boss final');
+  return{cle,monde:[A.M.w,A.M.h],etat:A.ie,foule:E.foule,boss:!!E.boss,masque:!!w2.length,peintureMs:+A.peintureMs.toFixed(1)};}
+ const QA=/[?&]arene=([a-z]+)/.exec(location.search);
+ if(QA&&!/[?&]demo=/.test(location.search)){const q=k=>(new RegExp('[?&]'+k+'=([^&]*)').exec(location.search)||[])[1];
+  addEventListener('load',()=>setTimeout(()=>{try{essai(QA[1],{cls:q('classe'),etat:+(q('etat')||0),w:+(q('w')||0)||undefined,h:+(q('h')||0)||undefined,foule:q('foule')!=null?+q('foule'):undefined,
+   boss:q('boss')==='1',tirs:q('tirs')==='1',bot:q('bot')==='1',dieu:q('dieu')==='1'});}catch(err){console.error(err);}},400));}
+ // ── console et bancs
+ window.__arene={DA,essai,vers,
+  etat:()=>({on:A.on,cle:A.cle,monde:A.M&&[A.M.w,A.M.h],etat:A.ie,trans:A.trans&&{ph:A.trans.ph,t:+A.trans.t.toFixed(2),journal:A.trans.journal.slice(),pousse:A.trans.pousse.slice()},AR:Object.assign({},AR),piliers:room&&room.pillars.length,peintureMs:A.peintureMs}),
+  cam:()=>({x:CAM.x,y:CAM.y,on:CAM.on,vue:vue(),sure:arSure(vue(),DA.vue.marges),hud:A.hud,P:P&&{x:P.x,y:P.y}}),
+  indic:()=>A.indic.map(s=>({k:s.k,x:+s.x.toFixed(1),y:+s.y.toFixed(1),sx:+(s.x-CAM.x).toFixed(1),sy:+(s.y-CAM.y).toFixed(1),cote:s.cote,n:s.n,c:s.c,ids:s.ids.length,ks:[...new Set(s.ks)]})),
+  journal:()=>JSON.parse(JSON.stringify(A.j)),
+  mesure:()=>({peintureMs:A.peintureMs,tuilesPosees:A.tuilesPosees,tuiles:A.M?Math.ceil(A.M.w/DA.tuiles.w)*Math.ceil(A.M.h/DA.tuiles.h):0,calques:Object.keys(A.sol).length}),
+  activer:v=>{A.actif=v;return actif();},
+  dbg:()=>({A,P,RUN,room,enemies,eproj,CAM,AR,AR0,MONDE,mouse,keys,camera,indicateurs,id,pilote:v=>{A.pilote=v;},kill:killEnemy,boss:essaiBoss,frame:()=>{render();updateHud();},render:()=>render(),tlights:()=>tlights,vue})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

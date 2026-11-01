@@ -300,7 +300,7 @@ const porteDe = (co, act) => fid => !!F.nemCombo(A, co, fid, { act, salle: 99, J
   has(/function nemFinRun\(win,abandon\)\{if\(!RUN\|\|RUN\.hub\|\|RUN\.nemFait\)return;RUN\.nemFait=true;if\(!nemActif\(\)\)return;/, 'une fois par descente, rien tant qu’actif est faux');
   has(/const nemActif=\(\)=>!!\(NM&&\(NDEV\.on==null\?NM\.actif:NDEV\.on\)\)&&!DEMO;/, 'jamais en démo ; les données, ou la console (activer(true) force, activer(false) éteint)');
   has(/essai:!!\(RUN\.essai\|\|ESSAI_URL\)/, 'les modes d’essai ne promeuvent personne');
-  has(/ESSAI_URL=\/\[\?&\]\(masque\|brume\|glas\|dernier\|nemesis\)=\//, 'modes d’essai par l’adresse');
+  has(/ESSAI_URL=\/\[\?&\]\(masque\|brume\|glas\|dernier\|nemesis\|arene\)=\//, 'modes d’essai par l’adresse (v18.4 : arene)');
   ok((html.match(/RUN\.essai=1;/g) || []).length >= 3, 'index.html : RUN.essai posé par __asm.essai, le Glas et le Dernier Souvenir d’essai');
   has(/SAVE\.nemesis=nemEcrire\(/, 'SAVE.nemesis n’est écrit que par nemEcrire');
   ok(!/SAVE\.nemesis=(?!nemEcrire)/.test(html), 'index.html : aucune autre écriture de SAVE.nemesis');

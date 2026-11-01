@@ -187,10 +187,37 @@ if (SEC.includes('E')) {
     }
     res[p] = { salles: tot.salles, degMin: tot.deg / (tot.s / 60), masques: tot.masques, porteurs: tot.porteurs, temps: tot.temps, mondeParSalle: tot.monde / Math.max(1, tot.salles) };
   }
-  ok(res.difficile.masques >= res.normal.masques && res.extreme.masques >= res.normal.masques, 'E : plus de Masqués hors Normal ' + JSON.stringify([res.normal.masques, res.difficile.masques, res.extreme.masques]));
+  // v18.4 (Q12 de l'action 4) : le compte des Masqués sur trois descentes était trop petit pour juger un écart de 50 à 70 % (§ 33).
+  // Comptage direct : pour chaque palier, 800 salles de combat entrées à l'acte IV (salle premiereSalle, éligible), réserve garnie ;
+  // chance attendue = chance du palier × part d'éligibles (mesurée en Normal), tolérance de 4 écarts-types ; porteurs par acte ≤ parActe.
+  const N = 800, direct = {};
+  for (const p of ['normal', 'difficile', 'extreme']) {
+    const { page, errs, ctx } = await ouvre();
+    await page.evaluate(DEPART, p);
+    direct[p] = await page.evaluate(n => { const X = window.__descente, B = window.__brume, A = window.BRUME_DATA.bestiaire.assemble;
+      X.essai(4); B.RUN.essai = 1; X.vider(); const R = window.__asm.dbg().RUN;
+      for (const id of ['ray_n1', 'fan_n2', 'ray_n2', 'fan_n1']) R.reserveBrume.push({ id, source: 'talent', rang: 1, g: 0, oublie: { acte: 3, salle: 1 }, porte: 0 });
+      const prem = A.premiereSalle || 1; let m = 0, sv = 0, maxP = 0;
+      for (let i = 0; i < n; i++) { R.roomIdx = prem - 1; if (R.asm) R.asm.salle = -99; window.__asm.dbg().entrer('combat'); const r = window.__asm.dbg().room;
+        if (r.asm) { m++; if (r.asm.sv) sv++; } maxP = Math.max(maxP, (R.asm && R.asm.porteurs && R.asm.porteurs[R.act]) || 0); }
+      return { n, m, sv, maxP, chance: A.chance, parActe: A.souvenir.parActe, acte: X.dbg().acte, salle: R.roomIdx }; }, N);
+    ok(!errs.length, `E : ${p}, comptage direct sans erreur ` + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  // part d'éligibles : mesurée en Normal (bornée à 1 : la salle comptée est éligible par construction) ; son incertitude s'ajoute à celle du compte
+  const pr = p => direct[p].m / direct[p].n, sd = q => Math.sqrt(q * (1 - q) / N), part = Math.min(1, pr('normal') / (direct.normal.chance / 100)), sdPart = sd(pr('normal')) / (direct.normal.chance / 100);
+  for (const p of ['normal', 'difficile', 'extreme']) { const x = direct[p], att = Math.min(1, x.chance / 100 * part);
+    console.log(`   comptage direct ${p.padEnd(9)} : ${x.m} Masqués sur ${x.n} salles (${(pr(p) * 100).toFixed(1)} %, attendu ${(att * 100).toFixed(1)} % = chance ${x.chance} % × part d’éligibles ${(part * 100).toFixed(0)} %), porteurs ${x.sv} (au plus ${x.maxP} par acte, plafond ${x.parActe}), acte ${x.acte}`);
+    ok(x.acte === 4, `E : ${p}, comptage à l’acte IV`);
+    const tol = 4 * Math.sqrt(sd(att) ** 2 + (p === 'normal' ? 0 : (x.chance / 100 * sdPart) ** 2));
+    ok(Math.abs(pr(p) - att) <= tol, `E : ${p}, Masqués ${(pr(p) * 100).toFixed(1)} % pour ${(att * 100).toFixed(1)} % attendus (± ${(tol * 100).toFixed(1)} points, 4 écarts-types)`);
+    ok(x.maxP <= x.parActe && x.sv <= x.parActe, `E : ${p}, porteurs de souvenir par acte ≤ ${x.parActe} (${x.maxP})`); }
+  ok(part > 0.9, `E : part d’éligibles mesurée en Normal ${(part * 100).toFixed(0)} % (la salle comptée est éligible)`);
+  for (const p of ['difficile', 'extreme']) { const d = pr(p) - pr('normal'), m = 4 * Math.sqrt(sd(pr(p)) ** 2 + sd(pr('normal')) ** 2);
+    ok(d > m, `E : ${p} − Normal = ${(d * 100).toFixed(1)} points de Masqués, au-dessus de zéro avec la marge (${(m * 100).toFixed(1)})`); }
   ok(res.difficile.mondeParSalle < res.normal.mondeParSalle && res.extreme.mondeParSalle < res.difficile.mondeParSalle, 'E : soins du monde reçus : Normal > Difficile > Extrême');
   ok(res.normal.temps === 0 && res.difficile.temps > 0, 'E : temps de plus seulement hors Normal');
-  console.log('  mesure (actes I à V, 3 descentes par palier, joueur immobile, 15 s par salle de combat, ennemis ordinaires abattus toutes les 4 s) :');
+  console.log('  mesure indicative (actes I à V, 3 descentes par palier, joueur immobile, 15 s par salle de combat, ennemis ordinaires abattus toutes les 4 s ; les Masqués y sont trop peu nombreux pour juger : voir le comptage direct) :');
   for (const p of ['normal', 'difficile', 'extreme']) { const x = res[p];
     console.log(`   ${p.padEnd(9)} salles ${x.salles}, dégâts subis ${x.degMin.toFixed(0)} PV/min (${(x.degMin / res.normal.degMin * 100 - 100).toFixed(0)} %), Masqués ${x.masques} (porteurs ${x.porteurs}, temps de plus ${x.temps}), soins du monde ${x.mondeParSalle.toFixed(1)} PV/salle`); }
 }
