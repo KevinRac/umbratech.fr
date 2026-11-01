@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v18.4',
+ actuelle:'v18.5',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-11-01',h:'v18.5',t:'Préparation du combat final : le Brumeux a désormais son emblème (une croix de manipulation où veille un œil), sa barre de vie et le socle de son combat, qui s’essaie en atelier. Il n’est pas encore au fond de la descente : rien ne change en jeu.'},
  {d:'2026-11-01',h:'v18.4',t:'Préparation du combat final : une arène plus grande que l’écran, une caméra qui suit, et des signes au bord de l’écran pour ce qui arrive hors de vue. Elle reste fermée pour l’instant : rien ne change en jeu.'},
  {d:'2026-11-01',h:'v18.3',t:'L’Extrême a ses règles mutantes : huit règles (Échos funèbres, Vagues pressées, Brume qui serre, Couronne, Dernier souffle, Glas lointain, Ombre, Cœur fermé), imposées acte par acte : une aux actes I à III, deux aux actes IV à VI, trois aux actes VII à X. À l’entrée d’un acte, la nouvelle s’imprime sous le nom de l’acte et la plus ancienne se brise ; leurs icônes restent en haut à gauche, et la pause dit ce qu’elles font et comment y répondre. Elles ne jouent jamais dans la salle d’un gardien ni au boss final. Normal et Difficile ne changent pas.'},
  {d:'2026-11-01',h:'v18.2',t:'Les paliers ont leurs règles. En Difficile, le Masqué vient plus souvent et porte plus souvent tes souvenirs, les soins que t’offre la descente baissent (ceux de tes talents ne changent pas), et les gardiens des actes IV à IX, les miniboss et le boss final ont un temps de plus sous 35 % de PV. L’Extrême ajoute encore moins de soins, plus rien après la victoire sur un gardien, et plus de halte au choix avant la moitié de l’acte. En Normal, rien ne change, et les combats des gardiens des actes I à III sont les mêmes dans les trois paliers. Les règles mutantes de l’Extrême viendront ensuite.'},

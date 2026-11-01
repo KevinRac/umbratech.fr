@@ -1,6 +1,6 @@
 # La Brume · v18.5 « Le Brumeux » · cadrage de l'action 5 (boss final)
 
-Statut : **proposé le 1er novembre 2026, à valider par l'auteur.** Aucune ligne du jeu n'a été touchée. Rédigé à partir de `CLAUDE.md`, `_dev/REPRISE.md`, du cadrage v18 (D3, D5, D6, D8, V3–V8), de `_dev/memoire.md` (§ 1, § 26–28, § 31–34) et du code actuel (profil et contre-mesures v12, v16.1, v16.16 ; feinte v14 ; Masqué et montage v16.24–v16.29 ; armes de la Brume ; Glas qui se souvient ; némésis ; arène v18.4).
+Statut : **validé le 1er novembre 2026, toutes les recommandations ; action 5a faite le 1er novembre 2026 (v18.5, socle technique, mémoire § 35) ; suivante : 5b, la phase I, d'abord sa fiche courte à valider.** Proposé le 1er novembre 2026. Rédigé à partir de `CLAUDE.md`, `_dev/REPRISE.md`, du cadrage v18 (D3, D5, D6, D8, V3–V8), de `_dev/memoire.md` (§ 1, § 26–28, § 31–34) et du code actuel (profil et contre-mesures v12, v16.1, v16.16 ; feinte v14 ; Masqué et montage v16.24–v16.29 ; armes de la Brume ; Glas qui se souvient ; némésis ; arène v18.4).
 
 Hors champ : les six gardiens (IV à IX) et les deux miniboss (X), qui viennent à l'action 6 ; l'équilibrage d'ensemble et les emblèmes (action 7).
 
