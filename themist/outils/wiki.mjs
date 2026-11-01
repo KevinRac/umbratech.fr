@@ -228,19 +228,22 @@ function descente(DS, G, B, I) {
   const ico = id => (I && I[id]) ? `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
   const actes = [...G.actes.map((a, i) => Object.assign({ fin: 'gardien' }, a, { n: i + 1 })), ...DS.actes.slice(0, DS.nombre - G.actes.length).map((a, i) => Object.assign({}, a, { n: G.actes.length + i + 1 }))];
   const total = actes.reduce((t, a) => t + a.rooms, 0);
-  const finDe = a => a.fin === 'elite' ? `Élite de l’acte : un Masqué, PV ×${num(DS.fin.pv[a.n])}` : a.n > G.actes.length ? `${esc(a.boss)} (gardien provisoire)` : `<a href="#gardiens">${esc(a.boss)}</a>`;
+  const PV = DS.provisoire;
+  const finDe = a => a.n <= G.actes.length ? `<a href="#gardiens">${esc(a.boss)}</a>`
+    : a.fin === 'final' ? `${a.miniboss ? `${mot(a.miniboss)} miniboss, puis ` : ''}le <b>boss final</b> (à venir ; pour l’instant, des Masqués : PV ${[...PV.mini.pv.slice(0, a.miniboss || 0), PV.final.pv].map(x => '×' + num(x)).join(', ')})`
+    : a.boss ? esc(a.boss) : `Gardien à venir (pour l’instant, un Masqué : PV ×${num(PV.fin.pv[a.n])})`;
   const lignes = actes.map(a => `<tr><td>${ROM[a.n]}</td><td><b>${esc(a.name)}</b></td><td>${a.rooms}</td><td>${finDe(a)}</td></tr>`).join('\n');
   const ouvre = p => { const o = DS.paliers[p].ouvrePar; return o ? `Gagne une descente en <b>${esc(DS.paliers[o].n)}</b>.` : 'Ouvert dès le départ.'; };
   const cartes = DS.ordre.map(p => { const X = DS.paliers[p]; return `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(X.court)}</p><p class="k">${ouvre(p)}</p></article>`; }).join('');
   const reg = actes.find(a => a.n === DS.registre);
-  return `<section class="sec" id="descente" data-sec>${MARK('data/descente.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>La descente</h2><div class="lede"><p>Une descente compte <b>${mot(DS.nombre)} actes</b> (${total} salles, fins d’acte comprises). Les actes I à III se terminent par leurs gardiens. Pour l’instant, les actes IV à IX se terminent par une <b>élite de fin d’acte</b> et l’acte X par un <b>gardien provisoire</b> ; les actes IV à X reprennent le décor et les ennemis de l’acte ${ROM[DS.registre]} (${esc(reg.name)}). Ils recevront leurs propres gardiens.</p><p>Une descente vise environ <b>${DS.dureeCible.normale} minutes</b> en Normal (${DS.dureeCible.rapide} pour un joueur rapide).</p></div></header>
+  return `<section class="sec" id="descente" data-sec>${MARK('data/descente.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>La descente</h2><div class="lede"><p>Une descente compte <b>${mot(DS.nombre)} actes</b> (${total} salles, fins d’acte comprises). Chaque acte se termine par un gardien : la Mère-Brume, le Héraut Noyé et le Glas Originel pour les actes I à III, six nouveaux gardiens pour les actes IV à IX. L’acte X enchaîne deux salles de <b>miniboss</b>, puis le <b>boss final</b>. Les nouveaux gardiens et le boss final arrivent dans les prochaines versions : en attendant, leur place est tenue par un Masqué renforcé, et les actes IV à X reprennent le décor et les ennemis de l’acte ${ROM[DS.registre]} (${esc(reg.name)}).</p><p>Une descente vise environ <b>${DS.dureeCible.normale} minutes</b> en Normal (${DS.dureeCible.rapide} pour un joueur rapide).</p></div></header>
 <h3 class="sub">Les dix actes</h3>
 <table class="tbl"><thead><tr><th>Acte</th><th>Nom</th><th>Salles</th><th>Fin de l’acte</th></tr></thead><tbody>
 ${lignes}</tbody></table>
-<p>Aux actes I à III, la salle avant le gardien est une halte imposée (l’antichambre). Aux actes IV à IX, il n’y en a pas : la troisième salle se choisit comme les autres, puis vient l’élite de fin d’acte, imposée, avec une vague de plus. L’acte X s’ouvre sur l’antichambre. Chaque nouvel acte apporte un pacte et une relance de talents de plus.</p>
+<p>Aux actes I à III, la salle avant le gardien est une halte imposée (l’antichambre). Aux actes IV à IX, il n’y en a pas : la troisième salle se choisit comme les autres, puis vient le gardien. À l’acte X, les trois salles sont imposées : deux miniboss, puis le boss final. Chaque nouvel acte apporte un pacte et une relance de talents de plus.</p>
 <p>Les ennemis gagnent <b>${pct(B.montee.pvParSalle)} de PV</b> et <b>${pct(B.montee.degatsParSalle)} de dégâts</b> par salle jusqu’à la fin de l’acte ${ROM[DS.montee.apresActe]}, puis <b>${pct(DS.montee.pvParSalle)}</b> et <b>${pct(DS.montee.degatsParSalle)}</b> par salle.</p>
 <h3 class="sub">Les paliers</h3>
-<p>Choisis ton palier sur l’écran titre ou au Portail du Sanctuaire. Gagner une descente (vaincre le gardien de l’acte X) ouvre le palier suivant ; une descente d’essai n’ouvre rien. Pour l’instant, les trois paliers jouent la même descente : leurs règles arrivent dans une prochaine version.</p>
+<p>Choisis ton palier sur l’écran titre ou au Portail du Sanctuaire. Gagner une descente (vaincre le boss final) ouvre le palier suivant ; une descente d’essai n’ouvre rien. Pour l’instant, les trois paliers jouent la même descente : leurs règles arrivent dans une prochaine version.</p>
 <div class="grid g3">${cartes}</div>
 </section>`;
 }

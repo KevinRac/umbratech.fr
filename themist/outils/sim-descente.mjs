@@ -2,10 +2,10 @@
 // La Brume · vérification hors navigateur de la grande descente (v18, action 2 : la charpente)
 // Extrait la logique pure d'index.html (bloc /*des:pur*/) et la fait tourner avec data/gardiens.js, data/descente.js,
 // data/bestiaire.js (montee) et data/icones.js. Vérifie :
-//  0. les données : 10 actes, fins d'acte, paliers chaînés, icônes, règles vides, aucun mot du secret ;
+//  0. les données : 10 actes, un gardien par acte (I à IX), deux miniboss puis le boss final (X), places provisoires, paliers, icônes, secret ;
 //  1. les actes : I à III identiques à gardiens.js (nom, salles, gardien), registres, total des salles ;
 //  2. la montée des ennemis : exactement la formule d'avant jusqu'à la fin de l'acte III, puis la pente douce, continue et croissante ;
-//  3. les portes imposées, acte par acte : I à III comme avant (sauf la sortie du Glas, qui mène à l'acte IV), IV à IX élite de fin, X antichambre et gardien ;
+//  3. les portes imposées, acte par acte : I à III comme avant (sauf la sortie du Glas, qui mène à l'acte IV), IV à IX un gardien (provisoire), X deux miniboss et le boss final ;
 //  4. la sauvegarde (SAVE.descente) : état neuf, sauvegardes abîmées, version future, trous, ancienne sauvegarde ;
 //  5. le déblocage : Normal ouvre Difficile, Difficile ouvre Extrême ; ni l'essai, ni la mort, ni l'abandon n'ouvrent rien ;
 //  6. les branchements du jeu (lecture d'index.html) : registre, Paliers de Brume retirés, montée, victoire au dernier acte, garde de l'essai.
@@ -34,16 +34,19 @@ DS.actes.forEach((a, i) => {
   const n = i + 4;
   ok(typeof a.name === 'string' && a.name.length > 2, `acte ${n} : nom`);
   ok(Number.isInteger(a.rooms) && a.rooms >= 2 && a.rooms <= 7, `acte ${n} : 2 à 7 salles`);
-  ok(a.fin === 'elite' || a.fin === 'gardien', `acte ${n} : fin élite ou gardien`);
-  ok(!a.entree || ['combat', 'halte'].includes(a.entree), `acte ${n} : première salle combat ou halte`);
+  ok(n < 10 ? a.fin === 'gardien' : a.fin === 'final', `acte ${n} : ${n < 10 ? 'un gardien' : 'le boss final'} en dernière salle`);
+  ok(!a.boss, `acte ${n} : ${n < 10 ? 'gardien' : 'boss final'} pas encore créé (place provisoire)`);
+  ok(!a.entree || ['combat', 'halte', 'mini'].includes(a.entree), `acte ${n} : première salle combat, halte ou miniboss`);
   ok(typeof a.done === 'string' && a.done.length > 2, `acte ${n} : phrase de fin`);
-  if (a.fin === 'elite') { ok(DS.fin.pv[n] >= 1 && DS.fin.pv[n] <= 3, `acte ${n} : PV de l'élite de fin bornés`); ok(DS.fin.vague[n] >= 0 && DS.fin.vague[n] <= 1.5, `acte ${n} : vague en plus bornée`); ok(!a.antichambre, `acte ${n} : pas d'antichambre avant une élite`); }
-  else { ok(typeof a.boss === 'string' && a.boss.length > 2, `acte ${n} : nom du gardien`); ok(a.antichambre === true, `acte ${n} : antichambre avant le gardien`); }
+  ok(!a.antichambre, `acte ${n} : pas d'antichambre`);
+  if (n < 10) { ok(DS.provisoire.fin.pv[n] >= 1 && DS.provisoire.fin.pv[n] <= 3, `acte ${n} : PV de la place provisoire bornés`); ok(DS.provisoire.fin.vague[n] >= 0 && DS.provisoire.fin.vague[n] <= 1.5, `acte ${n} : vague en plus bornée`); ok(!a.miniboss, `acte ${n} : pas de miniboss`); }
 });
-ok(DS.actes.slice(0, 6).every(a => a.fin === 'elite'), 'actes IV à IX : une élite de fin d’acte (provisoire)');
-ok(DS.actes[6].fin === 'gardien', 'acte X : un gardien (provisoire)');
-for (let n = 4; n <= 9; n++) ok(n === 4 || DS.fin.pv[n] > DS.fin.pv[n - 1], `élite de fin : plus endurante d'acte en acte (${n})`);
-ok(DS.gardien.pv >= 1 && DS.gardien.pv <= 2 && DS.gardien.degats >= 1 && DS.gardien.degats <= 1.5, 'gardien provisoire de l’acte X : multiplicateurs bornés');
+const X10 = DS.actes[6];
+ok(X10.miniboss === 2 && X10.rooms === 3 && X10.entree === 'mini', 'acte X : deux salles de miniboss, puis le boss final (3 salles)');
+ok(DS.provisoire.mini.pv.length === 2 && DS.provisoire.mini.pv[1] > DS.provisoire.mini.pv[0] && DS.provisoire.final.pv > DS.provisoire.mini.pv[1], 'acte X : miniboss puis boss final, de plus en plus endurants');
+for (let n = 5; n <= 9; n++) ok(DS.provisoire.fin.pv[n] > DS.provisoire.fin.pv[n - 1], `places provisoires des gardiens : plus endurantes d'acte en acte (${n})`);
+ok(DS.provisoire.final.pv > DS.provisoire.fin.pv[9], 'boss final provisoire : plus endurant que le dernier gardien provisoire');
+ok(!('gardien' in DS) && !('fin' in DS), 'le Glas Originel n’est plus repris à l’acte X (plus de gardien provisoire)');
 ok(DS.registre === 3, 'actes IV à X : registre de l’acte III');
 ok(DS.montee.apresActe === 3, 'montée : la pente change après l’acte III');
 ok(DS.montee.pvParSalle > 0 && DS.montee.pvParSalle < BE.montee.pvParSalle && DS.montee.degatsParSalle > 0 && DS.montee.degatsParSalle < BE.montee.degatsParSalle, 'montée : pente plus douce après l’acte III');
@@ -69,13 +72,13 @@ for (let n = 1; n <= 3; n++) {
   ok(b.name === a.name && b.rooms === a.rooms && b.boss === a.boss && b.done === a.done, `acte ${n} : identique à gardiens.js`);
   ok(b.registre === n && b.fin === 'gardien' && b.antichambre === true, `acte ${n} : son propre registre, un gardien, une antichambre`);
 }
-for (let n = 4; n <= 10; n++) ok(L[n].registre === 3 && L[n].n === n, `acte ${n} : registre 3`);
+for (let n = 4; n <= 10; n++) ok(L[n].registre === 3 && L[n].n === n && L[n].fin === (n < 10 ? 'gardien' : 'final'), `acte ${n} : registre 3, fin ${n < 10 ? 'gardien' : 'boss final'}`);
 const total = L.slice(1).reduce((s, a) => s + a.rooms, 0);
-ok(total === 20 + 6 * 4 + 2, `actes : 46 salles en tout, fins comprises (${total})`);
-ok(L.slice(1).filter(a => a.fin === 'gardien').length === 4 && L.slice(1).filter(a => a.fin === 'elite').length === 6, 'actes : 4 gardiens (I, II, III, X) et 6 élites de fin');
+ok(total === 20 + 6 * 4 + 3, `actes : 47 salles en tout, fins comprises (${total})`);
+ok(L.slice(1).filter(a => a.fin === 'gardien').length === 9 && L.slice(1).filter(a => a.fin === 'final').length === 1, 'actes : 9 gardiens (I à IX) et le boss final');
 // salles « hors fin » : ce qui fixe la durée (cible : 40 min en Normal)
 const horsFin = L.slice(1).reduce((s, a) => s + a.rooms - 1, 0);
-ok(horsFin === 36, `actes : 36 salles hors fins d'acte (${horsFin})`);
+ok(horsFin === 37, `actes : 37 salles hors fins d'acte, dont 2 miniboss (${horsFin})`);
 
 // ── 2. Montée
 const seuil = F.desSeuil(L, DS);
@@ -105,30 +108,34 @@ for (let n = 1; n <= 10; n++) {
   const A = L[n];
   let type = n === 1 ? 'combat' : (A.entree || 'combat'), garde = false;
   const vu = [type];
+  if (type === 'mini') type = 'elite';
   for (let i = 1; i <= A.rooms; i++) {
     const next = i + 1;
-    const p = F.desPorte(A, { acte: n, N: 10, next, type, garde });
+    const p = F.desPorte(A, { acte: n, N: 10, next, type, fin: garde });
     if (n <= 3) {
       const old = ancienne(n, A, next, type);
       ok(p === old || (n === 3 && type === 'boss' && old === 'fin' && p === 'suite'), `portes : acte ${n}, salle ${i} → ${next}, comme avant (${p} / ${old})`);
     }
     if (i < A.rooms) {
-      if (p === 'garde') { type = 'elite'; garde = true; } else if (p) { type = p; } else type = 'combat';
-      vu.push(p === 'garde' ? 'garde' : type);
+      if (p === 'garde' || p === 'final') { type = 'elite'; garde = true; } else if (p === 'mini') { type = 'elite'; garde = false; } else if (p) { type = p; } else type = 'combat';
+      vu.push(['garde', 'final', 'mini'].includes(p) ? p : type);
     } else {
       ok(p === (n < 10 ? 'suite' : 'fin'), `portes : acte ${n}, la dernière salle mène ${n < 10 ? 'à l’acte suivant' : 'à la victoire'}`);
     }
   }
   parcours.push(vu);
   ok(vu.length === A.rooms, `portes : acte ${n}, ${A.rooms} salles parcourues`);
-  if (A.fin === 'elite') { ok(vu[vu.length - 1] === 'garde', `portes : acte ${n}, l'élite de fin en dernière salle`); ok(!vu.includes('halte') || vu.indexOf('halte') !== vu.length - 2, `portes : acte ${n}, pas d'antichambre imposée`); ok(!vu.includes('boss'), `portes : acte ${n}, pas de gardien`); }
-  else ok(vu[vu.length - 1] === 'boss' && vu[vu.length - 2] === 'halte', `portes : acte ${n}, antichambre puis gardien`);
+  if (n <= 3) ok(vu[vu.length - 1] === 'boss' && vu[vu.length - 2] === 'halte', `portes : acte ${n}, antichambre puis gardien`);
+  else if (n < 10) { ok(vu[vu.length - 1] === 'garde', `portes : acte ${n}, la place du gardien en dernière salle`); ok(!vu.includes('halte') || vu.indexOf('halte') !== vu.length - 2, `portes : acte ${n}, pas d'antichambre imposée`); ok(!vu.includes('boss') && !vu.includes('mini'), `portes : acte ${n}, ni le Glas ni miniboss`); }
+  else ok(eq(vu, ['mini', 'mini', 'final']), `portes : acte X, deux miniboss puis le boss final ${JSON.stringify(vu)}`);
 }
-ok(eq(parcours[9], ['halte', 'boss']), 'portes : acte X = antichambre, puis le gardien');
+ok(!parcours.slice(3).some(v => v.includes('boss')), 'portes : le Glas Originel (salle « boss ») ne revient plus après l’acte III');
 ok(F.desPorteActe(2) === 'act' && F.desPorteActe(3) === 'act3' && [4, 5, 6, 7, 8, 9, 10].every(n => F.desPorteActe(n) === 'acte'), 'portes : act, act3 (comme avant), puis acte');
 // une élite ordinaire (pas de fin) ne termine pas l'acte
-ok(F.desPorte(L[5], { acte: 5, N: 10, next: 3, type: 'elite', garde: false }) === null, 'portes : une élite ordinaire laisse les portes au choix');
-ok(F.desPorte(L[10], { acte: 10, N: 10, next: 3, type: 'boss', garde: false }) === 'fin', 'portes : le dernier gardien termine la descente');
+ok(F.desPorte(L[5], { acte: 5, N: 10, next: 3, type: 'elite', fin: false }) === null, 'portes : une élite ordinaire laisse les portes au choix');
+ok(F.desPorte(L[10], { acte: 10, N: 10, next: 4, type: 'elite', fin: true }) === 'fin', 'portes : le boss final termine la descente');
+ok(F.desPorte(L[10], { acte: 10, N: 10, next: 3, type: 'elite', fin: false }) === 'final', 'portes : un miniboss vaincu mène au suivant, puis au boss final');
+ok(F.desPorte(Object.assign({}, L[4], { boss: 'Essai' }), { acte: 4, N: 10, next: 4, type: 'combat', fin: false }) === 'boss', 'portes : un gardien créé (boss nommé) prend la salle « boss »');
 
 // ── 4. Sauvegarde
 const neuf = F.desNeuf(DS);
@@ -172,9 +179,12 @@ has(/function newRun\(hub\)\{return\{acteD:1,get act\(\)\{const A=ACTD\[this\.ac
 has(/palier:0,goldF:0/, 'les Paliers de Brume ne sont plus proposés (palier 0)');
 has(/hpMul=function\(\)\{return desMontee\(DES_BASE\(\),DES_D,DES_SEUIL,G\(\)\)\.pv\*/, 'PV des ennemis : desMontee');
 has(/dmgMul=function\(\)\{return desMontee\(DES_BASE\(\),DES_D,DES_SEUIL,G\(\)\)\.degats\*/, 'dégâts des ennemis : desMontee');
-has(/const imp=desPorte\(A,\{acte:ACTE\(\),N:ACTES_N,next,type:room\.type,garde:!!room\.garde\}\);/, 'makeDoors : portes imposées par desPorte');
+has(/const imp=desPorte\(A,\{acte:ACTE\(\),N:ACTES_N,next,type:room\.type,fin:room\.gardeK==='garde'\|\|room\.gardeK==='final'\}\);/, 'makeDoors : portes imposées par desPorte');
+has(/else if\(room\.gardeK==='final'\)\{if\(RUN\.mem\)RUN\.mem\.won=true;later\(2\.2,\(\)=>openEnd\(true\)\);return;\}/, 'le boss final termine la descente (victoire)');
+has(/e\.maxHp=\(GA_D\.pv\|\|\[0,1000,2300,3600\]\)\[RUN\.act\]\*\(PAL\(\)>=1\?1\.2:1\)\*\(PAL\(\)>=5\?1\.3:1\);e\.hp=e\.maxHp;e\.dmg=\[0,16,22,26\]\[RUN\.act\];e\.spd=58;e\.xp=\[0,70,90,0\]\[RUN\.act\];e\.name=ACTS\[RUN\.act\]\.boss;/, 'createBoss : exactement comme avant la v18');
+ok(!/desGardienX|DES_D\.gardien/.test(html), 'jeu : plus de gardien provisoire repris du Glas');
 has(/else if\(ACTE\(\)<ACTES_N\)\{enqueue\(\(\)=>openRelics\(ACTD\[ACTE\(\)\]\.done/, 'après le Glas Originel, la descente continue');
-has(/if\(a===3&&ACTE\(\)>=ACTES_N\)R\.won=true;/, 'la victoire de la mémoire au dernier acte seulement');
+has(/if\(a===3&&ACTE\(\)>=ACTES_N\)R\.won=true;/, 'la mort du Glas ne compte plus comme la victoire de la descente');
 has(/win:!!win&&ACTE\(\)>=ACTES_N,essai:!!\(RUN\.essai\|\|ESSAI18\)/, 'déblocage : victoire au dernier acte, hors essai');
 has(/ESSAI18=\/\[\?&\]\(masque\|brume\|glas\|dernier\|nemesis\|demo\|descente\)=\//, 'déblocage : les paramètres d’essai (et la démo) n’ouvrent rien');
 has(/RUN\.final\.palUp=false;/, 'les Paliers de Brume ne se débloquent plus');
@@ -183,5 +193,5 @@ has(/ACTD\[ACTE\(\)\]\.rooms-1;/, 'l’antichambre suit l’acte de la descente'
 ok(!/ACTS\[RUN\.act\]\.rooms/.test(html.replace(/AA=ACTS\[RUN\.act\][^;]*;/g, '')), 'jeu : plus de nombre de salles lu sur le registre (hors némésis)');
 
 console.log(`sim-descente : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
-console.log(`  actes : ${L.slice(1).map(a => `${a.rooms}${a.fin === 'elite' ? 'É' : 'G'}`).join(' · ')} (46 salles, 36 hors fins) ; montée fin III ×${mI.pv.toFixed(3)} PV ×${mI.degats.toFixed(2)} dégâts, fin IX ×${mX.pv.toFixed(3)} ×${mX.degats.toFixed(2)} (ancienne pente : ×${ancien.toFixed(2)})`);
+console.log(`  actes : ${L.slice(1).map(a => `${a.rooms}${a.fin === 'final' ? 'F' : 'G'}`).join(' · ')} (47 salles, 37 hors fins) ; montée fin III ×${mI.pv.toFixed(3)} PV ×${mI.degats.toFixed(2)} dégâts, fin IX ×${mX.pv.toFixed(3)} ×${mX.degats.toFixed(2)} (ancienne pente : ×${ancien.toFixed(2)})`);
 process.exit(fails ? 1 : 0);

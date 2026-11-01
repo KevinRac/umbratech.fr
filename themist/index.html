@@ -834,18 +834,21 @@ const ACTS=[null,...GA_D.actes];
 const DES_V=1;
 function desActes(GA,DS){const L=[null];
  GA.actes.forEach((a,i)=>L.push(Object.assign({},a,{n:i+1,fin:'gardien',antichambre:true,registre:i+1})));
- for(const a of DS.actes){if(L.length>DS.nombre)break;L.push(Object.assign({fin:'elite',antichambre:false},a,{n:L.length,registre:DS.registre||3}));}
+ for(const a of DS.actes){if(L.length>DS.nombre)break;L.push(Object.assign({fin:'gardien',antichambre:false},a,{n:L.length,registre:DS.registre||3}));}
  return L;}
 // salle globale (RUN.g) de la dernière salle de l'acte apresActe : jusque-là, la montée de bestiaire.js ne change pas
 function desSeuil(L,DS){let g=0;for(let i=1;i<=DS.montee.apresActe&&L[i];i++)g+=L[i].rooms;return g;}
 // multiplicateurs de PV et de dégâts des ennemis à la salle g (hors paliers). Pour g ≤ seuil : exactement 1 + base × (g − 1).
 function desMontee(base,DS,seuil,g){const a=DS.montee,av=Math.min(g-1,seuil-1),ap=Math.max(0,g-seuil);
  return{pv:1+base.pvParSalle*av+a.pvParSalle*ap,degats:1+base.degatsParSalle*av+a.degatsParSalle*ap};}
-// porte imposée en sortie de salle. o : {acte, N, next (numéro de la salle suivante dans l'acte), type (de la salle quittée), garde (élite de fin d'acte)}
-// 'suite' : vers l'acte suivant ; 'fin' : la descente est gagnée ; 'garde' / 'boss' / 'halte' : une seule porte ; null : portes au choix
+// porte imposée en sortie de salle. o : {acte, N, next (numéro de la salle suivante dans l'acte), type (de la salle quittée), fin (la salle quittée
+// était la fin de l'acte : un gardien, sa place provisoire ou le boss final)}. Rend 'suite' (vers l'acte suivant), 'fin' (la descente est gagnée),
+// une seule porte ('boss' : un gardien qui existe ; 'garde' : la place provisoire d'un gardien à venir ; 'final' : le boss final ; 'mini' : un miniboss ;
+// 'halte' : l'antichambre) ou null (portes au choix)
 function desPorte(A,o){
- if(o.type==='boss'||o.garde)return o.acte<o.N?'suite':'fin';
- if(o.next===A.rooms)return A.fin==='elite'?'garde':'boss';
+ if(o.type==='boss'||o.fin)return o.acte<o.N?'suite':'fin';
+ if(o.next===A.rooms)return A.fin==='final'?'final':A.boss?'boss':'garde';
+ if(A.miniboss&&o.next>=A.rooms-A.miniboss)return 'mini';
  if(o.next===A.rooms-1&&A.antichambre!==false)return 'halte';
  return null;}
 // type de la porte qui mène à l'acte n (les deux premières gardent leur nom d'avant la v18)
@@ -974,7 +977,7 @@ function spawnWave(w,last){const pc=w.some(s=>s.at==='pack')?findSpawn(300):null
 function createEnemy(type,x,y,elite=false){const d=ED[type];const e={type,x,y,r:d.r*(elite?CHAMP.taille:1),maxHp:d.hp*hpMul()*(elite?CHAMP.pv:1),spd:d.spd*spdMul()*(elite?CHAMP.vitesse:1),dmg:d.dmg*dmgMul()*(elite?CHAMP.degats:1),xp:d.xp*(elite?CHAMP.xp:1)*(1+0.05*(G()-1)),elite,state:'walk',t:rand(1.2,2.2),windTot:0.75,cd:rand(1,2.5),kbx:0,kby:0,flash:0,stun:0,marked:0,burnT:0,burnDps:0,exposed:false,dotAcc:0,dotT:0.45,orbT:0,crownT:0,devT:0,wob:Math.random()*TAU,ang:0,dead:false,chained:false,vuln:0,wT:0,dir:Math.random()<0.5?1:-1,aim:false,tok:null,hasteT:0,singT:0,thornT:0};e.hp=e.maxHp;enemies.push(e);
  if(type==='voile'&&!SAVE.flags.voile){SAVE.flags.voile=1;persist();}if(ENEMY_INFO[type]&&!RUN.announced.has(type)){RUN.announced.add(type);}
  return e;}
-function createBoss(){const e=createEnemy('boss',W/2,AR.y0+(RUN.act===3?180:170));const gX=desGardienX();e.maxHp=(GA_D.pv||[0,1000,2300,3600])[RUN.act]*(PAL()>=1?1.2:1)*(PAL()>=5?1.3:1)*(gX?DES_D.gardien.pv:1);e.hp=e.maxHp;e.dmg=[0,16,22,26][RUN.act]*(gX?DES_D.gardien.degats:1);e.spd=58;e.xp=[0,70,90,0][RUN.act];e.name=(ACTD[ACTE()]&&ACTD[ACTE()].boss)||ACTS[RUN.act].boss;e.patT=1.4;e.phase=1;e.queue=[];e.state='idle';e.spinA=0;e.spinDir=1;e.shotT=0;e.ringT=0;e.chantN=0;if(RUN.act===3){e.r=62;e.hx=W/2;e.hy=AR.y0+180;e.beatT=1.6;}room.boss=e;return e;}
+function createBoss(){const e=createEnemy('boss',W/2,AR.y0+(RUN.act===3?180:170));e.maxHp=(GA_D.pv||[0,1000,2300,3600])[RUN.act]*(PAL()>=1?1.2:1)*(PAL()>=5?1.3:1);e.hp=e.maxHp;e.dmg=[0,16,22,26][RUN.act];e.spd=58;e.xp=[0,70,90,0][RUN.act];e.name=ACTS[RUN.act].boss;e.patT=1.4;e.phase=1;e.queue=[];e.state='idle';e.spinA=0;e.spinDir=1;e.shotT=0;e.ringT=0;e.chantN=0;if(RUN.act===3){e.r=62;e.hx=W/2;e.hy=AR.y0+180;e.beatT=1.6;}room.boss=e;return e;}
 
 function enterRoom(type){
  RUN.roomIdx++;RUN.g++;RUN.path.push(type);
@@ -991,7 +994,7 @@ function enterRoom(type){
 }
 function makeDoors(){
  const A=ACTD[ACTE()],next=RUN.roomIdx+1;let types;
- const imp=desPorte(A,{acte:ACTE(),N:ACTES_N,next,type:room.type,garde:!!room.garde});
+ const imp=desPorte(A,{acte:ACTE(),N:ACTES_N,next,type:room.type,fin:room.gardeK==='garde'||room.gardeK==='final'});
  if(imp==='fin')return;
  if(imp==='suite'){const t=desPorteActe(ACTE()+1);if(t==='acte')DOOR.acte.l=`Acte ${ROM[ACTE()+1]}`;types=[t];}
  else if(imp)types=[imp];
@@ -1010,11 +1013,12 @@ function onRoomCleared(){
  v6RoomClear();enemies=enemies.filter(e=>!e.dead);eproj=[];rings=[];
  if(room.type==='combat'){gainXp(4+RUN.roomIdx);heal(6,'room');RUN.sh.rooms+=3;addGold(6+G(),true);}
  if(room.type==='elite'){RUN.sh.elites+=6;addGold(18+2*G(),true);}
- if(room.type==='elite')enqueue(()=>openRelics('Le champion tombe','Sa dépouille laisse une relique. Choisis-en une.'));
+ if(room.type==='elite'&&room.gardeK!=='final')enqueue(()=>openRelics('Le champion tombe','Sa dépouille laisse une relique. Choisis-en une.'));
  if(room.type==='boss'){if(RUN.act===1){enqueue(openAscension);makeDoors();}else if(RUN.act===2){SAVE.flags.heraut=1;persist();enqueue(()=>openRelics('Le Héraut se tait','Sous sa cloche fendue, une relique attend. Elle t’accompagnera jusqu’au Cœur.'));makeDoors();}else if(ACTE()<ACTES_N){enqueue(()=>openRelics(ACTD[ACTE()].done,'Une relique attend dans le silence. La descente continue.'));makeDoors();}else{later(2.2,()=>openEnd(true));return;}}
+ else if(room.gardeK==='final'){if(RUN.mem)RUN.mem.won=true;later(2.2,()=>openEnd(true));return;}
  else makeDoors();
  if(RUN.act===1&&RUN.roomIdx===1)$('#hHint').hidden=true;
- if(room.type!=='boss')toast(next1()?'Salle purifiée. L’antichambre du gardien t’attend.':room.doors.length===1&&room.doors[0].type==='garde'?'Salle purifiée. L’élite de l’acte t’attend.':'Salle purifiée. Choisis une porte.');
+ if(room.type!=='boss')toast(next1()?'Salle purifiée. L’antichambre du gardien t’attend.':room.doors.length===1&&DOOR[room.doors[0].type]&&DOOR[room.doors[0].type].t?`Salle purifiée. ${DOOR[room.doors[0].type].t}`:'Salle purifiée. Choisis une porte.');
  sfx('door');
 }
 function next1(){return room.doors.length===1&&room.doors[0].type==='halte';}
@@ -1035,7 +1039,7 @@ function updateRoom(dt){
   }else if(alive===0){room.cleared=true;onRoomCleared();}
  }
 }
-function doEnter(type){let banner=null;if(type==='acte'){const n=ACTE()+1,A=ACTD[n];desNouvelActe(n);type=A.entree||'combat';banner=[`Acte ${ROM[n]}`,A.name];}else if(type==='garde'){RUN.gardeNow=1;type='elite';}else if(type==='act'){RUN.act=2;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act2=1;persist();type='combat';banner=['Acte II',ACTS[2].name];}else if(type==='act3'){RUN.act=3;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act3=1;persist();type='combat';banner=['Acte III',ACTS[3].name];}enterRoom(type);if(banner){showBanner(banner[0],banner[1]);if(room.annT>0)room.annT=2.9;}}
+function doEnter(type){let banner=null;if(type==='acte'){const n=ACTE()+1,A=ACTD[n];desNouvelActe(n);type=A.entree||'combat';banner=[`Acte ${ROM[n]}`,A.name];}if(type==='garde'||type==='mini'||type==='final'){RUN.gardeNow=type;type='elite';}else if(type==='act'){RUN.act=2;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act2=1;persist();type='combat';banner=['Acte II',ACTS[2].name];}else if(type==='act3'){RUN.act=3;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act3=1;persist();type='combat';banner=['Acte III',ACTS[3].name];}enterRoom(type);if(banner){showBanner(banner[0],banner[1]);if(room.annT>0)room.annT=2.9;}}
 // v18 · entrée dans l'acte n (IV à N) : RUN.acteD avance, RUN.act (le registre) reste 3. Ce qui se compte « par acte » sous la clé du
 // registre (colporteur, raccourci, gardien direct, souvenirs portés par les Masqués, contre-mesures du Brumeux) repart à zéro.
 // Les effets d'un changement d'acte des enveloppes v9 et v13 (pacte, fiole, larme, flasque) sont rejoués par le bloc v18 (desApresActe).
@@ -1046,7 +1050,6 @@ function desNouvelActe(n){const r=ACTD[n].registre;
  if(RUN.v9){delete RUN.v9.skipUsed[r];delete RUN.v9.direct[r];}
  if(RUN.asm&&RUN.asm.porteurs)delete RUN.asm.porteurs[r];
  if(RUN.prof){if(RUN.prof.bud)delete RUN.prof.bud[r];if(RUN.prof.relaxSaid)delete RUN.prof.relaxSaid[r];}}
-function desGardienX(){return !!(RUN&&!RUN.hub&&ACTE()>3&&ACTD[ACTE()]&&ACTD[ACTE()].fin==='gardien');}
 function announceTheme(){const T=room&&room.wtheme&&WTHEMES[room.wtheme];if(!T)return;showBanner('Vague à thème',T.n);}
 
 // ───────────────────────── Joueur : commun
@@ -3380,7 +3383,7 @@ openEnd=function(win,abandon){
  // Pitié : jamais plus de deux descentes d'affilée sans fragment
  if(R.frags.length||has9('M7'))m.pity=0;else{m.pity++;if(m.pity>=3){const f0=giveFragEnd();if(f0)m.pity=0;}}
  // Journal
- const where=win?`a fait taire ${((ACTD[ACTE()]&&ACTD[ACTE()].boss)||'le Glas Originel').replace(/^Le /,'le ').replace(/^La /,'la ').replace(/^L’/,'l’')}`:abandon?`a renoncé en acte ${ROM[ACTE()]}, salle ${RUN.roomIdx}`:`est tombé en acte ${ROM[ACTE()]}, salle ${RUN.roomIdx}, face à ${foeName(R.lastSrc||'brume',RUN.act)}`;
+ const where=win?'est allé au fond de la Brume':abandon?`a renoncé en acte ${ROM[ACTE()]}, salle ${RUN.roomIdx}`:`est tombé en acte ${ROM[ACTE()]}, salle ${RUN.roomIdx}, face à ${foeName(R.lastSrc||'brume',RUN.act)}`;
  const tags=[];if(R.perfect.length)tags.push('gardien sans blessure');if(R.close.length)tags.push('sur le fil');if(R.frags.length)tags.push(`${R.frags.length} fragment${R.frags.length>1?'s':''}`);if(R.grave)tags.push('Écho recueilli');
  m.journal.unshift({n:SAVE.runs,cls,t:`Ton ${CLS[cls].short} ${where}.`,tags});if(m.journal.length>12)m.journal.length=12;
  // Réactions
@@ -12453,8 +12456,10 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
 (function(){
  const PA=DES_D.paliers,ORD=DES_D.ordre;
  const ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente)=/.test(location.search);
- Object.assign(DOOR,{acte:{l:'Acte IV',c:'225,205,255',g:'IV'},garde:{l:'Élite de l’acte',c:'255,138,92',g:'É'}});
- ICONS.acte=ICONS.act3||ICONS.act;ICONS.garde=ICONS.u_mask||ICONS.elite;
+ // garde : la place d'un gardien qui n'existe pas encore (actes IV à IX) ; mini : un miniboss (acte X) ; final : le boss final (acte X). Tous trois
+ // sont, pour l'instant, un Masqué imposé et renforcé (data/descente.js, provisoire). t : la phrase du message de salle purifiée.
+ Object.assign(DOOR,{acte:{l:'Acte IV',c:'225,205,255',g:'IV'},garde:{l:'Gardien',c:'255,77,77',g:'G',t:'Le gardien de l’acte t’attend.'},mini:{l:'Miniboss',c:'255,138,92',g:'M',t:'Un miniboss t’attend.'},final:{l:'Boss final',c:'255,60,90',g:'F',t:'Le boss final t’attend.'}});
+ ICONS.acte=ICONS.act3||ICONS.act;ICONS.garde=ICONS.u_mask||ICONS.elite;ICONS.mini=ICONS.u_skull||ICONS.elite;ICONS.final=ICONS.boss||ICONS.u_skull;
  // ── Sauvegarde : une sauvegarde d'avant la v18 reçoit l'état neuf (Normal seul ouvert) ; les anciennes victoires (3 actes) n'ouvrent rien
  const lire=()=>desLire(SAVE.descente,DES_D);   // null : sauvegarde d'une version future, on n'y touche pas
  {const S=lire();if(S&&JSON.stringify(SAVE.descente)!==JSON.stringify(desEcrire(S))){SAVE.descente=desEcrire(S);persist();}}
@@ -12506,7 +12511,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  // ── HUD : acte de la descente, élite de fin d'acte, palier
  const _urh18=updateRoomHud;
  updateRoomHud=function(){_urh18.apply(this,arguments);
-  try{if(!RUN||RUN.hub||!room)return;const hr=$('#hRoom');if(hr&&room.garde)hr.textContent=hr.textContent.replace(/· Élite\b/,'· Élite de l’acte');
+  try{if(!RUN||RUN.hub||!room)return;const hr=$('#hRoom');if(hr&&room.gardeK&&DOOR[room.gardeK])hr.textContent=hr.textContent.replace(/· Élite\b/,'· '+DOOR[room.gardeK].l);
    const ha=$('#hAct');if(ha&&RUN.palierD&&RUN.palierD!==ORD[0])ha.textContent+=` · ${nomP(RUN.palierD)}`;}catch(err){console.error(err);}};
  // ── Porte « acte » (IV à N) : ce que v9 et v13 font quand RUN.act change (ici il reste au registre) : pacte, fiole, larme, flasque, palier gagné
  const _de18=doEnter;
@@ -12518,18 +12523,24 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
    if(V){if(has9('R4'))V.flask=1;if(has9('D4')&&!saute){heal(P.s.maxHp*0.12,'halte');toast('Palier gagné : +12 % de PV.',2.4);}}
    enqueue(openPacte);}catch(err){console.error(err);}
   return res;};
- // ── Élite de fin d'acte (IV à IX, provisoire) : un Masqué imposé, plus endurant d'acte en acte, et une vague de plus
+ // ── Places provisoires (gardiens des actes IV à IX, miniboss et boss final de l'acte X) : un Masqué imposé et renforcé, une vague de plus
+ const PV=DES_D.provisoire;
+ function renfort(k,n){if(k==='garde')return{pv:PV.fin.pv[n]||1,vague:PV.fin.vague[n]||0};
+  if(k==='mini'){const i=Math.max(0,Math.min(PV.mini.pv.length-1,RUN.miniN||0));return{pv:PV.mini.pv[i],vague:PV.mini.vague[i]||0};}
+  return{pv:PV.final.pv,vague:PV.final.vague||0};}
  const _pr18=planRoom;
  planRoom=function(type){
   if(!(RUN&&!RUN.hub&&RUN.gardeNow&&type==='elite'&&room))return _pr18.apply(this,arguments);
-  RUN.gardeNow=0;const n=ACTE();room.garde=n;
+  const k=RUN.gardeNow,n=ACTE();RUN.gardeNow=0;room.garde=n;room.gardeK=k;
+  if(k==='mini'){RUN.miniN=RUN.miniActe===n?(RUN.miniN||0)+1:0;RUN.miniActe=n;}
+  room.renfort=renfort(k,n);
   const AS=window.__asm,f0=AS?AS.forcer:0;if(AS)AS.forcer=1;
   let w;try{w=_pr18.apply(this,arguments);}finally{if(AS)AS.forcer=f0;}
-  const fv=DES_D.fin.vague[n]||0;if(fv>0&&w&&w.length)w.push(genWave(budget()*fv,allowedTypes()));
+  if(room.renfort.vague>0&&w&&w.length)w.push(genWave(budget()*room.renfort.vague,allowedTypes()));
   return w;};
  const _ce18=createEnemy;
  createEnemy=function(type,x,y,elite){const e=_ce18.apply(this,arguments);
-  try{if(e&&elite&&room&&room.garde&&RUN&&!RUN.hub){const f=DES_D.fin.pv[room.garde]||1;if(f!==1){e.maxHp*=f;e.hp=e.maxHp;e.garde=room.garde;}}}catch(err){console.error(err);}
+  try{if(e&&elite&&room&&room.renfort&&RUN&&!RUN.hub){const f=room.renfort.pv||1;if(f!==1){e.maxHp*=f;e.hp=e.maxHp;}e.garde=room.garde;e.gardeK=room.gardeK;}}catch(err){console.error(err);}
   return e;};
  // ── Fin de descente : une victoire au dernier acte, hors essai, ouvre le palier suivant (et compte la victoire par palier et par forme)
  const _oe18=openEnd;
@@ -12546,18 +12557,18 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
   RUN.essai=1;closeOverlay();queue.length=0;trans=null;fade=0;
   RUN.acteD=n;RUN.roomIdx=0;RUN.path=[];RUN.g=0;for(let k=1;k<n;k++)RUN.g+=ACTD[k].rooms;
   const A=ACTD[n];
-  if(o.fin){RUN.roomIdx=A.rooms-1;RUN.g+=A.rooms-1;doEnter(A.fin==='elite'?'garde':'boss');}
-  else enterRoom(A.entree||'combat');
+  if(o.fin){RUN.roomIdx=A.rooms-1;RUN.g+=A.rooms-1;doEnter(desPorte(A,{acte:n,N:ACTES_N,next:A.rooms,type:'combat',fin:false}));}
+  else doEnter(A.entree||'combat');
   showBanner(`Acte ${ROM[n]} · essai`,A.name);
   return{acte:ACTE(),registre:RUN.act,g:RUN.g,salle:RUN.roomIdx,type:room.type,garde:room.garde||0};}
  const QD=/[?&]descente=(\d+)/.exec(location.search);
  if(QD&&!DEMO_CLS18()){const qc=(/[?&]classe=([a-z]+)/.exec(location.search)||[])[1],fin=/[?&]fin=1/.test(location.search);
   addEventListener('load',()=>setTimeout(()=>{try{essai(+QD[1],{cls:qc,fin});}catch(err){console.error(err);}},400));}
  function DEMO_CLS18(){return /[?&]demo=/.test(location.search);}
- window.__descente={ACTD,N:ACTES_N,seuil:DES_SEUIL,montee:g=>desMontee(DES_BASE(),DES_D,DES_SEUIL,g),porte:(n,next,type,garde)=>desPorte(ACTD[n],{acte:n,N:ACTES_N,next,type,garde}),
+ window.__descente={ACTD,N:ACTES_N,seuil:DES_SEUIL,montee:g=>desMontee(DES_BASE(),DES_D,DES_SEUIL,g),porte:(n,next,type,fin)=>desPorte(ACTD[n],{acte:n,N:ACTES_N,next,type,fin}),
   etat:lire,choisir,essai,selecteur,effacer:()=>{SAVE.descente=desEcrire(desNeuf(DES_D));persist();},
   vider:()=>{queue.length=0;closeOverlay();},file:()=>queue.length,   // bancs : fermer les fenêtres en attente
-  dbg:()=>({acte:ACTE(),registre:RUN&&RUN.act,g:RUN&&RUN.g,salle:RUN&&RUN.roomIdx,rooms:ACTD[ACTE()].rooms,type:room&&room.type,garde:room&&room.garde||0,portes:room&&room.doors?room.doors.map(d=>d.type):[],palier:RUN&&RUN.palierD,essai:!!(RUN&&RUN.essai),pv:hpMul(),deg:dmgMul()})};
+  dbg:()=>({acte:ACTE(),registre:RUN&&RUN.act,g:RUN&&RUN.g,salle:RUN&&RUN.roomIdx,rooms:ACTD[ACTE()].rooms,type:room&&room.type,garde:room&&room.garde||0,gardeK:room&&room.gardeK||'',portes:room&&room.doors?room.doors.map(d=>d.type):[],palier:RUN&&RUN.palierD,essai:!!(RUN&&RUN.essai),pv:hpMul(),deg:dmgMul()})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

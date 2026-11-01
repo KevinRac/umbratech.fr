@@ -1,6 +1,6 @@
 // Banc Chromium : v18, action 2 (la charpente de la grande descente). Usage : node banc-descente.mjs <port> [sections, ex. ABCDE]
-// A. Descente complète en Normal (pas de temps à la main, tout tué) : 10 actes, portes, salles, registre, HUD, montée, élites de fin,
-//    gardien provisoire, pacte à chaque acte, victoire au dernier acte seulement, Difficile ouvert, note de fin.
+// A. Descente complète en Normal (pas de temps à la main, tout tué) : 10 actes, portes, salles, registre, HUD, montée, gardiens des actes IV à IX
+//    (places provisoires : Masqué imposé), acte X (deux miniboss puis le boss final), le Glas jamais repris après l'acte III, pacte à chaque acte, victoire au dernier acte seulement, Difficile ouvert, note de fin.
 // B. Règle d'or : actes I à III (PV et dégâts des gardiens, montée salle par salle, portes imposées) comme avant la v18.
 // C. Essai : ?descente=10&fin=1 et __descente.essai() gagnés n'ouvrent rien.
 // D. Sélecteur : écran titre (Normal seul ouvert, palier fermé inerte, choix enregistré), Portail (plus de Paliers de Brume), HUD.
@@ -30,9 +30,9 @@ const PURGE = () => {
   for (let i = 0; i < 6000; i++) {
     X.vider(); const P = B.P; if (P) { P.hp = P.s.maxHp; P.iT = 2; }
     const r = B.room; if (r.cleared && r.doors && r.doors.length && r.doors.every(d => d.open >= 1)) return { ok: true, i, boss, asm };
-    if (r.cleared && r.type === 'boss' && (!r.doors || !r.doors.length)) return { ok: true, i, fin: true, boss, asm };
+    if (r.cleared && (r.type === 'boss' || r.gardeK === 'final') && (!r.doors || !r.doors.length)) return { ok: true, i, fin: true, boss, asm };
     const b = B.enemies.find(e => e.type === 'boss' && !e.dead); if (b && !boss) boss = { name: b.name, maxHp: Math.round(b.maxHp), dmg: b.dmg, r: b.r };
-    const m = r.asm && r.asm.e; if (m && !asm) asm = { garde: m.garde || 0, maxHp: Math.round(m.maxHp) };
+    const m = r.asm && r.asm.e; if (m && !asm) asm = { garde: m.garde || 0, k: m.gardeK || '', maxHp: Math.round(m.maxHp) };
     if (!r.cleared && (i % 3 === 0)) B.killAll();
     B.step(1 / 30, 1);
   }
@@ -55,7 +55,7 @@ if (SEC.includes('A')) {
     const pg = await page.evaluate(PURGE);
     if (!pg.ok) { ok(false, `A : salle non purgée ${JSON.stringify(pg)} ${JSON.stringify(e0)}`); break; }
     const e = await page.evaluate(ETAT);
-    vus.push({ acte: e.acte, reg: e.registre, g: e.g, salle: e.salle, rooms: e.rooms, type: e.type, garde: e.garde, portes: e.portes, pv: e.pv, boss: pg.boss, asm: pg.asm, hAct: e0.hAct, hRoom: e0.hRoom });
+    vus.push({ acte: e.acte, reg: e.registre, g: e.g, salle: e.salle, rooms: e.rooms, type: e.type, garde: e.garde, k: e.gardeK, portes: e.portes, pv: e.pv, boss: pg.boss, asm: pg.asm, hAct: e0.hAct, hRoom: e0.hRoom });
     if (!e.portes.length) { fini = e; break; }
     const forc = e.portes.length === 1 ? e.portes[0] : (e.portes.includes('combat') ? 'combat' : e.portes.find(t => !['raccourci', 'direct', 'breche'].includes(t)) || e.portes[0]);
     const avant = e.acte;
@@ -66,27 +66,28 @@ if (SEC.includes('A')) {
   // les 10 actes, dans l'ordre, au bon registre, le bon nombre de salles
   const actes = [...new Set(vus.map(v => v.acte))];
   ok(JSON.stringify(actes) === JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), 'A : les 10 actes dans l’ordre ' + JSON.stringify(actes));
-  const rooms = { 1: 7, 2: 6, 3: 7, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 2 };
+  const rooms = { 1: 7, 2: 6, 3: 7, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 3 };
   for (let n = 1; n <= 10; n++) {
     const s = vus.filter(v => v.acte === n);
     ok(s.length === rooms[n] && s.every(v => v.rooms === rooms[n]), `A : acte ${n}, ${rooms[n]} salles (${s.length})`);
     ok(s.every(v => v.reg === Math.min(n, 3)), `A : acte ${n}, registre ${Math.min(n, 3)}`);
     ok(s.every(v => new RegExp(`^Acte ${['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n]} · `).test(v.hAct)), `A : acte ${n}, HUD « Acte ${n} » ${s[0] && s[0].hAct}`);
     const der = s[s.length - 1];
-    if (n <= 3 || n === 10) { ok(der.type === 'boss' && der.boss, `A : acte ${n}, un gardien en dernière salle`); ok(s[s.length - 2].type === 'halte', `A : acte ${n}, antichambre`); }
-    else { ok(der.type === 'elite' && der.garde === n, `A : acte ${n}, élite de fin d'acte (${der.type}, ${der.garde})`); ok(!s.some(v => v.type === 'boss'), `A : acte ${n}, aucun gardien`); ok(/Élite de l’acte/.test(der.hRoom), `A : acte ${n}, HUD « Élite de l’acte » (${der.hRoom})`); }
+    if (n <= 3) { ok(der.type === 'boss' && der.boss, `A : acte ${n}, un gardien en dernière salle`); ok(s[s.length - 2].type === 'halte', `A : acte ${n}, antichambre`); }
+    else if (n < 10) { ok(der.type === 'elite' && der.garde === n && der.k === 'garde', `A : acte ${n}, la place du gardien (${der.type}, ${der.k})`); ok(/· Gardien/.test(der.hRoom), `A : acte ${n}, HUD « Gardien » (${der.hRoom})`); }
+    else { ok(JSON.stringify(s.map(v => v.k)) === '["mini","mini","final"]', `A : acte X, deux miniboss puis le boss final ${JSON.stringify(s.map(v => v.k))}`); ok(/· Miniboss/.test(s[0].hRoom) && /· Boss final/.test(der.hRoom), `A : acte X, HUD (${s[0].hRoom} / ${der.hRoom})`); }
+    if (n >= 4) ok(!s.some(v => v.type === 'boss' || (v.boss && /Glas/.test(v.boss.name))), `A : acte ${n}, le Glas Originel n'est pas repris`);
     if (n < 10) ok(JSON.stringify(der.portes) === JSON.stringify([n === 1 ? 'act' : n === 2 ? 'act3' : 'acte']), `A : acte ${n}, une seule porte vers l'acte suivant ${JSON.stringify(der.portes)}`);
   }
-  ok(vus.filter(v => v.acte >= 4 && v.acte <= 9 && v.asm && v.asm.garde === v.acte).length >= 5, `A : élites de fin : un Masqué imposé et renforcé (${vus.filter(v => v.asm && v.asm.garde).length} / 6)`);
-  const bX = vus.find(v => v.acte === 10 && v.type === 'boss'), b3 = vus.find(v => v.acte === 3 && v.type === 'boss');
-  ok(bX && bX.boss && bX.boss.name === 'L’Écho du Glas', 'A : acte X, le gardien provisoire ' + JSON.stringify(bX && bX.boss));
-  ok(bX && b3 && Math.abs(bX.boss.maxHp / b3.boss.maxHp - 1.25) < 0.01 && Math.abs(bX.boss.dmg / b3.boss.dmg - 1.15) < 0.01, `A : acte X, PV ×1,25 et dégâts ×1,15 du Glas (${bX && bX.boss.maxHp} / ${b3 && b3.boss.maxHp})`);
-  ok(vus.length === 46, `A : 46 salles parcourues (${vus.length})`);
+  ok(vus.filter(v => v.acte >= 4 && v.asm && v.asm.garde === v.acte && v.asm.k).length >= 7, `A : places provisoires : un Masqué imposé et renforcé (${vus.filter(v => v.asm && v.asm.k).length} / 8)`);
+  const mx = vus.filter(v => v.acte === 10 && v.asm && v.asm.k).map(v => v.asm.maxHp);
+  ok(mx.length === 3 ? mx[0] < mx[1] && mx[1] < mx[2] : true, `A : acte X, des Masqués de plus en plus endurants ${JSON.stringify(mx)}`);
+  ok(vus.length === 47, `A : 47 salles parcourues (${vus.length})`);
   ok(pactes >= 9, `A : un pacte proposé à chaque nouvel acte (${pactes} / 9)`);
   // montée : salle 21 (première de l'acte IV) = la pente douce
   const g21 = vus.find(v => v.g === 21), g44 = vus.find(v => v.g === 44);
   ok(g21 && Math.abs(g21.pv - 2.655) < 1e-6, 'A : salle 21, PV ×2,655 ' + (g21 && g21.pv));
-  ok(g44 && Math.abs(g44.pv - 3.575) < 1e-6, 'A : salle 44 (élite de l’acte IX), PV ×3,575 ' + (g44 && g44.pv));
+  ok(g44 && Math.abs(g44.pv - 3.575) < 1e-6, 'A : salle 44 (gardien de l’acte IX), PV ×3,575 ' + (g44 && g44.pv));
   // victoire : fin de descente au dernier acte, Difficile ouvert, note de fin
   await page.evaluate(() => { for (let i = 0; i < 200; i++) window.__brume.step(1 / 30, 1); });
   const fin = await page.evaluate(() => ({ save: window.__brume.SAVE.descente, wins: window.__brume.SAVE.wins, note: (document.querySelector('.des-fin') || {}).textContent || '', titre: (document.querySelector('#overlay h2') || {}).textContent || '', palierMax: window.__brume.SAVE.palierMax }));
@@ -95,7 +96,7 @@ if (SEC.includes('A')) {
   ok(/Difficile/.test(fin.note), 'A : la fin dit « Palier Difficile ouvert » ' + fin.note);
   ok(fin.wins === 1 && fin.palierMax === 0, `A : une victoire comptée, aucun Palier de Brume (${fin.wins}, ${fin.palierMax})`);
   ok(!errs.length, 'A : aucune erreur de script ' + errs.slice(0, 3).join(' | '));
-  console.log(`A · ${vus.length} salles ; actes : ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => vus.filter(v => v.acte === n).map(v => v.type === 'elite' && v.garde ? 'É' : v.type[0].toUpperCase()).join('')).join(' | ')}`);
+  console.log(`A · ${vus.length} salles ; actes : ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => vus.filter(v => v.acte === n).map(v => v.k === 'final' ? 'F' : v.k === 'mini' ? 'm' : v.k === 'garde' ? 'G' : v.type[0].toUpperCase()).join('')).join(' | ')}`);
   await ctx.close();
 }
 
@@ -133,7 +134,7 @@ if (SEC.includes('C')) {
     if (viaConsole) await page.evaluate(() => { window.__brume.cls('gou'); window.__brume.start(); window.__descente.essai(10, { fin: true }); });
     else await page.waitForFunction(() => { try { return window.__descente.dbg().acte === 10; } catch (e) { return false; } }, null, { timeout: 15000 });
     const e = await page.evaluate(() => window.__descente.dbg());
-    ok(e.acte === 10 && e.type === 'boss' && e.essai, `C ${nom} : dernière salle de l'acte X, en essai ${JSON.stringify(e)}`);
+    ok(e.acte === 10 && e.gardeK === 'final' && e.essai, `C ${nom} : le boss final de l'acte X, en essai ${JSON.stringify(e)}`);
     const pg = await page.evaluate(PURGE);
     await page.evaluate(() => { for (let i = 0; i < 200; i++) window.__brume.step(1 / 30, 1); });
     const s = await page.evaluate(() => ({ d: window.__brume.SAVE.descente, note: !!document.querySelector('.des-fin'), titre: (document.querySelector('#overlay h2') || {}).textContent || '' }));

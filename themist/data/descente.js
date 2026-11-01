@@ -8,23 +8,28 @@
  nombre:10,
  // Les actes IV à X se jouent dans le registre de l'acte III (décor, musique, ennemis, IA) en attendant leurs propres gardiens et décors.
  registre:3,
- // Actes IV à X (provisoires). rooms : salles de l'acte, fin comprise (la première salle est imposée, comme aux actes II et III).
- // fin : 'elite' = une élite de fin d'acte (un Masqué imposé, voir fin ci-dessous) ; 'gardien' = un gardien (salle « boss »).
- // antichambre : la salle avant la fin est une halte imposée (vrai aux actes I à III). entree : type de la première salle (défaut : combat).
+ // Actes IV à X. rooms : salles de l'acte, fin comprise (la première salle est imposée, comme aux actes II et III).
+ // fin : 'gardien' = un gardien en dernière salle ; 'final' = le boss final du jeu (acte X).
+ // boss : nom du gardien quand il existe. Sans boss, la place du gardien est tenue par une élite provisoire (provisoire.fin ci-dessous),
+ // en attendant les six nouveaux gardiens (actes IV à IX) et le boss final (acte X), créés plus tard dans le chantier v18.
+ // miniboss : nombre de salles de miniboss imposées juste avant la fin. antichambre : la salle avant la fin est une halte imposée.
+ // entree : type de la première salle (défaut : combat ; 'mini' : un miniboss).
  actes:[
-  {name:'Les Bas-Fonds',rooms:4,fin:'elite',antichambre:false,done:'Les Bas-Fonds se taisent'},
-  {name:'Les Eaux Mortes',rooms:4,fin:'elite',antichambre:false,done:'Les Eaux Mortes se taisent'},
-  {name:'La Nef Muette',rooms:4,fin:'elite',antichambre:false,done:'La Nef Muette se tait'},
-  {name:'Les Racines du Cœur',rooms:4,fin:'elite',antichambre:false,done:'Les Racines se taisent'},
-  {name:'Le Puits des Échos',rooms:4,fin:'elite',antichambre:false,done:'Le Puits se tait'},
-  {name:'Les Cloches Englouties',rooms:4,fin:'elite',antichambre:false,done:'Les Cloches se taisent'},
-  {name:'Le Fond de la Brume',rooms:2,fin:'gardien',antichambre:true,entree:'halte',boss:'L’Écho du Glas',done:'L’Écho du Glas se tait'}],
- // Élite de fin d'acte (actes IV à IX, provisoire) : un Masqué imposé (l'élite assemblé de bestiaire.js, assemble), au registre de l'acte III.
- // pv : × ses PV, par acte (index = numéro de l'acte) ; vague : une vague d'ennemis ordinaires en plus, en part du budget d'une vague.
- // Si aucun Masqué ne peut être assemblé, la salle garde son champion ordinaire.
- fin:{pv:{4:1.3,5:1.45,6:1.6,7:1.75,8:1.9,9:2.05},vague:{4:0.5,5:0.6,6:0.7,7:0.8,8:0.9,9:1}},
- // Gardien provisoire de l'acte X : le combat du Glas Originel (acte III), sous un autre nom. pv et degats : × ceux du Glas.
- gardien:{pv:1.25,degats:1.15},
+  {name:'Les Bas-Fonds',rooms:4,fin:'gardien',antichambre:false,done:'Les Bas-Fonds se taisent'},
+  {name:'Les Eaux Mortes',rooms:4,fin:'gardien',antichambre:false,done:'Les Eaux Mortes se taisent'},
+  {name:'La Nef Muette',rooms:4,fin:'gardien',antichambre:false,done:'La Nef Muette se tait'},
+  {name:'Les Racines du Cœur',rooms:4,fin:'gardien',antichambre:false,done:'Les Racines se taisent'},
+  {name:'Le Puits des Échos',rooms:4,fin:'gardien',antichambre:false,done:'Le Puits se tait'},
+  {name:'Les Cloches Englouties',rooms:4,fin:'gardien',antichambre:false,done:'Les Cloches se taisent'},
+  {name:'Le Fond de la Brume',rooms:3,fin:'final',miniboss:2,antichambre:false,entree:'mini',done:'La Brume se tait'}],
+ // Ce qui tient les places encore vides : un Masqué imposé (l'élite assemblé de bestiaire.js, assemble), au registre de l'acte III,
+ // plus endurant que d'ordinaire, avec une vague d'ennemis ordinaires en plus (part du budget d'une vague).
+ // fin : à la place d'un gardien qui n'existe pas encore (pv et vague par acte) ; mini : les miniboss de l'acte X, dans l'ordre ;
+ // final : à la place du boss final. Si aucun Masqué ne peut être assemblé, la salle garde son champion ordinaire.
+ provisoire:{
+  fin:{pv:{4:1.3,5:1.45,6:1.6,7:1.75,8:1.9,9:2.05},vague:{4:0.5,5:0.6,6:0.7,7:0.8,8:0.9,9:1}},
+  mini:{pv:[2.2,2.4],vague:[0.8,1]},
+  final:{pv:3,vague:1.2}},
  // Montée des ennemis. Jusqu'à la fin de l'acte apresActe, la règle de bestiaire.js (montee) ne change pas ;
  // ensuite, chaque salle ajoute pvParSalle et degatsParSalle (pente plus douce : la Mémoire plafonne la puissance du joueur).
  montee:{apresActe:3,pvParSalle:0.04,degatsParSalle:0.015},
