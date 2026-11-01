@@ -228,6 +228,7 @@ for (const [k, ou] of [...trace.couleurs.entries()].sort()) {
   n++; ok(d >= 25, `${k.padEnd(11)} ΔE ${d.toFixed(1).padStart(5)} (le plus proche : ${r}) · ${[...ou].slice(0, 2).join(' · ')}${ou.size > 2 ? ` · +${ou.size - 2}` : ''}${matiere ? ' [matière]' : ''}`);
 }
 console.log(`   ${n} couleurs distinctes relevées`);
+if (process.env.BANC_JSON) (await import('node:fs')).writeFileSync(process.env.BANC_JSON, JSON.stringify([...trace.couleurs.entries()].map(([k, v]) => [k, [...v]])));   // banc-gardiens-final.mjs relit les couleurs relevées
 
 // ── planches
 async function assembler(rows, nom) {

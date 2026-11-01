@@ -1709,3 +1709,74 @@ Fait avec Sonnet 5.5, effort faible. `assemble.nemesis.actif:true` ; version v17
 - Contrôle final : une vraie mort contre un Masqué, sans rien activer en console, écrit une fiche et ouvre l'écran avec le masque et le crâne.
 - Régressions : sim-nemesis 46 129, sim-masque 3 583 218, sim-brume 46 602, sim-dernier 4 021 ; bancs némésis 99, complet 46, revue 17, essai 15, banc-complet 228, essai 43, relecture 12, Glas 16, touche 34. `banc-dernier.mjs` : les 4 échecs d'avant, inchangés.
 - À lire sur de vraies descentes (export de l'Archiviste) : la part des morts face à un Masqué (`par:'asm:…'`), le taux de victoire contre elle selon ses points, combien la contournent par les portes, la valeur de la reprise en trophée à l'acte I.
+
+## 29. Les gardiens redessinés (v17.27), action 8 : le banc final et les mesures (1er novembre 2026)
+
+Fait avec Opus 5.5, effort élevé (cadrage G18). Rien du jeu n'a changé : ni `index.html`, ni `render`, ni `SC27`, ni les fonctions de dessin, ni les données. Base : commit `074bdab`.
+
+### Le banc
+
+`_dev/bancs/banc-gardiens-final.mjs <port> <dossier hors dépôt> [RDBPCM]` reprend les neuf points de G17 :
+
+- **R** rejoue les sept bancs des gardiens (`capture-gardiens`, `-heraut`, `-mere`, `-lisibilite`, `-scene`, `-glyphes`, `-portraits`) en sous-processus, sans les recopier, et relit leurs mesures (corps plein, couleurs, durées, portraits). `capture-lisibilite` reçoit une option `BANC_JSON` pour écrire les couleurs qu'il relève et leur origine.
+- **D** descente des quatre formes jusqu'à la victoire sur le Glas (deux salles par acte, puis le gardien joué par un pilote qui frappe et tourne autour, toutes les images dessinées), `dessin.actif` vrai puis faux sur une même graine, comparée image par image.
+- **B** Glas d'essai conduit (`bot=1`, Nova, Soleil posé, Atterrissage ; temps 2 et 3 ; quatre formes ; sans l'Appel, comme au § 26), vrai puis faux.
+- **P** planche finale (§ « Captures ») et lisibilité mesurée sur ses cases.
+- **C** coût de l'image entière (`render`) sur une salle chargée, et des parties qui changent avec l'interrupteur, mesurées en place ; porte et barre de vie avec glyphe.
+- **M** mouvements réduits : le corps (aperçu hors salle) à 12 instants sur 2 s, silhouette pleine (alpha > 200) et voilée (alpha > 64), lueurs à mi-éclat, lumière de salle ; un témoin sans réduction.
+
+Comment il tient : le jeu vit dans une fermeture stricte, donc la page est servie en **copie instrumentée** (interception de Playwright ; le harnais est injecté juste avant le démarrage du jeu, le fichier du dépôt n'est pas touché). L'horloge est à la main (`requestAnimationFrame` retenu, `frame()` appelé à 60 images par seconde, `performance.now()` suit cette horloge sauf pendant les mesures de coût : sans cela, le délai de 400 ms des boutons d'écran rendait la descente non rejouable). Le hasard est une graine ; `render` tire dans une suite à part. Les cinq explosions de l'ancienne mort d'un gardien (minuteurs `later`, posés par `bossDefeated`) tirent aussi dans la suite du dessin (voir « Le hasard après la mort »). Témoin A/A : deux passages avec le dessin final sont identiques image par image.
+
+### Résultats
+
+- **Combat inchangé** (G17.9) : 4 formes × 3 gardiens, 12 combats identiques image par image entre dessin final et ancien dessin (PV, position, temps, état, vulnérabilité, PV du héros, invoqués, tirs, anneaux) ; mêmes PV (2 650, 5 750, 9 000 avec ces réglages), mêmes rayons de touche (48, 48, 62 ; invoqués 14 à 16), mêmes durées (22 à 43 s par gardien), mêmes dégâts subis et infligés, mêmes temps aux mêmes images ; même héros après chaque mort ; aucune erreur de script. Glas d'essai conduit : 8 essais identiques sur 35 s, le Reflet sort (1 geste au temps 2, 2 au temps 3), 0 coup pendant un geste, 0 superposition.
+- **Bancs rejoués** : `capture-heraut` 31, `capture-lisibilite` 399, `capture-scene` 58, `capture-glyphes` 45, `capture-portraits` 42 : tout passe. `capture-gardiens` : son coût isolé du Glas a dépassé une fois (+1,165 ms, puis +0,41 au passage suivant). `capture-mere` : une fois sur trois, « rien du combat ne change » au temps 3 échoue (deux lectures à 150 ms d'écart en temps réel pendant que le jeu tourne ; `mk` converge encore) : défaut du banc, pas du dessin (D le prouve image par image).
+- **Portraits** : ceux du dépôt sont ceux que le dessin final produit (écart moyen 0,4 à 1,3 / 255 par portrait).
+- **Régressions** : `sim-brume` 46 602, `sim-dernier` 4 021, `sim-masque` 3 583 218, `sim-nemesis` 46 129, tout est bon ; `wiki.mjs --check` à jour (portraits compris). Bancs : complet 228, effets 740, touche 34, essai 43 (une fois sur trois « Masqué acte 2 : la bonne salle » a échoué, sans asm ; repassé deux fois sans échec), relecture 12, Glas relecture 16, némésis 99, némésis complet 46, revue 17, essai némésis 15 ; captures du crâne, de la porte et du trousseau sans erreur ; `banc-dernier.mjs` : les 4 échecs d'avant, inchangés. Deux bancs (`banc-touche`, `banc-essai`) réécrivent leurs images de référence dans `_dev/bancs/` : rendues telles qu'elles étaient.
+
+### Mesures
+
+Coût : rendu logiciel (Chromium sans carte graphique, deux cœurs) : l'image entière varie de plusieurs ms d'un passage à l'autre (bruit mesuré : l'ancien dessin mesuré deux fois). Ce qui tranche est la somme des parties qui changent avec l'interrupteur, mesurées en place (gardien : `drawEnemyBody` + `drawEnemyPost` ; scène : `drawScene27` ; Glas : `drawCoeurPost`) ; le brouillard (teinte de lumière seulement) sert de témoin du bruit. Quatre passages, valeurs du dernier.
+
+| | Mère-Brume | Héraut Noyé | Glas Originel |
+|---|---|---|---|
+| Coût en place ×1 (ms, avant → après) | 2,22 → 2,34 (**+0,12**) | 2,16 → 2,22 (**+0,06**) | gardien 2,05 → 2,55, vaisseaux 2,23 → 3,02 (**+1,29**) |
+| Coût en place ×2 | +0,06 | −0,17 | gardien +1,50, vaisseaux +1,63 (**+3,13**) |
+| Sur quatre passages, ×1 / ×2 | −0,21 à +0,12 / +0,05 à +0,76 | −0,11 à +0,06 / −0,34 à +0,21 | **+1,11 à +2,32 / +2,78 à +4,21** |
+| Dessin seul (banc de l'action, temps 3) | +0,38 | +0,58 | +0,41 à +1,17 |
+| Scène d'entrée / de mort contre gardien vivant (ms) | 1,86 / 1,87 | 1,97 / 2,63 | 2,28 / 2,68 |
+| Porte du gardien, deux portes (ms, icône → glyphe ; écart sur quatre passages) | −0,29 à −0,01 | −0,24 à +0,48 | −0,26 à +0,13 |
+| Barre de vie (`updateHud` + mise en page, ms) | 0,060 → 0,063 | 0,065 → 0,067 | 0,070 → 0,063 |
+| ΔE min. lueurs (données, halos, traits, lumière) : orange / violet / cyan / lavande | 41,2 / 69,7 / **30,7** / 42,9 | **29,3** / 87,1 / 45,9 / 65,6 | 46,1 / 82,8 / 44,2 / 62,8 |
+| ΔE min. matière (même ordre) | 41,8 / 69,7 / 34,7 / 42,9 | 54,8 / 90,9 / 43,8 / 66,0 | 58,1 / 80,4 / 48,4 / 66,3 |
+| Corps plein / rayon de touche (max. des bancs) | 1,075 à 1,111 | 1,141 | 1,137 |
+| Entrée (naissance après la bannière, s) | 2,25 à 2,27 | 2,22 à 2,27 | 2,22 à 2,30 |
+| Mort (s) | 1,52 à 1,55 | 1,52 à 1,53 | 1,53 |
+| Contraste corps / sol au repos, temps 1 / 2 / 3 (avant → après) | 4,9 → 5,9 / 5,7 → 6,4 / 5,1 → 5,8 | 6,7 → 5,4 / 6,3 → 5,3 / 5,6 → 5,2 | **6,6 → 4,2 / 7,8 → 3,7 / 7,5 → 3,0** |
+| Ce qui change à l'écran en copie / à nu (écart moyen /255, temps 2) | 13,3 → 11,2 / 16,6 → 13,9 | 4,9 → 3,5 / 5,6 → 6,5 | 9,2 → 4,5 / 12,9 → 8,2 |
+
+Couleurs de copie (les quatre formes, communes aux trois) : 26,3 contre orange et cyan, 58,0 contre violet, 38,1 contre lavande. Toutes les couleurs relevées restent ≥ 25 (G3). Entrée : la bannière dure 2,2 s de jeu par règle (`room.bannerT`) ; le banc la lit à l'image près.
+
+### Défauts pour l'action 9 (rien n'a été réparé ici)
+
+1. **Coût du Glas Originel** (G14, ≤ 1 ms par gardien) : temps 3, salle chargée (5 invoqués, 3 anneaux, 24 tirs), +1,11 à +2,32 ms à densité ×1 et +2,78 à +4,21 ms à ×2 sur quatre passages (Mère-Brume et Héraut : dans le bruit, ≤ +0,76). La plus grosse part est l'enveloppe de `drawCoeurPost` (vaisseaux du sol découpés autour de la cloche par une découpe `evenodd` sur toute la salle) : +0,79 à +1,12 ms (×1), +1,63 à +3,10 ms (×2) ; le corps lui-même +0,29 à +1,25 ms (×1), +0,74 à +1,50 (×2). Les bancs des actions 1 à 7 mesuraient le corps seul sur un canevas isolé et ne voyaient pas la découpe. Piste : couper les vaisseaux sans découpe plein écran (masque de la cloche seulement dans sa boîte, ou vaisseaux mis en cache et posés sous le corps).
+2. **Mouvements réduits, Héraut Noyé, temps 1** (G14 : rien ne balance) : la partie voilée du corps (alpha 64 à 200 : bas de robe, eau, brume autour) bouge encore : 577 px changent sur 9 126 (6,3 % ; 909 sans réduction). Le corps plein ne bouge pas (8 px). Temps 2 : 41 px (0,5 %), temps 3 : 3 px. Image : `rm-ecarts64-reduits-2-t1.png` (rouge et cyan sur les bords de la robe).
+3. **Mouvements réduits, Glas Originel, temps 1 et 2** : même chose sur la frange voilée de la cloche (bosses alternées des deux côtés) : 925 px sur 22 598 (4,1 %) au temps 1, 1 129 sur 21 221 (5,3 %) au temps 2 ; temps 3 : 5 px. Corps plein immobile (10 et 13 px). Images : `rm-ecarts64-reduits-3-t1.png`, `-t2.png`.
+4. **Mouvements réduits, lumière de salle du Glas** : `computeLights` donne au gardien de l'acte III une lumière de rayon `r × 2,4 × (1 + 0,35 × beatK())`, même en mouvements réduits : 148,8 → 160,2 px au temps 1, → 182,3 au temps 2, → 197,2 au temps 3, au fil du battement. La ligne est antérieure à v17.27 (seule sa teinte a changé) ; G14 demande « une variation de lumière sans changement de taille ». À trancher : hors du dessin du corps.
+5. **Banc `capture-mere`** (pas le dessin) : la vérification « rien du combat ne change » du temps 3 lit deux fois l'état à 150 ms d'écart pendant que le jeu tourne ; elle échoue parfois (`mk` converge encore). À rendre déterministe ou à confier à la descente comparée.
+
+### Observations (à juger en relecture, sans seuil au cadrage)
+
+- **Le Glas se lit moins contre le sol** : contraste corps / sol au repos 6,6 → 4,2 (temps 1), 7,8 → 3,7 (temps 2), 7,5 → 3,0 (temps 3) ; luminance du corps 101 → 65, 138 → 63, 119 → 46. La Mère-Brume gagne (4,9 → 5,9), le Héraut perd un peu (6,7 → 5,4).
+- **Copie et point faible du Héraut moins visibles** : écart à l'écran en copie 6,9 → 3,8 (temps 1), 8,3 → 4,7 (temps 3) ; à nu, plus visible au temps 3 (10,6 → 13,1). Le Glas en copie au temps 2 : 9,2 → 4,5.
+- **Le hasard après la mort** : l'ancienne mort pose cinq minuteurs d'explosion qui tirent au hasard quand ils partent ; la nouvelle (SC27) n'en pose aucun (1 minuteur contre 6). Aucune règle ne change, mais la suite du hasard décale : sans graine dans le jeu, aucun effet ; avec une graine (Partition du jour), les récompenses tirées juste après la mort d'un gardien ne seraient plus les mêmes selon le dessin. C'est ce qui faisait diverger les premières descentes du banc (Gouffre, puis Lanterne, au Glas) avant que les explosions ne tirent dans la suite du dessin.
+- Le rendu tire aussi au hasard (suite à part dans le banc) : 4 900 à 10 400 tirages par combat avec le nouveau dessin, 5 000 à 12 200 avec l'ancien. Sans effet aujourd'hui (même remarque que ci-dessus pour une graine).
+- Contrôle : quatre formes et mouvements réduits non touchés, `render`, `SC27` et les fonctions de dessin inchangés (`git diff` : seuls les bancs, leur README, ce document et `CLAUDE.md`).
+
+### Captures
+
+Hors dépôt (jointes au compte rendu) : `gardien-<n>-planche-finale.png` (trois gardiens × trois temps × six états : repos, chant ou salve, ruée / saisie / faisceaux, copie, à nu, fondu ; avant et après au même instant, télégraphes par-dessus), `rm-reduits-<n>.png` et `rm-temoin-<n>.png`, `rm-ecarts64-reduits-<n>-t<t>.png` (écarts des parties voilées), les planches des sept bancs rejoués (`bancs/<banc>/`) et `mesures-gardiens.json`.
+
+### Reste
+
+Action 9 (relecture par un agent séparé, Opus 5.5, effort moyen ; corriger les défauts 1 à 4 si la relecture les confirme, avec Sonnet 5.5, effort moyen) ; action 10 (wiki, journal, version v17.27, `CLAUDE.md`, retrait des anciennes fonctions, push ; Sonnet 5.5, effort faible).
