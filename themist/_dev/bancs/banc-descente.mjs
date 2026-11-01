@@ -32,7 +32,7 @@ const PURGE = () => {
     const r = B.room; if (r.cleared && r.doors && r.doors.length && r.doors.every(d => d.open >= 1)) return { ok: true, i, boss, asm };
     if (r.cleared && (r.type === 'boss' || r.gardeK === 'final') && (!r.doors || !r.doors.length)) return { ok: true, i, fin: true, boss, asm };
     const b = B.enemies.find(e => e.type === 'boss' && !e.dead); if (b && !boss) boss = { name: b.name, maxHp: Math.round(b.maxHp), dmg: b.dmg, r: b.r };
-    const m = r.asm && r.asm.e; if (m && !asm) asm = { garde: m.garde || 0, k: m.gardeK || '', maxHp: Math.round(m.maxHp) };
+    const m = r.asm && r.asm.e; if (m && !asm) { const C = window.BRUME_DATA.bestiaire.assemble.corps[m.type]; asm = { garde: m.garde || 0, k: m.gardeK || '', maxHp: Math.round(m.maxHp), parCorps: Math.round(m.maxHp / ((C && C.pv) || 1)) }; }
     if (!r.cleared && (i % 3 === 0)) B.killAll();
     B.step(1 / 30, 1);
   }
@@ -80,7 +80,8 @@ if (SEC.includes('A')) {
     if (n < 10) ok(JSON.stringify(der.portes) === JSON.stringify([n === 1 ? 'act' : n === 2 ? 'act3' : 'acte']), `A : acte ${n}, une seule porte vers l'acte suivant ${JSON.stringify(der.portes)}`);
   }
   ok(vus.filter(v => v.acte >= 4 && v.asm && v.asm.garde === v.acte && v.asm.k).length >= 7, `A : places provisoires : un Masqué imposé et renforcé (${vus.filter(v => v.asm && v.asm.k).length} / 8)`);
-  const mx = vus.filter(v => v.acte === 10 && v.asm && v.asm.k).map(v => v.asm.maxHp);
+  // v18.2 : comparés à corps égal (PV ÷ pv du corps : un Spectre, ×0,85, après une Brute, ×1,1, faisait échouer le banc au hasard)
+  const mx = vus.filter(v => v.acte === 10 && v.asm && v.asm.k).map(v => v.asm.parCorps);
   ok(mx.length === 3 ? mx[0] < mx[1] && mx[1] < mx[2] : true, `A : acte X, des Masqués de plus en plus endurants ${JSON.stringify(mx)}`);
   ok(vus.length === 47, `A : 47 salles parcourues (${vus.length})`);
   ok(pactes >= 9, `A : un pacte proposé à chaque nouvel acte (${pactes} / 9)`);

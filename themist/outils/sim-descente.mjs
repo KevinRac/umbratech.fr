@@ -9,6 +9,8 @@
 //  4. la sauvegarde (SAVE.descente) : état neuf, sauvegardes abîmées, version future, trous, ancienne sauvegarde ;
 //  5. le déblocage : Normal ouvre Difficile, Difficile ouvre Extrême ; ni l'essai, ni la mort, ni l'abandon n'ouvrent rien ;
 //  6. les branchements du jeu (lecture d'index.html) : registre, Paliers de Brume retirés, montée, victoire au dernier acte, garde de l'essai.
+//  7. les règles des paliers (v18.2, action 3a) : Normal vide, héritage, Masqué, némésis, soins, répit, temps de plus des places provisoires,
+//     règle d'or (gardiens I à III jamais touchés), indice de pression par palier, branchements.
 //   node themist/outils/sim-descente.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -21,7 +23,7 @@ const bloc = n => { const m = html.match(new RegExp(`\\/\\*${n}:pur\\*\\/([\\s\\
 const ctx = { window: {}, Math, console, JSON };
 vm.createContext(ctx);
 for (const f of ['gardiens.js', 'descente.js', 'bestiaire.js', 'icones.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\nthis.F={DES_V,desActes,desSeuil,desMontee,desPorte,desPorteActe,desNeuf,desLire,desEcrire,desChoix,desFin};', ctx);
+vm.runInContext(bloc('des') + '\nthis.F={DES_V,desActes,desSeuil,desMontee,desPorte,desPorteActe,desNeuf,desLire,desEcrire,desChoix,desFin,desFusion,desRegles,desMasque,desNemesis,desSoin,desHalteOk,desTempsEnPlus,desCapEnPlus};', ctx);
 const F = ctx.F, D = ctx.window.BRUME_DATA, GA = D.gardiens, DS = D.descente, BE = D.bestiaire;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
@@ -57,7 +59,7 @@ for (const p of DS.ordre) {
   const X = DS.paliers[p];
   ok(X && X.n && X.court && X.ic, `palier ${p} : nom, ligne, icône`);
   ok(new RegExp(`\\b${X.ic}:`).test(icTxt), `palier ${p} : icône ${X.ic} présente dans icones.js`);
-  ok(DS.regles[p] && typeof DS.regles[p] === 'object' && Object.keys(DS.regles[p]).length === 0, `palier ${p} : aucune règle pour l'instant (action 3)`);
+  ok(DS.regles[p] && typeof DS.regles[p] === 'object' && (p === 'normal') === (Object.keys(DS.regles[p]).length === 0), `palier ${p} : ${p === 'normal' ? 'aucune règle (Normal ne change pas)' : 'des règles (action 3)'}`);
 }
 // secret (cadrage D8) : rien dans les textes de la descente ne parle du Brumeux ni de règles mutantes
 const textes = [...DS.actes.flatMap(a => [a.name, a.done, a.boss || '']), ...DS.ordre.flatMap(p => [DS.paliers[p].n, DS.paliers[p].court])].join(' ');
@@ -192,6 +194,155 @@ has(/function essai\(n,o\)\{[^]*?RUN\.essai=1;/, 'l’essai de la descente pose 
 has(/ACTD\[ACTE\(\)\]\.rooms-1;/, 'l’antichambre suit l’acte de la descente');
 ok(!/ACTS\[RUN\.act\]\.rooms/.test(html.replace(/AA=ACTS\[RUN\.act\][^;]*;/g, '')), 'jeu : plus de nombre de salles lu sur le registre (hors némésis)');
 
+// ── 7. Règles des paliers (v18.2, action 3a ; cadrage claude/la-brume-v18-3-paliers-cadrage.md)
+const AS = BE.assemble, NM = AS.nemesis;
+const R = { normal: F.desRegles(DS, 'normal'), difficile: F.desRegles(DS, 'difficile'), extreme: F.desRegles(DS, 'extreme') };
+const CLES = ['masque', 'soins', 'gardien', 'nemesis', 'repit', 'brumeux'];
+ok(eq(R.normal, {}), 'Normal : aucune règle (la descente de la v18.1, au bit près)');
+ok(eq(F.desRegles(DS, 'inconnu'), {}), 'palier inconnu : aucune règle');
+for (const p of DS.ordre) ok(Object.keys(R[p]).every(k => CLES.includes(k)), `${p} : seulement des règles connues (${Object.keys(R[p]).join(', ')})`);
+ok(DS.regles.extreme.herite === 'difficile' && !('herite' in R.extreme), 'Extrême hérite de Difficile (Q1), la clé herite ne reste pas dans les règles');
+ok(eq(R.extreme.masque, R.difficile.masque) && eq(R.extreme.gardien, R.difficile.gardien) && eq(R.extreme.soins.sources, R.difficile.soins.sources), 'Extrême reprend les Masqués, le temps de plus et les sources de soin de Difficile');
+ok(R.extreme.soins.monde < R.difficile.soins.monde && R.difficile.soins.monde < 1, 'soins du monde : Normal > Difficile > Extrême');
+ok(R.extreme.soins.gardien === 0 && R.difficile.soins.gardien > 0 && R.difficile.soins.gardien < 1, 'soin qui suit un gardien : réduit en Difficile, aucun en Extrême');
+ok(!DS.regles.difficile.nemesis && !DS.regles.difficile.repit && !DS.regles.difficile.brumeux, 'Difficile : ni némésis, ni répit, ni Brumeux (Extrême seulement)');
+ok(R.extreme.brumeux && R.extreme.brumeux.phaseEntiere === true, 'Extrême : le Brumeux a sa phase finale entière (lu à l’action 5)');
+{ // héritage : copie neuve, sans effet de bord sur les données
+  const a = F.desRegles(DS, 'extreme'); a.soins.sources.push('x'); a.masque.chance = 1;
+  ok(DS.regles.difficile.soins.sources.length === 3 && DS.regles.difficile.masque.chance === 70 && F.desRegles(DS, 'extreme').masque.chance === 70, 'desRegles rend une copie neuve (les données ne bougent pas)');
+  const boucle = { regles: { a: { herite: 'b', x: 1 }, b: { herite: 'a', y: 2 } } };
+  ok(eq(F.desRegles(boucle, 'a'), { y: 2, x: 1 }), 'héritage en boucle : il s’arrête');
+  ok(eq(F.desFusion({ a: { b: 1, c: [1, 2] } }, { a: { c: [3] } }), { a: { b: 1, c: [3] } }), 'fusion profonde : les tableaux remplacent');
+}
+// Masqué (Q2)
+const baseM = { chance: AS.chance, souvenir: { chance: AS.souvenir.chance, parActe: AS.souvenir.parActe } };
+ok(eq(F.desMasque(baseM, R.normal), baseM), 'Masqué, Normal : chance, souvenirs et porteurs par acte de bestiaire.js, inchangés');
+ok(eq(F.desMasque(baseM, R.difficile), { chance: 70, souvenir: { chance: 75, parActe: 3 } }), 'Masqué, Difficile : 70 %, souvenir 75 %, 3 porteurs par acte');
+ok(F.desMasque(baseM, R.extreme).chance === 70, 'Masqué, Extrême : comme Difficile');
+ok(AS.chance === 50 && AS.souvenir.chance === 50 && AS.souvenir.parActe === 2, 'bestiaire.js garde les valeurs de Normal (le palier les pose en jeu, sans toucher aux données)');
+// Némésis (Q8, secret)
+const nb = { parActe: NM.parActe, repit: NM.repit };
+ok(eq(F.desNemesis(nb, R.normal), { parActe: 1, repitMorts: 3 }) && eq(F.desNemesis(nb, R.difficile), { parActe: 1, repitMorts: 3 }), 'némésis : Normal et Difficile inchangés');
+{ const n = F.desNemesis(nb, R.extreme); ok(n.parActe === 2 && n.repitMorts === Infinity, 'némésis, Extrême : deux par acte, plus de répit'); }
+// Soins (Q3, Q8)
+const sources = [...new Set([...html.matchAll(/\bheal\([^;]*?,'([a-z]+)'\)/g)].map(m => m[1]))];
+const monde = R.difficile.soins.sources, constr = sources.filter(s => !monde.includes(s));
+ok(monde.every(s => sources.includes(s)), `soins : chaque source du monde existe dans le jeu (${monde.join(', ')})`);
+ok(['devour', 'steal', 'kill', 'rupture', 'carapace', 'ames', 'fil', 'boss'].every(s => constr.includes(s)), 'soins : les soins venus des talents (Dévoration, vol de vie, survie du Gouffre…) ne sont pas du monde');
+for (const s of sources) {
+  ok(F.desSoin(R.normal, s, false) === 1, `soin ${s}, Normal : ×1`);
+  ok(F.desSoin(R.difficile, s, false) === (monde.includes(s) ? 0.65 : 1), `soin ${s}, Difficile : ×${monde.includes(s) ? 0.65 : 1}`);
+  ok(F.desSoin(R.extreme, s, false) === (monde.includes(s) ? 0.5 : 1), `soin ${s}, Extrême : ×${monde.includes(s) ? 0.5 : 1}`);
+}
+ok(F.desSoin(R.normal, 'boss', true) === 1 && F.desSoin(R.difficile, 'boss', true) === 0.65 && F.desSoin(R.extreme, 'boss', true) === 0, 'soin complet après un gardien : ×1, ×0,65, ×0');
+// Répit (Q8) : halte au choix seulement dans la seconde moitié de l'acte en Extrême ; l'antichambre (imposée) n'est jamais concernée
+for (let n = 1; n <= DS.nombre; n++) {
+  const A = L[n];
+  for (let next = 1; next < A.rooms; next++) {
+    ok(F.desHalteOk(R.normal, next, A.rooms) && F.desHalteOk(R.difficile, next, A.rooms), `halte, acte ${n} salle ${next} : Normal et Difficile inchangés`);
+    ok(F.desHalteOk(R.extreme, next, A.rooms) === (next >= Math.ceil(A.rooms / 2)), `halte, acte ${n} salle ${next}, Extrême : ${next >= Math.ceil(A.rooms / 2) ? 'permise' : 'retirée'}`);
+  }
+  if (A.antichambre !== false) ok(F.desHalteOk(R.extreme, A.rooms - 1, A.rooms), `acte ${n} : l'antichambre reste en Extrême`);
+}
+// Temps de plus (Q4) et règle d'or : jamais aux actes I à III, dans aucun palier
+for (const p of DS.ordre) for (let n = 1; n <= DS.nombre; n++) {
+  const T = F.desTempsEnPlus(R[p], n), veut = p !== 'normal' && n >= 4;
+  ok(!!T === veut, `temps de plus, ${p}, acte ${n} : ${veut ? 'oui' : 'non'}`);
+}
+ok(F.desTempsEnPlus({ gardien: { desActe: 1, tempsEnPlus: { pv: 35 } } }, 2) === null, 'règle d’or : même une règle mal écrite (desActe 1) ne touche pas les gardiens I à III');
+{ // 4ᵉ capacité : sur toutes les combinaisons du Masqué au registre 3 (sans arme de la Brume), combien en reçoivent une ?
+  const T = R.difficile.gardien.tempsEnPlus, inc = (a, b) => AS.incompatibles.some(([x, y]) => (x === a && y === b) || (x === b && y === a)), men = k => AS.capacites[k].menace;
+  const K = Object.keys(AS.capacites), plaf = AS.budgetMenace[3];
+  let n = 0, avec = 0; const parCap = {};
+  for (const ck in AS.corps) {
+    const C = AS.corps[ck], S = AS.signatures[C.signature]; if (!S) continue;
+    const okK = K.filter(k => !(C.exclut || []).includes(k));
+    for (let i = 0; i < okK.length; i++) for (let j = i + 1; j < okK.length; j++) for (const c of okK) {
+      const a = okK[i], b = okK[j]; if (c === a || c === b || inc(a, b) || inc(a, c) || inc(b, c)) continue;
+      const m = C.menace + S.menace + men(a) + men(b) + men(c); if (m > plaf) continue;
+      const co = { corps: ck, depart: [a, b], eveil: c, menace: m }; n++;
+      let seq = 0; const rnd = () => (seq++ * 0.37) % 1;
+      const x = F.desCapEnPlus(AS, co, T, plaf, { incomp: inc, menace: men }, rnd);
+      if (x) { avec++; parCap[x] = (parCap[x] || 0) + 1;
+        ok(![a, b, c].includes(x) && !(C.exclut || []).includes(x) && ![a, b, c].some(y => inc(x, y)) && m + men(x) <= plaf + T.margeMenace, `4ᵉ capacité ${ck}:${a}+${b}>${c} → ${x} : nouvelle, permise, compatible, sous plafond + marge`); }
+    }
+  }
+  ok(n > 0, `temps de plus : combinaisons du registre 3 (${n}) ; une 4ᵉ capacité pour ${avec}, la signature redoublée pour les autres`);
+  ok(F.desCapEnPlus(AS, null, T, plaf, { incomp: inc, menace: men }, Math.random) === null && F.desCapEnPlus(AS, { corps: Object.keys(AS.corps)[0], depart: ['a', 'b'], eveil: 'c', menace: 0 }, null, plaf, {}, Math.random) === null, 'sans combinaison ou sans règle : pas de 4ᵉ capacité');
+  globalThis.TEMPS = { n, avec, parCap };
+}
+{ // le temps de plus en jeu : asmPas et asmCycle (bloc /*asm:pur*/), sur toutes les combinaisons du registre 3 sans arme de la Brume
+  const am = html.match(/\/\*asm:pur\*\/([\s\S]*?)\/\*\/asm:pur\*\//), sm = html.match(/\/\*sb:pur\*\/([\s\S]*?)\/\*\/sb:pur\*\//);
+  const c2 = { window: {}, Math, console }; vm.createContext(c2);
+  for (const f of ['bestiaire.js', 'souvenirs.js', 'souvenirs-brume.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), c2);
+  vm.runInContext(am[1] + sm[1] + '\nthis.F={asmRng,asmCombos,asmNouveau,asmPas,asmCycle,asmIncomp,asmMenace};', c2);
+  const G = c2.F, A2 = c2.window.BRUME_DATA.bestiaire.assemble, J2 = c2.window.BRUME_DATA.souvenirsBrume, T = R.difficile.gardien.tempsEnPlus;
+  let combats = 0, doubles = 0;
+  for (const co of G.asmCombos(A2, { act: 3, salle: 18, J: J2 })) for (let rep = 0; rep < 20; rep++) {
+    combats++;
+    const rnd = G.asmRng(rep * 131 + co.cle.length), st = G.asmNouveau(A2, co, []), sig = st.sig;
+    const cap = F.desCapEnPlus(A2, co, T, A2.budgetMenace[3], { incomp: (a, b) => G.asmIncomp(A2, a, b, J2), menace: k => G.asmMenace(A2, J2, k) }, rnd);
+    st.temps = { cap: cap || sig, pv: T.pv, on: false };
+    let t = 0, pv = 100, active = null, last = null, eveils = [], apres = [], dur = 70 + rep;
+    while (t < dur) {
+      const dt = 0.005 + rnd() * 0.03; t += dt; pv = Math.max(1, 100 - t * (100 / dur) * 1.3);
+      for (const [ev, k] of G.asmPas(A2, st, { dt, act: 3, pv, er: 22, dist: 40, autre: rnd() < 0.02, fige: false, vivant: false, etourdi: false }, rnd, J2)) {
+        if (ev === 'eveil') eveils.push([k, pv]);
+        if (ev === 'charge') { ok(active === null, `temps de plus ${co.cle} : deux zones à la fois`); ok(k !== last, `temps de plus ${co.cle} : ${k} deux fois de suite`); active = k; last = k; if (st.temps.on) apres.push(k); }
+        if (ev === 'fin') active = null;
+      }
+    }
+    ok(eveils.length === 2 && eveils[0][0] === co.eveil && eveils[1][0] === st.temps.cap && eveils[1][1] <= T.pv && eveils[0][1] > eveils[1][1], `temps de plus ${co.cle} : l'éveil, puis le temps de plus sous ${T.pv} % (${eveils.map(e => e[0] + '@' + e[1].toFixed(0)).join(', ')})`);
+    if (st.temps.cap === sig) { const n = apres.filter(k => k === sig).length, autres = apres.filter(k => k !== sig).length; if (autres >= 9) { ok(n >= 2 * Math.floor(autres / 3) - 2, `temps de plus ${co.cle} : signature redoublée (${n} signatures pour ${autres} capacités)`); doubles++; } }
+  }
+  ok(combats > 0 && doubles > combats / 2, `temps de plus : signature redoublée vérifiée sur ${doubles} combats sur ${combats}`);
+  { // sans temps de plus, asmCycle tire exactement comme avant (même nombre de tirages, même ordre)
+    const r1 = G.asmRng(7), r2 = G.asmRng(7); let same = true;
+    for (let i = 0; i < 2000; i++) { const caps = ['explosion', 'cone', 'tirs'].slice(0, 2 + (i % 2)); const x = G.asmCycle(caps, 'fracas', i % 3 ? null : caps[0], r1);
+      const a = caps.slice(); for (let j = a.length - 1; j > 0; j--) { const q = Math.floor(r2() * (j + 1)); const y = a[j]; a[j] = a[q]; a[q] = y; } if (a.length > 1 && a[0] === (i % 3 ? null : caps[0])) a.push(a.shift()); a.push('fracas');
+      if (!eq(x, a)) same = false; }
+    ok(same, 'asmCycle sans signature redoublée : le cycle d’avant la v18.2, tirage pour tirage');
+  }
+}
+// Indice de pression par palier (Q13) : modèle grossier, à recaler sur le banc et sur des parties exportées.
+// Charge : vagues de combat (1 par salle de combat), Masqués attendus (2 vagues chacun), porteurs de souvenir (+0,5), temps de plus (+0,5 par place provisoire).
+// Soin : part du monde (60 % des soins reçus, hypothèse) × facteur + part des talents (40 %) ; le soin complet des gardiens I et II compte 2 salles de soin.
+const pression = p => {
+  const Rp = R[p], M = F.desMasque(baseM, Rp); let charge = 0, soin = 0;
+  for (let n = 1; n <= DS.nombre; n++) {
+    const A = L[n], fins = 1 + (A.miniboss || 0), comb = A.rooms - fins - (A.antichambre !== false ? 1 : 0);
+    const elig = Math.max(0, comb - (AS.premiereSalle - 1)), masq = elig * M.chance / 100;
+    const port = Math.min(M.souvenir.parActe, masq * M.souvenir.chance / 100);
+    charge += comb + 2 * masq + 0.5 * port + (F.desTempsEnPlus(Rp, n) ? 0.5 * fins : 0);
+    const fs = Rp.soins ? Rp.soins.monde : 1, fg = Rp.soins ? Rp.soins.gardien : 1;
+    soin += comb * (0.6 * fs + 0.4) + (n <= 2 ? 2 * fg : 0);
+  }
+  return charge / soin;
+};
+const PRS = Object.fromEntries(DS.ordre.map(p => [p, pression(p)]));
+const ecart = p => PRS[p] / PRS.normal - 1;
+// le modèle ne juge pas l'équilibre (ses poids sont des hypothèses) : il garde l'ordre des paliers et borne l'écart ; le banc mesure
+ok(ecart('difficile') > 0.1 && ecart('extreme') > ecart('difficile') + 0.1, `pression : Normal < Difficile < Extrême (+${(ecart('difficile') * 100).toFixed(0)} %, +${(ecart('extreme') * 100).toFixed(0)} %)`);
+ok(ecart('extreme') <= 1.2, `pression, Extrême hors mutations : au plus +120 % (${(ecart('extreme') * 100).toFixed(0)} %)`);
+// Branchements (bloc v18 d'index.html)
+has(/const regles=p=>RGC\[p\]\|\|\(RGC\[p\]=desRegles\(DES_D,p\)\);/, 'les règles viennent de desRegles (data/descente.js)');
+has(/function appliquer\(p\)\{if\(!BASE18\)return;const R=regles\(p\),M=desMasque\(BASE18,R\);/, 'Masqué : réglages posés depuis une copie des valeurs d’origine (desMasque)');
+has(/startRun=function\(\)\{const r=_sr18b\.apply\(this,arguments\);try\{appliquer\(/, 'Masqué et némésis : réglages posés à chaque départ de descente');
+has(/RUN\.palierD!==ORD\[0\]\)\{const R=RG\(\);/, 'soins : Normal ne passe pas par les règles');
+has(/const f=desSoin\(R,src,g\);/, 'soins : desSoin');
+has(/!desHalteOk\(RG\(\),next,A\.rooms\)/, 'répit : desHalteOk dans makeDoors');
+has(/room\.gardeK&&room\.asm&&room\.asm\.e===e&&!e\.asm\.st\.temps\?desTempsEnPlus\(RG\(\),ACTE\(\)\)/, 'temps de plus : seulement le Masqué d’une place provisoire (porte garde, mini ou final)');
+has(/e\.asm\.st\.temps=\{cap:cap\|\|e\.asm\.st\.sig,pv:T\.pv,on:false\}/, 'temps de plus : sans 4ᵉ capacité possible, la signature redoublée');
+has(/if\(st\.temps&&!st\.temps\.on&&st\.eveil&&env\.pv<=st\.temps\.pv\)/, 'temps de plus : asmPas l’éveille après la troisième capacité, à st.temps.pv');
+has(/Tes PV sont en partie restaurés\./, 'le message de victoire sur un gardien dit ce qui est rendu');
+{ // wiki (Q11) : les règles des paliers sont dites, la némésis et la phase finale du boss final sont tues
+  const W = readFileSync(join(ROOT, 'wiki.html'), 'utf8'), i = W.indexOf('id="descente"'), sec = i >= 0 ? W.slice(i, W.indexOf('</section>', i)) : '';
+  ok(/Les paliers/.test(sec) && /un temps de plus/.test(sec) && /×0,65/.test(sec) && /×0,5/.test(sec) && /Aucun répit/.test(sec), 'wiki : les règles de Difficile et d’Extrême sont dites');
+  ok(!/n[ée]m[ée]sis|brumeux|phase finale|mutant|mutation/i.test(sec), 'wiki : ni némésis, ni Brumeux, ni phase finale, ni mutation dans la section de la descente');
+}
+ok(!/regles\.(difficile|extreme)|palierD==='(difficile|extreme)'/.test(html), 'jeu : aucun palier écrit en dur (tout passe par les règles)');
+
+console.log(`  paliers : pression Difficile +${(ecart('difficile') * 100).toFixed(0)} %, Extrême +${(ecart('extreme') * 100).toFixed(0)} % (modèle) ; temps de plus : ${TEMPS.avec}/${TEMPS.n} combinaisons (${Object.entries(TEMPS.parCap).map(([k, v]) => k + ' ' + v).join(', ')}) ; sources de soin du jeu : ${sources.join(', ')}`);
 console.log(`sim-descente : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
 console.log(`  actes : ${L.slice(1).map(a => `${a.rooms}${a.fin === 'final' ? 'F' : 'G'}`).join(' · ')} (47 salles, 37 hors fins) ; montée fin III ×${mI.pv.toFixed(3)} PV ×${mI.degats.toFixed(2)} dégâts, fin IX ×${mX.pv.toFixed(3)} ×${mX.degats.toFixed(2)} (ancienne pente : ×${ancien.toFixed(2)})`);
 process.exit(fails ? 1 : 0);

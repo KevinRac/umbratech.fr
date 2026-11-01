@@ -223,7 +223,27 @@ function reliques(list, F, S) {
 }
 
 // ── Section « La descente » (v18 : data/descente.js et gardiens.js, actes). Le wiki dit les actes, les paliers et leur déblocage ;
-// il ne dit rien du combat final ni de règles propres aux paliers (il n'y en a pas encore).
+// v18.2 : les règles de Difficile et d'Extrême (regles, héritage résolu ici comme desRegles le fait en jeu). Il tait le combat final,
+// la phase finale du boss final (brumeux) et la némésis (nemesis : secret, aucun texte n'en parle).
+function reglesDe(DS, p) {
+  const fus = (a, b) => { const o = Object.assign({}, a); for (const k of Object.keys(b || {})) { const v = b[k]; o[k] = v && typeof v === 'object' && !Array.isArray(v) && o[k] && typeof o[k] === 'object' ? fus(o[k], v) : v; } return o; };
+  const ch = [], vu = []; for (let q = p; q && DS.regles[q] && !vu.includes(q); q = DS.regles[q].herite) { vu.push(q); ch.unshift(DS.regles[q]); }
+  return ch.reduce((o, r) => { const x = Object.assign({}, r); delete x.herite; return fus(o, x); }, {});
+}
+function lignesPalier(DS, B, p) {
+  const R = reglesDe(DS, p), H = DS.regles[p] && DS.regles[p].herite, RH = H ? reglesDe(DS, H) : {}, AS = B.assemble, L = [];
+  const fois = x => '×' + num(x), neuf = (k, f) => !H || JSON.stringify(f(R)) !== JSON.stringify(f(RH));
+  if (H) L.push(`Tout ce que change <b>${esc(DS.paliers[H].n)}</b>, et :`);
+  if (R.masque && neuf('masque', r => r.masque)) { const M = R.masque, S = M.souvenir || {};
+    L.push(`Le <a href="#bestiaire">Masqué</a> vient dans ${M.chance != null ? M.chance : AS.chance} % des salles où il peut venir (${AS.chance} % en Normal) et porte plus souvent un de tes souvenirs (${S.chance != null ? S.chance : AS.souvenir.chance} %, jusqu’à ${S.parActe != null ? S.parActe : AS.souvenir.parActe} par acte).`); }
+  if (R.soins && neuf('soins', r => [r.soins.monde, r.soins.gardien])) { const S = R.soins;
+    if (S.monde != null) L.push(`Les soins que t’offre la descente (fin de salle, niveau, halte, et ce qui soigne comme une halte) : ${fois(S.monde)}. Ceux de tes talents ne changent pas.`);
+    if (S.gardien != null) L.push(S.gardien > 0 ? `Après la victoire sur un gardien des actes I à III, tu récupères ${Math.round(S.gardien * 100)} % de tes PV au lieu de tous.` : 'Après la victoire sur un gardien des actes I à III, la Brume ne te rend rien.'); }
+  if (R.gardien && R.gardien.tempsEnPlus && neuf('gardien', r => r.gardien)) L.push(`Les gardiens des actes ${ROM[Math.max(4, R.gardien.desActe || 4)]} à IX, les miniboss et le boss final ont <b>un temps de plus</b> : sous ${R.gardien.tempsEnPlus.pv} % de PV, une nouvelle attaque s’éveille. Pour l’instant, leur place est tenue par un Masqué : c’est son sort signature qui revient deux fois par cycle. Les gardiens des actes I à III ne changent pas.`);
+  if (R.repit && R.repit.halteDes) L.push(`Aucun répit : pas de halte au choix avant la ${R.repit.halteDes === 0.5 ? 'moitié' : pct(R.repit.halteDes)} de chaque acte (l’antichambre des actes I à III reste).`);
+  if (!L.length) L.push('Aucune règle en plus.');
+  return `<ul class="rg">${L.map(x => `<li>${x}</li>`).join('')}</ul>`;
+}
 function descente(DS, G, B, I) {
   const ico = id => (I && I[id]) ? `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
   const actes = [...G.actes.map((a, i) => Object.assign({ fin: 'gardien' }, a, { n: i + 1 })), ...DS.actes.slice(0, DS.nombre - G.actes.length).map((a, i) => Object.assign({}, a, { n: G.actes.length + i + 1 }))];
@@ -234,7 +254,7 @@ function descente(DS, G, B, I) {
     : a.boss ? esc(a.boss) : `Gardien à venir (pour l’instant, un Masqué : PV ×${num(PV.fin.pv[a.n])})`;
   const lignes = actes.map(a => `<tr><td>${ROM[a.n]}</td><td><b>${esc(a.name)}</b></td><td>${a.rooms}</td><td>${finDe(a)}</td></tr>`).join('\n');
   const ouvre = p => { const o = DS.paliers[p].ouvrePar; return o ? `Gagne une descente en <b>${esc(DS.paliers[o].n)}</b>.` : 'Ouvert dès le départ.'; };
-  const cartes = DS.ordre.map(p => { const X = DS.paliers[p]; return `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(X.court)}</p><p class="k">${ouvre(p)}</p></article>`; }).join('');
+  const cartes = DS.ordre.map(p => { const X = DS.paliers[p]; return `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(X.court)}</p>${lignesPalier(DS, B, p)}<p class="k">${ouvre(p)}</p></article>`; }).join('');
   const reg = actes.find(a => a.n === DS.registre);
   return `<section class="sec" id="descente" data-sec>${MARK('data/descente.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>La descente</h2><div class="lede"><p>Une descente compte <b>${mot(DS.nombre)} actes</b> (${total} salles, fins d’acte comprises). Chaque acte se termine par un gardien : la Mère-Brume, le Héraut Noyé et le Glas Originel pour les actes I à III, six nouveaux gardiens pour les actes IV à IX. L’acte X enchaîne deux salles de <b>miniboss</b>, puis le <b>boss final</b>. Les nouveaux gardiens et le boss final arrivent dans les prochaines versions : en attendant, leur place est tenue par un Masqué renforcé, et les actes IV à X reprennent le décor et les ennemis de l’acte ${ROM[DS.registre]} (${esc(reg.name)}).</p><p>Une descente vise environ <b>${DS.dureeCible.normale} minutes</b> en Normal (${DS.dureeCible.rapide} pour un joueur rapide).</p></div></header>
 <h3 class="sub">Les dix actes</h3>
@@ -243,7 +263,7 @@ ${lignes}</tbody></table>
 <p>Aux actes I à III, la salle avant le gardien est une halte imposée (l’antichambre). Aux actes IV à IX, il n’y en a pas : la troisième salle se choisit comme les autres, puis vient le gardien. À l’acte X, les trois salles sont imposées : deux miniboss, puis le boss final. Chaque nouvel acte apporte un pacte et une relance de talents de plus.</p>
 <p>Les ennemis gagnent <b>${pct(B.montee.pvParSalle)} de PV</b> et <b>${pct(B.montee.degatsParSalle)} de dégâts</b> par salle jusqu’à la fin de l’acte ${ROM[DS.montee.apresActe]}, puis <b>${pct(DS.montee.pvParSalle)}</b> et <b>${pct(DS.montee.degatsParSalle)}</b> par salle.</p>
 <h3 class="sub">Les paliers</h3>
-<p>Choisis ton palier sur l’écran titre ou au Portail du Sanctuaire. Gagner une descente (vaincre le boss final) ouvre le palier suivant ; une descente d’essai n’ouvre rien. Pour l’instant, les trois paliers jouent la même descente : leurs règles arrivent dans une prochaine version.</p>
+<p>Choisis ton palier sur l’écran titre ou au Portail du Sanctuaire. Gagner une descente (vaincre le boss final) ouvre le palier suivant ; une descente d’essai n’ouvre rien. Chaque palier ajoute des règles, jamais un simple mur de PV : en Normal, la descente est celle que décrit ce wiki ; Difficile et Extrême la changent autour des gardiens des actes I à III, jamais leur combat. Le palier joué se lit en haut de l’écran, à côté de l’acte.</p>
 <div class="grid g3">${cartes}</div>
 </section>`;
 }

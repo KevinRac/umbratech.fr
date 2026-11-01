@@ -43,6 +43,30 @@
   normal:{n:'Normal',ic:'u_fog',court:'La descente telle qu’elle est conçue : on la finit en apprenant.'},
   difficile:{n:'Difficile',ic:'u_warn',ouvrePar:'normal',court:'Pour qui a déjà vu le fond.'},
   extreme:{n:'Extrême',ic:'u_skull',ouvrePar:'difficile',court:'Pour qui veut y laisser sa peau.'}},
- // Règles propres à chaque palier : posées à l'action 3 du chantier v18. Vides : les trois paliers jouent la même descente.
- regles:{normal:{},difficile:{},extreme:{}}
+ // Règles propres à chaque palier (action 3 du chantier v18, cadrage claude/la-brume-v18-3-paliers-cadrage.md, Q1–Q14).
+ // Normal : vide, et doit le rester (la descente Normal est celle de la v18.1). Les gardiens des actes I à III ne sont jamais touchés :
+ // les règles jouent autour d'eux (salles, Masqués, soins), jamais sur leur combat. Logique pure : desRegles et suivantes (bloc /*des:pur*/).
+ // herite : le palier reprend les règles de celui-ci, puis les siennes par-dessus (fusion profonde).
+ // masque : remplace assemble.chance et assemble.souvenir.{chance, parActe} de bestiaire.js pendant la descente (plus fréquents, plus de souvenirs).
+ // soins : sources = soins « du monde » (ceux que le jeu offre : fin de salle, niveau, halte, ainsi que la fiole, les tombes et le palier gagné,
+ //   qui passent par la source halte) ; monde : × sur ces soins ; gardien : × sur le soin complet qui suit la victoire sur un gardien (actes I à III).
+ //   Les soins venus des talents (Dévoration, vol de vie, survie du Gouffre contre un fort…) ne changent pas.
+ // gardien : à partir de l'acte desActe (jamais I à III), le gardien a un temps de plus. Tant que sa place est provisoire (un Masqué), ce temps est
+ //   une quatrième capacité qui s'éveille à pv % de PV, tirée parmi celles qu'il n'a pas, compatible, sous le plafond de menace + margeMenace ;
+//   si aucune ne tient (le cas de toutes les combinaisons d'aujourd'hui : exclusions des corps, explosion et onde jamais ensemble), c'est sa
+//   signature qui revient deux fois par cycle. Même rituel que l'éveil (signal, carte, icône).
+ // nemesis (jamais écrit au wiki) : parActe remplace assemble.nemesis.parActe ; repit faux : plus de répit après plusieurs morts de suite.
+ // repit : halteDes : pas de halte au choix avant cette part de l'acte (l'antichambre imposée reste).
+ // brumeux : lu par le boss final (action 5).
+ regles:{
+  normal:{},
+  difficile:{
+   masque:{chance:70,souvenir:{chance:75,parActe:3}},
+   soins:{sources:['room','level','halte'],monde:0.65,gardien:0.65},
+   gardien:{desActe:4,tempsEnPlus:{pv:35,margeMenace:1}}},
+  extreme:{herite:'difficile',
+   soins:{monde:0.5,gardien:0},
+   nemesis:{parActe:2,repit:false},
+   repit:{halteDes:0.5},
+   brumeux:{phaseEntiere:true}}}
 };})(window.BRUME_DATA=window.BRUME_DATA||{});
