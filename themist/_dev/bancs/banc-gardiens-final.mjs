@@ -429,7 +429,7 @@ if (SEC.includes('C')) {
   console.log('\n══ C · coût par image ══');
   M.cout = {};
   const INV = { 1: ['rampant', 'rampant', 'rampant', 'rampant'], 2: ['rampant', 'hurleur', 'bouffi', 'bouffi', 'rampant'], 3: ['voile', 'rampant', 'rampant', 'bouffi', 'voile'] };
-  for (const dpr of [2, 1]) for (const act of ACTES) {
+  for (const dpr of (process.env.BANC_DPR || '2,1').split(',').map(Number)) for (const act of ACTES) {
     const H = await salleGardien(browser, act, { dpr, seed: 31 + act, actif: true });
     H.page.on('crash', () => console.error(`page plantée : acte ${act}, ×${dpr}`));
     await H.page.evaluate(() => window.__h.temps(3));

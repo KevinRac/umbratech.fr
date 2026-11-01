@@ -1238,7 +1238,7 @@ function computeLights(){
   if(P.zenithT>0)lights.push({x:W/2,y:H/2,r:760,ex:false,c:'none'});
  }
  for(const e of enemies)if(!e.dead&&e.type==='hurleur'&&e.state==='sing')lights.push({x:e.x,y:e.y,r:70,ex:false,c:'cold'});
- for(const e of enemies)if(!e.dead&&e.type==='boss')lights.push({x:e.x,y:e.y,r:e.r*2.4*(RUN.act===3?1+0.35*beatK():1),ex:false,c:RUN.act===2?(g27Actif(2)?'lampe':'cold'):RUN.act===3&&g27Actif(3)?'glas':RUN.act===1&&g27Actif(1)?'perle':'violet'});   // v17.27 : la lumière du gardien suit sa lueur (G3 : la lampe d'Ismène, le battement du Glas, la brume perle de la Mère-Brume), rayon inchangé
+ for(const e of enemies)if(!e.dead&&e.type==='boss')lights.push({x:e.x,y:e.y,r:e.r*2.4*(RUN.act===3?1+(RM&&g27Actif(3)?0:0.35*beatK()):1),ex:false,c:RUN.act===2?(g27Actif(2)?'lampe':'cold'):RUN.act===3&&g27Actif(3)?'glas':RUN.act===1&&g27Actif(1)?'perle':'violet'});   // v17.27 : la lumière du gardien suit sa lueur (G3 : la lampe d'Ismène, le battement du Glas, la brume perle de la Mère-Brume), rayon inchangé
  if(room&&room.pillars)for(const q of room.pillars)if(q.kind==='crystal')lights.push({x:q.x,y:q.y-10,r:95,ex:false,c:'violet'});
  if(room&&room.candles)for(const k of room.candles)lights.push({x:k.x,y:k.y,r:k.wall?60:88,ex:false,c:'warm'});
  if(room&&room.npcs)for(const n of room.npcs)if(n.light)lights.push({x:n.lx||n.x,y:n.ly||n.y,r:n.light,ex:false,c:n.tint});
@@ -2379,7 +2379,8 @@ function drawEnemyPost(e){
  if(e.type==='boss')drawBossPost(e);
  if(e.enraged)glow(c,e.x,e.y,r*1.7,'255,60,60',0.26+0.1*Math.sin(T*10+e.wob));
  const col=e.puppet>0?'255,140,190':e.enraged?'255,70,70':e.hasteT>0?'120,255,240':(EYE[e.type]||'255,255,255');
- for(const [ex,ey,s] of eyePts(e)){glow(c,ex,ey,s*3.4,col,0.45);c.fillStyle=`rgba(${col},1)`;c.beginPath();c.arc(ex,ey,s*0.75,0,TAU);c.fill();}
+ const fdE=e.type==='boss'&&!e.reflet&&RUN&&g27Actif(RUN.act)&&e.fade!=null?e.fade:1;   // v17.27 (G13) : les yeux d'un gardien redessiné s'effacent avec lui pendant une esquive
+ for(const [ex,ey,s] of eyePts(e)){glow(c,ex,ey,s*3.4,col,0.45*fdE);c.fillStyle=`rgba(${col},${fdE})`;c.beginPath();c.arc(ex,ey,s*0.75,0,TAU);c.fill();}
  if(e.flash>0)glow(c,e.x,e.y,r*1.3,'255,250,235',Math.min(0.55,e.flash*6));
  c.restore();
  drawV6EnemyPost(e);
@@ -11509,6 +11510,8 @@ function demoBoot(cls){
 // ═════════════════════════ v17.27 · Les gardiens (cadrage G1–G18) : action 1 (socle), action 2 (le Glas Originel), action 3 (le Héraut Noyé), action 4 (la Mère-Brume)
 // Dessin seulement : rien du combat ne passe ici (PV, attaques, temps, rayon de touche, états restent ceux d'avant). Réglages : data/gardiens.js, dessin.
 // Chaque gardien a son interrupteur (dessin.actif[n]) ; éteint, l'ancien dessin reste (drawMere, drawHeraut, drawHeart et leurs lueurs), jusqu'à l'action 9.
+// linceul (action 9) : shroud (ancien, partagé) tourne avec T et e.wob ; en mouvements réduits, le dessin v17.27 le pose figé (G14)
+function linceul(c,e,col,a,front){if(!RM)return shroud(c,e,col,a,front);const t=T,w=e.wob;T=0;e.wob=0;try{shroud(c,e,col,a,front);}finally{T=t;e.wob=w;}}
 function g27Actif(n){const D=GA_D.dessin;if(!D||!D.actif)return false;return typeof D.actif==='object'?!!D.actif[n]:!!D.actif;}
 // ── G11 · Les glyphes (action 7) : un SVG par gardien (data/gardiens.js, dessin.glyphes), à trois endroits : la porte du gardien (sigil), la barre de vie (hBossGlyph, à
 // gauche du nom) et les cartes « Les gardiens » du wiki (outils/wiki.mjs). Rien du combat n'y passe. Éteint (dessin.actif[n] faux), l'ancienne icône reste.
@@ -11533,7 +11536,7 @@ const G27=(function(){
  // ── G5 · le point faible, partout le même signe : un anneau ivoire qui palpite autour de lui tant que la fenêtre « à nu » est ouverte (sonné : vuln ; fenêtre
  // de l'Accoutumance : rawT). Les trois gardiens l'appellent par G27.anneau (le banc peut donc l'observer) ; masqué pendant un fondu d'esquive (fd ≤ 0,3).
  const aNu=(e,fd)=>(e.vuln>0||e.rawT>0)&&fd>0.3;
- function anneau(c,x,y,r){c.strokeStyle=`rgba(255,250,235,${0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(x,y,r*0.3+(RM?0:3.5*Math.sin(T*12)),0,TAU);c.stroke();}
+ function anneau(c,x,y,r){c.strokeStyle=`rgba(255,250,235,${RM?0.8:0.5+0.4*Math.sin(T*24)})`;c.lineWidth=2.5;c.beginPath();c.arc(x,y,r*0.3+(RM?0:3.5*Math.sin(T*12)),0,TAU);c.stroke();}
  // ── G13 · la couleur de ta forme pendant une copie. G3 : deux formes (Lumière, Héraut) tombaient à moins de ΔE 25 d'un télégraphe (orange des zones, cyan de
  // saisie) ; dessin.copie donne leur teinte éclaircie, même famille de couleur. Les autres gardent la couleur de la forme (CRGB).
  function copie(){const D=((GA_D.dessin||{}).copie||{})[P.cls];return D?rgb(D):(CRGB[P.cls]||'255,250,240');}
@@ -11664,7 +11667,7 @@ const G27=(function(){
   o.strokeStyle='rgba(240,205,140,.3)';o.lineWidth=1.1;o.beginPath();o.ellipse(0,0.66*s,0.88*s,0.135*s,0,0.25,Math.PI-0.25);o.stroke();}
 
  // ── l'état de dessin, posé sur le gardien (rien du combat ne le lit) : temps vu, transformation en cours, plaques en vol et au sol
- function etat(e){let g=e.g27;if(g)return g;g=e.g27={ph:e.phase||1,t:-9,vole:[],sol:[]};
+ function etat(e){let g=e.g27;if(g&&g.glas)return g;g=e.g27={glas:1,ph:e.phase||1,t:-9,vole:[],sol:[]};
   // né à un temps avancé (mode d'essai) : ses plaques sont déjà au sol
   if(g.ph>=2)for(const i of ECLATENT)g.sol.push(posSol(e,i));if(g.ph>=3)for(const i of TOMBENT)g.sol.push(posSol(e,i));return g;}
  function posSol(e,i){const r=e.r,[sx,sy,rot]=SOL[i];return{i,x:clamp(e.x+sx*r,AR.x0+24,AR.x1-24),y:clamp(e.y+sy*r,AR.y0+20,AR.y1-14),rot};}
@@ -11700,7 +11703,7 @@ const G27=(function(){
   c.save();c.translate(-e.x,-e.y);for(const S of g.sol){const I=imgPlaque(S.i,r,true),[cx,cy]=CTR[S.i];c.save();c.globalAlpha=PRO();c.translate(S.x,S.y);c.rotate(S.rot);c.scale(1,0.55);c.translate(-cx*r,-cy*r);poser(c,I);c.restore();}
   c.restore();
   c.globalAlpha=fd;shadowAt(c,0,r*0.92,r*1.2,r*0.36,0.5);
-  shroud(c,e,'46,28,36',PRO()*(e.mk==null?1:e.mk),false);
+  linceul(c,e,'46,28,36',PRO()*(e.mk==null?1:e.mk),false);
   arteres(c,e,g,fd);
   const ph=e.phase,k=RM?1:clamp((T-g.t)/D,0,1);
   if(ph>=3)poser(c,imgDos(r));
@@ -11716,7 +11719,7 @@ const G27=(function(){
    const q=ease(u),x=V.x0+(V.S.x-V.x0)*q,y=V.y0+(V.S.y-V.y0)*q-Math.sin(Math.PI*u)*r*0.55,[cx,cy]=CTR[V.i];
    c.save();c.globalAlpha=1-(1-PRO())*u*u;c.translate(x,y);c.rotate(V.r0+(V.S.rot-V.r0)*q+Math.sin(Math.PI*u)*(V.i%2?0.8:-0.8));c.scale(1,1-0.45*q);c.translate(-cx*r,-cy*r);poser(c,imgPlaque(V.i,r,u>0.75));c.restore();}
    c.restore();}
-  shroud(c,e,'120,84,92',0.05*(e.mk==null?1:e.mk),true);c.globalAlpha=1;}
+  linceul(c,e,'120,84,92',0.05*(e.mk==null?1:e.mk),true);c.globalAlpha=1;}
 
  // ── les lueurs (après les télégraphes, en mode additif) : battement rouge sombre, petit (G3) ; œil blanc (couleur de ta forme quand il te copie,
  // G13) ; anneau ivoire du point faible quand il est à nu (G5) ; le Reflet qui sort par la fente (lavande, la seule) ; puis, inchangés, l'annonce
@@ -11730,7 +11733,7 @@ const G27=(function(){
   const copie=COPIE.includes(e.state)&&e.copy,oc=copie?G27.copie():'255,248,236',open=[0,0.42,0.75,1][ph];
   glow(c,e.x,e.y,r*(0.12+0.16*open),oc,(copie?0.5:0.22+0.12*b)*fd);
   if(G27.aNu(e,fd))G27.anneau(c,e.x,e.y,r);   // G5 : l'œil est son point faible
-  try{const G=room&&room.glas,rf=G&&G.reflet,R=((GA_D.attaques[3]||{}).souvenirs||{}).reflet||{};
+  try{const G=!e.dead&&room&&room.glas,rf=G&&G.reflet,R=((GA_D.attaques[3]||{}).souvenirs||{}).reflet||{};
    if(rf&&!rf.fin&&rf.boss===e){const u=(RUN.time-rf.nait)/(R.naissanceS||0.6);
     if(u<1.3){const a=clamp(1-u/1.3,0,1);glow(c,e.x,e.y,r*0.55,'180,160,255',0.75*a);c.strokeStyle=`rgba(215,200,255,${0.8*a})`;c.lineWidth=2.4;c.beginPath();for(let i=0;i<=16;i++){const y=-0.7+1.26*i/16;if(i)c.lineTo(e.x+fenteX(y)*r,e.y+y*r);else c.moveTo(e.x+fenteX(y)*r,e.y+y*r);}c.stroke();
      if(!RM&&u<1){const q=ease(u),hx=e.x+(rf.x-e.x)*q,hy=e.y+(rf.y-e.y)*q;for(let i=0;i<10;i++){const v=q*(1-i/10);glow(c,e.x+(rf.x-e.x)*v,e.y+(rf.y-e.y)*v,12+14*(1-i/10),'180,160,255',0.5*(1-i/10)*a);}glow(c,hx,hy,26,'215,200,255',0.7*a);}}}}catch(err){}
@@ -11745,8 +11748,17 @@ const G27=(function(){
  TINT.glas=rgb(mix(GD().lueur||[200,40,60],[0,0,0],0.15));
  // G8 / G12 : les vaisseaux du sol (décor du Cœur, dessinés après les corps) partent de sous sa lèvre : ils ne passent plus par-dessus la cloche
  const _dcp27=drawCoeurPost;drawCoeurPost=function(){const b=RUN&&RUN.act===3&&enemies.find(x=>x.type==='boss'&&!x.dead&&!x.reflet);if(!(b&&!b.dead&&RUN&&RUN.act===3&&g27Actif(3)))return _dcp27.apply(this,arguments);
-  const c=ctx;c.save();c.beginPath();c.rect(-50,-50,W+100,H+100);c.translate(b.x,b.y);cloche(c,b.r,true);c.translate(-b.x,-b.y);c.clip('evenodd');
-  try{return _dcp27.apply(this,arguments);}finally{c.restore();}};
+  // action 9 (G14, coût) : plus de découpe plein écran à chaque image. Les segments de vaisseaux loin de la cloche sont tracés tels quels ; seuls ceux
+  // qui passent près d'elle sont tracés sous une découpe limitée à leur boîte (boîte moins la cloche, evenodd). Même trait, même battement (opacité).
+  const c=ctx,V=room.veins;if(!V)return _dcp27.apply(this,arguments);
+  const R=1.25*b.r+4,bx0=b.x-R,bx1=b.x+R,by0=b.y-R,by1=b.y+R,loin=new Path2D(),pres=new Path2D();let px0=1e9,py0=1e9,px1=-1e9,py1=-1e9,n=0;
+  for(const v of V)for(let i=1;i<v.length;i++){const [x0,y0]=v[i-1],[x1,y1]=v[i];
+   if(Math.max(x0,x1)<bx0||Math.min(x0,x1)>bx1||Math.max(y0,y1)<by0||Math.min(y0,y1)>by1){loin.moveTo(x0,y0);loin.lineTo(x1,y1);}
+   else{pres.moveTo(x0,y0);pres.lineTo(x1,y1);n++;px0=Math.min(px0,x0,x1);py0=Math.min(py0,y0,y1);px1=Math.max(px1,x0,x1);py1=Math.max(py1,y0,y1);}}
+  c.save();c.globalCompositeOperation='lighter';c.lineCap='round';c.lineJoin='round';c.strokeStyle=`rgba(200,140,255,${0.12+0.4*beatK()})`;c.lineWidth=2.2;c.stroke(loin);
+  if(n){c.beginPath();c.rect(px0-4,py0-4,px1-px0+8,py1-py0+8);c.translate(b.x,b.y);cloche(c,b.r,true);c.translate(-b.x,-b.y);c.clip('evenodd');c.stroke(pres);}
+  c.restore();
+  room.veins=null;try{return _dcp27.apply(this,arguments);}finally{room.veins=V;}};
  // mesure (banc, G14) : temps de dessin du Glas par image, ancien et nouveau, sur un canevas caché à la taille de l'écran (lecture d'un pixel à chaque
  // image : le navigateur dessine vraiment, au lieu de seulement noter les ordres)
  function mesure(e,n){n=n||100;const cv2=document.createElement('canvas');cv2.width=cv.width;cv2.height=cv.height;const o=cv2.getContext('2d'),keep=ctx,L={vide:[],avant:[],apres:[]};
@@ -11929,7 +11941,7 @@ const G27=(function(){
   c.fillStyle=`rgba(${rgb(M.eau)},${0.12*Math.min(1,ph*0.5+0.5)})`;ell(c,0,1.0*r,1.0*r*(ph>=2?1.15:1),0.24*r);c.fill();
   if(!RM){const q=(T*0.55)%1;c.strokeStyle=`rgba(${rgb(mix(M.eau,[220,255,240],0.4))},${0.22*(1-q)})`;c.lineWidth=1.2;ell(c,0,1.0*r,(0.3+0.75*q)*r,(0.07+0.17*q)*r);c.stroke();}
   shadowAt(c,0,r*0.98,r*0.78,r*0.26,0.45);
-  shroud(c,e,'30,56,48',pro*0.6*mk,false);   // le linceul et l'ombre au sol, assez légers pour que leurs couches empilées ne se lisent jamais comme du corps
+  linceul(c,e,'30,56,48',pro*0.6*mk,false);   // le linceul et l'ombre au sol, assez légers pour que leurs couches empilées ne se lisent jamais comme du corps
   // les cordes (hors inclinaison, du poing au haut de la salle)
   const top=-e.y-14,swR=RM?0:Math.sin(T*0.8)*0.06*r;
   const tire=s=>RM?0:chant?0.07*Math.sin(T*9+(s>0?0:1.4)):(ph>=2&&s>0?0.06*Math.sin(T*2.8)-0.02:0.035*Math.sin(T*2.2+(s>0?0:1.4)));
@@ -11979,7 +11991,7 @@ const G27=(function(){
    for(let i=0;i<8;i++){const q=(T*0.9+i*0.37)%1,x=[-0.62,-0.4,-0.16,0.12,0.38,0.58,-0.3,0.3][i]*r,y0=(i<6?0.44:0.96)*r,y1=(i<6?0.98:1.16)*r,y=y0+(y1-y0)*q;c.globalAlpha=fd*pro*0.8*(1-q);c.beginPath();c.moveTo(x,y);c.lineTo(x,y+0.06*r);c.stroke();}
    c.globalAlpha=fd;}
   c.restore();
-  shroud(c,e,'80,130,112',0.05*mk,true);c.globalAlpha=1;
+  linceul(c,e,'80,130,112',0.05*mk,true);c.globalAlpha=1;
   // positions du monde des lueurs (la lampe, le battant), pour drawBossPost
   const lx=NOEUD[0]*r+Math.sin(-la)*0.18*LAMPE*r,ly=NOEUD[1]*r+Math.cos(la)*0.18*LAMPE*r,LP=Lw(lx,ly),BP=Bw(bx,by);
   g.lamp=[e.x+LP[0],e.y+LP[1]];g.batt=[e.x+BP[0],e.y+BP[1]];}
@@ -12269,7 +12281,7 @@ const G27=(function(){
  // ── les lueurs (après les télégraphes, en mode additif) : le cœur-cloche nacré (rouge au troisième temps, G3), petit ; le ballot, à peine ; l'anneau
  // ivoire du point faible (G5) ; le reflet de ta forme sur le masque pendant une copie (G13) ; la main qui saisit (cyan, inchangé)
  function lueurs(e){const c=ctx,r=e.r,g=etat(e),R=g.R||rig(e,g,0,0),fd=e.fade==null?1:e.fade,ph=e.phase||1,mk=e.mk==null?1:e.mk,Lu=GD().lueur||[245,240,230],C=teintes();
-  glow(c,e.x,e.y+r*0.3,r*1.5,rgb(C.B),0.06*mk*fd);
+  glow(c,e.x,e.y+r*0.3,r*1.1,rgb(C.B),0.06*mk*fd);
   if(g.enfA>0.02)glow(c,e.x+R.Cb[0],e.y+R.Cb[1],r*0.32,rgb(Lu),0.16*g.enfA*fd);
   const pul=RM?0.75:0.6+0.4*Math.sin(T*(2.2+ph)),cx=e.x+R.core.x,cy=e.y+R.core.y,big=ph>=3?1.45:1,cc=ph>=3?rgb(nu()):rgb(Lu);
   glow(c,cx,cy,r*0.42*big*(0.85+0.2*pul),cc,(ph>=3?0.42+0.25*pul:0.18+0.12*pul)*fd);

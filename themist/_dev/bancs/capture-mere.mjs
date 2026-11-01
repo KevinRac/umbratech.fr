@@ -31,7 +31,8 @@ const calme = page => page.evaluate(([BX, BY]) => {
   for (const x of D.enemies) if (x !== b && !x.dead) K(x);
   D.eproj.length = 0; D.rings.length = 0; if (D.room.spawning) D.room.spawning.length = 0;
   b.state = 'idle'; b.patT = 99; b.queue = []; b.vuln = 0; b.stun = 0; b.fade = 1; b.reach = b.reachTo = 0; b.grabbing = false; b.armT = null; b.reachSide = 1;
-  b.x = BX; b.y = BY; P.x = BX; P.y = BY + 250; P.iT = 99; P.grabT = 0; P.hp = P.s.maxHp; B.hideMsg();
+  b.x = BX; b.y = BY; b.mk = [1, 1, 0.8, 0.25][b.phase] || b.mk;   /* action 9 : la brume qui se retire posée à sa cible, sinon elle converge encore entre deux lectures */
+  P.x = BX; P.y = BY + 250; P.iT = 99; P.grabT = 0; P.hp = P.s.maxHp; B.hideMsg();
 }, [BX, BY]);
 async function temps(page, t, attendre = 900) {
   await page.evaluate(t => {

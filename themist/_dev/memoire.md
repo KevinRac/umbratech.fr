@@ -1780,3 +1780,32 @@ Hors dépôt (jointes au compte rendu) : `gardien-<n>-planche-finale.png` (trois
 ### Reste
 
 Action 9 (relecture par un agent séparé, Opus 5.5, effort moyen ; corriger les défauts 1 à 4 si la relecture les confirme, avec Sonnet 5.5, effort moyen) ; action 10 (wiki, journal, version v17.27, `CLAUDE.md`, retrait des anciennes fonctions, push ; Sonnet 5.5, effort faible).
+
+## 30. Les gardiens redessinés (v17.27), action 9 : relecture indépendante et corrections (1er novembre 2026)
+
+Relecture par un agent séparé (Opus 5.5, effort moyen) qui n'avait vu ni le travail ni le § 29 : lecture du bloc v17.27, captures en combat (nouveau et ancien dessin au même instant), mesures. Aucune erreur de script ; rien du combat ne passe par le dessin (il n'écrit que `e.g27`, `EYE.boss`, `TINT.*`). Corrections faites ensuite (Opus 5.5), sans rien changer du combat :
+
+| # | Constat (relecture et § 29) | Correction |
+|---|---|---|
+| 1 | Héraut, temps 1 et 2 : le corps se fond dans le dallage teal (contraste corps / sol 5,4 et 5,3 contre 6,7 et 6,3 avant) | `dessin[2].matiere.bronze` 110,96,60 → 140,122,78 et `robe` 28,44,38 → 60,96,82 : 6,0 / 5,8 / 5,7 (temps 1 / 2 / 3 ; avant le chantier 6,7 / 6,3 / 5,6). ΔE toujours ≥ 25. |
+| 2 | Glas : sa lumière de salle grossit avec le battement en mouvements réduits (148,8 → 197,2 px) | `computeLights` : en mouvements réduits, rayon fixe quand le Glas redessiné est actif (`RM&&g27Actif(3)`). |
+| 3 | Glas et Héraut : le linceul (`shroud`, ancien, partagé) tourne avec `T` et `e.wob` en mouvements réduits (Héraut 577 px, Glas 925 et 1 129 px de voile qui bougent) | `linceul()` dans le bloc v17.27 : pose `shroud` à `T = 0` et `e.wob = 0` sous `RM` (les quatre appels du nouveau dessin). Mesure : 0 à 23 px sur 8 000 à 23 000, partout. |
+| 4 | L'anneau du point faible clignote à 3,8 Hz en mouvements réduits | `G27.anneau` : opacité fixe 0,8 sous `RM`. |
+| 5 | Les yeux du gardien (`eyePts`, `drawEnemyPost`) ignorent le fondu d'esquive (G13) : on voit encore où est la Mère-Brume | Opacité des yeux × `e.fade` pour un gardien redessiné (ancien dessin inchangé). |
+| 6 | Coût du Glas (§ 29) : la découpe `evenodd` plein écran de `drawCoeurPost` à chaque image | Les segments de vaisseaux loin de la cloche sont tracés sans découpe ; ceux qui passent près d'elle, sous une découpe limitée à leur boîte. Vaisseaux : +1,9 → +0,5 à +0,7 ms (×1), +3,1 → +1,1 ms (×2). Un premier essai (vaisseaux peints dans un cache plein écran) coûtait plus cher en rendu logiciel (+11 ms à ×2) : abandonné. |
+| 7 | Traînée lavande de naissance du Reflet redessinée pendant la mort du Glas | Pas de traînée si `e.dead`. |
+| 8 | `etat` du Glas accepte n'importe quel `e.g27` | Marque `glas:1`, vérifiée. |
+| 9 | Halo de brume de la Mère-Brume, additif par-dessus les télégraphes, rayon 1,5 r | 1,1 r. |
+| 10 | Banc `capture-mere` : « rien du combat ne change » échouait parfois (`mk` converge entre deux lectures) | `calme` pose `mk` à sa cible. |
+
+Le dessin du Héraut a changé à l'œil : `dessin.version` 2 → 3, portraits refaits (`img/gardiens/*-v3.webp`, les v2 retirés), wiki régénéré, `--check` à jour.
+
+**Laissé tel quel, noté** :
+- **Glas plus sombre qu'avant** (contraste corps / sol 4,2 / 3,7 / 3,0 contre 6,6 / 7,8 / 7,5) : la relecture le juge lisible (encre, bronze, anneau du point faible bien visible ; au temps 1, sous l'anneau-télégraphe, mieux qu'avant). À juger en jeu ; piste : plus de lumière dans la chair du temps 3.
+- **Corde cassée du Héraut au temps 2** peu visible à l'échelle du jeu (c'est le bras qui pend qui dit le temps 2) : conforme à G4.
+- **Coût du Glas à densité ×2** : parties en place encore +1,1 à +2,4 ms en rendu logiciel (corps +0,7 à +1,5, vaisseaux +1,1) ; à ×1, +0,5 à +0,85 ms, image entière dans le bruit (trois passages). La relecture mesure +0,18 ms avec `mesure()`. À confirmer sur une vraie carte graphique.
+- Le hasard après la mort (§ 29) : inchangé, sans effet sans graine.
+
+**Vérification** : banc final complet après corrections (avant le changement des vaisseaux) : combat identique (12 combats, 8 essais du Glas), mouvements réduits tous verts, couleurs ≥ 25, bancs rejoués verts ; puis, après les vaisseaux, coût du Glas repassé trois fois à ×1, descente comparée (Lanterne) et bancs des gardiens, simulateurs et `wiki.mjs --check`.
+
+Reste : action 10 (journal, version v17.27, retrait des anciennes fonctions, push ; Sonnet 5.5, effort faible).

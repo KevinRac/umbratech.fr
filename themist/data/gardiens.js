@@ -74,7 +74,7 @@
  // matiere / lueur (G3) : couleurs [r,g,b] loin des télégraphes (orange zone, violet tirs, cyan saisie) et de la lavande des souvenirs.
  // La couleur de temps (failles.p1 / p3) ne sert plus qu'aux reflets ; le rouge du troisième temps reste sur le point faible.
  dessin:{
-  version:2,
+  version:3,
   actif:{1:true,2:true,3:true},
   echelle:{solide:1.15,silhouette:3.5,prolongements:0.35},
   // copie (G13, G3) : la couleur de ta forme que prend la lueur d'un gardien quand il te copie (masque de la Mère-Brume, battant du Héraut, œil du Glas). Par défaut
@@ -105,7 +105,7 @@
   // Héraut Noyé (G7) : Élias sous sa cloche. La cloche est sa tête, fondue sur ses épaules ; sa robe ruisselle ; il tire les cordes qui montent au
   // haut de la salle ; à sa ceinture, la lampe d'Ismène (lueur, ambre). eau : vert d'algue, loin du cyan de la saisie. reflets : les trois yeux sous
   // la lèvre (eyePts, même place). fente : ouverture des deux moitiés de la cloche au troisième temps (radians). transS : durée d'une transformation.
-  2:{matiere:{bronze:[110,96,60],eau:[70,190,150],chair:[104,130,116],patine:[84,128,100],robe:[28,44,38],corde:[134,116,80]},lueur:[255,200,120],
+  2:{matiere:{bronze:[140,122,78],eau:[70,190,150],chair:[104,130,116],patine:[84,128,100],robe:[60,96,82],corde:[134,116,80]},lueur:[255,200,120],
    entree:'il est hissé de l’ombre, cloche en avant, un coup de cloche sourd à l’arrivée',
    mort:'il s’enfonce ; la lampe d’Ismène reste allumée un instant, puis s’éteint doucement',
    faible:'le battant du Héraut Noyé',
