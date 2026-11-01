@@ -10,7 +10,8 @@
 //  5. le déblocage : Normal ouvre Difficile, Difficile ouvre Extrême ; ni l'essai, ni la mort, ni l'abandon n'ouvrent rien ;
 //  6. les branchements du jeu (lecture d'index.html) : registre, Paliers de Brume retirés, montée, victoire au dernier acte, garde de l'essai.
 //  7. les règles des paliers (v18.2, action 3a) : Normal vide, héritage, Masqué, némésis, soins, répit, temps de plus des places provisoires,
-//     règle d'or (gardiens I à III jamais touchés), indice de pression par palier, branchements.
+//     règle d'or (gardiens I à III jamais touchés), indice de pression par palier, branchements ;
+//  8. les règles mutantes de l'Extrême (v18.3, action 3b) : données, icônes, tirage par acte (10 000 descentes), salles, branchements.
 //   node themist/outils/sim-descente.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -23,7 +24,7 @@ const bloc = n => { const m = html.match(new RegExp(`\\/\\*${n}:pur\\*\\/([\\s\\
 const ctx = { window: {}, Math, console, JSON };
 vm.createContext(ctx);
 for (const f of ['gardiens.js', 'descente.js', 'bestiaire.js', 'icones.js']) vm.runInContext(readFileSync(join(ROOT, 'data', f), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\nthis.F={DES_V,desActes,desSeuil,desMontee,desPorte,desPorteActe,desNeuf,desLire,desEcrire,desChoix,desFin,desFusion,desRegles,desMasque,desNemesis,desSoin,desHalteOk,desTempsEnPlus,desCapEnPlus};', ctx);
+vm.runInContext(bloc('des') + '\nthis.F={DES_V,desActes,desSeuil,desMontee,desPorte,desPorteActe,desNeuf,desLire,desEcrire,desChoix,desFin,desFusion,desRegles,desMasque,desNemesis,desSoin,desHalteOk,desTempsEnPlus,desCapEnPlus,desRng,desPlafond,desMutIncomp,desMutActe,desMutDescente,desMutSalle};', ctx);
 const F = ctx.F, D = ctx.window.BRUME_DATA, GA = D.gardiens, DS = D.descente, BE = D.bestiaire;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
@@ -197,7 +198,7 @@ ok(!/ACTS\[RUN\.act\]\.rooms/.test(html.replace(/AA=ACTS\[RUN\.act\][^;]*;/g, ''
 // ── 7. Règles des paliers (v18.2, action 3a ; cadrage claude/la-brume-v18-3-paliers-cadrage.md)
 const AS = BE.assemble, NM = AS.nemesis;
 const R = { normal: F.desRegles(DS, 'normal'), difficile: F.desRegles(DS, 'difficile'), extreme: F.desRegles(DS, 'extreme') };
-const CLES = ['masque', 'soins', 'gardien', 'nemesis', 'repit', 'brumeux'];
+const CLES = ['masque', 'soins', 'gardien', 'nemesis', 'repit', 'brumeux', 'mutations'];
 ok(eq(R.normal, {}), 'Normal : aucune règle (la descente de la v18.1, au bit près)');
 ok(eq(F.desRegles(DS, 'inconnu'), {}), 'palier inconnu : aucune règle');
 for (const p of DS.ordre) ok(Object.keys(R[p]).every(k => CLES.includes(k)), `${p} : seulement des règles connues (${Object.keys(R[p]).join(', ')})`);
@@ -205,7 +206,7 @@ ok(DS.regles.extreme.herite === 'difficile' && !('herite' in R.extreme), 'Extrê
 ok(eq(R.extreme.masque, R.difficile.masque) && eq(R.extreme.gardien, R.difficile.gardien) && eq(R.extreme.soins.sources, R.difficile.soins.sources), 'Extrême reprend les Masqués, le temps de plus et les sources de soin de Difficile');
 ok(R.extreme.soins.monde < R.difficile.soins.monde && R.difficile.soins.monde < 1, 'soins du monde : Normal > Difficile > Extrême');
 ok(R.extreme.soins.gardien === 0 && R.difficile.soins.gardien > 0 && R.difficile.soins.gardien < 1, 'soin qui suit un gardien : réduit en Difficile, aucun en Extrême');
-ok(!DS.regles.difficile.nemesis && !DS.regles.difficile.repit && !DS.regles.difficile.brumeux, 'Difficile : ni némésis, ni répit, ni Brumeux (Extrême seulement)');
+ok(!DS.regles.difficile.nemesis && !DS.regles.difficile.repit && !DS.regles.difficile.brumeux && !DS.regles.difficile.mutations, 'Difficile : ni némésis, ni répit, ni Brumeux, ni mutations (Extrême seulement)');
 ok(R.extreme.brumeux && R.extreme.brumeux.phaseEntiere === true, 'Extrême : le Brumeux a sa phase finale entière (lu à l’action 5)');
 { // héritage : copie neuve, sans effet de bord sur les données
   const a = F.desRegles(DS, 'extreme'); a.soins.sources.push('x'); a.masque.chance = 1;
@@ -338,10 +339,69 @@ has(/Tes PV sont en partie restaurés\./, 'le message de victoire sur un gardien
 { // wiki (Q11) : les règles des paliers sont dites, la némésis et la phase finale du boss final sont tues
   const W = readFileSync(join(ROOT, 'wiki.html'), 'utf8'), i = W.indexOf('id="descente"'), sec = i >= 0 ? W.slice(i, W.indexOf('</section>', i)) : '';
   ok(/Les paliers/.test(sec) && /un temps de plus/.test(sec) && /×0,65/.test(sec) && /×0,5/.test(sec) && /Aucun répit/.test(sec), 'wiki : les règles de Difficile et d’Extrême sont dites');
-  ok(!/n[ée]m[ée]sis|brumeux|phase finale|mutant|mutation/i.test(sec), 'wiki : ni némésis, ni Brumeux, ni phase finale, ni mutation dans la section de la descente');
+  ok(!/n[ée]m[ée]sis|brumeux|phase finale|graine|tirage/i.test(sec), 'wiki : ni némésis, ni Brumeux, ni phase finale, ni la façon dont les mutations sont tirées');
+  { const MW = DS.regles.extreme.mutations; ok(Object.values(MW.liste).every(X => sec.includes(X.n.replace(/’/g, '’')) && sec.includes(X.r.replace(/’/g, '’').replace(/;/g, ';'))), 'wiki : le catalogue des mutations (nom et réponse de chacune)'); }
 }
 ok(!/regles\.(difficile|extreme)|palierD==='(difficile|extreme)'/.test(html), 'jeu : aucun palier écrit en dur (tout passe par les règles)');
 
+// ── 8. Règles mutantes de l'Extrême (v18.3, action 3b ; cadrage Q5–Q7)
+const MU = R.extreme.mutations, IDS = Object.keys(MU.liste);
+ok(IDS.length === 8 && eq(IDS, ['echo', 'presse', 'serre', 'couronne', 'dernier', 'glas', 'ombre', 'differe']), 'mutations : les huit du cadrage');
+ok(!R.normal.mutations && !R.difficile.mutations, 'mutations : Extrême seulement');
+for (const k of IDS) { const X = MU.liste[k];
+  ok(X.n && X.d && X.r && X.n.length < 24 && X.d.length < 140 && X.r.length < 70, `mutation ${k} : nom, une ligne, une réponse (courts)`);
+  ok(new RegExp(`\\b${X.ic}:`).test(icTxt) && /^u_m_/.test(X.ic), `mutation ${k} : icône ${X.ic} dans icones.js`);
+  ok(!/PV max|points de vie en plus|\+\d+ % de PV/i.test(X.d), `mutation ${k} : pas un mur de PV`);
+  ok(!/brumeux/i.test(X.n + X.d + X.r), `mutation ${k} : ne nomme pas le Brumeux`);
+}
+{ const icS = new Set(IDS.map(k => MU.liste[k].ic)); ok(icS.size === IDS.length, 'mutations : une icône chacune'); }
+{ const L = MU.liste; // lisibilité : un préavis pour tout ce qui frappe, pas plus de dégâts qu'un coup ordinaire
+  ok(L.echo.delaiS >= 0.8 && L.glas.preavisS >= 0.8 && L.ombre.apparitionS >= 0.5, 'mutations : tout ce qui frappe a un préavis (≥ 0,8 s, l’ombre ≥ 0,5 s)');
+  ok(L.echo.degats <= 12 && L.glas.degats <= 15 && L.ombre.degats <= 12, 'mutations : des coups légers (≤ 12 à 15 avant la montée)');
+  ok(L.serre.part > 0 && L.serre.part <= 0.2 && L.presse.part > 0 && L.presse.part < 1 && L.couronne.reduit > 0 && L.couronne.reduit < 1 && L.dernier.vitesse > 1 && L.dernier.vitesse <= 1.5, 'mutations : réglages bornés');
+  ok(L.glas.periodeS !== L.ombre.periodeS, 'glas et ombre : périodes différentes'); }
+ok(eq(MU.plafond, { 1: 1, 4: 2, 7: 3 }), 'plafond : 1 aux actes I à III, 2 aux IV à VI, 3 aux VII à X (Q6)');
+ok([1, 2, 3].every(n => F.desPlafond(MU, n) === 1) && [4, 5, 6].every(n => F.desPlafond(MU, n) === 2) && [7, 8, 9, 10].every(n => F.desPlafond(MU, n) === 3) && F.desPlafond({}, 5) === 0, 'desPlafond acte par acte');
+ok((MU.incompatibles || []).every(([a, b]) => IDS.includes(a) && IDS.includes(b)) && F.desMutIncomp(MU, 'dernier', 'presse') && !F.desMutIncomp(MU, 'glas', 'echo'), 'incompatibilités : connues, symétriques');
+{ // le générateur : déterministe, réparti
+  const a = F.desRng(42), b = F.desRng(42); let same = true, sum = 0; for (let i = 0; i < 1000; i++) { const x = a(); if (x !== b()) same = false; sum += x; if (x < 0 || x >= 1) same = false; }
+  ok(same && Math.abs(sum / 1000 - 0.5) < 0.05, 'desRng : même graine, même suite, dans [0, 1)'); }
+{ // 10 000 descentes
+  const N = 10000, cpt = Object.fromEntries(IDS.map(k => [k, 0])); let fautes = 0, entrees = 0, total = 0;
+  for (let i = 0; i < N; i++) {
+    const g = (i * 2654435761) >>> 0, D = F.desMutDescente(MU, g, DS.nombre), D2 = F.desMutDescente(MU, g, 6);
+    if (!eq(D.slice(0, 7), D2)) fautes++;
+    for (let n = 1; n <= DS.nombre; n++) { const X = D[n], av = n > 1 ? D[n - 1].liste : [];
+      if (X.liste.length !== F.desPlafond(MU, n)) fautes++;
+      if (new Set(X.liste).size !== X.liste.length) fautes++;
+      if (!X.entre || !X.liste.includes(X.entre) || av.includes(X.entre)) fautes++;          // une nouvelle à chaque acte, jamais une qui était déjà là (ni celle qui sort)
+      if (X.sort && (X.liste.includes(X.sort) || av[0] !== X.sort)) fautes++;                 // la plus ancienne sort
+      if (n > 1 && F.desPlafond(MU, n) > F.desPlafond(MU, n - 1) && X.sort) fautes++;         // le plafond monte : rien ne sort
+      for (const a of X.liste) for (const b of X.liste) if (a !== b && F.desMutIncomp(MU, a, b)) fautes++;
+      if (X.liste.slice(0, -1).some((k, j) => k !== av[av.length - X.liste.length + 1 + j])) fautes++;   // celles qui restent gardent leur ordre
+      entrees++; cpt[X.entre]++; total++; } }
+  ok(fautes === 0, `tirage, 10 000 descentes : plafond, une nouvelle par acte, la plus ancienne sort, jamais deux incompatibles, rejouable d’où qu’on arrive (${fautes} fautes)`);
+  // les deux incompatibles (presse, dernier) entrent un peu moins : elles ne cohabitent pas
+  const moy = total / IDS.length, inc = new Set((MU.incompatibles || []).flat()); ok(IDS.every(k => inc.has(k) ? cpt[k] / moy > 0.75 && cpt[k] / moy < 1 : Math.abs(cpt[k] / moy - 1) < 0.08), `tirage : chaque mutation à ±8 % de l’égalité, les incompatibles au moins aux trois quarts (${IDS.map(k => k + ' ' + (cpt[k] / total * 100).toFixed(1) + ' %').join(', ')})`);
+  globalThis.MUTCPT = cpt;
+  const g1 = F.desMutDescente(MU, 7, 10), g2 = F.desMutDescente(MU, 8, 10); ok(!eq(g1, g2), 'deux graines, deux descentes'); }
+// salles (Q6) : jamais au gardien, ni au boss final, ni en halte, autel ou chez le colporteur ; suspensions
+{ const L = ['serre', 'glas', 'ombre'];
+  ok(eq(F.desMutSalle(MU, L, { type: 'combat' }), L) && eq(F.desMutSalle(MU, L, { type: 'elite', gardeK: 'mini' }), ['serre', 'glas']), 'salles : combat toutes ; miniboss (élite) sans l’ombre quand le glas est là');
+  ok(['boss', 'halte', 'autel', 'marchand'].every(t => F.desMutSalle(MU, L, { type: t }).length === 0) && F.desMutSalle(MU, L, { type: 'elite', gardeK: 'garde' }).length === 0 && F.desMutSalle(MU, L, { type: 'elite', gardeK: 'final' }).length === 0, 'salles : jamais au gardien (I à IX), au boss final, en halte, autel, colporteur');
+  ok(eq(F.desMutSalle(MU, L, { type: 'combat', rule: 'brume' }), ['glas', 'ombre']) && eq(F.desMutSalle(MU, L, { type: 'combat', rule: 'sol' }), ['glas', 'ombre']) && eq(F.desMutSalle(MU, L, { type: 'combat', rule: 'verre' }), L), 'salles : la brume qui serre se tait sous Brume plombée et Sol qui se dérobe');
+  ok(eq(F.desMutSalle(MU, ['ombre'], { type: 'elite' }), ['ombre']), 'salles : l’ombre seule joue en élite');
+  ok(F.desMutSalle(null, L, { type: 'combat' }).length === 0, 'sans règles mutantes (Normal, Difficile) : rien'); }
+// branchements (bloc v18.3 d'index.html)
+has(/const MU=\(\)=>\{const M=RG\(\)\.mutations;/, 'mutations : lues dans les règles du palier joué (desRegles)');
+has(/const D=desMutDescente\(M,S\.graine,n\)\[n\];/, 'mutations : liste de l’acte recalculée depuis la graine');
+has(/return desMutSalle\(M,S\.liste,\{type:room\.type,gardeK:room\.gardeK,rule:room\.rule\}\);/, 'mutations : desMutSalle décide de la salle');
+has(/DEMO18=\/\[\?&\]demo=\/\.test/, 'mutations : jamais en ?demo=');
+has(/mutations:RUN\.mut18\?RUN\.mut18\.hist:\{\}/, 'statistiques : les mutations de chaque acte');
+for (const k of IDS) has(new RegExp(`A\\('${k}'\\)`), `mutation ${k} : branchée en jeu`);
+ok(!/murmur\([^)]*mut/i.test(html.slice(html.indexOf('v18.3 · Les règles mutantes'))), 'mutations : aucune fenêtre ni bulle de texte (murmur) pour les annoncer');
+
+console.log(`  mutations : ${IDS.length}, entrées sur 10 000 descentes : ${Object.entries(globalThis.MUTCPT).map(([k, v]) => k + ' ' + v).join(', ')}`);
 console.log(`  paliers : pression Difficile +${(ecart('difficile') * 100).toFixed(0)} %, Extrême +${(ecart('extreme') * 100).toFixed(0)} % (modèle) ; temps de plus : ${TEMPS.avec}/${TEMPS.n} combinaisons (${Object.entries(TEMPS.parCap).map(([k, v]) => k + ' ' + v).join(', ')}) ; sources de soin du jeu : ${sources.join(', ')}`);
 console.log(`sim-descente : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
 console.log(`  actes : ${L.slice(1).map(a => `${a.rooms}${a.fin === 'final' ? 'F' : 'G'}`).join(' · ')} (47 salles, 37 hors fins) ; montée fin III ×${mI.pv.toFixed(3)} PV ×${mI.degats.toFixed(2)} dégâts, fin IX ×${mX.pv.toFixed(3)} ×${mX.degats.toFixed(2)} (ancienne pente : ×${ancien.toFixed(2)})`);

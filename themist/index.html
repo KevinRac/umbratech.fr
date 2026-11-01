@@ -899,6 +899,26 @@ function desTempsEnPlus(R,acte){const G=R&&R.gardien;return !!(G&&G.tempsEnPlus&
 function desCapEnPlus(A,co,T,plafond,f,rnd){if(!A||!co||!T)return null;const C=A.corps[co.corps]||{},a=[...co.depart,co.eveil].filter(Boolean);
  const L=Object.keys(A.capacites).filter(k=>!a.includes(k)&&!(C.exclut||[]).includes(k)&&!a.some(x=>f.incomp(x,k))&&co.menace+f.menace(k)<=plafond+(T.margeMenace||0));
  return L.length?L[Math.floor(rnd()*L.length)%L.length]:null;}
+// v18.3 · règles mutantes (règles de l'Extrême, mutations). Générateur à graine (mulberry32) : même graine, même suite.
+function desRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+// nombre de mutations actives à l'acte n (plafond : {acte de départ: nombre})
+function desPlafond(M,n){let v=0;for(const k of Object.keys(M&&M.plafond||{}).map(Number).sort((a,b)=>a-b))if(n>=k)v=M.plafond[k];return v;}
+function desMutIncomp(M,a,b){return (M.incompatibles||[]).some(([x,y])=>(x===a&&y===b)||(x===b&&y===a));}
+// entrée dans un acte : avant (liste dans l'ordre d'entrée, la plus ancienne en tête), plafond pl → {liste, entre, sort}.
+// Au plafond, la plus ancienne sort ; la nouvelle n'est ni déjà là, ni celle qui sort, ni incompatible avec celles qui restent.
+function desMutActe(M,avant,pl,rnd){const L=(avant||[]).slice();let sort=null;
+ while(L.length>Math.max(0,pl-1)&&L.length)sort=L.shift();
+ if(pl<=0)return{liste:[],entre:null,sort:avant&&avant.length?avant[0]:null};
+ const C=Object.keys(M.liste||{}).filter(k=>!L.includes(k)&&k!==sort&&!(avant||[]).includes(k)&&!L.some(x=>desMutIncomp(M,x,k)));
+ const entre=C.length?C[Math.floor(rnd()*C.length)%C.length]:null;if(entre)L.push(entre);
+ return{liste:L,entre,sort};}
+// la descente entière jusqu'à l'acte n, depuis la graine : rejouable d'où qu'on arrive (essai compris). Rend [null, {liste, entre, sort}, …]
+function desMutDescente(M,graine,n){const out=[null];let av=[];
+ for(let a=1;a<=n;a++){const r=desMutActe(M,av,desPlafond(M,a),desRng(((graine>>>0)^Math.imul(a,0x9E3779B1))>>>0));out.push(r);av=r.liste;}
+ return out;}
+// celles qui jouent dans une salle : s = {type, gardeK, rule}. Jamais au gardien ni au boss final ; suspendues par une règle de salle ou en élite.
+function desMutSalle(M,liste,s){if(!M||!liste||!s||!(M.salles||[]).includes(s.type)||s.gardeK==='garde'||s.gardeK==='final')return[];
+ return liste.filter(k=>!((M.suspend||{})[k]||[]).includes(s.rule)&&!(s.type==='elite'&&(M.suspendElite||[]).some(([a,b])=>b===k&&liste.includes(a))));}
 /*/des:pur*/
 const DES_D=window.BRUME_DATA.descente;
 const ACTD=desActes(GA_D,DES_D);                   // ACTD[1..N] : les actes de la descente (ACTS[1..3] : les trois registres)
@@ -11337,7 +11357,7 @@ function demoBoot(cls){
  function statRun(M,win,abandon){
   const R=RUN.mem||{},EVN=M.actifs.filter(a=>a.src==='t'&&(a.g||0)>=2&&EVD[a.id]).length;
   const rec={n:SAVE.runs,d:new Date().toISOString().slice(0,16),v:(window.BRUME_DATA.versions||{}).actuelle||'',cls:P.cls,voie:P.s.sub||'',palier:RUN.palier||0,
-   fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':((window.__nemesis&&window.__nemesis.parAsm&&window.__nemesis.parAsm())||R.lastSrc||''),acte:ACTE(),registre:RUN.act,palierD:RUN.palierD||'',soins:RUN.soins18?Object.fromEntries(Object.entries(RUN.soins18).map(([k,v])=>[k,Math.round(v)])):{},actesT:RUN.acteT?Object.fromEntries(Object.entries(RUN.acteT).map(([a,t])=>[a,Math.round(t)])):{},salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
+   fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':((window.__nemesis&&window.__nemesis.parAsm&&window.__nemesis.parAsm())||R.lastSrc||''),acte:ACTE(),registre:RUN.act,palierD:RUN.palierD||'',soins:RUN.soins18?Object.fromEntries(Object.entries(RUN.soins18).map(([k,v])=>[k,Math.round(v)])):{},mutations:RUN.mut18?RUN.mut18.hist:{},actesT:RUN.acteT?Object.fromEntries(Object.entries(RUN.acteT).map(([a,t])=>[a,Math.round(t)])):{},salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
    tues:RUN.kills||0,degats:Math.round(RUN.dmg||0),pvMax:Math.round(P.s.maxHp),
    talents:Object.keys(M.traces).length,portes:M.actifs.length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),oublis:M.oublis||0,renonces:M.renonces||0,ecransOubli:M.ecrans||0,
    brules:(M.brules||[]).map(r=>({id:r.id,famille:r.famille,genre:r.genre,rang:r.rang,g:r.g,force:Math.round(r.force*100)/100,acte:r.acte,salle:r.salle,contre:r.contre,degats:Math.round(r.degats),surFort:Math.round(r.surFort+r.boost),plafonne:!!r.plafonne})),reserveGlas:M.reserveGlas==null?null:M.reserveGlas,
@@ -12656,6 +12676,189 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
   masque:()=>({chance:AS18.chance,souvenir:Object.assign({},AS18.souvenir),nemesis:NM18&&{parActe:NM18.parActe,repit:NM18.repit&&NM18.repit.morts}}),effacer:()=>{SAVE.descente=desEcrire(desNeuf(DES_D));persist();},
   vider:()=>{queue.length=0;closeOverlay();},file:()=>queue.length,   // bancs : fermer les fenêtres en attente
   dbg:()=>({acte:ACTE(),registre:RUN&&RUN.act,g:RUN&&RUN.g,salle:RUN&&RUN.roomIdx,rooms:ACTD[ACTE()].rooms,type:room&&room.type,garde:room&&room.garde||0,gardeK:room&&room.gardeK||'',portes:room&&room.doors?room.doors.map(d=>d.type):[],palier:RUN&&RUN.palierD,essai:!!(RUN&&RUN.essai),pv:hpMul(),deg:dmgMul()})};
+})();
+
+// v18.3 · Les règles mutantes de l'Extrême (chantier v18, action 3b ; cadrage Q5–Q7). Données : descente.js (règles de l'Extrême, mutations).
+// Logique pure : desRng, desPlafond, desMutActe, desMutDescente, desMutSalle (bloc /*des:pur*/), vérifiée par outils/sim-descente.mjs.
+// Une graine par descente (RUN.mut18.graine) ; à l'entrée de chaque acte, la liste est recalculée depuis la graine (un essai qui saute
+// des actes retombe sur la même liste). Sans mutations dans les règles du palier (Normal, Difficile), rien de ce bloc ne joue.
+// Lecture image d'abord : sceaux à l'entrée de l'acte (aucune pause, aucun texte bloquant), icônes au HUD (une ligne au survol), signes
+// dans le monde ; la pause dit une ligne par mutation. Jamais en salle de gardien ni au boss final (desMutSalle), jamais en ?demo=.
+(function(){
+ const ORD=DES_D.ordre,RGC={},DEMO18=/[?&]demo=/.test(location.search);
+ const RG=()=>{const p=RUN&&!RUN.hub&&RUN.palierD||ORD[0];return RGC[p]||(RGC[p]=desRegles(DES_D,p));};
+ const MU=()=>{const M=RG().mutations;return M&&M.liste&&Object.keys(M.liste).length?M:null;};
+ const ZC=TELE.zone,COUR='255,214,120',RAGE='255,58,52',BRUME='176,166,205';
+ Object.assign(NUMSTYLE,{soin18:[17,'#9fe3a8']});
+ // ── état de la descente : la liste de l'acte en cours
+ function etat(){const M=MU();if(!M||!RUN||RUN.hub||DEMO18)return null;
+  const S=RUN.mut18||(RUN.mut18={graine:(Math.random()*4294967296)>>>0,acte:0,liste:[],entre:null,sort:null,hist:{},vu:{}});
+  const n=ACTE();if(S.acte!==n){const D=desMutDescente(M,S.graine,n)[n];S.acte=n;S.liste=D.liste.slice();S.entre=D.entre;S.sort=D.sort;S.hist[n]=D.liste.slice();sceaux(S,M);majHud(true);}
+  return S;}
+ function actives(){const M=MU(),S=etat();if(!M||!S||!room||RUN.hub)return[];return desMutSalle(M,S.liste,{type:room.type,gardeK:room.gardeK,rule:room.rule});}
+ const A=k=>!!(room&&room.mut18A&&room.mut18A.includes(k));
+ const reg=k=>MU().liste[k];
+ const dm=()=>{try{return dmgMul();}catch(e){return 1;}};
+ function premiere(k){const S=RUN&&RUN.mut18;if(!S||S.vu[k])return;S.vu[k]=1;const el=hudEl18&&hudEl18.querySelector(`[data-m="${k}"]`);if(el){el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');}}
+ // ── zones au sol (échos, glas) : préavis orange (grammaire des télégraphes), puis un coup qui ne vise que toi
+ function zone(k,x,y,r,t,dmg){(room.z18||(room.z18=[])).push({k,x:clamp(x,AR.x0+r*0.5,AR.x1-r*0.5),y:clamp(y,AR.y0+r*0.5,AR.y1-r*0.5),r,t,tot:t,dmg});}
+ function zonesTick(dt){if(!room.z18)return;
+  for(const z of room.z18){z.t-=dt;if(z.t<=0&&!z.fini){z.fini=true;
+    if(!P.dead&&hyp(P.x-z.x,P.y-z.y)<z.r+(P.r||14)*0.4)hurtPlayer(z.dmg,null);
+    fx.push({k:'ring',x:z.x,y:z.y,r0:z.r*0.35,r1:z.r*1.08,w:9,t:0.3,max:0.3,col:`rgba(${ZC},`});if(!RM)shake(2,0.08);}}
+  room.z18=room.z18.filter(z=>!z.fini);}
+ // ── l'ombre : ta trace des dernières secondes, rejouée
+ function ombreTick(dt,L){const tr=room.trace18||(room.trace18=[]);tr.push({x:P.x,y:P.y,t:RUN.time});while(tr.length&&tr[0].t<RUN.time-L.traceS-0.3)tr.shift();
+  const O=room.ombre18;
+  if(O){O.age+=dt;const u=O.age-L.apparitionS;
+   if(u>=0&&u<=L.traceS){const tt=O.pts[0].t+u;let i=0;while(i<O.pts.length-1&&O.pts[i+1].t<tt)i++;const a=O.pts[i],b=O.pts[Math.min(i+1,O.pts.length-1)],f=b.t>a.t?clamp((tt-a.t)/(b.t-a.t),0,1):0;
+    O.x=a.x+(b.x-a.x)*f;O.y=a.y+(b.y-a.y)*f;
+    if(!O.touche&&!P.dead&&hyp(P.x-O.x,P.y-O.y)<L.rayon+(P.r||14)*0.6){O.touche=true;hurtPlayer(L.degats*dm(),null);}}
+   if(u>L.traceS+0.35)room.ombre18=null;}
+  return O;}
+ // ── chaque pas de jeu (après les ennemis)
+ const _ue18=updateEnemies;
+ updateEnemies=function(dt){_ue18(dt);try{tick(dt);}catch(err){console.error(err);}};
+ function tick(dt){
+  if(!RUN||RUN.hub||!room||!P)return;const M=MU();if(!M){if(room.mut18A)room.mut18A=null;return;}
+  etat();const AC=room.mut18A=actives();majHud(false);
+  const combat=!room.cleared&&(room.type==='combat'||room.type==='elite');
+  const vivants=enemies.filter(e=>!e.dead&&!(e.puppet>0)&&e.type!=='boss');
+  if(room.cleared){room.z18=null;room.ombre18=null;if(room.diff18)liberer();}
+  else zonesTick(dt);
+  // Vagues pressées
+  if(A('presse')&&combat&&room.waveI>0&&room.waveI<room.waves.length){const L=reg('presse'),alive=vivants.length+room.spawning.length;
+   if((alive<=Math.floor((room.lastSize||0)*L.part)&&room.sinceWave>L.apresS)||room.sinceWave>L.maxS){const i=room.waveI++;spawnWave(room.waves[i],i===room.waves.length-1);premiere('presse');}}
+  // Brume qui serre
+  {const L=reg('serre');if(L){let k=room.serre18||0;
+    if(A('serre')&&combat&&vivants.length)k=Math.min(L.part,k+dt*L.part/L.dureeS);else k=Math.max(0,k-dt*L.part/1.2);
+    room.serre18=k;if(k>0.002){const R=serreRect(k);
+     if(k>0.03)premiere('serre');
+     P.x=clamp(P.x,R.x0+(P.r||14),R.x1-(P.r||14));P.y=clamp(P.y,R.y0+(P.r||14),R.y1-(P.r||14));
+     for(const e of enemies)if(!e.dead&&e.type!=='boss'&&!e.fixed){e.x=clamp(e.x,R.x0+e.r,R.x1-e.r);e.y=clamp(e.y,R.y0+e.r,R.y1-e.r);}
+     for(const s of room.spawning){s.x=clamp(s.x,R.x0+20,R.x1-20);s.y=clamp(s.y,R.y0+20,R.y1-20);}}}}
+  // Couronne : une par vague (dès que la vague est entière), si la vague est assez grande
+  if(A('couronne')&&combat){const L=reg('couronne'),w=room.waveI-1;
+   if(w>=0&&room.cour18W!==w&&!room.spawning.length){room.cour18W=w;const C=vivants.filter(e=>e.vague18===w&&!e.asm&&!e.fixed&&!e.elite);
+    if(C.length>=L.min){const e=C[Math.floor(Math.random()*C.length)];e.couronne18=true;premiere('couronne');}}}
+  room.cour18=A('couronne')&&vivants.some(e=>e.couronne18);
+  // Dernier souffle
+  if(A('dernier')&&combat&&!room.spawning.length){const L=reg('dernier'),T18=room.taille18||{};
+   for(const w of Object.keys(T18)){if(T18[w]<L.min)continue;const g=vivants.filter(e=>e.vague18===+w);
+    if(g.length===1&&!g[0].rage18&&!g[0].asm){const e=g[0];e.rage18=true;e.spd*=L.vitesse;premiere('dernier');if(!RM)sparks(e.x,e.y,8,`rgb(${RAGE})`);}}}
+  // Glas lointain
+  if(A('glas')&&combat&&vivants.length){const L=reg('glas');room.glas18T=(room.glas18T||0)+dt;
+   const ombreProche=room.ombre18&&room.ombre18.age<L.preavisS+0.2;
+   if(room.glas18T>=L.periodeS&&!ombreProche){room.glas18T=0;const a=Math.random()*TAU,d=L.degats*dm();
+    zone('glas',P.x,P.y,L.rayon,L.preavisS,d);zone('glas',P.x+Math.cos(a)*L.ecart,P.y+Math.sin(a)*L.ecart,L.rayon,L.preavisS,d);zone('glas',P.x-Math.cos(a)*L.ecart,P.y-Math.sin(a)*L.ecart,L.rayon,L.preavisS,d);
+    sfx('bell');premiere('glas');}}
+  // Ombre
+  if(A('ombre')&&combat&&vivants.length){const L=reg('ombre');ombreTick(dt,L);room.ombre18T=(room.ombre18T||0)+dt;
+   const tr=room.trace18,glasProche=(room.z18||[]).some(z=>z.k==='glas');
+   if(!room.ombre18&&room.ombre18T>=L.periodeS&&tr.length>1&&RUN.time-tr[0].t>=L.traceS*0.8&&!glasProche){room.ombre18T=0;
+    const pts=tr.filter(p=>p.t>=RUN.time-L.traceS).map(p=>({x:p.x,y:p.y,t:p.t}));room.ombre18={pts,age:0,x:pts[0].x,y:pts[0].y,touche:false};premiere('ombre');}}
+  else if(room.ombre18&&!combat)room.ombre18=null;
+ }
+ function serreRect(k){const w=AR.x1-AR.x0,h=AR.y1-AR.y0;return{x0:AR.x0+w*k/2,x1:AR.x1-w*k/2,y0:AR.y0+h*k/2,y1:AR.y1-h*k/2};}
+ // ── vague de chaque ennemi (Couronne, Dernier souffle)
+ const _ce183=createEnemy;
+ createEnemy=function(type,x,y,elite){const e=_ce183.apply(this,arguments);
+  try{if(e&&RUN&&!RUN.hub&&room&&room.waves&&type!=='boss'&&MU()){e.vague18=Math.max(0,(room.waveI||0)-1);const T=room.taille18||(room.taille18={});T[e.vague18]=(T[e.vague18]||0)+1;}}catch(err){console.error(err);}
+  return e;};
+ // ── Échos funèbres : un ennemi ordinaire abattu
+ const _ke183=killEnemy;
+ killEnemy=function(e){const vivant=e&&!e.dead;const r=_ke183.apply(this,arguments);
+  try{if(vivant&&e.dead&&A('echo')&&room&&!room.cleared&&e.type!=='boss'&&!e.asm&&!e.elite&&!e.fixed&&!(e.puppet>0)){const L=reg('echo');zone('echo',e.x,e.y,L.rayon,L.delaiS,L.degats*dm());premiere('echo');}}catch(err){console.error(err);}
+  return r;};
+ // ── Couronne : les autres ne subissent que la moitié des dégâts tant que la couronne vit
+ const _he183=hitEnemy;
+ hitEnemy=function(e,base,o){try{if(room&&room.cour18&&e&&!e.couronne18&&!e.asm&&e.type!=='boss'&&typeof base==='number'&&A('couronne')){base*=reg('couronne').reduit;e.prot18=RUN.time;}}catch(err){console.error(err);}
+  return _he183.apply(this,[e,base,o]);};
+ // ── Cœur fermé : les soins reçus en combat attendent la purge
+ let libre=false;
+ const _hl183=heal;
+ heal=function(n,src){
+  if(!libre&&n>0&&RUN&&!RUN.hub&&room&&!room.cleared&&(room.type==='combat'||room.type==='elite')&&A('differe')){const D=room.diff18||(room.diff18={});D[src]=(D[src]||0)+n;premiere('differe');return;}
+  return _hl183.apply(this,arguments);};
+ function liberer(){const D=room.diff18;room.diff18=null;if(!D||!P||P.dead)return;const h0=P.hp;libre=true;try{for(const s of Object.keys(D))heal(D[s],s);}finally{libre=false;}
+  const g=Math.round(P.hp-h0);if(g>0){addNum(P.x,P.y-30,'+'+g,'soin18');if(!RM)sparks(P.x,P.y,10,'#9fe3a8');}}
+ const enAttente=()=>{const D=room&&room.diff18;if(!D)return 0;let t=0;for(const k in D)t+=D[k];return t;};
+ // ── dessin : zones et brume au sol (sous les ennemis), ombre, couronne, rage
+ const _dt183=drawTelegraphs;
+ drawTelegraphs=function(){_dt183();try{if(RUN&&!RUN.hub&&room&&room.mut18A)dessin();}catch(err){console.error(err);}};
+ function dessin(){const c=ctx;
+  const k=room.serre18||0;
+  if(k>0.002){const R=serreRect(k);c.save();c.beginPath();c.rect(AR.x0-40,AR.y0-40,AR.x1-AR.x0+80,AR.y1-AR.y0+80);c.rect(R.x0,R.y0,R.x1-R.x0,R.y1-R.y0);
+   c.fillStyle=`rgba(${BRUME},${0.3})`;c.fill('evenodd');
+   c.strokeStyle=`rgba(${BRUME},.75)`;c.lineWidth=2;c.setLineDash([10,8]);c.lineDashOffset=RM?0:-T*14;c.strokeRect(R.x0,R.y0,R.x1-R.x0,R.y1-R.y0);c.restore();}
+  for(const z of room.z18||[]){const p=1-z.t/z.tot;c.save();
+   c.fillStyle=`rgba(${ZC},${0.1+0.22*p})`;c.beginPath();c.arc(z.x,z.y,z.r,0,TAU);c.fill();
+   c.strokeStyle=`rgba(${ZC},${0.55+0.35*(RM?1:Math.sin(T*26)*0.5+0.5)})`;c.lineWidth=2;c.setLineDash([6,6]);c.beginPath();c.arc(z.x,z.y,z.r,0,TAU);c.stroke();c.setLineDash([]);
+   c.strokeStyle=`rgba(${ZC},.9)`;c.lineWidth=1.5;c.beginPath();c.arc(z.x,z.y,Math.max(2,z.r*p),0,TAU);c.stroke();
+   if(z.k==='glas'){c.strokeStyle=`rgba(${ZC},.85)`;c.lineWidth=1.6;const s=z.r*0.32;c.beginPath();c.moveTo(z.x-s*0.8,z.y+s*0.5);c.quadraticCurveTo(z.x-s*0.7,z.y-s,z.x,z.y-s);c.quadraticCurveTo(z.x+s*0.7,z.y-s,z.x+s*0.8,z.y+s*0.5);c.closePath();c.stroke();}
+   c.restore();}
+  const O=room.ombre18;if(O){const L=reg('ombre'),u=O.age-L.apparitionS;c.save();
+   if(u<0){const a=clamp(O.age/L.apparitionS,0,1);c.globalAlpha=0.3+0.5*a;c.fillStyle='rgba(8,6,14,.85)';c.beginPath();c.arc(O.pts[0].x,O.pts[0].y,L.rayon,0,TAU);c.fill();
+    c.strokeStyle=`rgba(${ZC},${0.4+0.5*a})`;c.lineWidth=2;c.setLineDash([5,5]);c.stroke();c.setLineDash([]);
+    c.globalAlpha=0.35*a;c.strokeStyle=`rgba(${ZC},1)`;c.setLineDash([2,7]);c.beginPath();O.pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.stroke();}
+   else{const fin=u>L.traceS?1-(u-L.traceS)/0.35:1;c.globalAlpha=Math.max(0,fin);
+    const tt=O.pts[0].t+u;c.strokeStyle=`rgba(${ZC},.35)`;c.setLineDash([2,7]);c.beginPath();let first=true;for(const p of O.pts)if(p.t>=tt){first?c.moveTo(p.x,p.y):c.lineTo(p.x,p.y);first=false;}c.stroke();c.setLineDash([]);
+    c.fillStyle='rgba(8,6,14,.9)';c.beginPath();c.arc(O.x,O.y,L.rayon,0,TAU);c.fill();c.strokeStyle=`rgba(${ZC},.9)`;c.lineWidth=2;c.stroke();
+    c.fillStyle='rgba(8,6,14,.9)';c.beginPath();c.arc(O.x,O.y-L.rayon*1.15,L.rayon*0.55,0,TAU);c.fill();c.stroke();}
+   c.restore();}
+  if(room.cour18){const cr=enemies.find(e=>!e.dead&&e.couronne18);if(cr){c.save();c.strokeStyle=`rgba(${COUR},.22)`;c.lineWidth=1;
+    for(const e of enemies)if(!e.dead&&e!==cr&&!e.asm&&e.type!=='boss'){c.beginPath();c.moveTo(cr.x,cr.y);c.lineTo(e.x,e.y);c.stroke();c.strokeStyle=`rgba(${COUR},.3)`;c.beginPath();c.arc(e.x,e.y,e.r+5,0,TAU);c.stroke();c.strokeStyle=`rgba(${COUR},.22)`;}
+    c.restore();}}}
+ const _dep183=drawEnemyPost;
+ drawEnemyPost=function(e){_dep183(e);try{if(!room||!room.mut18A)return;const c=ctx;
+   if(e.couronne18){const x=e.x,y=e.y-e.r-16,s=9;c.save();c.globalCompositeOperation='lighter';glow(c,x,y,22,COUR,0.45);c.globalCompositeOperation='source-over';
+    c.fillStyle=`rgb(${COUR})`;c.strokeStyle='rgba(30,20,6,.9)';c.lineWidth=1.4;c.beginPath();c.moveTo(x-s,y+s*0.55);c.lineTo(x-s*1.05,y-s*0.5);c.lineTo(x-s*0.45,y);c.lineTo(x,y-s*0.85);c.lineTo(x+s*0.45,y);c.lineTo(x+s*1.05,y-s*0.5);c.lineTo(x+s,y+s*0.55);c.closePath();c.fill();c.stroke();c.restore();}
+   if(e.rage18){c.save();c.globalCompositeOperation='lighter';glow(c,e.x,e.y,e.r*2.1,RAGE,RM?0.35:0.28+0.14*Math.sin(T*10));c.restore();}}catch(err){console.error(err);}};
+ // ── sceaux à l'entrée de l'acte : la nouvelle s'imprime, celle qui sort se brise. Le jeu ne s'arrête pas.
+ const st=document.createElement('style');st.textContent=`
+#sceaux18{position:absolute;left:50%;top:calc(34% + clamp(56px,7vw,98px));transform:translateX(-50%);display:flex;gap:14px;pointer-events:none;opacity:0;transition:opacity .5s}
+#sceaux18.show{opacity:1}
+#sceaux18 i{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-style:normal;color:#ffb07a;border:1.5px solid rgba(255,120,90,.7);background:rgba(20,8,10,.82);box-shadow:0 0 18px rgba(255,80,60,.25)}
+#sceaux18 i .ic{width:26px;height:26px;stroke-width:1.7}
+#sceaux18 i.nw{animation:sc18 .55s cubic-bezier(.2,1.6,.4,1) both;border-color:#ff8a5c;box-shadow:0 0 26px rgba(255,110,70,.55)}
+#sceaux18 i.sort{opacity:.45;filter:grayscale(1);position:relative;animation:sc18o 1.6s ease both}
+#sceaux18 i.sort::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:2px;background:#d8cfc0;transform:rotate(-35deg)}
+@keyframes sc18{0%{transform:scale(1.9);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes sc18o{0%{opacity:.9;filter:none}100%{opacity:.25;filter:grayscale(1)}}
+#hMut18{display:flex;gap:5px;margin-top:2px}
+#hMut18 i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;color:#ffb07a;border:1px solid rgba(255,120,90,.55);background:rgba(20,8,10,.7);pointer-events:auto;cursor:help}
+#hMut18 i .ic{width:15px;height:15px;stroke-width:1.8}
+#hMut18 i.off{opacity:.35;filter:grayscale(1)}
+#hMut18 i.flash{animation:mf18 1.2s ease 1}
+@keyframes mf18{0%,40%,80%{box-shadow:0 0 0 3px rgba(255,140,90,.8);background:rgba(120,40,20,.9)}20%,60%,100%{box-shadow:none}}
+.bar.hp .d18{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(159,227,168,.75) 0 4px,rgba(159,227,168,.3) 4px 8px);pointer-events:none}
+.mut18p{margin:6px 0 4px}.mut18p .mr{display:flex;gap:10px;align-items:flex-start;margin:6px 0}.mut18p .mr i{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#ffb07a;border:1px solid rgba(255,120,90,.55);font-style:normal}
+.mut18p .mr i .ic{width:17px;height:17px}.mut18p .mr p{margin:0;font-size:14.5px;line-height:1.4}.mut18p .mr em{display:block;color:var(--ash);font-style:normal;font-size:13.5px}
+@media (prefers-reduced-motion:reduce){#sceaux18 i.nw,#sceaux18 i.sort,#hMut18 i.flash{animation:none}}`;document.head.appendChild(st);
+ let scEl=null,scT=0;
+ function sceaux(S,M){if(!S.liste.length&&!S.sort)return;if(!scEl){scEl=document.createElement('div');scEl.id='sceaux18';scEl.setAttribute('aria-hidden','true');$('#banner').parentNode.appendChild(scEl);}
+  const ic=(k,cls)=>`<i class="${cls||''}" data-m="${k}">${icon(M.liste[k].ic)}</i>`;
+  scEl.innerHTML=(S.sort&&!S.liste.includes(S.sort)?ic(S.sort,'sort'):'')+S.liste.map(k=>ic(k,k===S.entre?'nw':'')).join('');
+  scEl.classList.add('show');clearTimeout(scT);scT=setTimeout(()=>scEl&&scEl.classList.remove('show'),(M.sceauS||2.4)*1000);if(S.entre)sfx('bell');}
+ // ── HUD : une icône par mutation de l'acte (éteinte là où elle ne joue pas), une ligne au survol ; soin en attente sur la barre de PV
+ let hudEl18=null,hudCle='',dEl=null;
+ function majHud(force){const M=MU(),S=RUN&&RUN.mut18;
+  const L=(M&&S&&!RUN.hub)?S.liste:[],AC=room&&room.mut18A||[],cle=L.map(k=>k+(AC.includes(k)?1:0)).join(',');
+  if(force||cle!==hudCle){hudCle=cle;if(!hudEl18){hudEl18=document.createElement('div');hudEl18.id='hMut18';const hr=$('#hRoom');hr.parentNode.insertBefore(hudEl18,hr.nextSibling);}
+   hudEl18.innerHTML=L.map(k=>{const X=M.liste[k];return `<i data-m="${k}" class="${AC.includes(k)?'':'off'}" title="${esc(X.n+' · '+X.d)}">${icon(X.ic)}</i>`;}).join('');hudEl18.hidden=!L.length;}
+  const w=enAttente();if(!dEl){const b=$('#hHp');dEl=document.createElement('i');dEl.className='d18';b.parentElement.appendChild(dEl);}
+  if(w>0&&P&&P.s){const hp=clamp(P.hp/P.s.maxHp,0,1),dw=clamp(w/P.s.maxHp,0,1-hp);dEl.style.left=(hp*100)+'%';dEl.style.width=(dw*100)+'%';dEl.hidden=false;}else dEl.hidden=true;}
+ const _urh183=updateRoomHud;
+ updateRoomHud=function(){_urh183.apply(this,arguments);try{if(RUN&&RUN.hub){if(hudEl18)hudEl18.hidden=true;}else majHud(true);}catch(err){console.error(err);}};
+ // ── pause : une ligne par mutation (ce qui se passe, la réponse)
+ const _op183=openPause;
+ openPause=function(){_op183.apply(this,arguments);try{const M=MU(),S=RUN&&RUN.mut18;if(!M||!S||RUN.hub||!S.liste.length||overlayEl.querySelector('.mut18p'))return;
+   const h=overlayEl.querySelector('.panel h2');if(!h)return;
+   h.insertAdjacentHTML('afterend',`<div class="mut18p"><p class="h-sec">Règles mutantes · acte ${ROM[ACTE()]}</p>${S.liste.map(k=>{const X=M.liste[k];return `<div class="mr"><i>${icon(X.ic)}</i><p><b>${esc(X.n)}</b> · ${esc(X.d)}<em>${esc(X.r)}</em></p></div>`;}).join('')}</div>`);}catch(err){console.error(err);}};
+ // console et bancs
+ window.__mutations={frapper:(e,b)=>hitEnemy(e,b,{crit:false,kb:0}),rejouer:(g,n)=>desMutDescente(desRegles(DES_D,'extreme').mutations,g,n)[n].liste,etat:()=>RUN&&RUN.mut18,actives:()=>room&&room.mut18A||[],regles:MU,attente:enAttente,
+  forcer:liste=>{const S=etat();if(S){S.liste=liste.slice();S.hist[S.acte]=S.liste.slice();majHud(true);}return S;},
+  salle:()=>room&&{z:(room.z18||[]).map(z=>({k:z.k,t:z.t,r:z.r})),serre:room.serre18||0,ombre:room.ombre18?{age:room.ombre18.age,touche:room.ombre18.touche}:null,cour:!!room.cour18,diff:room.diff18||null,waveI:room.waveI,waves:room.waves&&room.waves.length}};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

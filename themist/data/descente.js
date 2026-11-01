@@ -57,7 +57,7 @@
 //   signature qui revient deux fois par cycle. Même rituel que l'éveil (signal, carte, icône).
  // nemesis (jamais écrit au wiki) : parActe remplace assemble.nemesis.parActe ; repit faux : plus de répit après plusieurs morts de suite.
  // repit : halteDes : pas de halte au choix avant cette part de l'acte (l'antichambre imposée reste).
- // brumeux : lu par le boss final (action 5).
+ // brumeux : lu par le boss final (action 5). mutations (Extrême, v18.3) : voir plus bas.
  regles:{
   normal:{},
   difficile:{
@@ -68,5 +68,28 @@
    soins:{monde:0.5,gardien:0},
    nemesis:{parActe:2,repit:false},
    repit:{halteDes:0.5},
-   brumeux:{phaseEntiere:true}}}
+   brumeux:{phaseEntiere:true},
+   // v18.3 (action 3b) · règles mutantes, imposées en Extrême (cadrage Q5–Q7). Le joueur ne les choisit pas.
+   // plafond : nombre de mutations actives à partir de l'acte (clé) ; à chaque acte, une nouvelle entre et, au plafond, la plus ancienne sort
+   //   (fenêtre glissante) ; tirage par graine de descente, jamais la mutation qui vient de sortir, jamais deux incompatibles ensemble.
+   // salles : où elles jouent (jamais en salle de gardien, ni au boss final : porte garde ou final ; ni halte, autel, colporteur).
+   // suspend : mutation sans effet tant que la règle de salle (bestiaire.js, regles) est l'une de celles-ci ; suspendElite : paire dont la seconde
+   //   se tait en salle d'élite (deux zones automatiques sur le joueur). Chaque mutation : n (nom), ic (icône, data/icones.js), d (ce qui se passe),
+   //   r (la réponse du joueur) ; ce sont les lignes du HUD, de la pause et du wiki. Le reste : ses réglages (secondes, px, dégâts × montée).
+   mutations:{
+    plafond:{1:1,4:2,7:3},
+    salles:['combat','elite'],
+    incompatibles:[['presse','dernier']],
+    suspend:{serre:['brume','sol']},
+    suspendElite:[['glas','ombre']],
+    sceauS:2.4,
+    liste:{
+     echo:{n:'Échos funèbres',ic:'u_m_echo',d:'Un ennemi ordinaire abattu laisse un écho qui éclate un instant plus tard.',r:'Ne finis pas tes ennemis au contact, ou éloigne-toi aussitôt.',delaiS:1.2,rayon:56,degats:8},
+     presse:{n:'Vagues pressées',ic:'u_m_presse',d:'La vague suivante entre dès que la moitié de la précédente est tombée.',r:'Purge vite ; garde de quoi tenir une foule.',part:0.5,apresS:1.2,maxS:7},
+     serre:{n:'Brume qui serre',ic:'u_m_serre',d:'Pendant le combat, la brume ronge les bords de la salle ; elle se retire à la purge.',r:'Reste mobile, ne te laisse pas acculer.',part:0.15,dureeS:25},
+     couronne:{n:'Couronne',ic:'u_m_couronne',d:'Dans chaque vague, un ennemi est couronné : tant qu’il vit, les autres ne subissent que la moitié des dégâts.',r:'Abats la couronne d’abord.',reduit:0.5,min:3},
+     dernier:{n:'Dernier souffle',ic:'u_m_dernier',d:'Le dernier ennemi d’une vague enrage : il va 30 % plus vite.',r:'Ne laisse pas traîner le dernier.',vitesse:1.3,min:3},
+     glas:{n:'Glas lointain',ic:'u_m_glas',d:'Toutes les 9 s, une cloche marque trois cercles près de toi, qui frappent une seconde plus tard.',r:'Au son de la cloche, sors des cercles.',periodeS:9,preavisS:1,rayon:60,ecart:115,degats:12},
+     ombre:{n:'Ombre',ic:'u_m_ombre',d:'Toutes les 12 s, ton ombre refait le chemin de tes deux dernières secondes ; la toucher blesse.',r:'Ne repasse pas par le même chemin.',periodeS:12,traceS:2,apparitionS:0.6,rayon:16,degats:10},
+     differe:{n:'Cœur fermé',ic:'u_m_differe',d:'Les soins reçus pendant le combat attendent la purge de la salle ; tu les perds si tu tombes avant.',r:'Joue propre : le soin arrive après.'}}}}}
 };})(window.BRUME_DATA=window.BRUME_DATA||{});

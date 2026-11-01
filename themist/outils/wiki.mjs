@@ -224,7 +224,8 @@ function reliques(list, F, S) {
 
 // ── Section « La descente » (v18 : data/descente.js et gardiens.js, actes). Le wiki dit les actes, les paliers et leur déblocage ;
 // v18.2 : les règles de Difficile et d'Extrême (regles, héritage résolu ici comme desRegles le fait en jeu). Il tait le combat final,
-// la phase finale du boss final (brumeux) et la némésis (nemesis : secret, aucun texte n'en parle).
+// la phase finale du boss final (brumeux) et la némésis (nemesis : secret, aucun texte n'en parle). v18.3 : il dit les règles mutantes
+// (catalogue), pas la façon dont elles sont choisies.
 function reglesDe(DS, p) {
   const fus = (a, b) => { const o = Object.assign({}, a); for (const k of Object.keys(b || {})) { const v = b[k]; o[k] = v && typeof v === 'object' && !Array.isArray(v) && o[k] && typeof o[k] === 'object' ? fus(o[k], v) : v; } return o; };
   const ch = [], vu = []; for (let q = p; q && DS.regles[q] && !vu.includes(q); q = DS.regles[q].herite) { vu.push(q); ch.unshift(DS.regles[q]); }
@@ -241,8 +242,22 @@ function lignesPalier(DS, B, p) {
     if (S.gardien != null) L.push(S.gardien > 0 ? `Après la victoire sur un gardien des actes I à III, tu récupères ${Math.round(S.gardien * 100)} % de tes PV au lieu de tous.` : 'Après la victoire sur un gardien des actes I à III, la Brume ne te rend rien.'); }
   if (R.gardien && R.gardien.tempsEnPlus && neuf('gardien', r => r.gardien)) L.push(`Les gardiens des actes ${ROM[Math.max(4, R.gardien.desActe || 4)]} à IX, les miniboss et le boss final ont <b>un temps de plus</b> : sous ${R.gardien.tempsEnPlus.pv} % de PV, une nouvelle attaque s’éveille. Pour l’instant, leur place est tenue par un Masqué : c’est son sort signature qui revient deux fois par cycle. Les gardiens des actes I à III ne changent pas.`);
   if (R.repit && R.repit.halteDes) L.push(`Aucun répit : pas de halte au choix avant la ${R.repit.halteDes === 0.5 ? 'moitié' : pct(R.repit.halteDes)} de chaque acte (l’antichambre des actes I à III reste).`);
+  if (R.mutations && R.mutations.liste && neuf('mutations', r => r.mutations)) L.push(`<a href="#mutations">Règles mutantes</a> imposées : ${mutPlafond(R.mutations)}, qui changent à chaque acte.`);
   if (!L.length) L.push('Aucune règle en plus.');
   return `<ul class="rg">${L.map(x => `<li>${x}</li>`).join('')}</ul>`;
+}
+// v18.3 · le plafond des règles mutantes, en mots (« une aux actes I à III, deux aux actes IV à VI, trois aux actes VII à X »)
+function mutPlafond(M) {
+  const ks = Object.keys(M.plafond).map(Number).sort((a, b) => a - b);
+  return ks.map((k, i) => { const fin = i < ks.length - 1 ? ks[i + 1] - 1 : 10; return `${M.plafond[k] === 1 ? 'une' : mot(M.plafond[k])} aux actes ${ROM[k]} à ${ROM[fin]}`; }).join(', ');
+}
+// v18.3 · le catalogue des règles mutantes (Extrême) : icône, nom, ce qui se passe, la réponse. Il ne dit pas comment elles sont choisies.
+function catalogueMutations(DS, I, ico) {
+  const R = reglesDe(DS, 'extreme'), M = R.mutations; if (!M || !M.liste) return '';
+  const cartes = Object.values(M.liste).map(X => `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(X.d)}</p><p class="k">${esc(X.r)}</p></article>`).join('');
+  return `<h3 class="sub" id="mutations">Les règles mutantes (Extrême)</h3>
+<p>En Extrême, chaque acte impose ses règles mutantes : ${mutPlafond(M)}. À l’entrée d’un acte, une nouvelle s’imprime sous le nom de l’acte et, quand elles sont au complet, la plus ancienne se brise. Elles ne jouent jamais dans la salle d’un gardien ni au boss final. Leurs icônes restent en haut à gauche, sous la salle (éteintes là où elles ne jouent pas) : survole-les pour leur ligne, ou ouvre la pause.</p>
+<div class="grid g3">${cartes}</div>`;
 }
 function descente(DS, G, B, I) {
   const ico = id => (I && I[id]) ? `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
@@ -265,6 +280,7 @@ ${lignes}</tbody></table>
 <h3 class="sub">Les paliers</h3>
 <p>Choisis ton palier sur l’écran titre ou au Portail du Sanctuaire. Gagner une descente (vaincre le boss final) ouvre le palier suivant ; une descente d’essai n’ouvre rien. Chaque palier ajoute des règles, jamais un simple mur de PV : en Normal, la descente est celle que décrit ce wiki ; Difficile et Extrême la changent autour des gardiens des actes I à III, jamais leur combat. Le palier joué se lit en haut de l’écran, à côté de l’acte.</p>
 <div class="grid g3">${cartes}</div>
+${catalogueMutations(DS, I, ico)}
 </section>`;
 }
 
