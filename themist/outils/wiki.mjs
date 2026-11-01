@@ -28,7 +28,7 @@ function loadData() {
 
 // ── Petits utilitaires
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const ROM = ['', 'I', 'II', 'III', 'IV', 'V'];
+const ROM = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 // « La Mère-Brume » → « à la Mère-Brume », « Le Héraut Noyé » → « au Héraut Noyé »
 const aLa = s => s.replace(/^Le /, 'au ').replace(/^La /, 'à la ').replace(/^Les /, 'aux ').replace(/^L’/, 'à l’');
 const lower = s => s.charAt(0).toLowerCase() + s.slice(1);
@@ -222,6 +222,29 @@ function reliques(list, F, S) {
 <div class="grid g3">${cards}</div></section>`;
 }
 
+// ── Section « La descente » (v18 : data/descente.js et gardiens.js, actes). Le wiki dit les actes, les paliers et leur déblocage ;
+// il ne dit rien du combat final ni de règles propres aux paliers (il n'y en a pas encore).
+function descente(DS, G, B, I) {
+  const ico = id => (I && I[id]) ? `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true"><path d="${I[id]}"/></svg>` : '';
+  const actes = [...G.actes.map((a, i) => Object.assign({ fin: 'gardien' }, a, { n: i + 1 })), ...DS.actes.slice(0, DS.nombre - G.actes.length).map((a, i) => Object.assign({}, a, { n: G.actes.length + i + 1 }))];
+  const total = actes.reduce((t, a) => t + a.rooms, 0);
+  const finDe = a => a.fin === 'elite' ? `Élite de l’acte : un Masqué, PV ×${num(DS.fin.pv[a.n])}` : a.n > G.actes.length ? `${esc(a.boss)} (gardien provisoire)` : `<a href="#gardiens">${esc(a.boss)}</a>`;
+  const lignes = actes.map(a => `<tr><td>${ROM[a.n]}</td><td><b>${esc(a.name)}</b></td><td>${a.rooms}</td><td>${finDe(a)}</td></tr>`).join('\n');
+  const ouvre = p => { const o = DS.paliers[p].ouvrePar; return o ? `Gagne une descente en <b>${esc(DS.paliers[o].n)}</b>.` : 'Ouvert dès le départ.'; };
+  const cartes = DS.ordre.map(p => { const X = DS.paliers[p]; return `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(X.court)}</p><p class="k">${ouvre(p)}</p></article>`; }).join('');
+  const reg = actes.find(a => a.n === DS.registre);
+  return `<section class="sec" id="descente" data-sec>${MARK('data/descente.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>La descente</h2><div class="lede"><p>Une descente compte <b>${mot(DS.nombre)} actes</b> (${total} salles, fins d’acte comprises). Les actes I à III se terminent par leurs gardiens. Pour l’instant, les actes IV à IX se terminent par une <b>élite de fin d’acte</b> et l’acte X par un <b>gardien provisoire</b> ; les actes IV à X reprennent le décor et les ennemis de l’acte ${ROM[DS.registre]} (${esc(reg.name)}). Ils recevront leurs propres gardiens.</p><p>Une descente vise environ <b>${DS.dureeCible.normale} minutes</b> en Normal (${DS.dureeCible.rapide} pour un joueur rapide).</p></div></header>
+<h3 class="sub">Les dix actes</h3>
+<table class="tbl"><thead><tr><th>Acte</th><th>Nom</th><th>Salles</th><th>Fin de l’acte</th></tr></thead><tbody>
+${lignes}</tbody></table>
+<p>Aux actes I à III, la salle avant le gardien est une halte imposée (l’antichambre). Aux actes IV à IX, il n’y en a pas : la troisième salle se choisit comme les autres, puis vient l’élite de fin d’acte, imposée, avec une vague de plus. L’acte X s’ouvre sur l’antichambre. Chaque nouvel acte apporte un pacte et une relance de talents de plus.</p>
+<p>Les ennemis gagnent <b>${pct(B.montee.pvParSalle)} de PV</b> et <b>${pct(B.montee.degatsParSalle)} de dégâts</b> par salle jusqu’à la fin de l’acte ${ROM[DS.montee.apresActe]}, puis <b>${pct(DS.montee.pvParSalle)}</b> et <b>${pct(DS.montee.degatsParSalle)}</b> par salle.</p>
+<h3 class="sub">Les paliers</h3>
+<p>Choisis ton palier sur l’écran titre ou au Portail du Sanctuaire. Gagner une descente (vaincre le gardien de l’acte X) ouvre le palier suivant ; une descente d’essai n’ouvre rien. Pour l’instant, les trois paliers jouent la même descente : leurs règles arrivent dans une prochaine version.</p>
+<div class="grid g3">${cartes}</div>
+</section>`;
+}
+
 // ── Section « Pactes et aides »
 function pactes(D, I) {
   // v16.6 : chaque pacte porte une icône (data/icones.js) et une valeur courte, comme sur la carte du jeu
@@ -262,7 +285,7 @@ function survieGouffre(G) {
   const pct = x => Math.round(x * 100);
   return `<p>Face à un gardien ou à un Masqué, le <b>Gouffre</b> encaisse mieux : <b>−${pct(1 - S.degatsRecus)} %</b> de dégâts reçus, et ${pct(S.vol)} % des dégâts qu’il leur inflige lui reviennent en PV. Son corps à corps l’expose à leurs zones.</p>`;
 }
-function bestiaire(B, I, MQ, G) {
+function bestiaire(B, I, MQ, G, DS) {
   const E = B.ennemis, C = B.champion, RS = B.reglesSalle, BR = B.breche, EF = B.efficacite;
   const nom = k => E[k].n;
   const ennemis = Object.values(E).filter(e => e.desc).map(e =>
@@ -289,7 +312,7 @@ function bestiaire(B, I, MQ, G) {
   const caps = Object.values(AS.capacites).map(X => `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(FORME[X.forme])}.</p><p class="k">Empruntée ${E2[X.de] ? `${X.de === 'brute' ? 'à la' : 'au'} ${esc(E2[X.de].n)}` : ''} · chargement ${sec(X.chargeS)}</p></article>`).join('');
   const sigs = Object.values(AS.signatures).map(X => `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(FORME[X.forme])}.</p><p class="k">Chargement ${sec(Math.max(X.chargeS, AS.signatureMinS))} (jamais moins de ${sec(AS.signatureMinS)})</p></article>`).join('');
   const muts = B.mutationsInstables.map(m => `<article class="ent"><h4>${esc(m.n)}</h4><p>${esc(m.d)}</p></article>`).join('');
-  return `<section class="sec" id="bestiaire" data-sec>${MARK('data/bestiaire.js')}<header class="sh"><p class="eyebrow">Ennemis</p><h2>Bestiaire</h2><div class="lede"><p>Les statistiques indiquées sont les valeurs de base (salle 1, palier 0). Elles augmentent à chaque salle de <b>${pct(B.montee.pvParSalle)} de PV</b> et de <b>${pct(B.montee.degatsParSalle)} de dégâts</b>, et avec les paliers de Brume. Un <b>champion</b> a ${num(C.pv)}× les PV, ${num(C.degats)}× les dégâts et ${num(C.taille)}× la taille.</p></div></header>
+  return `<section class="sec" id="bestiaire" data-sec>${MARK('data/bestiaire.js')}<header class="sh"><p class="eyebrow">Ennemis</p><h2>Bestiaire</h2><div class="lede"><p>Les statistiques indiquées sont les valeurs de base (salle 1, palier 0). Elles augmentent à chaque salle de <b>${pct(B.montee.pvParSalle)} de PV</b> et de <b>${pct(B.montee.degatsParSalle)} de dégâts</b> jusqu’à la fin de l’acte ${ROM[DS.montee.apresActe]}, puis de ${pct(DS.montee.pvParSalle)} et ${pct(DS.montee.degatsParSalle)} (voir <a href="#descente">La descente</a>). Un <b>champion</b> a ${num(C.pv)}× les PV, ${num(C.degats)}× les dégâts et ${num(C.taille)}× la taille.</p></div></header>
 <h3 class="sub">Les ennemis communs</h3>
 <p>Toutes leurs attaques de zone sont annoncées en <b>rouge</b> : disque qui se remplit (Bouffi), onde pointillée (Hurleur), cône (Voilé), couloir (Brute). Un liseré rouge entoure les tirs des Spectres. Les zones des gardiens restent orange.</p>
 <div class="grid g3">${ennemis}</div>
@@ -378,7 +401,7 @@ function gardiens(G, F) {
   const anneau = faibles.length ? ` Pendant la fenêtre (et quand le gardien est sonné), un <b>anneau ivoire</b> palpite autour de son point faible : ${faibles.map(esc).join(', ')}.` : '';
   const fen = Object.entries(G.fenetres).map(([c, x]) => `<article class="ent" data-cls="${c}"><h4 style="color:${F[c].col}">${esc(F[c].n)}</h4><p><b>Avertissement :</b> ${esc(x.warn)}.</p><p><b>Fenêtre :</b> ${esc(x.label)}.</p></article>`).join('');
   const titre2 = Object.keys(G.failles).map((a, i) => `${esc(i ? lower(A[a - 1].boss) : A[a - 1].boss)} · Acte ${ROM[a]}`).join(' et ');
-  return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Chaque acte se termine par un gardien. Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux du palier 0 ; les paliers de Brume les augmentent.</p>' : ''}${survieGouffre(G)}</div></header>
+  return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Les actes I à III se terminent chacun par un gardien (voir <a href="#descente">La descente</a>). Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux de la descente en Normal.</p>' : ''}${survieGouffre(G)}</div></header>
 <div class="grid g3">${cartes}</div>
 
 <h3 class="sub">${esc(A[0].boss)} · Acte I</h3>
@@ -479,7 +502,7 @@ function fragments(D) {
   const T = D.talents, FO = D.formes, F = FO.fiches, ordre = FO.ordre, SA = D.sanctuaire, ME = D.memoire, HI = D.histoire;
   const out = {};
   out['intro-compte'] = `les ${mot(ordre.length)} formes, leurs ${Object.keys(T.noeuds).length} talents, les ${D.reliques.length} reliques, les ${Object.keys(D.equipements.objets).length} équipements`;
-  out['intro-actes'] = D.gardiens.actes.map(a => esc(a.name)).join(', ');
+  out['intro-actes'] = `${D.gardiens.actes.map(a => esc(a.name)).join(', ')}, puis ${mot(D.descente.nombre - D.gardiens.actes.length)} actes plus profonds`;
   out.commandes = `<div class="tabs" data-tabs>\n${ordre.map((c, i) => `<button type="button" class="tab${i ? '' : ' on'}" data-t="k-${c}" style="--c:${T.formes[c].color}">${esc(T.formes[c].short)}</button>`).join('')}\n</div>\n`
     + ordre.map((c, i) => `<div class="tabpane${i ? '' : ' on'}" id="k-${c}"><dl class="kv">${F[c].commandes.map(([k, v]) => `<dt><kbd>${esc(touche(k))}</kbd></dt><dd>${esc(v)}</dd>`).join('')}</dl></div>`).join('');
   const branches = c => Object.keys(T.branches).filter(b => T.branches[b].cls === c);
@@ -499,9 +522,9 @@ ${ordre.map(c => { const d = F[c].depart; return `<tr><td>${esc(T.formes[c].shor
   const B = D.resonances.bareme, P = SA.parPalier;
   out.eclats = `<p>Tu gagnes des <b>Éclats</b> à chaque descente, réussie ou non. Une mort conserve <b>${pct(B.mort)}</b> des éclats du run, un abandon <b>${pct(B.abandon)}</b>, une victoire <b>${pct(B.victoire)}</b>. Les éclats achètent des améliorations permanentes à la flamme d’Ismène.</p>
 <div class="grid g2">${SA.ameliorations.map(m => `<article class="ent"><div class="eh"><h4>${esc(m.name)}</h4><span class="tag">${m.max} rang${m.max > 1 ? 's' : ''}</span></div><p>${esc(m.desc)}</p><p class="k">Coût : ${m.cost.map(c => `${c} ✦`).join(' · ')}</p></article>`).join('')}</div>`;
-  out.paliers = `<p>Après ta première victoire, tu peux redescendre plus difficilement. Chaque palier <b>s’ajoute aux précédents</b>, renforce les ennemis de ${pct(P.pvEnnemis)} de PV et ${pct(P.degatsEnnemis)} de dégâts, et rapporte <b>${pct(P.eclats)} d’éclats en plus</b>. Faire taire le Glas Originel débloque le palier suivant.</p>
-<table class="tbl"><thead><tr><th>Palier</th><th>Nom</th><th>Effet</th></tr></thead><tbody>
-${SA.paliers.map(p => `<tr><td>${p.n}</td><td><b>${esc(p.name)}</b></td><td>${esc(p.desc)}</td></tr>`).join('')}</tbody></table>`;
+  // v18 : les Paliers de Brume sont remplacés par les paliers de la descente (data/descente.js)
+  const DS = D.descente;
+  out.paliers = `<p>Les Paliers de Brume ont laissé la place à <b>${mot(DS.ordre.length)} paliers</b> : ${DS.ordre.map(p => `<b>${esc(DS.paliers[p].n)}</b>`).join(', ').replace(/, ([^,]*)$/, ' et $1')}. Gagner une descente ouvre le palier suivant ; tu le choisis sur l’écran titre ou au Portail. Voir <a href="#descente">La descente</a>.</p>`;
   const A = ME.accoutumance;
   out.accoutumance = `<p>Chaque descente, la Brume mesure la part de tes dégâts qui repose sur la mécanique de ta classe. Au-delà de <b>${pct(A.seuil)}</b>, elle <b>apprend</b> ; en dessous, ou avec une autre classe, elle oublie. Jusqu’à trois niveaux. Une Brume qui a appris rapporte plus d’éclats (+${pct(A.eclatsParNiveau)} par niveau). Les accoutumés encaissent mieux ton mécanisme, mais le contre-jeu t’est donné.</p>`;
   out.adaptations = `<div class="grid g2">${Object.entries(ME.adaptations).map(([c, a]) => `<article class="ent" data-cls="${c}"><h4 style="color:${T.formes[c].color}">${esc(T.formes[c].short)} · ${esc(a.name)}</h4><p>La Brume observe <b>${esc(a.what)}</b>.</p><p><b>Contre-jeu :</b> ${esc(a.counter)}</p></article>`).join('')}</div>`;
@@ -542,7 +565,8 @@ export function build(html) {
   out = replaceSection(out, 'memoire', memoire(D));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D), D.souvenirs));
   out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
-  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque, D.gardiens));
+  out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque, D.gardiens, D.descente));
+  out = replaceSection(out, 'descente', descente(D.descente, D.gardiens, D.bestiaire, D.icones));
   out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
   out = replaceSection(out, 'talents', talents(D.talents, D.arbre, D.souvenirs));

@@ -444,6 +444,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/bestiaire.js"></script>
 <script src="data/masque.js"></script>
 <script src="data/gardiens.js"></script>
+<script src="data/descente.js"></script>
 <script src="data/resonances.js"></script>
 <script src="data/talents.js"></script>
 <script src="data/arbre.js"></script>
@@ -826,6 +827,54 @@ const ENEMY_INFO=Object.fromEntries(Object.entries(BE_D.ennemis).filter(([,e])=>
 // Actes et gardiens (noms, textes, fenêtres, couleurs) : data/gardiens.js. Ici, seulement le comportement.
 const GA_D=window.BRUME_DATA.gardiens;
 const ACTS=[null,...GA_D.actes];
+/*des:pur*/
+// v18 · La grande descente : logique pure, sans accès au jeu (tout passe en argument). Vérifiée par outils/sim-descente.mjs.
+// Les actes : I à III viennent de gardiens.js (inchangés), IV à N de descente.js. registre : l'acte (I à III) dont l'acte reprend
+// le décor, la musique, les ennemis et l'IA ; c'est la valeur que lit RUN.act (le reste du jeu ne connaît que trois actes).
+const DES_V=1;
+function desActes(GA,DS){const L=[null];
+ GA.actes.forEach((a,i)=>L.push(Object.assign({},a,{n:i+1,fin:'gardien',antichambre:true,registre:i+1})));
+ for(const a of DS.actes){if(L.length>DS.nombre)break;L.push(Object.assign({fin:'elite',antichambre:false},a,{n:L.length,registre:DS.registre||3}));}
+ return L;}
+// salle globale (RUN.g) de la dernière salle de l'acte apresActe : jusque-là, la montée de bestiaire.js ne change pas
+function desSeuil(L,DS){let g=0;for(let i=1;i<=DS.montee.apresActe&&L[i];i++)g+=L[i].rooms;return g;}
+// multiplicateurs de PV et de dégâts des ennemis à la salle g (hors paliers). Pour g ≤ seuil : exactement 1 + base × (g − 1).
+function desMontee(base,DS,seuil,g){const a=DS.montee,av=Math.min(g-1,seuil-1),ap=Math.max(0,g-seuil);
+ return{pv:1+base.pvParSalle*av+a.pvParSalle*ap,degats:1+base.degatsParSalle*av+a.degatsParSalle*ap};}
+// porte imposée en sortie de salle. o : {acte, N, next (numéro de la salle suivante dans l'acte), type (de la salle quittée), garde (élite de fin d'acte)}
+// 'suite' : vers l'acte suivant ; 'fin' : la descente est gagnée ; 'garde' / 'boss' / 'halte' : une seule porte ; null : portes au choix
+function desPorte(A,o){
+ if(o.type==='boss'||o.garde)return o.acte<o.N?'suite':'fin';
+ if(o.next===A.rooms)return A.fin==='elite'?'garde':'boss';
+ if(o.next===A.rooms-1&&A.antichambre!==false)return 'halte';
+ return null;}
+// type de la porte qui mène à l'acte n (les deux premières gardent leur nom d'avant la v18)
+function desPorteActe(n){return n===2?'act':n===3?'act3':'acte';}
+// sauvegarde (SAVE.descente, versionnée) : {v, ouverts:[paliers], choisi, victoires:{palier:{forme:n}}}
+// une sauvegarde absente ou abîmée donne l'état neuf ; une version future rend null (on n'y touche pas)
+function desNeuf(DS){return{v:DES_V,ouverts:[DS.ordre[0]],choisi:DS.ordre[0],victoires:{}};}
+function desLire(raw,DS){
+ if(raw==null||typeof raw!=='object'||typeof raw.v!=='number'||!(raw.v>=1))return desNeuf(DS);
+ if(raw.v>DES_V)return null;
+ const ord=DS.ordre,brut=Array.isArray(raw.ouverts)?raw.ouverts:[],ok=[];
+ for(const p of ord){const X=DS.paliers[p];if(p===ord[0]||(brut.includes(p)&&X&&ok.includes(X.ouvrePar)))ok.push(p);}   // pas de trou : un palier ouvert a son « ouvrePar » ouvert
+ const vic={};if(raw.victoires&&typeof raw.victoires==='object')for(const p of ord){const V=raw.victoires[p];if(!V||typeof V!=='object')continue;
+  for(const c of Object.keys(V)){const n=V[c];if(typeof n==='number'&&n>0&&isFinite(n))(vic[p]=vic[p]||{})[c]=Math.floor(n);}}
+ return{v:DES_V,ouverts:ok,choisi:ok.includes(raw.choisi)?raw.choisi:ord[0],victoires:vic};}
+function desEcrire(S){return JSON.parse(JSON.stringify({v:DES_V,ouverts:S.ouverts,choisi:S.choisi,victoires:S.victoires||{}}));}
+// palier jouable : celui demandé s'il est ouvert, sinon le premier
+function desChoix(S,p,DS){return S&&S.ouverts.includes(p)?p:DS.ordre[0];}
+// fin de descente : seule une victoire hors essai compte ; elle ouvre le palier dont ouvrePar est celui joué. Rend {S, ouvert}
+function desFin(S,DS,o){const R={S,ouvert:null};
+ if(!S||!o||!o.win||o.essai||!S.ouverts.includes(o.palier))return R;
+ const N=desLire(desEcrire(S),DS);const V=N.victoires[o.palier]=N.victoires[o.palier]||{};V[o.cls||'?']=(V[o.cls||'?']||0)+1;
+ for(const p of DS.ordre)if(DS.paliers[p].ouvrePar===o.palier&&!N.ouverts.includes(p)){N.ouverts.push(p);R.ouvert=p;}
+ N.ouverts=DS.ordre.filter(p=>N.ouverts.includes(p));R.S=N;return R;}
+/*/des:pur*/
+const DES_D=window.BRUME_DATA.descente;
+const ACTD=desActes(GA_D,DES_D);                   // ACTD[1..N] : les actes de la descente (ACTS[1..3] : les trois registres)
+const ACTES_N=ACTD.length-1;
+const ACTE=()=>RUN?(RUN.acteD||RUN.act||1):1;     // l'acte de la descente (1 à N) ; RUN.act reste le registre (1 à 3)
 const DOOR={combat:{l:'Combat',c:'214,210,196',g:'C'},elite:{l:'Élite',c:'243,185,77',g:'É'},autel:{l:'Autel',c:'143,178,255',g:'A'},halte:{l:'Halte',c:'255,154,82',g:'H'},boss:{l:'Gardien',c:'255,77,77',g:'G'},act:{l:'Acte II',c:'180,140,255',g:'II'},act3:{l:'Acte III',c:'225,205,255',g:'III'},marchand:{l:'Colporteur',c:'120,220,170',g:'¤'},sanctuaire:{l:'Sanctuaire',c:'0,0,0',g:''},title:{l:'',c:'0,0,0',g:''}};
 
 // ───────────────────────── État
@@ -925,7 +974,7 @@ function spawnWave(w,last){const pc=w.some(s=>s.at==='pack')?findSpawn(300):null
 function createEnemy(type,x,y,elite=false){const d=ED[type];const e={type,x,y,r:d.r*(elite?CHAMP.taille:1),maxHp:d.hp*hpMul()*(elite?CHAMP.pv:1),spd:d.spd*spdMul()*(elite?CHAMP.vitesse:1),dmg:d.dmg*dmgMul()*(elite?CHAMP.degats:1),xp:d.xp*(elite?CHAMP.xp:1)*(1+0.05*(G()-1)),elite,state:'walk',t:rand(1.2,2.2),windTot:0.75,cd:rand(1,2.5),kbx:0,kby:0,flash:0,stun:0,marked:0,burnT:0,burnDps:0,exposed:false,dotAcc:0,dotT:0.45,orbT:0,crownT:0,devT:0,wob:Math.random()*TAU,ang:0,dead:false,chained:false,vuln:0,wT:0,dir:Math.random()<0.5?1:-1,aim:false,tok:null,hasteT:0,singT:0,thornT:0};e.hp=e.maxHp;enemies.push(e);
  if(type==='voile'&&!SAVE.flags.voile){SAVE.flags.voile=1;persist();}if(ENEMY_INFO[type]&&!RUN.announced.has(type)){RUN.announced.add(type);}
  return e;}
-function createBoss(){const e=createEnemy('boss',W/2,AR.y0+(RUN.act===3?180:170));e.maxHp=(GA_D.pv||[0,1000,2300,3600])[RUN.act]*(PAL()>=1?1.2:1)*(PAL()>=5?1.3:1);e.hp=e.maxHp;e.dmg=[0,16,22,26][RUN.act];e.spd=58;e.xp=[0,70,90,0][RUN.act];e.name=ACTS[RUN.act].boss;e.patT=1.4;e.phase=1;e.queue=[];e.state='idle';e.spinA=0;e.spinDir=1;e.shotT=0;e.ringT=0;e.chantN=0;if(RUN.act===3){e.r=62;e.hx=W/2;e.hy=AR.y0+180;e.beatT=1.6;}room.boss=e;return e;}
+function createBoss(){const e=createEnemy('boss',W/2,AR.y0+(RUN.act===3?180:170));const gX=desGardienX();e.maxHp=(GA_D.pv||[0,1000,2300,3600])[RUN.act]*(PAL()>=1?1.2:1)*(PAL()>=5?1.3:1)*(gX?DES_D.gardien.pv:1);e.hp=e.maxHp;e.dmg=[0,16,22,26][RUN.act]*(gX?DES_D.gardien.degats:1);e.spd=58;e.xp=[0,70,90,0][RUN.act];e.name=(ACTD[ACTE()]&&ACTD[ACTE()].boss)||ACTS[RUN.act].boss;e.patT=1.4;e.phase=1;e.queue=[];e.state='idle';e.spinA=0;e.spinDir=1;e.shotT=0;e.ringT=0;e.chantN=0;if(RUN.act===3){e.r=62;e.hx=W/2;e.hy=AR.y0+180;e.beatT=1.6;}room.boss=e;return e;}
 
 function enterRoom(type){
  RUN.roomIdx++;RUN.g++;RUN.path.push(type);
@@ -936,15 +985,16 @@ function enterRoom(type){
  if(type==='combat'||type==='elite'){room.waves=planRoom(type);room.sinceWave=0;if(room.wtheme)room.annT=0.6;}
  else if(type==='autel'){room.cleared=true;enqueue(()=>openRelics('Un autel oublié','Une relique attend sur la pierre. Elle reste avec toi jusqu’à la fin de la run.'));makeDoors();}
  else if(type==='marchand'){room.cleared=true;RUN.merchantAct[RUN.act]=true;SAVE.flags.merchant=1;persist();room.shop=genShop();makeDoors();later(0.5,()=>toast('Le Colporteur a installé sa charrette. Approche-toi pour marchander.',2.8));}
- else if(type==='halte'){room.cleared=true;const ante=RUN.roomIdx===ACTS[RUN.act].rooms-1;enqueue(()=>openHalte(ante));makeDoors();}
- else if(type==='boss'){room.bannerT=2.2;showBanner('Gardien de l’acte',ACTS[RUN.act].boss,true);sfx('boss');}
+ else if(type==='halte'){room.cleared=true;const ante=RUN.roomIdx===ACTD[ACTE()].rooms-1;enqueue(()=>openHalte(ante));makeDoors();}
+ else if(type==='boss'){room.bannerT=2.2;showBanner('Gardien de l’acte',(ACTD[ACTE()]&&ACTD[ACTE()].boss)||ACTS[RUN.act].boss,true);sfx('boss');}
  updateRoomHud();
 }
 function makeDoors(){
- const A=ACTS[RUN.act],next=RUN.roomIdx+1;let types;
- if(room.type==='boss'){if(RUN.act<3)types=[RUN.act===1?'act':'act3'];else return;}
- else if(next===A.rooms)types=['boss'];
- else if(next===A.rooms-1)types=['halte'];
+ const A=ACTD[ACTE()],next=RUN.roomIdx+1;let types;
+ const imp=desPorte(A,{acte:ACTE(),N:ACTES_N,next,type:room.type,garde:!!room.garde});
+ if(imp==='fin')return;
+ if(imp==='suite'){const t=desPorteActe(ACTE()+1);if(t==='acte')DOOR.acte.l=`Acte ${ROM[ACTE()+1]}`;types=[t];}
+ else if(imp)types=[imp];
  else{
   const eliteOk=(RUN.act===1?next>=3:next>=2)&&room.type!=='elite';
   const halteOk=next>=3&&room.type!=='halte'&&next<A.rooms-2;
@@ -961,10 +1011,10 @@ function onRoomCleared(){
  if(room.type==='combat'){gainXp(4+RUN.roomIdx);heal(6,'room');RUN.sh.rooms+=3;addGold(6+G(),true);}
  if(room.type==='elite'){RUN.sh.elites+=6;addGold(18+2*G(),true);}
  if(room.type==='elite')enqueue(()=>openRelics('Le champion tombe','Sa dépouille laisse une relique. Choisis-en une.'));
- if(room.type==='boss'){if(RUN.act===1){enqueue(openAscension);makeDoors();}else if(RUN.act===2){SAVE.flags.heraut=1;persist();enqueue(()=>openRelics('Le Héraut se tait','Sous sa cloche fendue, une relique attend. Elle t’accompagnera jusqu’au Cœur.'));makeDoors();}else{later(2.2,()=>openEnd(true));return;}}
+ if(room.type==='boss'){if(RUN.act===1){enqueue(openAscension);makeDoors();}else if(RUN.act===2){SAVE.flags.heraut=1;persist();enqueue(()=>openRelics('Le Héraut se tait','Sous sa cloche fendue, une relique attend. Elle t’accompagnera jusqu’au Cœur.'));makeDoors();}else if(ACTE()<ACTES_N){enqueue(()=>openRelics(ACTD[ACTE()].done,'Une relique attend dans le silence. La descente continue.'));makeDoors();}else{later(2.2,()=>openEnd(true));return;}}
  else makeDoors();
  if(RUN.act===1&&RUN.roomIdx===1)$('#hHint').hidden=true;
- if(room.type!=='boss')toast(next1()?'Salle purifiée. L’antichambre du gardien t’attend.':'Salle purifiée. Choisis une porte.');
+ if(room.type!=='boss')toast(next1()?'Salle purifiée. L’antichambre du gardien t’attend.':room.doors.length===1&&room.doors[0].type==='garde'?'Salle purifiée. L’élite de l’acte t’attend.':'Salle purifiée. Choisis une porte.');
  sfx('door');
 }
 function next1(){return room.doors.length===1&&room.doors[0].type==='halte';}
@@ -985,7 +1035,18 @@ function updateRoom(dt){
   }else if(alive===0){room.cleared=true;onRoomCleared();}
  }
 }
-function doEnter(type){let banner=null;if(type==='act'){RUN.act=2;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act2=1;persist();type='combat';banner=['Acte II',ACTS[2].name];}else if(type==='act3'){RUN.act=3;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act3=1;persist();type='combat';banner=['Acte III',ACTS[3].name];}enterRoom(type);if(banner){showBanner(banner[0],banner[1]);if(room.annT>0)room.annT=2.9;}}
+function doEnter(type){let banner=null;if(type==='acte'){const n=ACTE()+1,A=ACTD[n];desNouvelActe(n);type=A.entree||'combat';banner=[`Acte ${ROM[n]}`,A.name];}else if(type==='garde'){RUN.gardeNow=1;type='elite';}else if(type==='act'){RUN.act=2;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act2=1;persist();type='combat';banner=['Acte II',ACTS[2].name];}else if(type==='act3'){RUN.act=3;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags.act3=1;persist();type='combat';banner=['Acte III',ACTS[3].name];}enterRoom(type);if(banner){showBanner(banner[0],banner[1]);if(room.annT>0)room.annT=2.9;}}
+// v18 · entrée dans l'acte n (IV à N) : RUN.acteD avance, RUN.act (le registre) reste 3. Ce qui se compte « par acte » sous la clé du
+// registre (colporteur, raccourci, gardien direct, souvenirs portés par les Masqués, contre-mesures du Brumeux) repart à zéro.
+// Les effets d'un changement d'acte des enveloppes v9 et v13 (pacte, fiole, larme, flasque) sont rejoués par le bloc v18 (desApresActe).
+function desNouvelActe(n){const r=ACTD[n].registre;
+ RUN.acteD=n;RUN.roomIdx=0;RUN.path=[];RUN.rerolls+=RUN.relPerAct||1;SAVE.flags['acte'+n]=1;persist();
+ (RUN.acteT||(RUN.acteT={}))[n]=RUN.time;
+ if(RUN.merchantAct)delete RUN.merchantAct[r];
+ if(RUN.v9){delete RUN.v9.skipUsed[r];delete RUN.v9.direct[r];}
+ if(RUN.asm&&RUN.asm.porteurs)delete RUN.asm.porteurs[r];
+ if(RUN.prof){if(RUN.prof.bud)delete RUN.prof.bud[r];if(RUN.prof.relaxSaid)delete RUN.prof.relaxSaid[r];}}
+function desGardienX(){return !!(RUN&&!RUN.hub&&ACTE()>3&&ACTD[ACTE()]&&ACTD[ACTE()].fin==='gardien');}
 function announceTheme(){const T=room&&room.wtheme&&WTHEMES[room.wtheme];if(!T)return;showBanner('Vague à thème',T.n);}
 
 // ───────────────────────── Joueur : commun
@@ -1433,7 +1494,7 @@ function bossDefeated(e){
  for(const o of enemies)if(!o.dead&&o!==e){o.dead=true;mist(o.x,o.y,o.r);}
  eproj=[];rings=[];room.spawning=[];
  if(!SC27.debut(e))for(let i=0;i<5;i++)later(i*0.16,()=>explosion(e.x+rand(-50,50),e.y+rand(-50,50),110,0,0,{col:'rgba(255,90,90,',spark:'#ffb0a0'}));
- mist(e.x,e.y,e.r*1.5);shake(12,0.6);freezeT=0.12;heal(P.s.maxHp,'boss');toast(`${ACTS[RUN.act].done}. Tes PV sont restaurés.`,3);
+ mist(e.x,e.y,e.r*1.5);shake(12,0.6);freezeT=0.12;heal(P.s.maxHp,'boss');toast(`${ACTD[ACTE()].done}. Tes PV sont restaurés.`,3);
 }
 function explosion(x,y,rad,pDmg,eDmg,o={}){
  const col=o.col||'rgba(255,150,70,';fx.push({k:'ring',x,y,r0:rad*0.3,r1:rad,w:10,t:0.35,max:0.35,col,fill:true});tlights.push({x,y,r:rad*1.8,t:0.35,max:0.35,c:o.light||'warm'});sparks(x,y,14,o.spark||'#ffb36b');fx.push({k:'star',x,y,s:rad*0.45,t:0.16,max:0.16,col:'255,230,180',rot:rand(0,TAU)});for(let i=0;i<6;i++){const a=rand(0,TAU),v=rand(20,70);parts.push({x:x+Math.cos(a)*rad*0.3,y:y+Math.sin(a)*rad*0.3,vx:Math.cos(a)*v,vy:Math.sin(a)*v-20,life:0.9,max:0.9,size:rad*0.22,col:'#14121a',layer:'pre',drag:2,grow:1.4,a:0.6});}decals.push({x,y,r:rad*0.55,t:5,max:5,col:'8,6,8',seed:Math.random()*10});shake(5,0.18);sfx('explode');
@@ -1613,7 +1674,7 @@ function updateHud(){
  sT(HUD.hState,st);if(HUD.hState._c!==cls){HUD.hState._c=cls;HUD.hState.className='hud-state '+cls;}
  const b=room&&room.boss;if(b&&!b.dead){HUD.hBoss.hidden=false;g27GlypheHud(HUD.hBossGlyph,RUN.act);sT(HUD.hBossName,b.name+(b.vuln>0?' · sonné':''));sW(HUD.hBossFill,b.hp/b.maxHp*100);}else HUD.hBoss.hidden=true;
 }
-function updateRoomHud(){if(RUN.hub){$('#hAct').textContent='Le Sanctuaire';$('#hRoom').textContent='Entre deux descentes';$('#hPath').innerHTML='';return;}const A=ACTS[RUN.act];$('#hAct').textContent=`Acte ${ROM[RUN.act]} · ${A.name}`;const ante=room.type==='halte'&&RUN.roomIdx===A.rooms-1;$('#hRoom').textContent=`Salle ${RUN.roomIdx} / ${A.rooms} · ${ante?'Antichambre':DOOR[room.type].l}${room.wtheme&&WTHEMES[room.wtheme]?' · '+WTHEMES[room.wtheme].n:''}`;$('#hPath').innerHTML=RUN.path.map((t,i)=>`<span class="${i===RUN.path.length-1?'cur':''}" title="${DOOR[t].l}">${icon(t)}</span>`).join('');}
+function updateRoomHud(){if(RUN.hub){$('#hAct').textContent='Le Sanctuaire';$('#hRoom').textContent='Entre deux descentes';$('#hPath').innerHTML='';return;}const A=ACTD[ACTE()];$('#hAct').textContent=`Acte ${ROM[ACTE()]} · ${A.name}`;const ante=room.type==='halte'&&RUN.roomIdx===A.rooms-1;$('#hRoom').textContent=`Salle ${RUN.roomIdx} / ${A.rooms} · ${ante?'Antichambre':DOOR[room.type].l}${room.wtheme&&WTHEMES[room.wtheme]?' · '+WTHEMES[room.wtheme].n:''}`;$('#hPath').innerHTML=RUN.path.map((t,i)=>`<span class="${i===RUN.path.length-1?'cur':''}" title="${DOOR[t].l}">${icon(t)}</span>`).join('');}
 function renderRelics(){$('#hRelics').innerHTML=P.relics.map(id=>{const r=RELICS.find(x=>x.id===id);return `<span class="relic" title="${esc(r.name+' : '+r.desc)}">${icon(r.id)}</span>`;}).join('');}
 function setHint(){const h=$('#hHint');if(!h||!P)return;if(RUN&&RUN.hub){h.innerHTML='Approche-toi d’un habitant pour lui parler. Le portail, au nord, mène à la Brume. Le mannequin encaisse tes coups pour tester ton build.';return;}h.innerHTML=V6HINT[P.cls]?V6HINT[P.cls]():P.cls==='gou'
  ?`<kbd>${MOVE()}</kbd> se déplacer · <kbd>Clic G</kbd> Mâchoire · <kbd>Clic D</kbd> maintenir pour Dévorer · <kbd>Espace</kbd> Ruée · <kbd>${KL.KeyR}</kbd> Recracher. Dévorer remplit ta Corruption : à 100, tu exploses.`
@@ -1800,7 +1861,7 @@ function statsHTML(){const s=P.s;let rows;
 function relicsHTML(){if(!P.relics.length)return '<p class="muted" style="margin:0">Aucune relique pour l’instant. Les autels et les élites en donnent.</p>';return `<ul class="rl">${P.relics.map(id=>{const r=RELICS.find(x=>x.id===id);return `<li><span class="g">${icon(r.id)}</span><span><strong>${esc(r.name)}</strong><br>${esc(r.desc)}</span></li>`;}).join('')}</ul>`;}
 function openPause(){
  if(state!=='play'||!overlayEl.hidden||P.dead)return;
- openOverlay(`<div class="panel"><div class="lv"><div>${treeBlock([],typeof PZ_HINT!=='undefined'?PZ_HINT:'')}</div><div><p class="eyebrow">${RUN.hub?'Pause · Sanctuaire':`Pause · Acte ${ROM[RUN.act]}, salle ${RUN.roomIdx}`}</p><h2>${CLS[P.cls].name}</h2><p class="sub">Niveau ${P.level}${P.s.sub?' · '+BR[P.s.sub].name:''}</p><p class="h-sec">Caractéristiques</p>${statsHTML()}<p class="h-sec">Reliques</p>${relicsHTML()}<div class="row"><button type="button" class="btn primary" id="resume">Reprendre</button><label class="vol" for="musvol">Musique <input type="range" id="musvol" min="0" max="1" step="0.05" value="${MUSIC.vol}"></label><button type="button" class="btn" id="mute">${muted?'Activer le son':'Couper le son'}</button>${RUN.hub?'':'<button type="button" class="btn" id="quit">Abandonner la run</button>'}</div></div></div></div>`);
+ openOverlay(`<div class="panel"><div class="lv"><div>${treeBlock([],typeof PZ_HINT!=='undefined'?PZ_HINT:'')}</div><div><p class="eyebrow">${RUN.hub?'Pause · Sanctuaire':`Pause · Acte ${ROM[ACTE()]}, salle ${RUN.roomIdx}`}</p><h2>${CLS[P.cls].name}</h2><p class="sub">Niveau ${P.level}${P.s.sub?' · '+BR[P.s.sub].name:''}</p><p class="h-sec">Caractéristiques</p>${statsHTML()}<p class="h-sec">Reliques</p>${relicsHTML()}<div class="row"><button type="button" class="btn primary" id="resume">Reprendre</button><label class="vol" for="musvol">Musique <input type="range" id="musvol" min="0" max="1" step="0.05" value="${MUSIC.vol}"></label><button type="button" class="btn" id="mute">${muted?'Activer le son':'Couper le son'}</button>${RUN.hub?'':'<button type="button" class="btn" id="quit">Abandonner la run</button>'}</div></div></div></div>`);
  bindTree(overlayEl,$('#cap'));
  $('#resume').addEventListener('click',closeOverlay);
  $('#mute').addEventListener('click',e=>{muted=!muted;e.target.textContent=muted?'Activer le son':'Couper le son';});
@@ -1817,9 +1878,8 @@ function openEnd(win,abandon){
   RUN.final={kills,base,mult,total:Math.round(base*mult),win:!!win,v9:[]};v9Final(RUN.final,win,abandon);
   SAVE.runs++;if(win)SAVE.wins++;else if(!abandon)SAVE.deaths++;
   SAVE.kills+=RUN.kills;SAVE.shards+=RUN.final.total;SAVE.total+=RUN.final.total;
-  if(RUN.g>SAVE.best){SAVE.best=RUN.g;SAVE.bestLabel=`Acte ${ROM[RUN.act]} · salle ${RUN.roomIdx}`;}
-  RUN.final.palUp=!!(win&&RUN.palier<PALIERS.length-1&&RUN.palier+1>SAVE.palierMax);
-  if(win)SAVE.palierMax=Math.max(SAVE.palierMax,Math.min(PALIERS.length-1,RUN.palier+1));
+  if(RUN.g>SAVE.best){SAVE.best=RUN.g;SAVE.bestLabel=`Acte ${ROM[ACTE()]} · salle ${RUN.roomIdx}`;}
+  RUN.final.palUp=false;   // v18 : les Paliers de Brume ne se débloquent plus (paliers de la descente : bloc v18)
   persist();
   RUN.final.lore=LORE.filter(l=>l.c(SAVE)&&!before.includes(l.id)).map(l=>l.t);
  }
@@ -1835,7 +1895,7 @@ function openEnd(win,abandon){
  if(F.lore.length)notes.push(`${F.lore.length>1?'Nouvelles chroniques':'Nouvelle chronique'} chez l’Archiviste : ${F.lore.map(esc).join(', ')}.`);
  if(F.palUp)notes.push(`Palier de Brume ${RUN.palier+1} débloqué au portail.`);
  openOverlay(`<div class="panel narrow"><p class="eyebrow">${win?'Victoire':'Fin de run'} · ${CLS[P.cls].short}${RUN.palier?' · Palier '+RUN.palier:''}</p><h2>${title}</h2><p class="sub">${sub}</p>
- <div class="tiles"><div class="tile"><span>Progression</span><b>Acte ${ROM[RUN.act]} · ${RUN.roomIdx}</b></div><div class="tile"><span>Niveau</span><b>${P.level}</b></div><div class="tile"><span>Ennemis vaincus</span><b>${RUN.kills}</b></div><div class="tile"><span>Durée</span><b>${mm}:${ss}</b></div><div class="tile"><span>Dégâts infligés</span><b>${fmt(RUN.dmg)}</b></div></div>
+ <div class="tiles"><div class="tile"><span>Progression</span><b>Acte ${ROM[ACTE()]} · ${RUN.roomIdx}</b></div><div class="tile"><span>Niveau</span><b>${P.level}</b></div><div class="tile"><span>Ennemis vaincus</span><b>${RUN.kills}</b></div><div class="tile"><span>Durée</span><b>${mm}:${ss}</b></div><div class="tile"><span>Dégâts infligés</span><b>${fmt(RUN.dmg)}</b></div></div>
  <div class="two" style="margin-top:6px"><div><p class="h-sec">Éclats de Mémoire</p>${brk}<p class="k" style="margin-top:8px">Au Sanctuaire : ${SAVE.shards} ✦ à dépenser</p></div><div><p class="h-sec">Ton build</p><div class="chips">${chips}</div>${relics}</div></div>
  ${notes.map(n=>`<p class="notice">${n}</p>`).join('')}
  <div class="row" style="margin-top:24px"><button type="button" class="btn primary" id="tohub">Retourner au Sanctuaire</button><button type="button" class="btn" id="again">Relancer avec ${art(P.cls)}</button></div></div>`);
@@ -1868,7 +1928,7 @@ function applyMeta(){
  for(let i=0;i<mr('sav');i++){P.level++;P.pendingLv++;}
  if(mr('bag'))enqueue(()=>openRelics('Le bagage d’Ismène','La Veilleuse t’a confié un souvenir pour la route. Choisis-le.'));
 }
-function newRun(hub){return{act:1,roomIdx:0,g:hub?1:0,path:[],rerolls:1,time:0,kills:0,dmg:0,seenObscur:false,seen:new Set(['rampant']),announced:new Set(),hub:!!hub,palier:hub?0:clamp(SAVE.palier||0,0,SAVE.palierMax),goldF:0,goldMul:1,priceMul:1,relPerAct:1,offerCount:3,merchantAct:{},levelsBought:0,sh:{rooms:0,elites:0,bosses:0}};}
+function newRun(hub){return{acteD:1,get act(){const A=ACTD[this.acteD];return A?A.registre:this.acteD;},set act(v){this.acteD=v;},roomIdx:0,g:hub?1:0,path:[],rerolls:1,time:0,kills:0,dmg:0,seenObscur:false,seen:new Set(['rampant']),announced:new Set(),hub:!!hub,palier:0,goldF:0,goldMul:1,priceMul:1,relPerAct:1,offerCount:3,merchantAct:{},levelsBought:0,sh:{rooms:0,elites:0,bosses:0}};}
 function clearWorld(){decals=[];bells=[];chorus=[];webs=[];enemies=[];eproj=[];pproj=[];parts=[];fx=[];nums=[];tlights=[];spectrals=[];timers=[];deferred=[];queue=[];rings=[];pools=[];coins=[];freezeT=0;shakeT=0;}
 function startRun(){
  initAudio();
@@ -2591,7 +2651,7 @@ function drawParts(layer){const c=ctx;c.save();if(layer==='post')c.globalComposi
 function drawNums(){const c=ctx;c.save();c.textAlign='center';c.lineJoin='round';for(const n of nums){const [sz,col]=NUMSTYLE[n.k];const k=n.t/n.max;const pop=n.k==='crit'?1+Math.max(0,k-0.72)*2.6:1;c.globalAlpha=Math.min(1,k*2);c.font=`700 ${Math.round(sz*pop)}px "Alegreya Sans", sans-serif`;const txt=typeof n.v==='string'?n.v:n.k==='crit'?n.v+'!':n.k==='hurt'?'−'+n.v:String(n.v);c.strokeStyle='rgba(0,0,0,.85)';c.lineWidth=3.5;c.strokeText(txt,n.x,n.y);c.fillStyle=col;c.fillText(txt,n.x,n.y);}c.restore();}
 
 // ═════════════════════════ Acte III : Le Cœur de la Brume
-const ROM=['','I','II','III'];
+const ROM=['','I','II','III','IV','V','VI','VII','VIII','IX','X'];
 function beatK(){const t=(T*1.15)%1;return Math.exp(-((t-0.06)**2)/0.0016)+0.65*Math.exp(-((t-0.22)**2)/0.0016);}
 const drainK=()=>room&&room.drainT>0?0.6:1;
 const COEUR_LAYOUTS=[
@@ -3166,7 +3226,7 @@ const _enterRoom=enterRoom;
 enterRoom=function(type){_enterRoom(type);if(!RUN||RUN.hub)return;if(!RUN.mem)RUN.mem=newMem();
  if(type==='boss')RUN.mem.bossHurt[RUN.act]=0;
  if(type==='autel'&&Math.random()<fragP('autel',0.15))giveFrag('autel',W/2,H/2,1.2);
- const g=M().graves.find(g=>g.act===RUN.act&&g.room===RUN.roomIdx);
+ const g=M().graves.find(g=>g.act===ACTE()&&g.room===RUN.roomIdx);
  if(g&&['combat','elite','boss'].includes(type)){room.grave=Object.assign({},g,{t:0,taken:false});later(1.4,()=>toast(`Un Écho dort ici : ton ${CLS[g.cls].short} est tombé dans cette salle, à ta descente ${g.n}.`,3.5));}};
 const _loseHp=loseHp;
 loseHp=function(n){if(RUN&&RUN.mem&&room&&room.type==='boss'&&!room.bossDead&&n>0)RUN.mem.bossHurt[RUN.act]=(RUN.mem.bossHurt[RUN.act]||0)+n;_loseHp(n);};
@@ -3174,7 +3234,7 @@ const _hurtPlayer=hurtPlayer;
 hurtPlayer=function(dmg,src){if(RUN&&RUN.mem&&!(P.iT>0||P.dashT>0||P.dead)){let k=src&&src.type;if(!k){if(room&&room.type==='boss')k='boss';else{let best=null,bd=1e9;for(const e of enemies){if(e.dead||e.puppet>0)continue;const sh=['spectre','hurleur','voile','nourrice'].includes(e.type)?0.6:1,d=hyp(e.x-P.x,e.y-P.y)*sh;if(d<bd){bd=d;best=e;}}k=best?best.type:'brume';}}RUN.mem.lastSrc=k;}_hurtPlayer(dmg,src);};
 const _bossDefeated=bossDefeated;
 bossDefeated=function(e){const R=RUN.mem,a=RUN.act;
- if(R){if((R.bossHurt[a]||0)<=0.5)R.perfect.push(a);if(P.hp/P.s.maxHp<0.2)R.close.push(a);if(a===3)R.won=true;}
+ if(R){if((R.bossHurt[a]||0)<=0.5)R.perfect.push(a);if(P.hp/P.s.maxHp<0.2)R.close.push(a);if(a===3&&ACTE()>=ACTES_N)R.won=true;}
  _bossDefeated(e);
  if(R&&R.perfect.includes(a))later(1.2,()=>toast(`Sans une égratignure. ${ACTS[a].boss} ne t’a pas touché : la Brume s’en souviendra.`,3.5));
  const m=M();if(!m.bossFirst[a]){m.bossFirst[a]=1;persist();giveFrag('first',e.x,e.y,2.4);}else if(Math.random()<fragP('boss',0.4))giveFrag('boss',e.x,e.y,2.4);};
@@ -3316,11 +3376,11 @@ openEnd=function(win,abandon){
  // Prime d'accoutumance : la Brume qui apprend paie mieux
  const bonus=lvBefore>0?Math.round(F.base*F.mult*ME_D.accoutumance.eclatsParNiveau*lvBefore):0;if(bonus){F.total+=bonus;SAVE.shards+=bonus;SAVE.total+=bonus;}
  // Tombe d'Écho
- let grave=null;if(died){const gx=clamp(P.x,AR.x0+70,AR.x1-70),gy=clamp(P.y,AR.y0+110,AR.y1-150);grave={act:RUN.act,room:RUN.roomIdx,x:gx,y:gy,cls,n:SAVE.runs,by:R.lastSrc||'brume'};m.graves=m.graves.filter(g=>!(g.act===grave.act&&g.room===grave.room));m.graves.push(grave);if(m.graves.length>(has9('P3')?8:6))m.graves.shift();}
+ let grave=null;if(died){const gx=clamp(P.x,AR.x0+70,AR.x1-70),gy=clamp(P.y,AR.y0+110,AR.y1-150);grave={act:ACTE(),room:RUN.roomIdx,x:gx,y:gy,cls,n:SAVE.runs,by:R.lastSrc||'brume'};m.graves=m.graves.filter(g=>!(g.act===grave.act&&g.room===grave.room));m.graves.push(grave);if(m.graves.length>(has9('P3')?8:6))m.graves.shift();}
  // Pitié : jamais plus de deux descentes d'affilée sans fragment
  if(R.frags.length||has9('M7'))m.pity=0;else{m.pity++;if(m.pity>=3){const f0=giveFragEnd();if(f0)m.pity=0;}}
  // Journal
- const where=win?'a fait taire le Glas Originel':abandon?`a renoncé en acte ${ROM[RUN.act]}, salle ${RUN.roomIdx}`:`est tombé en acte ${ROM[RUN.act]}, salle ${RUN.roomIdx}, face à ${foeName(R.lastSrc||'brume',RUN.act)}`;
+ const where=win?`a fait taire ${((ACTD[ACTE()]&&ACTD[ACTE()].boss)||'le Glas Originel').replace(/^Le /,'le ').replace(/^La /,'la ').replace(/^L’/,'l’')}`:abandon?`a renoncé en acte ${ROM[ACTE()]}, salle ${RUN.roomIdx}`:`est tombé en acte ${ROM[ACTE()]}, salle ${RUN.roomIdx}, face à ${foeName(R.lastSrc||'brume',RUN.act)}`;
  const tags=[];if(R.perfect.length)tags.push('gardien sans blessure');if(R.close.length)tags.push('sur le fil');if(R.frags.length)tags.push(`${R.frags.length} fragment${R.frags.length>1?'s':''}`);if(R.grave)tags.push('Écho recueilli');
  m.journal.unshift({n:SAVE.runs,cls,t:`Ton ${CLS[cls].short} ${where}.`,tags});if(m.journal.length>12)m.journal.length=12;
  // Réactions
@@ -3834,7 +3894,7 @@ const _makeDoors9=makeDoors;
 makeDoors=function(){
  _makeDoors9();
  if(!RUN||RUN.hub||!RUN.v9||!room||!room.doors||!room.doors.length)return;
- const V=RUN.v9,next=RUN.roomIdx+1,A=ACTS[RUN.act];
+ const V=RUN.v9,next=RUN.roomIdx+1,A=ACTD[ACTE()];
  V.graveHint=false;
  if(room.type!=='boss'&&next<A.rooms-1){
   const addDoor=t=>{
@@ -3845,7 +3905,7 @@ makeDoors=function(){
  }
  V.pre=null;
  if(has9('D1')&&room.doors.some(d=>d.type==='combat')){V.pre=_chooseTheme9(allowedTypes());}
- if(has9('M1')&&M().graves.some(g=>g.act===RUN.act&&g.room===next)&&room.doors.some(d=>['combat','elite','boss','direct'].includes(d.type)))V.graveHint=true;
+ if(has9('M1')&&M().graves.some(g=>g.act===ACTE()&&g.room===next)&&room.doors.some(d=>['combat','elite','boss','direct'].includes(d.type)))V.graveHint=true;
 };
 const _doEnter9=doEnter;
 doEnter=function(type){
@@ -5160,8 +5220,10 @@ const BAL={
  p6Spd:1.12, p8Elite:1.4, p8Hp:0.85};
 
 // ───────────────────────── Paliers : rampe continue + trois nouveaux paliers
-hpMul=function(){return (1+BAL.hpPerRoom*(G()-1))*(PAL()>=1?1.2:1)*(1+BAL.palHp*PAL());};
-dmgMul=function(){return (1+BAL.dmgPerRoom*(G()-1))*(PAL()>=3?1.2:1)*(1+BAL.palDmg*PAL());};
+// v18 · après l'acte III, la montée passe à la pente de data/descente.js (montee) ; jusqu'à la salle DES_SEUIL, exactement la formule d'avant
+const DES_SEUIL=desSeuil(ACTD,DES_D),DES_BASE=()=>({pvParSalle:BAL.hpPerRoom,degatsParSalle:BAL.dmgPerRoom});
+hpMul=function(){return desMontee(DES_BASE(),DES_D,DES_SEUIL,G()).pv*(PAL()>=1?1.2:1)*(1+BAL.palHp*PAL());};
+dmgMul=function(){return desMontee(DES_BASE(),DES_D,DES_SEUIL,G()).degats*(PAL()>=3?1.2:1)*(1+BAL.palDmg*PAL());};
 spdMul=function(){return (1+0.012*(G()-1))*(PAL()>=6?BAL.p6Spd:1);};
 budget=function(){return (4.5+1.5*(G()-1))*(PAL()>=2?1.2:1)*(1+BAL.palBudget*PAL());};
 const _pr11=planRoom;
@@ -5184,7 +5246,7 @@ baseStats=function(cls){const s=_bs11(cls);
 const _cb11=createBoss;
 createBoss=function(){const e=_cb11();const f=(BAL.bossMul[RUN.act]||1)*(1+BAL.palHp*PAL());e.maxHp*=f;e.hp=e.maxHp;RUN.bossStart=RUN.time;return e;};
 const _bd11=bossDefeated;
-bossDefeated=function(e){(RUN.bossT||(RUN.bossT={}))[RUN.act]=RUN.time-(RUN.bossStart||RUN.time);_bd11(e);};
+bossDefeated=function(e){(RUN.bossT||(RUN.bossT={}))[ACTE()]=RUN.time-(RUN.bossStart||RUN.time);_bd11(e);};
 const _hit11=hitEnemy;
 hitEnemy=function(e,base,o){
  o=o||{};
@@ -5370,7 +5432,7 @@ function openGuide(back){
 const _eh11=enterHub;
 enterHub=function(){_eh11();if(!SAVE.flags.guide)later(1.3,()=>{if(overlayEl.hidden&&state==='play'&&RUN&&RUN.hub)openGuide();});};
 // v16.39 · palier 0 terminé : au premier retour au Sanctuaire, on rappelle que la difficulté se monte au Portail (une seule fois)
-{const _eh1639=enterHub;enterHub=function(){_eh1639();if(SAVE.palierMax>=1&&!SAVE.flags.palHint&&SAVE.flags.guide){SAVE.flags.palHint=1;persist();later(2.4,()=>{if(state==='play'&&RUN&&RUN.hub)toast('Palier 0 terminé ! Au Portail, choisis un Palier de Brume pour monter la difficulté : plus dur, mais plus d’Éclats.',6);});}};}
+{const _eh1639=enterHub;enterHub=function(){_eh1639();if(false&&SAVE.palierMax>=1&&!SAVE.flags.palHint&&SAVE.flags.guide){   /* v18 : Paliers de Brume retirés */SAVE.flags.palHint=1;persist();later(2.4,()=>{if(state==='play'&&RUN&&RUN.hub)toast('Palier 0 terminé ! Au Portail, choisis un Palier de Brume pour monter la difficulté : plus dur, mais plus d’Éclats.',6);});}};}
 
 // ───────────────────────── Écran titre : choix de la forme avant le Sanctuaire
 function titleCls(c){if(!CLS[c])return;chosenCls=c;SAVE.cls=c;persist();P=newPlayer(c);P.x=W/2+150;P.y=H/2+40;sfx('pick');openTitle();}
@@ -5815,7 +5877,7 @@ function openPacte(){
  if(!RUN||RUN.hub||P.dead)return;
  pactEnd();const offers=pactOffers(),n=RUN.pactN||0;
  const card=(o,i)=>{const B=PBOON[o.boon],C=PCONS[o.cons];return `<button type="button" class="card pact" data-i="${i}" style="--c:#b48cff"><span class="meta"><span class="br">● Pacte</span><span>touche ${i+1}</span></span><h3>${B.n} · ${C.n}</h3>${pactChip('good',B)}${pactChip('bad',C)}<p class="why">${icon('u_eye')}${o.known?`Il a vu que ${esc(C.why)}.`:'Il ne te connaît pas encore : il choisit au hasard.'}</p></button>`;};
- openOverlay(`<div class="panel narrow"><p class="eyebrow">Acte ${ROM[RUN.act]} · Le Pacte de la Brume</p><h2>Le Brumeux te tend la main</h2><p class="sub">Un avantage fort, contre une contrainte qu’il choisit en te regardant jouer. Le pacte dure tout l’acte. Chaque pacte accepté rend les gardiens plus agressifs${n?` (déjà ${n} accepté${n>1?'s':''} : gardiens ${Math.round((1-pactAgg())*100)} % plus rapides)`:''}.</p><div class="three">${offers.map(card).join('')}<button type="button" class="card pact-no" data-i="r"><span class="meta"><span class="br">● Refus</span><span>touche 3</span></span><h3>Refuser</h3><div class="pactchip none"><i>${icon('u_cross')}</i><div><b>Aucun pacte</b><small>Tu descends sans rien devoir à la Brume.</small></div></div></button></div></div>`);
+ openOverlay(`<div class="panel narrow"><p class="eyebrow">Acte ${ROM[ACTE()]} · Le Pacte de la Brume</p><h2>Le Brumeux te tend la main</h2><p class="sub">Un avantage fort, contre une contrainte qu’il choisit en te regardant jouer. Le pacte dure tout l’acte. Chaque pacte accepté rend les gardiens plus agressifs${n?` (déjà ${n} accepté${n>1?'s':''} : gardiens ${Math.round((1-pactAgg())*100)} % plus rapides)`:''}.</p><div class="three">${offers.map(card).join('')}<button type="button" class="card pact-no" data-i="r"><span class="meta"><span class="br">● Refus</span><span>touche 3</span></span><h3>Refuser</h3><div class="pactchip none"><i>${icon('u_cross')}</i><div><b>Aucun pacte</b><small>Tu descends sans rien devoir à la Brume.</small></div></div></button></div></div>`);
  const choose=i=>{if(!armed())return;if(i!=='r'){const o=offers[i];RUN.pact={boon:o.boon,cons:o.cons};RUN.pactN=(RUN.pactN||0)+1;const B=PBOON[o.boon],C=PCONS[o.cons];if(B.on)B.on(P.s);if(C.on)C.on(P.s);if(o.cons==='brume')RUN.fogBoost=Math.min(0.14,(RUN.fogBoost||0)+0.07);
    sfx('murmur');murmur(`Pacte scellé · ${B.n}`,`${B.d} En échange : ${C.d}`,4.2);if(eqIs('murmure'))murRank(1);}
   else toast('Tu refuses le pacte. La Brume t’observe en silence.',2.2);
@@ -5991,7 +6053,7 @@ function eqDetail(){const two=slot2();
  if(!P.eq&&!P.eq2)return `<p class="muted" style="margin:0 0 8px">Aucun équipement porté. Les élites et les gardiens en laissent parfois.${two?'' :' Un second emplacement s’ouvre à l’acte II.'}</p>`;
  return (P.eq?eqOne(P.eq,two?'I':''):'')+(two?(P.eq2?eqOne(P.eq2,'II'):'<p class="muted" style="margin:0 0 8px">Emplacement II libre.</p>'):'')+setsDetail();}
 function pactDetail(){const p=RUN.pact;if(!p)return '';const B=PBOON[p.boon],C=PCONS[p.cons];
- return `<p class="h-sec">Pacte de la Brume · acte ${ROM[RUN.act]}</p><div class="eqpause pactp"><p class="boon">+ ${esc(B.n)} : ${esc(B.d)}</p><p class="cons">− ${esc(C.n)} : ${esc(C.d)}</p></div>`;}
+ return `<p class="h-sec">Pacte de la Brume · acte ${ROM[ACTE()]}</p><div class="eqpause pactp"><p class="boon">+ ${esc(B.n)} : ${esc(B.d)}</p><p class="cons">− ${esc(C.n)} : ${esc(C.d)}</p></div>`;}
 function openCodex(back){
  const got=M().codex||{},ids=Object.keys(EQS),n=ids.filter(k=>got[k]).length;
  const cell=k=>{const E=EQS[k],R=RAR[E.r];
@@ -6221,7 +6283,7 @@ function ensure14(){if(!RUN)return;if(!RUN.ch)RUN.ch={notes:[],hits:0,kills:0,fl
  if(!RUN.as)RUN.as={offers:0,hitsT:[],lastOffer:-99,busy:false};}
 const fmtT=t=>{const m=Math.floor(t/60),s=Math.floor(t%60);return m?`${m} min ${s} s`:`${s} s`;};
 const CW={boss:3,phenix:3,set:3,brule:3,pact:2,eq:2,rule:2,rulemut:1,ruleclear:2,assist:2,eqleft:1,refus:1,cmok:1,cmko:2,cmban:2};
-function chron(k,d){if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch,a=ROM[RUN.act]||'I';let t='';d=d||{};
+function chron(k,d){if(!RUN||RUN.hub)return;ensure14();const c=RUN.ch,a=ROM[ACTE()]||'I';let t='';d=d||{};
  switch(k){
   case 'pact':t=pick([`À l’acte ${a}, tu as scellé un pacte : ${PBOON[d.boon].n} contre ${PCONS[d.cons].n}.`,`Acte ${a} : la Brume t’a offert ${PBOON[d.boon].n}, au prix de ${PCONS[d.cons].n}. Tu as signé.`]);break;
   case 'eq':{const E=EQS[d.id];t=d.old?pick([`Tu as laissé ${EQS[d.old].n} pour ${E.n}.`,`${E.n} a pris la place de ${EQS[d.old].n}.`]):pick([`Tu as ramassé ${E.n} (${RAR[E.r].n.toLowerCase()}).`,`${E.n} est venu s’ajouter à ton paquetage.`]);break;}
@@ -6246,8 +6308,8 @@ function chronBuild(win){const c=RUN.ch;if(!c)return null;const cl=CLS[P.cls].na
  const L=[`${cl}, ${fmtT(RUN.time)} dans la Brume.`,...sel];
  if(c.flawless>=3)L.push(`Tu as traversé ${c.flawless} salles sans une égratignure.`);
  if(c.hits>0)L.push(`La Brume t’a touché ${c.hits} fois ; tu as continué ${c.hits>20?'avec un entêtement admirable':'sans trop de bruit'}.`);
- L.push(win?'Le Cœur a cessé de battre. Pour un temps.':`Tu es tombé à l’acte ${ROM[RUN.act]||'I'}, salle ${RUN.roomIdx}. La Brume s’en souviendra.`);
- return{title:win?'La Descente achevée':`La chute · acte ${ROM[RUN.act]||'I'}, salle ${RUN.roomIdx}`,lines:L};}
+ L.push(win?'Le Cœur a cessé de battre. Pour un temps.':`Tu es tombé à l’acte ${ROM[ACTE()]||'I'}, salle ${RUN.roomIdx}. La Brume s’en souviendra.`);
+ return{title:win?'La Descente achevée':`La chute · acte ${ROM[ACTE()]||'I'}, salle ${RUN.roomIdx}`,lines:L};}
 function chronText(ch){return `${ch.title}\n\n${ch.lines.join('\n')}\n\n— La Brume`;}
 function copyText(t,btn){const ok=()=>{if(btn){const o=btn.textContent;btn.textContent='Copié';setTimeout(()=>{btn.textContent=o;},1400);}};
  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,()=>fb());return;}}catch(e){}
@@ -6389,7 +6451,7 @@ loseHp=function(n){
 const _ke14=killEnemy;
 killEnemy=function(e){const was=!e.dead;_ke14(e);if(!was||!RUN||RUN.hub)return;ensure14();RUN.ch.kills++;
  if(e.type!=='boss'&&eqIs('chaine'))heal(1,'equip');
- if(e.type==='boss')chron('boss',{n:e.name||(ACTS[RUN.act]&&ACTS[RUN.act].boss)||'Le gardien',t:RUN.time-(room.t0||0)});};
+ if(e.type==='boss')chron('boss',{n:e.name||(ACTD[ACTE()]&&ACTD[ACTE()].boss)||'Le gardien',t:RUN.time-(room.t0||0)});};
 
 // ───────────────────────── Cycle de vie
 const _er14=enterRoom;
@@ -6477,7 +6539,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
   return `<div class="eqpause" style="--c:rgb(${R.col})"><p class="eqh"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${EQ_IC[E.slot]}"/></svg><strong>${esc(E.n)}</strong></p><p class="eqr">${tag?'Emplacement '+tag+' · ':''}${R.n} · ${E.slot}</p>${ln('boon',E.up)}${ln('cons',E.down)}${extra?`<p class="eqx">${extra}</p>`:''}</div>`;};
  setsDetail=function(){const on=Object.keys(SETS).filter(k=>P.sets&&P.sets[k]);if(!on.length)return '';return on.map(k=>`<div class="eqpause setp"><p class="eqh"><strong>Set · ${esc(SETS[k].n)}</strong></p>${ln('boon',SETS[k].d)}</div>`).join('');};
  pactDetail=function(){const p=RUN.pact;if(!p)return '';const B=PBOON[p.boon],C=PCONS[p.cons];
-  return `<p class="h-sec">Pacte de la Brume · acte ${ROM[RUN.act]}</p><div class="eqpause pactp"><p class="eqh"><strong>${esc(B.n)} · ${esc(C.n)}</strong></p>${ln('boon',B.n+' : '+B.d)}${ln('cons',C.n+' : '+C.d)}</div>`;};
+  return `<p class="h-sec">Pacte de la Brume · acte ${ROM[ACTE()]}</p><div class="eqpause pactp"><p class="eqh"><strong>${esc(B.n)} · ${esc(C.n)}</strong></p>${ln('boon',B.n+' : '+B.d)}${ln('cons',C.n+' : '+C.d)}</div>`;};
 
  const st=document.createElement('style');st.textContent=`
 #toast,#murmur{font-size:19px;max-width:min(760px,calc(100% - 28px))}
@@ -6587,7 +6649,7 @@ Object.defineProperty(window.__brume,'V',{get(){return RUN&&RUN.v9;}});
    return tile(k,i).replace('class="slotx"','class="slotx tipx"').replace('data-n=',`data-html="${enc(detailHTML(id,ex))}" data-n=`);}).join('');
   const sets=hub?'':Object.keys(SETS).filter(k=>P.sets&&P.sets[k]).map(k=>tp(`<div class="eqpause setp"><p class="eqh"><strong>Set · ${esc(SETS[k].n)}</strong></p>${ln('boon',SETS[k].d)}<p class="eqx">Actif : ${SETS[k].items.map(i=>esc(EQS[i].n)).join(' + ')}</p></div>`,'chipx set',`★ ${esc(SETS[k].n)}`)).join('');
   let pact='';if(!hub&&RUN.pact){const B=PBOON[RUN.pact.boon],C=PCONS[RUN.pact.cons];
-   pact=tp(`<div class="eqpause pactp"><p class="eqh"><strong>Pacte de la Brume · acte ${ROM[RUN.act]}</strong></p>${ln('boon',B.n+' : '+B.d)}${ln('cons',C.n+' : '+C.d)}</div>`,'chipx pact',`☾ ${esc(B.n)} · ${esc(C.n)}`);}
+   pact=tp(`<div class="eqpause pactp"><p class="eqh"><strong>Pacte de la Brume · acte ${ROM[ACTE()]}</strong></p>${ln('boon',B.n+' : '+B.d)}${ln('cons',C.n+' : '+C.d)}</div>`,'chipx pact',`☾ ${esc(B.n)} · ${esc(C.n)}`);}
   const rel=P.relics.map(id=>{const r=RELICS.find(x=>x.id===id);return tp(`<div class="eqpause"><p class="eqh">${icon(r.id)}<strong>${esc(r.name)}</strong></p><p class="eqr">Relique</p><div class="ln boon"><i>+</i><div><span>${esc(r.desc)}</span></div></div></div>`,'chipx',`${icon(r.id)} ${esc(r.name)}`);}).join('');
   const sub=(t,h)=>h?`<p class="h-sec">${t}</p><div class="chips">${h}</div>`:'';
   const eqPane=`<div class="slotgrid">${slotsHTML}</div>${hub?'<p class="muted" style="margin:10px 0 0">En run, les élites et les gardiens laissent des objets à porter ici.</p>':''}<div id="pztip" class="eqtip"></div>${sub('Sets',sets)}${sub('Pacte',pact)}${sub('Reliques',rel||'')}${(!rel&&!hub)?'':''}<p class="pzfoot"></p>`;
@@ -7508,7 +7570,7 @@ details.fold>.chips{margin-top:8px}
  const _md15=makeDoors;
  makeDoors=function(){_md15();
   if(!RUN||RUN.hub||!room||!room.doors||room.type==='boss'||room.breche)return;
-  const next=RUN.roomIdx+1,A=ACTS[RUN.act];
+  const next=RUN.roomIdx+1,A=ACTD[ACTE()];
   if(next<BR_.premiereSalle||next>=A.rooms-2)return;
   const d=room.doors.find(x=>x.type==='combat');
   if(d&&Math.random()*100<BR_.chance)d.type='breche';};
@@ -7742,7 +7804,7 @@ details.fold>.chips{margin-top:8px}
  const S17=()=>room&&room.br17;
  function setup(){
   if(!RUN||RUN.hub||!room)return;
-  const A=ACTS[RUN.act],c=room.cm&&CMS[room.cm];
+  const A=ACTD[ACTE()],c=room.cm&&CMS[room.cm];
   const ok=br17Eligible({type:room.type,breche:!!room.breche,roomIdx:RUN.roomIdx,actRooms:A.rooms,demo:DEMO17,cm:room.cm,hasEsc:!!(c&&c.esc)},C17);
   room.br17=ok?{actT:null,wT:0,wD:0,n:0,lastT:-1e9,rel:false,pend:null,hideAt:0}:null;}
  const _er=enterRoom;
@@ -9130,7 +9192,7 @@ function demoBoot(cls){
  planRoom=function(type){const w=_pr.apply(this,arguments);
   try{if((type==='combat'||type==='elite')&&RUN&&!RUN.hub&&room&&w.length){
    const M=RUN.asm=RUN.asm||{dernier:null,vaincus:[],salle:-99},R=PR();
-   const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTS[RUN.act].rooms,breche:!!(room.breche||RUN.brecheNow||RUN.asmBr),demo:DEMO,hub:!!RUN.hub,depuis:RUN.g-M.salle-1};
+   const r={type,act:RUN.act,roomIdx:RUN.roomIdx,actRooms:ACTD[ACTE()].rooms,breche:!!(room.breche||RUN.brecheNow||RUN.asmBr),demo:DEMO,hub:!!RUN.hub,depuis:RUN.g-M.salle-1};
    const ap=asmAppel(A,{salles:R.rooms||0,tempsS:R.clearT||0,sansDegatsS:RUN.time-(RUN.asmHit||0)});
    if(nemIci(r,w,M,ap))return w;   // v17.25 · la némésis de cet acte t'attend ici : elle passe avant tout tirage (cadrage N5)
    const force=window.__asm.forcer>0;
@@ -10512,7 +10574,7 @@ function demoBoot(cls){
   if(a.src==='t')delete P.ranks[a.id];else{const j=P.relics.indexOf(a.id);if(j>=0)P.relics.splice(j,1);}
   RUN.reserveBrume.push({id:a.id,source:a.src==='t'?'talent':'relique',rang:a.rang,g:a.g||0,oublie:{acte:RUN.act,salle:RUN.roomIdx},porte:0});
   M.oublis++;resync();
-  try{ensure14();const nm=nameOf(a);RUN.ch.notes.push({a:RUN.act,k:'oubli',t:`Acte ${ROM[RUN.act]||'I'} : tu as oublié ${nm}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}
+  try{ensure14();const nm=nameOf(a);RUN.ch.notes.push({a:RUN.act,k:'oubli',t:`Acte ${ROM[ACTE()]||'I'} : tu as oublié ${nm}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}
  }
 
  // ── v17.23 (palier 5, actions 1 et 2) · Le Dernier Souvenir : brûler un talent porté, en combat (cadrage DS1 à DS19, _dev/memoire.md § 27).
@@ -10561,7 +10623,7 @@ function demoBoot(cls){
    v:dsValeurs(DS,fam,force,false),vf:dsValeurs(DS,fam,force,true),degats:0,surFort:0,boost:0,plafonne:0,touches:0,acheves:0,avales:0,soin:0,bouclier:0,dissipes:0};
   (M.brules||(M.brules=[])).push(r);
   resync();renderMem();
-  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'brule',t:`Acte ${ROM[RUN.act]||'I'} : tu as brûlé ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}
+  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'brule',t:`Acte ${ROM[ACTE()]||'I'} : tu as brûlé ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}
   try{embraser(r);}catch(err){console.error(err);}   // après le recalcul : un soin se compte sur les PV max d'après (DS10)
   return r;}
 
@@ -11044,7 +11106,7 @@ function demoBoot(cls){
   M.traces[x.id]=Math.max(M.traces[x.id]||0,x.rang);M.gains++;M.repris=(M.repris||0)+1;
   resync();renderMem();
   const a={id:x.id,src:'t'};toast(tro?`Trophée : ${nameOf(a)}`:`Repris : ${nameOf(a)}`,1.8);sfx(tro?'level':'pick');
-  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'repris',t:`Acte ${ROM[RUN.act]||'I'} : tu as repris ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
+  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'repris',t:`Acte ${ROM[ACTE()]||'I'} : tu as repris ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
  function offreReprise(x,relique,titre){
   if(!on()||!(RUN.reserveBrume||[]).includes(x)||!NODES[x.id]){relique();return;}
   const a={id:x.id,src:'t',rang:x.rang,g:x.g||0},tro=peutTrophee(),plein=full()&&!tro;
@@ -11075,7 +11137,7 @@ function demoBoot(cls){
   M.traces[x.id]=Math.max(M.traces[x.id]||0,x.rang);M.gains++;M.repris=(M.repris||0)+1;
   resync();renderMem();
   const a={id:x.id,src:'t'};toast(x.tro?`Trophée : ${nameOf(a)}`:`Repris : ${nameOf(a)}`,1.8);sfx(x.tro?'level':'pick');
-  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'repris',t:`Acte ${ROM[RUN.act]||'I'} : tu as repris ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
+  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'repris',t:`Acte ${ROM[ACTE()]||'I'} : tu as repris ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
  function nemJoueur(sv){const M=MEM(),id=sv&&sv.id,a=id?M.actifs.find(y=>y.src==='t'&&y.id===id):null;
   return{cls:P.cls,porte:a?{rang:a.trophee?99:a.rang}:null,brule:!!(id&&brule(id)),gravable:!!(a&&gravables().includes(a)),trophee:peutTrophee(),connu:!!(id&&NODES[id])};}
  function offreNemesis(f,titre){
@@ -11144,7 +11206,7 @@ function demoBoot(cls){
   const hp0=P.s.maxHp,dc0=P.s.dashCharges;a.g=(a.g||0)+1;M.gravures++;resync();
   if(P.s.maxHp>hp0)P.hp+=P.s.maxHp-hp0;if(P.s.dashCharges>dc0)P.dashCh+=P.s.dashCharges-dc0;
   toast(`${nameOf(a)} · gravure ${ROMG[a.g]}`);sfx('pick');renderMem();
-  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'gravure',t:`Acte ${ROM[RUN.act]||'I'} : tu as gravé ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
+  try{ensure14();RUN.ch.notes.push({a:RUN.act,k:'gravure',t:`Acte ${ROM[ACTE()]||'I'} : tu as gravé ${nameOf(a)}.`});if(RUN.ch.notes.length>70)RUN.ch.notes.shift();}catch(err){}}
  const GK={};for(let i=0;i<9;i++){GK['Digit'+(i+1)]=i;GK['Numpad'+(i+1)]=i;}
  const _olu=openLevelUp;
  openLevelUp=function(o){
@@ -11239,7 +11301,7 @@ function demoBoot(cls){
  function statRun(M,win,abandon){
   const R=RUN.mem||{},EVN=M.actifs.filter(a=>a.src==='t'&&(a.g||0)>=2&&EVD[a.id]).length;
   const rec={n:SAVE.runs,d:new Date().toISOString().slice(0,16),v:(window.BRUME_DATA.versions||{}).actuelle||'',cls:P.cls,voie:P.s.sub||'',palier:RUN.palier||0,
-   fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':((window.__nemesis&&window.__nemesis.parAsm&&window.__nemesis.parAsm())||R.lastSrc||''),acte:RUN.act,salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
+   fin:win?'victoire':abandon?'abandon':'mort',par:win||abandon?'':((window.__nemesis&&window.__nemesis.parAsm&&window.__nemesis.parAsm())||R.lastSrc||''),acte:ACTE(),registre:RUN.act,palierD:RUN.palierD||'',actesT:RUN.acteT?Object.fromEntries(Object.entries(RUN.acteT).map(([a,t])=>[a,Math.round(t)])):{},salle:RUN.roomIdx,salles:RUN.g||0,niveau:P.level,temps:Math.round(RUN.time||0),
    tues:RUN.kills||0,degats:Math.round(RUN.dmg||0),pvMax:Math.round(P.s.maxHp),
    talents:Object.keys(M.traces).length,portes:M.actifs.length,rangs:M.actifs.reduce((n,a)=>n+a.rang,0),oublis:M.oublis||0,renonces:M.renonces||0,ecransOubli:M.ecrans||0,
    brules:(M.brules||[]).map(r=>({id:r.id,famille:r.famille,genre:r.genre,rang:r.rang,g:r.g,force:Math.round(r.force*100)/100,acte:r.acte,salle:r.salle,contre:r.contre,degats:Math.round(r.degats),surFort:Math.round(r.surFort+r.boost),plafonne:!!r.plafonne})),reserveGlas:M.reserveGlas==null?null:M.reserveGlas,
@@ -12378,6 +12440,125 @@ const SC27=(function(){
  return{scene,debut};
 })();
 function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v18 · La grande descente (charpente, action 2 du chantier) : 10 actes, trois paliers Normal / Difficile / Extrême.
+// Données : data/descente.js. Logique pure : bloc /*des:pur*/ (près d'ACTS), vérifiée par outils/sim-descente.mjs.
+// RUN.acteD est l'acte de la descente (1 à N) ; RUN.act, le registre (1 à 3), reste ce que lit le reste du jeu : les actes IV à X
+// se jouent dans le registre de l'acte III (décor, musique, ennemis, IA). Les actes I à III ne changent pas (portes, salles, gardiens, montée).
+// Actes IV à IX : une élite de fin d'acte (Masqué imposé, porte « garde ») ; acte X : antichambre, puis un gardien provisoire (le combat du Glas).
+// Paliers : SAVE.descente (versionnée) ; gagner une descente ouvre le palier suivant ; une descente d'essai (RUN.essai, ou un paramètre
+// d'essai dans l'adresse) n'ouvre rien. Les paliers n'ont encore aucune règle (descente.js, regles : action 3).
+// Essai : index.html?descente=<acte>[&fin=1][&classe=…] ; console : __descente.
+(function(){
+ const PA=DES_D.paliers,ORD=DES_D.ordre;
+ const ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente)=/.test(location.search);
+ Object.assign(DOOR,{acte:{l:'Acte IV',c:'225,205,255',g:'IV'},garde:{l:'Élite de l’acte',c:'255,138,92',g:'É'}});
+ ICONS.acte=ICONS.act3||ICONS.act;ICONS.garde=ICONS.u_mask||ICONS.elite;
+ // ── Sauvegarde : une sauvegarde d'avant la v18 reçoit l'état neuf (Normal seul ouvert) ; les anciennes victoires (3 actes) n'ouvrent rien
+ const lire=()=>desLire(SAVE.descente,DES_D);   // null : sauvegarde d'une version future, on n'y touche pas
+ {const S=lire();if(S&&JSON.stringify(SAVE.descente)!==JSON.stringify(desEcrire(S))){SAVE.descente=desEcrire(S);persist();}}
+ const ouverts=()=>{const S=lire();return S?S.ouverts:[ORD[0]];};
+ const choisi=()=>{const S=lire();return S?S.choisi:ORD[0];};
+ function choisir(p){const S=lire();if(!S||!S.ouverts.includes(p))return false;S.choisi=p;SAVE.descente=desEcrire(S);persist();return true;}
+ const nomP=p=>PA[p]?PA[p].n:p;
+ const ouvrePar=p=>PA[p]&&PA[p].ouvrePar;
+ // ── Sélecteur (écran titre et Portail) : une pastille par palier, image d'abord ; un palier fermé dit comment l'ouvrir
+ function selecteur(){const o=ouverts(),c=choisi();
+  const b=p=>{const on=o.includes(p),sel=p===c,X=PA[p],t=on?`${X.n} · ${X.court}`:`Gagne une descente en ${nomP(ouvrePar(p))} pour l’ouvrir`;
+   return `<button type="button" class="des-p${sel?' sel':''}${on?'':' off'}" data-pal="${p}" role="radio" aria-checked="${sel}" ${on?'':'aria-disabled="true"'} title="${esc(t)}"><i>${icon(X.ic)}</i><b>${esc(X.n)}</b>${on?'':`<em>${icon('u_off')}</em>`}</button>`;};
+  const prochain=ORD.find(p=>!o.includes(p));
+  return `<div class="des-pal" role="radiogroup" aria-label="Palier de difficulté">${ORD.map(b).join('')}</div><p class="des-pn">${prochain?`${icon('u_star')}<span>Gagne en <b>${esc(nomP(ouvrePar(prochain)))}</b> pour ouvrir <b>${esc(nomP(prochain))}</b>.</span>`:`${icon('u_check')}<span>Les trois paliers sont ouverts.</span>`}</p>`;}
+ function brancher(box,refaire){box.querySelectorAll('.des-p').forEach(x=>x.addEventListener('click',()=>{if(x.classList.contains('off'))return;if(choisir(x.dataset.pal))refaire();}));}
+ const st=document.createElement('style');st.textContent=`
+.des-pal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.des-p{appearance:none;font:inherit;color:inherit;cursor:pointer;position:relative;display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(14,17,26,.88);--c:#e7c47a}
+.des-p[data-pal=difficile]{--c:#ff9a52}.des-p[data-pal=extreme]{--c:#ff4d5e}
+.des-p>i{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--c);font-style:normal;border:1px solid color-mix(in srgb,var(--c) 50%,transparent)}
+.des-p>i .ic{width:21px;height:21px;stroke-width:1.7}
+.des-p b{font-family:var(--f-display);font-weight:500;font-size:17px;line-height:1.1}
+.des-p:hover{border-color:var(--line-hi)}
+.des-p:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
+.des-p.sel{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c),0 0 20px color-mix(in srgb,var(--c) 28%,transparent);background:color-mix(in srgb,var(--c) 11%,rgba(14,17,26,.95))}
+.des-p.off{cursor:not-allowed;opacity:.5;filter:grayscale(.8)}
+.des-p em{position:absolute;top:4px;right:5px;font-style:normal;color:var(--ash)}.des-p em .ic{width:14px;height:14px}
+.des-pn{margin:7px 2px 0;font-size:13.5px;color:var(--ash);display:flex;gap:6px;align-items:center}.des-pn .ic{width:15px;height:15px;color:var(--flame)}
+.des-fin{display:flex;gap:10px;align-items:center;margin:10px 0 0;padding:8px 12px;border:1px solid rgba(243,185,77,.45);background:rgba(243,185,77,.08);border-radius:6px}
+.des-fin .ic{width:22px;height:22px;color:var(--flame)}
+@media (max-width:420px){.des-pal{grid-template-columns:1fr}}`;document.head.appendChild(st);
+ // écran titre : sous ta progression
+ const _ot18=openTitle;
+ openTitle=function(){_ot18.apply(this,arguments);
+  try{const side=overlayEl.querySelector('.tw2-side');if(!side||side.querySelector('.des-pal'))return;
+   const h=document.createElement('div');h.className='des-sel';h.innerHTML=`<p class="h-sec">Palier</p>${selecteur()}`;
+   const avant=side.querySelector('.h-sec');side.insertBefore(h,avant||null);brancher(h,()=>openTitle());}catch(err){console.error(err);}};
+ // Portail du Sanctuaire : le sélecteur remplace les Paliers de Brume
+ const _rp18=renderPortail;
+ renderPortail=function(){_rp18.apply(this,arguments);
+  try{const panel=overlayEl.querySelector('.panel');if(!panel||!panel.querySelector('#descend'))return;
+   const h=[...panel.querySelectorAll('.h-sec')].find(x=>/Palier de Brume/.test(x.textContent));
+   let box=h&&h.parentElement;if(box&&box.querySelector('.classes')){const d=document.createElement('div');h.parentNode.insertBefore(d,h);let n=h;while(n){const nx=n.nextSibling;d.appendChild(n);n=nx;}box=d;}
+   if(box){box.innerHTML=`<p class="h-sec">Palier</p>${selecteur()}`;brancher(box,()=>renderPortail());}
+   const go=panel.querySelector('#descend');const p=choisi();if(go&&p!==ORD[0]&&!/·\s*(Normal|Difficile|Extrême)/.test(go.textContent))go.insertAdjacentText('beforeend',` · ${nomP(p)}`);}catch(err){console.error(err);}};
+ // ── Début de descente : le palier choisi (s'il est ouvert), l'heure d'entrée de chaque acte (mesure de la durée)
+ const _sr18=startRun;
+ startRun=function(){_sr18.apply(this,arguments);if(!RUN||RUN.hub)return;RUN.palierD=desChoix(lire(),choisi(),DES_D);RUN.acteT=Object.assign({[ACTE()]:0},RUN.acteT||{});updateRoomHud();};
+ // ── HUD : acte de la descente, élite de fin d'acte, palier
+ const _urh18=updateRoomHud;
+ updateRoomHud=function(){_urh18.apply(this,arguments);
+  try{if(!RUN||RUN.hub||!room)return;const hr=$('#hRoom');if(hr&&room.garde)hr.textContent=hr.textContent.replace(/· Élite\b/,'· Élite de l’acte');
+   const ha=$('#hAct');if(ha&&RUN.palierD&&RUN.palierD!==ORD[0])ha.textContent+=` · ${nomP(RUN.palierD)}`;}catch(err){console.error(err);}};
+ // ── Porte « acte » (IV à N) : ce que v9 et v13 font quand RUN.act change (ici il reste au registre) : pacte, fiole, larme, flasque, palier gagné
+ const _de18=doEnter;
+ doEnter=function(type){
+  if(!RUN||RUN.hub||type!=='acte')return _de18.apply(this,arguments);
+  const V=RUN.v9,r=ACTD[ACTE()].registre,saute=!!(V&&V.skipUsed&&V.skipUsed[r]);
+  const res=_de18.apply(this,arguments);
+  try{RUN.fiole=false;RUN.larme=false;
+   if(V){if(has9('R4'))V.flask=1;if(has9('D4')&&!saute){heal(P.s.maxHp*0.12,'halte');toast('Palier gagné : +12 % de PV.',2.4);}}
+   enqueue(openPacte);}catch(err){console.error(err);}
+  return res;};
+ // ── Élite de fin d'acte (IV à IX, provisoire) : un Masqué imposé, plus endurant d'acte en acte, et une vague de plus
+ const _pr18=planRoom;
+ planRoom=function(type){
+  if(!(RUN&&!RUN.hub&&RUN.gardeNow&&type==='elite'&&room))return _pr18.apply(this,arguments);
+  RUN.gardeNow=0;const n=ACTE();room.garde=n;
+  const AS=window.__asm,f0=AS?AS.forcer:0;if(AS)AS.forcer=1;
+  let w;try{w=_pr18.apply(this,arguments);}finally{if(AS)AS.forcer=f0;}
+  const fv=DES_D.fin.vague[n]||0;if(fv>0&&w&&w.length)w.push(genWave(budget()*fv,allowedTypes()));
+  return w;};
+ const _ce18=createEnemy;
+ createEnemy=function(type,x,y,elite){const e=_ce18.apply(this,arguments);
+  try{if(e&&elite&&room&&room.garde&&RUN&&!RUN.hub){const f=DES_D.fin.pv[room.garde]||1;if(f!==1){e.maxHp*=f;e.hp=e.maxHp;e.garde=room.garde;}}}catch(err){console.error(err);}
+  return e;};
+ // ── Fin de descente : une victoire au dernier acte, hors essai, ouvre le palier suivant (et compte la victoire par palier et par forme)
+ const _oe18=openEnd;
+ openEnd=function(win){let ouvert=null;
+  try{if(RUN&&!RUN.hub&&!RUN.fin18){RUN.fin18=1;const S=lire();
+    const R=desFin(S,DES_D,{win:!!win&&ACTE()>=ACTES_N,essai:!!(RUN.essai||ESSAI18),palier:RUN.palierD||ORD[0],cls:P&&P.cls});
+    if(R.S&&R.S!==S){SAVE.descente=desEcrire(R.S);persist();}ouvert=R.ouvert;RUN.ouvert18=ouvert;}}catch(err){console.error(err);}
+  const r=_oe18.apply(this,arguments);
+  try{const o=RUN&&RUN.ouvert18;const sub=overlayEl.querySelector('.panel .sub');if(o&&sub&&!overlayEl.querySelector('.des-fin'))sub.insertAdjacentHTML('afterend',`<p class="des-fin">${icon(PA[o].ic)}<span>Palier <b>${esc(nomP(o))}</b> ouvert : choisis-le à l’écran titre ou au Portail.</span></p>`);}catch(err){console.error(err);}
+  return r;};
+ // ── Essai : démarrer à l'acte n (fin : directement la dernière salle de l'acte). Une descente d'essai n'ouvre aucun palier.
+ function essai(n,o){o=o||{};n=Math.max(1,Math.min(ACTES_N,n|0||1));
+  if(!RUN||RUN.hub||state!=='play'){chosenCls=CLS[o.cls]?o.cls:CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}
+  RUN.essai=1;closeOverlay();queue.length=0;trans=null;fade=0;
+  RUN.acteD=n;RUN.roomIdx=0;RUN.path=[];RUN.g=0;for(let k=1;k<n;k++)RUN.g+=ACTD[k].rooms;
+  const A=ACTD[n];
+  if(o.fin){RUN.roomIdx=A.rooms-1;RUN.g+=A.rooms-1;doEnter(A.fin==='elite'?'garde':'boss');}
+  else enterRoom(A.entree||'combat');
+  showBanner(`Acte ${ROM[n]} · essai`,A.name);
+  return{acte:ACTE(),registre:RUN.act,g:RUN.g,salle:RUN.roomIdx,type:room.type,garde:room.garde||0};}
+ const QD=/[?&]descente=(\d+)/.exec(location.search);
+ if(QD&&!DEMO_CLS18()){const qc=(/[?&]classe=([a-z]+)/.exec(location.search)||[])[1],fin=/[?&]fin=1/.test(location.search);
+  addEventListener('load',()=>setTimeout(()=>{try{essai(+QD[1],{cls:qc,fin});}catch(err){console.error(err);}},400));}
+ function DEMO_CLS18(){return /[?&]demo=/.test(location.search);}
+ window.__descente={ACTD,N:ACTES_N,seuil:DES_SEUIL,montee:g=>desMontee(DES_BASE(),DES_D,DES_SEUIL,g),porte:(n,next,type,garde)=>desPorte(ACTD[n],{acte:n,N:ACTES_N,next,type,garde}),
+  etat:lire,choisir,essai,selecteur,effacer:()=>{SAVE.descente=desEcrire(desNeuf(DES_D));persist();},
+  vider:()=>{queue.length=0;closeOverlay();},file:()=>queue.length,   // bancs : fermer les fenêtres en attente
+  dbg:()=>({acte:ACTE(),registre:RUN&&RUN.act,g:RUN&&RUN.g,salle:RUN&&RUN.roomIdx,rooms:ACTD[ACTE()].rooms,type:room&&room.type,garde:room&&room.garde||0,portes:room&&room.doors?room.doors.map(d=>d.type):[],palier:RUN&&RUN.palierD,essai:!!(RUN&&RUN.essai),pv:hpMul(),deg:dmgMul()})};
+})();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];
 if(DEMO_CLS&&CLS[DEMO_CLS])demoBoot(DEMO_CLS);

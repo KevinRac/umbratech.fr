@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v17.27',
+ actuelle:'v18.0',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-11-01',h:'v18.0',t:'La grande descente, première pierre : une descente compte désormais dix actes. Les actes I à III ne changent pas ; après le Glas Originel, la descente continue. Pour l’instant, les actes IV à IX se terminent par une élite de fin d’acte (un Masqué imposé, plus endurant d’acte en acte) et l’acte X par un gardien provisoire ; ils reprennent le décor et les ennemis du Cœur de la Brume. Après l’acte III, les ennemis montent moins vite : +4 % de PV et +1,5 % de dégâts par salle. Chaque nouvel acte apporte un pacte. Trois paliers, Normal, Difficile et Extrême, remplacent les Paliers de Brume : gagner une descente ouvre le suivant (une descente d’essai n’ouvre rien). Ils se choisissent sur l’écran titre ou au Portail et n’ont pas encore de règles propres.'},
  {d:'2026-11-01',h:'v17.27',t:'Retouches de dessin : la chair du Glas Originel est plus claire, pour mieux se lire sur son sol sombre, et le bout de la corde cassée du Héraut, qui pend de son poing au deuxième temps, est plus épais.'},
  {d:'2026-11-01',h:'v17.27',t:'Les gardiens ont un nouveau visage : la Mère-Brume berce son enfant, le Héraut porte sa cloche, le Glas Originel bat. Rien ne change dans leurs combats ; seuls leurs dessins, leurs entrées et leurs morts sont refaits, et lisent mieux le point faible.'},
  {d:'2026-11-01',h:'v17.27',t:'Les gardiens ont leur emblème et leur portrait. Chacun a son glyphe : une couronne-masque pour la Mère-Brume, une cloche posée sur une robe, la lampe d’Ismène dessous, pour le Héraut Noyé, une cloche fendue où bat un œil pour le Glas Originel. Tu le vois sur la porte du gardien, à la place de l’ancienne icône, et à gauche de son nom sur sa barre de vie. Le wiki montre dans la fiche de chaque gardien son glyphe et son portrait (le premier temps ; le troisième au survol). Rien ne change dans le combat.'},

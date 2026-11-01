@@ -189,7 +189,8 @@ function DEDANS() {
       res.gardiens[act] = H.gardien(seed * 31 + act, max);
       for (let i = 0; i < 40; i++) { const v = H.vider(); if (v === 'vide' || v === 'fin') break; H.pas(); }
     }
-    res.fin = !!document.querySelector('.endmem'); return res;
+    // v18 : après le Glas de l'acte III, la descente continue (10 actes) : la fin, c'est le Glas vaincu et la seule porte vers l'acte IV
+    res.fin = !!document.querySelector('.endmem') || !!(window.__descente && room && room.type === 'boss' && room.bossDead && window.__descente.dbg().portes.join() === 'acte'); return res;
   };
   // le Glas d'essai (?glas=), pilote bot=1 (conduit vers la sortie de chaque geste du Reflet), dieu, sans l'Appel (comme au § 26 : ses Rampants touchent le pilote immobile)
   H.glasBot = (cls, liste, temps, seed, n) => {
@@ -324,7 +325,7 @@ if (SEC.includes('D')) {
     const A = runs[true], B = runs[false];
     if (A.trace) { const k = A.trace.findIndex((x, j) => x !== B.trace[j]); console.log(`trace ${cls} : ${A.trace.length} images, première différence ${k}`); if (k >= 0) for (let j = Math.max(0, k - 2); j < k + 3; j++) console.log(`  ${j} A ${A.trace[j]}\n  ${j} B ${B.trace[j]}`); }
     ok(!A.errs.length && !B.errs.length, `${cls} : aucune erreur de script (${[...A.errs, ...B.errs].slice(0, 3).join(' | ')})`);
-    ok(A.fin && B.fin, `${cls} : la descente va jusqu'à la victoire sur le Glas (écran de fin : ${A.fin} / ${B.fin} ; salles ${A.salles.join(',')})`);
+    ok(A.fin && B.fin, `${cls} : la descente va jusqu'au Glas vaincu (fin, ou porte de l'acte IV depuis la v18 : ${A.fin} / ${B.fin} ; salles ${A.salles.join(',')})`);
     for (const act of [1, 2, 3]) {
       const a = A.gardiens[act], b = B.gardiens[act]; if (!a || !b) { ok(false, `${cls} acte ${act} : gardien combattu`); continue; }
       let i0 = -1; for (let k = 0; k < Math.max(a.sigs.length, b.sigs.length); k++) if (a.sigs[k] !== b.sigs[k]) { i0 = k; break; }

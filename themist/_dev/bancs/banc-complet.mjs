@@ -178,6 +178,14 @@ if (SEC.includes('F')) for (const cls of ['lum', 'gou', 'her', 'tis']) {
     await page.waitForTimeout(1500);
     for (let i = 0; i < 8; i++) { await page.evaluate(() => { const D = window.__asm.dbg(); for (const e of D.enemies) if (!e.dead) { e.hp = 1; D.kill(e); } }); await page.waitForTimeout(500); if (acte < 3) await vider(page); else if (await page.evaluate(() => !!document.querySelector('.endmem'))) break; else await vider(page); }
   }
+  // v18 : après le Glas de l'acte III, la descente continue (10 actes). Le banc saute au gardien de l'acte X (même descente, pas d'essai)
+  // et l'abat : la fin de run (victoire, statistiques) arrive là.
+  if (await page.evaluate(() => !!window.__descente && window.__descente.N > 3)) {
+    await vider(page);
+    await page.evaluate(() => { const D = window.__asm.dbg(), X = window.__descente; D.RUN.acteD = X.N; D.RUN.roomIdx = X.ACTD[X.N].rooms - 1; D.entrer('boss'); });
+    await page.waitForTimeout(2600);
+    for (let i = 0; i < 12; i++) { await page.evaluate(() => { const D = window.__asm.dbg(); D.P.iT = 999; D.P.hp = D.P.s.maxHp; for (const e of D.enemies) if (!e.dead) { e.hp = 1; D.kill(e); } }); await page.waitForTimeout(500); if (await page.evaluate(() => !!document.querySelector('.endmem'))) break; await vider(page); }
+  }
   // fin : victoire et statistiques
   await page.waitForTimeout(1500);
   const fin = await page.evaluate(() => { const S = window.__memoire.stats(), r = S[S.length - 1]; return { n: S.length, fin: r && r.fin, brules: r && r.brules && r.brules.map(b => b.acte + ':' + b.id + ':' + b.contre), rg: r && r.reserveGlas, end: !!document.querySelector('.endmem .endbru'), etat: window.__asm.dbg().state }; });
