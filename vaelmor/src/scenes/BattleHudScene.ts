@@ -12,6 +12,7 @@
  * du côté opposé au curseur (`setDodge`) pour ne jamais cacher la case visée.
  * `BattleScene` pilote tout ; les appels reçus avant la création sont mis en attente.
  */
+import { portraitInBox } from '../render/portraits';
 import Phaser from 'phaser';
 import { ActionInput } from '../core/input';
 import { uiScaleFor } from '../core/viewport';
@@ -334,11 +335,12 @@ export class BattleHudScene extends Phaser.Scene {
     // Portrait : le sprite de carte agrandi ×2 sur un fond aux couleurs du camp.
     parts.push(this.add.rectangle(x + 8 * S, y + 8 * S, 40 * S, 50 * S, TEAM_COLOR[unit.team], 0.22).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
     parts.push(
-      this.add
-        .image(x + 28 * S, y + 56 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0))
-        .setOrigin(0.5, 1)
-        .setScale(2 * S)
-        .setDepth(DEPTH.panel + 2),
+      (unit.team === 'player' ? portraitInBox(this, unit.sprite, x + 8 * S, y + 8 * S, 40 * S, 50 * S, S, DEPTH.panel + 2) : null) ??
+        this.add
+          .image(x + 28 * S, y + 56 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0))
+          .setOrigin(0.5, 1)
+          .setScale(2 * S)
+          .setDepth(DEPTH.panel + 2),
     );
     if (unit.isBoss) parts.push(this.add.image(x + 44 * S, y + 12 * S, BATTLE_TEX.crown).setScale(2 * S).setDepth(DEPTH.panel + 3));
     if (unit.isHero) parts.push(this.add.image(x + 44 * S, y + 12 * S, BATTLE_TEX.heroMark).setScale(2 * S).setDepth(DEPTH.panel + 3));
@@ -482,7 +484,7 @@ export class BattleHudScene extends Phaser.Scene {
     const head = (unit: BattleUnit, cx: number): void => {
       // Portrait : le sprite ×2 (son cadre a 7 rangées vides au-dessus de la tête).
       parts.push(this.add.rectangle(cx, y + 40 * S, 52 * S, 58 * S, TEAM_COLOR[unit.team], 0.22).setDepth(DEPTH.panel + 1));
-      parts.push(this.add.image(cx, y + 70 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(DEPTH.panel + 2));
+      parts.push((unit.team === 'player' ? portraitInBox(this, unit.sprite, cx - 26 * S, y + 11 * S, 52 * S, 58 * S, S, DEPTH.panel + 2) : null) ?? this.add.image(cx, y + 70 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(DEPTH.panel + 2));
       text(cx, y + 72 * S, unit.name, TEAM_COLOR[unit.team]);
     };
     head(attacker, colA);
@@ -809,7 +811,7 @@ export class BattleHudScene extends Phaser.Scene {
         const c = this.add.container(0, 0).setDepth(DEPTH.banner);
         c.add(drawPanel(this, x, y, w, h, { scale: 2 * S }));
         c.add(this.add.rectangle(x + 8 * S, y + 8 * S, 34 * S, 32 * S, color, 0.25).setOrigin(0, 0));
-        c.add(this.add.image(x + 25 * S, y + 46 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(S).setCrop(0, 0, 40, 30));
+        c.add((unit.team === 'player' ? portraitInBox(this, unit.sprite, x + 8 * S, y + 8 * S, 34 * S, 32 * S, S, 0) : null) ?? this.add.image(x + 25 * S, y + 46 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(S).setCrop(0, 0, 40, 30));
         c.add(addText(this, x + 52 * S, y + 7 * S, name, { font: 'body', scale: S, color: PALETTE.lumiereDoree }));
         c.add(addText(this, x + 52 * S, y + 25 * S, unit.name, { scale: S, color }));
         c.setAlpha(0);
@@ -1060,7 +1062,7 @@ export class BattleHudScene extends Phaser.Scene {
       parts.push(drawPanel(this, lx, fy, colW, fh, { scale: 2 * S, depth: DEPTH.prep }));
       this.prepRects.push({ x: lx, y: fy, w: colW, h: fh });
       parts.push(this.add.rectangle(lx + 8 * S, fy + 8 * S, 30 * S, 36 * S, TEAM_COLOR.player, 0.22).setOrigin(0, 0).setDepth(DEPTH.prep + 1));
-      parts.push(this.add.image(lx + 23 * S, fy + 44 * S, BATTLE_TEX.ms(unit.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(S).setDepth(DEPTH.prep + 2));
+      parts.push(portraitInBox(this, unit.sprite, lx + 8 * S, fy + 8 * S, 30 * S, 36 * S, S, DEPTH.prep + 2) ?? this.add.image(lx + 23 * S, fy + 44 * S, BATTLE_TEX.ms(unit.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(S).setDepth(DEPTH.prep + 2));
       const textW = colW - 46 * S - 10 * S;
       parts.push(fitText(addText(this, lx + 46 * S, fy + 7 * S, `${unit.name}  Niv ${unit.level}`, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.prep + 2), textW));
       parts.push(fitText(addText(this, lx + 46 * S, fy + 21 * S, unit.kindName, { scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH.prep + 2), textW));

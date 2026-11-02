@@ -71,7 +71,8 @@ describe('déambulation des PNJ', () => {
       }
     }
     expect(moved).toBeGreaterThan(1000);
-  });
+    // Simulation longue : marge de temps pour les machines lentes (CI, conteneurs à 2 cœurs).
+  }, 30_000);
 
   it('une conversation fige le PNJ une fois son pas fini', () => {
     const rng = Rng.fromSeed('hold');

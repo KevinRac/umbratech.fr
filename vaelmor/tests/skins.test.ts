@@ -26,4 +26,13 @@ describe('apparences', () => {
       expect(c.readUInt32BE(20), s.id).toBe(30 * (poses ? 6 : 3));
     }
   });
+  it('chaque apparence a un portrait 64×64', () => {
+    for (const s of SKINS) {
+      const file = resolve(__dirname, `../assets/portraits/${s.id}.png`);
+      expect(existsSync(file), s.id).toBe(true);
+      const b = readFileSync(file);
+      expect(b.readUInt32BE(16), s.id).toBe(64);
+      expect(b.readUInt32BE(20), s.id).toBe(64);
+    }
+  });
 });

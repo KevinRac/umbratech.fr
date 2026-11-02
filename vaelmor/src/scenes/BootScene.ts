@@ -11,6 +11,7 @@ import { GameDataError, loadGameData } from '../data';
 import { paintTitleBackdrop } from '../render/backdrops/titleBackdrop';
 import { PALETTE } from '../render/palette';
 import { PIXEL_FONTS, buildPixelFont, loadPixelFontFaces, type FontKey } from '../render/pixelFont';
+import { preloadPortraits } from '../render/portraits';
 import { preloadSkins } from '../render/skins';
 import { WORLD_MAP_KEY, WORLD_TILESET_KEY } from '../render/worldTextures';
 import { SCENES } from './keys';
@@ -30,6 +31,7 @@ export class BootScene extends Phaser.Scene {
     this.load.tilemapTiledJSON(WORLD_MAP_KEY, assetUrl('assets/maps/world.json'));
     this.load.image(WORLD_TILESET_KEY, assetUrl('assets/tilesets/world_tiles.png'));
     preloadSkins(this);
+    preloadPortraits(this);
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
       showFatalError('Un fichier du jeu est introuvable.', [`${file.key} : ${file.url as string}`]);
     });

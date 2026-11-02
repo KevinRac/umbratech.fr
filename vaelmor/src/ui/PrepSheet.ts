@@ -4,6 +4,7 @@
  * dessous, le sac en cases : chaque objet porté occupe une case (5 au plus) ;
  * un clic sur une case rend l'objet au sac, un clic sur un objet du sac le donne.
  */
+import { portraitInBox } from '../render/portraits';
 import Phaser from 'phaser';
 import { PALETTE } from '../render/palette';
 import { BATTLE_TEX } from '../render/battleTextures';
@@ -94,7 +95,7 @@ export class PrepSheet {
 
     // En-tête : portrait, nom, classe.
     parts.push(this.scene.add.rectangle(x + 10 * S, y + 10 * S, 40 * S, 50 * S, 0x6fa8e8, 0.22).setOrigin(0, 0).setDepth(D + 2));
-    parts.push(this.scene.add.image(x + 30 * S, y + 58 * S, BATTLE_TEX.ms(view.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(D + 3));
+    parts.push(portraitInBox(this.scene, view.sprite, x + 10 * S, y + 10 * S, 40 * S, 50 * S, S, D + 3) ?? this.scene.add.image(x + 30 * S, y + 58 * S, BATTLE_TEX.ms(view.sprite, 'player'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(D + 3));
     text(x + 60 * S, y + 12 * S, `${view.name}  Niv ${view.level}`, PALETTE.parchemin, { maxWidth: w - 190 * S });
     text(x + 60 * S, y + 28 * S, view.kind, PALETTE.cyanEclat, { maxWidth: w - 190 * S });
     text(x + 60 * S, y + 44 * S, view.deployed ? 'Déployé' : 'Au camp', view.deployed ? 0x7fcf6a : PALETTE.desactive);
