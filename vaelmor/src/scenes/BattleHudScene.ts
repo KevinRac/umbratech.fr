@@ -12,7 +12,7 @@
  * du côté opposé au curseur (`setDodge`) pour ne jamais cacher la case visée.
  * `BattleScene` pilote tout ; les appels reçus avant la création sont mis en attente.
  */
-import { portraitInBox } from '../render/portraits';
+import { moodForHp, portraitInBox, speak } from '../render/portraits';
 import Phaser from 'phaser';
 import { ActionInput } from '../core/input';
 import { uiScaleFor } from '../core/viewport';
@@ -335,7 +335,7 @@ export class BattleHudScene extends Phaser.Scene {
     // Portrait : le sprite de carte agrandi ×2 sur un fond aux couleurs du camp.
     parts.push(this.add.rectangle(x + 8 * S, y + 8 * S, 40 * S, 50 * S, TEAM_COLOR[unit.team], 0.22).setOrigin(0, 0).setDepth(DEPTH.panel + 1));
     parts.push(
-      (unit.team === 'player' ? portraitInBox(this, unit.sprite, x + 8 * S, y + 8 * S, 40 * S, 50 * S, S, DEPTH.panel + 2) : null) ??
+      (unit.team === 'player' ? portraitInBox(this, unit.sprite, x + 8 * S, y + 8 * S, 40 * S, 50 * S, S, DEPTH.panel + 2, moodForHp(unit.hp, unit.stats.pv)) : null) ??
         this.add
           .image(x + 28 * S, y + 56 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0))
           .setOrigin(0.5, 1)
@@ -484,7 +484,7 @@ export class BattleHudScene extends Phaser.Scene {
     const head = (unit: BattleUnit, cx: number): void => {
       // Portrait : le sprite ×2 (son cadre a 7 rangées vides au-dessus de la tête).
       parts.push(this.add.rectangle(cx, y + 40 * S, 52 * S, 58 * S, TEAM_COLOR[unit.team], 0.22).setDepth(DEPTH.panel + 1));
-      parts.push((unit.team === 'player' ? portraitInBox(this, unit.sprite, cx - 26 * S, y + 11 * S, 52 * S, 58 * S, S, DEPTH.panel + 2) : null) ?? this.add.image(cx, y + 70 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(DEPTH.panel + 2));
+      parts.push((unit.team === 'player' ? portraitInBox(this, unit.sprite, cx - 26 * S, y + 11 * S, 52 * S, 58 * S, S, DEPTH.panel + 2, moodForHp(unit.hp, unit.stats.pv)) : null) ?? this.add.image(cx, y + 70 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1).setScale(2 * S).setDepth(DEPTH.panel + 2));
       text(cx, y + 72 * S, unit.name, TEAM_COLOR[unit.team]);
     };
     head(attacker, colA);
@@ -811,7 +811,10 @@ export class BattleHudScene extends Phaser.Scene {
         const c = this.add.container(0, 0).setDepth(DEPTH.banner);
         c.add(drawPanel(this, x, y, w, h, { scale: 2 * S }));
         c.add(this.add.rectangle(x + 8 * S, y + 8 * S, 34 * S, 32 * S, color, 0.25).setOrigin(0, 0));
-        c.add((unit.team === 'player' ? portraitInBox(this, unit.sprite, x + 8 * S, y + 8 * S, 34 * S, 32 * S, S, 0) : null) ?? this.add.image(x + 25 * S, y + 46 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(S).setCrop(0, 0, 40, 30));
+        // Compétence : le lanceur crie (portrait « en colère » qui parle).
+        const shout = unit.team === 'player' ? portraitInBox(this, unit.sprite, x + 8 * S, y + 8 * S, 34 * S, 32 * S, S, 0, 'angry') : null;
+        if (shout) speak(this, shout, unit.sprite, 'angry', durationMs * 0.6);
+        c.add(shout ?? this.add.image(x + 25 * S, y + 46 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(S).setCrop(0, 0, 40, 30));
         c.add(addText(this, x + 52 * S, y + 7 * S, name, { font: 'body', scale: S, color: PALETTE.lumiereDoree }));
         c.add(addText(this, x + 52 * S, y + 25 * S, unit.name, { scale: S, color }));
         c.setAlpha(0);
@@ -1187,6 +1190,13 @@ export class BattleHudScene extends Phaser.Scene {
         shadowOffset: 2 * S,
       }).setDepth(DEPTH.result + 2);
       parts.push(title);
+      // Le héros réagit : content après une victoire, abattu après une défaite.
+      const heroMood = victory ? 'happy' : 'sad';
+      const hero = portraitInBox(this, 'heros', x + 16 * S, y + 12 * S, 48 * S, 52 * S, S, DEPTH.result + 2, heroMood);
+      if (hero) {
+        parts.push(hero);
+        speak(this, hero, 'heros', heroMood, 700);
+      }
       const lines: [string, number][] = [
         [`Tours : ${summary.turns}`, PALETTE.parchemin],
         [`Ennemis vaincus : ${summary.enemiesDefeated} / ${summary.enemiesTotal}`, PALETTE.parchemin],

@@ -15,7 +15,7 @@ Toutes sous licence SIL Open Font License 1.1 (texte complet à côté de chaque
 ## Graphismes
 - Logotype « VAELMOR », décor de l'écran titre, curseur, cadres d'interface : dessinés pour le projet (pixel art procédural dans `src/render/`), aucun asset tiers.
 - Personnages de la carte (`assets/personnages/*.png`) : feuilles de marche générées avec Pixellab (IA) à partir des descriptions du projet, puis converties (réduction, palette) par script ; à retoucher à la main si besoin.
-- Portraits de la compagnie (`assets/portraits/*.png`) : générés avec Pixellab (IA) à partir de ces mêmes personnages (portrait du héros : fourni par l'auteur).
+- Portraits de la compagnie (`assets/portraits/*.png`) : générés avec Pixellab (IA) à partir de ces mêmes personnages (portrait du héros : fourni par l'auteur) ; leurs expressions (`assets/portraits/expressions/`) aussi.
 
 ## Sons
 Aucun asset tiers pour l'instant. Toute source future doit être listée ici avec sa licence.

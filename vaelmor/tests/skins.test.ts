@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SKINS, SKIN_POSES, SKIN_ROWS } from '../src/data/skins';
+import { PORTRAIT_MOODS, PORTRAIT_MOUTHS, SKINS, SKIN_POSES, SKIN_ROWS } from '../src/data/skins';
 import { skinFrameIndex, skinWalkFrames } from '../src/logic/skinFrames';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -33,6 +33,13 @@ describe('apparences', () => {
       const b = readFileSync(file);
       expect(b.readUInt32BE(16), s.id).toBe(64);
       expect(b.readUInt32BE(20), s.id).toBe(64);
+    }
+  });
+  it('chaque apparence a une feuille d’expressions (4 humeurs × 3 bouches)', () => {
+    for (const s of SKINS) {
+      const b = readFileSync(resolve(__dirname, `../assets/portraits/expressions/${s.id}.png`));
+      expect(b.readUInt32BE(16), s.id).toBe(64 * PORTRAIT_MOUTHS.length);
+      expect(b.readUInt32BE(20), s.id).toBe(64 * PORTRAIT_MOODS.length);
     }
   });
 });

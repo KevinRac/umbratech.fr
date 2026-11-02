@@ -52,4 +52,13 @@ export const SKIN_POSES: Readonly<Record<string, readonly string[]>> = {
  * Elle est ajoutée à l'adresse des fichiers (`?v=`) pour que le navigateur ne garde pas une ancienne
  * feuille avec un nouveau code (cellules décalées, unité invisible).
  */
-export const SKIN_REV = 5;
+export const SKIN_REV = 6;
+
+/**
+ * Expressions des portraits (générées avec Pixellab, `vocal-animation`, 3 positions de bouche) :
+ * une feuille `assets/portraits/expressions/<id>.png` de 4 rangées (humeurs) × 3 colonnes (bouches) de 64 px.
+ * L'humeur « neutre » est le portrait de base (`assets/portraits/<id>.png`).
+ */
+export const PORTRAIT_MOODS = ['happy', 'angry', 'sad', 'surprised'] as const;
+export type PortraitMood = (typeof PORTRAIT_MOODS)[number] | 'neutral';
+export const PORTRAIT_MOUTHS = ['rest', 'open', 'round'] as const;
