@@ -50,6 +50,7 @@ export class WorldHudScene extends Phaser.Scene {
   private pending: (() => void)[] = [];
   private actions!: ActionInput;
   private toasts!: Toasts;
+  private savingMark: Phaser.GameObjects.Container | null = null;
   private S = 1;
 
   private tint!: Phaser.GameObjects.Rectangle;
@@ -146,6 +147,37 @@ export class WorldHudScene extends Phaser.Scene {
 
   toast(message: string): void {
     this.run(() => this.toasts.push(message));
+  }
+
+  /** Sauvegarde automatique faite (n°160) : petite lanterne et « Sauvegarde… » en bas à droite, 1,2 s. */
+  showSaving(): void {
+    this.run(() => {
+      this.savingMark?.destroy(true);
+      const S = this.S;
+      const { width, height } = this.scale;
+      const k = 2 * S;
+      const mark = this.add.container(0, 0).setDepth(DEPTH.toasts);
+      // Lanterne 5×8 en pixels d'art : anse, toit, verre allumé, socle.
+      const g = this.add.graphics();
+      const px = (x: number, y: number, w: number, h: number, color: number): void => void g.fillStyle(color, 1).fillRect(x * k, y * k, w * k, h * k);
+      px(2, 0, 1, 1, PALETTE.metalClair);
+      px(1, 1, 3, 1, PALETTE.metalClair);
+      px(0, 2, 5, 1, PALETTE.encre);
+      px(0, 3, 1, 4, PALETTE.encre);
+      px(4, 3, 1, 4, PALETTE.encre);
+      px(1, 3, 3, 4, PALETTE.orangeForge);
+      px(2, 4, 1, 2, PALETTE.lumiereDoree);
+      px(0, 7, 5, 1, PALETTE.encre);
+      const label = addText(this, 0, 0, 'Sauvegarde…', { scale: S, color: PALETTE.parchemin });
+      const x = width - 14 * S - label.width;
+      const y = height - 14 * S - 8 * k;
+      g.setPosition(x - 5 * k - 6 * S, y);
+      label.setPosition(x, y + 8 * k - label.height);
+      mark.add([g, label]);
+      mark.setAlpha(0);
+      this.savingMark = mark;
+      this.tweens.add({ targets: mark, alpha: 1, duration: 150, hold: 900, yoyo: true, onComplete: () => mark.destroy(true) });
+    });
   }
 
   /** Notifications de jeu (réputation, or, objets, quêtes) : deux messages par bulle au plus. */

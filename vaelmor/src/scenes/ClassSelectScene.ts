@@ -7,6 +7,9 @@
  * droite (rôle, élément, arme, compétence signature, stats au niveau de
  * départ et croissances, évolutions). Le héros garde son apparence quelle que
  * soit la classe ; seule son arme change.
+ *
+ * Puis « Choisis ta règle » (jalon M9, décision n°166) : Blessure (GDD §9.13)
+ * ou Classique (mort définitive), fixée pour toute la partie.
  */
 import Phaser from 'phaser';
 import { ActionInput } from '../core/input';
@@ -16,14 +19,16 @@ import { GROWTH_KEYS, STAT_KEYS, type ClassDef } from '../data/schemas';
 import { statsAtLevel } from '../logic/units/stats';
 import { PALETTE } from '../render/palette';
 import { portraitInBox } from '../render/portraits';
+import type { GameMode } from '../logic/game/progress';
 import { ROLE_LABELS, STAT_SHORT } from '../ui/labels';
 import { drawPanel } from '../ui/panel';
 import { ScrollList } from '../ui/ScrollList';
 import { addText } from '../ui/text';
+import { VerticalMenu } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
 
 export interface ClassSelectData {
-  readonly onChoose: (classId: string) => void;
+  readonly onChoose: (classId: string, mode: GameMode) => void;
   readonly onCancel: () => void;
 }
 
@@ -35,6 +40,11 @@ export class ClassSelectScene extends Phaser.Scene {
   private callbacks!: ClassSelectData;
   private S = 1;
   private done = false;
+  /** Classe choisie : l'écran demande alors la règle de mort (n°166). */
+  private chosen: string | null = null;
+  private modeParts: Phaser.GameObjects.GameObject[] = [];
+  private modeMenu: VerticalMenu | null = null;
+  private describeMode: (() => void) | null = null;
 
   constructor() {
     super(SCENES.classSelect);
@@ -43,6 +53,9 @@ export class ClassSelectScene extends Phaser.Scene {
   create(callbacks: ClassSelectData): void {
     this.callbacks = callbacks;
     this.done = false;
+    this.chosen = null;
+    this.modeParts = [];
+    this.modeMenu = null;
     this.data_ = loadGameData();
     this.actions = new ActionInput(this);
     const S = (this.S = uiScaleFor(this.scale.height));
@@ -77,6 +90,14 @@ export class ClassSelectScene extends Phaser.Scene {
 
   override update(): void {
     if (this.done) return;
+    if (this.chosen !== null) {
+      if (this.actions.consume('cancel')) this.closeModes();
+      else {
+        this.modeMenu?.update();
+        this.describeMode?.();
+      }
+      return;
+    }
     if (this.actions.justPressed('cancel')) {
       this.done = true;
       this.callbacks.onCancel();
@@ -87,10 +108,82 @@ export class ClassSelectScene extends Phaser.Scene {
   }
 
   private choose(classId: string): void {
-    if (this.done) return;
-    this.done = true;
+    if (this.done || this.chosen !== null) return;
+    this.chosen = classId;
     this.list?.setLocked(true);
-    this.callbacks.onChoose(classId);
+    this.showModes();
+  }
+
+  /* ---------- Règle de mort (n°166) ---------- */
+
+  private static readonly MODES: readonly { readonly id: GameMode; readonly label: string; readonly lines: readonly string[]; readonly color: number }[] = [
+    {
+      id: 'blessure',
+      label: 'Blessure (conseillé)',
+      color: PALETTE.parchemin,
+      lines: ['Une unité tombée revient après le combat, blessée jusqu’au prochain repos à l’auberge (−10 % aux stats, −2 Mob).'],
+    },
+    {
+      id: 'classique',
+      label: 'Classique : mort définitive',
+      color: PALETTE.rougeCendre,
+      lines: [
+        'Une unité tombée est perdue pour toujours, avec ses niveaux. Une recrue perdue coûte 3 de réputation à son village.',
+        'Le héros ne meurt jamais : sa chute est une défaite, comme en Blessure.',
+      ],
+    },
+  ];
+
+  private showModes(): void {
+    const S = this.S;
+    const { width, height } = this.scale;
+    const w = 600 * S;
+    const h = 250 * S;
+    const x = Math.round((width - w) / 2);
+    const y = Math.round((height - h) / 2);
+    const depth = 20;
+    const dim = this.add.rectangle(0, 0, width, height, PALETTE.nuit, 0.7).setOrigin(0, 0).setDepth(depth).setInteractive();
+    const panel = drawPanel(this, x, y, w, h, { scale: 2 * S, fillAlpha: 0.98 }).setDepth(depth + 1);
+    const title = addText(this, width / 2, y + 14 * S, 'CHOISIS TA RÈGLE', { font: 'body', scale: S, color: PALETTE.lumiereDoree, align: 'center' }).setDepth(depth + 2);
+    const sub = addText(this, width / 2, y + 38 * S, 'Ce que devient une unité tombée au combat. Ce choix vaut pour toute la partie.', { scale: S, color: PALETTE.metalClair, align: 'center' }).setDepth(depth + 2);
+    const explain = addText(this, x + 24 * S, y + 128 * S, '', { scale: S, color: PALETTE.parchemin, maxWidth: w - 48 * S }).setDepth(depth + 2);
+    const hint = addText(this, width / 2, y + h - 24 * S, 'Entrée : commencer    Échap : changer de classe', { scale: S, color: PALETTE.metalClair, align: 'center' }).setDepth(depth + 2);
+    this.modeParts = [dim, panel, title, sub, explain, hint];
+    const modes = ClassSelectScene.MODES;
+    this.modeMenu = new VerticalMenu(
+      this,
+      x + 24 * S,
+      y + 64 * S,
+      modes.map((m) => ({ label: m.label, onSelect: () => this.start(m.id) })),
+      this.actions,
+      { width: w - 48 * S, lineHeight: 26 * S, depth: depth + 2, scale: S, textScale: S },
+    );
+    const describe = (): void => {
+      const mode = modes[this.modeMenu?.selected ?? 0];
+      if (!mode) return;
+      explain.setText(mode.lines.join('\n'));
+      explain.setTint(mode.color === PALETTE.rougeCendre ? PALETTE.ocreClair : PALETTE.parchemin);
+    };
+    describe();
+    this.describeMode = describe;
+    this.actions.consume('confirm');
+  }
+
+  private closeModes(): void {
+    this.modeMenu?.destroy();
+    this.modeMenu = null;
+    for (const p of this.modeParts) p.destroy();
+    this.modeParts = [];
+    this.describeMode = null;
+    this.chosen = null;
+    this.list?.setLocked(false);
+  }
+
+  private start(mode: GameMode): void {
+    if (this.done || this.chosen === null) return;
+    this.done = true;
+    this.modeMenu?.setLocked(true);
+    this.callbacks.onChoose(this.chosen, mode);
   }
 
   /** Fiche de la classe survolée. */

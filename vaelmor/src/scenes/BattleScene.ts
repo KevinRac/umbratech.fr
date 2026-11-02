@@ -21,9 +21,9 @@ import Phaser from 'phaser';
 import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, loadAnimSpeed, nextAnimSpeed, saveAnimSpeed, type AnimSpeed } from '../core/settings';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
-import { getLastDeployed, getLoadouts, getWorldState, setLastDeployed } from '../core/session';
+import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
 import { getGameCtx } from '../core/townContext';
-import { ensureCompany, settleBattle, testCompany, type BattleEnd, type Settlement } from '../logic/game';
+import { applyClassicLosses, ensureCompany, settleBattle, testCompany, type BattleEnd, type Settlement } from '../logic/game';
 import { applyBattleProgress, applyErrantProgress, isWounded } from '../logic/units/company';
 import { applyBattleCounters } from '../logic/progression/evolutions';
 import { equippedPassive, learnedPassives, LINEAGE, passiveLearnedAt, OATH_INFO, OATH_KINDS, SEASON_NAMES, seasonOf, type OathKind } from '../logic/progression/traits';
@@ -59,7 +59,7 @@ import { costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForeca
 import { isStunned } from '../logic/tactics/status';
 import { hostile, type BattleEvent, type BattleRules, type BattleState, type BattleUnit, type Cell, type EffectResult, type GrowthKey, type ItemStack, type Strike, type Team } from '../logic/tactics/types';
 import { GROWTH_KEYS } from '../data/schemas';
-import { memberUnit, type Loadout, type MemberLike } from '../logic/tactics/units';
+import { emptyLoadout, memberUnit, type Loadout, type MemberLike } from '../logic/tactics/units';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES } from '../render/battlefield';
 import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureMapSprite } from '../render/battleTextures';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureWorldTextures } from '../render/worldTextures';
@@ -163,13 +163,15 @@ export class BattleScene extends Phaser.Scene {
   private seed = '';
   /** Bilan appliqué à la partie à la fin du combat (or, butin, drapeaux, défaite). */
   private settlement: Settlement | null = null;
+  /** Membres perdus en mode Classique à la fin de ce combat (n°167). */
+  private losses: string[] = [];
   private ended: BattleEnd | null = null;
   private hud!: BattleHudScene;
   private actions!: ActionInput;
   private alive = false;
 
   /* Compagnie et préparation (jalon M5) */
-  private party: MemberLike[] = [];
+  private party: (MemberLike & { readonly id: string })[] = [];
   /** La compagnie est celle de la partie : niveaux et XP gagnés lui sont reportés à la fin. */
   private persistent = false;
   private progressSaved = false;
@@ -242,6 +244,7 @@ export class BattleScene extends Phaser.Scene {
     this.brambles = new Map();
     this.ended = null;
     this.settlement = null;
+    this.losses = [];
     this.progressSaved = false;
     this.plan = null;
     this.prepPick = null;
@@ -265,7 +268,8 @@ export class BattleScene extends Phaser.Scene {
       // Un membre blessé (tombé au combat, jusqu'au prochain repos) se bat diminué (n°138).
       this.party = world ? ensureCompany(this.gameData, world.progress).map((m) => ({ ...m, wounded: isWounded(m, world.progress.day) })) : testCompany(this.gameData);
       this.convoy = getWorldState()?.progress.inventory ?? this.gameData.balance.prep.testItems.map((s) => ({ ...s }));
-      this.loadouts = getLoadouts(this.party.length);
+      // Équipement gardé par membre pour la partie (n°154) ; un combat d'essai part de zéro et ne touche pas à la partie.
+      this.loadouts = world ? getLoadouts(this.party.map((m) => m.id)) : this.party.map(() => emptyLoadout());
       reconcileLoadouts(this.loadouts, this.convoy);
       this.state = buildBattle(encounter, this.party, this.gameData, {
         seed,
@@ -880,10 +884,11 @@ export class BattleScene extends Phaser.Scene {
     const locked = this.state.ambush;
     const plan = planFromState(this.state, locked);
     // Le dernier choix de déploiement de la session, s'il tient encore.
-    const remembered = getLastDeployed();
+    const remembered = this.persistent ? getLastDeployed() : null;
     if (!locked && remembered) {
       const hero = this.party.findIndex((m) => m.hero);
-      const wanted = [hero, ...remembered.filter((m) => m !== hero && m < this.party.length)].slice(0, plan.maxDeploy);
+      const indices = remembered.map((id) => this.party.findIndex((m) => m.id === id)).filter((m) => m >= 0);
+      const wanted = [hero, ...indices.filter((m) => m !== hero)].slice(0, plan.maxDeploy);
       plan.slots.fill(null);
       wanted.forEach((m, i) => {
         if (i < plan.slots.length) plan.slots[i] = m;
@@ -986,6 +991,7 @@ export class BattleScene extends Phaser.Scene {
       .sort((a, b) => Number(b.boss) - Number(a.boss) || b.level - a.level)
       .map((g) => ({ text: `${g.name}${g.boss ? ' (boss)' : ''}${g.count > 1 ? ` ×${g.count}` : ''} · Niv ${g.level}`, color: g.boss ? PALETTE.lumiereDoree : PALETTE.parchemin }));
     const warnings: { text: string; color: number }[] = [];
+    if (this.classic()) warnings.push({ text: 'Classique : une unité tombée est perdue', color: PALETTE.rougeCendre });
     const enemyWaves = this.state.reinforcements.filter((r) => r.team === 'enemy').map((r) => r.turn);
     if (enemyWaves.length > 0) warnings.push({ text: `Renforts ennemis : tours ${enemyWaves.join(' et ')}`, color: PALETTE.braise });
     for (const r of this.state.reinforcements.filter((x) => x.team === 'ally')) warnings.push({ text: `Allié vert : ${r.units.map((u) => u.name).join(', ')} (tour ${r.turn})`, color: ALLY_OUTLINE });
@@ -1205,7 +1211,7 @@ export class BattleScene extends Phaser.Scene {
   private async startFight(): Promise<void> {
     if (!this.plan) return;
     if (deployedMembers(this.plan).length === 0) return;
-    setLastDeployed(deployedMembers(this.plan));
+    if (this.persistent) setLastDeployed(deployedMembers(this.plan).map((m) => this.party[m]?.id ?? '').filter((id) => id !== ''));
     this.hud.closePrep();
     this.hud.closeMenu();
     this.hud.closeList();
@@ -2339,7 +2345,7 @@ export class BattleScene extends Phaser.Scene {
     const opensWorld = this.params.returnTo === 'world' && getWorldState() !== null;
     const settlement = this.settle(summary.outcome === 'victory' ? 'victory' : 'defeat');
     const ctx = getGameCtx();
-    const rewards = ctx && settlement ? formatNotices(ctx, settlement.notices) : [];
+    const rewards = [...(ctx && settlement ? formatNotices(ctx, settlement.notices) : []), ...this.classicLossLines()];
     this.hud.showResult(
       summary,
       opensWorld,
@@ -2389,6 +2395,21 @@ export class BattleScene extends Phaser.Scene {
     applyBattleProgress(world.progress.company, this.state.units, world.progress.day);
     applyBattleCounters(world.progress.company, this.state, this.rules);
     applyErrantProgress(world.progress.errants, this.state.units);
+    // Mode Classique (n°167) : les membres tombés sont perdus, quelle que soit l'issue.
+    this.losses = applyClassicLosses(this.gameData, world.progress, this.state.units, getSessionState().loadouts).map((l) => l.member.name);
+  }
+
+  /** La partie se joue-t-elle en mode Classique (mort définitive) ? */
+  private classic(): boolean {
+    return this.persistent && getWorldState()?.progress.mode === 'classique';
+  }
+
+  /** Lignes de l'écran de fin pour les membres perdus (mode Classique). */
+  private classicLossLines(): string[] {
+    if (!this.classic()) return [];
+    return this.state.units
+      .filter((u) => u.team === 'player' && u.memberIndex !== null && u.summonUntil === null && u.hp <= 0 && !this.party[u.memberIndex]?.hero)
+      .map((u) => `${u.name} ne reviendra pas : perte définitive.`);
   }
 
   /** Retour à la scène d'origine ; le monde reçoit le bilan du combat. */
@@ -2399,7 +2420,7 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       if (this.params.returnTo === 'world' && world) {
-        this.scene.start(SCENES.world, { battleReturn: { end, wakeAt: this.settlement?.wakeAt?.location ?? null, notices: this.settlement?.notices ?? [] } });
+        this.scene.start(SCENES.world, { battleReturn: { end, wakeAt: this.settlement?.wakeAt?.location ?? null, notices: this.settlement?.notices ?? [], losses: this.losses } });
       } else this.scene.start(SCENES.title);
     });
   }

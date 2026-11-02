@@ -1,15 +1,20 @@
 /**
  * Écran titre (GDD §13). Décor animé : mer scintillante, brumes et nuages en
  * parallaxe, lanterne vacillante, braises et cendres, fenêtres de la Citadelle
- * qui palpitent. Menu : Nouvelle partie, Continuer (si une sauvegarde existe),
- * Options. « Nouvelle partie » mène à l'île (M1) ; les autres entrées annoncent leur jalon.
+ * qui palpitent. Menu (jalon M9, n°162) : Continuer (la sauvegarde la plus
+ * récente, en tête s'il y en a une), Nouvelle partie, Charger, Combat d'essai,
+ * Options.
  */
 import Phaser from 'phaser';
 import { GAME_SUBTITLE, GAME_VERSION, MILESTONE, TITLE_HEIGHT as GAME_HEIGHT, TITLE_WIDTH as GAME_WIDTH } from '../core/config';
 import { ActionInput } from '../core/input';
 import { loadGameData } from '../data';
-import { hasKey } from '../core/storage';
-import { GAME_SAVE_KEYS } from '../logic/save/keys';
+import { loadIntoSession, setPlayClock } from '../core/gameSave';
+import { anySave, latestSlot, readSlot } from '../core/saves';
+import { SAVE_KEYS } from '../logic/save/keys';
+import type { GameMode } from '../logic/game/progress';
+import type { SaveEnvelope } from '../logic/save/schema';
+import { ConfirmBox } from '../ui/ConfirmBox';
 import {
   CITADEL_WINDOWS,
   CLIFF,
@@ -28,6 +33,7 @@ import { addText } from '../ui/text';
 import { Toasts } from '../ui/Toasts';
 import { VerticalMenu } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
+import { slotOneLiner } from './SaveScene';
 
 const DEPTH = {
   sky: 0,
@@ -56,6 +62,7 @@ export class TitleScene extends Phaser.Scene {
   private mistNear!: Phaser.GameObjects.TileSprite;
   private clouds!: Phaser.GameObjects.TileSprite;
   private starting = false;
+  private confirm!: ConfirmBox;
 
   constructor() {
     super(SCENES.title);
@@ -72,6 +79,9 @@ export class TitleScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, refit));
     this.actions = new ActionInput(this);
     this.toasts = new Toasts(this, { width: GAME_WIDTH });
+    this.confirm = new ConfirmBox(this, this.actions, { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 + 20, width: 300, scale: 1, depth: DEPTH.ui + 10, lineHeight: 16 });
+    // Le temps de jeu ne court pas sur l'écran titre (n°155).
+    setPlayClock(false);
     this.buildBackdrop();
     this.buildAmbience();
     this.buildTitle();
@@ -84,6 +94,10 @@ export class TitleScene extends Phaser.Scene {
     this.clouds.tilePositionX += 2.2 * dt;
     this.mistFar.tilePositionX += 4 * dt;
     this.mistNear.tilePositionX += 9 * dt;
+    if (this.confirm.active) {
+      this.confirm.update();
+      return;
+    }
     this.menu?.update();
   }
 
@@ -204,10 +218,31 @@ export class TitleScene extends Phaser.Scene {
     this.cameras.main.filters.external.addVignette(0.5, 0.5, 0.85, 0.35);
   }
 
-  /** Fondu au noir puis arrivée sur l'île, au point de départ. */
-  /** Nouvelle partie : d'abord le choix de la classe du héros (jalon M6, n°133), puis l'île. */
+  /**
+   * Nouvelle partie. Une sauvegarde automatique existante sera écrasée par la
+   * nouvelle partie (n°159) : confirmation en deux étapes (n°163). Ensuite le
+   * choix de la classe du héros (n°133), puis de la règle de mort (n°166).
+   */
   private startNewGame(): void {
     if (this.starting) return;
+    const auto = readSlot(SAVE_KEYS.auto, loadGameData());
+    if (auto.state === 'empty') {
+      this.pickClass();
+      return;
+    }
+    this.menu?.setLocked(true);
+    const what = auto.state === 'broken' ? 'une sauvegarde illisible' : slotOneLiner(auto.save);
+    this.confirm.ask(
+      [
+        { title: 'Écraser la sauvegarde automatique ?', lines: [`Elle contient : ${what}.`, 'Les emplacements 1 à 3 ne sont pas touchés.'], yes: 'Continuer', no: 'Annuler' },
+        { title: 'Confirmer', lines: ['La nouvelle partie remplacera la sauvegarde automatique dès son arrivée sur l’île.'], yes: 'Oui, nouvelle partie', no: 'Non' },
+      ],
+      () => this.pickClass(),
+      () => this.menu?.setLocked(false),
+    );
+  }
+
+  private pickClass(): void {
     this.starting = true;
     this.menu?.setLocked(true);
     this.scene.launch(SCENES.classSelect, {
@@ -216,16 +251,53 @@ export class TitleScene extends Phaser.Scene {
         this.menu?.setLocked(false);
         this.actions.consume('cancel');
       },
-      onChoose: (heroClass: string) => {
+      onChoose: (heroClass: string, mode: GameMode) => {
         const pick = this.scene.get(SCENES.classSelect);
         pick.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
           this.scene.stop(SCENES.classSelect);
-          this.scene.start(SCENES.world, { newGame: true, heroClass });
+          this.scene.start(SCENES.world, { newGame: true, heroClass, mode });
         });
       },
     });
+  }
+
+  /** Continuer : la plus récente des sauvegardes lisibles (n°162). */
+  private continueGame(): void {
+    if (this.starting) return;
+    const latest = latestSlot(loadGameData());
+    if (!latest) {
+      this.toasts.push('Aucune sauvegarde lisible : ouvre « Charger » pour voir les emplacements.');
+      return;
+    }
+    if (latest.message) this.toasts.push(latest.message);
+    this.enterSavedGame(latest.save);
+  }
+
+  private openLoad(): void {
+    if (this.starting) return;
+    this.menu?.setLocked(true);
+    this.scene.launch(SCENES.saves, {
+      mode: 'title',
+      heading: 'CHARGER UNE PARTIE',
+      subtitle: 'La sauvegarde automatique et les trois emplacements.',
+      onLoad: (save: SaveEnvelope) => this.enterSavedGame(save),
+      onClose: () => {
+        this.menu?.setLocked(false);
+        this.actions.consume('cancel');
+        this.buildMenu();
+      },
+    });
+  }
+
+  /** Remplace la partie en mémoire par la sauvegarde et rejoint l'île. */
+  private enterSavedGame(save: SaveEnvelope): void {
+    this.starting = true;
+    this.menu?.setLocked(true);
+    loadIntoSession(save);
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.world, { loaded: true }));
   }
 
   /* ---------- Titre et menu ---------- */
@@ -239,10 +311,11 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private buildMenu(): void {
-    const hasSave = GAME_SAVE_KEYS.some((key) => hasKey(key));
+    const hasSave = anySave();
     this.showMenu([
+      ...(hasSave ? [{ label: 'Continuer', onSelect: () => this.continueGame() }] : []),
       { label: 'Nouvelle partie', onSelect: () => this.startNewGame() },
-      { label: 'Continuer', enabled: hasSave, onSelect: () => this.toasts.push('Le chargement arrive au jalon M9.') },
+      { label: 'Charger', enabled: hasSave, onSelect: () => this.openLoad() },
       { label: 'Combat d’essai', onSelect: () => this.showBattleMenu() },
       { label: 'Options', onSelect: () => this.toasts.push('Les options arrivent au jalon M10.') },
     ]);

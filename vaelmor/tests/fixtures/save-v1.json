@@ -1,0 +1,236 @@
+{
+  "game": "vaelmor",
+  "saveVersion": 1,
+  "savedAt": "2026-11-02T20:00:00.000Z",
+  "meta": {
+    "heroName": "Voyageur",
+    "heroClass": "Gardien des Marées",
+    "evolution": null,
+    "heroLevel": 6,
+    "place": "Plaines d’Aubemer",
+    "gold": 640,
+    "playMs": 3912000,
+    "mode": "classique",
+    "companySize": 4
+  },
+  "data": {
+    "world": {
+      "player": {
+        "x": 612,
+        "y": 845.5,
+        "facing": "e"
+      },
+      "openFlags": [
+        "boss_brakk"
+      ],
+      "discoveredZones": [
+        "z1",
+        "z2"
+      ],
+      "discoveredLocations": [
+        "haut_gue",
+        "camp_ecumeurs",
+        "autel_aubemer"
+      ],
+      "progress": {
+        "gold": 640,
+        "inventory": [
+          {
+            "item": "potion",
+            "qty": 2
+          },
+          {
+            "item": "pain_dore",
+            "qty": 1
+          },
+          {
+            "item": "potion",
+            "qty": 4
+          }
+        ],
+        "reputation": {
+          "haut_gue": 35,
+          "ronceval": 0,
+          "port_brume": -10,
+          "pierre_haute": 0,
+          "valcendre": 0,
+          "marees": 0,
+          "couronne": 0,
+          "racines": 0,
+          "lanternes": 0
+        },
+        "touched": [
+          "haut_gue"
+        ],
+        "day": 3,
+        "donated": {},
+        "quests": {
+          "farine_volee": "done",
+          "colporteur_perdu": "active"
+        },
+        "recruited": [
+          "nessa",
+          "tiphaine"
+        ],
+        "rewarded": [
+          "haut_gue:boss_brakk"
+        ],
+        "heard": [
+          "vieux_garrec#1"
+        ],
+        "foes": {
+          "z1_rodeur_plaine": {
+            "day": 2,
+            "clock": 451234.5,
+            "visits": 3
+          }
+        },
+        "clock": 0,
+        "zoneVisits": 0,
+        "lastVillage": "haut_gue",
+        "wounded": {
+          "brune": 2
+        },
+        "company": [
+          {
+            "id": "heros",
+            "name": "Voyageur",
+            "class": "gardien_des_marees",
+            "hero": true,
+            "level": 6,
+            "xp": 42,
+            "stats": {
+              "pv": 25,
+              "fo": 7,
+              "mag": 0,
+              "dex": 4,
+              "vit": 3,
+              "def": 9,
+              "res": 3,
+              "chc": 3,
+              "mob": 4
+            },
+            "levelCap": 20,
+            "woundedDay": null,
+            "passive": null,
+            "oath": null,
+            "evolution": null,
+            "counters": {
+              "bossesDeployed": 1
+            }
+          },
+          {
+            "id": "odran",
+            "name": "Odran",
+            "class": "gardien_des_marees",
+            "hero": false,
+            "level": 2,
+            "xp": 0,
+            "stats": {
+              "pv": 25,
+              "fo": 7,
+              "mag": 0,
+              "dex": 4,
+              "vit": 3,
+              "def": 9,
+              "res": 3,
+              "chc": 3,
+              "mob": 4
+            },
+            "levelCap": 20,
+            "woundedDay": 2,
+            "passive": null,
+            "oath": null,
+            "evolution": null,
+            "counters": {}
+          },
+          {
+            "id": "aurele",
+            "name": "Aurèle",
+            "class": "heritier_des_cendres",
+            "hero": false,
+            "level": 2,
+            "xp": 0,
+            "stats": {
+              "pv": 17,
+              "fo": 0,
+              "mag": 9,
+              "dex": 6,
+              "vit": 5,
+              "def": 2,
+              "res": 6,
+              "chc": 3,
+              "mob": 5
+            },
+            "levelCap": 20,
+            "woundedDay": null,
+            "passive": "braises_vives",
+            "oath": null,
+            "evolution": null,
+            "counters": {}
+          },
+          {
+            "id": "nessa",
+            "name": "Nessa",
+            "class": "danseur_des_courants",
+            "hero": false,
+            "level": 2,
+            "xp": 0,
+            "stats": {
+              "pv": 18,
+              "fo": 4,
+              "mag": 0,
+              "dex": 9,
+              "vit": 11,
+              "def": 2,
+              "res": 3,
+              "chc": 6,
+              "mob": 7
+            },
+            "levelCap": 20,
+            "woundedDay": null,
+            "passive": null,
+            "oath": null,
+            "evolution": null,
+            "counters": {}
+          }
+        ],
+        "errants": {
+          "aldric": {
+            "level": 4,
+            "xp": 12
+          }
+        },
+        "mode": "classique",
+        "fallen": [
+          "tiphaine"
+        ],
+        "bought": {
+          "raretes_de_lorn:sceau_de_maitrise": 1
+        }
+      },
+      "gameId": "6f1c2a0e-9b7d-4c1e-8e3a-2d5f0b9c7a11",
+      "playMs": 3912000
+    },
+    "session": {
+      "loadouts": {
+        "heros": {
+          "weapon": null,
+          "accessory": "amulette_de_pierre",
+          "items": [
+            {
+              "item": "potion",
+              "qty": 2
+            }
+          ]
+        }
+      },
+      "lastDeployed": [
+        "heros",
+        "odran",
+        "nessa"
+      ]
+    }
+  },
+  "checksum": "6fec4338"
+}

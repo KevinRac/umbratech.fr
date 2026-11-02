@@ -5,6 +5,7 @@
 import Phaser from 'phaser';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, GAME_TITLE, GAME_VERSION } from './core/config';
 import { showFatalError } from './core/fatal';
+import { tickPlayClock } from './core/gameSave';
 import { bindDisplaySize, measureDisplay } from './render/displayScaler';
 import { PALETTE, toCss } from './render/palette';
 import { BattleHudScene } from './scenes/BattleHudScene';
@@ -14,6 +15,7 @@ import { DebugScene } from './scenes/DebugScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { MenuScene } from './scenes/MenuScene';
 import { ClassSelectScene } from './scenes/ClassSelectScene';
+import { SaveScene } from './scenes/SaveScene';
 import { TitleScene } from './scenes/TitleScene';
 import { WorldHudScene } from './scenes/WorldHudScene';
 import { WorldScene } from './scenes/WorldScene';
@@ -38,9 +40,11 @@ function start(): void {
       zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, DebugScene],
+    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, SaveScene, DebugScene],
   });
   bindDisplaySize(game);
+  // Temps de jeu de la partie (n°155) : compté à chaque image, hors titre et hors pause.
+  game.events.on(Phaser.Core.Events.STEP, (_time: number, delta: number) => tickPlayClock(delta));
   // Outil de debug : `?debug` expose le jeu à la console (`window.vaelmor`) pour inspecter les scènes.
   if (new URLSearchParams(window.location.search).has('debug')) (window as unknown as { vaelmor: Phaser.Game }).vaelmor = game;
 }

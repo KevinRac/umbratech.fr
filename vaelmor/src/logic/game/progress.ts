@@ -15,6 +15,14 @@ export interface ItemStack {
 
 export type QuestState = 'active' | 'done';
 
+/**
+ * Règle de mort des unités, choisie à la nouvelle partie et fixée pour toute
+ * la partie (décisions n°13, n°166) : « blessure » (GDD §9.13) ou
+ * « classique » (une unité tombée est perdue).
+ */
+export const GAME_MODES = ['blessure', 'classique'] as const;
+export type GameMode = (typeof GAME_MODES)[number];
+
 export interface Progress {
   gold: number;
   inventory: ItemStack[];
@@ -48,6 +56,10 @@ export interface Progress {
   errants: Record<string, ErrantRecord>;
   /** Objets achetés dans un stock limité (`boutique:objet` → quantité, n°140). */
   bought?: Record<string, number>;
+  /** Règle de mort des unités (n°166). */
+  mode: GameMode;
+  /** Membres perdus en mode Classique (n°167), dans l'ordre de leur chute. */
+  fallen: string[];
 }
 
 /** Quand un ennemi du monde a été vaincu : jour de repos, temps de jeu et compteur de zones à ce moment-là. */
@@ -69,6 +81,8 @@ export interface ProgressSeed {
   readonly balance: BalanceConfig;
   readonly locations: readonly LocationDef[];
   readonly factions: readonly FactionDef[];
+  /** Règle de mort des unités ; « blessure » par défaut. */
+  readonly mode?: GameMode;
 }
 
 export function newProgress(seed: ProgressSeed): Progress {
@@ -93,6 +107,8 @@ export function newProgress(seed: ProgressSeed): Progress {
     wounded: {},
     company: [],
     errants: {},
+    mode: seed.mode ?? 'blessure',
+    fallen: [],
   };
   for (const s of seed.balance.economy.startingItems) addItem(progress, s.item, s.qty, seed.balance);
   return progress;

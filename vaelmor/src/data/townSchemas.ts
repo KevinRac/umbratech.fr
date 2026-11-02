@@ -139,6 +139,12 @@ export const optionSchema = z.discriminatedUnion('kind', [
     freeReply: linesSchema.optional(),
     poorReply: linesSchema.optional(),
   }),
+  /** Sauvegarde chez l'aubergiste (jalon M9, n°161) : ouvre les emplacements, puis la réplique. */
+  z.strictObject({
+    kind: z.literal('save'),
+    ...optionBase,
+    reply: linesSchema,
+  }),
   /** Quête : propose, rappelle, puis récompense (les règles sont dans quests.json). */
   z.strictObject({
     kind: z.literal('quest'),

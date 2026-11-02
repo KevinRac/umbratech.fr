@@ -8,3 +8,4 @@ export * from './shop';
 export * from './foeRules';
 export * from './allyRules';
 export * from './companyRules';
+export * from './classic';

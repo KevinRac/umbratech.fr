@@ -11,10 +11,13 @@ import Phaser from 'phaser';
 import { worldZoomFor } from '../core/viewport';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
-import { getWorldState, setWorldState } from '../core/session';
+import { getWorldState, setSessionState, setWorldState } from '../core/session';
+import { autoSave, loadIntoSession, newGameId, setPlayClock } from '../core/gameSave';
+import type { SaveEnvelope } from '../logic/save/schema';
+import type { GameMode } from '../logic/game/progress';
 import { GameDataError, loadGameData, type GameData } from '../data';
 import type { ZoneDef } from '../data/schemas';
-import { COLLISION, WorldMapError, loadWorldMap, type WorldMap } from '../data/worldMap';
+import { COLLISION, WorldMapError, loadWorldMap, type MapObject, type WorldMap } from '../data/worldMap';
 import { centerOn, followTarget, type CameraConfig, type Vec2 } from '../logic/world/camera';
 import { CollisionGrid, gateRequirements, isGateOpen } from '../logic/world/collision';
 import { buildSafeGrid, createFoe, detectionScale, feetCell, surpriseTarget, updateFoe, type FoeEvent, type FoeSim, type SafeGrid } from '../logic/world/foes';
@@ -141,6 +144,8 @@ export interface BattleReturn {
   readonly wakeAt?: string | null;
   /** Or, butin, récompenses : à annoncer. */
   readonly notices: readonly Notice[];
+  /** Membres perdus en mode Classique (n°167). */
+  readonly losses?: readonly string[];
 }
 
 export interface WorldSceneData {
@@ -148,9 +153,16 @@ export interface WorldSceneData {
   readonly newGame?: boolean;
   /** Classe choisie pour le héros à la nouvelle partie (n°133). */
   readonly heroClass?: string;
+  /** Règle de mort choisie à la nouvelle partie (n°166). */
+  readonly mode?: GameMode;
   /** Retour d'un combat. */
   readonly battleReturn?: BattleReturn;
+  /** Partie chargée depuis une sauvegarde (jalon M9). */
+  readonly loaded?: boolean;
 }
+
+/** Délai minimal entre deux sauvegardes automatiques d'entrée ou de sortie de village (n°160). */
+const VILLAGE_AUTOSAVE_MS = 20000;
 
 /** Options d'un combat engagé par un ennemi du monde. */
 interface EngageOptions {
@@ -229,8 +241,13 @@ export class WorldScene extends Phaser.Scene {
   /* Alliés errants (jalon M5) */
   private wanderers = new Map<string, WandererActor>();
   private nearWanderer: WandererActor | null = null;
+  private nearAltar: MapObject | null = null;
   private presenceTimer = 0;
   private foesDebugOff = false;
+  /** Heure (horloge de la scène) de la dernière sauvegarde automatique de village. */
+  private lastVillageSave = -Infinity;
+  /** Quêtes terminées et jour au début de la dernière fenêtre (dialogue, menu) : la fin d'une quête et le repos sauvegardent (n°160). */
+  private modalMarks = { questsDone: 0, day: 0 };
 
   constructor() {
     super(SCENES.world);
@@ -250,6 +267,7 @@ export class WorldScene extends Phaser.Scene {
     this.nearFoe = null;
     this.wanderers = new Map();
     this.nearWanderer = null;
+    this.nearAltar = null;
     this.presenceTimer = 0;
     if (data.newGame) this.registry.set('world.atApplied', false);
     this.view = worldView(this, worldZoomFor(this.scale.height));
@@ -269,12 +287,18 @@ export class WorldScene extends Phaser.Scene {
     ensureWorldTextures(this);
     ensureHeroAnimations(this);
 
-    if (data.newGame || !getWorldState()) {
-      const progress = newProgress({ balance: this.data_.balance, locations: this.data_.locations, factions: this.data_.factions });
+    const fresh = data.newGame === true || !getWorldState();
+    if (fresh) {
+      const progress = newProgress({ balance: this.data_.balance, locations: this.data_.locations, factions: this.data_.factions, mode: data.mode ?? 'blessure' });
       // Le héros dans la classe choisie, et les compagnons du départ (n°133, n°134).
       progress.company = startingCompany(this.data_, data.heroClass ?? DEFAULT_HERO_CLASS);
-      setWorldState(newWorldState(this.map, progress));
+      setWorldState(newWorldState(this.map, progress, newGameId()));
+      setSessionState(null);
     }
+    // L'arrivée (chargement, retour de combat) ne compte pas comme une entrée de village : pas de sauvegarde avant 20 s.
+    this.lastVillageSave = this.time.now;
+    // Le temps de jeu court dans le monde, menus et dialogues compris (n°155).
+    setPlayClock(true);
     this.state = getWorldState() as WorldState;
     this.gameCtx = getGameCtx() as GameCtx;
     this.applyTownDebug(data.newGame === true);
@@ -321,6 +345,9 @@ export class WorldScene extends Phaser.Scene {
     this.syncTownHud();
     this.checkProgress(true);
     this.announceBattleReturn(data.battleReturn);
+    // Sauvegarde automatique (n°160) : arrivée d'une nouvelle partie, retour d'un combat (défaite et réveil appliqués).
+    if (fresh || data.battleReturn) this.autoSaveNow();
+    if (data.loaded) this.time.delayedCall(700, () => this.hud.toast('Partie chargée.'));
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
@@ -711,21 +738,27 @@ export class WorldScene extends Phaser.Scene {
     const near = this.findNearNpc();
     const wanderer = near ? null : this.findNearWanderer();
     const surprise = near || wanderer ? null : surpriseTarget([...this.foeActors.values()].map((a) => a.sim), this.body_, this.data_.balance.foes.surpriseRange);
-    if (near !== this.nearNpc || surprise !== this.nearFoe || wanderer !== this.nearWanderer) {
+    // Autel des Lanternes : on s'y recueille pour sauvegarder (n°161).
+    const here = this.tracker.currentLocation;
+    const altar = near || wanderer || surprise || here?.kind !== 'autel' ? null : here;
+    if (near !== this.nearNpc || surprise !== this.nearFoe || wanderer !== this.nearWanderer || altar !== this.nearAltar) {
       this.nearNpc = near;
       this.nearFoe = surprise;
       this.nearWanderer = wanderer;
-      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : wanderer ? `Parler à ${wanderer.sim.def.name} (allié)` : surprise ? 'Attaquer par surprise' : null);
+      this.nearAltar = altar;
+      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : wanderer ? `Parler à ${wanderer.sim.def.name} (allié)` : surprise ? 'Attaquer par surprise' : altar ? 'Se recueillir (sauvegarder)' : null);
     }
     if (near && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startDialogue(near);
     else if (wanderer && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startWandererDialogue(wanderer);
     else if (surprise && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.engageFoe(surprise, { initiative: true });
+    else if (altar && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.openAltar(altar.name);
     if (time > this.modalCooldownUntil && this.actions.justPressed('menu')) this.openMenu('compagnie');
     else if (time > this.modalCooldownUntil && this.actions.justPressed('journal')) this.openMenu('quetes');
   }
 
   private enterModal(): void {
     this.modal = true;
+    this.modalMarks = { questsDone: this.questsDone(), day: this.state.progress.day };
     this.body_.moved = false;
     this.body_.sprinting = false;
     this.body_.vx = 0;
@@ -733,6 +766,7 @@ export class WorldScene extends Phaser.Scene {
     this.nearNpc = null;
     this.nearFoe = null;
     this.nearWanderer = null;
+    this.nearAltar = null;
     this.hud.setPrompt(null);
     this.syncHero();
   }
@@ -745,6 +779,67 @@ export class WorldScene extends Phaser.Scene {
     this.refreshMarkers();
     this.syncFoePresence();
     this.checkProgress(false);
+    if (this.questsDone() > this.modalMarks.questsDone || this.state.progress.day > this.modalMarks.day) this.autoSaveNow();
+  }
+
+  private questsDone(): number {
+    return Object.values(this.state.progress.quests).filter((q) => q === 'done').length;
+  }
+
+  /* ---------- Sauvegarde (jalon M9) ---------- */
+
+  /** Lieu ou zone du héros, en toutes lettres (résumé des sauvegardes). */
+  private placeName(): string {
+    return this.tracker?.currentLocation?.name ?? this.tracker?.currentZone?.name ?? 'Vaelmor';
+  }
+
+  /** Sauvegarde automatique (n°160) ; la lanterne du HUD la signale, un échec est dit en clair. */
+  private autoSaveNow(): void {
+    const result = autoSave(this.placeName());
+    if (result.ok) this.hud.showSaving();
+    else this.hud.toast(result.message);
+  }
+
+  /** Entrée ou sortie d'un village : au plus une sauvegarde toutes les 20 s. */
+  private villageAutoSave(): void {
+    if (this.time.now - this.lastVillageSave < VILLAGE_AUTOSAVE_MS) return;
+    this.lastVillageSave = this.time.now;
+    this.autoSaveNow();
+  }
+
+  /** Raison qui empêche de sauvegarder à la main, ou null (n°161 : pas pendant une poursuite). */
+  private saveBlocker(): string | null {
+    for (const actor of this.foeActors.values()) if (actor.sim.mode === 'alert' || actor.sim.mode === 'chase') return 'Impossible de sauvegarder : un ennemi te poursuit.';
+    return null;
+  }
+
+  /** Ouvre les emplacements (auberge, autel, menu). */
+  private openSaves(heading: string, subtitle: string, onClose: () => void): void {
+    this.scene.launch(SCENES.saves, {
+      mode: 'game',
+      heading,
+      subtitle,
+      place: this.placeName(),
+      blocked: this.saveBlocker(),
+      onLoad: (save: SaveEnvelope) => this.loadSavedGame(save),
+      onClose,
+    });
+  }
+
+  /** Charge une sauvegarde depuis la partie : tout repart de l'état sauvegardé. */
+  private loadSavedGame(save: SaveEnvelope): void {
+    this.scene.stop(SCENES.menu);
+    this.scene.stop(SCENES.dialogue);
+    this.leaving = true;
+    loadIntoSession(save);
+    this.cameras.main.fadeOut(400, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.world, { loaded: true }));
+  }
+
+  /** Autel des Lanternes : se recueillir ouvre les emplacements (n°161). */
+  private openAltar(name: string): void {
+    this.enterModal();
+    this.openSaves('AUTEL DES LANTERNES', `${name} : la flamme veille sur ta partie.`, () => this.leaveModal());
   }
 
   private startDialogue(actor: NpcActor): void {
@@ -756,6 +851,7 @@ export class WorldScene extends Phaser.Scene {
     this.syncHero();
     this.scene.launch(SCENES.dialogue, {
       npcId: actor.def.id,
+      saves: { place: this.placeName(), blocked: this.saveBlocker(), onLoad: (save: SaveEnvelope) => this.loadSavedGame(save) },
       onClose: (result: { recruited: boolean }) => {
         if (result.recruited) this.removeNpc(actor);
         actor.talking = false;
@@ -866,7 +962,11 @@ export class WorldScene extends Phaser.Scene {
 
   private openMenu(tab: MenuTab): void {
     this.enterModal();
-    this.scene.launch(SCENES.menu, { tab, onClose: () => this.leaveModal() });
+    this.scene.launch(SCENES.menu, {
+      tab,
+      onClose: () => this.leaveModal(),
+      saves: { place: this.placeName(), blocked: this.saveBlocker(), onLoad: (save: SaveEnvelope) => this.loadSavedGame(save) },
+    });
   }
 
   /** Jauge de réputation du lieu habité où se trouve le héros (null ailleurs). */
@@ -921,6 +1021,7 @@ export class WorldScene extends Phaser.Scene {
     enterLocation(this.gameCtx.progress, id, this.gameCtx.data.reputation);
     this.gameCtx.progress.lastVillage = id;
     this.village = id;
+    this.villageAutoSave();
     if (tierAt(this.gameCtx, id) === 'hostile' && this.data_.worldFoes.some((f) => f.kind === 'garde' && f.town === id)) {
       this.hud.toast(`Les gardes de ${this.gameCtx.index.locations.get(id)?.name ?? id} te reconnaissent. Ils te traquent !`);
     }
@@ -929,6 +1030,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onLocationLeft(): void {
+    if (this.village !== null) this.villageAutoSave();
     this.village = null;
     this.lastRepKey = '';
     this.hud.setReputation(null);
@@ -1334,6 +1436,7 @@ export class WorldScene extends Phaser.Scene {
       this.time.delayedCall(700, () => this.hud.toast('La compagnie a battu en retraite.'));
     }
     if (lines.length > 0) this.time.delayedCall(ret.end === 'victory' ? 700 : 2200, () => this.hud.notify(lines));
+    for (const name of ret.losses ?? []) this.time.delayedCall(1200, () => this.hud.toast(`${name} a quitté la compagnie pour toujours.`));
   }
 
   /* ---------- Pause ---------- */
@@ -1355,6 +1458,7 @@ export class WorldScene extends Phaser.Scene {
     });
     this.tweens.pauseAll();
     this.time.paused = true;
+    setPlayClock(false);
   }
 
   private closePause(): void {
@@ -1362,6 +1466,7 @@ export class WorldScene extends Phaser.Scene {
     this.hud.hidePause();
     this.tweens.resumeAll();
     this.time.paused = false;
+    setPlayClock(true);
   }
 
   private backToTitle(): void {

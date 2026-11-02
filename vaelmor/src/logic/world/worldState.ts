@@ -16,6 +16,10 @@ export interface WorldState {
   readonly discoveredLocations: string[];
   /** Or, sac, réputations, quêtes, recrues (jalon M2). */
   readonly progress: Progress;
+  /** Identifiant de la partie (stable d'une sauvegarde à l'autre, décision n°170). */
+  readonly gameId: string;
+  /** Temps de jeu total (ms) : exploration, combats et menus, hors pause (n°155). */
+  playMs: number;
   /**
    * Niveau imposé à la compagnie d'essai (debug `?lvl=`), tant que l'effectif
    * jouable n'existe pas (jalons M5-M6). Absent : niveaux de `testParty`.
@@ -35,10 +39,10 @@ export function findSpawn(map: WorldMap, id: string): { x: number; y: number } |
 }
 
 /** État d'une nouvelle partie : le héros apparaît au point « start ». */
-export function newWorldState(map: WorldMap, progress: Progress): WorldState {
+export function newWorldState(map: WorldMap, progress: Progress, gameId = 'partie'): WorldState {
   const start = findSpawn(map, 'start');
   if (!start) throw new Error('La carte du monde n’a pas de point d’apparition « start ».');
-  return { player: { x: start.x, y: start.y, facing: 's' }, openFlags: [], discoveredZones: [], discoveredLocations: [], progress };
+  return { player: { x: start.x, y: start.y, facing: 's' }, openFlags: [], discoveredZones: [], discoveredLocations: [], progress, gameId, playMs: 0 };
 }
 
 /** Ajoute `value` à une liste sans doublon (renvoie vrai si c'est nouveau). */

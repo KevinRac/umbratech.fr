@@ -77,6 +77,8 @@ function defaultLabel(ctx: GameCtx, o: NpcOption): string {
       return 'Boutique';
     case 'inn':
       return 'Se reposer';
+    case 'save':
+      return 'Sauvegarder la partie';
     case 'quest': {
       const name = ctx.index.quests.get(o.quest)?.name ?? '';
       const status = questStatus(ctx, o.quest);
@@ -122,6 +124,8 @@ export function greetingFor(ctx: GameCtx, npc: NpcDef): Greeting {
 export type Outcome =
   | { readonly type: 'say'; readonly pages: string[]; readonly expression: Expression; readonly notices: Notice[] }
   | { readonly type: 'shop'; readonly shopId: string }
+  /** Sauvegarde (n°161) : la scène ouvre les emplacements, puis dit `pages`. */
+  | { readonly type: 'save'; readonly pages: string[]; readonly expression: Expression }
   | {
       readonly type: 'ask';
       readonly pages: string[];
@@ -178,6 +182,9 @@ export function selectOption(ctx: GameCtx, npc: NpcDef, optionIndex: number): Ou
   switch (option.kind) {
     case 'shop':
       return { type: 'shop', shopId: option.shop };
+
+    case 'save':
+      return { type: 'save', pages: pickLines(option.reply, tier), expression: 'content' };
 
     case 'inn': {
       const free = option.freeFrom !== undefined && tierRank(tier) >= tierRank(option.freeFrom);

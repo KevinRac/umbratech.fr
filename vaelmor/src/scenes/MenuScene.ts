@@ -3,6 +3,8 @@
  * personnage, passives, évolutions), fiche simple de l'inventaire, jauges de
  * réputation (villages et factions, effets concrets) et journal des quêtes.
  * Tab ou M l'ouvre depuis le monde, J ouvre directement le journal.
+ * Onglet Sauvegarde (jalon M9, n°161) : les emplacements, qui s'ouvrent dans
+ * l'écran `SaveScene`.
  */
 import Phaser from 'phaser';
 import { getGameCtx } from '../core/townContext';
@@ -24,18 +26,25 @@ import { isWounded, type Member } from '../logic/units/company';
 import { portraitInBox } from '../render/portraits';
 import { STAT_SHORT } from '../ui/labels';
 import { SCENES } from './keys';
+import { isLoadable, listSlots, SLOT_LABEL } from '../core/saves';
+import { GAME_SAVE_KEYS } from '../logic/save/keys';
+import type { SaveEnvelope } from '../logic/save/schema';
+import { formatSavedAt } from './SaveScene';
 
-export type MenuTab = 'compagnie' | 'inventaire' | 'reputation' | 'quetes';
+export type MenuTab = 'compagnie' | 'inventaire' | 'reputation' | 'quetes' | 'sauvegarde';
 const TABS: readonly { id: MenuTab; label: string }[] = [
   { id: 'compagnie', label: 'Compagnie' },
   { id: 'inventaire', label: 'Inventaire' },
   { id: 'reputation', label: 'Réputation' },
   { id: 'quetes', label: 'Quêtes' },
+  { id: 'sauvegarde', label: 'Sauvegarde' },
 ];
 
 export interface MenuSceneData {
   readonly tab?: MenuTab;
   readonly onClose: () => void;
+  /** Sauvegarde depuis le menu (n°161) : lieu du héros, empêchement éventuel, chargement d'une partie. */
+  readonly saves?: { readonly place: string; readonly blocked: string | null; readonly onLoad: (save: SaveEnvelope) => void };
 }
 
 const DEPTH = 500;
@@ -53,6 +62,8 @@ export class MenuScene extends Phaser.Scene {
   private list: ScrollList | null = null;
   private box = { x: 0, y: 0, w: 0, h: 0 };
   private closing = false;
+  /** L'écran des emplacements est ouvert par-dessus : le menu attend. */
+  private covered = false;
 
   constructor() {
     super({ key: SCENES.menu, active: false });
@@ -68,6 +79,7 @@ export class MenuScene extends Phaser.Scene {
     this.ctx = ctx;
     this.data_ = data;
     this.closing = false;
+    this.covered = false;
     this.tab = data.tab ?? 'compagnie';
     this.frame = [];
     this.content = [];
@@ -86,7 +98,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   override update(): void {
-    if (this.closing) return;
+    if (this.closing || this.covered) return;
     if (this.actions.consume('cancel') || this.actions.consume('menu')) {
       this.close();
       return;
@@ -125,7 +137,7 @@ export class MenuScene extends Phaser.Scene {
     this.frame.push(dim, panel, gold, hints);
     this.tabTexts = TABS.map((t, i) => {
       const text = addText(this, x + 22 * S + i * 150 * S, y + 16 * S, t.label, { scale: S }).setDepth(DEPTH + 2);
-      text.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.setTab(t.id));
+      text.setInteractive({ useHandCursor: true }).on('pointerdown', () => !this.covered && this.setTab(t.id));
       this.frame.push(text);
       return text;
     });
@@ -142,6 +154,7 @@ export class MenuScene extends Phaser.Scene {
     if (tab === 'compagnie') this.buildCompany();
     else if (tab === 'inventaire') this.buildInventory();
     else if (tab === 'reputation') this.buildReputation();
+    else if (tab === 'sauvegarde') this.buildSaves();
     else this.buildQuests();
   }
 
@@ -359,6 +372,66 @@ export class MenuScene extends Phaser.Scene {
   }
 
   /* ---------- Quêtes ---------- */
+
+  /* ---------- Sauvegarde (jalon M9, n°161) ---------- */
+
+  private buildSaves(): void {
+    const S = this.S;
+    const a = this.area();
+    const saves = this.data_.saves;
+    const slots = listSlots(this.ctx.data);
+    const rows: ListRow[] = slots.map((e) => ({
+      label: SLOT_LABEL[e.key],
+      right: e.state === 'empty' ? 'vide' : e.state === 'broken' ? 'illisible' : `${e.save.meta.heroName} · niv. ${e.save.meta.heroLevel} · ${e.save.meta.place}`,
+      color: e.state === 'broken' ? PALETTE.rougeCendre : e.state === 'empty' ? PALETTE.metalClair : PALETTE.parchemin,
+    }));
+    const listW = Math.round(a.w * 0.62);
+    this.keep(addText(this, a.x, a.y, 'Emplacements', { font: 'body', scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
+    const info = this.keep(addText(this, a.x + listW + 24 * S, a.y + 30 * S, '', { scale: S, color: PALETTE.parchemin, maxWidth: a.w - listW - 24 * S }).setDepth(DEPTH + 2));
+    const show = (i: number): void => {
+      const e = slots[i];
+      if (!e) return;
+      const lines: string[] = [];
+      if (isLoadable(e)) lines.push(`Sauvegardé le ${formatSavedAt(e.save.savedAt)}.`);
+      if (e.key === GAME_SAVE_KEYS[0]) lines.push('Écrite seule après un combat, à l’entrée et à la sortie d’un village, à la fin d’une quête et au repos.');
+      else lines.push(saves?.blocked ?? 'Entrée : sauvegarder ici, charger, exporter ou supprimer.');
+      info.setText(lines.join('\n\n'));
+      info.setTint(saves?.blocked && e.key !== GAME_SAVE_KEYS[0] ? PALETTE.ambre : PALETTE.parchemin);
+    };
+    this.list = new ScrollList(this, a.x, a.y + 30 * S, this.actions, {
+      width: listW,
+      rowHeight: 30 * S,
+      visibleRows: rows.length,
+      depth: DEPTH + 2,
+      scale: S,
+      onCursor: show,
+      onActivate: (i) => this.openSaves(slots[i]?.key ?? GAME_SAVE_KEYS[1]),
+    });
+    this.list.reset(rows, 1);
+    show(1);
+    this.keep(addText(this, a.x, a.y + 30 * S + rows.length * 30 * S + 16 * S, 'Tu peux aussi sauvegarder chez un aubergiste ou à un autel des Lanternes.', { scale: S, color: PALETTE.metalClair, maxWidth: a.w }).setDepth(DEPTH + 2));
+  }
+
+  private openSaves(key: (typeof GAME_SAVE_KEYS)[number]): void {
+    const saves = this.data_.saves;
+    if (!saves) return;
+    this.covered = true;
+    this.list?.setLocked(true);
+    this.scene.launch(SCENES.saves, {
+      mode: 'game',
+      heading: 'SAUVEGARDE',
+      subtitle: 'Les emplacements de ta partie.',
+      place: saves.place,
+      blocked: saves.blocked,
+      initialKey: key,
+      onLoad: saves.onLoad,
+      onClose: () => {
+        this.covered = false;
+        this.actions.consume('cancel');
+        this.setTab('sauvegarde');
+      },
+    });
+  }
 
   private buildQuests(): void {
     const S = this.S;

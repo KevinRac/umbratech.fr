@@ -21,16 +21,19 @@ import { ShopView } from '../ui/ShopView';
 import { addText, setText, type PixelText } from '../ui/text';
 import { VerticalMenu, type MenuItem } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
+import type { SaveEnvelope } from '../logic/save/schema';
 import type { WorldHudScene } from './WorldHudScene';
 
 export interface DialogueSceneData {
   readonly npcId: string;
   /** Appelé à la fermeture ; `recruited` : le PNJ a rejoint la compagnie et quitte le village. */
   readonly onClose: (result: { recruited: boolean }) => void;
+  /** Sauvegarde chez l'aubergiste (n°161) : lieu, empêchement, chargement. */
+  readonly saves?: { readonly place: string; readonly blocked: string | null; readonly onLoad: (save: SaveEnvelope) => void };
 }
 
 const DEPTH = { box: 400, menu: 410, shop: 420 } as const;
-type Mode = 'typing' | 'waiting' | 'menu' | 'shop' | 'closed';
+type Mode = 'typing' | 'waiting' | 'menu' | 'shop' | 'saves' | 'closed';
 
 export class DialogueScene extends Phaser.Scene {
   private ctx!: GameCtx;
@@ -231,6 +234,7 @@ export class DialogueScene extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number): void {
+    if (this.mode === 'saves') return;
     if (this.mode === 'shop') {
       this.shop?.update();
       return;
@@ -315,6 +319,10 @@ export class DialogueScene extends Phaser.Scene {
       this.openShop(outcome.shopId);
       return;
     }
+    if (outcome.type === 'save') {
+      this.openSaves(outcome.pages, outcome.expression);
+      return;
+    }
     if (outcome.type === 'ask') {
       this.say(outcome.pages, outcome.expression, [], () => {
         const items: MenuItem[] = outcome.choices.map((c) => ({
@@ -336,6 +344,34 @@ export class DialogueScene extends Phaser.Scene {
     const recruit = outcome.notices.some((n) => n.kind === 'recruit');
     if (recruit) this.recruited = true;
     this.say(outcome.pages, outcome.expression, outcome.notices, () => (recruit ? this.close() : this.openMenu()));
+  }
+
+  /* ---------- Sauvegarde (n°161) ---------- */
+
+  private openSaves(pages: string[], expression: Expression): void {
+    const saves = this.data_.saves;
+    if (!saves) {
+      this.openMenu();
+      return;
+    }
+    this.mode = 'saves';
+    this.scene.launch(SCENES.saves, {
+      mode: 'game',
+      heading: 'SAUVEGARDE',
+      subtitle: `${this.npc.name} tient le registre de l’auberge.`,
+      place: saves.place,
+      blocked: saves.blocked,
+      onLoad: (save: SaveEnvelope) => {
+        this.mode = 'closed';
+        this.scene.stop();
+        saves.onLoad(save);
+      },
+      onClose: () => {
+        this.mode = 'waiting';
+        this.actions.consume('cancel');
+        this.say(pages, expression, [], () => this.openMenu());
+      },
+    });
   }
 
   /* ---------- Boutique ---------- */

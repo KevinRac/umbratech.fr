@@ -795,11 +795,17 @@ Fin de tour : effets (poison, soin terrain, buff)
 - Une unité à 0 PV est **KO** et **retirée du combat**.
 - À la fin du combat victorieux : elle revient avec 1 PV mais est **Blessée** (−2 Mob, −10 % stats) jusqu'au prochain repos à l'auberge ou soin.
 - **Le héros** qui meurt = défaite.
-- **Option « Mode Classique »** (permadeath) : activable à la nouvelle partie (décision n°13).
+- **Mode Classique** (mort définitive, décision n°13, réalisé au jalon M9, n°166 à n°169) : proposé à la nouvelle partie après le choix de la classe (écran « Choisis ta règle » : Blessure par défaut, ou Classique), fixé pour toute la partie.
+  - À la fin d'un combat, **quelle qu'en soit l'issue**, chaque membre tombé (hors héros) quitte la compagnie pour toujours ; il est noté dans la liste des unités perdues (`fallen`) et ne peut plus être recruté.
+  - Son arme, son accessoire et ses objets restent dans le sac (ils n'y étaient que réservés).
+  - Une recrue de village perdue coûte **3 de réputation** à son village (§6.3).
+  - Le héros ne meurt jamais : sa chute est une défaite, comme en Blessure. Les alliés verts et les errants gardent la règle des blessures.
+  - Rappels : bandeau « Classique : une unité tombée est perdue » dans la préparation, « X ne reviendra pas » sur l'écran de fin, badge dans les emplacements de sauvegarde.
+  - Pas de protection contre le rechargement : fermer la page en plein combat ramène à la dernière sauvegarde (n°169).
 
 ### 9.14 Sauvegarde après combat
 
-Sauvegarde automatique à l'écran de résultat (XP, butin, niveaux, état de zone).
+Sauvegarde automatique au retour dans le monde, une fois le combat réglé (XP, butin, niveaux, état de zone, réveil après une défaite, pertes du mode Classique) — jalon M9.
 Si la page est fermée en plein combat : **pas de reprise intra-combat** au prototype (retour au dernier point stable, ennemi toujours présent).
 
 ### 9.15 IA ennemie
@@ -1346,34 +1352,46 @@ Messages brefs en haut : « +15 Réputation (Haut-Gué) », « Niveau 4 ! », «
 
 ## 14. Sauvegarde localStorage
 
+> **Réalisé au jalon M9 (02/11/2026), décisions n°151 à n°169.** Logique pure dans `src/logic/save/` (format, somme, schéma, migrations, références, instantané), stockage dans `src/core/saves.ts` et `src/core/gameSave.ts`, écran des emplacements `src/scenes/SaveScene.ts`.
+
 ### 14.1 Données sauvegardées
 
 | Groupe | Contenu |
 |---|---|
-| **Méta** | Version, date, durée de jeu, nom du héros |
-| **Joueur** | Position (x, y), zone courante, direction |
-| **Équipe** | Pour chaque unité : id, classe, niveau, XP, stats, croissances individuelles, compétences, équipement, état (Blessé) |
-| **Inventaire** | Objets avec quantités, or |
-| **Réputation** | Valeurs par lieu et faction |
-| **Quêtes** | État par quête (non commencée, en cours, terminée), étapes |
-| **Monde** | Ennemis vaincus (ids + horodatage de réapparition), coffres ouverts, boss vaincus, zones découvertes, autels débloqués |
-| **PNJ** | Drapeaux de dialogue, recrues recrutées, états de boutique |
-| **Options** | Volume, vitesse d'animation, touches |
+| **Méta** (`meta`) | Résumé affiché dans les emplacements : héros (nom, classe ou évolution, niveau), lieu ou zone, or, temps de jeu, règle (Blessure / Classique), taille de la compagnie |
+| **Monde** (`data.world`) | Position et direction du héros, drapeaux levés (boss vaincus…), zones et lieux découverts, identifiant de partie, temps de jeu |
+| **Progression** (`data.world.progress`) | Or, sac, réputations (lieux et factions) et lieux touchés, jour, dons, quêtes, recrues, récompenses versées, sujets entendus, ennemis du monde vaincus (jour, horloge, zones), horloge d'exploration, changements de zone, dernier village, errants blessés, niveau et XP des errants, achats limités, règle de mort, unités perdues |
+| **Compagnie** | Pour chaque membre : identifiant, nom, classe, héros, niveau, XP, stats tirées, plafond, blessure, passive et serment choisis, évolution, compteurs des conditions |
+| **Préparation** (`data.session`) | Équipement de chaque membre (arme, accessoire, objets réservés), **indexé par identifiant de membre** (n°154), et dernier déploiement |
+| **Non sauvé** | Position des ennemis, PNJ et errants (ils reprennent leur poste, comme après un combat) ; réglages (clé `vaelmor:settings`, communs à toutes les parties) ; niveau d'essai du debug |
 
 ### 14.2 Principes
 
 | Élément | Règle |
 |---|---|
-| **Clés** | `vaelmor:save:slot1`, `…slot2`, `…slot3`, `vaelmor:save:auto`, `vaelmor:settings` |
-| **Format** | JSON compressé (optionnel, LZ-string) avec **somme de contrôle** |
-| **Versionnage** | Champ `saveVersion` ; **migrations** successives (v1→v2→…) |
-| **Auto-sauvegarde** | Après chaque combat, entrée/sortie de village, quête terminée, repos |
-| **Manuelle** | Depuis le menu et aux autels (3 emplacements) |
-| **Erreurs** | Si JSON invalide ou checksum faux : message clair, tentative de restauration de la **sauvegarde précédente** (copie de secours `:backup`) ; sinon proposition de supprimer |
-| **Quota** | Détection d'erreur `QuotaExceededError`, message utilisateur ; taille estimée < 200 Ko |
-| **Nouvelle partie** | Confirmation à deux étapes (« Cela écrasera l'emplacement X ») |
-| **Export/Import** | **Oui** : export en fichier `.json` (ou texte base64), import avec validation de schéma |
-| **Sécurité** | Aucun contenu exécutable : données uniquement, validées par schéma |
+| **Clés** | `vaelmor:save:slot1`, `…slot2`, `…slot3`, `vaelmor:save:auto`, `vaelmor:settings` ; copie de secours `<clé>:backup` |
+| **Format** | JSON lisible, non compressé : `{ game, saveVersion, savedAt, meta, data, checksum }`. Somme **FNV-1a 32 bits** sur le JSON canonique (clés triées) de tout le reste de l'enveloppe : elle détecte une sauvegarde abîmée, pas la triche. Une partie de 30 membres pèse moins de 80 Ko (test) |
+| **Lecture** | Six contrôles dans l'ordre : JSON, somme, version (une version plus récente du jeu est refusée), migrations, schéma Zod strict, références aux données (n°156). Une référence inconnue (objet, quête, évolution retirés d'une version future) est **ignorée avec un avertissement** ; seuls un héros absent ou une classe de héros inconnue rendent la partie inchargeable |
+| **Versionnage** | `saveVersion` = 1. Registre `MIGRATIONS` (n → n + 1), vide en v1, testé avec des migrations factices ; la sauvegarde figée `tests/fixtures/save-v1.json` doit se charger à toutes les versions futures (n°158). Premier usage réel prévu : le lot « dialogues de combat » (scènes vues, nommés vaincus) |
+| **Auto-sauvegarde** | Une seule pour toutes les parties (clé `auto`, n°159). Écrite à l'arrivée d'une nouvelle partie, au retour d'un combat, à l'entrée et à la sortie d'un village ou de Valcendre (au plus une toutes les 20 s, pas à l'arrivée d'un chargement), à la fin d'une quête et au repos, toujours une fois le dialogue fermé. Une petite lanterne « Sauvegarde… » s'affiche 1,2 s en bas à droite |
+| **Manuelle** | Onglet **Sauvegarde** du menu (Tab), partout en exploration sauf pendant une poursuite ; option « Sauvegarder la partie » des aubergistes (Maëlys, Hild, Rosalind ; type d'option `save` dans `locations.json`) ; « Se recueillir » aux 6 **autels des Lanternes** (n°161). Trois emplacements |
+| **Écran titre** | **Continuer** (en tête s'il existe une sauvegarde : la plus récente des 4 sauvegardes lisibles), Nouvelle partie, **Charger** (liste des 4 sauvegardes avec héros, niveau, lieu, temps de jeu, date, or, badge Classique, état), Combat d'essai, Options (n°162) |
+| **Confirmation en deux étapes** | Écraser un emplacement occupé, supprimer, nouvelle partie qui écrasera la sauvegarde auto, import sur un emplacement occupé, charger en cours de partie. Étape 1 : ce qui sera perdu ; étape 2 : « Non » présélectionné (n°163) |
+| **Erreurs** | Principale abîmée et copie bonne : la copie est chargée, réécrite comme principale, et le message le dit (« L’emplacement 2 était abîmé : la copie précédente a été chargée. ») ; les deux abîmées : « Sauvegarde illisible », à supprimer. JSON coupé, somme fausse, version future, schéma incomplet : un message clair chacun |
+| **Quota** | `QuotaExceededError` détectée : rien n'est écrasé, « Espace de stockage plein : la partie n'a pas été sauvegardée. Supprime ou exporte un emplacement. » |
+| **Nouvelle partie** | Confirmation si une sauvegarde auto existe ; puis choix de la classe et de la règle (Blessure / Classique) |
+| **Export/Import** | Export d'un emplacement en fichier `vaelmor-emplacement2-2026-11-02.json` (l'enveloppe telle quelle). Import d'un fichier .json de 1 Mo au plus, mêmes contrôles qu'à la lecture (une somme fausse donne « Fichier modifié ou abîmé »), puis choix de l'emplacement 1, 2 ou 3 (n°164) |
+| **Après un chargement** | Le héros réapparaît à sa place et dans sa direction, ennemis et PNJ à leur poste, 4 s de grâce face aux ennemis (n°165) |
+| **Sécurité** | Aucun contenu exécutable : données seulement, validées par schéma |
+
+### 14.3 Compte et sauvegarde en ligne (prévu : lot M9b)
+
+Demande de l'auteur (02/11/2026) : une connexion par e-mail, sur le modèle de `gw1/api` (API PHP sur IONOS, base MySQL, code à 6 chiffres envoyé par e-mail valable 10 min et 5 essais, cookie de session d'un an, identifiants écrits au déploiement depuis des secrets GitHub). Propositions n°170 à n°173, à valider, avec une question ouverte (base séparée ou partagée avec gw1) :
+
+- le stockage passe déjà par l'interface `SaveStore` (localStorage aujourd'hui) et chaque sauvegarde porte un identifiant de partie et une date : le format sera le même en ligne ;
+- API `vaelmor/api/` calquée sur gw1, secrets `VAELMOR_*` ;
+- jeu toujours jouable sans compte ; connecté, chaque sauvegarde part aussi sur le serveur ; au chargement la plus récente gagne ; si les deux versions ont changé depuis la dernière synchronisation, le jeu demande laquelle garder ;
+- le serveur vérifie la taille (200 Ko au plus) et la somme, pas le contenu du jeu.
 
 ---
 
@@ -1606,7 +1624,8 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 29. **Hébergement** (16/10/2026) : le jeu compilé est servi sur `umbratech.fr/vaelmor/play/`. Le serveur fait un simple `git pull` du dépôt, sans étape de build : la sortie du build (`vaelmor/play/`) est donc commitée. La page d'attente reste sur `/vaelmor/` avec un lien « Jouer ».
 30. **Musique** (précision de la n°23) : les pistes sont générées avec Suno par l'auteur (voir `music/README.md`) ; chaque piste retenue est tracée dans `CREDITS.md`.
 31. **Version de Phaser** (16/10/2026, précision de la n°1) : **Phaser 4** (4.2.1). La branche 3.x n'évolue plus depuis la 3.90 (mai 2025) ; Phaser 4 est stable depuis avril 2026, garde la même API de haut niveau et apporte un nouveau moteur de rendu (filtres, éclairage) utile au pilier « Beauté d'abord ». Le reste de la pile n° 1 est inchangé (TypeScript, Vite, Tiled).
-32. **Jalon M6** (02/11/2026) : passives (n°93), mécaniques de classe (n°123 à n°127), XP (n°128 à n°132), compagnie (n°133 à n°139), évolutions (n°140 à n°144) validées ; adaptations n°145 à n°150 à valider. Détail dans PROGRESS.md.
+32. **Jalon M6** (02/11/2026) : passives (n°93), mécaniques de classe (n°123 à n°127), XP (n°128 à n°132), compagnie (n°133 à n°139), évolutions (n°140 à n°144) validées ; adaptations n°145 à n°150 validées le 02/11/2026. Détail dans PROGRESS.md.
+33. **Jalon M9 : sauvegarde** (02/11/2026) : décisions n°151 à n°169 validées (format, contrôles, copie de secours, migrations, sauvegardes automatiques et manuelles, écran titre, confirmations, export/import, mode Classique). Compte et sauvegarde en ligne par e-mail prévus au lot M9b (n°170 à n°173, à valider). Voir §9.13, §14 et PROGRESS.md.
 
 ---
 

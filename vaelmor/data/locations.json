@@ -80,6 +80,11 @@
               "poorReply": ["Vingt pièces d’or, voyageur. Reviens quand tu les auras, je ne fais pas crédit."]
             },
             {
+              "kind": "save",
+              "label": "Sauvegarder la partie",
+              "reply": ["Le registre de l’auberge est toujours ouvert pour toi."]
+            },
+            {
               "kind": "topic",
               "label": "La rumeur du jour",
               "lines": [
@@ -1352,6 +1357,11 @@
               "reply": ["Bonne nuit. Il fait froid, couvre-toi bien."],
               "freeReply": ["Pour toi, c’est gratuit. Dors, ici on veille."],
               "poorReply": ["Trente pièces, voyageur. Pas moins."]
+            },
+            {
+              "kind": "save",
+              "label": "Sauvegarder la partie",
+              "reply": ["Le livre de la maison t’attend. La pierre garde tout."]
             }
           ],
           "refusesWhenHostile": true
@@ -1900,6 +1910,11 @@
               "reply": ["Bonne nuit. Le Corbeau veille, comme toujours."],
               "freeReply": ["Ça ne se discute pas : pour toi, c’est gratuit."],
               "poorReply": ["Quarante pièces. Je ne fais pas crédit."]
+            },
+            {
+              "kind": "save",
+              "label": "Sauvegarder la partie",
+              "reply": ["Le Corbeau tient ses registres mieux que la Couronne."]
             },
             {
               "kind": "topic",

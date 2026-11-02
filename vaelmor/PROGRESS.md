@@ -3,10 +3,10 @@
 > Fichier de continuité entre les conversations. À mettre à jour en fin de chaque jalon.
 
 ## Reprise (prompt à coller dans une nouvelle conversation)
-Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
+Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M9 : sauvegarde** (GDD §14, §17) : auto + manuelle, 3 emplacements, migrations, export/import, erreurs gérées. Tout l'état à sauvegarder est déjà sérialisable : `WorldState` (dont `Progress` : or, sac, réputations, quêtes, **compagnie** avec niveaux, XP, stats tirées, passive et serment choisis, évolution, compteurs, blessures ; niveaux des errants ; achats limités) et `core/session.ts` (équipement et dernier déploiement). **Décisions n°145 à n°150 à valider** (adaptations de M6, voir « Livré en M6 »).
+**M9b : compte et sauvegarde en ligne** (GDD §14.3), dès que l'auteur a créé la base : connexion par e-mail sur le modèle de `gw1/api`. **Décisions n°170 à n°173 à valider**, et une question à trancher : base séparée ou partagée avec gw1 (proposition : séparée).
 Ensuite, dans l'ordre du GDD §17 : **lot « dialogues de combat » (moteur, voir ci-dessous)**, M7, M8, M10.
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
@@ -17,7 +17,7 @@ Livré : **`docs/STORY_BIBLE.md`** (ton, chronologie, héros, intrigue en 3 acte
 
 - [ ] **Lot « dialogues de combat » (moteur)**, à faire entre M6 et M7 (inclut l'apparition aléatoire des nommés, n°115) : déclencheurs (attaque, riposte, compétence ciblée, mort, phase 2), action **Parler** (adjacence, interlocuteurs, prérequis, délai), recrutement d'un ennemi, journal des rencontres, indicateur dans la préparation, scènes d'allié vert nommé scriptées, limite de 3 scènes par combat. Données : `battleQuotes.json`, champs `named` / `skinOf` / `portrait` / `recruit`.
 - [ ] **M7 (contenu)** : écrire environ 50 scènes, portraits des nommés, promouvoir en alliés verts nommés une vingtaine de figures de village (n°109, bible §7.4), ajouter Orvane et les 3 fins, relire les dialogues de village pour qu'ils suivent l'arc de chaque recrue.
-- [ ] **M9 (sauvegarde)** : retenir scènes vues, recrues obtenues ou perdues, nommés vaincus.
+- [ ] **Sauvegarde des dialogues de combat** : retenir scènes vues, nommés recrutés, perdus ou vaincus. M9 est livré sans ces champs : le lot les ajoutera par la première vraie migration (format v1 → v2, `src/logic/save/migrations.ts`, avec un test qui charge `tests/fixtures/save-v1.json`). Les membres perdus en mode Classique sont déjà dans `Progress.fallen`.
 
 ### Décisions n°105 à n°115 — validées par l'auteur le 22/10/2026 (n°109 et n°111 révisées le 21/10 : plus nombreuses)
 - **n°105 — Trois catégories d'ennemis** : commun (muet), nommé (nom, portrait, liens), boss (nommé, jamais recrutable). Un **Écho** est un nommé dont le skin dérive d'un modèle existant (`skinOf`).
@@ -63,8 +63,9 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
   - [x] Renforts des cartes de boss (tours 3 et 6)
   - [x] IA à score : agressif, opportuniste, défensif, soutien, chasseur de héros, boss (§9.15)
   - [x] Alliés verts : gardes, alliés de passage, alliés errants, phase alliée (§7.8)
-- [x] **M6 : XP, niveaux, classes** (02/11/2026) — voir « Livré en M6 » ; décisions n°93 et n°123 à n°144 validées le 02/11/2026, n°145 à n°150 à valider
-- [ ] M9, lot « dialogues de combat », M7, M8, M10 (ordre du GDD §17)
+- [x] **M6 : XP, niveaux, classes** (02/11/2026) — voir « Livré en M6 » ; décisions n°93 et n°123 à n°150 validées le 02/11/2026
+- [x] **M9 : sauvegarde** (02/11/2026) — voir « Livré en M9 » ; décisions n°151 à n°169 validées le 02/11/2026, n°170 à n°173 (compte en ligne) à valider
+- [ ] M9b (compte en ligne), lot « dialogues de combat », M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -381,7 +382,7 @@ Quatre étapes, chacune montrée en captures à l'auteur (02/11/2026). Modèle c
 - **n°133 à n°139 — Compagnie** : choix de classe à la nouvelle partie (le héros garde son apparence) ; départ héros + Odran + Aurèle niveau 2 ; niveau d'arrivée des recrues ; Rhyel ; compagnie d'essai ; blessure simple ; Embuscade au gué à 5.
 - **n°140 à n°144 — Évolutions** : Sceaux (5 boss + 2 chez Lorn) ; évolution depuis l'onglet Compagnie ; 6 évolutions pilotes (Gardien, Lame, Chasseur) puis les 18 autres ; apparence inchangée sauf nom et cadre doré.
 
-### Décisions n°145 à n°150 (jalon M6) — à valider par l'auteur
+### Décisions n°145 à n°150 (jalon M6) — validées par l'auteur le 02/11/2026
 - **n°145 — Traits adaptés des 18 évolutions** (le GDD §10.5 décrivait des actions que le moteur n'a pas encore) : Faucon de Vent (portée +2, deux coups sans bouger) ; Tireur de Brume (ignore la défense et l'esquive du terrain de la cible, au lieu de flèches traversantes) ; Maître de Braise (Nuée 5×5 sans toucher les alliés) ; Spectre de Cendre (ignore 3 Rés, vole la moitié des dégâts) ; Archi-Lanterne (Halo 3×3, +3 Rés aux alliés adjacents) ; Veilleuse des Âmes (une fois par combat, un allié qui tomberait à 2 cases d'elle sous un coup garde 1 PV, au lieu d'une résurrection) ; Maréchal de Cendre (une fois par combat, Appel aux armes rend leur action aux alliés touchés, au lieu d'un ordre ciblé) ; Chantre des Saisons (aura +2 Déf, +2 Rés à 2 cases) ; Grand Alchimiste du Gel (Fiole 3×3) ; Distillateur de Venin (ses attaques empoisonnent 2 tours) ; Fil-de-Vent (toute case franchissable à 1, eau comprise ; pas de déplacement d'allié) ; Tempête-Dansante (toujours deux coups, +10 précision, au lieu de quatre) ; Éveilleur de Colosse (golems +15 PV, +3 Fo, au lieu d'un Colosse unique) ; Chuchoteur de Menhirs (un menhir-tour qui tire à 2 cases, au lieu de deux) ; Sylvarque (Mur de ronces → bosquet, +3 PV aux alliés en forêt au début de sa phase) ; Tisseur de Ronces (ses ronces font 5 dégâts aux ennemis collés) ; Artificier Sapeur (Perce-armure blesse de 4 les ennemis collés à la cible, au lieu de mines) ; Maître de Siège (portée +1, +30 % sans avoir bougé). Rempart de Récif : « riposte à toute attaque, même hors de portée » (sa lance couvrait déjà la mêlée).
 - **n°146 — Conditions adaptées** : Exécuteur Lige (3 ennemis abattus dans un même combat après avoir brisé son serment) ; Tireur de Brume (un ennemi vaincu sur la Côte des Brumes) ; Grand Alchimiste du Gel (geler 15 ennemis) ; Distillateur de Venin (un boss vaincu avec lui déployé : l'Alchimiste n'a pas de poison et les boss sont immunisés contre le gel) ; Fil-de-Vent (100 cases d'eau ou de marais) ; Harponneur Abyssal et Traqueur de Léviathans (boss vaincus avec le Chasseur déployé).
 - **n°147 — Stock limité en boutique** : champs `price` (prix imposé, pour un objet clé) et `limit` (exemplaires pour toute la partie) dans `locations.json › shops › stock` ; achats comptés dans `Progress.bought`.
@@ -389,3 +390,57 @@ Quatre étapes, chacune montrée en captures à l'auteur (02/11/2026). Modèle c
 - **n°149 — La Veilleuse des Âmes ne protège que des coups** (échanges), pas des dégâts de statut ni des compétences sans jet.
 - **n°150 — Le menu (Tab) s'ouvre sur l'onglet Compagnie.**
 
+## Livré en M9
+Sauvegarde complète dans le navigateur (GDD §14, §9.13). Modèle conseillé pour M9b : Opus, effort élevé (API, base, synchronisation) ; Sonnet suffit pour des retouches d'interface.
+
+- **Logique pure** `src/logic/save/` (testée, sans Phaser ni DOM) :
+  - `checksum.ts` : JSON canonique (clés triées), FNV-1a 32 bits.
+  - `schema.ts` : schéma Zod **strict** de la version courante (`SAVE_VERSION` = 1) : enveloppe, méta, `WorldState`, `Progress`, membres, session. Un champ ajouté à `Progress` ou `WorldState` sans être déclaré ici fait échouer l'aller-retour des tests : il faut alors une version 2 et une migration.
+  - `migrations.ts` : registre `MIGRATIONS` (n → n + 1, vide en v1) et `migrate`, qui contrôle chaque marche.
+  - `references.ts` : références contre les données du jeu ; ce qui a disparu est ignoré avec un avertissement, un héros absent ou de classe inconnue refuse le chargement ; nouvelles cibles de réputation à leur valeur de départ.
+  - `codec.ts` : `buildEnvelope`, `encodeEnvelope`, `decodeSave` (six contrôles, messages en français, somme recalculée après correction).
+  - `snapshot.ts` : `snapshotGame` (copie profonde, sans `testLevel`), `restoreGame`, `summarize`, `formatPlayTime`, `latestOf`.
+  - `logic/game/classic.ts` : `applyClassicLosses` (perte définitive, `fallen`, −3 de réputation au village de la recrue, équipement oublié) ; `joinCompany` refuse un membre perdu.
+- **Nouveaux champs** : `Progress.mode` (« blessure » ou « classique ») et `Progress.fallen` ; `WorldState.gameId` (identifiant de partie, pour la synchronisation en ligne) et `WorldState.playMs` (temps de jeu : exploration, combat et menus, hors titre, pause et onglet caché, compté dans `main.ts`).
+- **Stockage** : `core/saves.ts` (interface `SaveStore`, emplacements, copie de secours `:backup` écrite avant chaque écriture, restauration automatique d'une principale abîmée, quota, suppression), `core/gameSave.ts` (sauvegarder et charger la partie en cours, chronomètre, export et import de fichiers).
+- **Session indexée par membre** (`core/session.ts`, n°154) : équipement (`Record<id, Loadout>`) et dernier déploiement (identifiants). Corrige l'ancien défaut : l'équipement de toute la compagnie était vidé à l'arrivée d'une recrue. Un combat d'essai lancé du titre ne touche plus à l'équipement de la partie.
+- **Écrans** :
+  - `scenes/SaveScene.ts` : emplacements (auto + 3 + « Importer un fichier »), fiche (portrait, classe ou évolution, niveau, compagnie, badge Classique, lieu, temps de jeu, or, date, état), actions (Sauvegarder ici, Charger, Exporter en fichier, Supprimer), import (contrôle puis choix de l'emplacement). Ouvert depuis le titre, l'onglet Sauvegarde du menu, les aubergistes et les autels.
+  - `ui/ConfirmBox.ts` : confirmation en plusieurs étapes, « Non » présélectionné à la dernière, Échap refuse.
+  - Titre : Continuer (en tête s'il y a une sauvegarde), Nouvelle partie (confirmation si une sauvegarde auto existe), Charger, Combat d'essai, Options.
+  - « Choisis ta voie » enchaîne sur « Choisis ta règle » (Blessure / Classique).
+  - Menu (Tab) : onglet **Sauvegarde** (liste des emplacements, Entrée ouvre l'écran).
+  - Auberges : option `save` dans `locations.json` (Maëlys, Hild, Rosalind ; Ronceval et Port-Brume n'ont pas d'auberge). Autels : invite « Se recueillir (sauvegarder) ».
+  - HUD : lanterne « Sauvegarde… » 1,2 s après chaque sauvegarde automatique ; échec dit en clair.
+  - Combat : bandeau « Classique : une unité tombée est perdue » dans la préparation ; « X ne reviendra pas : perte définitive. » sur l'écran de fin ; au retour dans le monde, « X a quitté la compagnie pour toujours ».
+- **Sauvegardes automatiques** (`WorldScene`) : arrivée d'une nouvelle partie ; retour d'un combat (après le réveil d'une défaite et les pertes du Classique) ; entrée et sortie d'un village (au plus une toutes les 20 s, pas à l'arrivée d'un chargement ou d'un retour de combat) ; fin d'une quête et repos, détectés à la fermeture du dialogue. Sauvegarde manuelle refusée pendant une poursuite.
+- **Tests** : 672 au vert (+28 dans `tests/save.test.ts` : somme ; aller-retour après nouvelle partie, combat gagné, défaite, village, quête, repos, achat limité + recrue + évolution + passive + serment, Classique ; poids d'une partie de 30 membres < 80 Ko ; JSON coupé, autre jeu, somme fausse, version future, champ manquant ; références inconnues ; héros de classe inconnue ; migrations factices et marche manquante ; sauvegarde v1 figée `tests/fixtures/save-v1.json` ; copie de secours, double corruption, quota, « Continuer » ; mode Classique ; aubergistes ; session par membre).
+- **Vérifié dans Chrome** (SwiftShader, 960×540) : nouvelle partie en Classique, lanterne de sauvegarde auto, onglet Sauvegarde, sauvegarde dans un emplacement vide puis écrasement en deux étapes, titre avec Continuer et Charger, emplacement restauré depuis sa copie, emplacement illisible, import d'un fichier retouché (refusé) puis valide, confirmation de nouvelle partie, Continuer, autel, auberge, préparation en Classique, perte d'Aurèle de bout en bout (retraite → sauvegarde auto sans elle, `fallen` = aurele). Aucune erreur console (le seul 404 est le favicon du serveur de développement).
+
+### Décisions n°151 à n°169 (jalon M9) — validées par l'auteur le 02/11/2026
+- **n°151 — Format** : JSON lisible non compressé, enveloppe `{ game, saveVersion, savedAt, meta, data, checksum }`, somme FNV-1a 32 bits sur le JSON canonique.
+- **n°152 — Contenu** : `WorldState` et `Progress` entiers, équipement et dernier déploiement, règle de mort, temps de jeu ; `meta` pour l'affichage.
+- **n°153 — Non sauvé** : positions des ennemis, PNJ et errants ; réglages ; niveau d'essai du debug.
+- **n°154 — Équipement indexé par membre** (et dernier déploiement par identifiant).
+- **n°155 — Temps de jeu** `playMs`, hors titre, pause et onglet caché.
+- **n°156 — Six contrôles au chargement** ; référence inconnue ignorée avec avertissement.
+- **n°157 — Copie de secours** `:backup` ; quota sans rien écraser.
+- **n°158 — Migrations** : v1 = M9, registre vide, sauvegarde figée en test.
+- **n°159 — Une seule sauvegarde automatique** pour toutes les parties.
+- **n°160 — Déclencheurs automatiques** : nouvelle partie, combat, village (20 s), quête, repos ; lanterne du HUD.
+- **n°161 — Sauvegarde manuelle** : onglet du menu (pas pendant une poursuite), aubergistes, autels (sauvegarde seule).
+- **n°162 — Écran titre** : Continuer en tête, Charger.
+- **n°163 — Confirmation en deux étapes** (écraser, supprimer, nouvelle partie, import, chargement en partie).
+- **n°164 — Export et import** de fichiers .json, 1 Mo au plus, choix de l'emplacement.
+- **n°165 — Après un chargement** : position, direction, ennemis à leur poste, 4 s de grâce.
+- **n°166 — Choix de la règle** après le choix de la classe ; fixée pour la partie.
+- **n°167 — Règles du Classique** : perte à la fin du combat quelle qu'en soit l'issue, `fallen`, équipement au sac, −3 de réputation, héros jamais perdu, alliés verts inchangés.
+- **n°168 — Rappels du Classique** : préparation, écran de fin, emplacements.
+- **n°169 — Pas de protection contre le rechargement** en Classique.
+
+### Décisions n°170 à n°173 (lot M9b, compte en ligne) — à valider par l'auteur
+- **n°170 — M9 prépare le terrain** : interface `SaveStore`, identifiant de partie et date dans chaque sauvegarde, même format en ligne.
+- **n°171 — API `vaelmor/api/`** calquée sur `gw1/api` (PHP sur IONOS, MySQL, code à 6 chiffres par e-mail, cookie de session), secrets GitHub `VAELMOR_*`.
+- **n°172 — Jeu sans compte toujours possible** ; connecté, chaque sauvegarde part aussi sur le serveur ; la plus récente gagne ; conflit = le jeu demande.
+- **n°173 — Le serveur vérifie taille et somme**, pas le contenu du jeu.
+- **Question ouverte** : base séparée (proposée, isole gw1) ou partagée (un seul compte pour les deux sites).

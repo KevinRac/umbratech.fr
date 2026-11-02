@@ -52,9 +52,12 @@ export function recruitLevel(data: GameData, company: readonly Member[], id: str
   return Math.max(fixed, Math.round(average) - data.company.catchUpGap);
 }
 
-/** Une recrue rejoint la compagnie (une seule fois). Renvoie le nouveau membre, ou null s'il y était déjà. */
+/**
+ * Une recrue rejoint la compagnie (une seule fois). Renvoie le nouveau membre,
+ * ou null s'il y était déjà ou s'il est tombé en mode Classique (n°167).
+ */
 export function joinCompany(data: GameData, progress: Progress, unit: UnitRef): Member | null {
-  if (progress.company.some((m) => m.id === unit.id)) return null;
+  if (progress.company.some((m) => m.id === unit.id) || progress.fallen.includes(unit.id)) return null;
   const member = createMember(data, { ...unit, level: recruitLevel(data, progress.company, unit.id) });
   progress.company.push(member);
   if (!progress.recruited.includes(unit.id)) progress.recruited.push(unit.id);
