@@ -227,8 +227,8 @@ export class MenuScene extends Phaser.Scene {
         const world = { data, progress: this.ctx.progress, discovered: this.ctx.discovered };
         const { choices, blocker } = evolutionChoices(world, m);
         if (blocker) {
-          line(dx, y, `${blocker} (niveau ${data.balance.levels.promotionMinLevel}, un Sceau de Maîtrise et la condition de la branche).`, PALETTE.metalClair, dw);
-          y += 20 * S;
+          const why = line(dx, y, `${blocker} : il faut le niveau ${data.balance.levels.promotionMinLevel}, un Sceau de Maîtrise et la condition d’une branche.`, PALETTE.metalClair, dw);
+          y += Math.ceil(why.height) + 6 * S;
         }
         for (const c of choices) {
           const head = line(dx, y, c.evo.name, c.ready ? PALETTE.lumiereDoree : PALETTE.parchemin);
