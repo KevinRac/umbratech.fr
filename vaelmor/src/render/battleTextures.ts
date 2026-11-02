@@ -10,7 +10,7 @@ import { PixelCanvas } from './pixelCanvas';
 import { CHAR_POSES, type CharPose } from './characterSprite';
 import { BATTLE_CELL, SKINS, SKIN_POSES, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
 import { hasSkin, skinCombatKey } from './skins';
-import { paintDetails } from './skinDetails';
+import { DETAIL_PAD, paintDetails } from './skinDetails';
 import { parseSprite } from '../logic/skinFrames';
 import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitFrameKind, type UnitTeam } from './unitSprites';
 
@@ -123,26 +123,29 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
   if (!scene.textures.exists(key)) {
     const source = scene.textures.get(skinCombatKey(base)).getSourceImage() as HTMLImageElement;
     // Recrue avec un détail : copie de la feuille sur un canevas, détail peint dans chaque image de marche.
-    const canvas = variant > 0 ? scene.textures.createCanvas(key, source.width, source.height) : null;
+    // Les images sont plus hautes de DETAIL_PAD rangées (plume, chapeau) ; les pieds restent en bas de l'image.
+    const pad = variant > 0 ? DETAIL_PAD : 0;
+    const cellH = BATTLE_CELL + pad;
+    const canvas = variant > 0 ? scene.textures.createCanvas(key, source.width, SKIN_ROWS.length * cellH) : null;
     if (canvas) {
       const ctx = canvas.getContext();
-      ctx.drawImage(source, 0, 0);
-      const image = ctx.getImageData(0, 0, source.width, source.height);
-      for (let row = 0; row < SKIN_ROWS.length; row++) for (let col = 0; col < def.frames; col++) paintDetails(image, col * BATTLE_CELL, row * BATTLE_CELL, BATTLE_CELL, BATTLE_CELL, variant, false);
+      for (let row = 0; row < SKIN_ROWS.length; row++) ctx.drawImage(source, 0, row * BATTLE_CELL, source.width, BATTLE_CELL, 0, row * cellH + pad, source.width, BATTLE_CELL);
+      const image = ctx.getImageData(0, 0, source.width, SKIN_ROWS.length * cellH);
+      for (let row = 0; row < SKIN_ROWS.length; row++) for (let col = 0; col < def.frames; col++) paintDetails(image, col * BATTLE_CELL, row * cellH, BATTLE_CELL, cellH, variant, false);
       ctx.putImageData(image, 0, 0);
       canvas.refresh();
     }
     const texture = canvas ?? scene.textures.addImage(key, source);
     if (!texture) return;
-    const at = (row: number, col: number): [number, number] => [col * BATTLE_CELL, row * BATTLE_CELL];
+    const at = (row: number, col: number): [number, number] => [col * BATTLE_CELL, row * cellH];
     const add = (name: string, row: number, col: number): void => {
       const [x, y] = at(row, col);
-      texture.add(name, 0, x, y, BATTLE_CELL, BATTLE_CELL);
+      texture.add(name, 0, x, y, BATTLE_CELL, cellH);
     };
     SKIN_ROWS.forEach((pose, row) => {
       for (let f = 0; f < def.frames; f++) add(BATTLE_TEX.msFrame(pose, f), row, f);
     });
-    (SKIN_POSES[id] ?? []).forEach((pose, col) => SKIN_ROWS.forEach((view, r) => add(BATTLE_TEX.pose(pose, view), 3 + ((r + 1) % 3), col)));
+    if (variant === 0) (SKIN_POSES[base] ?? []).forEach((pose, col) => SKIN_ROWS.forEach((view, r) => add(BATTLE_TEX.pose(pose, view), 3 + ((r + 1) % 3), col)));
     for (let f = 0; f < UNIT_IDLE_FRAMES; f++) add(BATTLE_TEX.msFrame('idle', f), 0, 0);
     for (let f = 0; f < UNIT_READY_FRAMES; f++) add(BATTLE_TEX.msFrame('ready', f), 0, 0);
   }

@@ -19,12 +19,13 @@ describe('détails des recrues', () => {
     expect(parseSprite('lame_du_serment#2')).toEqual({ base: 'lame_du_serment', variant: 2 });
     expect(parseSprite('heros')).toEqual({ base: 'heros', variant: 0 });
   });
-  it('les détails tournent : plume, écharpe, les deux', () => {
+  it('les détails tournent : plume, chapeau, bandeau, chapeau à plume', () => {
     expect(detailsFor(0)).toEqual([]);
     expect(detailsFor(1)).toEqual(['plume']);
-    expect(detailsFor(2)).toEqual(['echarpe']);
-    expect(detailsFor(3)).toEqual(['plume', 'echarpe']);
-    expect(detailsFor(4)).toEqual(['plume']);
+    expect(detailsFor(2)).toEqual(['chapeau']);
+    expect(detailsFor(3)).toEqual(['bandeau']);
+    expect(detailsFor(4)).toEqual(['chapeau', 'plume']);
+    expect(detailsFor(5)).toEqual(['plume']);
   });
   it('peint quelque chose sur une silhouette, rien sans variante', () => {
     const make = (): { width: number; height: number; data: Uint8ClampedArray } => {
@@ -32,7 +33,7 @@ describe('détails des recrues', () => {
       for (let y = 6; y < 29; y++) for (let x = 10; x < 20; x++) data.set([90, 90, 90, 255], (y * 30 + x) * 4);
       return { width: 30, height: 30, data };
     };
-    for (const v of [1, 2]) {
+    for (const v of [1, 2, 3]) {
       const a = make();
       const before = a.data.slice();
       paintDetails(a, 0, 0, 30, 30, v, false);
