@@ -9,6 +9,8 @@ Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr). 
 **M6 : XP, niveaux, classes** (GDD §17, §9.12, §10) : XP par action et bonus de victoire, montée de niveau tirée au sort (croissances, une stat garantie), niveau max 20 / 30, évolutions (Sceau de Maîtrise + condition de branche ; 6 d'abord, puis 24), recrutement réel (n°66) à la place de la compagnie d'essai, **passives des niveaux 5 et 15** (proposition n°93, à valider avant de coder) et **mécaniques de classe** différées (Serment, hauteur, Saisons, Fil d'eau, Fanfare : n°92). L'XP des alliés verts (§7.8) arrive avec M6.
 Ensuite, dans l'ordre du GDD §17 : M9, **lot « dialogues de combat » (moteur, voir ci-dessous)**, M7, M8, M10.
 
+**Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
+
 ## Spécification narrative : ennemis nommés et dialogues de combat (21/10/2026)
 
 Livré : **`docs/STORY_BIBLE.md`** (ton, chronologie, héros, intrigue en 3 actes, 12 recrues, boss, 6 nommés recrutables, 6 nommés non recrutables, table des liens, scènes d'exemple, schéma de données) et **GDD §7.9** (règles). Aucun code. Modèle : citations de combat et « Parler » de *Fire Emblem : The Sacred Stones*. **Pas de dialogues ni de bonus entre alliés** (décision de l'auteur) : seuls comptent les ennemis nommés et les boss.
