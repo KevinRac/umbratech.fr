@@ -774,6 +774,8 @@ Fin de tour : effets (poison, soin terrain, buff)
 
 ### 9.12 XP et montée de niveau
 
+> **Réalisé en M6 (02/11/2026, n°128 à n°132).** Compétence de dégâts = attaque ; soin (compétence ou bâton) 15 ; statut ou bonus 10 ; objet sur un allié 10 ; un ennemi achevé par un statut rapporte le coup fatal à celui qui l'a posé ; l'XP d'une invocation va à son invocateur ; bonus de victoire à tous les déployés, KO compris. Montée immédiate (fenêtre « Niveau N ! ») ; XP gardée en défaite ou retraite ; seuls les alliés errants gardent leur XP parmi les alliés verts.
+
 | Élément | Règle |
 |---|---|
 | XP pour un niveau | 100 |
@@ -816,6 +818,8 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 ---
 
 ## 10. Classes et progression
+
+> **Mise à jour du 02/11/2026 (jalon M6, décisions n°93 et n°123 à n°150 — détail dans PROGRESS.md).** Réalisé : XP par action et bonus de victoire (§9.12), montée de niveau immédiate tirée au sort avec une stat garantie, plafonds 20 / 30 ; compagnie persistante (choix de la classe du héros à la nouvelle partie, départ avec Odran et Aurèle, recrues des villages, Rhyel, blessure jusqu'au repos) ; les 24 passives des niveaux 5 et 15 (une équipée) ; les mécaniques Serment, Hauteur, Saisons, Fil d'eau, Fanfare ; les 24 évolutions avec leurs conditions (compteurs, quêtes, réputation, lieux) et leurs traits, depuis l'onglet Compagnie du menu, avec un Sceau de Maîtrise (un par boss de zone, 2 chez Maître Lorn). Plusieurs traits et conditions sont **adaptés** au moteur actuel (n°145, n°146, à valider) : la colonne « Évolutions » des fiches ci-dessous garde le texte d'origine, `data/classes.json` fait foi.
 
 ### 10.1 Règles générales
 
@@ -1602,7 +1606,9 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 29. **Hébergement** (16/10/2026) : le jeu compilé est servi sur `umbratech.fr/vaelmor/play/`. Le serveur fait un simple `git pull` du dépôt, sans étape de build : la sortie du build (`vaelmor/play/`) est donc commitée. La page d'attente reste sur `/vaelmor/` avec un lien « Jouer ».
 30. **Musique** (précision de la n°23) : les pistes sont générées avec Suno par l'auteur (voir `music/README.md`) ; chaque piste retenue est tracée dans `CREDITS.md`.
 31. **Version de Phaser** (16/10/2026, précision de la n°1) : **Phaser 4** (4.2.1). La branche 3.x n'évolue plus depuis la 3.90 (mai 2025) ; Phaser 4 est stable depuis avril 2026, garde la même API de haut niveau et apporte un nouveau moteur de rendu (filtres, éclairage) utile au pilier « Beauté d'abord ». Le reste de la pile n° 1 est inchangé (TypeScript, Vite, Tiled).
+32. **Jalon M6** (02/11/2026) : passives (n°93), mécaniques de classe (n°123 à n°127), XP (n°128 à n°132), compagnie (n°133 à n°139), évolutions (n°140 à n°144) validées ; adaptations n°145 à n°150 à valider. Détail dans PROGRESS.md.
 
 ---
 
 *Fin du document v0.2.*
+
