@@ -7,7 +7,7 @@ Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, p
 
 ## Prochain jalon
 **Lot « dialogues de combat » (moteur, voir ci-dessous)**, puis M7, M8, M10 (ordre du GDD §17).
-**À faire par l'auteur pour allumer le compte en ligne (M9b)** : voir `api/INSTALL.md` (importer `api/schema.sql` dans la base de Vaelmor, créer les secrets `VAELMOR_DB_*` et `VAELMOR_SECRET`, relancer le déploiement, essayer « Compte » au titre).
+Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2026** (schéma importé, secrets créés, connexion et sauvegarde OK).
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
 
@@ -65,7 +65,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
   - [x] Alliés verts : gardes, alliés de passage, alliés errants, phase alliée (§7.8)
 - [x] **M6 : XP, niveaux, classes** (02/11/2026) — voir « Livré en M6 » ; décisions n°93 et n°123 à n°150 validées le 02/11/2026
 - [x] **M9 : sauvegarde** (02/11/2026) — voir « Livré en M9 » ; décisions n°151 à n°169 validées le 02/11/2026, n°170 à n°173 (compte en ligne) à valider
-- [x] **M9b : compte et sauvegarde en ligne** (03/11/2026) — voir « Livré en M9b » ; décisions n°170 à n°173 validées le 03/11/2026 ; à allumer par l'auteur (`api/INSTALL.md`)
+- [x] **M9b : compte et sauvegarde en ligne** (03/11/2026) — voir « Livré en M9b » ; décisions n°170 à n°173 validées le 03/11/2026 ; en service depuis le 03/11/2026
 - [ ] Lot « dialogues de combat », M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
