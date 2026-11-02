@@ -15,6 +15,7 @@
  */
 import { strikeOdds } from '../combat/combat';
 import { distance, getUnit, inBounds, reachable } from '../tactics/grid';
+import { talkRefusal, talkTargets, talkableEnemies } from '../tactics/talk';
 import { hostile, type BattleRules, type BattleState, type BattleUnit, type Cell } from '../tactics/types';
 import { approach, bestAction, healScore, threatReach, type AiPlan } from './enemyAi';
 
@@ -47,6 +48,9 @@ export function planAllyAction(state: BattleState, unitId: string, rules: Battle
   const unit = getUnit(state, unitId);
   const here: Cell = { x: unit.x, y: unit.y };
   const stops = reachable(state, unit).stops.filter((c) => inBounds(state.map, c.x, c.y));
+  // Allié vert nommé : parler d'abord à un nommé recrutable qui l'écouterait (n°184).
+  const talk = talkPlan(state, unit, [here, ...stops], rules);
+  if (talk) return talk;
   const best = bestAction(state, unit, stops, rules, (target) => (hostile(target.team, unit.team) ? menaceBonus(state, target, rules) : 0));
   if (best && best.score > -Infinity) return best.plan;
   // Rester à `leash` cases au plus d'un membre de la compagnie.
@@ -66,6 +70,24 @@ export function planAllyAction(state: BattleState, unitId: string, rules: Battle
     }
   }
   return { unitId, to: rejoin, targetId: null };
+}
+
+/**
+ * Allié vert nommé interlocuteur d'un nommé recrutable : il va lui parler s'il
+ * peut se coller à lui ce tour-ci et si le nommé accepterait (pas de refus
+ * inutile). La première case d'arrêt qui convient l'emporte (déterministe).
+ */
+function talkPlan(state: BattleState, unit: BattleUnit, stops: readonly Cell[], rules: BattleRules): AiPlan | null {
+  if (unit.charId === null) return null;
+  const willing = talkableEnemies(state, unit, rules).filter((e) => talkRefusal(state, e, rules) === null);
+  if (willing.length === 0) return null;
+  for (const stop of stops) {
+    const occupied = state.units.some((u) => u !== unit && u.hp > 0 && u.x === stop.x && u.y === stop.y);
+    if (occupied) continue;
+    const target = talkTargets(state, unit, rules, stop).find((e) => willing.includes(e));
+    if (target) return { unitId: unit.id, to: stop, targetId: null, talkId: target.id };
+  }
+  return null;
 }
 
 export { healScore };

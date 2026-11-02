@@ -150,5 +150,14 @@
     "evening": 0,
     "eveningDarkness": 0.45,
     "wheatHide": { "dense": 10, "edge": 6 }
+  },
+  "namedPop": {
+    "base": 4,
+    "step": 1,
+    "cap": 12,
+    "deployedWeight": 3,
+    "levelBonus": 1,
+    "excludeEncounters": ["milice_aubemer", "milice_racine", "milice_brume", "milice_cendre"],
+    "sceneCap": 3
   }
 }

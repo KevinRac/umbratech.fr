@@ -62,6 +62,9 @@ export const CLASS_DETAILS: Readonly<Record<string, readonly (readonly DetailKin
   faconneur_de_racines: [['fleurs'], ['laurier'], ['fleurs', 'laurier']],
   ingenieur_des_ruines: [['chapeau'], ['bandeau'], ['chapeau', 'plume']],
   chasseur_de_serpents_de_mer: [['cornes'], ['masque'], ['cornes', 'masque']],
+  // Échos d'ennemis nommés (n°175) : un détail de bandit, jamais une couleur (celles des camps).
+  ecumeur_sabreur: [['masque'], ['bandeau'], ['masque', 'bandeau']],
+  ecumeur_incendiaire: [['cornes'], ['masque'], ['bandeau']],
 };
 const DEFAULT_DETAILS: readonly (readonly DetailKind[])[] = [['laurier'], ['plume'], ['bandeau']];
 

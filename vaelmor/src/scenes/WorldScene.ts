@@ -11,7 +11,8 @@ import Phaser from 'phaser';
 import { worldZoomFor } from '../core/viewport';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
-import { getWorldState, setSessionState, setWorldState } from '../core/session';
+import { getLastDeployed, getWorldState, setSessionState, setWorldState } from '../core/session';
+import { rollNamedPop } from '../logic/game/namedRules';
 import { autoSave, loadIntoSession, newGameId, setPlayClock } from '../core/gameSave';
 import type { SaveEnvelope } from '../logic/save/schema';
 import type { GameMode } from '../logic/game/progress';
@@ -951,6 +952,22 @@ export class WorldScene extends Phaser.Scene {
     return planAllies({ data: this.data_, site, zoneValue, villages, errants, rng, errantRecords: this.state.progress.errants });
   }
 
+  /** Tirage d'un ennemi nommé de passage (n°115, n°185, n°186) ; le compteur anti-malchance vit dans la progression. */
+  private rollNamed(encounterId: string, site: { x: number; y: number }): { enemy: string; level: number } | null {
+    const zoneValue = this.map.zones[site.y * this.map.width + site.x] as number;
+    const zone = this.data_.zones.find((z) => z.value === zoneValue)?.id;
+    if (!zone) return null;
+    return rollNamedPop({
+      data: this.data_,
+      progress: this.state.progress,
+      flags: this.state.openFlags,
+      encounter: findEncounter(this.data_, encounterId),
+      zone,
+      lastDeployed: getLastDeployed(),
+      rng: Rng.fromSeed(`${site.x},${site.y}:${Math.round(this.state.progress.clock)}:named`),
+    });
+  }
+
   private removeNpc(actor: NpcActor): void {
     actor.sprite.destroy();
     actor.shadow.destroy();
@@ -1231,6 +1248,9 @@ export class WorldScene extends Phaser.Scene {
     const tile = this.map.tileSize;
     const where = site ?? { x: Math.floor(this.body_.x / tile), y: Math.floor((this.body_.y - 1) / tile) };
     const allies = this.planBattleAllies(where);
+    // Un ennemi nommé peut surgir dans un combat ordinaire (GDD §7.9, n°115).
+    const named = this.rollNamed(encounterId, where);
+    const extraEnemies = [...(options.extraEnemies ?? []), ...(named ? [named] : [])];
     const data = {
       encounterId,
       returnTo: 'world',
@@ -1239,7 +1259,7 @@ export class WorldScene extends Phaser.Scene {
       ...(options.initiative ? { initiative: true } : {}),
       ...(options.ambush ? { ambush: true } : {}),
       ...(options.foeId ? { foeId: options.foeId } : {}),
-      ...(options.extraEnemies && options.extraEnemies.length > 0 ? { extraEnemies: options.extraEnemies } : {}),
+      ...(extraEnemies.length > 0 ? { extraEnemies } : {}),
     };
     camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, data));
   }

@@ -10,7 +10,6 @@ import {
   BATTLE_MAP_LIMITS,
   CLASS_ROLES,
   balanceFileSchema,
-  enemiesFileSchema,
   encountersFileSchema,
   itemsFileSchema,
   classesFileSchema,
@@ -47,6 +46,8 @@ import {
 } from './townSchemas';
 import { alliesFileSchema, type AllyTemplateDef, type AllyVillageDef, type WandererDef } from './allySchemas';
 import { companyFileSchema, type CompanyFile } from './companySchemas';
+import { battleQuotesFileSchema, enemiesWithNamedFileSchema, type NamedEnemyDef, type SceneDef } from './talkSchemas';
+import { checkTalk } from './talkChecks';
 
 z.config(z.locales.fr());
 
@@ -59,7 +60,7 @@ export const DATA_SCHEMAS = {
   classes: classesFileSchema,
   zones: zonesFileSchema,
   items: itemsFileSchema,
-  enemies: enemiesFileSchema,
+  enemies: enemiesWithNamedFileSchema,
   encounters: encountersFileSchema,
   locations: locationsFileSchema,
   quests: questsFileSchema,
@@ -67,6 +68,7 @@ export const DATA_SCHEMAS = {
   skills: skillsFileSchema,
   allies: alliesFileSchema,
   company: companyFileSchema,
+  battleQuotes: battleQuotesFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -107,6 +109,13 @@ export interface GameData {
   readonly wanderers: readonly WandererDef[];
   /** La compagnie : héros, compagnons du départ, niveaux des recrues (jalon M6). */
   readonly company: CompanyFile;
+  /**
+   * Ennemis nommés (GDD §7.9) : leurs fiches. Chacun a aussi sa fiche d'ennemi
+   * complète dans `enemies` (le modèle `skinOf` avec son nom et son détail).
+   */
+  readonly named: readonly NamedEnemyDef[];
+  /** Scènes des dialogues de combat (`battleQuotes.json`). */
+  readonly scenes: readonly SceneDef[];
 }
 
 export type ValidationResult =
@@ -249,6 +258,7 @@ function crossCheck(data: GameData): string[] {
   checkWorldFoes(data, issues);
   checkSkills(data, issues);
   checkAllies(data, issues);
+  checkTalk(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -425,7 +435,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     classes: z.infer<typeof classesFileSchema>;
     zones: z.infer<typeof zonesFileSchema>;
     items: z.infer<typeof itemsFileSchema>;
-    enemies: z.infer<typeof enemiesFileSchema>;
+    enemies: z.infer<typeof enemiesWithNamedFileSchema>;
     encounters: z.infer<typeof encountersFileSchema>;
     locations: z.infer<typeof locationsFileSchema>;
     quests: z.infer<typeof questsFileSchema>;
@@ -433,6 +443,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     skills: z.infer<typeof skillsFileSchema>;
     allies: z.infer<typeof alliesFileSchema>;
     company: z.infer<typeof companyFileSchema>;
+    battleQuotes: z.infer<typeof battleQuotesFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -442,7 +453,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     classes: files.classes.classes,
     zones: files.zones.zones,
     weapons: files.items.weapons,
-    enemies: files.enemies.enemies,
+    enemies: [...files.enemies.enemies, ...namedEnemyDefs(files.enemies.enemies, files.enemies.named)],
     encounters: files.encounters,
     consumables: files.items.consumables,
     accessories: files.items.accessories,
@@ -458,11 +469,28 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     allyVillages: files.allies.villages,
     wanderers: files.allies.wanderers,
     company: files.company,
+    named: files.enemies.named,
+    scenes: files.battleQuotes.scenes,
   };
 
   const crossIssues = crossCheck(data);
   if (crossIssues.length > 0) return { ok: false, issues: crossIssues };
   return { ok: true, data, issues: [] };
+}
+
+/**
+ * Fiches d'ennemi des nommés (n°105, n°175) : le modèle `skinOf` avec le nom,
+ * le titre et l'apparence du nommé (sprite du modèle + détail, `modele#n`).
+ * Un modèle inconnu est signalé par `checkTalk` ; le nommé est alors ignoré ici.
+ */
+export function namedEnemyDefs(models: readonly EnemyDef[], named: readonly NamedEnemyDef[]): EnemyDef[] {
+  const out: EnemyDef[] = [];
+  for (const n of named) {
+    const model = models.find((e) => e.id === n.skinOf);
+    if (!model) continue;
+    out.push({ ...model, id: n.id, name: n.name, title: n.title ?? model.title ?? model.name, sprite: `${model.sprite}#${n.detail}` });
+  }
+  return out;
 }
 
 /** Erreur levée quand les données embarquées sont invalides. */

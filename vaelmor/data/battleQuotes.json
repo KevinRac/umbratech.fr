@@ -1,0 +1,82 @@
+{
+  "$comment": "Scènes des dialogues de combat (GDD §7.9, bible narrative §7 à §9, décisions n°105 à n°115 et n°174 à n°191). Une scène lie un ennemi nommé ou un boss (`enemy`) à des unités (`units` : compagnie, ennemis nommés recrutés, alliés verts nommés). `kind` : `battle` (avant l'échange de coups, dans le sens `direction`), `talk` (Parler : `lines` au succès, `onFail` au refus), `death` (mort de l'ennemi, selon qui porte le coup ; `units` vide : quel que soit l'auteur), `phase` (passage du boss en phase 2, selon qui l'y pousse ; remplace la réplique de sa fiche), `mourn` (deuil : l'allié vert lié est tombé avant sa scène). `when` : conditions. `once` (défaut : vrai) : une fois par partie ; faux : une fois par combat. `speaker` : un personnage ; `mood` : humeur du portrait (neutral, happy, angry, sad, surprised). Contenu pilote du moteur (n°174) : l'écriture des scènes vient en M7.",
+  "scenes": [
+    {
+      "id": "brakk_nessa",
+      "enemy": "brakk",
+      "units": ["nessa"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "nessa", "text": "C'est toi qui as arrêté mon père au pont.", "mood": "angry" },
+        { "speaker": "brakk", "text": "Un péage, gamine. Il a refusé de payer." },
+        { "speaker": "nessa", "text": "Alors je viens récupérer ce qu'il t'a laissé.", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "brakk_alden",
+      "enemy": "brakk",
+      "units": ["alden"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "brakk", "text": "Sire Alden. Tu as encore ton épée, à ce que je vois." },
+        { "speaker": "alden", "text": "Et toi, toujours ce bout de cape de la garnison. Tu devrais avoir honte.", "mood": "angry" },
+        { "speaker": "brakk", "text": "Honte ? Elle ne m'a pas défendu quand la mer est montée." }
+      ]
+    },
+    {
+      "id": "brakk_phase",
+      "enemy": "brakk",
+      "units": ["nessa", "alden"],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "brakk", "text": "Assez ! Vous croyez que je pille pour le plaisir ?" },
+        { "speaker": "brakk", "text": "Personne ne viendra ! Alors viens me chercher !" }
+      ]
+    },
+    {
+      "id": "rik_nessa_parler",
+      "enemy": "rik",
+      "units": ["nessa"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "nessa", "text": "Rik ? C'est toi, sous cette cagoule ?", "mood": "surprised" },
+        { "speaker": "rik", "text": "Nessa... Je ne savais pas que c'était ton père, au pont." },
+        { "speaker": "nessa", "text": "Tu le sais maintenant. Reviens avec moi.", "mood": "sad" },
+        { "speaker": "rik", "text": "...Je n'ai plus de maison. Mais j'ai encore mes jambes." }
+      ],
+      "onFail": [
+        { "speaker": "nessa", "text": "Rik ? Attends, c'est moi !", "mood": "surprised" },
+        { "speaker": "rik", "text": "Va-t'en, Nessa. Pas encore." }
+      ]
+    },
+    {
+      "id": "rik_nessa_mort",
+      "enemy": "rik",
+      "units": ["nessa"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "rik", "text": "Nessa... Dis au charron... que je suis désolé." },
+        { "speaker": "nessa", "text": "Rik ! Non...", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "gorm_nessa",
+      "enemy": "gorm",
+      "units": ["nessa"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "gorm", "text": "Tiens, la petite du gué. La grange de Thom a bien flambé, l'an dernier." },
+        { "speaker": "nessa", "text": "Il l'a reconstruite. Toi, tu ne reconstruiras rien.", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "gorm_nessa_mort",
+      "enemy": "gorm",
+      "units": ["nessa"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "gorm", "text": "Le feu... finit toujours... par s'éteindre..." }
+      ]
+    }
+  ]
+}

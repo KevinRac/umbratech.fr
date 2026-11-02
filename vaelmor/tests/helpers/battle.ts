@@ -5,9 +5,10 @@
  *   #  pont     r  ruines  v  village s  plage      ,  marais    w  eau profonde
  */
 import { loadGameData } from '../../src/data';
-import type { EncounterDef, PartyMemberDef } from '../../src/data/schemas';
+import type { EncounterDef } from '../../src/data/schemas';
 import { battleRules, buildBattle } from '../../src/logic/tactics/encounter';
-import { allyUnit, emptyLoadout, type Loadout } from '../../src/logic/tactics/units';
+import { allyUnit, emptyLoadout, type Loadout, type MemberLike } from '../../src/logic/tactics/units';
+import type { TalkContext } from '../../src/logic/tactics/talk';
 import { getUnit } from '../../src/logic/tactics/grid';
 import type { BattleRules, BattleState, BattleUnit } from '../../src/logic/tactics/types';
 
@@ -17,6 +18,8 @@ export interface TestAlly {
   readonly at: readonly [number, number];
   readonly hero?: boolean;
   readonly name?: string;
+  /** Personnage (« nessa ») : pour les scènes de combat (GDD §7.9). */
+  readonly id?: string;
 }
 
 /** Allié vert posé à la main (camp « ally », mené par l'IA). */
@@ -25,6 +28,8 @@ export interface TestGreen {
   readonly level?: number;
   readonly at: readonly [number, number];
   readonly sprite?: string;
+  /** Modèle d'allié vert nommé (« voyageur_arme ») : il a des scènes de combat. */
+  readonly named?: string;
 }
 
 export interface TestEnemy {
@@ -44,10 +49,11 @@ export function makeBattle(
   map: readonly string[],
   allies: readonly TestAlly[],
   enemies: readonly TestEnemy[],
-  options: { objective?: 'rout' | 'boss'; seed?: string; initiative?: boolean; greens?: readonly TestGreen[]; loadouts?: readonly Loadout[] } = {},
+  options: { objective?: 'rout' | 'boss'; seed?: string; initiative?: boolean; greens?: readonly TestGreen[]; loadouts?: readonly Loadout[]; talk?: TalkContext } = {},
 ): BattleState {
   const hasHero = allies.some((a) => a.hero);
-  const party: PartyMemberDef[] = allies.map((a, i) => ({
+  const party: MemberLike[] = allies.map((a, i) => ({
+    ...(a.id ? { id: a.id } : {}),
     name: a.name ?? `Allié ${i}`,
     class: a.class,
     level: a.level ?? 1,
@@ -66,7 +72,7 @@ export function makeBattle(
     victoryFlags: options.objective === 'boss' ? ['boss_test'] : [],
   };
   const data = loadGameData();
-  const state = buildBattle(encounter, party, data, { seed: options.seed ?? 'test', initiative: options.initiative ?? false, loadouts: options.loadouts ?? party.map(() => emptyLoadout()) });
+  const state = buildBattle(encounter, party, data, { seed: options.seed ?? 'test', initiative: options.initiative ?? false, loadouts: options.loadouts ?? party.map(() => emptyLoadout()), ...(options.talk ? { talk: options.talk } : {}) });
   // Le constructeur trie le héros en tête : on retrouve chaque allié par son nom pour le poser.
   const players = state.units.filter((u) => u.team === 'player');
   allies.forEach((a, i) => {
@@ -78,7 +84,7 @@ export function makeBattle(
   // Alliés verts : g0, g1… dans l'ordre donné.
   const r = battleRules(data);
   (options.greens ?? []).forEach((g, i) => {
-    const template = { id: `test_${i}`, name: `Vert ${i}`, class: g.class, sprite: g.sprite ?? g.class, levelOffset: 0 };
+    const template = { id: g.named ?? `test_${i}`, name: `Vert ${i}`, class: g.class, sprite: g.sprite ?? g.class, levelOffset: 0, ...(g.named ? { named: true } : {}) };
     const u = allyUnit(data, r, template, g.level ?? 1, 'passage', null, `g${i}`);
     u.x = g.at[0];
     u.y = g.at[1];

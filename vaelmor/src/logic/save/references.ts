@@ -68,6 +68,11 @@ export function checkReferences(save: SaveData, data: GameData): ReferenceReport
   const wanderers = new Set(data.wanderers.map((w) => w.id));
   for (const w of Object.keys(p.errants)) if (!wanderers.has(w)) delete p.errants[w];
   if (p.wounded) for (const w of Object.keys(p.wounded)) if (!wanderers.has(w)) delete p.wounded[w];
+  // Dialogues de combat (n°189) : scènes et nommés disparus oubliés en silence.
+  const scenes = new Set(data.scenes.map((sc) => sc.id));
+  p.scenesSeen = p.scenesSeen.filter((sc) => scenes.has(sc));
+  const named = new Set(data.named.map((n) => n.id));
+  for (const n of Object.keys(p.named)) if (!named.has(n)) delete p.named[n];
 
   // Réputation : cibles disparues retirées, nouvelles cibles à leur valeur de départ.
   const starts = new Map<string, number>();

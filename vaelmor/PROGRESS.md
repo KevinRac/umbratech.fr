@@ -3,10 +3,10 @@
 > Fichier de continuité entre les conversations. À mettre à jour en fin de chaque jalon.
 
 ## Reprise (prompt à coller dans une nouvelle conversation)
-Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
+Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md`, `docs/STORY_BIBLE.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**Lot « dialogues de combat » (moteur, voir ci-dessous)**, puis M7, M8, M10 (ordre du GDD §17).
+**M7 (contenu du monde)**, puis M8, M10 (ordre du GDD §17). Le lot « dialogues de combat » (moteur) est livré le 03/11/2026 : M7 y ajoute les scènes, les portraits des nommés et les alliés verts nommés.
 Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2026** (schéma importé, secrets créés, connexion et sauvegarde OK).
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
@@ -15,9 +15,9 @@ Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2
 
 Livré : **`docs/STORY_BIBLE.md`** (ton, chronologie, héros, intrigue en 3 actes, 12 recrues, boss, 6 nommés recrutables, 6 nommés non recrutables, table des liens, scènes d'exemple, schéma de données) et **GDD §7.9** (règles). Aucun code. Modèle : citations de combat et « Parler » de *Fire Emblem : The Sacred Stones*. **Pas de dialogues ni de bonus entre alliés** (décision de l'auteur) : seuls comptent les ennemis nommés et les boss.
 
-- [ ] **Lot « dialogues de combat » (moteur)**, à faire entre M6 et M7 (inclut l'apparition aléatoire des nommés, n°115) : déclencheurs (attaque, riposte, compétence ciblée, mort, phase 2), action **Parler** (adjacence, interlocuteurs, prérequis, délai), recrutement d'un ennemi, journal des rencontres, indicateur dans la préparation, scènes d'allié vert nommé scriptées, limite de 3 scènes par combat. Données : `battleQuotes.json`, champs `named` / `skinOf` / `portrait` / `recruit`.
+- [x] **Lot « dialogues de combat » (moteur)** — livré le 03/11/2026, voir « Livré : dialogues de combat » ; décisions n°174 à n°191 validées le 03/11/2026.
 - [ ] **M7 (contenu)** : écrire environ 50 scènes, portraits des nommés, promouvoir en alliés verts nommés une vingtaine de figures de village (n°109, bible §7.4), ajouter Orvane et les 3 fins, relire les dialogues de village pour qu'ils suivent l'arc de chaque recrue.
-- [ ] **Sauvegarde des dialogues de combat** : retenir scènes vues, nommés recrutés, perdus ou vaincus. M9 est livré sans ces champs : le lot les ajoutera par la première vraie migration (format v1 → v2, `src/logic/save/migrations.ts`, avec un test qui charge `tests/fixtures/save-v1.json`). Les membres perdus en mode Classique sont déjà dans `Progress.fallen`.
+- [x] **Sauvegarde des dialogues de combat** : format v2 (`scenesSeen`, `named`, `namedPity`), première vraie migration v1 → v2, testée sur `tests/fixtures/save-v1.json` (n°189).
 
 ### Décisions n°105 à n°115 — validées par l'auteur le 22/10/2026 (n°109 et n°111 révisées le 21/10 : plus nombreuses)
 - **n°105 — Trois catégories d'ennemis** : commun (muet), nommé (nom, portrait, liens), boss (nommé, jamais recrutable). Un **Écho** est un nommé dont le skin dérive d'un modèle existant (`skinOf`).
@@ -66,7 +66,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M6 : XP, niveaux, classes** (02/11/2026) — voir « Livré en M6 » ; décisions n°93 et n°123 à n°150 validées le 02/11/2026
 - [x] **M9 : sauvegarde** (02/11/2026) — voir « Livré en M9 » ; décisions n°151 à n°169 validées le 02/11/2026, n°170 à n°173 (compte en ligne) à valider
 - [x] **M9b : compte et sauvegarde en ligne** (03/11/2026) — voir « Livré en M9b » ; décisions n°170 à n°173 validées le 03/11/2026 ; en service depuis le 03/11/2026
-- [ ] Lot « dialogues de combat », M7, M8, M10 (ordre du GDD §17)
+- [x] **Lot « dialogues de combat » (moteur)** (03/11/2026) — voir « Livré : dialogues de combat » ; décisions n°174 à n°191 validées le 03/11/2026
+- [ ] M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -453,3 +454,36 @@ Sauvegarde complète dans le navigateur (GDD §14, §9.13). Modèle conseillé p
 - **Retouche M9** : la sauvegarde automatique d'arrivée (nouvelle partie, retour de combat) attend 0,6 s pour que le lieu du résumé soit connu (elle disait « Vaelmor »).
 - **Tests** : 680 au vert (+8 dans `tests/api.test.ts` : `planSync` dans tous les cas ; somme PHP identique à celle du jeu, accents, emoji, U+2028, objets vides, nombres ; l'API complète sous `php -S` avec SQLite et e-mails dans un fichier : code envoyé, délai entre deux codes, mauvais code, bon code, code à usage unique, écriture, conflit 409, liste, lecture, somme fausse, autre jeu, emplacement inconnu, 200 Ko, protection CSRF, suppression avec révision, déconnexion ; sautés sans PHP).
 - **Vérifié dans Chrome** avec le jeu compilé et l'API locale (PHP + SQLite) : connexion par code depuis le titre, envoi de la sauvegarde auto, conflit (autre appareil + changement local) présenté au titre et tranché en faveur de la version en ligne, sauvegarde auto en partie envoyée (révision 2 → 3).
+
+## Livré : dialogues de combat (moteur, 03/11/2026)
+Règles et réglages : GDD §7.9.1. Modèle conseillé pour M7 : Opus, effort moyen à élevé (beaucoup d'écriture et de données ; le moteur est en place).
+
+- **Données** (validées par schémas et contrôles croisés, `src/data/talkSchemas.ts`, `src/data/talkChecks.ts`) : `enemies.json › named` (fiches nommées, fusionnées avec leur modèle par `namedEnemyDefs` dans `validate.ts`), `data/battleQuotes.json` (nouveau fichier, 7 scènes pilotes), `named` sur les 5 alliés errants (`allies.json`), `balance.json › namedPop` (4 %, +1, 12 %, ×3, niveau +1, milices exclues, plafond de 3 scènes). `npm run validate-data` compte les nommés et les scènes ; les contrôles refusent une scène « talk » sans refus, une citation sans unité, un ennemi commun, un interlocuteur sans scène, une phase hors boss, un orateur ou une référence inconnus.
+- **Contenu pilote (n°174)** : Brakk × Nessa, Brakk × Alden, phase 2 de Brakk ; Rik « le Cadet » (Parler avec Nessa, refus, citation de mort) ; Gorm l'Incendiaire (citation de combat et de mort avec Nessa).
+- **Identité des unités** : `BattleUnit.charId` (membre de la compagnie, ennemi, modèle d'allié vert nommé) ; `MemberLike.id`.
+- **Logique pure** : `logic/tactics/talk.ts` — `evalCondition` / `conditionHolds`, `weaveScenes` (appelé par toutes les commandes du combat : citation avant l'échange, mort avant la chute, phase après `bossPhase` dont la réplique est vidée, deuil), plafond et réservation du boss, `talkTargets`, `talkableEnemies`, `talkRefusal`, `talkUnit` (refus : `spared` ; succès : unité remplacée sur sa case, événement `recruit`), `talkResults`. `logic/game/namedRules.ts` — `talkContextOf`, `namedCandidates`, `namedPopChance`, `rollNamedPop` (appelé par `WorldScene.startBattle`), `applyTalkResults` (scènes vues, sort des nommés, recrues, rançon, blessure ou perte). Nouvelle commande `talkAction` ; IA ennemie : une unité épargnée n'est pas visée ; IA alliée : un allié vert nommé interlocuteur parle d'abord, seulement si le nommé accepterait.
+- **Sauvegarde v2** : `Progress.scenesSeen`, `named`, `namedPity` ; migration v1 → v2 ; scènes et nommés disparus oubliés au chargement (`references.ts`).
+- **Rendu** : `ui/TalkBox.ts` (boîte de scène, portraits face à face, machine à écrire, Échap, en haut quand les unités sont en bas de l'écran), `ui/talkView.ts` (visages : ennemi de la scène, unités sur la carte, compagnie, recrues de village, données) ; `BattleHudScene.talk` ; `BattleScene` : événements `scene` et `recruit`, entrée « Parler » et visée (or doux), phylactère (`BATTLE_TEX.talkMark`), lignes « Ennemis en vue » de la préparation, écran de fin (recrues, rançon, nommés perdus), debug. Échos : détail peint sur les sprites générés (`ensureMapSprite`, `PixelCanvas.pixels`) ; détails des Écumeurs dans `CLASS_DETAILS` (Rik : foulard ; Gorm : cornes d'os). `MenuScene` : section « Rencontres » de l'onglet Quêtes, relecture d'une scène.
+- **Debug** : `?debug&named=rik[:niv],gorm`, `&quests=colporteur_perdu`, `&scenes=reset` ; ligne « SCÈNES n/3 » dans l'écran de debug du combat.
+- **Tests** : 707 au vert (+27 : `tests/talk.test.ts` 26 — données, citations dans les deux sens, `once`, compétence de zone et à cible unique, mort, phase, plafond, réservation du boss, deuil, Parler, refus et unité épargnée, changement de camp, victoire par recrutement, délai, rançon, perdu / vaincu, allié vert qui parle, apparition au hasard, bilan sur la partie ; `save.test.ts` : migration v1 → v2 et aller-retour v2).
+- **Vérifié dans Chrome** (SwiftShader, 960×540) : préparation avec Rik et Gorm, menu « Parler » et phylactère, scène Parler (Nessa, Rik), recrutement, citation de combat et de mort de Gorm, citation et scène de phase de Brakk, journal des rencontres et relecture ; aucune erreur console (hors favicon du serveur de développement).
+
+### Décisions n°174 à n°191 (lot « dialogues de combat ») — validées par l'auteur le 03/11/2026
+- **n°174 — Contenu pilote** : seules les scènes d'exemple de la bible (Brakk, Rik, Gorm) ; scènes d'alliés verts nommés et de deuil vérifiées par des données de test.
+- **n°175 — Apparence d'un Écho** : sprite du modèle + détail visible (`#n`), sans couleur ; portrait provisoire = sprite de combat agrandi.
+- **n°176 — Plafond de 3** : citations de combat, de mort et de deuil seulement ; Parler et phases jamais bloquées ; une place réservée au boss.
+- **n°177 — Citation de combat** : attaque, riposte, compétence à cible unique ; pas de compétence de zone.
+- **n°178 — Auteur du coup** : dernier coup (échange, compétence, Brûlure, Poison, ronces).
+- **n°179 — Deuil** : au premier échange suivant avec l'ennemi, si l'allié vert lié est tombé avant sa scène.
+- **n°180 — Parler et prérequis** : « Parler » dès qu'un interlocuteur est collé ; refus = action perdue, unité épargnée par lui ce tour.
+- **n°181 — Changement de camp** : forme de compagnie aussitôt, PV en proportion, déjà joué ; rançon payée à la fin.
+- **n°182 — Arrivée** : à la fin du combat, quelle qu'en soit l'issue ; blessé s'il tombe ensuite (Blessure), perdu (Classique).
+- **n°183 — Sort des nommés** : recrutable tué = perdu ; non recrutable tué = vaincu ; retraite ou défaite = toujours disponible.
+- **n°184 — Alliés verts nommés** : scènes jouées seules ; Parler par l'IA alliée s'il accepterait.
+- **n°185 — Poids ×3** d'après le dernier déploiement.
+- **n°186 — Combats concernés** : rencontres ordinaires tirées du monde ; ni boss, ni scénario, ni milices ; niveau = plus haut ennemi + 1 ; zone voisine = rang ±1.
+- **n°187 — Affichage** : boîte de scène façon *Sacred Stones*, Échap passe, visible même animations désactivées ; phylactère ; lignes dans la préparation.
+- **n°188 — Journal des rencontres** dans l'onglet Quêtes.
+- **n°189 — Sauvegarde v2** (`scenesSeen`, `named`, `namedPity`).
+- **n°190 — Roster de 30 et tri / filtre par classe** : laissés à M7.
+- **n°191 — Outils de debug** : `named`, `quests`, `scenes=reset`, ligne SCÈNES.

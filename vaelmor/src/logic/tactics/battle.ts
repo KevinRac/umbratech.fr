@@ -23,6 +23,7 @@ import { checkBossPhases } from './bosses';
 import { canStop, getUnit, inWeaponRange, isFreeCell, nearestFreeCell, pathTo, reachable, terrainAt } from './grid';
 import { healUnit, useItem } from './items';
 import { useSkill } from './skills';
+import { talkUnit, weaveScenes } from './talk';
 import { expireStatuses, isStunned, statusDef } from './status';
 import { hostile, type BattleEvent, type BattleRules, type BattleState, type BattleUnit, type Cell, type Team } from './types';
 
@@ -34,7 +35,9 @@ export function readyUnits(state: BattleState): BattleUnit[] {
 }
 
 /** Ajoute à la fin des événements d'une commande les serments brisés et l'XP gagnée (jalon M6). */
-function withXp(state: BattleState, rules: BattleRules, events: BattleEvent[]): BattleEvent[] {
+function withXp(state: BattleState, rules: BattleRules, commandEvents: BattleEvent[]): BattleEvent[] {
+  // Dialogues de combat (GDD §7.9) : citations glissées avant les échanges et les chutes.
+  const events = weaveScenes(state, rules, commandEvents);
   events.push(...trackOaths(state, events));
   tallyEvents(state, events);
   events.push(...grantXp(state, rules, events));
@@ -119,6 +122,11 @@ export function skillAction(state: BattleState, unitId: string, skillId: string,
 /** Utilise un objet porté (voir `items.ts`). */
 export function itemAction(state: BattleState, unitId: string, item: string, targetId: string, rules: BattleRules): BattleEvent[] {
   return withXp(state, rules, [...useItem(state, unitId, item, targetId, rules), ...afterAction(state, rules)]);
+}
+
+/** Parler à un ennemi nommé recrutable (voir `talk.ts`, GDD §7.9). */
+export function talkAction(state: BattleState, unitId: string, targetId: string, rules: BattleRules): BattleEvent[] {
+  return withXp(state, rules, talkUnit(state, unitId, targetId, rules));
 }
 
 /** Soigne un allié au bâton (voir `items.ts`). */

@@ -1,5 +1,5 @@
 {
-  "$comment": "Alliés verts (jalon M5, GDD §7.8). Toujours gérés par une IA, jamais par le joueur ; ils ne comptent ni dans le déploiement ni dans la défaite. `templates` : modèles d'unités (classe de classes.json, apparence de combat de render/unitSprites.ts dessinée en vert, niveau = milieu des niveaux de la zone + levelOffset). `villages` : gardes (fixes, garantis à partir d'« Amical » : 1 garde, 2 à partir d'« Allié » ; balance.allies) et alliés de passage (un tiré au sort, chance selon le palier : 0/10/20/35 %). `wanderers` : alliés errants, des PNJ (même format que locations.json) qui parcourent `route` en boucle, s'abordent (salutation, sujets, petit cadeau) et rejoignent les combats proches (d'office à moins de balance.allies.errantJoinRange cases, sinon 50 % s'ils le voient). Un errant tombé au combat est blessé jusqu'au prochain repos à l'auberge.",
+  "$comment": "Alliés verts (jalon M5, GDD §7.8). `named` : allié vert nommé (errant, figure de village), qui a des scènes de combat avec les ennemis nommés (GDD §7.9). Toujours gérés par une IA, jamais par le joueur ; ils ne comptent ni dans le déploiement ni dans la défaite. `templates` : modèles d'unités (classe de classes.json, apparence de combat de render/unitSprites.ts dessinée en vert, niveau = milieu des niveaux de la zone + levelOffset). `villages` : gardes (fixes, garantis à partir d'« Amical » : 1 garde, 2 à partir d'« Allié » ; balance.allies) et alliés de passage (un tiré au sort, chance selon le palier : 0/10/20/35 %). `wanderers` : alliés errants, des PNJ (même format que locations.json) qui parcourent `route` en boucle, s'abordent (salutation, sujets, petit cadeau) et rejoignent les combats proches (d'office à moins de balance.allies.errantJoinRange cases, sinon 50 % s'ils le voient). Un errant tombé au combat est blessé jusqu'au prochain repos à l'auberge.",
   "templates": [
     { "id": "garde_haut_gue", "name": "Garde de Haut-Gué", "class": "gardien_des_marees", "sprite": "milicien", "levelOffset": 0 },
     { "id": "milicien_haut_gue", "name": "Milicien de Haut-Gué", "class": "lame_du_serment", "sprite": "milicien", "levelOffset": -1 },
@@ -13,11 +13,11 @@
     { "id": "lanterne_pierre_haute", "name": "Porte-Lanterne de la Cime", "class": "porte_lanterne", "sprite": "porte_lanterne", "levelOffset": -1 },
     { "id": "garde_valcendre", "name": "Garde de Valcendre", "class": "gardien_des_marees", "sprite": "milicien", "levelOffset": 0 },
     { "id": "arbaletrier_valcendre", "name": "Arbalétrier de Valcendre", "class": "ingenieur_des_ruines", "sprite": "ingenieur_des_ruines", "levelOffset": -1 },
-    { "id": "voyageur_arme", "name": "Aldric", "class": "lame_du_serment", "sprite": "lame_du_serment", "levelOffset": 0 },
-    { "id": "chasseuse_errante", "name": "Brune", "class": "veilleur_des_falaises", "sprite": "veilleur_des_falaises", "levelOffset": 0 },
-    { "id": "ermite_des_greves", "name": "Frère Anselme", "class": "porte_lanterne", "sprite": "porte_lanterne", "levelOffset": 0 },
-    { "id": "chevalier_errant", "name": "Sire Gauvain", "class": "gardien_des_marees", "sprite": "gardien_des_marees", "levelOffset": 0 },
-    { "id": "mercenaire_repentie", "name": "Garance", "class": "heraut_des_bannieres", "sprite": "heraut_des_bannieres", "levelOffset": 0 }
+    { "id": "voyageur_arme", "name": "Aldric", "class": "lame_du_serment", "sprite": "lame_du_serment", "levelOffset": 0, "named": true },
+    { "id": "chasseuse_errante", "name": "Brune", "class": "veilleur_des_falaises", "sprite": "veilleur_des_falaises", "levelOffset": 0, "named": true },
+    { "id": "ermite_des_greves", "name": "Frère Anselme", "class": "porte_lanterne", "sprite": "porte_lanterne", "levelOffset": 0, "named": true },
+    { "id": "chevalier_errant", "name": "Sire Gauvain", "class": "gardien_des_marees", "sprite": "gardien_des_marees", "levelOffset": 0, "named": true },
+    { "id": "mercenaire_repentie", "name": "Garance", "class": "heraut_des_bannieres", "sprite": "heraut_des_bannieres", "levelOffset": 0, "named": true }
   ],
   "villages": [
     { "location": "haut_gue", "guards": ["garde_haut_gue", "milicien_haut_gue"], "passers": ["milicien_haut_gue", "chasseuse_haut_gue", "apprentie_haut_gue"] },

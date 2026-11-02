@@ -62,7 +62,8 @@ describe('champ de bataille', () => {
 
 describe('unités au gabarit commun (décision n°60)', () => {
   it('chaque classe, chaque ennemi et le héros ont une fiche', () => {
-    const sprites = ['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite)];
+    // Un ennemi nommé reprend le sprite de son modèle avec un détail (`modele#n`, n°175).
+    const sprites = ['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite.split('#')[0] as string)];
     for (const sprite of sprites) expect(UNIT_SPRITES[sprite], sprite).toBeDefined();
   });
 

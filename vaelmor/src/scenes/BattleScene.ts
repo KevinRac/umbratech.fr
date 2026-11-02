@@ -23,7 +23,9 @@ import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
 import { getGameCtx } from '../core/townContext';
-import { applyClassicLosses, ensureCompany, settleBattle, testCompany, type BattleEnd, type Settlement } from '../logic/game';
+import { applyClassicLosses, applyTalkResults, ensureCompany, settleBattle, talkContextOf, testCompany, type BattleEnd, type Settlement } from '../logic/game';
+import { EMPTY_TALK_CONTEXT, namedDef, talkResults, talkTargets, talkableEnemies, type TalkContext } from '../logic/tactics/talk';
+import { buildTalkView, type FaceLookup } from '../ui/talkView';
 import { applyBattleProgress, applyErrantProgress, isWounded } from '../logic/units/company';
 import { applyBattleCounters } from '../logic/progression/evolutions';
 import { equippedPassive, learnedPassives, LINEAGE, passiveLearnedAt, OATH_INFO, OATH_KINDS, SEASON_NAMES, seasonOf, type OathKind } from '../logic/progression/traits';
@@ -34,7 +36,7 @@ import { skinVariant } from '../logic/skinFrames';
 import { planAllyAction } from '../logic/ai/allyAi';
 import { planEnemyAction } from '../logic/ai/enemyAi';
 import { forecast } from '../logic/combat/combat';
-import { attackUnit, endPhase, healAction, itemAction, livingUnits, moveUnit, phaseComplete, readyUnits, skillAction, summarize, undoMove, waitUnit } from '../logic/tactics/battle';
+import { attackUnit, endPhase, healAction, itemAction, livingUnits, moveUnit, phaseComplete, readyUnits, skillAction, summarize, talkAction, undoMove, waitUnit } from '../logic/tactics/battle';
 import { phaseThreshold } from '../logic/tactics/bosses';
 import { battleRules, buildBattle, findEncounter, type AllyJoin } from '../logic/tactics/encounter';
 import { cellIndex, cellsInRange, getUnit, inBounds, inWeaponRange, pathTo, reachable, targetsFrom, terrainAt, threatCells, unitAt, type Reach } from '../logic/tactics/grid';
@@ -107,7 +109,7 @@ type Mode = 'prep' | 'place' | 'busy' | 'browse' | 'move' | 'menu' | 'target' | 
 
 /** Ce qu'on vise : une attaque, une compétence, un objet, un soin. */
 interface Targeting {
-  readonly kind: 'attack' | 'skill' | 'item' | 'heal';
+  readonly kind: 'attack' | 'skill' | 'item' | 'heal' | 'talk';
   readonly skillId?: string;
   readonly item?: string;
   /** Cases valables. */
@@ -126,6 +128,8 @@ interface UnitView {
   aura: Phaser.GameObjects.Image | null;
   /** Rage d'un boss en seconde phase (0 à 1) : teinte rouge pulsée du sprite. */
   rage: { t: number } | null;
+  /** Phylactère d'un ennemi nommé recrutable (n°187), ou null. */
+  readonly talk: Phaser.GameObjects.Image | null;
 }
 
 const T = BF_TILE;
@@ -149,6 +153,8 @@ const COLORS = {
   area: 0xffb15c,
   slot: 0x4f93e6,
   pick: 0xffdf9a,
+  /** Parler : or doux, ni rouge d'attaque ni vert de soin. */
+  talk: 0xe8c06a,
 } as const;
 const SHADOW_TINT: Readonly<Record<Team, number>> = { player: 0x9cc0ff, ally: 0xb0f0c8, enemy: 0xffb0a0 };
 const WATER_FRAME_MS = 420;
@@ -271,11 +277,15 @@ export class BattleScene extends Phaser.Scene {
       // Équipement gardé par membre pour la partie (n°154) ; un combat d'essai part de zéro et ne touche pas à la partie.
       this.loadouts = world ? getLoadouts(this.party.map((m) => m.id)) : this.party.map(() => emptyLoadout());
       reconcileLoadouts(this.loadouts, this.convoy);
+      // `?debug&named=rik` (ou `rik:6`) : un ennemi nommé rejoint ce combat (dialogues de combat, n°191).
+      const extraEnemies = [...(params.extraEnemies ?? []), ...(debug ? this.debugNamed(url.get('named'), encounter.enemies) : [])];
       this.state = buildBattle(encounter, this.party, this.gameData, {
         seed,
         initiative: params.initiative === true,
         ambush: params.ambush === true,
-        ...(params.extraEnemies ? { extraEnemies: params.extraEnemies } : {}),
+        ...(extraEnemies.length > 0 ? { extraEnemies } : {}),
+        // Ce que les scènes de combat savent de la partie (GDD §7.9) ; un combat d'essai part d'une partie vierge.
+        talk: this.debugTalk(world ? talkContextOf(world.progress, world.openFlags) : EMPTY_TALK_CONTEXT, debug ? url : null),
         world: this.worldSource(),
         ...(params.site ? { site: params.site } : {}),
         loadouts: this.loadouts,
@@ -378,6 +388,31 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private debugResonance: number | null = null;
+
+  /**
+   * Debug des dialogues de combat (n°191) : `&quests=a,b` tient ces quêtes pour
+   * terminées, `&scenes=reset` oublie les scènes vues (pour ce combat).
+   */
+  private debugTalk(ctx: TalkContext, url: URLSearchParams | null): TalkContext {
+    if (!url) return ctx;
+    const done = (url.get('quests') ?? '').split(',').filter((q) => q !== '');
+    return {
+      ...ctx,
+      quests: { ...ctx.quests, ...Object.fromEntries(done.map((q) => [q, 'done'])) },
+      seen: url.get('scenes') === 'reset' ? [] : ctx.seen,
+    };
+  }
+
+  /** `?debug&named=rik[:niveau]` : nommés ajoutés au combat (niveau par défaut : le plus haut des ennemis + 1). */
+  private debugNamed(param: string | null, enemies: readonly { readonly level: number }[]): { enemy: string; level: number }[] {
+    if (!param) return [];
+    const top = Math.max(1, ...enemies.map((e) => e.level)) + this.gameData.balance.namedPop.levelBonus;
+    return param
+      .split(',')
+      .map((part) => part.split(':'))
+      .filter(([id]) => this.gameData.named.some((n) => n.id === id))
+      .map(([id, lvl]) => ({ enemy: id as string, level: Math.max(1, Math.min(30, Number(lvl) || top)) }));
+  }
 
   /* ---------- Construction ---------- */
 
@@ -549,6 +584,15 @@ export class BattleScene extends Phaser.Scene {
     this.camTarget = this.clampCam(x, y);
   }
 
+  /** Cadre les unités d'une scène dans le haut de l'écran : la boîte de scène prend le bas (n°187). */
+  private frameForTalk(cells: readonly Cell[]): void {
+    if (cells.length === 0) return;
+    const cx = cells.reduce((n, c) => n + c.x, 0) / cells.length;
+    const cy = cells.reduce((n, c) => n + c.y, 0) / cells.length;
+    const { w, h } = this.viewSize;
+    this.camTarget = this.clampCam((cx + 0.5) * T - w / 2, (cy + 0.5) * T - h * 0.3);
+  }
+
   private applyCamera(): void {
     const camera = this.cameras.main;
     const origin = zoomOrigin(camera.width, camera.height, this.zoom);
@@ -592,8 +636,14 @@ export class BattleScene extends Phaser.Scene {
     const parts: Phaser.GameObjects.GameObject[] = [shadow, sprite, hpBg, hpFill, mark];
     if (unit.isBoss) parts.push(this.add.image(0, -36, BATTLE_TEX.crown));
     if (unit.isHero) parts.push(this.add.image(0, -36, BATTLE_TEX.heroMark));
+    // Ennemi nommé recrutable : phylactère, visible quand l'unité choisie peut lui parler (n°187).
+    const talk = unit.team === 'enemy' && namedDef(this.rules, unit.charId)?.recruit ? this.add.image(9, -27, BATTLE_TEX.talkMark).setVisible(false) : null;
+    if (talk) {
+      parts.push(talk);
+      this.tweens.add({ targets: talk, y: -29, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
     const container = this.add.container(0, 0, parts);
-    const view: UnitView = { container, sprite, shadow, hpBg, hpFill, mark, aura: null, rage: null };
+    const view: UnitView = { container, sprite, shadow, hpBg, hpFill, mark, aura: null, rage: null, talk };
     this.views.set(unit.id, view);
     sprite.anims.play({ key: BATTLE_TEX.msIdle(unit.sprite, unit.team), startFrame: Math.floor(Math.random() * UNIT_IDLE_FRAMES) });
     this.syncUnit(unit);
@@ -783,6 +833,7 @@ export class BattleScene extends Phaser.Scene {
     this.updateCamera(delta);
     this.atmosphere?.update(delta / 1000);
     this.updateDebug();
+    this.refreshTalkMarks();
     // Le mode vient de changer pendant cette image (menu validé dans l'interface) : on attend la suivante.
     if (this.modeFrame === this.game.loop.frame) return;
     const click = this.pendingClick;
@@ -981,15 +1032,24 @@ export class BattleScene extends Phaser.Scene {
     // Ennemis groupés par type et niveau, boss en tête.
     const groups = new Map<string, { name: string; level: number; count: number; boss: boolean }>();
     for (const u of this.state.units) {
-      if (u.team !== 'enemy') continue;
+      if (u.team !== 'enemy' || namedDef(this.rules, u.charId)) continue;
       const key = `${u.kindId}:${u.level}:${u.isBoss}`;
       const g = groups.get(key) ?? { name: u.name, level: u.level, count: 0, boss: u.isBoss };
       g.count += 1;
       groups.set(key, g);
     }
-    const enemies = [...groups.values()]
+    const enemies: { text: string; color: number }[] = [...groups.values()]
       .sort((a, b) => Number(b.boss) - Number(a.boss) || b.level - a.level)
       .map((g) => ({ text: `${g.name}${g.boss ? ' (boss)' : ''}${g.count > 1 ? ` ×${g.count}` : ''} · Niv ${g.level}`, color: g.boss ? PALETTE.lumiereDoree : PALETTE.parchemin }));
+    // Ennemis nommés en vue (n°115, n°187) : nom, et qui peut lui parler s'il est recrutable.
+    for (const u of this.state.units) {
+      const def = u.team === 'enemy' ? namedDef(this.rules, u.charId) : null;
+      if (!def) continue;
+      enemies.unshift({ text: `» ${def.name}, ${u.kindName} · Niv ${u.level}`, color: PALETTE.ambre });
+      if (!def.recruit) continue;
+      const talkers = def.recruit.talkers.map((id) => this.party.find((m) => m.id === id)?.name).filter((n): n is string => n !== undefined);
+      enemies.splice(1, 0, { text: talkers.length > 0 ? `  À recruter : ${talkers.join(', ')} peut lui parler` : '  À recruter (personne ne le connaît encore)', color: PALETTE.cyanEclat });
+    }
     const warnings: { text: string; color: number }[] = [];
     if (this.classic()) warnings.push({ text: 'Classique : une unité tombée est perdue', color: PALETTE.rougeCendre });
     const enemyWaves = this.state.reinforcements.filter((r) => r.team === 'enemy').map((r) => r.turn);
@@ -1459,6 +1519,9 @@ export class BattleScene extends Phaser.Scene {
     // Portée d'attaque depuis la case choisie.
     this.paintTiles(this.highlights, cellsInRange(this.state.map, unit, unit.weapon.range), COLORS.attack, 0.38, DEPTH.highlight);
     const items: MenuItem[] = [{ label: 'Attaquer', enabled: targets.length > 0, onSelect: () => this.startTargeting({ kind: 'attack', cells: targets.map((t) => ({ x: t.x, y: t.y })), free: false }, null) }];
+    // Parler (GDD §7.9, n°107) : seulement collée à un ennemi nommé qui l'écouterait.
+    const listeners = talkTargets(this.state, unit, this.rules);
+    if (listeners.length > 0) items.push({ label: 'Parler', onSelect: () => this.startTargeting({ kind: 'talk', cells: listeners.map((t) => ({ x: t.x, y: t.y })), free: false }, null) });
     const skillId = unit.skills[0];
     if (skillId) {
       const skill = skillDef(this.rules, skillId);
@@ -1578,6 +1641,7 @@ export class BattleScene extends Phaser.Scene {
   private targetColor(t: Targeting): number {
     if (t.kind === 'attack') return COLORS.attack;
     if (t.kind === 'heal') return COLORS.heal;
+    if (t.kind === 'talk') return COLORS.talk;
     if (t.kind === 'item') return this.rules.consumables.get(t.item ?? '')?.battle?.target === 'ennemi' ? COLORS.attack : COLORS.heal;
     const skill = this.rules.skills.get(t.skillId ?? '');
     if (!skill) return COLORS.skill;
@@ -1641,6 +1705,10 @@ export class BattleScene extends Phaser.Scene {
       const lines = previewSkill(this.state, unit, skill, cell, this.rules).map((line) => this.previewLine(unit, line));
       const extra = skill.effects.some((e) => e.kind === 'invocation') ? [{ name: 'Golem de pierre', text: '20 PV · 3 tours', color: PALETTE.pierre }] : skill.effects.some((e) => e.kind === 'terrain') ? [{ name: 'Ronces', text: `${area.length} cases · 3 tours`, color: PALETTE.olive }] : [];
       this.hud.showSkillPreview({ title: skill.name, subtitle: costLabel(skill, cls?.resource?.name), description: skill.description, lines: [...lines, ...extra] });
+      return;
+    }
+    if (t.kind === 'talk' && target) {
+      this.hud.showSkillPreview({ title: 'Parler', subtitle: `${unit.name} → ${target.name}`, description: `${unit.name} tente de convaincre ${target.name}. S'il accepte, il rejoint la compagnie ; s'il refuse, l'action est perdue.`, lines: [] });
       return;
     }
     if (t.kind === 'heal' && target) {
@@ -1719,6 +1787,9 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'heal':
         if (target) void this.finishAction(() => healAction(this.state, unit.id, target.id, this.rules));
+        break;
+      case 'talk':
+        if (target) void this.finishAction(() => talkAction(this.state, unit.id, target.id, this.rules));
         break;
     }
   }
@@ -1882,7 +1953,8 @@ export class BattleScene extends Phaser.Scene {
         await this.playEvents(moveUnit(this.state, unit.id, plan.to));
         this.setCursorQuiet(unit);
       }
-      if (plan.targetId) await this.playEvents(attackUnit(this.state, unit.id, plan.targetId, this.rules));
+      if (plan.talkId) await this.playEvents(talkAction(this.state, unit.id, plan.talkId, this.rules));
+      else if (plan.targetId) await this.playEvents(attackUnit(this.state, unit.id, plan.targetId, this.rules));
       else if (plan.healId) await this.playEvents(healAction(this.state, unit.id, plan.healId, this.rules));
       else if (plan.skill) await this.playEvents(skillAction(this.state, unit.id, plan.skill.id, plan.skill.cell, this.rules));
       else waitUnit(this.state, unit.id);
@@ -1897,6 +1969,22 @@ export class BattleScene extends Phaser.Scene {
     }
     await this.nextPhase();
   }
+
+  /**
+   * Phylactères (n°187) : au-dessus des ennemis nommés à qui l'unité choisie
+   * (ou, à défaut, l'unité de la compagnie survolée) peut parler.
+   */
+  private refreshTalkMarks(): void {
+    const focus = this.selected ?? (this.hovered && this.hovered.team !== 'enemy' ? this.hovered : null);
+    const playerTurn = this.state.phase === 'player' && this.state.outcome === 'ongoing' && this.mode !== 'enemy' && this.mode !== 'busy';
+    const key = playerTurn && focus ? `${focus.id}:${this.state.turn}:${this.state.units.length}` : '';
+    if (key === this.talkKey) return;
+    this.talkKey = key;
+    const able = new Set(playerTurn && focus ? talkableEnemies(this.state, focus, this.rules).map((u) => u.id) : []);
+    for (const [id, view] of this.views) view.talk?.setVisible(able.has(id));
+  }
+
+  private talkKey = '';
 
   private setCursorQuiet(cell: Cell): void {
     this.cursorCell = { x: cell.x, y: cell.y };
@@ -2017,6 +2105,12 @@ export class BattleScene extends Phaser.Scene {
           await this.wait(300);
           break;
         }
+        case 'scene':
+          await this.playScene(event);
+          break;
+        case 'recruit':
+          await this.animateRecruit(event.fromId, event.unitId);
+          break;
         case 'oath': {
           const unit = getUnit(this.state, event.unitId);
           this.floatText(unit, 'Serment brisé', PALETTE.braise, -6);
@@ -2150,7 +2244,69 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.flash(this.dur(260, 100), 180, 40, 40);
     this.syncUnit(unit);
     this.flashUnit(unit, PALETTE.rougeCendre);
-    await this.hud.bossLine(unit, line, this.speed === 'off' ? 900 : MS.bossLine);
+    // Réplique remplacée par une scène de phase (GDD §7.9) : la scène suit.
+    if (line === '') await this.wait(420);
+    else await this.hud.bossLine(unit, line, this.speed === 'off' ? 900 : MS.bossLine);
+  }
+
+  /* ---------- Dialogues de combat (GDD §7.9) ---------- */
+
+  /** Visages connus pendant le combat : les unités sur la carte (compagnie, alliés verts, nommés recrutés). */
+  private faceLookup(): FaceLookup {
+    return (charId) => {
+      const unit = this.state.units.find((u) => u.charId === charId && u.team !== 'enemy');
+      if (unit) return { name: unit.name, title: unit.kindName, sprite: unit.sprite, team: unit.team };
+      const member = this.party.find((m) => m.id === charId);
+      return member ? { name: member.name, title: null, sprite: member.hero ? 'heros' : member.class, team: 'player' } : null;
+    };
+  }
+
+  /** Une scène de dialogue : la caméra sur l'ennemi, puis la boîte de scène (n°187). */
+  private async playScene(event: Extract<BattleEvent, { type: 'scene' }>): Promise<void> {
+    const scene = this.gameData.scenes.find((s) => s.id === event.sceneId);
+    if (!scene) return;
+    const cast = this.state.units.filter((u) => u.id === event.enemyId || u.id === event.unitId);
+    const focus = cast[0];
+    if (focus) {
+      this.cursorCell = { x: focus.x, y: focus.y };
+      this.cursor.setPosition(this.px(focus.x) - 2, this.py(focus.y) - 2);
+    }
+    this.frameForTalk(cast);
+    await this.wait(260);
+    // La boîte de scène prend le bas de l'écran : les fenêtres d'unité et de terrain s'effacent.
+    this.hud.showUnit(null);
+    this.hud.showTerrain(null);
+    const linked = this.state.units.find((u) => u.id === event.unitId)?.charId ?? null;
+    // Unités dans le bas de l'écran (bord de carte) : la boîte passe en haut pour ne pas les cacher.
+    const lowest = Math.max(...cast.map((u) => u.y), 0);
+    const screenY = ((lowest + 0.5) * T - this.camTarget.y) * this.zoom;
+    const atTop = cast.length > 0 && screenY > this.scale.height * 0.5;
+    await this.hud.talk(buildTalkView(this.gameData, scene, event.failed, this.faceLookup(), linked), this.gameData.balance.dialogue, atTop);
+    if (event.failed) {
+      const enemy = this.state.units.find((u) => u.id === event.enemyId);
+      if (enemy) this.floatText(enemy, 'Refus', PALETTE.metalClair, -6);
+    }
+  }
+
+  /** Un ennemi nommé change de camp (n°181) : éclat, puis il reparaît aux couleurs de la compagnie. */
+  private async animateRecruit(fromId: string, unitId: string): Promise<void> {
+    const joined = getUnit(this.state, unitId);
+    const old = this.views.get(fromId);
+    if (old) {
+      flashWhite(old.sprite, true);
+      await this.tween({ targets: old.container, alpha: 0, duration: this.dur(260, 80) });
+      old.container.destroy();
+      this.views.delete(fromId);
+    }
+    this.sparks.setParticleTint(PALETTE.lumiereDoree);
+    this.sparks.explode(16, this.px(joined.x) + T / 2, this.py(joined.y) + T - 8);
+    const view = this.createView(joined);
+    view.container.setAlpha(0);
+    await this.tween({ targets: view.container, alpha: 1, duration: this.dur(320, 80) });
+    this.floatText(joined, 'Recrue !', PALETTE.lumiereDoree, -6);
+    this.hud.toast(`${joined.name} rejoint la compagnie !`);
+    this.talkKey = '';
+    await this.wait(420);
   }
 
   /** Mur de ronces : les ronces jaillissent (ou se fanent). */
@@ -2345,7 +2501,7 @@ export class BattleScene extends Phaser.Scene {
     const opensWorld = this.params.returnTo === 'world' && getWorldState() !== null;
     const settlement = this.settle(summary.outcome === 'victory' ? 'victory' : 'defeat');
     const ctx = getGameCtx();
-    const rewards = [...(ctx && settlement ? formatNotices(ctx, settlement.notices) : []), ...this.classicLossLines()];
+    const rewards = [...(ctx && settlement ? formatNotices(ctx, settlement.notices) : []), ...this.talkLines(), ...this.classicLossLines()];
     this.hud.showResult(
       summary,
       opensWorld,
@@ -2397,6 +2553,26 @@ export class BattleScene extends Phaser.Scene {
     applyErrantProgress(world.progress.errants, this.state.units);
     // Mode Classique (n°167) : les membres tombés sont perdus, quelle que soit l'issue.
     this.losses = applyClassicLosses(this.gameData, world.progress, this.state.units, getSessionState().loadouts).map((l) => l.member.name);
+    // Dialogues de combat (n°182, n°183, n°189) : scènes vues, nommés vaincus ou perdus, recrues, quelle que soit l'issue.
+    applyTalkResults(this.gameData, world.progress, talkResults(this.state, this.rules), this.state.units);
+  }
+
+  /** Lignes de l'écran de fin pour les ennemis nommés : recrues, perdus (GDD §7.9). */
+  private talkLines(): string[] {
+    const results = talkResults(this.state, this.rules);
+    const lines: string[] = [];
+    for (const r of results.recruits) {
+      const unit = this.state.units.find((u) => u.id === r.unitId);
+      if (!unit) continue;
+      if (unit.hp <= 0 && this.classic()) lines.push(`${unit.name} ne rejoindra pas la compagnie : perte définitive.`);
+      else lines.push(`${unit.name} rejoint la compagnie${r.ransom > 0 ? ` (rançon : ${r.ransom} or)` : ''}${unit.hp <= 0 ? ', blessé' : ''}.`);
+    }
+    for (const [id, status] of Object.entries(results.named)) {
+      if (status !== 'lost') continue;
+      const name = this.gameData.named.find((n) => n.id === id)?.name ?? id;
+      lines.push(`${name} est tombé : il ne pourra plus être recruté.`);
+    }
+    return lines;
   }
 
   /** La partie se joue-t-elle en mode Classique (mort définitive) ? */
@@ -2482,6 +2658,7 @@ export class BattleScene extends Phaser.Scene {
       [
         `COMBAT ${this.state.encounterId}  MODE ${this.mode}  TOUR ${this.state.turn} ${this.state.phase}`,
         `CASE ${this.cursorCell.x},${this.cursorCell.y}  ZOOM ×${this.zoom}  F2 VICTOIRE${boss ? `  BOSS ${boss.hp}/${boss.stats.pv} (phase ${boss.boss?.phase ?? 1}, seuil ${phaseThreshold(boss) ?? '-'})` : ''}`,
+        `SCÈNES ${this.state.talk.capUsed}/${this.gameData.balance.namedPop.sceneCap} : ${this.state.talk.played.join(', ') || 'aucune'}`,
       ].join('\n'),
     );
   }

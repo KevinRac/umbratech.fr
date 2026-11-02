@@ -29,6 +29,8 @@ export const BATTLE_TEX = {
   tile: 'battle:tile',
   crown: 'battle:crown',
   heroMark: 'battle:heroMark',
+  /** Phylactère au-dessus d'un ennemi nommé à qui l'unité choisie peut parler (GDD §7.9, n°187). */
+  talkMark: 'battle:talkMark',
   spark: 'battle:spark',
   /** Marque de statut au-dessus d'une unité (jalon M5) : renfort, affaiblissement, gel. */
   status: (kind: 'buff' | 'debuff' | 'stun'): string => `battle:status:${kind}`,
@@ -70,6 +72,11 @@ export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitT
     const sheet = new PixelCanvas(UNIT_W * Math.max(UNIT_WALK_FRAMES, UNIT_READY_FRAMES), UNIT_H * rows.length);
     rows.forEach(([kind, count], row) => {
       for (let f = 0; f < count; f++) paintUnitSprite({ set: (x, y, color) => sheet.set(x, y, color) }, f * UNIT_W, row * UNIT_H, sprite, team, kind, f);
+    });
+    // Écho d'un ennemi nommé (`modele#n`, n°175) : le détail de sa fiche, peint sur chaque image.
+    const { base, variant } = parseSprite(sprite);
+    if (variant > 0) rows.forEach(([, count], row) => {
+      for (let f = 0; f < count; f++) paintDetails(sheet.pixels, f * UNIT_W, row * UNIT_H, UNIT_W, UNIT_H, variant, false, base);
     });
     sheet.toTexture(scene, key);
     const texture = scene.textures.get(key);
@@ -217,6 +224,17 @@ export function ensureBattleFxTextures(scene: Phaser.Scene): void {
   const star = new PixelCanvas(5, 5);
   ['..y..', '.yyy.', 'yyyyy', '.yyy.', '.y.y.'].forEach((row, y) => [...row].forEach((ch, x) => ch === 'y' && star.set(x, y, x < 2 ? P.lumiereDoree : P.cyanEclat)));
   star.toTexture(scene, BATTLE_TEX.heroMark);
+
+  // Phylactère « Parler » (11 × 8) : bulle parchemin, trois points, queue vers l'unité.
+  const bubble = new PixelCanvas(11, 8);
+  ['.kkkkkkkkk.', 'kwwwwwwwwwk', 'kwdwwdwwdwk', 'kwwwwwwwwwk', '.kkwkkkkkk.', '..kwk......', '..kk.......', '..k........'].forEach((row, y) =>
+    [...row].forEach((ch, x) => {
+      if (ch === 'k') bubble.set(x, y, P.encre);
+      if (ch === 'w') bubble.set(x, y, y < 2 ? 0xffffff : P.parchemin);
+      if (ch === 'd') bubble.set(x, y, P.ambre);
+    }),
+  );
+  bubble.toTexture(scene, BATTLE_TEX.talkMark);
 
   // Étincelle d'impact (croix 5 × 5, blanche, teintée par l'émetteur).
   const spark = new PixelCanvas(5, 5);

@@ -26,7 +26,8 @@
  * propre IA (`allyAi.ts`), bâtie sur les mêmes estimations.
  */
 import { forecast, type StrikeMods } from '../combat/combat';
-import { attackUnit, healAction, moveUnit, skillAction, waitUnit } from '../tactics/battle';
+import { attackUnit, healAction, moveUnit, skillAction, talkAction, waitUnit } from '../tactics/battle';
+import { isSpared } from '../tactics/talk';
 import { cellIndex, cellsInRange, distance, getUnit, inBounds, reachable, targetsFrom, terrainAt, unitAt } from '../tactics/grid';
 import { healTargets, staffHealAmount } from '../tactics/items';
 import { hasStatus } from '../tactics/status';
@@ -43,6 +44,8 @@ export interface AiPlan {
   readonly healId?: string | null;
   /** Compétence à lancer depuis `to`, sur une case. */
   readonly skill?: { readonly id: string; readonly cell: Cell } | null;
+  /** Ennemi nommé à qui parler depuis `to` (allié vert nommé, GDD §7.9, n°184). */
+  readonly talkId?: string | null;
 }
 
 /** Poids du score (réglés à la main ; les déplacer dans balance.json si l'équilibrage le demande). */
@@ -215,7 +218,8 @@ export function planEnemyAction(state: BattleState, unitId: string, rules: Battl
   const profile = profileOf(unit);
   const here: Cell = { x: unit.x, y: unit.y };
   const stops = profile === 'boss' ? [here] : reachable(state, unit).stops.filter((c) => inBounds(state.map, c.x, c.y));
-  const best = bestAction(state, unit, stops, rules);
+  // Une unité qui vient de lui parler (et qu'il a refusée) n'est pas frappée ce tour (n°180).
+  const best = bestAction(state, unit, stops, rules, (target) => (isSpared(state, unit, target) ? -Infinity : 0));
   if (best && best.score > -Infinity) return best.plan;
   if (profile === 'boss' || profile === 'defensif') return { unitId, to: here, targetId: null };
   return { unitId, to: approach(state, unit, stops), targetId: null };
@@ -226,7 +230,8 @@ export function executePlan(state: BattleState, plan: AiPlan, rules: BattleRules
   const unit = getUnit(state, plan.unitId);
   const events: BattleEvent[] = [];
   if (plan.to.x !== unit.x || plan.to.y !== unit.y) events.push(...moveUnit(state, unit.id, plan.to));
-  if (plan.targetId) events.push(...attackUnit(state, unit.id, plan.targetId, rules));
+  if (plan.talkId) events.push(...talkAction(state, unit.id, plan.talkId, rules));
+  else if (plan.targetId) events.push(...attackUnit(state, unit.id, plan.targetId, rules));
   else if (plan.healId) events.push(...healAction(state, unit.id, plan.healId, rules));
   else if (plan.skill) events.push(...skillAction(state, unit.id, plan.skill.id, plan.skill.cell, rules));
   else events.push(...waitUnit(state, unit.id));

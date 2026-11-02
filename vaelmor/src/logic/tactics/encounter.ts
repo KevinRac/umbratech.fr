@@ -20,6 +20,7 @@ import { parseBattleMap } from './grid';
 import { placeUnits, sampleTerrain, type TerrainSource } from './sampling';
 import type { AllySource, BattleMap, BattleRules, BattleState, BattleUnit, Cell, Reinforcement } from './types';
 import { allyUnit, emptyLoadout, enemyUnit, memberUnit, type Loadout, type MemberLike } from './units';
+import { newTalkState, type TalkContext } from './talk';
 
 export function battleRules(data: GameData): BattleRules {
   return {
@@ -76,6 +77,8 @@ export interface BattleOptions {
   readonly loadouts?: readonly Loadout[];
   /** Alliés verts attendus. */
   readonly allies?: readonly AllyJoin[];
+  /** Ce que les scènes de combat savent de la partie (GDD §7.9) ; par défaut, une partie vierge. */
+  readonly talk?: TalkContext;
 }
 
 interface Layout {
@@ -223,5 +226,6 @@ export function buildBattle(base: EncounterDef, party: readonly MemberLike[], da
     nextId,
     mechanics: data.balance.classMechanics,
     wasAmbush: options.ambush === true,
+    talk: newTalkState(options.talk),
   };
 }

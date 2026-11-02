@@ -575,9 +575,9 @@ Les alliés rejoignent un combat en **renforts verts** (liseré et teinte verts,
 
 ---
 
-### 7.9 Ennemis nommés et dialogues de combat (spécification, 21/10/2026)
+### 7.9 Ennemis nommés et dialogues de combat (spécification 21/10/2026, moteur réalisé le 03/11/2026)
 
-> **Spécification, pas encore codée** (décisions n°105 à n°111 dans PROGRESS.md, à valider). L'histoire, les personnages, la table des liens et les scènes d'exemple sont dans `docs/STORY_BIBLE.md`. Inspiration : les citations de combat et l'action « Parler » de *Fire Emblem : The Sacred Stones*. **Il n'y a ni conversation de camp, ni soutien, ni bonus entre alliés** : les dialogues naissent uniquement de la rencontre avec un ennemi nommé.
+> **Moteur réalisé** (lot « dialogues de combat », 03/11/2026, décisions n°174 à n°191 — détail dans PROGRESS.md et en fin de section). La spécification d'origine suit (n°105 à n°115). L'histoire, les personnages, la table des liens et les scènes d'exemple sont dans `docs/STORY_BIBLE.md`. Inspiration : les citations de combat et l'action « Parler » de *Fire Emblem : The Sacred Stones*. **Il n'y a ni conversation de camp, ni soutien, ni bonus entre alliés** : les dialogues naissent uniquement de la rencontre avec un ennemi nommé.
 
 **Catégories d'ennemis**
 
@@ -619,6 +619,24 @@ Les alliés verts sans nom (gardes, miliciens) restent muets.
 **Données.** Champs `named`, `skinOf`, `portrait`, `recruit` sur les ennemis ; nouveau fichier `data/battleQuotes.json` (une entrée par scène : ennemi, unité, statut, genre, direction, conditions, répliques, effets). Détail dans la bible narrative §9.
 
 **Impact sur le plan.** Un lot « moteur de dialogues de combat » (déclencheurs, action Parler, recrutement d'ennemi, journal) vient **entre M6 et M7** ; l'écriture des scènes et des portraits se fait **en M7**. La sauvegarde (M9) retient les scènes vues et les recrues obtenues ou perdues.
+
+#### 7.9.1 Ce qui est réalisé (lot « dialogues de combat », 03/11/2026)
+
+| Élément | Règle appliquée |
+|---|---|
+| **Données** | `enemies.json › named` : fiches nommées (Échos) — `skinOf` (modèle repris : stats, arme, IA), `detail` (détail visible sur le sprite, jamais une couleur, n°175), `zone`, `portrait` (décrit, peint en M7), `pop` (condition d'apparition au hasard, `false` : jamais), `recruit` (`talkers`, `requires`, `deadline` tour ou part de PV, `ransom` avec `waivedIf`, `asClass`, `level`). Le registre en tire une fiche d'ennemi complète. `data/battleQuotes.json` : scènes `battle`, `talk` (+ `onFail`), `death`, `phase`, `mourn`, avec `units`, `direction`, `when`, `lines` (`speaker`, `text`, `mood`), `once`. `allies.json` : `named` sur les modèles d'alliés verts nommés (les 5 errants). `balance.json › namedPop`. Conditions : quête terminée ou en cours, drapeau, recrue, unité présente, palier de réputation, or, scène vue, tour maximal, et `any` (l'une de plusieurs) |
+| **Contenu pilote (n°174)** | Brakk × Nessa, Brakk × Alden, phase 2 de Brakk (Nessa, Alden) ; **Rik « le Cadet »** (Écho d'Écumeur, Z1, recrutable par Nessa après *Le colporteur perdu*, avant le tour 8 ; Lame du Serment niveau 4) ; **Gorm l'Incendiaire** (nommé non recrutable, Z1). L'écriture des ~50 scènes reste en M7 |
+| **Citations** | Avant l'échange (attaque, riposte, compétence à cible unique ; jamais une compétence de zone, n°177), une fois par paire ; citation de mort avant la chute, selon l'auteur du dernier coup (échange, compétence, statut, ronces, n°178) ; scène de phase à la place de la réplique de la fiche du boss ; deuil au premier échange suivant quand l'allié vert lié est tombé avant sa scène (n°179) |
+| **Plafond (n°176)** | 3 citations de combat, de mort et de deuil par combat (`namedPop.sceneCap`) ; Parler et les phases ne comptent pas ; la dernière place reste au boss tant qu'il a une scène possible |
+| **Parler (n°180 à n°184)** | Entrée « Parler » du menu d'action, seulement collé à un nommé dont l'unité est interlocutrice. Refus (prérequis, délai, rançon) : répliques de refus, action perdue, l'unité épargnée par lui ce tour. Succès : il change de camp sous sa forme de recrue (classe et niveau de sa fiche, PV dans la même proportion, a déjà agi), puis rejoint la compagnie à la fin du combat quelle qu'en soit l'issue (blessé s'il tombe ensuite, perdu en Classique ; rançon payée à ce moment). Un allié vert nommé interlocuteur parle seul, s'il sait que le nommé accepterait |
+| **Sort des nommés (n°183)** | Recrutable tué encore ennemi : **perdu** ; non recrutable tué : **vaincu** ; ni l'un ni l'autre ne revient. Retraite ou défaite : il reste disponible |
+| **Apparition au hasard (n°115, n°185, n°186)** | Au lancement d'un combat ordinaire tiré du monde (ni boss, ni carte de scénario, ni milice) : 4 %, +1 par combat sans apparition (compteur seulement s'il y avait un candidat), plafond 12 %. Candidats : nommés de la zone ou de la zone voisine, ni vaincus ni recrutés ni perdus, condition `pop` remplie, liés à un membre de la compagnie ; poids ×3 si un lié était du **dernier déploiement**. Niveau : plus haut niveau ennemi de la rencontre + 1 |
+| **Affichage (n°187)** | Boîte de scène façon *Sacred Stones* : deux portraits face à face (compagnie à gauche, ennemi à droite), celui qui parle éclairé, nom et titre, machine à écrire (`balance.dialogue`), Entrée / clic pour avancer, Maj maintenue accélère, Échap passe la scène ; la boîte monte en haut de l'écran quand les unités sont en bas. Ennemis sans portrait peint : sprite de combat agrandi (M7 : portraits). Phylactère au-dessus d'un nommé recrutable quand l'unité choisie peut lui parler. Préparation : ligne du nommé dans « Ennemis en vue » (« Rik, le Cadet · Niv 4 ») et « À recruter : Nessa peut lui parler ». Écran de fin : recrues, rançon, nommés perdus |
+| **Journal (n°188)** | Onglet Quêtes, section « Rencontres » : scènes vues, rangées par ennemi ; Entrée relit la scène |
+| **Sauvegarde (n°189)** | Version 2 : `Progress.scenesSeen`, `named`, `namedPity` ; migration v1 → v2 (champs vides) testée sur `tests/fixtures/save-v1.json` ; scènes et nommés disparus oubliés au chargement |
+| **Debug (n°191)** | `?debug&named=rik[:niveau],gorm` (nommés ajoutés au combat), `&quests=colporteur_perdu` (quêtes tenues pour terminées dans le combat), `&scenes=reset` ; ligne « SCÈNES n/3 » dans l'écran de debug du combat |
+| **Code** | Logique pure : `logic/tactics/talk.ts` (conditions, déclencheurs glissés dans les événements des commandes, plafond, Parler, recrutement, bilan), `logic/game/namedRules.ts` (apparition, contexte, report sur la partie) ; IA : `isSpared` (ennemie), Parler des alliés verts nommés (alliée). Rendu : `ui/TalkBox.ts`, `ui/talkView.ts`, `BattleHudScene.talk`, `BattleScene` (événements `scene` et `recruit`), `MenuScene` (journal). Contrôles des données : `data/talkChecks.ts` |
+| **Reste pour M7** | Écrire les scènes (~50) et portraits des nommés ; promouvoir les figures de village en alliés verts nommés (`named` dans `allies.json`) ; roster de 30 avec tri et filtre par classe dans la préparation (n°190) |
 
 ---
 
@@ -1360,7 +1378,7 @@ Messages brefs en haut : « +15 Réputation (Haut-Gué) », « Niveau 4 ! », «
 |---|---|
 | **Méta** (`meta`) | Résumé affiché dans les emplacements : héros (nom, classe ou évolution, niveau), lieu ou zone, or, temps de jeu, règle (Blessure / Classique), taille de la compagnie |
 | **Monde** (`data.world`) | Position et direction du héros, drapeaux levés (boss vaincus…), zones et lieux découverts, identifiant de partie, temps de jeu |
-| **Progression** (`data.world.progress`) | Or, sac, réputations (lieux et factions) et lieux touchés, jour, dons, quêtes, recrues, récompenses versées, sujets entendus, ennemis du monde vaincus (jour, horloge, zones), horloge d'exploration, changements de zone, dernier village, errants blessés, niveau et XP des errants, achats limités, règle de mort, unités perdues |
+| **Progression** (`data.world.progress`) | Or, sac, réputations (lieux et factions) et lieux touchés, jour, dons, quêtes, recrues, récompenses versées, sujets entendus, ennemis du monde vaincus (jour, horloge, zones), horloge d'exploration, changements de zone, dernier village, errants blessés, niveau et XP des errants, achats limités, règle de mort, unités perdues ; depuis la v2, scènes de combat vues, sort des ennemis nommés (vaincu, recruté, perdu) et compteur anti-malchance de leur apparition (n°189) |
 | **Compagnie** | Pour chaque membre : identifiant, nom, classe, héros, niveau, XP, stats tirées, plafond, blessure, passive et serment choisis, évolution, compteurs des conditions |
 | **Préparation** (`data.session`) | Équipement de chaque membre (arme, accessoire, objets réservés), **indexé par identifiant de membre** (n°154), et dernier déploiement |
 | **Non sauvé** | Position des ennemis, PNJ et errants (ils reprennent leur poste, comme après un combat) ; réglages (clé `vaelmor:settings`, communs à toutes les parties) ; niveau d'essai du debug |
@@ -1372,7 +1390,7 @@ Messages brefs en haut : « +15 Réputation (Haut-Gué) », « Niveau 4 ! », «
 | **Clés** | `vaelmor:save:slot1`, `…slot2`, `…slot3`, `vaelmor:save:auto`, `vaelmor:settings` ; copie de secours `<clé>:backup` |
 | **Format** | JSON lisible, non compressé : `{ game, saveVersion, savedAt, meta, data, checksum }`. Somme **FNV-1a 32 bits** sur le JSON canonique (clés triées) de tout le reste de l'enveloppe : elle détecte une sauvegarde abîmée, pas la triche. Une partie de 30 membres pèse moins de 80 Ko (test) |
 | **Lecture** | Six contrôles dans l'ordre : JSON, somme, version (une version plus récente du jeu est refusée), migrations, schéma Zod strict, références aux données (n°156). Une référence inconnue (objet, quête, évolution retirés d'une version future) est **ignorée avec un avertissement** ; seuls un héros absent ou une classe de héros inconnue rendent la partie inchargeable |
-| **Versionnage** | `saveVersion` = 1. Registre `MIGRATIONS` (n → n + 1), vide en v1, testé avec des migrations factices ; la sauvegarde figée `tests/fixtures/save-v1.json` doit se charger à toutes les versions futures (n°158). Premier usage réel prévu : le lot « dialogues de combat » (scènes vues, nommés vaincus) |
+| **Versionnage** | `saveVersion` = 2. Registre `MIGRATIONS` (n → n + 1), testé avec des migrations factices ; la sauvegarde figée `tests/fixtures/save-v1.json` doit se charger à toutes les versions futures (n°158). v1 → v2 (lot « dialogues de combat », n°189) : `scenesSeen`, `named` et `namedPity` ajoutés vides |
 | **Auto-sauvegarde** | Une seule pour toutes les parties (clé `auto`, n°159). Écrite à l'arrivée d'une nouvelle partie, au retour d'un combat, à l'entrée et à la sortie d'un village ou de Valcendre (au plus une toutes les 20 s, pas à l'arrivée d'un chargement), à la fin d'une quête et au repos, toujours une fois le dialogue fermé. Une petite lanterne « Sauvegarde… » s'affiche 1,2 s en bas à droite |
 | **Manuelle** | Onglet **Sauvegarde** du menu (Tab), partout en exploration sauf pendant une poursuite ; option « Sauvegarder la partie » des aubergistes (Maëlys, Hild, Rosalind ; type d'option `save` dans `locations.json`) ; « Se recueillir » aux 6 **autels des Lanternes** (n°161). Trois emplacements |
 | **Écran titre** | **Continuer** (en tête s'il existe une sauvegarde : la plus récente des 4 sauvegardes lisibles), Nouvelle partie, **Charger** (liste des 4 sauvegardes avec héros, niveau, lieu, temps de jeu, date, or, badge Classique, état), Combat d'essai, Options (n°162) |
@@ -1491,7 +1509,8 @@ Règle : **la couche logique ne connaît ni Phaser ni le DOM**. Le rendu lit l'�
 | `classes.json` | id, nom, rôle, stats de base, croissances, compétences, évolutions, conditions |
 | `skills.json` | id, nom, coût, portée, zone, effets, animation |
 | `items.json` | id, type, effets, prix, icône |
-| `enemies.json` | id, nom, classe, niveau min/max, IA, butin, sprite |
+| `enemies.json` | id, nom, classe, niveau min/max, IA, butin, sprite ; `named` : ennemis nommés (Échos, recrutement, GDD §7.9) |
+| `battleQuotes.json` | scènes des dialogues de combat : ennemi, unités liées, sorte, sens, conditions, répliques, refus (GDD §7.9) |
 | `encounters.json` | id, zone, ennemis, carte/gabarit, objectif, renforts |
 | `zones.json` | id, niveaux, musique, tables de spawn, verrous |
 | `locations.json` | villages : id, nom, PNJ, boutiques, réputation initiale |
@@ -1631,6 +1650,7 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 31. **Version de Phaser** (16/10/2026, précision de la n°1) : **Phaser 4** (4.2.1). La branche 3.x n'évolue plus depuis la 3.90 (mai 2025) ; Phaser 4 est stable depuis avril 2026, garde la même API de haut niveau et apporte un nouveau moteur de rendu (filtres, éclairage) utile au pilier « Beauté d'abord ». Le reste de la pile n° 1 est inchangé (TypeScript, Vite, Tiled).
 32. **Jalon M6** (02/11/2026) : passives (n°93), mécaniques de classe (n°123 à n°127), XP (n°128 à n°132), compagnie (n°133 à n°139), évolutions (n°140 à n°144) validées ; adaptations n°145 à n°150 validées le 02/11/2026. Détail dans PROGRESS.md.
 33. **Jalon M9 : sauvegarde** (02/11/2026) : décisions n°151 à n°169 validées (format, contrôles, copie de secours, migrations, sauvegardes automatiques et manuelles, écran titre, confirmations, export/import, mode Classique). Compte et sauvegarde en ligne par e-mail réalisés au lot M9b (03/11/2026, n°170 à n°173 validées, base séparée de gw1). Voir §9.13, §14 et PROGRESS.md.
+34. **Lot « dialogues de combat »** (03/11/2026) : décisions n°174 à n°191 validées (contenu pilote, apparence des Échos, plafond et réservation du boss, déclencheurs, Parler et refus, changement de camp, arrivée dans la compagnie, sort des nommés, alliés verts qui parlent, apparition au hasard, affichage, journal, sauvegarde v2, roster de 30 laissé à M7, outils de debug) ; voir §7.9.1 et PROGRESS.md.
 
 ---
 

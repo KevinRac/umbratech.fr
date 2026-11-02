@@ -145,6 +145,25 @@ const foesBalanceSchema = z.strictObject({
 const tierPercent = z.strictObject({ hostile: percent, mefiant: percent, neutre: percent, amical: percent, allie: percent, heros_local: percent });
 const tierCount = z.strictObject({ hostile: z.number().int().min(0), mefiant: z.number().int().min(0), neutre: z.number().int().min(0), amical: z.number().int().min(0), allie: z.number().int().min(0), heros_local: z.number().int().min(0) });
 
+/** Réglages de l'apparition aléatoire des nommés (`balance.json › namedPop`, n°115, n°185, n°186). */
+export const namedPopBalanceSchema = z.strictObject({
+  /** Chance de départ (%) au lancement d'un combat ordinaire. */
+  base: z.number().min(0).max(100),
+  /** Points ajoutés par combat sans apparition. */
+  step: z.number().min(0).max(100),
+  /** Plafond (%). */
+  cap: z.number().min(0).max(100),
+  /** Poids d'un nommé dont une unité liée était du dernier déploiement. */
+  deployedWeight: z.number().min(1),
+  /** Niveau : le plus haut niveau ennemi de la rencontre plus cet écart. */
+  levelBonus: z.number().int().min(0).max(5),
+  /** Rencontres exclues (milices de village hostiles). */
+  excludeEncounters: z.array(idSchema),
+  /** Plafond de scènes par combat (citations de combat, de mort et de deuil, n°176). */
+  sceneCap: z.number().int().min(0).max(10),
+});
+export type NamedPopBalance = z.infer<typeof namedPopBalanceSchema>;
+
 const alliesBalanceSchema = z.strictObject({
   /** Un combat engagé à moins de tant de cases d'un village (son rectangle) y appelle ses gardes. */
   guardRange: z.number().int().min(0),
@@ -267,6 +286,8 @@ export const balanceFileSchema = z.strictObject({
   }),
   /** Alliés verts (jalon M5, GDD §7.8) : gardes, alliés de passage, alliés errants. Distances en cases. */
   allies: alliesBalanceSchema,
+  /** Ennemis nommés et dialogues de combat (n°115, n°176, n°185, n°186). */
+  namedPop: namedPopBalanceSchema,
   /** Effets HD-2D du monde ouvert (décision n°47) ; le réglage « Qualité » choisit lesquels s'appliquent. */
   visuals: z.strictObject({
     /** Flou de profondeur : bande nette centrée de hauteur `focus` (fraction d'écran), fondu `fade`, force `blur`. */

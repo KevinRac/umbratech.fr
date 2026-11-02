@@ -8,6 +8,7 @@
  */
 import allies from '../../data/allies.json';
 import balance from '../../data/balance.json';
+import battleQuotes from '../../data/battleQuotes.json';
 import classes from '../../data/classes.json';
 import company from '../../data/company.json';
 import elements from '../../data/elements.json';
@@ -23,7 +24,7 @@ import worldEnemies from '../../data/worldEnemies.json';
 import zones from '../../data/zones.json';
 import { GameDataError, validateGameData, type GameData, type RawGameData } from './validate';
 
-export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies, skills, allies, company };
+export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies, skills, allies, company, battleQuotes };
 
 let cache: GameData | null = null;
 

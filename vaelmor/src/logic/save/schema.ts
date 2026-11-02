@@ -12,8 +12,8 @@ import { STAT_KEYS } from '../../data/schemas';
 import { GAME_MODES } from '../game/progress';
 import { OATH_KINDS } from '../progression/traits';
 
-/** Version courante du format (n°158). */
-export const SAVE_VERSION = 1;
+/** Version courante du format (n°158) ; 2 : dialogues de combat (scènes vues, ennemis nommés, n°189). */
+export const SAVE_VERSION = 2;
 
 /** Marque du jeu dans l'enveloppe : un fichier d'un autre jeu est refusé net. */
 export const SAVE_GAME = 'vaelmor';
@@ -63,6 +63,10 @@ const progress = z.strictObject({
   bought: z.record(z.string(), count).optional(),
   mode: z.enum(GAME_MODES),
   fallen: z.array(z.string()),
+  /** Version 2 (dialogues de combat, n°189). */
+  scenesSeen: z.array(z.string()),
+  named: z.record(z.string(), z.enum(['defeated', 'recruited', 'lost'])),
+  namedPity: count,
 });
 
 const world = z.strictObject({

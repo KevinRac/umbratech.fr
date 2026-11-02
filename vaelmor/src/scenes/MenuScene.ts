@@ -26,6 +26,9 @@ import { isWounded, type Member } from '../logic/units/company';
 import { portraitInBox } from '../render/portraits';
 import { STAT_SHORT } from '../ui/labels';
 import { SCENES } from './keys';
+import { TalkBox } from '../ui/TalkBox';
+import { buildTalkView, sceneTitle, type FaceLookup } from '../ui/talkView';
+import type { SceneDef } from '../data/talkSchemas';
 import { isLoadable, listSlots, SLOT_LABEL } from '../core/saves';
 import { GAME_SAVE_KEYS } from '../logic/save/keys';
 import type { SaveEnvelope } from '../logic/save/schema';
@@ -70,6 +73,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(data: MenuSceneData): void {
+    this.talkBox = null;
     const ctx = getGameCtx();
     if (!ctx) {
       data.onClose();
@@ -97,8 +101,13 @@ export class MenuScene extends Phaser.Scene {
     this.build();
   }
 
-  override update(): void {
+  override update(_time: number, delta: number): void {
     if (this.closing || this.covered) return;
+    // Journal des rencontres : une scène relue occupe toutes les touches (Échap la passe).
+    if (this.talkBox) {
+      this.talkBox.update(delta);
+      return;
+    }
     if (this.actions.consume('cancel') || this.actions.consume('menu')) {
       this.close();
       return;
@@ -433,16 +442,53 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
+  private talkBox: TalkBox | null = null;
+
+  /** Visages du journal : la compagnie de la partie (les autres viennent des données). */
+  private faceLookup(): FaceLookup {
+    return (charId) => {
+      const m = this.ctx.progress.company.find((c) => c.id === charId);
+      return m ? { name: m.name, title: null, sprite: m.hero ? 'heros' : m.class, team: 'player' } : null;
+    };
+  }
+
+  /** Relit une scène du journal des rencontres (n°188). */
+  private replay(scene: SceneDef): void {
+    const box = new TalkBox(this, this.actions, buildTalkView(this.ctx.data, scene, false, this.faceLookup()), {
+      scale: this.S,
+      depth: DEPTH + 20,
+      bottom: this.scale.height - 12 * this.S,
+      ...this.ctx.data.balance.dialogue,
+    });
+    this.talkBox = box;
+    this.list?.setLocked(true);
+    void box.done.then(() => {
+      if (this.talkBox === box) this.talkBox = null;
+      this.list?.setLocked(false);
+      // Échap a fermé la scène : il ne doit pas fermer le menu dans la même image.
+      this.actions.consume('cancel');
+    });
+  }
+
   private buildQuests(): void {
     const S = this.S;
     const a = this.area();
     const quests = this.ctx.data.quests
       .filter((q) => questStatus(this.ctx, q.id) !== 'available' || this.ctx.progress.quests[q.id] !== undefined)
       .sort((p, q) => this.order(p) - this.order(q));
-    const rows: ListRow[] = quests.map((q) => {
-      const status = questStatus(this.ctx, q.id);
+    // Journal des rencontres (GDD §7.9, n°188) : les scènes de combat déjà vues, par ennemi.
+    const lookup = this.faceLookup();
+    const seen = new Set(this.ctx.progress.scenesSeen);
+    const enemyOrder = (id: string): number => this.ctx.data.enemies.findIndex((e) => e.id === id);
+    const scenes = this.ctx.data.scenes.filter((sc) => seen.has(sc.id)).sort((p, q) => enemyOrder(p.enemy) - enemyOrder(q.enemy) || this.ctx.progress.scenesSeen.indexOf(p.id) - this.ctx.progress.scenesSeen.indexOf(q.id));
+    type Entry = { readonly quest: QuestDef } | { readonly scene: SceneDef } | { readonly header: true };
+    const entries: Entry[] = [...quests.map((quest) => ({ quest })), ...(scenes.length > 0 ? [{ header: true as const }, ...scenes.map((scene) => ({ scene }))] : [])];
+    const rows: ListRow[] = entries.map((e) => {
+      if ('header' in e) return { label: '— Rencontres —', color: PALETTE.ambre };
+      if ('scene' in e) return { label: sceneTitle(this.ctx.data, e.scene, lookup), right: 'Relire', color: PALETTE.parchemin };
+      const status = questStatus(this.ctx, e.quest.id);
       return {
-        label: q.name,
+        label: e.quest.name,
         right: STATUS_LABEL[status],
         color: status === 'done' ? PALETTE.desactive : status === 'ready' ? PALETTE.cyanEclat : PALETTE.parchemin,
       };
@@ -456,18 +502,30 @@ export class MenuScene extends Phaser.Scene {
       detail.length = 0;
       const dx = a.x + listW + 24 * S;
       const dw = a.w - listW - 24 * S;
-      const q = quests[i];
-      if (!q) {
-        detail.push(addText(this, dx, a.y, 'Aucune quête pour l’instant. Parlez aux habitants : ceux qui ont besoin d’aide le montrent.', { scale: S, color: PALETTE.metalClair, maxWidth: dw }).setDepth(DEPTH + 2));
-        this.content.push(...detail);
-        return;
-      }
+      const entry = entries[i];
       let y = a.y;
       const push = (text: string, color: number, scale = S, font: 'body' | 'small' = 'body'): void => {
         const t = addText(this, dx, y, text, { scale, color, maxWidth: dw, font }).setDepth(DEPTH + 2);
         detail.push(t);
         y += Math.ceil(t.height) + 6 * S;
       };
+      if (!entry) {
+        push('Aucune quête pour l’instant. Parlez aux habitants : ceux qui ont besoin d’aide le montrent.', PALETTE.metalClair);
+        this.content.push(...detail);
+        return;
+      }
+      if ('header' in entry || 'scene' in entry) {
+        push('Journal des rencontres', PALETTE.jauneBle);
+        push('Les paroles échangées au combat avec les ennemis nommés.', PALETTE.parchemin);
+        if ('scene' in entry) {
+          const first = entry.scene.lines[0];
+          if (first) push(`« ${first.text} »`, PALETTE.metalClair);
+          push('Entrée : relire la scène. Échap : la passer.', PALETTE.cyanEclat, S + 1, 'small');
+        }
+        this.content.push(...detail);
+        return;
+      }
+      const q = entry.quest;
       push(q.name, PALETTE.jauneBle);
       const giver = this.ctx.index.npcs.get(q.giver);
       push(`${q.principal ? 'Quête principale · ' : ''}${giver ? `${giver.npc.name}, ${giver.location.name}` : ''}`, PALETTE.cyanEclat, S + 1, 'small');
@@ -476,7 +534,11 @@ export class MenuScene extends Phaser.Scene {
       push(`Récompense : ${this.rewardText(q)}`, PALETTE.metalClair, S + 1, 'small');
       this.content.push(...detail);
     };
-    this.list = new ScrollList(this, a.x, a.y, this.actions, { width: listW, rowHeight: rowH, visibleRows: visible, depth: DEPTH + 2, scale: S, onCursor: show });
+    const activate = (i: number): void => {
+      const entry = entries[i];
+      if (entry && 'scene' in entry) this.replay(entry.scene);
+    };
+    this.list = new ScrollList(this, a.x, a.y, this.actions, { width: listW, rowHeight: rowH, visibleRows: visible, depth: DEPTH + 2, scale: S, onCursor: show, onActivate: activate });
     this.list.setRows(rows, false);
     if (rows.length === 0) show(0);
   }

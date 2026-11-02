@@ -48,6 +48,11 @@ export class PixelCanvas {
     this.px = this.image.data;
   }
 
+  /** Les pixels bruts (RGBA), pour un peintre qui travaille sur un tampon (détails de skin). */
+  get pixels(): { readonly width: number; readonly height: number; readonly data: Uint8ClampedArray } {
+    return { width: this.width, height: this.height, data: this.px };
+  }
+
   inBounds(x: number, y: number): boolean {
     return x >= 0 && y >= 0 && x < this.width && y < this.height;
   }

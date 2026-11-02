@@ -51,7 +51,7 @@ async function main(): Promise<number> {
           `✓ Données valides : ${d.classes.length} classes, ` +
             `${d.classes.reduce((n, c) => n + c.evolutions.length, 0)} évolutions, ` +
             `${d.terrains.length} terrains, ${d.elements.length} éléments, ${d.reputation.tiers.length} paliers de réputation, ` +
-            `${d.weapons.length} armes, ${d.enemies.length} ennemis, ${d.encounters.encounters.length} rencontres, ${d.locations.length} lieux, ${d.locations.reduce((n, l) => n + l.npcs.length, 0)} PNJ, ${d.quests.length} quêtes, ${d.worldFoes.length} ennemis du monde, ${d.skills.length} compétences, ${d.statuses.length} statuts, ${d.bosses.length} boss à 2 phases, ${d.allyTemplates.length} modèles d'alliés, ${d.wanderers.length} alliés errants.${mapSummary}`,
+            `${d.weapons.length} armes, ${d.enemies.length - d.named.length} ennemis, ${d.encounters.encounters.length} rencontres, ${d.locations.length} lieux, ${d.locations.reduce((n, l) => n + l.npcs.length, 0)} PNJ, ${d.quests.length} quêtes, ${d.worldFoes.length} ennemis du monde, ${d.skills.length} compétences, ${d.statuses.length} statuts, ${d.bosses.length} boss à 2 phases, ${d.allyTemplates.length} modèles d'alliés, ${d.wanderers.length} alliés errants, ${d.named.length} ennemis nommés, ${d.scenes.length} scènes de combat.${mapSummary}`,
         );
         return 0;
       }

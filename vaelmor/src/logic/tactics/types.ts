@@ -31,6 +31,8 @@ import type {
 import type { GameData } from '../../data/validate';
 import type { OathState } from '../progression/traits';
 import type { Rng } from '../rng';
+import type { SceneKind } from '../../data/talkSchemas';
+import type { TalkState } from './talk';
 
 export type Team = 'player' | 'ally' | 'enemy';
 
@@ -80,6 +82,13 @@ export type AllySource = 'garde' | 'passage' | 'errant';
 export interface BattleUnit {
   /** Identifiant (réaffecté par les tests, d'où l'absence de `readonly`). */
   id: string;
+  /**
+   * Personnage (GDD §7.9) : identifiant du membre de la compagnie (« nessa »),
+   * de l'ennemi (« brakk », « rik ») ou du modèle d'un allié vert nommé
+   * (« voyageur_arme ») ; null pour les unités sans identité (gardes, invocations…).
+   * Les scènes de combat (`battleQuotes.json`) lient des personnages.
+   */
+  readonly charId: string | null;
   readonly name: string;
   readonly team: Team;
   /** Classe (compagnie, alliés) ou type d'ennemi. */
@@ -238,6 +247,8 @@ export interface BattleState {
    * montée de niveau ne change pas les jets du combat. Créé à la demande.
    */
   growthRng?: Rng;
+  /** Dialogues de combat : scènes jouées, plafond, refus de Parler, recrues (GDD §7.9). */
+  readonly talk: TalkState;
 }
 
 /** Règles chiffrées du combat, tirées des données (balance.json, elements.json, skills.json…). */
@@ -324,6 +335,14 @@ export type BattleEvent =
   | { readonly type: 'canto'; readonly unitId: string; readonly range: number }
   /** Épines (passive, n°93) : dégâts des ronces aux ennemis collés, au début de la phase de leur poseur. */
   | { readonly type: 'thorns'; readonly unitId: string; readonly sourceId: string; readonly damage: number; readonly hp: number }
+  /**
+   * Scène de dialogue (GDD §7.9) : citation de combat (avant l'échange), Parler,
+   * citation de mort (avant la chute), de phase, de deuil. `unitId` : l'unité
+   * liée (null pour une scène générique) ; `failed` : refus de Parler.
+   */
+  | { readonly type: 'scene'; readonly sceneId: string; readonly kind: SceneKind; readonly enemyId: string; readonly unitId: string | null; readonly failed: boolean }
+  /** Un ennemi nommé change de camp (n°181) : l'unité `fromId` est remplacée par `unitId`. */
+  | { readonly type: 'recruit'; readonly fromId: string; readonly unitId: string }
   /** Serment brisé (Lame du Serment, n°123). */
   | { readonly type: 'oath'; readonly unitId: string; readonly broken: true }
   /**

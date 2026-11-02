@@ -21,6 +21,8 @@ import type { AllySource, BattleRules, BattleUnit, ItemStack, Team } from './typ
  * porte en plus ses stats tirées au sort, son XP et son plafond de niveau.
  */
 export type MemberLike = PartyMemberDef & {
+  /** Identifiant de personnage (« heros », « nessa »…), pour les scènes de combat (GDD §7.9). */
+  readonly id?: string;
   /** Stats propres (sans accessoire) ; absentes : croissance moyenne du niveau (n°52). */
   readonly stats?: StatBlock;
   readonly xp?: number;
@@ -127,6 +129,7 @@ export function memberUnit(data: GameData, rules: BattleRules, member: MemberLik
   const skill = signatureSkill(data, cls.id);
   const unit: BattleUnit = {
     id,
+    charId: member.id ?? null,
     name: member.name,
     team: 'player',
     kindId: cls.id,
@@ -175,6 +178,7 @@ export function enemyUnit(data: GameData, rules: BattleRules, placed: { enemy: s
   const bossDef: BossDef | null = placed.boss === true ? (data.bosses.find((b) => b.enemy === def.id) ?? null) : null;
   const unit: BattleUnit = {
     id,
+    charId: def.id,
     name: def.name,
     team,
     kindId: def.id,
@@ -227,6 +231,7 @@ export function allyUnit(data: GameData, rules: BattleRules, template: AllyTempl
   const learns = source === 'errant';
   const unit: BattleUnit = {
     id,
+    charId: template.named === true ? template.id : null,
     name: template.name,
     team: 'ally',
     kindId: cls.id,

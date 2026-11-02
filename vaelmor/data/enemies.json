@@ -1,5 +1,5 @@
 {
-  "$comment": "Ennemis des combats tactiques (GDD §7, §9.15, §16.3). baseStats = niveau 1 ; à un niveau supérieur, chaque stat reçoit sa croissance moyenne (croissance × (niveau − 1) / 100, arrondie) : un ennemi d'un niveau donné a toujours les mêmes stats (décision n°52). weapon : arme de data/items.json. armor : legere, lourde ou monstre (cibles des armes « effective »). ai : profil d'IA (§9.15) — agressif, opportuniste, defensif (ne bouge que s'il peut frapper ce tour-ci, puis devient agressif), chasseur_heros, boss (ne quitte jamais sa case). sprite : apparence dessinée par render/unitLooks.ts.",
+  "$comment": "Ennemis des combats tactiques (GDD §7, §9.15, §16.3). `named` : ennemis nommés (GDD §7.9, n°105, n°175), chacun un « Écho » d'un modèle (`skinOf`) avec son nom, un détail visible sur le sprite (`detail`), sa zone, son portrait (décrit, peint en M7), sa condition d'apparition au hasard (`pop` ; `false` : jamais) et, s'il est recrutable, `recruit` (interlocuteurs, prérequis, délai, rançon, classe et niveau en rejoignant la compagnie). baseStats = niveau 1 ; à un niveau supérieur, chaque stat reçoit sa croissance moyenne (croissance × (niveau − 1) / 100, arrondie) : un ennemi d'un niveau donné a toujours les mêmes stats (décision n°52). weapon : arme de data/items.json. armor : legere, lourde ou monstre (cibles des armes « effective »). ai : profil d'IA (§9.15) — agressif, opportuniste, defensif (ne bouge que s'il peut frapper ce tour-ci, puis devient agressif), chasseur_heros, boss (ne quitte jamais sa case). sprite : apparence dessinée par render/unitLooks.ts.",
   "enemies": [
     {
       "id": "ecumeur_sabreur",
@@ -344,6 +344,36 @@
       "ai": "defensif",
       "baseStats": {"pv": 16, "fo": 5, "mag": 0, "dex": 6, "vit": 0, "def": 6, "res": 4, "chc": 0, "mob": 1},
       "growths": {"pv": 0, "fo": 0, "mag": 0, "dex": 0, "vit": 0, "def": 0, "res": 0, "chc": 0}
+    }
+  ],
+  "named": [
+    {
+      "id": "rik",
+      "name": "Rik",
+      "title": "le Cadet",
+      "skinOf": "ecumeur_sabreur",
+      "detail": 1,
+      "zone": "z1",
+      "portrait": "Jeune homme maigre, cagoule d'Écumeur rabattue sur le front, foulard sur le bas du visage, regard qui fuit.",
+      "story": "Ami d'enfance de Nessa, parti chez les Écumeurs après la mort de ses parents.",
+      "pop": {"questDone": "colporteur_perdu"},
+      "recruit": {
+        "talkers": ["nessa"],
+        "requires": {"questDone": "colporteur_perdu"},
+        "deadline": {"turn": 8},
+        "asClass": "lame_du_serment",
+        "level": 4
+      }
+    },
+    {
+      "id": "gorm",
+      "name": "Gorm",
+      "title": "l'Incendiaire",
+      "skinOf": "ecumeur_incendiaire",
+      "detail": 1,
+      "zone": "z1",
+      "portrait": "Colosse roux aux sourcils brûlés, cornes d'os sur la capuche, sourire de travers.",
+      "story": "Lieutenant de Brakk. Il a brûlé la grange de Thom."
     }
   ]
 }

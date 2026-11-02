@@ -3,9 +3,10 @@
  *
  * `MIGRATIONS[n]` transforme une enveloppe de la version n en version n + 1
  * (ses champs `meta` et `data`, et `saveVersion`). Une sauvegarde v1 est
- * ainsi portée pas à pas jusqu'à la version courante. Le registre est vide
- * en v1 ; chaque changement du schéma (`schema.ts`) ajoute ici une fonction
- * et un test qui charge la sauvegarde figée `tests/fixtures/save-v1.json`.
+ * ainsi portée pas à pas jusqu'à la version courante. v1 = M9 ; v2 ajoute
+ * les dialogues de combat. Chaque changement du schéma (`schema.ts`) ajoute
+ * ici une fonction et un test qui charge la sauvegarde figée
+ * `tests/fixtures/save-v1.json`.
  *
  * Une migration reçoit une copie et peut la modifier ; elle ne contrôle rien :
  * le schéma de la version courante valide le résultat. Module pur.
@@ -22,8 +23,24 @@ export interface RawEnvelope {
 
 export type Migration = (envelope: RawEnvelope) => RawEnvelope;
 
-/** Registre des migrations : version de départ → fonction (v1 : aucune). */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
+/**
+ * v1 → v2 (dialogues de combat, n°189) : la progression gagne les scènes vues,
+ * le sort des ennemis nommés et le compteur anti-malchance de leur apparition,
+ * tous vides.
+ */
+const toV2: Migration = (envelope) => {
+  const data = envelope.data as { world?: { progress?: Record<string, unknown> } };
+  const progress = data.world?.progress;
+  if (progress) {
+    progress['scenesSeen'] ??= [];
+    progress['named'] ??= {};
+    progress['namedPity'] ??= 0;
+  }
+  return { ...envelope, saveVersion: 2 };
+};
+
+/** Registre des migrations : version de départ → fonction. */
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: toV2 };
 
 export class MigrationError extends Error {}
 

@@ -27,6 +27,7 @@ import { PrepSheet, type SheetCallbacks, type SheetView } from '../ui/PrepSheet'
 import { drawPanel } from '../ui/panel';
 import { ScrollList, type ListRow } from '../ui/ScrollList';
 import { addText, fitText, setText, type PixelText } from '../ui/text';
+import { TalkBox, type TalkView } from '../ui/TalkBox';
 import { Toasts } from '../ui/Toasts';
 import { VerticalMenu, type MenuItem } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
@@ -248,6 +249,8 @@ export class BattleHudScene extends Phaser.Scene {
       this.prepRects = [];
       this.prepPaused = false;
       this.uiHidden = false;
+      this.talkBox?.close();
+      this.talkBox = null;
     });
     this.ready = true;
     const queued = this.pending;
@@ -255,8 +258,12 @@ export class BattleHudScene extends Phaser.Scene {
     for (const call of queued) call();
   }
 
-  override update(): void {
+  override update(_time: number, delta: number): void {
     if (!this.ready) return;
+    if (this.talkBox) {
+      this.talkBox.update(delta);
+      return;
+    }
     if (this.list) {
       if (this.actions.justPressed('cancel') && this.listCancel) this.listCancel();
       else this.list?.update();
@@ -871,6 +878,28 @@ export class BattleHudScene extends Phaser.Scene {
             c.destroy(true);
             resolve();
           },
+        });
+      });
+    });
+  }
+
+  /* ---------- Scène de dialogue (GDD §7.9, n°187) ---------- */
+
+  private talkBox: TalkBox | null = null;
+
+  /** Joue une scène de dialogue ; se résout quand elle est finie ou passée (Échap). */
+  talk(view: TalkView, typing: { readonly charsPerSecond: number; readonly fastMultiplier: number }, atTop = false): Promise<void> {
+    return new Promise((resolve) => {
+      this.run(() => {
+        if (view.lines.length === 0) {
+          resolve();
+          return;
+        }
+        const box = new TalkBox(this, this.actions, view, { scale: this.S, depth: DEPTH.line, bottom: this.scale.height - BOTTOM_BAR * this.S, ...(atTop ? { top: TOP_BAR * this.S } : {}), ...typing });
+        this.talkBox = box;
+        void box.done.then(() => {
+          if (this.talkBox === box) this.talkBox = null;
+          resolve();
         });
       });
     });

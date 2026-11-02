@@ -302,9 +302,10 @@ describe('migrations successives (n°158)', () => {
 
   it('decodeSave applique les migrations puis contrôle le résultat', () => {
     const env = envelopeOf(newGame().world, newGame().session) as unknown as RawEnvelope;
-    const res = decodeSave(JSON.stringify(env), data, { version: 2, migrations: { 1: (e) => ({ ...e, saveVersion: 2 }) } });
-    expect(res).toMatchObject({ ok: true, migratedFrom: 1 });
-    expect(decodeSave(JSON.stringify(env), data, { version: 2, migrations: {} })).toMatchObject({ ok: false, kind: 'migration' });
+    const next = SAVE_VERSION + 1;
+    const res = decodeSave(JSON.stringify(env), data, { version: next, migrations: { [SAVE_VERSION]: (e) => ({ ...e, saveVersion: next }) } });
+    expect(res).toMatchObject({ ok: true, migratedFrom: SAVE_VERSION });
+    expect(decodeSave(JSON.stringify(env), data, { version: next, migrations: {} })).toMatchObject({ ok: false, kind: 'migration' });
   });
 
   it('la sauvegarde v1 figée se charge toujours (tests/fixtures/save-v1.json)', () => {
@@ -313,6 +314,18 @@ describe('migrations successives (n°158)', () => {
     if (!res.ok) throw new Error(`${res.kind} : ${res.message}`);
     expect(res.save.data.world.progress.company.length).toBeGreaterThan(0);
     expect(res.save.meta.heroName).toBeTruthy();
+    // v1 → v2 (dialogues de combat, n°189) : champs vides ajoutés.
+    expect(res.migratedFrom).toBe(1);
+    expect(res.save.saveVersion).toBe(2);
+    expect(res.save.data.world.progress).toMatchObject({ scenesSeen: [], named: {}, namedPity: 0 });
+  });
+
+  it('les scènes vues et le sort des nommés font l’aller-retour ; ceux qui ont disparu sont oubliés', () => {
+    const g = newGame();
+    Object.assign(g.world.progress, { scenesSeen: ['gorm_nessa', 'scene_disparue'], named: { rik: 'recruited', gorm: 'defeated', fantome: 'lost' }, namedPity: 5 });
+    const res = decodeSave(encodeEnvelope(envelopeOf(g.world, g.session)), data);
+    if (!res.ok) throw new Error(res.message);
+    expect(res.save.data.world.progress).toMatchObject({ scenesSeen: ['gorm_nessa'], named: { rik: 'recruited', gorm: 'defeated' }, namedPity: 5 });
   });
 });
 

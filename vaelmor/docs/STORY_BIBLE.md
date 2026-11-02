@@ -292,6 +292,8 @@ Remplacement par une **citation de deuil** de 1 réplique : `[Brakk] Où est le 
 ## 9. Données (rappel, voir GDD §7.9)
 
 ### 9.1 Champs ajoutés aux ennemis (`enemies.json`)
+
+> **Réalisé le 03/11/2026 (lot « dialogues de combat »)** sous une forme un peu différente : les nommés sont des fiches à part, `enemies.json › named` (`skinOf`, `detail`, `zone`, `portrait`, `pop`, `recruit` avec `talkers`, `requires`, `deadline`, `ransom`, `asClass`, `level`), et les scènes sont dans `battleQuotes.json` avec `units` (liste), `kind` (`battle`, `talk`, `death`, `phase`, `mourn`), `when`, `lines`, `onFail`, `once`. Voir GDD §7.9.1.
 | Champ | Rôle |
 |---|---|
 | `named` | `true` pour un nommé ou un boss |

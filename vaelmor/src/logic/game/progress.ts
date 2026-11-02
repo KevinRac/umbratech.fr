@@ -7,6 +7,7 @@ import type { BalanceConfig, ReputationConfig } from '../../data/schemas';
 import { TIER_IDS, type FactionDef, type LocationDef, type TierId } from '../../data/townSchemas';
 import { applyReputationDecay, applyReputationDelta, getReputationTier } from '../reputation/reputation';
 import type { ErrantRecord, Member } from '../units/company';
+import type { NamedStatus } from '../tactics/talk';
 
 export interface ItemStack {
   item: string;
@@ -60,6 +61,12 @@ export interface Progress {
   mode: GameMode;
   /** Membres perdus en mode Classique (n°167), dans l'ordre de leur chute. */
   fallen: string[];
+  /** Scènes de combat déjà vues (GDD §7.9, n°189), dans l'ordre : le journal des rencontres les relit. */
+  scenesSeen: string[];
+  /** Ennemis nommés vaincus, recrutés ou perdus (n°183) : ils ne reviennent plus. */
+  named: Record<string, NamedStatus>;
+  /** Combats ordinaires sans apparition de nommé depuis la dernière (anti-malchance, n°115). */
+  namedPity: number;
 }
 
 /** Quand un ennemi du monde a été vaincu : jour de repos, temps de jeu et compteur de zones à ce moment-là. */
@@ -109,6 +116,9 @@ export function newProgress(seed: ProgressSeed): Progress {
     errants: {},
     mode: seed.mode ?? 'blessure',
     fallen: [],
+    scenesSeen: [],
+    named: {},
+    namedPity: 0,
   };
   for (const s of seed.balance.economy.startingItems) addItem(progress, s.item, s.qty, seed.balance);
   return progress;

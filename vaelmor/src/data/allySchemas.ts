@@ -25,6 +25,12 @@ export const allyTemplateSchema = z.strictObject({
   sprite: idSchema,
   /** Niveau = milieu des niveaux de la zone + cet écart. */
   levelOffset: z.number().int().min(-5).max(5),
+  /**
+   * Allié vert nommé (errant, figure de village) : il a des scènes de combat
+   * avec les ennemis nommés (GDD §7.9) ; son identifiant de personnage est
+   * l'identifiant du modèle.
+   */
+  named: z.boolean().optional(),
 });
 
 export const allyVillageSchema = z.strictObject({
