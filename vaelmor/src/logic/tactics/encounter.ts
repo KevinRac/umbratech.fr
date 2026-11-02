@@ -19,7 +19,7 @@ import { Rng } from '../rng';
 import { parseBattleMap } from './grid';
 import { placeUnits, sampleTerrain, type TerrainSource } from './sampling';
 import type { AllySource, BattleMap, BattleRules, BattleState, BattleUnit, Cell, Reinforcement } from './types';
-import { allyUnit, emptyLoadout, enemyUnit, memberUnit, type Loadout } from './units';
+import { allyUnit, emptyLoadout, enemyUnit, memberUnit, type Loadout, type MemberLike } from './units';
 
 export function battleRules(data: GameData): BattleRules {
   return {
@@ -47,6 +47,8 @@ export interface AllyJoin {
   /** Modèle (allies.json › templates). */
   readonly template: string;
   readonly level: number;
+  /** XP gardée par un allié errant (décision n°132). */
+  readonly xp?: number;
   /** Tour d'arrivée (au début de la phase alliée). */
   readonly turn: number;
   /** D'où il vient, en cases du monde (village, errant) ; null : au bord de la carte, côté compagnie. */
@@ -146,7 +148,7 @@ export function borderPoint(map: BattleMap, p: Cell): Cell {
 const centroid = (cells: readonly Cell[]): Cell =>
   cells.length === 0 ? { x: 0, y: 0 } : { x: cells.reduce((n, c) => n + c.x, 0) / cells.length, y: cells.reduce((n, c) => n + c.y, 0) / cells.length };
 
-export function buildBattle(base: EncounterDef, party: readonly PartyMemberDef[], data: GameData, options: BattleOptions): BattleState {
+export function buildBattle(base: EncounterDef, party: readonly MemberLike[], data: GameData, options: BattleOptions): BattleState {
   const encounter: EncounterDef = options.extraEnemies && options.extraEnemies.length > 0 ? { ...base, enemies: [...base.enemies, ...options.extraEnemies] } : base;
   const rules = battleRules(data);
   const layout = layoutEncounter(encounter, data, options);
@@ -157,7 +159,7 @@ export function buildBattle(base: EncounterDef, party: readonly PartyMemberDef[]
   defaultDeployOrder(party)
     .slice(0, maxDeploy)
     .forEach((memberIndex, i) => {
-      const member = party[memberIndex] as PartyMemberDef;
+      const member = party[memberIndex] as MemberLike;
       const slot = layout.slots[i] as Cell;
       units.push(memberUnit(data, rules, member, options.loadouts?.[memberIndex] ?? emptyLoadout(), `p${i}`, memberIndex, slot.x, slot.y, skinVariant(party, memberIndex)));
     });
@@ -192,7 +194,7 @@ export function buildBattle(base: EncounterDef, party: readonly PartyMemberDef[]
     reinforcements.push({
       turn: join.turn,
       team: 'ally',
-      units: [allyUnit(data, rules, template, join.level, join.source, join.errantId, `a${nextId++}`)],
+      units: [allyUnit(data, rules, template, join.level, join.source, join.errantId, `a${nextId++}`, join.xp ?? 0)],
       entry: local && inside ? local : borderPoint(map, local ?? playerHome),
       label: join.label,
     });

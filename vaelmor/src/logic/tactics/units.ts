@@ -13,6 +13,18 @@ import { statsAtLevel } from '../units/stats';
 import { refreshStats } from './status';
 import type { AllySource, BattleRules, BattleUnit, ItemStack, Team } from './types';
 
+/**
+ * Un membre de la compagnie tel que le combat le lit : la fiche de données
+ * (compagnie d'essai) ou un membre persistant (`logic/units/company.ts`) qui
+ * porte en plus ses stats tirées au sort, son XP et son plafond de niveau.
+ */
+export type MemberLike = PartyMemberDef & {
+  /** Stats propres (sans accessoire) ; absentes : croissance moyenne du niveau (n°52). */
+  readonly stats?: StatBlock;
+  readonly xp?: number;
+  readonly levelCap?: number;
+};
+
 /** Équipement choisi à la préparation (GDD §9.3) : arme (du type de la classe), accessoire, objets (5 au plus). */
 export interface Loadout {
   weapon: string | null;
@@ -24,11 +36,11 @@ export const emptyLoadout = (): Loadout => ({ weapon: null, accessory: null, ite
 
 type Fresh = Pick<
   BattleUnit,
-  'moved' | 'acted' | 'moveOrigin' | 'resonance' | 'bogPending' | 'bogged' | 'alerted' | 'cooldowns' | 'mods' | 'cantoLeft' | 'moveCap' | 'summonUntil'
+  'moved' | 'acted' | 'moveOrigin' | 'resonance' | 'bogPending' | 'bogged' | 'alerted' | 'cooldowns' | 'mods' | 'cantoLeft' | 'moveCap' | 'summonUntil' | 'gains' | 'ownerId'
 >;
 
 function fresh(): Fresh {
-  return { moved: false, acted: false, moveOrigin: null, resonance: 0, bogPending: false, bogged: false, alerted: false, cooldowns: {}, mods: [], cantoLeft: 0, moveCap: null, summonUntil: null };
+  return { moved: false, acted: false, moveOrigin: null, resonance: 0, bogPending: false, bogged: false, alerted: false, cooldowns: {}, mods: [], cantoLeft: 0, moveCap: null, summonUntil: null, gains: {}, ownerId: null };
 }
 
 function weaponOf(data: GameData, id: string): WeaponDef {
@@ -70,10 +82,11 @@ export function weaponFor(data: GameData, cls: ClassDef, wanted: string | null):
 }
 
 /** Un membre de la compagnie. */
-export function memberUnit(data: GameData, rules: BattleRules, member: PartyMemberDef, loadout: Loadout, id: string, memberIndex: number, x: number, y: number, variant = 0): BattleUnit {
+export function memberUnit(data: GameData, rules: BattleRules, member: MemberLike, loadout: Loadout, id: string, memberIndex: number, x: number, y: number, variant = 0): BattleUnit {
   const cls = classOf(data, member.class);
   const accessory = loadout.accessory ? data.accessories.find((a) => a.id === loadout.accessory) ?? null : null;
-  const base = withBonus(statsAtLevel(cls.baseStats, cls.growths, member.level), accessory?.bonus);
+  const base = withBonus(member.stats ? { ...member.stats } : statsAtLevel(cls.baseStats, cls.growths, member.level), accessory?.bonus);
+  const levelCap = member.levelCap ?? data.balance.levels.baseClassCap;
   const skill = signatureSkill(data, cls.id);
   const unit: BattleUnit = {
     id,
@@ -83,6 +96,9 @@ export function memberUnit(data: GameData, rules: BattleRules, member: PartyMemb
     kindName: cls.name,
     sprite: member.hero ? 'heros' : memberSprite(cls.id, variant),
     level: member.level,
+    xp: member.level >= levelCap ? 0 : (member.xp ?? 0),
+    growths: cls.growths,
+    levelCap,
     base,
     stats: base,
     weapon: weaponFor(data, cls, loadout.weapon),
@@ -122,6 +138,9 @@ export function enemyUnit(data: GameData, rules: BattleRules, placed: { enemy: s
     kindName: def.title ?? def.name,
     sprite: def.sprite,
     level: placed.level,
+    xp: null,
+    growths: null,
+    levelCap: placed.level,
     base,
     stats: base,
     weapon: weaponOf(data, def.weapon),
@@ -147,10 +166,16 @@ export function enemyUnit(data: GameData, rules: BattleRules, placed: { enemy: s
   return unit;
 }
 
-/** Un allié vert (GDD §7.8) : toujours mené par l'IA. */
-export function allyUnit(data: GameData, rules: BattleRules, template: AllyTemplateDef, level: number, source: AllySource, errantId: string | null, id: string): BattleUnit {
+/**
+ * Un allié vert (GDD §7.8) : toujours mené par l'IA. Seuls les errants gagnent
+ * de l'XP (décision n°132) : `xp` est alors leur XP gardée d'un combat à l'autre.
+ */
+export function allyUnit(data: GameData, rules: BattleRules, template: AllyTemplateDef, level: number, source: AllySource, errantId: string | null, id: string, xp = 0): BattleUnit {
   const cls = classOf(data, template.class);
-  const base = statsAtLevel(cls.baseStats, cls.growths, Math.max(1, level));
+  const lvl = Math.max(1, level);
+  const base = statsAtLevel(cls.baseStats, cls.growths, lvl);
+  const levelCap = data.balance.levels.baseClassCap;
+  const learns = source === 'errant';
   const unit: BattleUnit = {
     id,
     name: template.name,
@@ -158,7 +183,10 @@ export function allyUnit(data: GameData, rules: BattleRules, template: AllyTempl
     kindId: cls.id,
     kindName: cls.name,
     sprite: template.sprite,
-    level: Math.max(1, level),
+    level: lvl,
+    xp: learns ? (lvl >= levelCap ? 0 : xp) : null,
+    growths: learns ? cls.growths : null,
+    levelCap: learns ? levelCap : lvl,
     base,
     stats: base,
     weapon: weaponOf(data, cls.startingWeapon),

@@ -64,10 +64,10 @@ export function meanEnemyLevel(encounter: EncounterDef): number {
   return encounter.enemies.reduce((n, e) => n + e.level, 0) / encounter.enemies.length;
 }
 
-/** Niveau moyen de la compagnie (compagnie d'essai tant que M5-M6 ne sont pas là ; `override` pour le debug). */
-export function partyLevel(data: GameData, override?: number): number {
+/** Niveau moyen de la compagnie (la compagnie d'essai à défaut ; `override` pour le debug). */
+export function partyLevel(data: GameData, override?: number, company?: readonly { readonly level: number }[]): number {
   if (override !== undefined) return override;
-  const party = data.encounters.testParty;
+  const party = company && company.length > 0 ? company : data.encounters.testParty;
   return party.reduce((n, m) => n + m.level, 0) / party.length;
 }
 
@@ -77,9 +77,10 @@ export function testPartyAt(data: GameData, level?: number): PartyMemberDef[] {
 }
 
 /** Facteur de détection de la compagnie : le plus discret des bonus de classe présents (Chasseur de Serpents de Mer ×0,8). */
-export function classDetectionScale(data: GameData): number {
+export function classDetectionScale(data: GameData, company?: readonly { readonly class: string }[]): number {
   let scale = 1;
-  for (const member of data.encounters.testParty) scale = Math.min(scale, data.balance.foes.classDetection[member.class] ?? 1);
+  const party = company && company.length > 0 ? company : data.encounters.testParty;
+  for (const member of party) scale = Math.min(scale, data.balance.foes.classDetection[member.class] ?? 1);
   return scale;
 }
 

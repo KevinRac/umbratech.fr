@@ -50,6 +50,8 @@ export interface AllyPlanInput {
   readonly villages: readonly VillageArea[];
   readonly errants: readonly ErrantPosition[];
   readonly rng: Rng;
+  /** Niveau et XP gardés par les errants (décision n°132). */
+  readonly errantRecords?: Readonly<Record<string, { readonly level: number; readonly xp: number }>>;
 }
 
 /** Distance (cases) d'une case au rectangle d'un village (0 dedans). */
@@ -106,7 +108,12 @@ export function planAllies(input: AllyPlanInput): AllyJoin[] {
     if (!joinsFight) continue;
     const def = data.wanderers.find((w) => w.id === errant.id);
     if (!def) continue;
-    joins.push({ template: def.template, level: allyLevel(data, input.zoneValue, def.template), turn: cfg.errantTurn, worldCell: errant.cell, source: 'errant', errantId: errant.id, label: `${def.name} se joint au combat !` });
+    // Un errant garde le niveau qu'il a gagné ; il ne descend jamais sous celui de la zone.
+    const zoneLevel = allyLevel(data, input.zoneValue, def.template);
+    const kept = input.errantRecords?.[errant.id];
+    const level = kept && kept.level >= zoneLevel ? kept.level : zoneLevel;
+    const xp = kept && kept.level >= zoneLevel ? kept.xp : 0;
+    joins.push({ template: def.template, level, xp, turn: cfg.errantTurn, worldCell: errant.cell, source: 'errant', errantId: errant.id, label: `${def.name} se joint au combat !` });
   }
   return joins;
 }

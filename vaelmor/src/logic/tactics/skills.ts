@@ -263,6 +263,7 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
         if (!def || !isFreeCell(state, target.x, target.y)) break;
         const summon = enemyUnit(rules.data, rules, { enemy: def.id, level: caster.level }, `s${state.nextId++}`, target.x, target.y, caster.team);
         summon.summonUntil = nextPhaseTurn(state, caster.team) + effect.turns;
+        summon.ownerId = caster.id;
         // Elle vient d'apparaître : elle agira à la prochaine phase de son camp.
         summon.acted = state.phase === caster.team;
         summon.moved = summon.acted;

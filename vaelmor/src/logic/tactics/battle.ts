@@ -15,6 +15,7 @@
  * leur action, soin des villages (compagnie et alliés).
  */
 import { resolveExchange } from '../combat/combat';
+import { grantXp } from '../progression/xp';
 import { BattleError, assertCanAct, assertCanAction, finishUnit, hurt, livingUnits, settleOutcome } from './battleCore';
 import { checkBossPhases } from './bosses';
 import { canStop, getUnit, inWeaponRange, nearestFreeCell, pathTo, reachable, terrainAt } from './grid';
@@ -28,6 +29,12 @@ export { BattleError, evaluateOutcome, livingUnits } from './battleCore';
 /** Unités du camp en cours qui peuvent encore agir. */
 export function readyUnits(state: BattleState): BattleUnit[] {
   return livingUnits(state, state.phase).filter((u) => !u.acted);
+}
+
+/** Ajoute à la fin des événements d'une commande l'XP qu'ils rapportent (jalon M6). */
+function withXp(state: BattleState, rules: BattleRules, events: BattleEvent[]): BattleEvent[] {
+  events.push(...grantXp(state, rules, events));
+  return events;
 }
 
 /** Après toute action qui blesse : boss qui changent de phase, fin du combat. */
@@ -86,22 +93,22 @@ export function attackUnit(state: BattleState, attackerId: string, defenderId: s
   for (const unit of [defender, attacker]) if (unit.hp <= 0) events.push({ type: 'ko', unitId: unit.id });
   finishUnit(state, attacker);
   events.push(...afterAction(state, rules));
-  return events;
+  return withXp(state, rules, events);
 }
 
 /** Lance une compétence sur une case (voir `skills.ts`). */
 export function skillAction(state: BattleState, unitId: string, skillId: string, target: Cell, rules: BattleRules): BattleEvent[] {
-  return [...useSkill(state, unitId, skillId, target, rules), ...afterAction(state, rules)];
+  return withXp(state, rules, [...useSkill(state, unitId, skillId, target, rules), ...afterAction(state, rules)]);
 }
 
 /** Utilise un objet porté (voir `items.ts`). */
 export function itemAction(state: BattleState, unitId: string, item: string, targetId: string, rules: BattleRules): BattleEvent[] {
-  return [...useItem(state, unitId, item, targetId, rules), ...afterAction(state, rules)];
+  return withXp(state, rules, [...useItem(state, unitId, item, targetId, rules), ...afterAction(state, rules)]);
 }
 
 /** Soigne un allié au bâton (voir `items.ts`). */
 export function healAction(state: BattleState, unitId: string, targetId: string, rules: BattleRules): BattleEvent[] {
-  return [...healUnit(state, unitId, targetId), ...afterAction(state, rules)];
+  return withXp(state, rules, [...healUnit(state, unitId, targetId), ...afterAction(state, rules)]);
 }
 
 /* ---------- Phases ---------- */
@@ -235,7 +242,7 @@ export function endPhase(state: BattleState, rules: BattleRules): BattleEvent[] 
   state.phase = next;
   state.turn = turn;
   events.push({ type: 'phase', team: next, turn, skipped: false }, ...startPhase(state, next, rules));
-  return events;
+  return withXp(state, rules, events);
 }
 
 /** Vrai quand toutes les unités du camp en cours ont agi (la phase peut se terminer d'elle-même). */

@@ -23,11 +23,11 @@ import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getLastDeployed, getLoadouts, getWorldState, setLastDeployed } from '../core/session';
 import { getGameCtx } from '../core/townContext';
-import { settleBattle, testPartyAt, type BattleEnd, type Settlement } from '../logic/game';
+import { ensureCompany, settleBattle, testPartyAt, type BattleEnd, type Settlement } from '../logic/game';
+import { applyBattleProgress, applyErrantProgress } from '../logic/units/company';
 import { formatNotices } from '../ui/notices';
 import { uiScaleFor, zoomOrigin } from '../core/viewport';
 import { loadGameData, type GameData } from '../data';
-import type { PartyMemberDef } from '../data/schemas';
 import { skinVariant } from '../logic/skinFrames';
 import { planAllyAction } from '../logic/ai/allyAi';
 import { planEnemyAction } from '../logic/ai/enemyAi';
@@ -55,8 +55,9 @@ import {
 } from '../logic/tactics/prep';
 import { costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
 import { isStunned } from '../logic/tactics/status';
-import { hostile, type BattleEvent, type BattleRules, type BattleState, type BattleUnit, type Cell, type EffectResult, type ItemStack, type Strike, type Team } from '../logic/tactics/types';
-import { memberUnit, type Loadout } from '../logic/tactics/units';
+import { hostile, type BattleEvent, type BattleRules, type BattleState, type BattleUnit, type Cell, type EffectResult, type GrowthKey, type ItemStack, type Strike, type Team } from '../logic/tactics/types';
+import { GROWTH_KEYS } from '../data/schemas';
+import { memberUnit, type Loadout, type MemberLike } from '../logic/tactics/units';
 import { BF_TILE, BF_TOP, BF_WATER_FRAMES } from '../render/battlefield';
 import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureMapSprite } from '../render/battleTextures';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureWorldTextures } from '../render/worldTextures';
@@ -150,7 +151,7 @@ const COLORS = {
 const SHADOW_TINT: Readonly<Record<Team, number>> = { player: 0x9cc0ff, ally: 0xb0f0c8, enemy: 0xffb0a0 };
 const WATER_FRAME_MS = 420;
 /** Durées de base (ms) des animations sur la carte, avant le réglage de vitesse. */
-const MS = { step: 75, lunge: 90, back: 120, hitStop: 70, number: 650, ko: 520, between: 110, banner: 1300, enemyPause: 160, projectile: 190, cutIn: 900, bossLine: 2400, arrive: 1100 } as const;
+const MS = { step: 75, lunge: 90, back: 120, hitStop: 70, number: 650, ko: 520, between: 110, banner: 1300, enemyPause: 160, projectile: 190, cutIn: 900, bossLine: 2400, arrive: 1100, xp: 1100, levelUp: 2600 } as const;
 
 export class BattleScene extends Phaser.Scene {
   private gameData!: GameData;
@@ -166,7 +167,10 @@ export class BattleScene extends Phaser.Scene {
   private alive = false;
 
   /* Compagnie et préparation (jalon M5) */
-  private party: PartyMemberDef[] = [];
+  private party: MemberLike[] = [];
+  /** La compagnie est celle de la partie : niveaux et XP gagnés lui sont reportés à la fin. */
+  private persistent = false;
+  private progressSaved = false;
   private loadouts: Loadout[] = [];
   /** Sac de la compagnie : celui de la partie, ou un sac d'essai (titre). */
   private convoy: ItemStack[] = [];
@@ -236,6 +240,7 @@ export class BattleScene extends Phaser.Scene {
     this.brambles = new Map();
     this.ended = null;
     this.settlement = null;
+    this.progressSaved = false;
     this.plan = null;
     this.prepPick = null;
     this.prepMessage = null;
@@ -252,7 +257,10 @@ export class BattleScene extends Phaser.Scene {
       // `?debug&seed=…` rejoue un combat à l'identique (placement et dés).
       const seed = params.seed ?? (debug && url.get('seed') ? `${url.get('seed')}` : `${params.encounterId}:${Date.now()}`);
       this.seed = String(seed);
-      this.party = testPartyAt(this.gameData, getWorldState()?.testLevel);
+      // La compagnie de la partie (jalon M6) ; la compagnie d'essai pour un combat lancé du titre.
+      const world = params.returnTo === 'world' ? getWorldState() : null;
+      this.persistent = world !== null;
+      this.party = world ? ensureCompany(this.gameData, world.progress, world.testLevel) : testPartyAt(this.gameData);
       this.convoy = getWorldState()?.progress.inventory ?? this.gameData.balance.prep.testItems.map((s) => ({ ...s }));
       this.loadouts = getLoadouts(this.party.length);
       reconcileLoadouts(this.loadouts, this.convoy);
@@ -1949,7 +1957,40 @@ export class BattleScene extends Phaser.Scene {
           break;
         case 'canto':
           break;
+        case 'xp':
+          await this.animateXp(event);
+          break;
       }
+    }
+  }
+
+  /**
+   * XP gagnée (jalon M6) : barre d'XP pour un membre de la compagnie, puis une
+   * fenêtre par niveau gagné ; une simple notification pour un allié errant.
+   * Animations désactivées : notification seulement.
+   */
+  private async animateXp(event: Extract<BattleEvent, { type: 'xp' }>): Promise<void> {
+    const unit = getUnit(this.state, event.unitId);
+    this.syncUnit(unit);
+    const levels = event.levelUps.length;
+    const quick = unit.team !== 'player' || this.dur(MS.xp) <= 0;
+    if (quick) {
+      if (levels > 0) this.hud.toast(`${unit.name} passe au niveau ${event.after.level} !`);
+      return;
+    }
+    const perLevel = this.gameData.balance.xp.perLevel;
+    await this.hud.xpGain(unit, { amount: event.amount, bonus: event.bonus, before: event.before, after: event.after, perLevel, maxed: event.after.level >= unit.levelCap }, this.dur(MS.xp, 500));
+    // Stats après chaque montée : on retire les gains des montées suivantes.
+    const later: Record<string, number> = {};
+    const views = [...event.levelUps].reverse().map((up) => {
+      const stats = {} as Record<GrowthKey, number>;
+      for (const key of GROWTH_KEYS) stats[key] = unit.base[key] - (later[key] ?? 0);
+      for (const [k, v] of Object.entries(up.gains)) later[k] = (later[k] ?? 0) + (v ?? 0);
+      return { level: up.level, className: unit.kindName, stats, gains: up.gains };
+    });
+    for (const view of views.reverse()) {
+      if (!this.alive) return;
+      await this.hud.levelUp(unit, view, this.dur(MS.levelUp, 1600));
     }
   }
 
@@ -2277,8 +2318,22 @@ export class BattleScene extends Phaser.Scene {
     return this.settlement;
   }
 
+  /**
+   * Reporte sur la partie les niveaux, l'XP et les stats gagnés pendant le
+   * combat, quelle qu'en soit l'issue (décision n°130), une seule fois.
+   */
+  private saveProgress(): void {
+    if (this.progressSaved || !this.persistent) return;
+    const world = getWorldState();
+    if (!world) return;
+    this.progressSaved = true;
+    applyBattleProgress(world.progress.company, this.state.units);
+    applyErrantProgress(world.progress.errants, this.state.units);
+  }
+
   /** Retour à la scène d'origine ; le monde reçoit le bilan du combat. */
   private leave(): void {
+    this.saveProgress();
     const world = getWorldState();
     const end = this.ended ?? 'retreat';
     this.cameras.main.fadeOut(500, 0, 0, 0);

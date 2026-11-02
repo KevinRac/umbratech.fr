@@ -21,6 +21,7 @@ import type {
   ConsumableDef,
   ElementDef,
   EnemyDef,
+  GrowthBlock,
   SkillDef,
   StatBlock,
   StatusDef,
@@ -86,7 +87,18 @@ export interface BattleUnit {
   readonly kindName: string;
   /** Apparence (render/unitSprites.ts). */
   readonly sprite: string;
-  readonly level: number;
+  /** Niveau : il monte en cours de combat avec l'XP (jalon M6). */
+  level: number;
+  /** XP vers le niveau suivant (0 à 99), ou null pour une unité qui n'en gagne pas (ennemis, gardes, invocations). */
+  xp: number | null;
+  /** Croissances tirées à chaque montée de niveau (GDD §10.4) ; null sans XP. */
+  readonly growths: GrowthBlock | null;
+  /** Niveau maximal (20 en classe de base, 30 en classe avancée, décision n°131). */
+  readonly levelCap: number;
+  /** Stats gagnées pendant ce combat par les montées de niveau (reportées sur la compagnie à la fin). */
+  readonly gains: StatGains;
+  /** Invocation : unité qui l'a appelée (l'XP du golem va à l'invocateur, décision n°128). */
+  ownerId: string | null;
   /** Stats sans statut (accessoire et phase de boss compris). */
   base: StatBlock;
   /** Stats effectives (base + statuts), recalculées par `refreshStats`. */
@@ -198,6 +210,11 @@ export interface BattleState {
   readonly itemsUsed: Record<string, number>;
   /** Compteur des identifiants d'unités créées en cours de combat (renforts, invocations). */
   nextId: number;
+  /**
+   * Hasard des montées de niveau (jalon M6) : séparé de `rng` pour qu'une
+   * montée de niveau ne change pas les jets du combat. Créé à la demande.
+   */
+  growthRng?: Rng;
 }
 
 /** Règles chiffrées du combat, tirées des données (balance.json, elements.json, skills.json…). */
@@ -213,6 +230,16 @@ export interface BattleRules {
   readonly allies: AlliesBalance;
   /** Les données complètes (fabrique des invocations et des renforts). */
   readonly data: GameData;
+}
+
+/** Stats gagnées à une montée de niveau (la Mob ne monte jamais). */
+export type GrowthKey = 'pv' | 'fo' | 'mag' | 'dex' | 'vit' | 'def' | 'res' | 'chc';
+export type StatGains = Partial<Record<GrowthKey, number>>;
+
+/** Une montée de niveau : nouveau niveau et stats gagnées. */
+export interface LevelUp {
+  readonly level: number;
+  readonly gains: StatGains;
 }
 
 /** Un coup porté pendant un échange. */
@@ -271,4 +298,17 @@ export type BattleEvent =
   /** Terrain temporaire posé (`on`) ou retiré. */
   | { readonly type: 'terrain'; readonly cells: readonly Cell[]; readonly terrain: string; readonly on: boolean }
   /** Après « Pas de marée » : l'unité peut encore marcher. */
-  | { readonly type: 'canto'; readonly unitId: string; readonly range: number };
+  | { readonly type: 'canto'; readonly unitId: string; readonly range: number }
+  /**
+   * XP gagnée (jalon M6) : `amount` = XP de l'action (multiplicateurs compris)
+   * + `bonus` de victoire ; montées de niveau dans l'ordre.
+   */
+  | {
+      readonly type: 'xp';
+      readonly unitId: string;
+      readonly amount: number;
+      readonly bonus: number;
+      readonly before: { readonly level: number; readonly xp: number };
+      readonly after: { readonly level: number; readonly xp: number };
+      readonly levelUps: readonly LevelUp[];
+    };

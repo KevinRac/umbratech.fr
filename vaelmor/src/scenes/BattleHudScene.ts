@@ -19,7 +19,7 @@ import { uiScaleFor } from '../core/viewport';
 import type { TerrainDef } from '../data/schemas';
 import type { Forecast, SideForecast } from '../logic/combat/combat';
 import type { BattleSummary } from '../logic/tactics/battle';
-import type { BattleUnit, Team } from '../logic/tactics/types';
+import type { BattleUnit, GrowthKey, StatGains, Team } from '../logic/tactics/types';
 import { BATTLE_TEX } from '../render/battleTextures';
 import { PALETTE } from '../render/palette';
 import { ALLY_OUTLINE } from '../render/unitSprites';
@@ -57,6 +57,36 @@ const STAT_LABELS: readonly (readonly [keyof BattleUnit['stats'], string])[] = [
   ['chc', 'CHC'],
   ['mob', 'MOB'],
 ];
+
+/** Stats montrées à la montée de niveau (la Mob ne monte pas). */
+const LEVEL_STATS: readonly (readonly [GrowthKey, string])[] = [
+  ['pv', 'PV'],
+  ['fo', 'FO'],
+  ['mag', 'MAG'],
+  ['dex', 'DEX'],
+  ['vit', 'VIT'],
+  ['def', 'DÉF'],
+  ['res', 'RÉS'],
+  ['chc', 'CHC'],
+];
+
+/** XP gagnée par une unité (événement `xp`, jalon M6). */
+export interface XpView {
+  readonly amount: number;
+  readonly bonus: number;
+  readonly before: { readonly level: number; readonly xp: number };
+  readonly after: { readonly level: number; readonly xp: number };
+  readonly perLevel: number;
+  readonly maxed: boolean;
+}
+
+/** Une montée de niveau à montrer : stats après la montée et gains. */
+export interface LevelUpView {
+  readonly level: number;
+  readonly className: string;
+  readonly stats: Readonly<Record<GrowthKey, number>>;
+  readonly gains: StatGains;
+}
 
 export interface MenuRequest {
   readonly title?: string;
@@ -410,6 +440,7 @@ export class BattleHudScene extends Phaser.Scene {
   /** Lignes ajoutées à la fiche : compétence, ressource, accessoire, objets, statuts. */
   private extraLines(unit: BattleUnit, extra: UnitExtra): [string, number][] {
     const lines: [string, number][] = [];
+    if (unit.xp !== null) lines.push([unit.level >= unit.levelCap ? `Niveau ${unit.level} · EXP MAX` : `Niveau ${unit.level} · EXP ${unit.xp}/100`, PALETTE.jauneBle]);
     if (extra.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}${extra.skill.blocker ? ` (${extra.skill.blocker})` : ''}`, extra.skill.blocker ? PALETTE.metalClair : PALETTE.lumiereDoree]);
     if (extra.resource) lines.push([extra.resource, PALETTE.ocreClair]);
     if (extra.accessory) lines.push([`Accessoire : ${extra.accessory}`, PALETTE.parchemin]);
@@ -1229,6 +1260,162 @@ export class BattleHudScene extends Phaser.Scene {
 
   lockResult(): void {
     this.run(() => this.resultMenu?.setLocked(true));
+  }
+
+  /* ---------- XP et montée de niveau (jalon M6, décision n°129) ---------- */
+
+  /** Barre d'XP qui se remplit sous la carte, façon GBA. `durationMs` ≤ 0 : rien n'est montré. */
+  xpGain(unit: BattleUnit, view: XpView, durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      this.run(() => {
+        if (durationMs <= 0) {
+          resolve();
+          return;
+        }
+        const S = this.S;
+        const { width, height } = this.scale;
+        const w = 330 * S;
+        const h = (view.bonus > 0 ? 72 : 60) * S;
+        const x = Math.round((width - w) / 2);
+        const y = height - h - (BOTTOM_BAR + 6) * S;
+        const c = this.add.container(0, 0).setDepth(DEPTH.exchange + 1);
+        c.add(drawPanel(this, x, y, w, h, { scale: 2 * S }));
+        const leveled = view.after.level > view.before.level;
+        const face = portraitInBox(this, unit.sprite, x + 8 * S, y + 8 * S, 44 * S, h - 16 * S, S, 0, leveled ? 'happy' : 'neutral');
+        c.add(face ?? this.add.image(x + 30 * S, y + h - 8 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(S));
+        const left = x + 60 * S;
+        c.add(fitText(addText(this, left, y + 7 * S, unit.name, { font: 'body', scale: S, color: PALETTE.parchemin }), 150 * S));
+        const levelText = addText(this, x + w - 12 * S, y + 7 * S, `Niv ${view.before.level}`, { scale: S, color: PALETTE.lumiereDoree, align: 'right' });
+        c.add(levelText);
+        const by = y + 31 * S;
+        c.add(addText(this, left, by - 2 * S, 'EXP', { scale: S, color: PALETTE.metalClair }));
+        const barX = left + 34 * S;
+        const barW = w - (barX - x) - 52 * S;
+        c.add(this.add.rectangle(barX, by, barW, 10 * S, PALETTE.encre, 1).setOrigin(0, 0));
+        const fill = this.add.rectangle(barX + S, by + S, 0, 8 * S, PALETTE.lumiereDoree, 1).setOrigin(0, 0);
+        c.add(fill);
+        const number = addText(this, x + w - 12 * S, by - 2 * S, `${view.before.xp}`, { scale: S, color: PALETTE.parchemin, align: 'right' });
+        c.add(number);
+        if (view.bonus > 0) {
+          const parts = [view.amount > 0 ? `Action +${view.amount}` : null, `Victoire +${view.bonus}`].filter((p): p is string => p !== null);
+          c.add(addText(this, left, y + 48 * S, parts.join('   '), { scale: S, color: 0x7fcf6a }));
+        }
+        const inner = barW - 2 * S;
+        const per = view.perLevel;
+        const show = (v: number): void => {
+          const lv = view.before.level + Math.floor(v / per);
+          const atMax = view.maxed && lv >= view.after.level;
+          const xp = atMax ? 0 : Math.floor(v % per);
+          fill.width = Math.round((inner * xp) / per);
+          setText(number, atMax ? 'MAX' : `${xp}`);
+          setText(levelText, `Niv ${lv}`);
+        };
+        show(view.before.xp);
+        const end = (view.after.level - view.before.level) * per + view.after.xp;
+        const counter = { v: view.before.xp };
+        c.setAlpha(0);
+        this.tweens.add({ targets: c, alpha: 1, duration: 120 });
+        this.tweens.chain({
+          targets: counter,
+          tweens: [
+            { v: view.before.xp, duration: durationMs * 0.15 },
+            { v: end, duration: durationMs * 0.6, ease: 'Linear', onUpdate: () => show(counter.v) },
+            { v: end, duration: durationMs * 0.25 },
+          ],
+          onComplete: () => {
+            show(end);
+            this.tweens.add({ targets: c, alpha: 0, duration: 120, onComplete: () => c.destroy(true) });
+            resolve();
+          },
+        });
+      });
+    });
+  }
+
+  /**
+   * Fenêtre « Niveau N ! » : les stats montent une à une, +1 en vert. Se ferme
+   * d'un clic ou d'une touche une fois tout montré, ou seule après `durationMs`.
+   */
+  levelUp(unit: BattleUnit, view: LevelUpView, durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      this.run(() => {
+        if (durationMs <= 0) {
+          resolve();
+          return;
+        }
+        const S = this.S;
+        const { width, height } = this.scale;
+        const w = 432 * S;
+        const h = 196 * S;
+        const x = Math.round((width - w) / 2);
+        const y = Math.round((height - h) / 2);
+        const c = this.add.container(0, 0).setDepth(DEPTH.line);
+        c.add(this.add.rectangle(0, 0, width, height, PALETTE.nuit, 0.35).setOrigin(0, 0));
+        c.add(drawPanel(this, x, y, w, h, { scale: 2 * S, fillAlpha: 0.97 }));
+        c.add(this.add.rectangle(x + 10 * S, y + 10 * S, w - 20 * S, 2 * S, PALETTE.lumiereDoree, 0.8).setOrigin(0, 0));
+        c.add(addText(this, x + w / 2, y + 16 * S, `NIVEAU ${view.level} !`, { font: 'body', scale: 2 * S, color: PALETTE.lumiereDoree, align: 'center', shadowOffset: 2 * S }));
+        const faceBox = { x: x + 16 * S, y: y + 62 * S, w: 116 * S, h: 108 * S };
+        c.add(this.add.rectangle(faceBox.x, faceBox.y, faceBox.w, faceBox.h, TEAM_COLOR[unit.team], 0.18).setOrigin(0, 0));
+        const face = portraitInBox(this, unit.sprite, faceBox.x + 6 * S, faceBox.y + 6 * S, faceBox.w - 12 * S, faceBox.h - 34 * S, S, 0, 'happy');
+        if (face) {
+          c.add(face);
+          speak(this, face, unit.sprite, 'happy', 600);
+        } else c.add(this.add.image(faceBox.x + faceBox.w / 2, faceBox.y + faceBox.h - 28 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(2 * S));
+        c.add(fitText(addText(this, faceBox.x + faceBox.w / 2, faceBox.y + faceBox.h - 26 * S, unit.name, { scale: S, color: PALETTE.parchemin, align: 'center' }), faceBox.w - 4 * S));
+        c.add(fitText(addText(this, faceBox.x + faceBox.w / 2, faceBox.y + faceBox.h - 13 * S, view.className, { scale: S, color: PALETTE.metalClair, align: 'center' }), faceBox.w - 4 * S));
+        // Deux colonnes de quatre stats.
+        const colW = 128 * S;
+        const gx = faceBox.x + faceBox.w + 22 * S;
+        const gy = y + 66 * S;
+        const reveals: (() => void)[] = [];
+        LEVEL_STATS.forEach(([key, label], i) => {
+          const cx = gx + Math.floor(i / 4) * (colW + 12 * S);
+          const cy = gy + (i % 4) * 26 * S;
+          const gain = view.gains[key] ?? 0;
+          c.add(this.add.rectangle(cx, cy + 20 * S, colW, S, PALETTE.metal, 0.6).setOrigin(0, 0));
+          c.add(addText(this, cx + 2 * S, cy, label, { scale: S, color: PALETTE.metalClair }));
+          const value = addText(this, cx + 78 * S, cy, `${view.stats[key] - gain}`, { scale: S, color: PALETTE.parchemin, align: 'right' });
+          c.add(value);
+          if (gain <= 0) return;
+          const plus = addText(this, cx + 88 * S, cy, `+${gain}`, { scale: S, color: 0x7fcf6a }).setAlpha(0);
+          c.add(plus);
+          reveals.push(() => {
+            setText(value, `${view.stats[key]}`);
+            value.setTint(PALETTE.lumiereDoree);
+            plus.setAlpha(1);
+            plus.y += 6 * S;
+            this.tweens.add({ targets: plus, y: plus.y - 6 * S, duration: 160, ease: 'Back.easeOut' });
+            const glint = this.add.rectangle(cx, cy - 2 * S, colW, 22 * S, 0x7fcf6a, 0.35).setOrigin(0, 0);
+            c.add(glint);
+            this.tweens.add({ targets: glint, alpha: 0, duration: 380, onComplete: () => glint.destroy() });
+          });
+        });
+        c.setAlpha(0);
+        c.setScale(1);
+        this.tweens.add({ targets: c, alpha: 1, duration: 140 });
+        const step = Math.max(70, Math.min(170, (durationMs * 0.45) / Math.max(1, reveals.length)));
+        reveals.forEach((reveal, i) => this.time.delayedCall(260 + i * step, reveal));
+        const shownAt = 260 + reveals.length * step;
+        let done = false;
+        const close = (): void => {
+          if (done) return;
+          done = true;
+          this.input.off(Phaser.Input.Events.POINTER_DOWN, onPointer);
+          this.input.keyboard?.off('keydown', onKey);
+          this.tweens.add({ targets: c, alpha: 0, duration: 140, onComplete: () => c.destroy(true) });
+          resolve();
+        };
+        const onPointer = (): void => {
+          if (this.time.now - opened >= shownAt) close();
+        };
+        const onKey = (): void => onPointer();
+        const opened = this.time.now;
+        this.input.on(Phaser.Input.Events.POINTER_DOWN, onPointer);
+        this.input.keyboard?.on('keydown', onKey);
+        // Le temps de lire, même en vitesse rapide : un clic ou une touche ferme plus tôt.
+        this.time.delayedCall(Math.max(shownAt + 1600, durationMs), close);
+      });
+    });
   }
 }
 

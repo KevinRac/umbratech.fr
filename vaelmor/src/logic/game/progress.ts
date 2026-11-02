@@ -6,6 +6,7 @@
 import type { BalanceConfig, ReputationConfig } from '../../data/schemas';
 import { TIER_IDS, type FactionDef, type LocationDef, type TierId } from '../../data/townSchemas';
 import { applyReputationDecay, applyReputationDelta, getReputationTier } from '../reputation/reputation';
+import type { ErrantRecord, Member } from '../units/company';
 
 export interface ItemStack {
   item: string;
@@ -41,6 +42,10 @@ export interface Progress {
   lastVillage: string | null;
   /** Alliés errants blessés (jalon M5) : jour de repos où ils sont tombés ; ils reviennent au repos suivant. */
   wounded?: Record<string, number>;
+  /** La compagnie (jalon M6) : niveaux, XP et stats de chaque membre, le héros d'abord. */
+  company: Member[];
+  /** Niveau et XP des alliés errants (décision n°132). */
+  errants: Record<string, ErrantRecord>;
 }
 
 /** Quand un ennemi du monde a été vaincu : jour de repos, temps de jeu et compteur de zones à ce moment-là. */
@@ -84,6 +89,8 @@ export function newProgress(seed: ProgressSeed): Progress {
     zoneVisits: 0,
     lastVillage: null,
     wounded: {},
+    company: [],
+    errants: {},
   };
   for (const s of seed.balance.economy.startingItems) addItem(progress, s.item, s.qty, seed.balance);
   return progress;

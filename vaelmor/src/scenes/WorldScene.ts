@@ -40,6 +40,7 @@ import {
   newlyReady,
   npcPresent,
   partyLevel,
+  ensureCompany,
   questStatus,
   questTierOk,
   reputationOf,
@@ -266,6 +267,7 @@ export class WorldScene extends Phaser.Scene {
     this.state = getWorldState() as WorldState;
     this.gameCtx = getGameCtx() as GameCtx;
     this.applyTownDebug(data.newGame === true);
+    ensureCompany(this.data_, this.state.progress, this.state.testLevel);
     this.grid = CollisionGrid.fromMap(this.map, this.state.openFlags);
     this.gateReq = gateRequirements(this.data_.zones);
     this.grid.setGateRequirements(this.gateReq);
@@ -544,7 +546,10 @@ export class WorldScene extends Phaser.Scene {
       const [target, value] = entry.split(':');
       if (target && value !== undefined && Number.isFinite(Number(value)) && progress.reputation[target] !== undefined) progress.reputation[target] = Math.max(-100, Math.min(100, Number(value)));
     }
-    if (params.has('lvl')) this.state.testLevel = Math.max(1, Math.min(30, Math.floor(Number(params.get('lvl')) || 1)));
+    if (params.has('lvl')) {
+      this.state.testLevel = Math.max(1, Math.min(30, Math.floor(Number(params.get('lvl')) || 1)));
+      progress.company = []; // recréée au niveau imposé
+    }
     if (params.has('gold')) progress.gold = Math.max(0, Math.floor(Number(params.get('gold')) || 0));
     for (const flag of (params.get('flags') ?? '').split(',')) if (flag) addUnique(this.state.openFlags, flag);
   }
@@ -834,7 +839,7 @@ export class WorldScene extends Phaser.Scene {
     const errants = [...this.wanderers.values()].map((w) => ({ id: w.sim.def.id, cell: walkerCell(w.sim, tile) }));
     const zoneValue = this.map.zones[site.y * this.map.width + site.x] as number;
     const rng = Rng.fromSeed(`${site.x},${site.y}:${Math.round(this.state.progress.clock)}:allies`);
-    return planAllies({ data: this.data_, site, zoneValue, villages, errants, rng });
+    return planAllies({ data: this.data_, site, zoneValue, villages, errants, rng, errantRecords: this.state.progress.errants });
   }
 
   private removeNpc(actor: NpcActor): void {
@@ -1138,8 +1143,8 @@ export class WorldScene extends Phaser.Scene {
       this.map.locations.filter((l) => l.kind === 'village' || l.kind === 'ville'),
       this.data_.balance.foes.townSafeMargin,
     );
-    this.classScale = classDetectionScale(this.data_);
-    this.partyLvl = partyLevel(this.data_, this.state.testLevel);
+    this.classScale = classDetectionScale(this.data_, this.state.progress.company);
+    this.partyLvl = partyLevel(this.data_, undefined, this.state.progress.company);
     this.graceMs = this.data_.balance.foes.graceMs;
     this.syncFoePresence();
   }
