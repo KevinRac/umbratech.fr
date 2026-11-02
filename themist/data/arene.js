@@ -7,7 +7,8 @@
  // Éteinte jusqu'à l'action 5 (Q6) : en jeu, aucune salle ne change. Seul le mode d'essai l'ouvre : index.html?arene=final[&…].
  actif:false,
  // Salles qui reçoivent l'arène (Q1 : le boss final seulement). w × h : taille du monde en écrans (1 280 × 720) ; entree : point d'entrée
- // du joueur, en fractions du monde. etats : états d'arène d'ESSAI (Q5) ; le contenu réel de chaque phase est écrit à l'action 5.
+ // du joueur, en fractions du monde. etats : états d'arène (Q5) : 0 à 2 d'ESSAI (banc-arene A et C comptent sur eux, à leurs places) ; les états
+// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b).
  // Un état : bornes jouables (fractions des bornes dures), obstacles (piliers, disques), vides (fosses : on n'y marche pas, rien n'y apparaît),
  // sol (calque peint à l'entrée), brume de décor (ne cache jamais un télégraphe ni un signe de bord). fx, fy : fractions des bornes dures ; r en px.
  salles:{
@@ -21,7 +22,12 @@
      brume:[{fx:0.5,fy:0.7,r:200,a:0.1}]},
     {bornes:{fx0:0,fy0:0.1,fx1:1,fy1:0.9},sol:'braise',
      obstacles:[{fx:0.15,fy:0.5,r:40},{fx:0.85,fy:0.5,r:40},{fx:0.5,fy:0.2,r:28}],vides:[{fx:0.35,fy:0.65,r:52},{fx:0.65,fy:0.65,r:52}],
-     brume:[]}]}},
+     brume:[]},
+    // 3 · phase I réelle du Brumeux, « le Rappel » (fiche 5b, § 5) : arène pleine ; quatre montants aux frontières des tiers (ils marquent les
+    // colonnes sans texte et donnent un abri, toujours hors des fragments) ; pas de fosse ; brume de décor en haut, où son corps se devine.
+    {id:'rappel',bornes:{fx0:0,fy0:0,fx1:1,fy1:1},sol:'pierre',
+     obstacles:[{fx:0.3333,fy:0.18,r:26},{fx:0.3333,fy:0.82,r:26},{fx:0.6667,fy:0.18,r:26},{fx:0.6667,fy:0.82,r:26}],
+     vides:[],brume:[{fx:0.5,fy:0.04,r:320,a:0.14}]}]}},
  // Bornes dures dans le monde : à la même distance des bords que l'arène d'un écran (AR : 56, 92, 56, 44).
  mur:{g:56,h:92,d:56,b:44},
  // La caméra (Q3). zone : zone morte (rectangle centré) ; tau : lissage exponentiel (s), jamais de dépassement ; avance : jusqu'à px dans le sens

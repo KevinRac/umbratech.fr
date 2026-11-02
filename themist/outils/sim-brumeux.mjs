@@ -17,9 +17,16 @@
 //  7. la sauvegarde : neuve, abîmée, version future ; brxNoter (essai : rien ; mort : l'élément par phase ; victoire ; vus ; phase atteinte) ;
 //  8. les statistiques (brxPire) ;
 //  9. les branchements lus dans index.html (enveloppes, seuils de phase, gardes d'essai, crochets de l'arène, arène toujours éteinte, le Brumeux
-//     jamais créé hors de l'essai).
+//     jamais créé hors de l'essai) ;
+// 10. la phase I, « le Rappel » (action 5b, v18.6) : données (partition, gestes signature fixes, tableaux, état d'arène réel en index 3 et
+//     montants aux frontières des tiers, thèmes permis par décor d'après le champ salle du bestiaire, Brume plombée exclue) ; brèche de
+//     l'anneau et case dans brxDans ; les gestes signature : 10 000 positions chacun, toujours une sortie (la Toile : deux coups) ; tiers et
+//     fragments ; 10 000 boucles de tableaux à graine (déterminisme, trois tiers, décors distincts, thème permis, budget et coûts, jamais
+//     la Brume plombée) ; pondération par RUN.par18 / par18A / par18R ; premier tableau = celui qui t'a tué ; places et dalles dans le
+//     fragment (10 000 tirages, toujours une sortie) ; champ tab de SAVE.brumeux (v:1).
 // Contre-épreuves (une erreur introduite exprès doit être attrapée) : seuils inversés, budget dépassé, feinte tirée, sortie sans réflexe,
-// construction qui coupe le passage acceptée, sauvegarde d'essai écrite.
+// construction qui coupe le passage acceptée, sauvegarde d'essai écrite ; 5b : brèche fermée, damier plein, dalle hors fragment, tiers répété,
+// thème interdit, sauvegarde tab invalide acceptée.
 //   node themist/outils/sim-brumeux.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -31,9 +38,9 @@ const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 const bloc = (n) => { const m = html.match(new RegExp('/\\*' + n + ':pur\\*/([\\s\\S]*?)/\\*/' + n + ':pur\\*/')); if (!m) { console.error(`Bloc /*${n}:pur*/ introuvable`); process.exit(1); } return m[1]; };
 const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array };
 vm.createContext(ctx);
-for (const f of ['brumeux', 'arene', 'descente', 'bestiaire', 'versions']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxPalier,brxPv,brxSeuils,brxPhase,brxLire,brxBudget,brxTirer,brxMesures,brxBoucle,brxPreavis,brxSeg,brxDans,brxSortie,brxPlacer,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,BRX_V};', ctx);
-const F = ctx.F, BD = ctx.window.BRUME_DATA, D = BD.brumeux, DA = BD.arene, DS = BD.descente, BE = BD.bestiaire, VERS = BD.versions;
+for (const f of ['brumeux', 'arene', 'descente', 'bestiaire', 'versions', 'gardiens']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
+vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxPalier,brxPv,brxSeuils,brxPhase,brxLire,brxBudget,brxTirer,brxMesures,brxBoucle,brxPreavis,brxSeg,brxDans,brxSortie,brxPlacer,brxPartition,brxFils,brxCadre,brxToile,brxSortieToile,brxTiers,brxTiersLoin,brxDansRect,brxPlaces,brxDalle,brxDecors,brxTabOk,brxPoidsTab,brxPick,brxTableau,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,BRX_V};', ctx);
+const F = ctx.F, BD = ctx.window.BRUME_DATA, D = BD.brumeux, DA = BD.arene, DS = BD.descente, BE = BD.bestiaire, VERS = BD.versions, GA = BD.gardiens;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
 const NOTES = []; const note = m => NOTES.push(m);
@@ -90,11 +97,13 @@ ok(!/\bid=|<filter|url\(|<script|<style/.test(G), 'glyphe : ni identifiant, ni f
 ok(/stroke-width="4\.4"/.test(G) && /<circle/.test(G), 'glyphe : croix de manipulation (trait épais) et œil');
 // journal et wiki (secret, Q16) : la ligne v18.5 ne dit ni phase, ni construction selon le style, ni tirage ; le wiki hors journal ne parle pas
 // du combat final (ni du Brumeux qui bâtit, lit ou tire)
-const j185 = VERS.journal.filter(x => x.h === 'v18.5');
-ok(VERS.actuelle === 'v18.5' && j185.length >= 1, 'journal : version actuelle v18.5, une ligne v18.5');
-for (const x of j185) ok(!/phase|\bbât|construi|graine|tirage|improvis|selon ta|ton style|lit ton|segment/i.test(x.t), 'journal v18.5 : ni phase, ni construction selon le style, ni tirage, ni lecture');
+const j185 = VERS.journal.filter(x => x.h === 'v18.5' || x.h === 'v18.6');
+ok(/^v18\.([5-9])/.test(VERS.actuelle) && VERS.journal.some(x => x.h === 'v18.5'), 'journal : version actuelle v18.5 ou plus, une ligne v18.5');
+ok(VERS.actuelle !== 'v18.6' || (VERS.journal[0].h === 'v18.6'), 'journal (5b) : la ligne v18.6 est en tête');
+for (const x of j185) ok(!/phase|\bbât|construi|graine|tirage|improvis|selon ta|ton style|lit ton|segment/i.test(x.t), `journal ${x.h} : ni phase, ni construction selon le style, ni tirage, ni lecture`);
+for (const x of j185) ok(!/tableau|tiers|fragment|décor|rideau|partition|toile|cadre\b|\bfils\b|dalle/i.test(x.t), `journal ${x.h} : ni tableau, ni décor convoqué, ni geste nommé (secret)`);
 const wiki = readFileSync(join(ROOT, 'wiki.html'), 'utf8').replace(/<!-- gen:journal -->[\s\S]*?<!-- \/gen:journal -->/, '').replace(/<[^>]+>/g, ' ');
-ok(!/Brumeux[^.]{0,140}(phase|bât|construi|graine|tirage|improvis|partition)/i.test(wiki) && !/(boss final|fond de la Brume)[^.]{0,140}(phase|bât|graine|tirage|partition)/i.test(wiki), 'wiki : rien sur les phases, la construction, les tirages ni la lecture du combat final');
+ok(!/Brumeux[^.]{0,140}(phase|bât|construi|graine|tirage|improvis|partition|tableau|tiers|rideau)/i.test(wiki) && !/(boss final|fond de la Brume)[^.]{0,140}(phase|bât|graine|tirage|partition)/i.test(wiki), 'wiki : rien sur les phases, la construction, les tirages ni la lecture du combat final');
 for (const k of ['menace', 'cumul', 'budget', 'brumeux.js']) ok(!new RegExp('\\b' + k + '\\b[^.]{0,80}(Brumeux|boss final)', 'i').test(wiki), `wiki : « ${k} » n'est pas relié au Brumeux`);
 
 // ── 1. PV, seuils, phase
@@ -148,7 +157,8 @@ ok(F.brxLire(D, Object.assign({}, S0, { prof: { portee: 1 }, ko: { traque: 9 } }
   ok(feinte === 0, 'tirages : la feinte n\'est jamais tirée (mesure fixe)');
   { let nc = 0, nc4 = 0; for (let i = 0; i < 2000; i++) { if (F.brxTirer(D, lec, 4, 'extreme', F.desRng(i + 7), {}).elements.includes('construction')) nc++; if (F.brxTirer(D, lec, 3, 'extreme', F.desRng(i + 7), {}).elements.includes('construction')) nc4++; }
     ok(nc === 0 && nc4 > 0, `tirages : la phase V ne bâtit jamais (exclut), la phase IV oui (${nc4} / 2000)`); }
-  const tirables = Object.keys(D.elements).filter(id => D.elements[id].sorte !== 'feinte');
+  const tirables = Object.keys(D.elements).filter(id => D.elements[id].sorte !== 'feinte' && !D.elements[id].fixe);
+  ok(!Object.keys(vus).some(id => D.elements[id].fixe), 'tirages : un élément fixe (gestes signature, tableau, feinte) n\'est jamais tiré : ' + Object.keys(vus).join(', '));
   ok(tirables.every(id => (vus[id] || 0) > 0), 'tirages : chaque élément tirable sort au moins une fois (couverture) : ' + tirables.map(id => id + ' ' + (vus[id] || 0)).join(', '));
   // premier : ce qui t'a tué sort en tête quand il tient dans le budget et le non-cumul
   const lp = F.brxLire(D, Object.assign({}, S0, { tue: { 1: 'anneau' } }), 0);
@@ -161,8 +171,9 @@ ok(F.brxLire(D, Object.assign({}, S0, { prof: { portee: 1 }, ko: { traque: 9 } }
   for (let i = 0; i < 4000; i++) { const t = F.brxTirer(D, lb, 1, 'normal', F.desRng(i + 1e5), { zone: 1, construction: 1 }); if (t.elements[0] === 'rafale') nb++; if (t.elements[0] === 'tir') nt++; }
   ok(nb > nt * 2, `tirages : poids 3 contre 1 : la rafale sort en tête ${nb} fois, le tir ${nt} (≥ 2 fois plus)`);
   // boucle : les mesures libres sont résolues, les fixes gardent leur geste
-  const bo = F.brxBoucle(D, lec, 0, 'normal', F.desRng(3), {}); ok(bo.length === D.partition.essai.length && bo.every(m => m.k === 'fixe' ? !!m.g : Array.isArray(m.elements)), 'tirages : la boucle résout les mesures libres');
-  ok(F.brxMesures(D, 2).every((m, i) => m.k === D.partition.essai[i].k), 'tirages : 5a : la partition d\'essai sert aux cinq phases');
+  const bo = F.brxBoucle(D, lec, 1, 'normal', F.desRng(3), {}); ok(bo.length === D.partition.essai.length && bo.every(m => m.k === 'fixe' ? !!m.g : Array.isArray(m.elements)), 'tirages : la boucle résout les mesures libres');
+  ok(F.brxMesures(D, 2).every((m, i) => m.k === D.partition.essai[i].k) && F.brxMesures(D, 1).length === D.partition.essai.length, 'tirages : les phases II à V jouent encore la partition d\'essai (5c à 5f)');
+  ok(F.brxMesures(D, 0).length === D.partition.rappel.mesures.length && F.brxPartition(D, 0).entracteS === 1.4 && F.brxPartition(D, 0).nuS === 0 && F.brxPartition(D, 1).nuS === D.partition.nuS, 'tirages : la phase I joue sa partition (le Rappel : entracte 1,4 s, pas de fenêtre à nu après la boucle)');
   // contre-épreuves : un budget dépassé ou une feinte tirée seraient attrapés par les comptes ci-dessus
   { const t = { elements: ['couloir', 'couloir', 'couloir'] }; let m = 0; for (const id of t.elements) m += D.elements[id].menace; ok(m > F.brxBudget(D, 0, 'normal'), 'contre-épreuve : trois couloirs dépasseraient le budget de la phase I (attrapé par le compte)'); } }
 
@@ -293,6 +304,176 @@ ok((html.match(/\bdebut\(phase\)/g) || []).length === 1 && /debut\(phase\);showB
 ok(!/actif:true/.test(readFileSync(join(ROOT, 'data', 'arene.js'), 'utf8')), 'arene.js : actif:false (règle d\'or)');
 has(/const QB=\/\[\?&\]brumeux=\(\\d\+\)\/\.exec\(location\.search\);/, 'essai par l\'adresse : ?brumeux=<phase>');
 has(/window\.__brumeux=\{DB,essai,vers/, 'console __brumeux');
+// v18.6 (5b) : la phase I en jeu
+const B186 = (html.match(/═══ v18\.6 · Phase I[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+ok(B186.length > 4000, 'branchement (5b) : la section « v18.6 · Phase I » existe dans le bloc du Brumeux');
+ok(!/setRule\(|murmur\(|ruleTag|showBanner\(|toast\(/.test(B186), 'branchement (5b) : règles confinées sans bulle ni étiquette (ni setRule, ni murmur, ni toast, ni bandeau)');
+ok(!/'brume'|veil/.test(B186), 'branchement (5b) : la Brume plombée n\'est jamais jouée dans un fragment');
+ok(!/Math\.random\(\)/.test(B186), 'branchement (5b) : la phase I ne tire rien avec Math.random (graine du combat)');
+has(/if\(m\.k==='tableau'\)\{X\.im\+\+;accrocher\(m\);return;\}/, '(5b) une mesure « tableau » accroche un tableau');
+has(/X\.boucle=brxBoucle\(DB,X\.lec,X\.phase,X\.palier,X\.rng,actifs,\{premiere:!X\.nb\+\+\}\);X\.im=0;X\.tiersVus=\[\];/, '(5b) le premier tableau de la phase rejoue celui qui t\'a tué ; chaque tiers sert une fois par boucle');
+has(/i=brxTiersLoin\(TI,P\.x,P\.y,X\.tiersVus\)/, '(5b) le tableau au tiers le plus loin de toi parmi ceux qui n\'ont pas servi');
+has(/Math\.random=desRng\(/, '(5b) les fragments sont peints à la graine du combat');
+has(/finally\{Object\.assign\(AR,sAR\);Math\.random=sR;\}/, '(5b) AR et Math.random rendus après la peinture (rien du jeu ne change)');
+has(/if\(brxMesures\(DB,phase0\)\.some\(m=>m\.k==='tableau'\)\)cuire\(\);/, '(5b) les calques sont cuits à l\'entrée du combat (aucune peinture en combat)');
+has(/if\(brxPlacer\(DB,\[\[d,\.\.\.autres\]\],\[P\.x,P\.y\],optSortie\(SOL\.annonceS\)\)<0\)X\.j\.dallesSautees\+\+;/, '(5b) une dalle n\'est posée que si une sortie existe');
+has(/XA\.coup\(h,\(\)=>hurtPlayer\(SOL\.degatsJoueur,null\)\)/, '(5b) le coup d\'une dalle est jugé sur la dalle (source de signe)');
+has(/if\(X\.tab\)for\(const h of X\.tab\.dalles\)out\.push\(\{o:h,k:'tele'/, '(5b) chaque dalle est une source de signe de l\'arène');
+has(/PA=RUN\.par18A\|\|\(RUN\.par18A=\{\}\),ac=ACTE\(\);PA\[ac\]=\(PA\[ac\]\|\|0\)\+lost;/, '(5b) RUN.par18A : dégâts reçus par acte');
+has(/const PR=RUN\.par18R\|\|\(RUN\.par18R=\{\}\);PR\[room\.rule\]=\(PR\[room\.rule\]\|\|0\)\+lost;/, '(5b) RUN.par18R : dégâts reçus par règle de salle');
+has(/if\(T&&T\.sub==='vie'&&T\.regle==='verre'&&P&&brxDansRect\(T\.frag,P\.x,P\.y\)\)/, '(5b) le Verre : +40 % reçus, dans le fragment seulement');
+has(/if\(T\.regle==='verre'&&brxDansRect\(T\.frag,e\.x,e\.y\)\)m=TB\.regles\.verre\.recu;/, '(5b) le Verre : un ennemi dans le fragment subit +40 %');
+has(/else if\(T\.regle==='braseros'&&!\(T\.braz\|\|\[\]\)\.some\(b=>hyp\(e\.x-b\.x,e\.y-b\.y\)<BRZ\.rayon\)\)m=BRZ\.subi;/, '(5b) les Braseros : un ennemi du tableau hors de leur lumière ne subit que 40 %');
+has(/if\(!vivants&&T\.t>0\.3\)rideau\(true\);else if\(T\.t>=TB\.vieMaxS\)\{rentrer\(\);rideau\(false\);\}/, '(5b) vidé : le rideau ; non vidé à 30 s : ses ennemis rentrent, rideau');
+has(/if\(T\.vide\)X\.e\.vuln=Math\.max\(X\.e\.vuln\|\|0,TB\.nuS\);/, '(5b) à nu 3 s après un tableau vidé seulement');
+has(/if\(!T\.feinte&&T\.t>=TB\.feinteApresS&&!room\.bl\)\{T\.feinte=true;lancer\('feinte'\);\}/, '(5b) une feinte au plus par tableau, s\'il vit encore 8 s');
+has(/const ch=nu&&!RM&&/, '(5b) mouvements réduits : ses mains ne tombent pas');
+has(/function fragAlpha\(T\)\{[^}]*RM\?1-Math\.min\(1,T\.t\/TB\.rideauS\):1/, '(5b) mouvements réduits : le rideau est un fondu');
+has(/tab:!win&&X\.tue==='tableau'\?X\.tueTab:null/, '(5b) la sauvegarde garde le tableau qui t\'a tué');
+has(/if\(X\.tab\)tabFin\(\);X\.nb=0;/, '(5b) une transition rentre le tableau en cours');
+has(/if\(S\.size\)\{eproj=eproj\.filter\(q=>!S\.has\(q\.from\)\);rings=rings\.filter\(g=>!S\.has\(g\.src\)\);\}/, '(5b) les ennemis qui rentrent emportent leurs tirs en vol et leurs ondes (aucun coup au nom d\'un ennemi parti)');
+has(/for\(const sp of room\.spawning\)if\(!sp\.brx18t\)\{sp\.brx18t=1;sp\.t=Math\.max\(sp\.t,TB\.apparition\[0\]\);\}/, '(5b) une naissance en plein combat (la Nourrice) a au moins le cercle d\'une apparition (0,85 s ≥ préavis de l\'arène)');
+ok(DA.preavis.coup < D.tableaux.apparition[0], `(5b) le cercle d'apparition (${D.tableaux.apparition[0]} s) dépasse le préavis de l'arène (${DA.preavis.coup} s)`);
+has(/const h=a>=1&&A\.solTrou\?A\.solTrou\(\):null;/, '(5b) arène : sous un fragment plein, le sol n\'est pas posé (crochet solTrou, inerte sans le Brumeux)');
+has(/solTrou:\(\)=>\{const T=X\.tab;if\(!T\|\|!X\.cal\|\|fragAlpha\(T\)<1\)return null;/, '(5b) le trou n\'est posé que sous un fragment plein');
+has(/XA\.crochets\(\{sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null\}\)/, '(5b) les crochets de l\'arène (trou compris) rendus à la salle suivante');
+has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle ne relance pas de feinte d\'elle-même pendant son combat (le Brumeux la joue dans sa partition)');
+
+// ── 10. La phase I, « le Rappel » (action 5b, v18.6)
+{ const PR = D.partition.rappel, T = D.tableaux, ME = PR.mesures;
+  // données : partition, gestes signature fixes, tableaux
+  ok(D.phases[0].id === 'rappel' && D.phases[0].arene === 3 && (D.phases[0].exclut || []).includes('construction'), 'phase I : état d\'arène réel (index 3), la construction exclue (bâtir, c\'est la phase II)');
+  ok(PR.entracteS === 1.4 && PR.nuS === 0 && ME.length === 9, 'phase I : partition (9 mesures, entracte 1,4 s, à nu après chaque tableau et non après la boucle)');
+  ok(ME.filter(m => m.k === 'tableau').length === 3 && ME.filter(m => m.k === 'libre').length === 2 && ME.filter(m => m.k === 'fixe').map(m => m.g).join() === 'fils,feinte,cadre,toile', 'phase I : trois tableaux, deux mesures libres, les Fils, la feinte, le Cadre, la Toile, dans l\'ordre de la fiche');
+  ok(ME.map(m => m.k === 'fixe' ? m.g : m.k).join(' ') === 'tableau fils libre tableau feinte cadre tableau libre toile', 'phase I : l\'ordre des mesures est celui de la fiche (§ 2)');
+  for (const g of ['fils', 'cadre', 'toile', 'feinte', 'tableau']) ok(D.elements[g] && D.elements[g].fixe === true, `phase I : « ${g} » est fixe (jamais tiré)`);
+  const EF = D.elements.fils, EC = D.elements.cadre, ET = D.elements.toile;
+  ok(EF.n === 5 && EF.w === 30 && EF.ouverture === 70 && EF.len === 1000 && EF.charge === 1.0 && EF.degats === 14, 'phase I : les Fils : 5 couloirs de 30 px en éventail de 70°, longueur 1 000, préavis 1,0 s, 14 dégâts');
+  ok(EC.r0 === 70 && EC.r1 === 250 && EC.breche === 110 && EC.charge === 1.2 && EC.degats === 12, 'phase I : le Cadre : anneau 70 → 250, brèche 110 px, préavis 1,2 s, 12 dégâts');
+  ok(ET.n === 5 && ET.cote === 90 && ET.charge === 1.0 && ET.seconde === 0.9 && ET.degats === 10, 'phase I : la Toile : 5 × 5 cases de 90 px, 1,0 s puis 0,9 s, 10 dégâts par moitié');
+  for (const g of ['fils', 'cadre', 'toile']) ok(D.elements[g].charge >= D.preavis.boss && D.elements[g].sorte === 'zone', `phase I : ${g} : une zone, préavis ≥ ${D.preavis.boss} s`);
+  ok(T.accrocheS === 1.2 && T.vieMaxS === 30 && T.rideauS === 0.6 && T.nuS === 3 && T.feinteApresS === 8 && T.retrait === 30 && T.minD === 230 && T.chute === 140, 'phase I : tableau : accroche 1,2 s, vie ≤ 30 s, rideau 0,6 s, à nu 3 s, feinte après 8 s, retrait 30 px, places à 230 px, chute des mains 140 px');
+  ok(T.budget.normal === 4 && T.budget.difficile === 5 && T.budget.extreme === 6 && T.couts.vague === 2 && T.couts.regle === 1 && T.couts.densite === 1 && T.couts.champion === 1 && T.max.regle === 1 && T.max.densite === 2 && T.max.champion === 1, 'phase I : budget par tableau 4 / 5 / 6 et coûts (vague 2, règle 1, densité 1 ×2 au plus, champion 1)');
+  ok(Object.keys(T.regles).sort().join() === 'braseros,sol,verre' && T.exclues.includes('brume') && !T.regles.brume, 'phase I : règles confinées Sol, Braseros, Verre ; Brume plombée exclue');
+  for (const k in T.regles) ok(!!BE.regles[k], `phase I : la règle « ${k} » existe en descente (mêmes chiffres, mêmes dessins)`);
+  ok(T.regles.sol.r === 66 && T.regles.sol.annonceS === 1.3 && T.regles.sol.degatsJoueur === 10 && T.regles.sol.degatsEnnemis === 20 && T.regles.braseros.n === 2 && T.regles.braseros.rayon === 190 && T.regles.braseros.subi === 0.4 && T.regles.verre.recu === 1.4, 'phase I : chiffres des règles = ceux de la descente (dalle 66 px annoncée 1,3 s, 10 / 20 dégâts ; braseros 190 px, 40 % ; verre +40 %)');
+  // thèmes permis par décor : ceux qu'on rencontre dans l'acte du décor (champ salle du bestiaire ; registres I, II, III)
+  const finActe = []; { let g = 0; for (const a of GA.actes) { g += a.rooms; finActe.push(g); } }
+  for (const [k, dc] of Object.entries(T.decors)) { const fin = finActe[Math.min(2, Math.max(...dc.actes.filter(a => a <= 3)) - 1)];
+    const permis = Object.keys(BE.themes).filter(t => BE.themes[t].need.every(n => (BE.ennemis[n].salle || 1) <= fin));
+    ok(permis.slice().sort().join() === dc.themes.slice().sort().join(), `phase I : décor ${k} : thèmes ${dc.themes.join(', ')} = ceux qu'on rencontre à son acte (salle ≤ ${fin})`); }
+  ok(T.decors.faub.themes.join() === 'meute,tir,petards' && T.decors.crypt.themes.length === 4 && T.decors.coeur.themes.length === 6, 'phase I : Faubourgs 3 thèmes, Cryptes 4, Cœur 6 (fiche § 3)');
+  // contre-épreuve : un thème interdit (le Siège dans les Faubourgs) n'est pas un tableau possible
+  ok(!F.brxTabOk(D, { decor: 'faub', theme: 'siege', regle: null }, null) && F.brxTabOk(D, { decor: 'coeur', theme: 'siege', regle: 'sol' }, null) && !F.brxTabOk(D, { decor: 'coeur', theme: 'meute', regle: 'brume' }, null), 'contre-épreuve : thème interdit par le décor, ou Brume plombée : tableau refusé');
+  // l'état d'arène réel (index 3, ajouté après les trois états d'essai) et ses quatre montants aux frontières des tiers
+  const EA = DA.salles.final.etats, M = F_mondeFinal(), E3 = EA[3];
+  ok(EA.length === 4 && E3.id === 'rappel' && E3.sol === 'pierre' && (E3.vides || []).length === 0 && E3.obstacles.length === 4, 'phase I : arene.js : état « rappel » en index 3, sol pierre, pas de fosse, quatre montants');
+  ok(EA[0].obstacles.length === 4 && EA[1].vides.length === 1 && EA[2].vides.length === 2, 'phase I : les trois états d\'essai restent à leurs places (0, 1, 2)');
+  const R = { x0: MUR.g, y0: MUR.h, x1: M.w - MUR.d, y1: M.h - MUR.b }, TI = F.brxTiers(R, T.retrait);
+  ok(TI.length === 3 && Math.abs(TI[0].x0 - R.x0) < 1e-6 && Math.abs(TI[2].x1 - R.x1) < 1e-6 && TI.every((t, i) => i === 0 || Math.abs(t.x0 - TI[i - 1].x1) < 1e-6), `phase I : trois tiers qui couvrent l'arène (${Math.round(TI[0].x1 - TI[0].x0)} px chacun)`);
+  ok(TI.every(t => t.frag.x0 === t.x0 + 30 && t.frag.x1 === t.x1 - 30 && t.frag.y0 === R.y0 + 30 && t.frag.y1 === R.y1 - 30), 'phase I : chaque fragment est son tiers moins 30 px');
+  const mont = E3.obstacles.map(o => ({ x: R.x0 + (R.x1 - R.x0) * o.fx, y: R.y0 + (R.y1 - R.y0) * o.fy, r: o.r }));
+  ok(mont.every(m => TI.some((t, i) => i > 0 && Math.abs(m.x - t.x0) < 2)) && mont.every(m => TI.every(t => !(m.x + m.r > t.frag.x0 && m.x - m.r < t.frag.x1 && m.y + m.r > t.frag.y0 && m.y - m.r < t.frag.y1))), 'phase I : les montants sont aux frontières des tiers, toujours hors des fragments');
+  // le tiers le plus loin de toi parmi ceux qui n'ont pas servi
+  { const rnd = mk(5); let bad = 0, rep = 0;
+    for (let i = 0; i < 10000; i++) { const x = R.x0 + rnd() * (R.x1 - R.x0), y = R.y0 + rnd() * (R.y1 - R.y0), vus = [];
+      for (let k = 0; k < 3; k++) { const t = F.brxTiersLoin(TI, x, y, vus); if (t < 0 || vus.includes(t)) rep++; vus.push(t); }
+      const t0 = F.brxTiersLoin(TI, x, y, []), d = t => Math.hypot(x - (TI[t].x0 + TI[t].x1) / 2, y - (TI[t].y0 + TI[t].y1) / 2); if ([0, 1, 2].some(t => d(t) > d(t0) + 1e-9)) bad++; }
+    ok(bad === 0 && rep === 0, `phase I : 10 000 boucles : le premier tableau au tiers le plus loin de toi, puis les deux autres, jamais deux fois le même (${bad} + ${rep})`);
+    // contre-épreuve : en oubliant les tiers déjà servis, le même tiers reviendrait
+    let rep2 = 0; for (let i = 0; i < 200; i++) { const x = R.x0 + rnd() * (R.x1 - R.x0), y = R.y0 + rnd() * (R.y1 - R.y0); if (F.brxTiersLoin(TI, x, y, null) === F.brxTiersLoin(TI, x, y, [])) rep2++; }
+    ok(rep2 === 200, 'contre-épreuve : un tiers répété (les tiers servis oubliés) serait attrapé par le compte ci-dessus'); }
+  // brèche de l'anneau et case dans brxDans
+  { const z = { forme: 'anneau', x: 1000, y: 500, r0: 70, r1: 250, breche: { a: 0, l: 110 } }, pr = 14;
+    ok(!F.brxDans(z, 1000, 500, pr) && !F.brxDans(z, 1150, 500, pr) && !F.brxDans(z, 1150, 540, pr) && F.brxDans(z, 1150, 552, pr) && F.brxDans(z, 850, 500, pr) && F.brxDans(z, 1000, 650, pr), 'brxDans : le Cadre : à l\'abri au centre et dans la brèche (à pr/2 de ses bords), touché ailleurs sur l\'anneau');
+    const ferme = Object.assign({}, z, { breche: { a: 0, l: 0 } }); ok(F.brxDans(ferme, 1150, 500, pr), 'contre-épreuve : une brèche fermée (0 px) toucherait qui s\'y tient');
+    const c = { forme: 'case', x0: 0, y0: 0, x1: 90, y1: 90 }; ok(F.brxDans(c, 45, 45, pr) && F.brxDans(c, 95, 45, pr) && !F.brxDans(c, 98, 45, pr) && !F.brxDans(c, 45, -8, pr), 'brxDans : une case du damier, à pr/2 de ses bords'); }
+  // les gestes signature : 10 000 positions chacun ; quand une variante est placée, la sortie existe vraiment (Toile : deux coups)
+  { const rnd = mk(77), N = 10000, o0 = { pr: 14, v: 180, reflexe: 0.05, arene: R }, bloque = (x, y, pr) => mont.some(m => Math.hypot(x - m.x, y - m.y) < m.r + pr), ch = id => D.elements[id].charge + D.preavis.premiere;
+    const st = { fils: [0, 0, 0], cadre: [0, 0, 0], toile: [0, 0, 0] };
+    for (let i = 0; i < N; i++) { const px = R.x0 + 30 + rnd() * (R.x1 - R.x0 - 60), py = R.y0 + 30 + rnd() * (R.y1 - R.y0 - 60); if (bloque(px, py, 14)) continue;
+      const hx = Math.max(R.x0 + 220, Math.min(R.x1 - 220, px + (rnd() - 0.5) * 400)), hy = R.y0 + 200 + 0.6 * Math.max(0, py - R.y0 - 200), o = Object.assign({}, o0, { bloque: (x, y) => bloque(x, y, 14) });
+      const lib = (zs, x, y) => x >= R.x0 + 14 && x <= R.x1 - 14 && y >= R.y0 + 14 && y <= R.y1 - 14 && !o.bloque(x, y) && !zs.some(z => F.brxDans(z, x, y, 14));
+      for (const g of ['fils', 'cadre']) { const V = [0, 0.15, -0.15, 0.3].map(r => g === 'fils' ? F.brxFils(EF, [hx, hy], [px, py], r) : F.brxCadre(EC, [hx, hy], [px, py], r)), oc = Object.assign({}, o, { charge: ch(g) }), k = F.brxPlacer(D, V, [px, py], oc);
+        if (k < 0) { st[g][1]++; continue; } st[g][0]++; const s = F.brxSortie(D, V[k], [px, py], oc); if (!s.ok || !lib(V[k], s.q[0], s.q[1]) || Math.hypot(s.q[0] - px, s.q[1] - py) > 180 * (oc.charge - 0.05) + 1e-6) st[g][2]++; }
+      { let placee = false; for (const dec of [[0, 0], [45, 0], [0, 45], [45, 45]]) { const TT = F.brxToile(ET, [px, py], dec), s = F.brxSortieToile(D, ET, TT, [px, py], o, ch('toile'));
+          if (!s.ok) continue; placee = true; st.toile[0]++; if (!lib(TT.noires, s.q1[0], s.q1[1]) || !lib(TT.blanches, s.q2[0], s.q2[1]) || Math.hypot(s.q2[0] - s.q1[0], s.q2[1] - s.q1[1]) > 180 * (ET.seconde - 0.05) + 1e-6) st.toile[2]++; break; }
+        if (!placee) st.toile[1]++; } }
+    for (const g of ['fils', 'cadre', 'toile']) ok(st[g][2] === 0 && st[g][0] > N * 0.9, `gestes : ${g} : ${st[g][0]} placés, ${st[g][1]} sautés, chaque sortie rendue libre et atteinte à pied à temps (${st[g][2]} fausses)`);
+    note(`gestes signature : Fils ${st.fils[0]} / ${st.fils[1]} sautés, Cadre ${st.cadre[0]} / ${st.cadre[1]}, Toile ${st.toile[0]} / ${st.toile[1]}`);
+    ok(st.cadre[1] === 0, 'gestes : le Cadre centré sur toi a toujours sa sortie (rester au centre)');
+    // la Toile : 13 noires et 12 blanches, la case du centre est noire ; contre-épreuve : un damier plein (25 cases d'un coup) ne laisse aucune sortie du centre
+    const TT = F.brxToile(ET, [1000, 500]); ok(TT.noires.length === 13 && TT.blanches.length === 12 && TT.noires.some(c => c.x0 < 1000 && c.x1 > 1000 && c.y0 < 500 && c.y1 > 500), 'gestes : la Toile : 13 cases noires (dont celle sous toi), 12 blanches');
+    const plein = TT.noires.concat(TT.blanches); ok(!F.brxSortie(D, plein, [1000, 500], Object.assign({}, o0, { charge: ch('toile') })).ok, 'contre-épreuve : un damier plein (les deux moitiés d\'un coup) n\'aurait pas de sortie : la règle des deux moitiés compte');
+    const fan = F.brxFils(EF, [1000, 200], [1000, 600], 0), angs = fan.map(z => Math.atan2(z.y1 - z.y0, z.x1 - z.x0));
+    ok(fan.length === 5 && Math.abs((angs[4] - angs[0]) * 180 / Math.PI - 70) < 1e-6 && Math.abs(angs[2] - Math.PI / 2) < 1e-9 && fan.every(z => Math.abs(Math.hypot(z.x1 - z.x0, z.y1 - z.y0) - 1000) < 1e-6), 'gestes : les Fils : 5 couloirs sur 70°, celui du milieu vers toi, longueur 1 000');
+    const cd = F.brxCadre(EC, [1000, 200], [1000, 600], 0)[0]; ok(Math.abs(cd.breche.a - Math.PI / 2) < 1e-9 && cd.x === 1000 && cd.y === 600, 'gestes : le Cadre : centré sur toi, brèche du côté opposé à ses mains'); }
+  // les tableaux : 10 000 boucles à graine
+  { const THM = BE.themes, S = { prof: {}, eff: {}, ko: {}, cms: CMS, par: {}, tue: {}, acte: 10, themes: THM }, lec = F.brxLire(D, S, 0), N = 10000;
+    let det = 0, bad = 0, distincts = 0, brume = 0, theme = 0, cout = 0, regles = { sol: 0, braseros: 0, verre: 0, aucune: 0 }, dens = 0, champ = 0;
+    for (let i = 0; i < N; i++) { const pal = ['normal', 'difficile', 'extreme'][i % 3], b1 = F.brxBoucle(D, lec, 0, pal, F.desRng(i), {}), b2 = F.brxBoucle(D, lec, 0, pal, F.desRng(i), {});
+      if (JSON.stringify(b1) !== JSON.stringify(b2)) det++;
+      const tabs = b1.filter(m => m.k === 'tableau').map(m => m.tab); if (tabs.length !== 3) bad++;
+      if (new Set(tabs.map(t => t.decor)).size === 3) distincts++;
+      for (const t of tabs) { if (!T.decors[t.decor].themes.includes(t.theme)) theme++; if (t.regle === 'brume') brume++; regles[t.regle || 'aucune']++;
+        const c = T.couts.vague + (t.regle ? T.couts.regle : 0) + t.densite * T.couts.densite + (t.champion ? T.couts.champion : 0);
+        if (c !== t.cout || c > T.budget[pal] || t.densite > T.max.densite || (t.regle && c < Math.min(T.budget[pal], 2 + 1 + 3))) cout++; dens += t.densite; champ += t.champion ? 1 : 0; } }
+    ok(det === 0, 'tableaux : 10 000 boucles : déterministes (même graine, mêmes tableaux)');
+    ok(bad === 0 && distincts === N, `tableaux : trois tableaux par boucle, trois décors distincts tant qu'il y en a trois (${distincts} / ${N})`);
+    ok(theme === 0 && brume === 0, 'tableaux : thème toujours permis par le décor, jamais la Brume plombée');
+    ok(cout === 0, 'tableaux : budget et coûts tenus (vague 2, règle 1, densité ×2 et champion au plus ; tout le budget dépensé quand il y a une règle)');
+    ok(Object.values(regles).every(n => n > 0) && dens > 0 && champ > 0, `tableaux : chaque règle sort (${JSON.stringify(regles)}), densité et champion aussi`);
+    note(`tableaux : ${N} boucles, règles ${JSON.stringify(regles)}, densité ${dens}, champions ${champ}`);
+    // un seul décor traversé (acte I) : trois tableaux des Faubourgs, sans thème interdit
+    { const l1 = F.brxLire(D, Object.assign({}, S, { acte: 1 }), 0); let b = 0; for (let i = 0; i < 500; i++) for (const m of F.brxBoucle(D, l1, 0, 'normal', F.desRng(i), {})) if (m.k === 'tableau' && (m.tab.decor !== 'faub' || !T.decors.faub.themes.includes(m.tab.theme))) b++;
+      ok(b === 0, 'tableaux : un seul décor traversé : ses trois tableaux, thèmes permis seulement'); }
+    // pondération : dégâts reçus par acte (décor), par source (thème), par règle
+    const freq = (Sx, f) => { const l = F.brxLire(D, Object.assign({}, S, Sx), 0); let n = 0; for (let i = 0; i < 3000; i++) if (f(F.brxTableau(D, l, 'normal', F.desRng(i + 9), {}))) n++; return n; };
+    const fa0 = freq({}, t => t.decor === 'faub'), fa1 = freq({ parA: { 1: 900, 3: 100 } }, t => t.decor === 'faub');
+    ok(fa1 > fa0 * 1.3, `tableaux : RUN.par18A : les dégâts reçus aux Faubourgs font monter leur décor (${fa0} → ${fa1} / 3 000)`);
+    const th0 = freq({}, t => t.theme === 'tir'), th1 = freq({ par: { spectre: 500, brute: 20 } }, t => t.theme === 'tir');
+    ok(th1 > th0 * 1.2, `tableaux : RUN.par18 : les dégâts reçus des Spectres font monter Tir croisé (${th0} → ${th1})`);
+    const rg0 = freq({}, t => t.regle === 'verre'), rg1 = freq({ parA: { 3: 1000 }, parR: { verre: 800 } }, t => t.regle === 'verre');
+    ok(rg1 > rg0 * 1.3, `tableaux : RUN.par18R : les dégâts reçus sous le Verre font monter le Verre (${rg0} → ${rg1})`);
+    const W = F.brxPoidsTab(D, F.brxLire(D, Object.assign({}, S, { par: { spectre: 300, rampant: 100 }, parA: { 2: 300, 3: 100 }, parR: { sol: 100 } }), 0));
+    ok(Math.abs(W.decor.crypt - (1 + 0.8 * 0.75)) < 1e-9 && Math.abs(W.theme.tir - (1 + 0.8 * 1)) < 1e-9 && Math.abs(W.theme.meute - (1 + 0.8 * 0.25)) < 1e-9 && Math.abs(W.regle.sol - (1 + 0.8 * 0.25)) < 1e-9 && W.regle.aucune === 1, 'tableaux : poids = 1 + 0,8 × part (décor, thème par ses types, règle) ; « aucune règle » : 1');
+    // premier tableau = celui qui t'a tué (s'il est encore possible), seulement au premier tableau de la première boucle
+    const tueT = { decor: 'crypt', theme: 'choeur', regle: 'braseros' }, Lt = F.brxLire(D, Object.assign({}, S, { tue: { 1: 'tableau' }, tab: { 1: tueT } }), 0); let pr = 0, pr2 = 0, pr3 = 0;
+    for (let i = 0; i < 2000; i++) { const b = F.brxBoucle(D, Lt, 0, 'normal', F.desRng(i), {}, { premiere: true }), t = b.filter(m => m.k === 'tableau').map(m => m.tab);
+      if (t[0].decor === 'crypt' && t[0].theme === 'choeur' && t[0].regle === 'braseros' && t[0].rejoue && !t[1].rejoue && !t[2].rejoue && t[1].decor !== 'crypt') pr++;
+      if (F.brxBoucle(D, Lt, 0, 'normal', F.desRng(i), {}, { premiere: false }).filter(m => m.k === 'tableau').some(m => m.tab.rejoue)) pr2++; }
+    ok(pr === 2000 && pr2 === 0, `tableaux : le premier tableau de la phase rejoue celui qui t'a tué (${pr} / 2 000), pas les boucles suivantes`);
+    const L1 = F.brxLire(D, Object.assign({}, S, { acte: 1, tue: { 1: 'tableau' }, tab: { 1: tueT } }), 0); for (let i = 0; i < 300; i++) if (F.brxBoucle(D, L1, 0, 'normal', F.desRng(i), {}, { premiere: true }).some(m => m.k === 'tableau' && m.tab.rejoue)) pr3++;
+    ok(pr3 === 0, 'tableaux : … seulement s\'il est encore possible (décor traversé)');
+    ok(F.brxLire(D, Object.assign({}, S, { tue: { 1: 'fils' }, tab: { 1: tueT } }), 0).tab === null && F.brxLire(D, Object.assign({}, S, { tue: { 1: 'fils' } }), 0).premier === null, 'tableaux : mort par un geste signature : ni tableau rejoué, ni élément libre en premier (il est au socle, préavis normal)');
+    ok(F.brxLire(D, Object.assign({}, S, { tue: { 1: 'anneau' } }), 0).premier === 'anneau', 'tableaux : mort par un élément libre : il passe en premier (règle 5a)'); }
+  // places dans le fragment, dalles confinées : 10 000 tirages
+  { const rnd = mk(11), f = TI[1].frag, SOL = T.regles.sol, o0 = { pr: 14, v: 180, reflexe: 0.05, arene: R }; let pb = 0, loin = 0, db = 0, dok = 0, dko = 0, dfaux = 0, hors = 0;
+    for (let i = 0; i < 10000; i++) { const p = [R.x0 + rnd() * (R.x1 - R.x0), R.y0 + rnd() * (R.y1 - R.y0)], pl = F.brxPlaces(f, 4, p, rnd, { marge: 30, minD: T.minD });
+      for (const q of pl) { if (!F.brxDansRect(f, q[0], q[1], -30 + 1e-9)) pb++; if (Math.hypot(q[0] - p[0], q[1] - p[1]) >= T.minD) loin++; }
+      const c = F.brxDansRect(f, p[0], p[1]) && rnd() < 0.5 ? p : [f.x0 + rnd() * (f.x1 - f.x0), f.y0 + rnd() * (f.y1 - f.y0)], d = F.brxDalle(SOL, f, c, rnd, 30);
+      if (!(d.x - d.r >= f.x0 - 1e-9 && d.x + d.r <= f.x1 + 1e-9 && d.y - d.r >= f.y0 - 1e-9 && d.y + d.r <= f.y1 + 1e-9)) db++;
+      const oc = Object.assign({}, o0, { charge: SOL.annonceS }), k = F.brxPlacer(D, [[d]], p, oc); if (k < 0) dko++; else { dok++; const s = F.brxSortie(D, [d], p, oc); if (!s.ok || F.brxDans(d, s.q[0], s.q[1], 14)) dfaux++; }
+      const brut = { x: c[0] + (rnd() * 2 - 1) * 30, y: c[1] + (rnd() * 2 - 1) * 30, r: SOL.r }; if (brut.x - brut.r < f.x0 || brut.x + brut.r > f.x1 || brut.y - brut.r < f.y0 || brut.y + brut.r > f.y1) hors++; }
+    ok(pb === 0 && loin > 38000, `tableaux : 40 000 places : toutes dans le fragment (à 30 px du bord), ${loin} à 230 px de toi ou plus (sinon la plus loin trouvée)`);
+    ok(db === 0, 'dalles : 10 000 dalles du Sol qui se dérobe, toutes entières dans le fragment');
+    ok(dfaux === 0 && dok > 9000, `dalles : posées seulement avec une sortie (${dok} posées, ${dko} sautées, ${dfaux} fausses)`);
+    ok(hors > 0, `contre-épreuve : sans la borne du fragment, ${hors} dalles déborderaient du fragment`); }
+  // sauvegarde : champ tab (v:1)
+  { const N0 = F.brxNeuf(), tt = { decor: 'coeur', theme: 'siege', regle: 'sol' };
+    const S1 = F.brxNoter(N0, { essai: false, phase: 1, par: 'tableau', tab: tt, win: false, vus: ['tableau'] }, D);
+    ok(S1.v === 1 && S1.mort[1] === 'tableau' && JSON.stringify(S1.tab[1]) === JSON.stringify(tt), 'sauvegarde : mort par un tableau : l\'élément « tableau » et le tableau (décor, thème, règle), toujours en v:1');
+    const W1 = F.brxEcrireSauve(S1), L1 = F.brxLireSauve(W1, D); ok(JSON.stringify(L1.tab[1]) === JSON.stringify(tt) && W1.v === 1, 'sauvegarde : écrire puis lire garde le tableau');
+    const S2 = F.brxNoter(S1, { essai: false, phase: 1, par: 'fils', win: false }, D); ok(S2.mort[1] === 'fils' && !S2.tab[1], 'sauvegarde : une mort par autre chose efface le tableau de cette phase');
+    ok(F.brxNoter(N0, { essai: true, phase: 1, par: 'tableau', tab: tt, win: false }, D) === N0, 'sauvegarde : une descente d\'essai n\'écrit rien');
+    const inval = [{ mort: { 1: 'tableau' }, tab: { 1: { decor: 'faub', theme: 'siege', regle: null } } }, { mort: { 1: 'tableau' }, tab: { 1: { decor: 'coeur', theme: 'meute', regle: 'brume' } } },
+      { mort: { 1: 'fils' }, tab: { 1: tt } }, { mort: { 1: 'tableau' }, tab: { 9: tt } }, { mort: { 1: 'tableau' }, tab: { 1: 'x' } }, { mort: { 1: 'tableau' }, tab: { 1: { decor: 'inconnu', theme: 'meute' } } }];
+    ok(inval.every(x => JSON.stringify(F.brxLireSauve(Object.assign({ v: 1 }, x), D).tab) === '{}'), 'sauvegarde : un champ tab invalide (thème interdit, Brume, mort qui n\'est pas un tableau, phase hors bornes, abîmé, décor inconnu) est ignoré');
+    ok(JSON.stringify(F.brxLireSauve({ v: 1, mort: { 1: 'tableau' }, tab: { 1: tt }, inconnu: 3 }, D).tab[1]) === JSON.stringify(tt) && F.brxLireSauve({ v: 1, tab: 5 }, D) !== null, 'sauvegarde : les champs inconnus sont ignorés, un tab valide gardé');
+    // contre-épreuve : une lecture qui accepterait le tab sans le valider garderait le Siège dans les Faubourgs
+    { const brut = { v: 1, mort: { 1: 'tableau' }, tab: { 1: { decor: 'faub', theme: 'siege', regle: null } } }; ok(brut.tab[1].theme === 'siege' && !F.brxLireSauve(brut, D).tab[1], 'contre-épreuve : une sauvegarde tab invalide acceptée serait attrapée'); }
+    ok(F.brxLire(D, { prof: {}, tue: L1.mort, tab: L1.tab }, 0).tab.theme === 'siege', 'sauvegarde : au combat suivant, la lecture rend le tableau qui t\'a tué'); } }
+function F_mondeFinal() { const S = DA.salles.final; return { w: Math.round(S.w * W), h: Math.round(S.h * H) }; }
 
 for (const m of NOTES) console.log('  ' + m);
 console.log(`sim-brumeux : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}. (ΔE minimal des couleurs du Brumeux contre la grammaire : ${dEmin.toFixed(1)})`);

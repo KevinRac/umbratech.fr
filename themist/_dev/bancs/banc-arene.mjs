@@ -179,10 +179,10 @@ if (SEC.includes('C')) {
   }
   ok(pire.d <= DA.budget.rendu, `C : une image de l’arène pleine coûte ${pire.d >= 0 ? '+' : ''}${pire.d.toFixed(2)} ms de plus qu’une salle d’élite au même contenu (≤ +${DA.budget.rendu})`);
   const t = await A.page.evaluate(() => window.__arene.mesure());
-  ok(t.tuilesPosees <= 9 && t.tuiles === 12 && t.calques === 3, `C : ${t.tuilesPosees} tuiles posées sur ${t.tuiles} (≤ 9), ${t.calques} calques`);
+  ok(t.tuilesPosees <= 9 && t.tuiles === 12 && t.calques === DA.salles.final.etats.length, `C : ${t.tuilesPosees} tuiles posées sur ${t.tuiles} (≤ 9), ${t.calques} calques (un par état d'arène : ${DA.salles.final.etats.length}, l'état réel de la phase I du Brumeux compris depuis v18.6)`);
   // peinture à l'entrée, trois entrées
   const ps = []; for (let k = 0; k < 3; k++) { const p = await A.page.evaluate(ESSAI, { foule: 0 }); ps.push(p.peintureMs); }
-  ok(Math.max(...ps) <= DA.budget.peinture, `C : peinture des tuiles à l’entrée ${ps.map(x => x.toFixed(0)).join(' / ')} ms (≤ ${DA.budget.peinture}, 36 tuiles)`);
+  ok(Math.max(...ps) <= DA.budget.peinture, `C : peinture des tuiles à l’entrée ${ps.map(x => x.toFixed(0)).join(' / ')} ms (≤ ${DA.budget.peinture}, ${12 * DA.salles.final.etats.length} tuiles)`);
   ok(!A.errs.length && !O.errs.length, 'C : aucune erreur ' + A.errs.concat(O.errs).slice(0, 2).join(' | '));
   await A.ctx.close(); await O.ctx.close();
 }

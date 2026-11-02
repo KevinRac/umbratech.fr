@@ -1,6 +1,6 @@
 // La Brume · données du Brumeux, le boss final (v18.5, chantier v18, action 5 ; cadrage Q1–Q17 validé le 1er novembre 2026)
-// Action 5a : le socle technique seulement. Les cinq phases ne sont PAS écrites ici (5b à 5f) : le moteur est éprouvé avec des gestes
-// d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
+// Action 5a : le socle technique. Action 5b (v18.6) : la phase I, « le Rappel » (partition.rappel, gestes signature, tableaux). Les phases II à V
+// (5c à 5f) jouent encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
 // pure /*brx:pur*/), par outils/sim-brumeux.mjs et par _dev/bancs/banc-brumeux.mjs. Le wiki ne lit de ce fichier rien d'autre que ce que
 // l'action 5g y branchera (sa carte, Q16) : ni les phases, ni la partition, ni la lecture, ni les tirages (secret).
 // En jeu, rien n'est allumé : l'arène (arene.js, actif:false) reste fermée et le boss final provisoire tient sa place jusqu'à l'action 5g.
@@ -9,11 +9,11 @@
  nom:'Le Brumeux',
  // ── Les cinq phases (Q1). id : nom de travail, jamais affiché ; presence : au-dessus de l'arène (mains, croix, fils ; haut) ou au sol (sol) ;
  // faible : ce que l'anneau ivoire entoure (G27.anneau) ; arene : l'état d'arène (data/arene.js, salles.final.etats : 0 pleine, 1 resserrée,
- // 2 bande à fosses ; les cinq états réels viennent avec les fiches 5b à 5f) ; libre : part improvisée visée (indicative, Q8) ;
+ // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; les autres états réels viennent avec les fiches 5c à 5f) ; libre : part improvisée visée (indicative, Q8) ;
  // pv : PV de la phase (placeholders, à calibrer au bot à l'action 5g : 50 à 70 s par phase, Q11). Pas de PV ni de dégâts en plus par palier (Q12).
- // exclut : les sortes d'éléments que cette phase ne tire jamais (V : l'arène se défait, rien n'y est bâti).
+ // exclut : les sortes d'éléments que cette phase ne tire jamais (I : bâtir, c'est la phase II ; V : l'arène se défait, rien n'y est bâti).
  phases:[
-  {id:'rappel',presence:'haut',faible:'mains',arene:0,libre:0.25,pv:2400},
+  {id:'rappel',presence:'haut',faible:'mains',arene:3,libre:0.25,pv:2400,exclut:['construction']},
   {id:'ouvrage',presence:'haut',faible:'mains',arene:0,libre:0.40,pv:2400},
   {id:'couture',presence:'haut',faible:'croix',arene:0,libre:0.50,pv:2400},
   {id:'emprunt',presence:'sol',faible:'coeur',arene:1,libre:0.50,pv:2400},
@@ -24,8 +24,12 @@
  // ── La partition (Q8, option b) : chaque phase est une boucle de mesures, les unes fixes (socle appris), les autres libres (improvisées,
  // retirées à chaque boucle). 5a : une seule partition d'ESSAI, la même pour les cinq phases (chaque fiche 5b à 5f écrit la sienne).
  // Une mesure : {k:'fixe', g:<geste d'essai>} ou {k:'libre'} ; entre deux mesures, l'entracte (s). nu : à nu (anneau ivoire) après la boucle (s).
+ // Une partition propre à une phase est un objet {entracteS, nuS, mesures} rangé sous l'id de la phase ; une mesure {k:'tableau'} (phase I) est un
+ // tableau convoqué (voir tableaux), tiré à chaque boucle. nuS 0 : pas de fenêtre à nu après la boucle (la phase I l'a après chaque tableau).
  partition:{entracteS:1.6,nuS:2.2,
-  essai:[{k:'fixe',g:'disque'},{k:'libre'},{k:'fixe',g:'feinte'},{k:'libre'},{k:'fixe',g:'couloir'},{k:'libre'}]},
+  essai:[{k:'fixe',g:'disque'},{k:'libre'},{k:'fixe',g:'feinte'},{k:'libre'},{k:'fixe',g:'couloir'},{k:'libre'}],
+  // Phase I, « le Rappel » (fiche 5b) : une boucle d'environ 70 s, trois tableaux, trois gestes signature, la feinte, deux mesures libres
+  rappel:{entracteS:1.4,nuS:0,mesures:[{k:'tableau'},{k:'fixe',g:'fils'},{k:'libre'},{k:'tableau'},{k:'fixe',g:'feinte'},{k:'fixe',g:'cadre'},{k:'tableau'},{k:'libre'},{k:'fixe',g:'toile'}]}},
  // ── Les éléments improvisables (Q8) et leur menace. sorte : zone, tir, saisie, construction (deux éléments de même sorte ne se cumulent
  // pas au-delà de cumul[sorte]). charge : préavis (s, ≥ preavis.boss) ; degats : avant la montée (dmgMul). pond : l'axe du profil qui pèse
  // (sens +1 : plus l'axe est haut, plus l'élément pèse ; −1 : l'inverse) ; sources : les ennemis de la descente dont les dégâts reçus
@@ -38,8 +42,21 @@
   tir:{menace:2,sorte:'tir',n:1,vitesse:380,degats:8,charge:0.8,pond:{axe:'portee',sens:1},sources:['spectre','voile']},
   rafale:{menace:3,sorte:'tir',n:3,vitesse:380,degats:6,charge:0.8,pond:{axe:'rythme',sens:1},sources:['spectre']},
   construction:{menace:3,sorte:'construction',r:34,pond:{axe:'soin',sens:1},sources:[]},
-  feinte:{menace:0,sorte:'feinte'}},
- cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1},
+  // fixe : jamais tiré dans une mesure libre (socle appris). La feinte (v14) est le fil rouge des cinq phases.
+  feinte:{menace:0,sorte:'feinte',fixe:true},
+  // ── Les gestes signature de la phase I (fiche 5b, § 1), toujours les mêmes, chacun avec deux sorties lisibles. Orange TELE.zone.
+  // Les Fils : rayons posés en couloirs fins (n couloirs de w px en éventail de ouverture degrés, partant de ses mains vers toi, longueur len) ;
+  //   sorties : entre deux fils, ou de côté.
+  fils:{menace:3,sorte:'zone',forme:'rayons',fixe:true,n:5,w:30,ouverture:70,len:1000,charge:1.0,degats:14,vise:true},
+  // Le Cadre : anneau à brèche, fixe, autour de toi (r0 → r1), brèche de breche px du côté opposé à ses mains ;
+  //   sorties : rester au centre, ou sortir par la brèche.
+  cadre:{menace:3,sorte:'zone',forme:'cadre',fixe:true,r0:70,r1:250,breche:110,charge:1.2,degats:12,vise:true},
+  // La Toile : damier de n × n cases de cote px centré sur toi ; les cases noires frappent à charge, les blanches seconde s plus tard ;
+  //   sortie : changer de couleur de case entre les deux coups (ou sortir du damier).
+  toile:{menace:3,sorte:'zone',forme:'damier',fixe:true,n:5,cote:90,charge:1.0,seconde:0.9,degats:10,vise:true},
+  // Un tableau convoqué (phase I) : jamais tiré ; c'est l'élément noté dans la sauvegarde quand un de ses ennemis ou une de ses dalles t'a tué.
+  tableau:{menace:0,sorte:'tableau',fixe:true}},
+ cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1,tableau:1},
  // ── Le budget d'une mesure libre, par phase (menace cumulée) et par palier (Q12 : ×1,25 en Difficile, ×1,5 en Extrême ; jamais de PV ni de
  // dégâts en plus). Un tirage prend des éléments tant que le budget et le non-cumul le permettent ; le premier est ce qui t'a tué (Q13).
  budget:{base:[4,5,6,6,7],palier:{normal:1,difficile:1.25,extreme:1.5}},
@@ -64,6 +81,31 @@
  // distances FF (cs : pas, pad : marge, les mêmes que le jeu) ; aire : part de l'aire libre qu'elles peuvent couvrir au plus ; max : par palier
  // (paliers.*.constructions). couleur d'annonce : craie (ΔE ≥ 25 de toute la grammaire, ivoire compris). Rendu : une image par sorte et par état.
  constructions:{connexite:0.85,aire:0.3,grille:{cs:20,pad:15},annonceS:1.5,poussee:true,sortes:{pilier:{r:34}}},
+ // ── Les tableaux de la phase I, « le Rappel » (fiche 5b, § 3 et § 4). Il « accroche » un tableau sur un tiers de l'arène : un fragment de décor
+ // d'un acte traversé (peint une fois à l'entrée du combat, à la graine du combat), une vague d'un thème existant (WTHEMES : types et rôles
+ // seulement ; les places sont tirées dans le fragment), au plus une règle de salle confinée au fragment (mêmes chiffres et mêmes dessins
+ // qu'en descente, sans bulle ni étiquette). Vidé, le rideau tombe et il est à nu (anneau ivoire sur ses mains). Non vidé à vieMaxS : ses
+ // ennemis rentrent dans le tableau et le rideau tombe sans fenêtre à nu (la seule « punition » de la lenteur).
+ // accrocheS : accroche ; fonduS : fondu du fragment ; vieMaxS : vie au plus ; rideauS : rideau ; nuS : à nu après un tableau vidé ;
+ // feinteApresS : une feinte (une seule) si le tableau vit encore ce temps après l'accroche ; retrait : marge du fragment dans son tiers (px) ;
+ // minD : distance des places à toi (px) ; apparition : durée du cercle violet (s) ; chute : ses mains retombent de tant (px) au rideau.
+ tableaux:{accrocheS:1.2,fonduS:0.8,vieMaxS:30,rideauS:0.6,nuS:3,feinteApresS:8,retrait:30,minD:230,apparition:[0.85,1.3],chute:140,cadre:{marge:12,trait:6},
+  // Un décor par registre d'acte (les actes IV à IX jouent au registre de l'acte III tant que l'action 6 ne leur donne pas leur décor) ;
+  // themes : les thèmes de vague qu'on rencontre dans l'acte de ce décor (champ salle du bestiaire).
+  decors:{faub:{actes:[1],themes:['meute','tir','petards']},crypt:{actes:[2],themes:['meute','tir','petards','choeur']},
+   coeur:{actes:[3,4,5,6,7,8,9,10],themes:['meute','tir','petards','choeur','faux','siege']}},
+  // Les règles confinées au fragment (Sol : une dalle vise toi si tu es dans le fragment, sinon un ennemi du fragment ; elle reste entière dans le
+  // fragment et n'est posée que si une sortie existe). Brume plombée exclue : son voile assombrit les ennemis et l'arène ne sait pas juger un coup venu
+  // d'un ennemi voilé (« aucune mort sans signe »).
+  regles:{sol:{r:66,annonceS:1.3,ouvertS:2.4,tickS:0.4,degatsJoueur:10,degatsEnnemis:20,max:3,premiereS:1.4,intervalle:[3.2,4.5]},
+   braseros:{n:2,rayon:190,lumiere:210,subi:0.4},verre:{recu:1.4}},
+  exclues:['brume'],
+  // Budget d'un tableau (menace, Q12 : ×1 / ×1,25 / ×1,5 ; jamais de PV ni de dégâts en plus) ; coûts et plafonds de ce qui s'y achète ;
+  // densite : chaque achat ajoute cette part au budget de la vague (budget() du jeu).
+  budget:{normal:4,difficile:5,extreme:6},couts:{vague:2,regle:1,densite:1,champion:1},max:{regle:1,densite:2,champion:1},densite:0.25,
+  // Pondération vers ce qui t'a coûté le plus de PV dans cette descente (même forme que la lecture : 1 + poids × part, plancher min) :
+  // décor ← RUN.par18A (par acte), thème ← RUN.par18 (types du thème), règle ← RUN.par18R (par règle) ; « aucune règle » garde aucune.
+  lecture:{poids:0.8,min:0.05,aucune:1}},
  // ── Couleurs (r,g,b), hors grammaire : craie = annonce d'une construction ; les autres sont la matière du Brumeux (jamais une couleur de
  // télégraphe : orange, rouge, violet, cyan ; ni la lavande des souvenirs, ni l'ivoire du point faible). Le simulateur vérifie ΔE ≥ 25.
  couleurs:{craie:'160,185,150',yeux:'175,185,205',fils:'170,165,185',croix:'120,110,140',capuche:'52,44,70',manteau:'70,60,95'},
@@ -77,7 +119,8 @@
  // valide et autonome : balise inline du wiki, image du HUD et du signe de bord). Il remplace l'œil d'essai du boss de l'arène (point ouvert (4), § 34).
  // hauteur : où ses mains pendent sous le haut de l'arène (px) ; suit : elles descendent vers toi de cette part de ce qui te sépare d'elles
  // (lissé), pour rester dans la vue quand tu te bats au milieu de l'arène ; son corps, lui, reste au bord du monde.
- dessin:{version:1,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
+ // version 2 (action 5b) : fils tendus de ses mains au cadre d'un tableau, croix qui penche vers le tiers occupé, mains qui retombent et s'ouvrent au rideau.
+ dessin:{version:2,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
   glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#0a0810" stroke-width="4.4" stroke-linecap="round"/><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#c8c0d8" stroke-width="2.2" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#0a0810" stroke-width="2.6" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#b9b0c8" stroke-width="1.2" stroke-linecap="round"/><path d="M7 8.5Q12 3.4 17 8.5Q12 13.6 7 8.5Z" fill="#eee8da" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="8.5" r="1.9" fill="#0a0810"/></svg>'},
  // ── Le bot qui frappe (Q14, bot=2) : il attaque avec le kit de base de sa forme, sort des zones qui chargent (à sa vitesse de marche, par une
  // esquive s'il le faut), vise le Brumeux (ou l'ennemi le plus proche s'il est plus près que proche px). Il sert aussi à mesurer l'action 6.

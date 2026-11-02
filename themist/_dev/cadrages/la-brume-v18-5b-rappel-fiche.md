@@ -1,6 +1,6 @@
 # La Brume · v18.5 « Le Brumeux » · action 5b · fiche courte de la phase I, « Le Rappel »
 
-Statut : **soumise à l'auteur le 2 novembre 2026, en attente de validation** (cadrage Q17 : aucune ligne de code avant). Rédigée à partir du cadrage validé (Q3, Q8, Q10, Q11, Q13, Q14), de `_dev/memoire.md` § 35 (socle 5a), § 34 (arène), § 31–33, § 19–21, et du code actuel (`WTHEMES`, `setRule` / `holesTick` / `nearBrazier`, `renderFloor` et ses sols, bloc v18.4, bloc v18.5).
+Statut : **fiche validée le 2 novembre 2026 (toutes les recommandations, écarts compris) ; implémentée le 2 novembre 2026 (v18.6, action 5b, mémoire § 36, écarts de l'implémentation notés en § 36).** Soumise à l'auteur le 2 novembre 2026 (cadrage Q17 : aucune ligne de code avant la validation). Rédigée à partir du cadrage validé (Q3, Q8, Q10, Q11, Q13, Q14), de `_dev/memoire.md` § 35 (socle 5a), § 34 (arène), § 31–33, § 19–21, et du code actuel (`WTHEMES`, `setRule` / `holesTick` / `nearBrazier`, `renderFloor` et ses sols, bloc v18.4, bloc v18.5).
 
 Ce qu'il faut savoir du code avant de lire :
 - Les actes IV à IX jouent **au registre de l'acte III** (décor du Cœur) tant que l'action 6 ne leur donne pas leur décor. Il n'existe donc aujourd'hui que **trois décors** : Faubourgs (pavés, flaques, `faub`), Cryptes (dalles, os, bougies, `crypt`), Cœur (hexagones, `coeur`).

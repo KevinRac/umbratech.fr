@@ -12987,7 +12987,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  // l'état de l'arène en cours (null hors de l'arène)
  const A={on:false,cle:null,M:null,etats:[],ie:0,etat:null,trans:null,cam:{x:0,y:0,ax:0,ay:0},indic:[],sig:{debut:{}},
   j:{coups:0,sansSigne:0,liste:[],horsVue:0,assertions:0,cibles:0},sol:{},peintureMs:0,tuilesPosees:0,hud:{m:Object.assign({},DA.vue.marges),blocs:[],t:-9},
-  essai:null,ouvrir:null,zoneCourante:null,px:null,py:null,ids:new WeakMap(),parent:new WeakMap(),nid:1,actif:null,sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null};   // v18.5 : crochets du Brumeux
+  essai:null,ouvrir:null,zoneCourante:null,px:null,py:null,ids:new WeakMap(),parent:new WeakMap(),nid:1,actif:null,sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null};   // v18.5 : crochets du Brumeux (v18.6 : solTrou)
  const actif=()=>A.actif!=null?A.actif:!!DA.actif;
  const id=o=>{let v=A.ids.get(o);if(!v){v=A.nid++;A.ids.set(o,v);}return v;};
  const vue=()=>arVue(CAM,V);
@@ -13015,8 +13015,12 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  function solCalque(ie,a){const L=A.sol[ie];if(!L)return;const T=DA.tuiles,ts=arTuiles(vue(),A.M,T);A.tuilesPosees=ts.length;
   // seule la part visible de chaque tuile est posée (rectangle source recadré sur la vue)
   const v=vue();if(a<1)ctx.globalAlpha=a;
+  // v18.6 : un trou (rect du monde déjà couvert par un calque opaque, le fragment d'un tableau du Brumeux : crochet A.solTrou) n'est pas posé
+  const h=a>=1&&A.solTrou?A.solTrou():null;
   for(const t of ts){const x0=Math.max(t.x,Math.floor(v.x0)),y0=Math.max(t.y,Math.floor(v.y0)),x1=Math.min(t.x+T.w,Math.ceil(v.x1)),y1=Math.min(t.y+T.h,Math.ceil(v.y1));
-   if(x1>x0&&y1>y0)ctx.drawImage(L[t.k],x0-t.x,y0-t.y,x1-x0,y1-y0,x0,y0,x1-x0,y1-y0);}
+   if(x1>x0&&y1>y0){if(!h||h.x0>=x1||h.x1<=x0||h.y0>=y1||h.y1<=y0)ctx.drawImage(L[t.k],x0-t.x,y0-t.y,x1-x0,y1-y0,x0,y0,x1-x0,y1-y0);
+    else{const Q=(a0,b0,a1,b1)=>{if(a1>a0&&b1>b0)ctx.drawImage(L[t.k],a0-t.x,b0-t.y,a1-a0,b1-b0,a0,b0,a1-a0,b1-b0);},yy0=Math.max(y0,h.y0),yy1=Math.min(y1,h.y1);
+     Q(x0,y0,x1,yy0);Q(x0,yy1,x1,y1);Q(x0,yy0,Math.max(x0,h.x0),yy1);Q(Math.min(x1,h.x1),yy0,x1,yy1);}}}
   ctx.globalAlpha=1;}
  function rond(c,x,y,r){c.beginPath();c.arc(x,y,r,0,TAU);}
  CAM.sol=function(){const c=ctx,T=A.trans,E=A.etat;
@@ -13260,7 +13264,8 @@ function brxPv(D,palier){const P=D.paliers[brxPalier(D,palier)],n=D.phases.lengt
 function brxSeuils(pv){const tot=pv.reduce((s,v)=>s+v,0),out=[];let acc=0;for(let i=0;i<pv.length-1;i++){acc+=pv[i];out.push(Math.round((1-acc/tot)*1e6)/1e6);}return out;}
 function brxPhase(hp,maxHp,seuils){let k=0;for(const s of seuils){if(hp>maxHp*s)break;k++;}return Math.min(k,seuils.length);}
 // ── La lecture (Q2). S : {prof:{axe:0..1|null}, eff:{cm:{s,n}}, ko:{cm:n}, cms:{cm:{ax,hi}}, par:{source:dégâts}, tue:{phase(1..n):élément},
-// adapt, portes, reserve, nemesis (gardés tels quels pour les phases III et IV)}. Rend {poids:{élément:p}, premier:élément|null, …}.
+// adapt, portes, reserve, nemesis (gardés tels quels pour les phases III et IV) ; phase I (5b) : parA:{acte:dégâts}, parR:{règle:dégâts}, acte,
+// themes:{thème:{need}}, tab:{phase:{decor,theme,regle}}}. Rend {poids:{élément:p}, premier:élément|null, tab (le tableau qui t'a tué), …}.
 function brxLire(D,S,phase){const L=D.lecture,poids={},par=S.par||{};let parTot=0;for(const k in par)parTot+=Math.max(0,par[k]||0);
  for(const id in D.elements){const el=D.elements[id];let w=1;
   if(el.pond){const v=S.prof?S.prof[el.pond.axe]:null;if(v!=null&&isFinite(v))w*=L.axe.plancher+L.axe.pente*(el.pond.sens>0?v:1-v);
@@ -13268,30 +13273,42 @@ function brxLire(D,S,phase){const L=D.lecture,poids={},par=S.par||{};let parTot=
     if(e&&e.s>0)w*=1+L.verdict.porte*Math.min(1,e.s);if(S.ko&&(S.ko[k]||0)>=L.verdict.abandonApres)w*=L.verdict.abandon;}}
   if(parTot>0&&el.sources&&el.sources.length){let p=0;for(const s of el.sources)p+=Math.max(0,par[s]||0);w*=1+L.par.poids*p/parTot;}
   poids[id]=Math.max(L.min,w);}
- const tue=S.tue&&S.tue[phase+1];
- return{phase,poids,premier:L.tue.premier&&tue&&D.elements[tue]?tue:null,adapt:S.adapt|0,portes:(S.portes||[]).slice(),reserve:(S.reserve||[]).slice(),nemesis:!!S.nemesis};}
+ const tue=S.tue&&S.tue[phase+1],tab=tue==='tableau'&&S.tab&&S.tab[phase+1]?Object.assign({},S.tab[phase+1]):null;
+ return{phase,poids,premier:L.tue.premier&&tue&&D.elements[tue]&&!D.elements[tue].fixe?tue:null,tab:L.tue.premier?tab:null,adapt:S.adapt|0,portes:(S.portes||[]).slice(),reserve:(S.reserve||[]).slice(),nemesis:!!S.nemesis,
+  par:Object.assign({},par),parA:Object.assign({},S.parA||{}),parR:Object.assign({},S.parR||{}),acte:S.acte||1,themes:S.themes||{}};}
 // ── Budget d'une mesure libre et tirage (Q8) : le premier est ce qui t'a tué ; puis des éléments tirés au poids tant que le budget et le
-// non-cumul (cumul[sorte], compte tenu de ce qui est déjà en jeu : actifs) le permettent ; la feinte n'est jamais tirée (elle est fixe).
+// non-cumul (cumul[sorte], compte tenu de ce qui est déjà en jeu : actifs) le permettent ; un élément fixe (la feinte, les gestes signature,
+// le tableau) n'est jamais tiré : il est au socle.
 function brxBudget(D,phase,palier){return D.budget.base[Math.min(phase,D.budget.base.length-1)]*(D.budget.palier[brxPalier(D,palier)]||1);}
 function brxTirer(D,lec,phase,palier,rng,actifs){let bud=brxBudget(D,phase,palier);const cnt=Object.assign({},actifs||{}),out=[],ex=(D.phases[phase]&&D.phases[phase].exclut)||[];
- const peut=id=>{const el=D.elements[id];return el.sorte!=='feinte'&&!ex.includes(el.sorte)&&el.menace<=bud+1e-9&&(cnt[el.sorte]||0)<(D.cumul[el.sorte]||1);};
+ const peut=id=>{const el=D.elements[id];return el.sorte!=='feinte'&&!el.fixe&&!ex.includes(el.sorte)&&el.menace<=bud+1e-9&&(cnt[el.sorte]||0)<(D.cumul[el.sorte]||1);};
  const prend=id=>{const el=D.elements[id];out.push(id);bud-=el.menace;cnt[el.sorte]=(cnt[el.sorte]||0)+1;};
  if(lec.premier&&peut(lec.premier))prend(lec.premier);
  for(let k=0;k<16;k++){const cands=Object.keys(D.elements).filter(peut);if(!cands.length)break;let tot=0;for(const c of cands)tot+=lec.poids[c]||1;
   let r=rng()*tot,ch=cands[cands.length-1];for(const c of cands){r-=lec.poids[c]||1;if(r<=0){ch=c;break;}}prend(ch);}
  return{elements:out,reste:bud,budget:brxBudget(D,phase,palier)};}
-// ── La partition d'une phase : ses mesures (5a : la partition d'essai pour toutes), les mesures libres résolues par un tirage
-function brxMesures(D,phase){const ph=D.phases[phase];return(D.partition[ph.id]||D.partition.essai).map(m=>Object.assign({},m));}
-function brxBoucle(D,lec,phase,palier,rng,actifs){return brxMesures(D,phase).map(m=>m.k==='libre'?Object.assign(m,{elements:brxTirer(D,lec,phase,palier,rng,actifs).elements}):m);}
+// ── La partition d'une phase : ses mesures, son entracte et sa fenêtre à nu après la boucle (la partition d'essai pour les phases qui n'ont
+// pas encore la leur ; la phase I a la sienne, 5b). La boucle : mesures libres résolues par un tirage, tableaux tirés (décors distincts tant
+// qu'il y en a ; le premier tableau de la phase rejoue celui qui t'a tué, o.premiere).
+function brxPartition(D,phase){const ph=D.phases[phase],p=ph&&D.partition[ph.id],P0=D.partition;
+ if(p&&!Array.isArray(p))return{mesures:p.mesures.map(m=>Object.assign({},m)),entracteS:p.entracteS!=null?p.entracteS:P0.entracteS,nuS:p.nuS!=null?p.nuS:P0.nuS};
+ return{mesures:(p||P0.essai).map(m=>Object.assign({},m)),entracteS:P0.entracteS,nuS:P0.nuS};}
+function brxMesures(D,phase){return brxPartition(D,phase).mesures;}
+function brxBoucle(D,lec,phase,palier,rng,actifs,o){o=o||{};const ex=[];let premier=o.premiere&&lec.tab?lec.tab:null;
+ return brxMesures(D,phase).map(m=>{if(m.k==='libre')return Object.assign(m,{elements:brxTirer(D,lec,phase,palier,rng,actifs).elements});
+  if(m.k==='tableau'){const t=brxTableau(D,lec,palier,rng,{exclus:ex,premier});premier=null;ex.push(t.decor);return Object.assign(m,{tab:t});}return m;});}
 // ── Préavis d'un élément (Q8) : sa charge, jamais sous preavis.boss, plus premiere s si cette sauvegarde ne l'a jamais vu au combat final
 function brxPreavis(D,S,id){const el=D.elements[id],vu=!!(S&&S.vus&&S.vus.includes(id));return Math.max(D.preavis.boss,(el&&el.charge)||0)+(vu?0:D.preavis.premiere);}
 // ── Toujours une sortie (Q8), même garantie que sbPlacer / sbArrivee. zones : [{forme:'disque',x,y,r} | {forme:'couloir',x0,y0,x1,y1,w} |
-// {forme:'anneau',x,y,r0,r1}] ; p : [x,y] où tu es ; o : {pr (ton rayon), v (ta vitesse à pied, px/s), reflexe (s), charge (s avant le coup),
+// {forme:'anneau',x,y,r0,r1[,breche:{a,l}]} | {forme:'case',x0,y0,x1,y1}] ; p : [x,y] où tu es ; o : {pr (ton rayon), v (ta vitesse à pied, px/s), reflexe (s), charge (s avant le coup),
 // arene {x0,y0,x1,y1}, bloque(x,y) (piliers)}. Une zone d'essai frappe d'un coup à charge : il faut un point libre atteint en ligne droite avant.
 function brxSeg(x,y,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l2));return Math.hypot(x-(ax+dx*t),y-(ay+dy*t));}
 function brxDans(z,x,y,pr){pr=pr||0;switch(z.forme){case 'disque':return Math.hypot(x-z.x,y-z.y)<z.r+pr*0.5;
  case 'couloir':return brxSeg(x,y,z.x0,z.y0,z.x1,z.y1)<z.w/2+pr*0.5;
- case 'anneau':{const d=Math.hypot(x-z.x,y-z.y);return d>z.r0-pr*0.5&&d<z.r1+pr*0.5;}}return false;}
+ case 'anneau':{const d=Math.hypot(x-z.x,y-z.y);if(!(d>z.r0-pr*0.5&&d<z.r1+pr*0.5))return false;
+  // la brèche (5b, le Cadre) : un couloir de largeur l, du centre vers l'extérieur dans la direction a ; on y est à l'abri à pr/2 de ses bords
+  if(z.breche){const ca=Math.cos(z.breche.a),sa=Math.sin(z.breche.a),u=(x-z.x)*ca+(y-z.y)*sa,v=-(x-z.x)*sa+(y-z.y)*ca;if(u>0&&Math.abs(v)<z.breche.l/2-pr*0.5)return false;}return true;}
+ case 'case':return x>z.x0-pr*0.5&&x<z.x1+pr*0.5&&y>z.y0-pr*0.5&&y<z.y1+pr*0.5;}return false;}
 function brxSortie(D,zones,p,o){const S=D.sortie,pr=o.pr||0,v=o.v||180,R=o.arene;
  const libre=(x,y)=>x>=R.x0+pr&&x<=R.x1-pr&&y>=R.y0+pr&&y<=R.y1-pr&&!(o.bloque&&o.bloque(x,y))&&!zones.some(z=>brxDans(z,x,y,pr));
  if(libre(p[0],p[1]))return{ok:true,d:0,q:[p[0],p[1]]};
@@ -13302,6 +13319,52 @@ function brxSortie(D,zones,p,o){const S=D.sortie,pr=o.pr||0,v=o.v||180,R=o.arene
 // Placer : variantes (listes de zones, la première telle quelle, puis tournées ou décalées vers le centre par l'appelant) : l'indice de la
 // première qui laisse une sortie, sinon −1 (l'élément saute : jamais de zone sans sortie)
 function brxPlacer(D,variantes,p,o){for(let k=0;k<variantes.length&&k<D.sortie.essais;k++)if(brxSortie(D,variantes[k],p,o).ok)return k;return -1;}
+// ── Phase I, « le Rappel » (fiche 5b). Les gestes signature (géométrie) : h = ses mains, p = toi ; rot : variante (rotation).
+// Les Fils : n couloirs fins en éventail de ses mains vers toi. Le Cadre : anneau autour de toi, brèche du côté opposé à ses mains.
+// La Toile : damier n × n centré sur toi (dec : décalage d'une variante) ; noires ((i + j) pair) puis blanches.
+function brxFils(el,h,p,rot){const a0=Math.atan2(p[1]-h[1],p[0]-h[0])+(rot||0),ou=el.ouverture*Math.PI/180,out=[];
+ for(let i=0;i<el.n;i++){const a=a0+(el.n>1?(i/(el.n-1)-0.5)*ou:0);out.push({forme:'couloir',x0:h[0],y0:h[1],x1:h[0]+Math.cos(a)*el.len,y1:h[1]+Math.sin(a)*el.len,w:el.w});}return out;}
+function brxCadre(el,h,p,rot){const a=Math.atan2(p[1]-h[1],p[0]-h[0])+(rot||0);return[{forme:'anneau',x:p[0],y:p[1],r0:el.r0,r1:el.r1,breche:{a,l:el.breche}}];}
+function brxToile(el,c,dec){const n=el.n,s=el.cote,x0=c[0]-n*s/2+(dec?dec[0]:0),y0=c[1]-n*s/2+(dec?dec[1]:0),noires=[],blanches=[];
+ for(let j=0;j<n;j++)for(let i=0;i<n;i++)((i+j)%2?blanches:noires).push({forme:'case',x0:x0+i*s,y0:y0+j*s,x1:x0+(i+1)*s,y1:y0+(j+1)*s});return{noires,blanches};}
+// la Toile a deux coups : une sortie des noires avant charge, puis, d'où l'on est sorti, une sortie des blanches avant seconde
+function brxSortieToile(D,el,T,p,o,charge){const s1=brxSortie(D,T.noires,p,Object.assign({},o,{charge}));if(!s1.ok)return{ok:false};
+ const s2=brxSortie(D,T.blanches,s1.q,Object.assign({},o,{charge:el.seconde}));return{ok:s2.ok,q1:s1.q,q2:s2.q};}
+// Les tiers de l'arène (trois colonnes) et le fragment de chacun (retrait px) ; le tiers le plus loin de toi parmi ceux qui n'ont pas servi
+function brxTiers(R,retrait){const w=(R.x1-R.x0)/3,out=[];for(let i=0;i<3;i++){const x0=R.x0+w*i,x1=x0+w;out.push({i,x0,y0:R.y0,x1,y1:R.y1,frag:{x0:x0+retrait,y0:R.y0+retrait,x1:x1-retrait,y1:R.y1-retrait}});}return out;}
+function brxTiersLoin(tiers,x,y,vus){let best=-1,bd=-1;for(const t of tiers){if(vus&&vus.includes(t.i))continue;const d=Math.hypot(x-(t.x0+t.x1)/2,y-(t.y0+t.y1)/2);if(d>bd){bd=d;best=t.i;}}
+ return best<0&&vus&&vus.length?brxTiersLoin(tiers,x,y,null):best;}
+function brxDansRect(f,x,y,m){m=m||0;return x>=f.x0-m&&x<=f.x1+m&&y>=f.y0-m&&y<=f.y1+m;}
+// les places d'une vague dans le fragment f : à o.marge du bord, à o.minD de toi au moins, hors des piliers (o.bloque) ; sinon la plus loin trouvée
+function brxPlaces(f,n,p,rng,o){o=o||{};const out=[],m=o.marge||30,minD=o.minD||0;
+ for(let i=0;i<n;i++){let best=null,bd=-1;for(let k=0;k<30;k++){const x=f.x0+m+rng()*(f.x1-f.x0-2*m),y=f.y0+m+rng()*(f.y1-f.y0-2*m);if(o.bloque&&o.bloque(x,y))continue;
+  const d=Math.hypot(x-p[0],y-p[1]);if(d>=minD){best=[x,y];break;}if(d>bd){bd=d;best=[x,y];}}out.push(best||[(f.x0+f.x1)/2,(f.y0+f.y1)/2]);}return out;}
+// une dalle du Sol qui se dérobe, confinée au fragment f : autour de la cible c (± jit px), entière dans le fragment (R : dalle de data)
+function brxDalle(R,f,c,rng,jit){const m=R.r;return{forme:'disque',x:Math.max(f.x0+m,Math.min(f.x1-m,c[0]+(rng()*2-1)*jit)),y:Math.max(f.y0+m,Math.min(f.y1-m,c[1]+(rng()*2-1)*jit)),r:R.r};}
+// les décors traversés (un par registre d'acte, jusqu'à l'acte de la descente) ; un tableau est-il encore possible ?
+function brxDecors(D,acte){const out=[];for(const k in D.tableaux.decors)if(D.tableaux.decors[k].actes.some(a=>a<=(acte||1)))out.push(k);return out;}
+function brxTabOk(D,t,dispo){const T=D.tableaux;return!!(t&&typeof t==='object'&&T.decors[t.decor]&&(!dispo||dispo.includes(t.decor))&&T.decors[t.decor].themes.includes(t.theme)&&(t.regle==null||!!T.regles[t.regle]));}
+// pondération vers ce qui t'a coûté le plus de PV dans la descente (1 + poids × part, plancher) : décor ← parA (par acte), thème ← par (les
+// types que le thème demande, lec.themes[k].need), règle ← parR (part de tous les dégâts reçus) ; « aucune règle » garde un poids fixe
+function brxPoidsTab(D,lec){const T=D.tableaux,L=T.lecture,par=lec.par||{},pa=lec.parA||{},pr=lec.parR||{},TH=lec.themes||{};
+ const tot=o=>{let s=0;for(const k in o)s+=Math.max(0,o[k]||0);return s;},tP=tot(par),tA=tot(pa),w=q=>Math.max(L.min,1+L.poids*q),decor={},theme={},regle={aucune:L.aucune};
+ for(const k in T.decors){let s=0;for(const a of T.decors[k].actes)s+=Math.max(0,pa[a]||0);decor[k]=w(tA>0?s/tA:0);}
+ for(const d in T.decors)for(const k of T.decors[d].themes){if(theme[k]!=null)continue;let s=0;for(const t of(TH[k]&&TH[k].need)||[])s+=Math.max(0,par[t]||0);theme[k]=w(tP>0?s/tP:0);}
+ for(const k in T.regles)regle[k]=w(tA>0?Math.max(0,pr[k]||0)/tA:0);
+ return{decor,theme,regle};}
+function brxPick(w,keys,rng){let tot=0;for(const k of keys)tot+=w[k]||0;let r=rng()*tot,ch=keys[keys.length-1];for(const k of keys){r-=w[k]||0;if(r<=0){ch=k;break;}}return ch;}
+// un tableau : décor (hors o.exclus tant qu'il en reste), thème permis par le décor, règle (ou aucune), puis densité et champion tant que le
+// budget du palier le permet (vague toujours, règle au plus une, densité au plus deux, champion au plus un). o.premier : le tableau qui t'a
+// tué, rejoué tel quel s'il est encore possible (décor, thème, règle ; densité et champion tirés à nouveau).
+function brxTableau(D,lec,palier,rng,o){o=o||{};const T=D.tableaux,C=T.couts,W=brxPoidsTab(D,lec),dispo=brxDecors(D,lec.acte),B=T.budget[brxPalier(D,palier)]||T.budget.normal;
+ let pool=dispo.filter(k=>!(o.exclus||[]).includes(k));if(!pool.length)pool=dispo.slice();
+ let decor,theme,regle,rejoue=false,bud=B;
+ if(o.premier&&brxTabOk(D,o.premier,dispo)){decor=o.premier.decor;theme=o.premier.theme;regle=o.premier.regle||null;rejoue=true;}
+ else{decor=brxPick(W.decor,pool,rng);theme=brxPick(W.theme,T.decors[decor].themes,rng);const r=brxPick(W.regle,['aucune',...Object.keys(T.regles)],rng);regle=r==='aucune'?null:r;}
+ bud-=C.vague;if(regle)bud-=C.regle;let densite=0,champion=0;
+ for(let k=0;k<8;k++){const op=[];if(densite<T.max.densite&&C.densite<=bud+1e-9)op.push('densite');if(champion<T.max.champion&&C.champion<=bud+1e-9)op.push('champion');if(!op.length)break;
+  const ch=op[Math.floor(rng()*op.length)];if(ch==='densite')densite++;else champion++;bud-=C[ch];}
+ return{decor,theme,regle,densite,champion:champion>0,cout:B-bud,budget:B,rejoue};}
 // ── Les constructions comme système (Q9) : grille de la carte de distances (mêmes règles que FF : pas cs, marge pad, bornes de l'arène et
 // piliers bloquent), part de l'aire libre reliée à un point (inondation 4-connexe + diagonales non coupées, comme FF), aire couverte.
 function brxGrille(M,R,piliers,G){const cs=G.cs,pad=G.pad,cols=Math.ceil(M.w/cs),rows=Math.ceil(M.h/cs),blk=new Uint8Array(cols*rows);let libres=0;
@@ -13327,18 +13390,23 @@ function brxPoser(D,M,R,base,cons,c,j,palier){const C=D.constructions,P=D.palier
  if(part<C.connexite-1e-9)return{ok:false,raison:'connexite',part,aire};
  return{ok:true,part,aire};}
 // ── Sauvegarde (Q13) : SAVE.brumeux versionnée. Absente ou abîmée : état neuf ; version future : null (on n'y touche pas).
-function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[]};}
+function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[],tab:{}};}
 function brxLireSauve(S,D){if(!S||typeof S!=='object')return brxNeuf();if(typeof S.v==='number'&&S.v>BRX_V)return null;if(S.v!==BRX_V)return brxNeuf();
  const N=brxNeuf(),ent=(x,a,b)=>Number.isInteger(x)&&x>=a&&x<=b,n=D?D.phases.length:5;
  N.tentatives=ent(S.tentatives,0,1e6)?S.tentatives:0;N.victoires=ent(S.victoires,0,1e6)?S.victoires:0;N.phaseMax=ent(S.phaseMax,0,n)?S.phaseMax:0;
  if(S.mort&&typeof S.mort==='object')for(const k in S.mort){const ph=+k,id=S.mort[k];if(ent(ph,1,n)&&typeof id==='string'&&(!D||D.elements[id]))N.mort[ph]=id;}
  if(Array.isArray(S.vus))N.vus=S.vus.filter(id=>typeof id==='string'&&(!D||D.elements[id])).slice(0,64);
+ // tab (5b, facultatif) : le tableau qui t'a tué, par phase, seulement là où l'élément mortel est « tableau » ; un champ invalide est ignoré
+ if(S.tab&&typeof S.tab==='object')for(const k in S.tab){const ph=+k,t=S.tab[k];if(!ent(ph,1,n)||N.mort[ph]!=='tableau'||!t||typeof t!=='object')continue;
+  if(D?brxTabOk(D,t,null):(typeof t.decor==='string'&&typeof t.theme==='string'))N.tab[ph]={decor:t.decor,theme:t.theme,regle:t.regle==null?null:t.regle};}
  return N;}
-function brxEcrireSauve(S){return JSON.parse(JSON.stringify({v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]}));}
-// Noter un combat : o = {essai, phase (1..n, la plus haute atteinte), par (l'élément qui t'a tué, ou null), win, vus (éléments rencontrés)}.
+function brxEcrireSauve(S){const o={v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]};if(S.tab&&Object.keys(S.tab).length)o.tab=S.tab;return JSON.parse(JSON.stringify(o));}
+// Noter un combat : o = {essai, phase (1..n, la plus haute atteinte), par (l'élément qui t'a tué, ou null), tab (si par vaut « tableau » : le
+// tableau, {decor, theme, regle}), win, vus (éléments rencontrés)}.
 // Une descente d'essai n'écrit rien (l'état rendu est le même objet).
 function brxNoter(S,o,D){if(o.essai)return S;const N=brxLireSauve(brxEcrireSauve(S),D)||brxNeuf();N.tentatives++;N.phaseMax=Math.max(N.phaseMax,o.phase|0);
- if(o.win){N.victoires++;}else if(o.par&&(!D||D.elements[o.par])&&o.phase>=1)N.mort[o.phase]=o.par;
+ if(o.win){N.victoires++;}else if(o.par&&(!D||D.elements[o.par])&&o.phase>=1){N.mort[o.phase]=o.par;
+  if(o.par==='tableau'&&o.tab&&(D?brxTabOk(D,o.tab,null):true))N.tab[o.phase]={decor:o.tab.decor,theme:o.tab.theme,regle:o.tab.regle==null?null:o.tab.regle};else delete N.tab[o.phase];}
  for(const id of o.vus||[])if(!N.vus.includes(id)&&(!D||D.elements[id]))N.vus.push(id);
  return N;}
 // ── Statistiques : moyenne et pire part (p95 par défaut) d'un échantillon de durées (ms)
@@ -13352,6 +13420,9 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
 // [&graine=n][&reserve=id,id][&bot=2][&classe=…][&dieu=0] ; console : __brumeux. Le Brumeux est un ennemi « boss » (comme un gardien :
 // barre de vie, Accoutumance, verrou de phase, Dernier Souvenir sous plafond, biais de caméra, signe de bord), avec e.brx18 : ce bloc
 // enveloppe updateBoss, hitEnemy, bossDefeated, drawEnemyBody / Post, drawTelegraphs, computeLights, g27GlypheHud, step, render, hurtPlayer.
+// v18.6 (action 5b) : la phase I, « le Rappel » (fiche validée le 2 novembre 2026) : ses gestes signature (les Fils, le Cadre, la Toile, la
+// feinte), ses tableaux convoqués (fragments de décor peints une fois à l'entrée du combat, vagues d'un thème existant, règles de salle confinées
+// au fragment, sans bulle), le rideau et la fenêtre à nu après chaque tableau vidé. Les phases II à V jouent encore la partition d'essai.
 // ═════════════════════════════════════════════════════════════════════════════
 (()=>{
  const DB=window.BRUME_DATA&&window.BRUME_DATA.brumeux,DA=window.BRUME_DATA&&window.BRUME_DATA.arene,XA=window.__arene;if(!DB||!DA||!XA)return;
@@ -13359,7 +13430,9 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  TINT.brume18=COL.fils;
  // ── l'état du combat (vide hors du combat)
  const neuf=()=>({on:false,e:null,phase:0,pv:[],seuils:[],palier:'normal',graine:0,rng:null,lec:null,boucle:null,im:0,ph:'entracte',t:0,tmes:0,zones:[],tirs:[],cons:[],ncons:0,trans:null,
-  essai:null,bot:0,sauve:null,vus:new Set(),scene:null,regard:0,tue:null,note:false,zoneCourante:null,j:{phases:{},lancers:0,sautes:0,posees:0,refusees:[],lectures:0,transitions:[],tirages:[]}});
+  essai:null,bot:0,sauve:null,vus:new Set(),scene:null,regard:0,tue:null,note:false,zoneCourante:null,
+  nb:0,ngrp:0,tab:null,tiers:null,tiersVus:[],cal:null,tueTab:null,feinteCoup:false,chute:0,ouvre:0,pench:0,   // v18.6 : la phase I (tableaux, calques, mains)
+  j:{phases:{},lancers:0,sautes:0,posees:0,refusees:[],lectures:0,transitions:[],tirages:[],tableaux:[],dallesSautees:0,rentres:0,peintureMs:null}});
  let X=neuf();
  // ── le glyphe (croix de manipulation et œil) : image pour le HUD et le signe de bord
  const GL={s:DB.dessin.glyphe,url:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(DB.dessin.glyphe),img:null};
@@ -13367,7 +13440,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // ── la sauvegarde (Q13) : lue à l'entrée du combat, écrite à sa fin ; une descente d'essai n'écrit rien
  function sauveLire(){try{const S=brxLireSauve(SAVE.brumeux,DB);return S;}catch(err){return brxNeuf();}}
  function noter(win){if(X.note||!X.e)return;X.note=true;
-  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,win,vus:[...X.vus]};
+  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,win,vus:[...X.vus]};
   const S=X.sauve||brxNeuf(),N=brxNoter(S,o,DB);X.j.note=o;
   if(!o.essai&&N!==S){SAVE.brumeux=brxEcrireSauve(N);X.sauve=N;try{persist();}catch(err){}}}
  const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/.test(location.search);
@@ -13377,6 +13450,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   try{const ps=profStore();S.eff=ps.eff||{};S.ko=(PR().ko)||{};}catch(err){S.eff={};S.ko={};}
   S.cms={};for(const k in BE_D.contreMesures||{}){const c=BE_D.contreMesures[k];S.cms[k]={ax:c.ax,hi:!!c.hi};}
   S.par=Object.assign({},RUN.par18||{});S.tue=X.sauve?X.sauve.mort:{};
+  S.parA=Object.assign({},RUN.par18A||{});S.parR=Object.assign({},RUN.par18R||{});S.acte=ACTE();S.themes=BE_D.themes||{};S.tab=X.sauve&&X.sauve.tab||{};   // v18.6 : les tableaux
   try{S.adapt=adaptLv(P.cls);}catch(err){S.adapt=0;}
   S.portes=((RUN.memoire&&RUN.memoire.actifs)||[]).map(a=>({id:a.id,src:a.src,rang:a.rang,g:a.g||0}));
   S.reserve=(RUN.reserveBrume||[]).map(x=>({id:x.id,source:x.source,oublie:x.oublie}));
@@ -13385,7 +13459,9 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.5);}catch(err){}
   return L;}
  function boucleNeuve(){const actifs={};for(const z of X.zones)if(!z.fait)actifs[DB.elements[z.id].sorte]=(actifs[DB.elements[z.id].sorte]||0)+1;
-  X.boucle=brxBoucle(DB,X.lec,X.phase,X.palier,X.rng,actifs);X.im=0;X.j.tirages.push(X.boucle.filter(m=>m.k==='libre').map(m=>m.elements.join('+')).join(' | '));}
+  // v18.6 : le premier tableau de la phase (première boucle) rejoue celui qui t'a tué ; chaque tiers sert une fois par boucle
+  X.boucle=brxBoucle(DB,X.lec,X.phase,X.palier,X.rng,actifs,{premiere:!X.nb++});X.im=0;X.tiersVus=[];X.j.tirages.push(X.boucle.filter(m=>m.k==='libre').map(m=>m.elements.join('+')).join(' | '));}
+ const ent=()=>brxPartition(DB,X.phase).entracteS;   // l'entracte de la partition de la phase
  // ── créer le Brumeux (un ennemi « boss » : barre de vie, Accoutumance, verrou de phase, plafond du Dernier Souvenir, biais de caméra, signe de bord)
  function creer(phase0){const ph=DB.phases[phase0],haut=ph.presence==='haut',cx=(AR.x0+AR.x1)/2;
   const e=createEnemy('boss',cx,haut?AR.y0+DB.dessin.hauteur:(AR.y0+AR.y1)/2-60);e.brx18=true;e.name=DB.nom;e.spd=0;e.xp=0;e.r=DB.dessin.r[haut?'haut':'sol'];e.fade=1;e.patT=0;e.queue=[];e.state='brx';
@@ -13394,7 +13470,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   const h=hud();if(h){h.classList.add('brx18');h.querySelectorAll('.bossbar s.brx18').forEach((s,i)=>{s.style.left=(100-(X.seuils[i]||0)*100).toFixed(1)+'%';});}return e;}
  // ── la position : au-dessus de l'arène (ses mains suivent ton abscisse, sans te quitter des yeux), au sol (il garde ses distances)
  function presence(e,dt){const ph=DB.phases[X.phase];
-  if(ph.presence==='haut'){const tx=clamp(P.x,AR.x0+220,AR.x1-220),h0=AR.y0+DB.dessin.hauteur,ty=h0+DB.dessin.suit*Math.max(0,P.y-h0);e.x+=(tx-e.x)*Math.min(1,dt*0.6);if(e.hy==null)e.hy=ty;e.hy+=(ty-e.hy)*Math.min(1,dt*0.6);e.y=e.hy+(RM?0:Math.sin(T*0.9)*8);e.ang=Math.atan2(P.y-e.y,P.x-e.x);}
+  if(ph.presence==='haut'){const tx=clamp(P.x,AR.x0+220,AR.x1-220),h0=AR.y0+DB.dessin.hauteur,ty=h0+DB.dessin.suit*Math.max(0,P.y-h0);e.x+=(tx-e.x)*Math.min(1,dt*0.6);if(e.hy==null)e.hy=ty;e.hy+=(ty-e.hy)*Math.min(1,dt*0.6);e.y=e.hy+(RM?0:Math.sin(T*0.9)*8)+X.chute;e.ang=Math.atan2(P.y-e.y,P.x-e.x);}
   else{const d=hyp(P.x-e.x,P.y-e.y);if(d>260)moveTo(e,P.x,P.y,46,dt);else if(d<150)moveTo(e,2*e.x-P.x,2*e.y-P.y,40,dt);e.ang=Math.atan2(P.y-e.y,P.x-e.x);}}
  // ── les gestes d'essai. Un élément est lancé avec son préavis (jamais moins que preavis.boss, +0,3 s à la première rencontre), une zone seulement
  // si une sortie existe (brxPlacer : jusqu'à sortie.essais variantes, sinon elle saute), chaque zone est une source de signe à part entière (arène).
@@ -13406,13 +13482,18 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    else if(el.forme==='disque'){const bx=cx-P.x,by=cy-P.y,d=hyp(bx,by)||1,sh=Math.min(d,36*k);zs.push({forme:'disque',x:P.x+bx/d*sh,y:P.y+by/d*sh,r:el.r});}
    else if(el.forme==='couloir'){const a=Math.atan2(P.y-e.y,P.x-e.x)+rot;zs.push({forme:'couloir',x0:e.x,y0:e.y,x1:e.x+Math.cos(a)*el.len,y1:e.y+Math.sin(a)*el.len,w:el.w});}
    else if(el.forme==='anneau'){const bx=cx-P.x,by=cy-P.y,d=hyp(bx,by)||1,sh=Math.min(d,36*k);zs.push({forme:'anneau',x:P.x+bx/d*sh,y:P.y+by/d*sh,r0:el.r0*(1+0.15*s),r1:el.r1});}
+   // v18.6 : les gestes signature de la phase I (les Fils tournent de 0,15 rad par variante ; le Cadre, centré sur toi, tourne sa brèche)
+   else if(el.forme==='rayons')zs=brxFils(el,[e.x,e.y],[P.x,P.y],(k%2?1:-1)*Math.ceil(k/2)*0.15);
+   else if(el.forme==='cadre')zs=brxCadre(el,[e.x,e.y],[P.x,P.y],(k%2?1:-1)*Math.ceil(k/2)*0.6);
    out.push(zs);}
   return out;}
  function lancer(id){const el=DB.elements[id],e=X.e;if(!el||!e)return false;X.j.lancers++;
   if(el.sorte==='feinte'){if(!room.bl&&typeof startBluff==='function')startBluff();X.tmes=Math.max(X.tmes,1.3);return true;}
   const charge=brxPreavis(DB,X.sauve,id);X.vus.add(id);
+  if(el.sorte==='zone'&&el.forme==='damier')return toile(id,el,charge);
   if(el.sorte==='zone'){const V=variantes(el,e),k=brxPlacer(DB,V,[P.x,P.y],optSortie(charge));if(k<0){X.j.sautes++;return false;}
-   for(const g of V[k])X.zones.push(Object.assign(g,{id,t:0,charge,degats:el.degats*dmgMul(),vise:!!el.vise,boss:true,src:e,fait:false,flash:0,essai:k}));
+   const grp=++X.ngrp;   // un geste frappe une fois (deux fils qui se croisent sous toi ne comptent qu'un coup)
+   for(const g of V[k])X.zones.push(Object.assign(g,{id,t:0,charge,degats:el.degats*dmgMul(),vise:!!el.vise,boss:true,src:e,fait:false,flash:0,essai:k,grp}));
    X.tmes=Math.max(X.tmes,charge+0.3);return true;}
   if(el.sorte==='tir'){X.tirs.push({id,t:0,charge,n:el.n||1,vitesse:el.vitesse,degats:el.degats*dmgMul(),fait:false});X.tmes=Math.max(X.tmes,charge+0.3);return true;}
   if(el.sorte==='construction'){return poser(id,el);}
@@ -13434,9 +13515,9 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    c.pose=true;room.pillars.push(c);CAM.ff=1;X.j.posees++;}}
  function effacerCons(){if(!X.cons.length)return;room.pillars=room.pillars.filter(p=>!p.brx18);X.cons=[];CAM.ff=1;}
  // ── les zones : charge, puis coup (sous la zone, pas en ruée) jugé par l'arène (zone signalée depuis 0,8 s)
- function zonesPas(dt){const e=X.e;
+ function zonesPas(dt){const e=X.e,frappe=new Set();
   for(const z of X.zones){if(z.fait){z.flash-=dt;continue;}z.t+=dt;if(z.t<z.charge)continue;z.fait=true;z.flash=0.15;
-   if(!P.dead&&P.dashT<=0&&brxDans(z,P.x,P.y,P.r)){X.zoneCourante=z;try{XA.coup(z,()=>hurtPlayer(z.degats,e));}finally{X.zoneCourante=null;}}}
+   if(!P.dead&&P.dashT<=0&&!(z.grp&&frappe.has(z.grp))&&brxDans(z,P.x,P.y,P.r)){if(z.grp)frappe.add(z.grp);X.zoneCourante=z;try{XA.coup(z,()=>hurtPlayer(z.degats,e));}finally{X.zoneCourante=null;}}}
   X.zones=X.zones.filter(z=>!z.fait||z.flash>0);
   for(const tr of X.tirs){tr.t+=dt;if(tr.t<tr.charge)continue;tr.fait=true;const a0=Math.atan2(P.y-e.y,P.x-e.x);
    for(let i=0;i<tr.n;i++){const a=a0+(tr.n>1?(i-(tr.n-1)/2)*0.22:0);eproj.push({x:e.x+Math.cos(a)*e.r,y:e.y+Math.sin(a)*e.r,vx:Math.cos(a)*tr.vitesse,vy:Math.sin(a)*tr.vitesse,r:7,dmg:tr.degats,life:6,from:e,boss:true,col:TELE.proj,brx18:tr.id});}
@@ -13444,19 +13525,23 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   X.tirs=X.tirs.filter(tr=>!tr.fait);}
  // ── la partition : entracte → mesure (fixe ou libre) → … → à nu (anneau ivoire) après la boucle, puis une boucle neuve (nouveaux tirages)
  function mesure(){const m=X.boucle&&X.boucle[X.im];
-  if(!m){X.e.vuln=Math.max(X.e.vuln||0,DB.partition.nuS);X.ph='nu';X.t=DB.partition.nuS;return;}
+  if(!m){const nu=brxPartition(DB,X.phase).nuS;if(nu>0){X.e.vuln=Math.max(X.e.vuln||0,nu);X.ph='nu';X.t=nu;}else{boucleNeuve();X.ph='entracte';X.t=ent()*0.5;}return;}   // v18.6 : la phase I n'a pas de fenêtre après la boucle
+  if(m.k==='tableau'){X.im++;accrocher(m);return;}   // v18.6 : un tableau convoqué (phase I)
   X.tmes=0.4;if(m.k==='fixe')lancer(m.g);else for(const id of m.elements)lancer(id);
   X.im++;X.ph='mesure';X.t=0;}
  function pas(e,dt){if(X.scene)return;presence(e,dt);consPas(dt);
   if(X.trans){transPas(dt);return;}
   zonesPas(dt);const J=X.j.phases[X.phase];if(J)J.t+=dt;
   if(X.ph==='entracte'){X.t-=dt;if(X.t<=0)mesure();}
-  else if(X.ph==='mesure'){X.t+=dt;if(X.t>=X.tmes&&!X.zones.some(z=>!z.fait)&&!X.tirs.length){X.ph='entracte';X.t=DB.partition.entracteS;}}
-  else if(X.ph==='nu'){X.t-=dt;if(X.t<=0){boucleNeuve();X.ph='entracte';X.t=DB.partition.entracteS*0.5;}}}
+  else if(X.ph==='mesure'){X.t+=dt;if(X.t>=X.tmes&&!X.zones.some(z=>!z.fait)&&!X.tirs.length){X.ph='entracte';X.t=ent();}}
+  else if(X.ph==='tableau')tabPas(dt);
+  else if(X.ph==='nu'){X.t-=dt;if(X.t<=0){boucleNeuve();X.ph='entracte';X.t=ent()*0.5;}}
+  mainsPas(e,dt);}
  // ── la transition entre deux phases (Q11) : verrou (1,2 s à 15 %), cri, transformation de l'arène (data/arene.js, état de la phase), nouvelle
  // présence, relecture. Jamais une pause. ~3 s, ou le temps que l'arène se transforme.
  function vers(n){const e=X.e;if(!e||e.dead||n===X.phase||!DB.phases[n])return false;
   X.zones=[];X.tirs=[];room.bl=null;e.vuln=0;e.lockT=Math.max(e.lockT||0,RUN.time+VP.dureeS);
+  if(X.tab)tabFin();X.nb=0;   // v18.6 : un tableau en cours rentre (ses ennemis disparaissent) ; le premier tableau d'une phase se compte à neuf
   const ph=DB.phases[n],de=DB.phases[X.phase];X.phase=n;e.phase=n+1;X.j.phases[n]=X.j.phases[n]||{t:0,coups:0};X.j.transitions.push({de:X.phase,vers:n,t:+RUN.time.toFixed(2)});
   X.trans={t:0,n,arene:false,cri:false,presence:de.presence!==ph.presence};
   if(ph.id==='effacement')effacerCons();
@@ -13468,9 +13553,9 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    if(ph.presence==='sol'){e.r=DB.dessin.r.sol;e.x=clamp((AR.x0+AR.x1)/2,AR.x0+e.r,AR.x1-e.r);e.y=clamp((AR.y0+AR.y1)/2-40,AR.y0+e.r,AR.y1-e.r);if(hyp(P.x-e.x,P.y-e.y)<e.r+P.r+40){const a=Math.atan2(e.y-P.y,e.x-P.x);e.x=clamp(P.x+Math.cos(a)*(e.r+P.r+60),AR.x0+e.r,AR.x1-e.r);e.y=clamp(P.y+Math.sin(a)*(e.r+P.r+60),AR.y0+e.r,AR.y1-e.r);}}
    else{e.r=DB.dessin.r.haut;e.hy=null;e.y=AR.y0+DB.dessin.hauteur;}}
   const et=XA.etat();
-  if(Tn.t>=DB.transition.dureeS&&Tn.arene&&!et.trans){X.trans=null;if(DB.transition.relecture)lire();boucleNeuve();X.ph='entracte';X.t=DB.partition.entracteS*0.5;}}
+  if(Tn.t>=DB.transition.dureeS&&Tn.arene&&!et.trans){X.trans=null;if(DB.transition.relecture)lire();boucleNeuve();X.ph='entracte';X.t=ent()*0.5;}}
  // ── la fin : sa croix tombe, ses fils se coupent, l'arène redevient brume ; rien n'est retardé (la salle est vidée tout de suite)
- function mort(e){room.bossDead=true;for(const o of enemies)if(!o.dead&&o!==e){o.dead=true;mist(o.x,o.y,o.r);}
+ function mort(e){room.bossDead=true;X.tab=null;for(const o of enemies)if(!o.dead&&o!==e){o.dead=true;mist(o.x,o.y,o.r);}
   eproj=[];rings=[];room.spawning=[];room.bl=null;X.zones=[];X.tirs=[];X.scene={t:0,x:e.x,y:e.y,haut:DB.phases[X.phase].presence==='haut',r:e.r};
   mist(e.x,e.y,e.r*1.5);shake(12,0.6);freezeT=0.12;sfx('boss');noter(true);const h=hud();if(h)h.classList.remove('brx18');
   // hors essai (5g) : la victoire de la descente ; en essai : le combat se termine là, la salle reste ouverte
@@ -13482,8 +13567,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  const press=code=>{dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true}));};
  function pilote2(dt){const e=X.e;for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);if(!e||e.dead||P.dead)return;XA.dbg().pilote(true);
   const B=X.essai.b||(X.essai.b={t:0,beat:-1,strafe:1,sT:0});B.t+=dt;B.sT-=dt;if(B.sT<=0){B.sT=1.2+X.rng()*1.2;B.strafe=-B.strafe;}
-  let tx,ty;const vives=X.zones.filter(z=>!z.fait),dedans=vives.filter(z=>brxDans(z,P.x,P.y,P.r+24)),bl=room.bl&&room.bl.real&&hyp(P.x-room.bl.x,P.y-room.bl.y)<room.bl.r+P.r+20?room.bl:null;
-  if(dedans.length||bl){const zs=vives.slice();if(bl)zs.push({forme:'disque',x:bl.x,y:bl.y,r:bl.r});
+  let tx,ty;const vives=X.zones.filter(z=>!z.fait).concat(X.tab?X.tab.dalles.map(h=>({forme:'disque',x:h.x,y:h.y,r:h.r,charge:h.w>0?h.w:0,t:0})):[]),dedans=vives.filter(z=>brxDans(z,P.x,P.y,P.r+24)),bl=room.bl&&room.bl.real&&hyp(P.x-room.bl.x,P.y-room.bl.y)<room.bl.r+P.r+20?room.bl:null;
+  if(dedans.length||bl){const r0=dedans.length?Math.min(...dedans.map(z=>z.charge-z.t)):0,zs=vives.filter(z=>z.charge-z.t<=r0+0.5);if(bl)zs.push({forme:'disque',x:bl.x,y:bl.y,r:bl.r});
    const s=brxSortie(DB,zs,[P.x,P.y],optSortie(9));if(s.ok&&s.q){tx=s.q[0];ty=s.q[1];}else{const z=dedans[0]||bl,q=z.forme==='couloir'?{x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2}:z,dx=P.x-q.x,dy=P.y-q.y,d=hyp(dx,dy)||1;tx=P.x+dx/d*200;ty=P.y+dy/d*200;}
    const reste=Math.min(...dedans.map(z=>z.charge-z.t),bl?bl.t:9);if(reste<0.3&&P.dashCh>0&&P.dashT<=0){press('Space');}}
   else{const want=DIST[P.cls]||220,dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy)||1,ux=dx/d,uy=dy/d;
@@ -13524,27 +13609,44 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function images(){const I=RUN&&RUN.im18;if(!I||!I.n)return null;const p=DB.stats.images.pire;
   return{n:I.n,moyenne:+(I.sum/I.n).toFixed(2),pire5:+(brxPire(I.res,p)||0).toFixed(2),intervalle:I.nI?+(I.sumI/I.nI).toFixed(2):null,intervallePire5:I.nI?+(brxPire(I.resI,p)||0).toFixed(2):null};}
  function statsRun(){if(!X.on&&!X.j.note)return null;const ph={};for(const k in X.j.phases)ph[+k+1]={t:Math.round(X.j.phases[k].t),coups:X.j.phases[k].coups};
-  return{phases:ph,phase:X.phase+1,palier:X.palier,graine:X.graine,lancers:X.j.lancers,sautes:X.j.sautes,posees:X.j.posees,fin:X.j.note?(X.j.note.win?'victoire':'mort'):'en cours',par:X.j.note?X.j.note.par:null};}
+  return{phases:ph,phase:X.phase+1,palier:X.palier,graine:X.graine,lancers:X.j.lancers,sautes:X.j.sautes,posees:X.j.posees,fin:X.j.note?(X.j.note.win?'victoire':'mort'):'en cours',par:X.j.note?X.j.note.par:null,
+   tableaux:X.j.tableaux.length,vides:X.j.tableaux.filter(t=>t.vide===true).length,rentres:X.j.rentres,dallesSautees:X.j.dallesSautees};}
  // la salle change : plus de Brumeux (crochets de l'arène rendus)
- const _mr=makeRoom;makeRoom=function(){const h=hud();if(h)h.classList.remove('brx18');if(X.on)XA.crochets({sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null});X=neuf();return _mr.apply(this,arguments);};
+ const _mr=makeRoom;makeRoom=function(){const h=hud();if(h)h.classList.remove('brx18');if(X.on)XA.crochets({sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null});X=neuf();return _mr.apply(this,arguments);};
  // ── dessin. Phases I–III : son corps se devine dans la brume au bord du monde ; ses mains, sa croix de manipulation et ses fils descendent dans
  // l'arène (et c'est là qu'on le frappe). Phases IV–V : corps entier au sol, à l'échelle d'un gardien. Point faible : l'anneau ivoire G27.anneau
  // sur ses mains (I, II), sa croix (III), son cœur (IV, V), seulement à nu (G27.aNu). Tout suit e.fade ; mouvements réduits : rien ne pulse.
  const rgba=(k,a)=>`rgba(${COL[k]},${a})`;
  function faible(e){const ph=DB.phases[X.phase];if(ph.presence==='haut')return ph.faible==='croix'?[e.x,e.y-70,e.r*1.3]:[e.x,e.y,e.r*1.4];return[e.x,e.y+e.r*0.1,e.r*0.8];}
- function main(c,x,y,s,dir){c.save();c.translate(x,y);c.rotate(dir*0.25);c.fillStyle=rgba('yeux',0.92);c.strokeStyle='rgba(10,8,16,.8)';c.lineWidth=1.5;
+ function main(c,x,y,s,dir,ouv){ouv=ouv||0;c.save();c.translate(x,y);c.rotate(dir*0.25);c.fillStyle=rgba('yeux',0.92);c.strokeStyle='rgba(10,8,16,.8)';c.lineWidth=1.5;
   c.beginPath();c.ellipse(0,0,s*0.55,s*0.75,0,0,TAU);c.fill();c.stroke();
-  for(let i=-1;i<=1;i++){c.beginPath();c.moveTo(i*s*0.3,s*0.5);c.quadraticCurveTo(i*s*0.45,s*1.05,i*s*0.35,s*1.4);c.lineWidth=s*0.22;c.strokeStyle=rgba('yeux',0.9);c.lineCap='round';c.stroke();}c.restore();}
+  // v18.6 : la main s'ouvre (ouv 0 → 1) pendant la fenêtre à nu d'un tableau vidé : les doigts s'écartent
+  for(let i=-1;i<=1;i++){const sp=1+ouv*1.1;c.beginPath();c.moveTo(i*s*0.3,s*0.5);c.quadraticCurveTo(i*s*0.45*sp,s*(1.05-0.15*ouv),i*s*0.35*sp*1.15,s*(1.4-0.25*ouv));c.lineWidth=s*0.22;c.strokeStyle=rgba('yeux',0.9);c.lineCap='round';c.stroke();}c.restore();}
  function oeilB(c,x,y,s,a){c.save();c.globalAlpha=a;c.fillStyle=rgba('yeux',1);c.beginPath();c.ellipse(x,y,s,s*0.55,0,0,TAU);c.fill();c.fillStyle='rgba(10,8,16,.9)';c.beginPath();c.arc(x,y,s*0.32,0,TAU);c.fill();c.restore();}
+ // v18.6 : le corps deviné est cuit une fois (une image de 620 × 350, origine à (−310, −215) de son point d'ancrage), posé recadré sur la vue
+ let CORPS=null;function corpsImg(){if(CORPS)return CORPS;const c=document.createElement('canvas');c.width=620;c.height=350;const g=c.getContext('2d'),xb=310,yb=215;
+  const gr=g.createRadialGradient(xb,yb-40,10,xb,yb-40,260);gr.addColorStop(0,rgba('capuche',0.9));gr.addColorStop(1,rgba('capuche',0));g.fillStyle=gr;g.beginPath();g.ellipse(xb,yb-40,300,170,0,0,TAU);g.fill();
+  g.fillStyle=rgba('manteau',0.9);g.beginPath();g.moveTo(xb-140,yb+30);g.quadraticCurveTo(xb-120,yb-120,xb,yb-150);g.quadraticCurveTo(xb+120,yb-120,xb+140,yb+30);g.closePath();g.fill();return CORPS=c;}
+ // poser une image (1 px = 1 unité du monde) recadrée sur la vue : seule la part visible est posée (comme les tuiles de l'arène)
+ // sans mise à l'échelle (1 unité = 1 pixel), l'image est calée sur un pixel entier (décalage ≤ 0,5 px, invisible) : la caméra a des positions
+ // fractionnaires, et une image posée entre deux pixels se filtre (bilinéaire), ce qui coûte, en rendu logiciel, autant qu'un second sol
+ function poseVue(c,img,sx,sy,sw,sh,dx,dy){const m=c.getTransform();if(m.a===1&&m.d===1&&!m.b&&!m.c){dx+=Math.round(m.e+dx)-(m.e+dx);dy+=Math.round(m.f+dy)-(m.f+dy);}
+  const x0=Math.max(dx,CAM.x),y0=Math.max(dy,CAM.y),x1=Math.min(dx+sw,CAM.x+W),y1=Math.min(dy+sh,CAM.y+H);if(x1<=x0||y1<=y0)return;
+  // les bornes de la part visible, entières dans l'image (un recadrage fractionnaire se filtrerait aussi)
+  const ix0=Math.floor(x0-dx),iy0=Math.floor(y0-dy),ix1=Math.ceil(x1-dx),iy1=Math.ceil(y1-dy);c.drawImage(img,sx+ix0,sy+iy0,ix1-ix0,iy1-iy0,dx+ix0,dy+iy0,ix1-ix0,iy1-iy0);}
  function corpsHaut(c,e,fd){const yb=AR.y0-20,xb=e.x,R=e.r;
   // le corps, deviné dans la brume au bord du monde (jamais pris pour le corps : sous 35 % d'opacité)
-  c.save();c.globalAlpha=0.35*fd;const g=c.createRadialGradient(xb,yb-40,10,xb,yb-40,260);g.addColorStop(0,rgba('capuche',0.9));g.addColorStop(1,rgba('capuche',0));c.fillStyle=g;c.beginPath();c.ellipse(xb,yb-40,300,170,0,0,TAU);c.fill();
-  c.fillStyle=rgba('manteau',0.9);c.beginPath();c.moveTo(xb-140,yb+30);c.quadraticCurveTo(xb-120,yb-120,xb,yb-150);c.quadraticCurveTo(xb+120,yb-120,xb+140,yb+30);c.closePath();c.fill();
+  c.save();c.globalAlpha=0.35*fd;const ci=corpsImg();poseVue(c,ci,0,0,ci.width,ci.height,xb-310,yb-215);
   c.restore();oeilB(c,xb-26,yb-70,9,0.75*fd);oeilB(c,xb+26,yb-70,9,0.75*fd);
-  // la croix de manipulation, ses fils, ses mains
-  c.save();c.globalAlpha=fd;const cy=e.y-70;c.strokeStyle=rgba('croix',0.95);c.lineWidth=5;c.lineCap='round';c.beginPath();c.moveTo(e.x-46,cy);c.lineTo(e.x+46,cy);c.moveTo(e.x,cy-22);c.lineTo(e.x,cy+26);c.stroke();
-  c.strokeStyle=rgba('fils',0.8);c.lineWidth=1.3;c.beginPath();for(const [fx,hx] of [[-46,-R*0.7],[46,R*0.7]]){c.moveTo(e.x+fx,cy);c.quadraticCurveTo(e.x+fx*0.7,(cy+e.y)/2,e.x+hx,e.y);}c.moveTo(e.x,cy-22);c.lineTo(xb,yb+10);c.stroke();
-  main(c,e.x-R*0.7,e.y,R*0.42,-1);main(c,e.x+R*0.7,e.y,R*0.42,1);c.restore();}
+  // la croix de manipulation, ses fils, ses mains (v18.6 : la croix penche vers le tiers d'un tableau, X.pench ; ses bras portent les fils)
+  c.save();c.globalAlpha=fd;const cy=e.y-70,pc=Math.cos(X.pench),ps=Math.sin(X.pench),bx=f=>[e.x+f*pc,cy+f*ps];c.strokeStyle=rgba('croix',0.95);c.lineWidth=5;c.lineCap='round';
+  c.beginPath();c.moveTo(...bx(-46));c.lineTo(...bx(46));c.moveTo(e.x+22*ps,cy-22*pc);c.lineTo(e.x-26*ps,cy+26*pc);c.stroke();
+  c.strokeStyle=rgba('fils',0.8);c.lineWidth=1.3;c.beginPath();for(const [fx,hx] of [[-46,-R*0.7],[46,R*0.7]]){const [ax,ay]=bx(fx);c.moveTo(ax,ay);c.quadraticCurveTo(e.x+fx*0.7,(cy+e.y)/2,e.x+hx,e.y);}c.moveTo(e.x+22*ps,cy-22*pc);c.lineTo(xb,yb+10);c.stroke();
+  // v18.6 : pendant un tableau, deux fils tendus de ses mains aux coins hauts du cadre (ils descendent à l'accroche, mollissent au rideau)
+  const TB_=X.tab;if(TB_&&TB_.sub!=='apres'){const f=TB_.frag,k=TB_.sub==='accroche'&&!RM?Math.min(1,TB_.t/DB.tableaux.accrocheS):1,mol=TB_.sub==='rideau'?Math.min(1,TB_.t/DB.tableaux.rideauS):0;
+   c.strokeStyle=rgba('fils',0.75*(1-0.7*mol));c.lineWidth=1.4;c.beginPath();
+   for(const [hx,qx] of [[e.x-R*0.7,f.x0],[e.x+R*0.7,f.x1]]){const tx=hx+(qx-hx)*k,ty=e.y+(f.y0-e.y)*k;c.moveTo(hx,e.y);c.quadraticCurveTo((hx+tx)/2,Math.max(e.y,ty)+30+(RM?0:150*mol),tx,ty);}c.stroke();}
+  main(c,e.x-R*0.7,e.y,R*0.42,-1,X.ouvre);main(c,e.x+R*0.7,e.y,R*0.42,1,X.ouvre);c.restore();}
  function corpsSol(c,e,fd){const R=e.r;c.save();c.globalAlpha=fd;
   c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(e.x+6,e.y+R*0.95,R*1.05,R*0.4,0,0,TAU);c.fill();
   c.fillStyle=rgba('manteau',0.95);c.beginPath();c.moveTo(e.x-R*0.95,e.y+R*0.95);c.quadraticCurveTo(e.x-R*0.9,e.y-R*0.4,e.x,e.y-R*1.05);c.quadraticCurveTo(e.x+R*0.9,e.y-R*0.4,e.x+R*0.95,e.y+R*0.95);c.closePath();c.fill();
@@ -13558,9 +13660,14 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   try{if(G27.aNu(e,fd)){const [x,y,r]=faible(e);G27.anneau(c,x,y,r);}}catch(err){console.error(err);}};
  // télégraphes : zones (orange, grammaire), charge d'un tir (violet, à ses mains), annonce d'une construction (craie, pointillé), regard de lecture, scène de mort
  function rond(c,x,y,r){c.beginPath();c.arc(x,y,r,0,TAU);}
- function dessinZones(c){for(const z of X.zones){const k=Math.min(1,z.t/z.charge),al=z.fait?0.5*Math.max(0,z.flash)/0.15:1;c.save();c.globalAlpha=al;c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
+ function dessinZones(c){dessinTableau(c);for(const z of X.zones){const k=Math.min(1,z.t/z.charge),al=z.fait?0.5*Math.max(0,z.flash)/0.15:1;c.save();c.globalAlpha=al;c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
    if(z.forme==='couloir'){const a=Math.atan2(z.y1-z.y0,z.x1-z.x0),l=hyp(z.x1-z.x0,z.y1-z.y0);c.translate(z.x0,z.y0);c.rotate(a);c.fillRect(0,-z.w/2,l,z.w);c.fillStyle=`rgba(${TELE.zone},0.26)`;c.fillRect(0,-z.w/2,l*k,z.w);c.strokeRect(0,-z.w/2,l,z.w);}
-   else if(z.forme==='anneau'){rond(c,z.x,z.y,z.r1);c.stroke();rond(c,z.x,z.y,z.r0);c.stroke();c.beginPath();c.arc(z.x,z.y,z.r1,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();c.fillStyle=`rgba(${TELE.zone},0.26)`;c.beginPath();c.arc(z.x,z.y,z.r0+(z.r1-z.r0)*k,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();}
+   else if(z.forme==='case'){const att=z.blanche&&X.zones.some(q=>q.grp===z.grp-1&&!q.fait);   // v18.6 : la Toile ; les cases blanches attendent (pointillé, sans remplissage) que les noires aient frappé
+    if(att){c.globalAlpha*=0.7;c.setLineDash([5,5]);c.strokeRect(z.x0+1,z.y0+1,z.x1-z.x0-2,z.y1-z.y0-2);c.setLineDash([]);}
+    else{c.fillRect(z.x0,z.y0,z.x1-z.x0,z.y1-z.y0);c.strokeRect(z.x0+1,z.y0+1,z.x1-z.x0-2,z.y1-z.y0-2);c.fillStyle=`rgba(${TELE.zone},0.26)`;const k2=z.blanche?Math.min(1,(z.t-(z.charge-DB.elements.toile.seconde))/DB.elements.toile.seconde):k,cx=(z.x0+z.x1)/2,cy=(z.y0+z.y1)/2,hw=(z.x1-z.x0)/2*Math.max(0,k2),hh=(z.y1-z.y0)/2*Math.max(0,k2);c.fillRect(cx-hw,cy-hh,2*hw,2*hh);}}
+   else if(z.forme==='anneau'){if(z.breche){const a=z.breche.a,l=z.breche.l,ca=Math.cos(a),sa=Math.sin(a),qx=-sa*l/2,qy=ca*l/2,L=z.r1+24;   // v18.6 : la brèche du Cadre, retirée par une découpe (pair-impair)
+     c.beginPath();c.rect(z.x-L,z.y-L,2*L,2*L);c.moveTo(z.x+qx,z.y+qy);c.lineTo(z.x+qx+ca*L,z.y+qy+sa*L);c.lineTo(z.x-qx+ca*L,z.y-qy+sa*L);c.lineTo(z.x-qx,z.y-qy);c.closePath();c.clip('evenodd');}
+    rond(c,z.x,z.y,z.r1);c.stroke();rond(c,z.x,z.y,z.r0);c.stroke();c.beginPath();c.arc(z.x,z.y,z.r1,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();c.fillStyle=`rgba(${TELE.zone},0.26)`;c.beginPath();c.arc(z.x,z.y,z.r0+(z.r1-z.r0)*k,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();}
    else{rond(c,z.x,z.y,z.r);c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;rond(c,z.x,z.y,z.r*k);c.fill();}
    c.restore();}
   const e=X.e;if(e&&!e.dead)for(const tr of X.tirs){const k=Math.min(1,tr.t/tr.charge);c.save();c.globalAlpha=0.3+0.5*k;c.strokeStyle=`rgba(${TELE.proj},0.9)`;c.lineWidth=2;rond(c,e.x,e.y,e.r*(1.3-0.3*k));c.stroke();c.restore();}
@@ -13587,12 +13694,144 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function sources(){const out=[];if(!X.e||X.e.dead)return out;
   const B=room.bl;if(B)out.push({o:B,k:'tele',x:B.x,y:B.y,r:B.r,vise:true,rempli:Math.min(1,1-B.t/B.tot),c:'zone'});   // sa feinte (v14) est aussi une source de signe
   for(const z of X.zones){if(z.fait)continue;let q;if(z.forme==='couloir'){const dx=z.x1-z.x0,dy=z.y1-z.y0,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((P.x-z.x0)*dx+(P.y-z.y0)*dy)/l2));q={x:z.x0+dx*t,y:z.y0+dy*t,r:z.w/2};}
-   else if(z.forme==='anneau')q={x:z.x,y:z.y,r:z.r1};else q={x:z.x,y:z.y,r:z.r};
+   else if(z.forme==='anneau')q={x:z.x,y:z.y,r:z.r1};else if(z.forme==='case')q={x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2,r:Math.hypot(z.x1-z.x0,z.y1-z.y0)/2};else q={x:z.x,y:z.y,r:z.r};
    out.push({o:z,k:'tele',x:q.x,y:q.y,r:q.r,vise:!!z.vise,rempli:Math.min(1,z.t/z.charge),c:'zone'});}
+  // v18.6 : chaque dalle d'un tableau (annoncée, puis ouverte) est une source de signe à part entière
+  if(X.tab)for(const h of X.tab.dalles)out.push({o:h,k:'tele',x:h.x,y:h.y,r:h.r,vise:true,rempli:h.w>0?1-h.w/DB.tableaux.regles.sol.annonceS:1,c:'zone'});
   return out;}
- function debut(phase0){X.sauve=sauveLire();creer(phase0);X.on=true;
-  XA.crochets({sourcesPlus:sources,bossCam:()=>X.e&&!X.e.dead?X.e:null,glypheBoss:glypheSigne,bossCharge:()=>X.tirs.length>0||X.zones.some(z=>!z.fait)});
-  lire();boucleNeuve();X.ph='entracte';X.t=DB.partition.entracteS;}
+ function debut(phase0){X.sauve=sauveLire();creer(phase0);X.on=true;room.blT=1e9;X.tiers=brxTiers({x0:AR.x0,y0:AR.y0,x1:AR.x1,y1:AR.y1},DB.tableaux.retrait);if(brxMesures(DB,phase0).some(m=>m.k==='tableau'))cuire();
+  XA.crochets({sourcesPlus:sources,bossCam:()=>X.e&&!X.e.dead?X.e:null,glypheBoss:glypheSigne,bossCharge:()=>X.tirs.length>0||X.zones.some(z=>!z.fait),
+   solTrou:()=>{const T=X.tab;if(!T||!X.cal||fragAlpha(T)<1)return null;const f=T.frag;return{x0:Math.ceil(f.x0)+1,y0:Math.ceil(f.y0)+1,x1:Math.floor(f.x1)-1,y1:Math.floor(f.y1)-1};}});   // v18.6 : sous un fragment plein, le sol de l'arène n'est pas posé (il serait couvert)
+  lire();boucleNeuve();X.ph='entracte';X.t=ent();}
+ // ═══ v18.6 · Phase I, « le Rappel » (action 5b, fiche validée le 2 novembre 2026) ═══════════════════════════════════════════════════════════
+ // Il convoque ta descente en trois tableaux : un fragment de décor d'un acte traversé (peint une fois à l'entrée du combat, à la graine du
+ // combat, sans Math.random du jeu), une vague d'un thème existant (WTHEMES : types et rôles ; places tirées dans le fragment), au plus une
+ // règle de salle confinée au fragment (mêmes chiffres et mêmes dessins qu'en descente, sans bulle ni étiquette). Vidé : le rideau tombe, ses
+ // mains retombent, à nu 3 s. Non vidé à 30 s : ses ennemis rentrent dans le tableau, le rideau tombe sans fenêtre à nu.
+ const TB=DB.tableaux,SOL=TB.regles.sol,BRZ=TB.regles.braseros;
+ // ── les calques, cuits une fois à l'entrée : un sol par décor (mêmes peintres que renderFloor), le cadre (croix, fils) et le drapé (manteau)
+ const PEINTRES={faub:(g,p)=>floorCobbles(g,p),crypt:(g,p,rm)=>floorSlabs(g,p,rm),coeur:(g,p,rm)=>floorHex(g,p,rm)};
+ function cuire(){if(!X.tiers)return;const t0=performance.now(),f=X.tiers[0].frag,w=Math.ceil(f.x1-f.x0),h=Math.ceil(f.y1-f.y0),m=TB.cadre.marge,W2=w+2*m,H2=h+2*m,sol={};
+  const sAR={x0:AR.x0,y0:AR.y0,x1:AR.x1,y1:AR.y1},sR=Math.random;
+  // un sol opaque (alpha:false), à la taille exacte du fragment : il se pose d'une copie, sans mélange, quand il est plein
+  try{Object.assign(AR,{x0:0,y0:0,x1:w,y1:h});
+   Object.keys(TB.decors).forEach((k,i)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d',{alpha:false}),p=THEMES[k],rm={type:'tableau',candles:[],windows:[]};
+    Math.random=desRng(((X.graine>>>0)^Math.imul(0x9E3779B1,i+1))>>>0);   // la graine du combat : le même combat peint les mêmes fragments
+    g.fillStyle=hsl(p,-11);g.fillRect(0,0,w,h);(PEINTRES[k]||PEINTRES.faub)(g,p,rm);floorDecor(g,rm,k,p);
+    let gr=g.createLinearGradient(0,0,0,60);gr.addColorStop(0,'rgba(0,0,0,.55)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,w,60);
+    gr=g.createLinearGradient(0,h,0,h-40);gr.addColorStop(0,'rgba(0,0,0,.45)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,h-40,w,40);
+    for(const [x0,x1] of [[0,40],[w,w-40]]){gr=g.createLinearGradient(x0,0,x1,0);gr.addColorStop(0,'rgba(0,0,0,.5)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(Math.min(x0,x1),0,40,h);}
+    sol[k]=c;});}
+  finally{Object.assign(AR,sAR);Math.random=sR;}
+  // le cadre : un bord épais dans la matière de sa croix, un fil fin à l'intérieur, des nœuds aux quatre coins (jamais une couleur de la grammaire)
+  const cad=document.createElement('canvas');cad.width=W2;cad.height=H2;{const g=cad.getContext('2d'),tr=TB.cadre.trait;
+   g.strokeStyle='rgba(6,4,10,.75)';g.lineWidth=tr+4;g.strokeRect(m,m,w,h);g.strokeStyle=rgba('croix',0.95);g.lineWidth=tr;g.strokeRect(m,m,w,h);
+   g.strokeStyle=rgba('fils',0.7);g.lineWidth=1.2;g.strokeRect(m+tr,m+tr,w-2*tr,h-2*tr);
+   for(const [x,y] of [[m,m],[m+w,m],[m,m+h],[m+w,m+h]]){g.fillStyle='rgba(6,4,10,.8)';g.beginPath();g.arc(x,y,9,0,TAU);g.fill();g.fillStyle=rgba('croix',1);g.beginPath();g.arc(x,y,6.5,0,TAU);g.fill();g.fillStyle=rgba('fils',0.9);g.beginPath();g.arc(x,y,2.2,0,TAU);g.fill();}}
+  // le drapé : un rideau de sa matière (manteau), plis verticaux, ourlet en bas
+  const dr=document.createElement('canvas');dr.width=W2;dr.height=H2;{const g=dr.getContext('2d');g.fillStyle=rgba('manteau',1);g.fillRect(0,0,W2,H2-18);
+   for(let x=0,i=0;x<W2;x+=46,i++){const gr=g.createLinearGradient(x,0,x+46,0);gr.addColorStop(0,'rgba(0,0,0,.28)');gr.addColorStop(0.45,'rgba(255,255,255,.06)');gr.addColorStop(1,'rgba(0,0,0,.22)');g.fillStyle=gr;g.fillRect(x,0,46,H2-18);}
+   g.fillStyle=rgba('manteau',1);g.beginPath();g.moveTo(0,H2-18);for(let x=0;x<=W2;x+=23)g.lineTo(x,H2-18+((x/23)%2?14:4));g.lineTo(W2,H2-18);g.closePath();g.fill();
+   g.strokeStyle=rgba('croix',0.9);g.lineWidth=4;g.beginPath();g.moveTo(0,3);g.lineTo(W2,3);g.stroke();}
+  X.cal={sol,cadre:cad,drape:dr,w,h,m};X.j.peintureMs=+(performance.now()-t0).toFixed(1);}
+ // ── accrocher un tableau : au tiers le plus loin de toi parmi ceux qui n'ont pas encore servi dans la boucle
+ function accrocher(m){if(!X.cal)cuire();const TI=X.tiers,i=brxTiersLoin(TI,P.x,P.y,X.tiersVus),t=m.tab;X.tiersVus.push(i);
+  X.tab={i,frag:TI[i].frag,decor:t.decor,theme:t.theme,regle:t.regle||null,densite:t.densite,champion:!!t.champion,rejoue:!!t.rejoue,sub:'accroche',t:0,feinte:false,vide:false,dalles:[],holeT:0,braz:null,n:0,apresS:0};
+  X.j.tableaux.push({tiers:i,decor:t.decor,theme:t.theme,regle:t.regle||null,densite:t.densite,champion:!!t.champion,rejoue:!!t.rejoue,t0:+RUN.time.toFixed(2),fin:null,duree:null,vide:null,n:0});
+  X.ph='tableau';X.t=0;if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.35);}catch(err){}}
+ // ── la vague : types et rôles de WTHEMES (ennemis clés, garde du Siège, chœur), densité, un champion ; places tirées dans le fragment, à 230 px
+ // de toi au moins, posées comme apparitions explicites (cercle violet) ; elles peuvent naître hors de la vue (le signe de bord les montre)
+ function convoquer(){const T=X.tab,TH=WTHEMES[T.theme];if(!TH)return;const w=TH.build(budget()*(1+TB.densite*T.densite)).map(sp=>({type:sp.type,key:sp.key,tag:sp.tag,siege:sp.siege,elite:!!sp.elite}));
+  if(T.champion){const c=w.filter(sp=>!sp.key&&!sp.elite);if(c.length)c[Math.floor(X.rng()*c.length)].elite=true;}
+  const pl=brxPlaces(T.frag,w.length,[P.x,P.y],X.rng,{marge:30,minD:TB.minD,bloque:(x,y)=>room.pillars.some(q=>hyp(x-q.x,y-q.y)<q.r+30)}),A0=TB.apparition;
+  w.forEach((sp,k)=>room.spawning.push({x:pl[k][0],y:pl[k][1],type:sp.type,elite:sp.elite,key:sp.key,tag:sp.tag,siege:sp.siege,t:A0[0]+X.rng()*(A0[1]-A0[0]),tab18:1}));
+  T.n=w.length;X.j.tableaux[X.j.tableaux.length-1].n=w.length;}
+ // ── la règle confinée : elle naît avec le fragment (au début de sa vie) et meurt avec son rideau
+ function regleDebut(){const T=X.tab,f=T.frag,fw=f.x1-f.x0,fh=f.y1-f.y0;
+  if(T.regle==='sol')T.holeT=SOL.premiereS;
+  if(T.regle==='braseros'){T.braz=[];for(let i=0;i<BRZ.n;i++){const fx=BRZ.n>1?0.3+0.4*i/(BRZ.n-1):0.5;T.braz.push({x:f.x0+fw*fx+(X.rng()*2-1)*40,y:f.y0+fh*(0.35+X.rng()*0.3)});}}}
+ // le Sol qui se dérobe, dans le fragment seulement : la dalle vise toi si tu es dedans, sinon un ennemi du fragment ; posée seulement si une
+ // sortie existe (brxPlacer) ; chaque dalle est une source de signe (jugée au préavis du boss)
+ function dallesPas(dt){const T=X.tab;if(T.regle!=='sol')return;T.holeT-=dt;
+  if(T.holeT<=0&&T.dalles.length<SOL.max){T.holeT=SOL.intervalle[0]+X.rng()*(SOL.intervalle[1]-SOL.intervalle[0]);
+   const al=enemies.filter(o=>!o.dead&&!o.brx18&&brxDansRect(T.frag,o.x,o.y)),cible=brxDansRect(T.frag,P.x,P.y)?P:al.length?al[Math.floor(X.rng()*al.length)]:null;
+   if(cible){const d=brxDalle(SOL,T.frag,[cible.x,cible.y],X.rng,30),autres=X.zones.filter(z=>!z.fait).concat(T.dalles.map(h=>({forme:'disque',x:h.x,y:h.y,r:h.r})));
+    if(brxPlacer(DB,[[d,...autres]],[P.x,P.y],optSortie(SOL.annonceS))<0)X.j.dallesSautees++;
+    else T.dalles.push(Object.assign(d,{id:'dalle',w:SOL.annonceS,o:SOL.ouvertS,tick:0,boss:true,dalle18:1}));}}
+  for(const h of T.dalles){if(h.w>0){h.w-=dt;continue;}h.o-=dt;h.tick-=dt;
+   if(h.tick<=0){h.tick=SOL.tickS;for(const o of enemies)if(!o.dead&&!o.brx18&&!o.fixed&&hyp(o.x-h.x,o.y-h.y)<h.r+o.r*0.3)hitEnemy(o,SOL.degatsEnnemis,{crit:false,color:'#9a86c8'});
+    if(!P.dead&&hyp(P.x-h.x,P.y-h.y)<h.r){X.zoneCourante=h;try{XA.coup(h,()=>hurtPlayer(SOL.degatsJoueur,null));}finally{X.zoneCourante=null;}}}}
+  T.dalles=T.dalles.filter(h=>h.o>0);}
+ // ses ennemis rentrent dans le tableau (fondu : ils disparaissent, sans butin), avec ce qu'ils ont lancé (tirs en vol, ondes) : rien ne
+ // frappe plus au nom d'un ennemi qui n'est plus là (son signe est parti avec lui)
+ function rentrer(){const S=new Set();for(const o of enemies)if(!o.dead&&!o.brx18){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=[];
+  if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(g=>!S.has(g.src));}X.j.rentres+=S.size;return S.size;}
+ function rideau(vide){const T=X.tab,J=X.j.tableaux[X.j.tableaux.length-1];T.vide=vide;T.sub='rideau';T.t=0;T.dalles=[];
+  if(J){J.fin=+RUN.time.toFixed(2);J.duree=+(J.fin-J.t0).toFixed(2);J.vide=vide;}}
+ function tabPas(dt){const T=X.tab;if(!T){X.ph='entracte';X.t=ent();return;}T.t+=dt;
+  if(T.sub==='accroche'){if(T.t>=TB.accrocheS){T.sub='vie';T.t=0;convoquer();regleDebut();}return;}
+  if(T.sub==='vie'){dallesPas(dt);
+   // pendant un tableau, il ne lance rien d'autre qu'une feinte, une seule fois, si le tableau vit encore feinteApresS s après l'accroche
+   if(!T.feinte&&T.t>=TB.feinteApresS&&!room.bl){T.feinte=true;lancer('feinte');}
+   const vivants=room.spawning.length>0||enemies.some(o=>!o.dead&&!o.brx18);
+   if(!vivants&&T.t>0.3)rideau(true);else if(T.t>=TB.vieMaxS){rentrer();rideau(false);}return;}
+  if(T.sub==='rideau'){if(T.t>=TB.rideauS){T.sub='apres';T.t=0;T.braz=null;T.apresS=T.vide?TB.nuS:0.4;if(T.vide)X.e.vuln=Math.max(X.e.vuln||0,TB.nuS);}return;}
+  if(T.sub==='apres'&&T.t>=T.apresS){X.tab=null;X.ph='entracte';X.t=ent();}}
+ function tabFin(){if(!X.tab)return;if(X.tab.sub==='accroche'||X.tab.sub==='vie'){rentrer();rideau(false);}X.tab=null;}
+ // ses mains : elles retombent de chute px vers toi et s'ouvrent pendant la fenêtre à nu d'un tableau vidé (en mouvements réduits : rien ne
+ // tombe) ; la croix penche vers le tiers occupé
+ function mainsPas(e,dt){const T=X.tab,nu=!!(T&&T.sub==='apres'&&T.vide),k=RM?1:Math.min(1,dt*7);
+  const ch=nu&&!RM&&DB.phases[X.phase].presence==='haut'?Math.min(TB.chute,Math.max(0,P.y-(e.hy||e.y)-80)):0;X.chute+=(ch-X.chute)*k;X.ouvre+=((nu?1:0)-X.ouvre)*(RM?1:Math.min(1,dt*6));
+  const pe=T&&T.sub!=='apres'?clamp(((T.frag.x0+T.frag.x1)/2-e.x)/900,-1,1)*0.3:0;X.pench+=(pe-X.pench)*(RM?1:Math.min(1,dt*3));}
+ // ── la Toile : deux coups (les cases noires, puis les blanches) ; une variante (décalage d'une demi-case) seulement si les deux ont leur sortie
+ function toile(id,el,charge){const decs=[[0,0],[45,0],[0,45],[45,45]],o=optSortie(charge);
+  for(let k=0;k<decs.length&&k<DB.sortie.essais;k++){const TT=brxToile(el,[P.x,P.y],decs[k]);if(!brxSortieToile(DB,el,TT,[P.x,P.y],o,charge).ok)continue;
+   const g1=++X.ngrp,g2=++X.ngrp,dg=el.degats*dmgMul(),base={id,t:0,degats:dg,vise:true,boss:true,src:X.e,fait:false,flash:0,essai:k};
+   for(const q of TT.noires)X.zones.push(Object.assign(q,base,{charge,grp:g1}));for(const q of TT.blanches)X.zones.push(Object.assign(q,base,{charge:charge+el.seconde,grp:g2,blanche:true}));
+   X.tmes=Math.max(X.tmes,charge+el.seconde+0.3);return true;}
+  X.j.sautes++;return false;}
+ // ── dessin du tableau. Au sol (sous la brume) : le fragment ; par-dessus (après la brume, comme les télégraphes) : le cadre, les braseros, les
+ // dalles, le drapé. Accroche : fondu 0,8 s. Rideau : le drapé tombe du haut du cadre (mouvements réduits : fondu, rien ne tombe).
+ function fragAlpha(T){if(T.sub==='accroche')return Math.min(1,T.t/TB.fonduS);if(T.sub==='vie')return 1;if(T.sub==='rideau')return RM?1-Math.min(1,T.t/TB.rideauS):1;return 0;}
+ const _sol186=CAM.sol;CAM.sol=function(){_sol186.apply(this,arguments);const T=X.on&&X.tab,C=X.cal;if(!T||!C)return;const a=fragAlpha(T);if(a<=0)return;
+  const im=C.sol[T.decor];ctx.save();ctx.globalAlpha=a;poseVue(ctx,im,0,0,im.width,im.height,T.frag.x0,T.frag.y0);ctx.restore();};
+ function dessinTableau(c){const T=X.tab,C=X.cal;if(!T||!C)return;const f=T.frag,m=C.m;
+  if(T.sub==='vie'){
+   for(const b of T.braz||[]){c.save();c.strokeStyle='rgba(255,170,80,.22)';c.setLineDash([6,8]);c.lineDashOffset=RM?0:-T.t*10;c.beginPath();c.arc(b.x,b.y,BRZ.rayon,0,TAU);c.stroke();c.setLineDash([]);
+    c.fillStyle='#2a2018';c.fillRect(b.x-13,b.y-2,26,10);c.globalCompositeOperation='lighter';glow(c,b.x,b.y-8,26,'255,150,60',RM?0.75:0.7+0.2*Math.sin(T.t*12+b.x));c.restore();}
+   for(const h of T.dalles){const warn=h.w>0,k=warn?1-h.w/SOL.annonceS:1;c.save();c.fillStyle=warn?`rgba(20,14,30,${0.25+0.3*k})`:'rgba(4,2,8,.92)';c.beginPath();c.arc(h.x,h.y,h.r,0,TAU);c.fill();
+    c.strokeStyle=warn?`rgba(${TELE.zone},${RM?0.8:0.5+0.4*Math.sin(T.t*24)})`:'rgba(150,120,210,.7)';c.lineWidth=2;c.setLineDash(warn?[6,6]:[]);c.stroke();c.restore();}}
+  let aC=1,kD=0,aD=0;
+  if(T.sub==='accroche')aC=Math.min(1,T.t/TB.fonduS);
+  else if(T.sub==='rideau'){const k=Math.min(1,T.t/TB.rideauS);if(RM){kD=1;aD=k;}else{kD=k;aD=1;}}
+  else if(T.sub==='apres'){const k=Math.min(1,T.t/0.4);aC=1-k;kD=1;aD=1-k;}
+  // le cadre : ses quatre bandes seulement (le calque est vide au milieu), recadrées sur la vue ; le drapé : la part visible
+  if(aC>0){const K=C.cadre,b=2*m,dx=f.x0-m,dy=f.y0-m;c.save();c.globalAlpha=aC;poseVue(c,K,0,0,K.width,b,dx,dy);poseVue(c,K,0,K.height-b,K.width,b,dx,dy+K.height-b);poseVue(c,K,0,b,b,K.height-2*b,dx,dy+b);poseVue(c,K,K.width-b,b,b,K.height-2*b,dx+K.width-b,dy+b);c.restore();}
+  if(aD>0&&kD>0){const D2=C.drape,hh=Math.max(1,Math.round(D2.height*kD));c.save();c.globalAlpha=aD;poseVue(c,D2,0,D2.height-hh,D2.width,hh,f.x0-m,f.y0-m);c.restore();}}
+ // ── enveloppes de la phase I (les plus extérieures du bloc)
+ // la Brume a des dégâts à nommer : par acte (RUN.par18A) et par règle de salle (RUN.par18R), écrits seulement (rien d'autre ne les lit) ;
+ // le Verre du fragment (+40 % reçus quand tu es dedans) ; « ce qui t'a tué » : le tableau, quand c'est un de ses ennemis ou une de ses dalles
+ const _hp186=hurtPlayer;hurtPlayer=function(dmg,src){let a=arguments;const T=X.on&&X.tab;
+  if(T&&T.sub==='vie'&&T.regle==='verre'&&P&&brxDansRect(T.frag,P.x,P.y)){a=Array.prototype.slice.call(arguments);a[0]=dmg*TB.regles.verre.recu;}
+  const h0=P?P.hp:0,r=_hp186.apply(this,a);
+  try{if(P&&RUN&&!RUN.hub&&P.hp<h0){const lost=h0-P.hp,PA=RUN.par18A||(RUN.par18A={}),ac=ACTE();PA[ac]=(PA[ac]||0)+lost;
+    if(room&&room.rule){const PR=RUN.par18R||(RUN.par18R={});PR[room.rule]=(PR[room.rule]||0)+lost;}
+    if(T&&X.e&&!X.e.dead){const z=X.zoneCourante;if((z&&z.id==='dalle')||(!z&&!X.feinteCoup&&!(src&&src.brx18))){X.tue='tableau';X.tueTab={decor:T.decor,theme:T.theme,regle:T.regle||null};}}}}catch(err){}
+  return r;};
+ // le Verre (un ennemi dans le fragment : +40 %) et les Braseros (un ennemi du tableau hors de leur lumière : 40 %), pendant la vie du tableau
+ const _he186=hitEnemy;hitEnemy=function(e,base,o){const T=X.on&&X.tab;
+  if(T&&T.sub==='vie'&&T.regle&&e&&!e.brx18&&!e.dead&&!e.fixed){let m=1;
+   if(T.regle==='verre'&&brxDansRect(T.frag,e.x,e.y))m=TB.regles.verre.recu;
+   else if(T.regle==='braseros'&&!(T.braz||[]).some(b=>hyp(e.x-b.x,e.y-b.y)<BRZ.rayon))m=BRZ.subi;
+   if(m!==1)return _he186.call(this,e,base*m,o);}
+  return _he186.apply(this,arguments);};
+ // endBluff réarme le minuteur de la feinte de la salle (8 à 13 s) : dans son combat, le Brumeux joue sa feinte dans sa partition, et la salle
+ // n'en lance aucune d'elle-même (sinon, des ennemis de tableau présents, elle reviendrait toute seule)
+ const _eb186=endBluff;endBluff=function(){const k=X.feinteCoup;X.feinteCoup=true;try{return _eb186.apply(this,arguments);}finally{X.feinteCoup=k;if(X.on&&room)room.blT=1e9;}};
+ // les naissances en plein combat (la Nourrice d'un Siège pond des Rampants à 42 px d'elle, cercle de 0,5 s) : dans le combat du Brumeux, jamais
+ // moins que le cercle d'une apparition (0,85 s), pour qu'une naissance se voie au moins le préavis de l'arène (0,6 s) avant de pouvoir frapper
+ const _st186=step;step=function(dt){if(X.on&&room)for(const sp of room.spawning)if(!sp.brx18t){sp.brx18t=1;sp.t=Math.max(sp.t,TB.apparition[0]);}return _st186.apply(this,arguments);};
+ const _cl186=computeLights;computeLights=function(){_cl186.apply(this,arguments);const T=X.on&&X.tab;if(T&&T.sub==='vie'&&T.braz)for(const b of T.braz)lights.push({x:b.x,y:b.y,r:BRZ.lumiere,c:'warm'});};
  // ── essai (Q17) : l'arène d'essai (sans boss d'essai, sans tirs, sans foule, sans Masqué), le Brumeux à la phase demandée
  function essai(phase,o){o=o||{};phase=clamp(((+phase||1)-1)|0,0,DB.phases.length-1);
   const r=XA.essai('final',{cls:o.cls,masque:false,foule:0,boss:false,tirs:false,bot:false,dieu:o.dieu!==false,etat:DB.phases[phase].arene});
@@ -13609,10 +13848,12 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0'});}catch(err){console.error(err);}},400));}
  // ── console et bancs
  window.__brumeux={DB,essai,vers:n=>vers(clamp((n|0)-1,0,DB.phases.length-1)),lire,images,statsRun,
-  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:'['+m.elements.join('+')+']'),lec:X.lec&&{poids:X.lec.poids,premier:X.lec.premier},j:JSON.parse(JSON.stringify(X.j)),scene:!!X.scene,tue:X.tue}),
+  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
+   tab:X.tab&&{i:X.tab.i,frag:Object.assign({},X.tab.frag),decor:X.tab.decor,theme:X.tab.theme,regle:X.tab.regle,densite:X.tab.densite,champion:X.tab.champion,rejoue:X.tab.rejoue,sub:X.tab.sub,t:+X.tab.t.toFixed(2),feinte:X.tab.feinte,vide:X.tab.vide,dalles:X.tab.dalles.length,braz:X.tab.braz?X.tab.braz.length:0,n:X.tab.n},
+   tiersVus:X.tiersVus.slice(),chute:+X.chute.toFixed(1),ouvre:+X.ouvre.toFixed(2),pench:+X.pench.toFixed(3),cal:!!X.cal,tueTab:X.tueTab,lec:X.lec&&{poids:X.lec.poids,premier:X.lec.premier},j:JSON.parse(JSON.stringify(X.j)),scene:!!X.scene,tue:X.tue}),
   sauve:()=>({lu:X.sauve,brut:SAVE.brumeux||null}),noter:(o)=>brxNoter(X.sauve||brxNeuf(),o,DB),
   lancer,poser:(x,y,r,o)=>{o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,X.cons.map(k=>({x:k.x,y:k.y,r:k.r})),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
-  dbg:()=>({get X(){return X;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire},glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press})};
+  dbg:()=>({get X(){return X;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab},glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];
