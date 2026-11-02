@@ -1,5 +1,6 @@
 /**
- * Menu du joueur (jalon M2, GDD §13) : fiche simple de l'inventaire, jauges de
+ * Menu du joueur (jalon M2, GDD §13) : la compagnie (jalon M6 : fiche
+ * personnage, passives, évolutions), fiche simple de l'inventaire, jauges de
  * réputation (villages et factions, effets concrets) et journal des quêtes.
  * Tab ou M l'ouvre depuis le monde, J ouvre directement le journal.
  */
@@ -14,10 +15,19 @@ import { drawPanel } from '../ui/panel';
 import { reputationName } from '../ui/notices';
 import { ScrollList, type ListRow } from '../ui/ScrollList';
 import { addText } from '../ui/text';
+import { STAT_KEYS } from '../data/schemas';
+import { evolutionChoices, evolveMember, evolvedGrowths, findEvolution } from '../logic/progression/evolutions';
+import { equippedPassive, learnedPassives } from '../logic/progression/traits';
+import { memberSprite, skinVariant } from '../logic/skinFrames';
+import type { GrowthKey } from '../logic/tactics/types';
+import { isWounded, type Member } from '../logic/units/company';
+import { portraitInBox } from '../render/portraits';
+import { STAT_SHORT } from '../ui/labels';
 import { SCENES } from './keys';
 
-export type MenuTab = 'inventaire' | 'reputation' | 'quetes';
+export type MenuTab = 'compagnie' | 'inventaire' | 'reputation' | 'quetes';
 const TABS: readonly { id: MenuTab; label: string }[] = [
+  { id: 'compagnie', label: 'Compagnie' },
   { id: 'inventaire', label: 'Inventaire' },
   { id: 'reputation', label: 'Réputation' },
   { id: 'quetes', label: 'Quêtes' },
@@ -58,7 +68,7 @@ export class MenuScene extends Phaser.Scene {
     this.ctx = ctx;
     this.data_ = data;
     this.closing = false;
-    this.tab = data.tab ?? 'inventaire';
+    this.tab = data.tab ?? 'compagnie';
     this.frame = [];
     this.content = [];
     this.tabTexts = [];
@@ -129,7 +139,8 @@ export class MenuScene extends Phaser.Scene {
     this.list = null;
     for (const p of this.content) p.destroy();
     this.content = [];
-    if (tab === 'inventaire') this.buildInventory();
+    if (tab === 'compagnie') this.buildCompany();
+    else if (tab === 'inventaire') this.buildInventory();
     else if (tab === 'reputation') this.buildReputation();
     else this.buildQuests();
   }
@@ -144,6 +155,126 @@ export class MenuScene extends Phaser.Scene {
     const S = this.S;
     const { x, y, w, h } = this.box;
     return { x: x + 18 * S, y: y + 56 * S, w: w - 36 * S, h: h - 56 * S - 40 * S };
+  }
+
+  /* ---------- Compagnie (jalon M6, GDD §13.2 : fiche personnage, n°141) ---------- */
+
+  private companyCursor = 0;
+  private notice: string | null = null;
+
+  private buildCompany(): void {
+    const S = this.S;
+    const a = this.area();
+    const company = this.ctx.progress.company;
+    const data = this.ctx.data;
+    const listW = 216 * S;
+    const rowH = 24 * S;
+    const nameOf = (m: Member): string => (m.evolution ? (findEvolution(data, m.evolution)?.evo.name ?? m.class) : (data.classes.find((c) => c.id === m.class)?.name ?? m.class));
+    const rows: ListRow[] = company.map((m) => ({ label: `${m.name}${isWounded(m, this.ctx.progress.day) ? ' +' : ''}`, right: `${m.level}`, color: m.evolution ? PALETTE.lumiereDoree : m.hero ? PALETTE.jauneBle : PALETTE.parchemin }));
+    this.keep(addText(this, a.x, a.y, `Compagnie  ${company.length}`, { font: 'body', scale: S, color: PALETTE.cyanEclat }).setDepth(DEPTH + 2));
+    const detail: Phaser.GameObjects.GameObject[] = [];
+    const show = (i: number): void => {
+      this.companyCursor = i;
+      for (const d of detail) d.destroy();
+      detail.length = 0;
+      const m = company[i];
+      const cls = m ? data.classes.find((c) => c.id === m.class) : undefined;
+      const dx = a.x + listW + 20 * S;
+      const dw = a.w - listW - 20 * S;
+      const put = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+        detail.push(o);
+        return o;
+      };
+      const line = (x: number, y: number, t: string, color: number = PALETTE.parchemin, maxWidth?: number) =>
+        put(addText(this, x, y, t, { scale: S, color, ...(maxWidth ? { maxWidth } : {}) }).setDepth(DEPTH + 2));
+      if (!m || !cls) {
+        this.content.push(...detail);
+        return;
+      }
+      // En-tête : portrait (cadre doré après une évolution, n°143), nom, classe, niveau, XP.
+      const sprite = m.hero ? 'heros' : memberSprite(cls.id, skinVariant(company, i));
+      put(this.add.rectangle(dx, a.y, 52 * S, 52 * S, m.evolution ? PALETTE.lumiereDoree : PALETTE.violetBrume, m.evolution ? 0.9 : 0.4).setOrigin(0, 0).setDepth(DEPTH + 2));
+      const face = portraitInBox(this, sprite, dx + 2 * S, a.y + 2 * S, 48 * S, 48 * S, S, DEPTH + 3);
+      if (face) put(face);
+      line(dx + 62 * S, a.y, m.name, PALETTE.jauneBle);
+      line(dx + 62 * S, a.y + 18 * S, `${nameOf(m)} · niveau ${m.level}/${m.levelCap}`, m.evolution ? PALETTE.lumiereDoree : PALETTE.cyanEclat);
+      line(dx + 62 * S, a.y + 36 * S, m.level >= m.levelCap ? 'EXP MAX' : `EXP ${m.xp}/100${isWounded(m, this.ctx.progress.day) ? '   Blessé jusqu’au repos' : ''}`, isWounded(m, this.ctx.progress.day) ? PALETTE.braise : PALETTE.metalClair);
+      // Stats et croissances.
+      const evo = m.evolution ? (findEvolution(data, m.evolution)?.evo ?? null) : null;
+      const growths = evolvedGrowths(cls, evo);
+      const colW = Math.floor(dw / 9);
+      STAT_KEYS.forEach((k, j) => {
+        const cx = dx + j * colW;
+        line(cx, a.y + 60 * S, STAT_SHORT[k], PALETTE.metalClair);
+        line(cx, a.y + 76 * S, `${m.stats[k]}`);
+        if (k !== 'mob') line(cx, a.y + 92 * S, `${growths[k as GrowthKey]}%`, PALETTE.metalClair);
+      });
+      // Arme, compétence, passives.
+      const weapon = data.weapons.find((w) => w.id === cls.startingWeapon);
+      const skill = data.skills.find((s) => s.owner === cls.id);
+      line(dx, a.y + 114 * S, `Arme : ${weapon?.name ?? cls.weapon.name}   ·   Compétence : ${skill?.name ?? '—'}`, PALETTE.ocreClair, dw);
+      const learned = learnedPassives(cls, m.level);
+      const equipped = equippedPassive(cls, m.level, m.passive);
+      const passives = cls.passives.map((p) => `${p.name}${p.id === equipped ? ' (équipée)' : learned.includes(p) ? '' : ` (niv ${p.level})`}`).join('   ');
+      line(dx, a.y + 132 * S, `Passives : ${passives}`, PALETTE.parchemin, dw);
+      // Évolution.
+      let y = a.y + 156 * S;
+      line(dx, y, evo ? `Évolution : ${evo.name}` : 'Évolution', PALETTE.cyanEclat);
+      y += 18 * S;
+      if (evo) {
+        line(dx, y, evo.description, PALETTE.lumiereDoree, dw);
+      } else {
+        const world = { data, progress: this.ctx.progress, discovered: this.ctx.discovered };
+        const { choices, blocker } = evolutionChoices(world, m);
+        if (blocker) {
+          line(dx, y, `${blocker} (niveau ${data.balance.levels.promotionMinLevel}, un Sceau de Maîtrise et la condition de la branche).`, PALETTE.metalClair, dw);
+          y += 20 * S;
+        }
+        for (const c of choices) {
+          const head = line(dx, y, c.evo.name, c.ready ? PALETTE.lumiereDoree : PALETTE.parchemin);
+          if (c.ready) {
+            const btn = put(addText(this, dx + dw, y, '[ Évoluer ]', { scale: S, color: 0x7fcf6a, align: 'right' }).setDepth(DEPTH + 3));
+            btn.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.evolve(i, c.evo.id));
+          }
+          void head;
+          const trait = line(dx, y + 16 * S, c.evo.description, PALETTE.metalClair, dw);
+          const cond = line(dx, y + 18 * S + Math.ceil(trait.height), `${c.met ? 'Condition remplie' : 'Condition'} : ${c.evo.condition}${c.progress && !c.met ? ` (${c.progress})` : ''}`, c.met ? 0x7fcf6a : PALETTE.ambre, dw);
+          y += 22 * S + Math.ceil(trait.height) + Math.ceil(cond.height);
+        }
+      }
+      if (this.notice) line(dx, a.y + a.h - 16 * S, this.notice, PALETTE.lumiereDoree, dw);
+      this.content.push(...detail);
+    };
+    this.list = new ScrollList(this, a.x, a.y + 24 * S, this.actions, {
+      width: listW,
+      rowHeight: rowH,
+      visibleRows: Math.max(3, Math.floor((a.h - 28 * S) / rowH)),
+      depth: DEPTH + 2,
+      scale: S,
+      onCursor: show,
+      onActivate: (i) => {
+        // Entrée : évoluer si une seule branche est prête.
+        const m = company[i];
+        if (!m) return;
+        const ready = evolutionChoices({ data, progress: this.ctx.progress, discovered: this.ctx.discovered }, m).choices.filter((c) => c.ready);
+        if (ready.length === 1 && ready[0]) this.evolve(i, ready[0].evo.id);
+      },
+    });
+    this.list.reset(rows, Math.min(this.companyCursor, Math.max(0, rows.length - 1)));
+    show(this.companyCursor);
+  }
+
+  /** Fait évoluer un membre (n°141) puis redessine l'onglet. */
+  private evolve(index: number, evoId: string): void {
+    const m = this.ctx.progress.company[index];
+    if (!m) return;
+    const error = evolveMember({ data: this.ctx.data, progress: this.ctx.progress, discovered: this.ctx.discovered }, m, evoId);
+    const evo = findEvolution(this.ctx.data, evoId)?.evo;
+    this.notice = error ?? `${m.name} devient ${evo?.name ?? evoId} !`;
+    this.companyCursor = index;
+    this.cameras.main.flash(300, 255, 223, 154);
+    this.setTab('compagnie');
+    this.notice = null;
   }
 
   /* ---------- Inventaire ---------- */

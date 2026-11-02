@@ -1,5 +1,5 @@
 {
-  "$comment": "12 classes de départ et 24 évolutions (GDD §10). Stats de base = niveau 1 (§10.3) ; croissances en % (§10.4). startingWeapon : arme de départ (data/items.json), de même type, portée et nature de dégâts que `weapon`. `passives` : compétences passives apprises aux niveaux 5 et 15 (décision n°93, jalon M6) ; une seule est équipée. Les bonus de promotion et croissances avancées arrivent avec les évolutions (M6, étape 4).",
+  "$comment": "12 classes de départ et 24 évolutions (GDD §10). Stats de base = niveau 1 (§10.3) ; croissances en % (§10.4). startingWeapon : arme de départ (data/items.json), de même type, portée et nature de dégâts que `weapon`. `passives` : compétences passives apprises aux niveaux 5 et 15 (décision n°93, jalon M6) ; une seule est équipée. `evolutions` (jalon M6) : `condition` (texte affiché), `requires` (alternatives : toutes les conditions d'une liste ; compteurs, quête, réputation, lieux visités), `bonus` (stats gagnées à l'évolution), `growthBonus` (croissances en plus), `description` (trait de la classe avancée, codé dans `progression/evolutions.ts`).",
   "classes": [
     {
       "id": "gardien_des_marees",
@@ -17,8 +17,8 @@
         { "id": "inebranlable", "name": "Inébranlable", "level": 15, "description": "Immunisé contre Entravé ; +5 PV max." }
       ],
       "evolutions": [
-        { "id": "rempart_de_recif", "name": "Rempart de Récif", "condition": "Défendre un village (quête « Le phare éteint » ou embuscade vaincue avec ce Gardien à ≥ 50 % PV)." },
-        { "id": "sentinelle_des_abysses", "name": "Sentinelle des Abysses", "condition": "Port-Brume ≥ Amical et Sœur Mérrow vaincue avec ce Gardien déployé." }
+        { "id": "rempart_de_recif", "name": "Rempart de Récif", "condition": "Quête « Le phare éteint », ou embuscade vaincue avec ce Gardien à 50 % de ses PV ou plus.", "description": "Mob 3, Déf +6 ; riposte à toute attaque, même hors de portée.", "bonus": {"def": 6, "pv": 3, "mob": -1}, "growthBonus": {"def": 10, "pv": 5}, "requires": [[{"kind": "quest", "id": "phare_eteint"}], [{"kind": "counter", "id": "ambushWinsHealthy", "min": 1}]] },
+        { "id": "sentinelle_des_abysses", "name": "Sentinelle des Abysses", "condition": "Port-Brume au moins Amical, et Sœur Mérrow vaincue avec ce Gardien déployé.", "description": "Repousse d'une case la cible de ses attaques ; franchit l'eau profonde.", "bonus": {"fo": 2, "def": 2, "res": 1}, "growthBonus": {"fo": 10, "res": 10}, "requires": [[{"kind": "rep", "target": "port_brume", "tier": "amical"}, {"kind": "counter", "id": "boss:soeur_merrow", "min": 1}]] }
       ]
     },
     {
@@ -38,8 +38,8 @@
         { "id": "lame_d_honneur", "name": "Lame d’honneur", "level": 15, "description": "+3 dégâts contre un boss ou un ennemi de niveau supérieur." }
       ],
       "evolutions": [
-        { "id": "champion_du_serment", "name": "Champion du Serment", "condition": "Respecter le Serment pendant 5 combats." },
-        { "id": "executeur_lige", "name": "Exécuteur Lige", "condition": "Tuer 3 ennemis d'affilée pendant un Serment brisé." }
+        { "id": "champion_du_serment", "name": "Champion du Serment", "condition": "Respecter le Serment pendant 5 combats.", "description": "Fo +3 ; ne subit pas de riposte d'un ennemi isolé (aucun autre ennemi à son contact).", "bonus": {"fo": 3, "vit": 1, "def": 1}, "growthBonus": {"fo": 10, "pv": 5}, "requires": [[{"kind": "counter", "id": "oathsKept", "min": 5}]] },
+        { "id": "executeur_lige", "name": "Exécuteur Lige", "condition": "Abattre 3 ennemis dans un même combat après avoir brisé son serment.", "description": "+15 critique ; +30 % de dégâts contre une cible sous 50 % PV.", "bonus": {"fo": 2, "dex": 2, "vit": 1}, "growthBonus": {"dex": 10, "chc": 5}, "requires": [[{"kind": "counter", "id": "brokenOathTriple", "min": 1}]] }
       ]
     },
     {
@@ -58,8 +58,8 @@
         { "id": "tir_couvert", "name": "Tir couvert", "level": 15, "description": "+1 portée depuis une forêt, une montagne ou des ruines." }
       ],
       "evolutions": [
-        { "id": "faucon_de_vent", "name": "Faucon de Vent", "condition": "20 ennemis vaincus à l'arc à distance ≥ 3." },
-        { "id": "tireur_de_brume", "name": "Tireur de Brume", "condition": "Explorer la zone Z3 et vaincre un ennemi caché dans le brouillard." }
+        { "id": "faucon_de_vent", "name": "Faucon de Vent", "condition": "20 ennemis vaincus à 3 cases ou plus.", "description": "Portée +2 ; sans avoir bougé, frappe toujours deux fois.", "bonus": {"dex": 3, "vit": 2}, "growthBonus": {"dex": 10, "vit": 5}, "requires": [[{"kind": "counter", "id": "longKills", "min": 20}]] },
+        { "id": "tireur_de_brume", "name": "Tireur de Brume", "condition": "Vaincre un ennemi sur la Côte des Brumes (zone 3).", "description": "Ses tirs ignorent la défense et l'esquive du terrain de la cible.", "bonus": {"fo": 2, "dex": 2, "chc": 1}, "growthBonus": {"fo": 5, "dex": 5, "chc": 5}, "requires": [[{"kind": "counter", "id": "killsZone:z3", "min": 1}]] }
       ]
     },
     {
@@ -78,8 +78,8 @@
         { "id": "cendre_ardente", "name": "Cendre ardente", "level": 15, "description": "+2 dégâts magiques sous 50 % de PV." }
       ],
       "evolutions": [
-        { "id": "maitre_de_braise", "name": "Maître de Braise", "condition": "Brûler 15 ennemis." },
-        { "id": "spectre_de_cendre", "name": "Spectre de Cendre", "condition": "Vaincre un boss avec cette unité sous 5 PV." }
+        { "id": "maitre_de_braise", "name": "Maître de Braise", "condition": "Brûler 15 ennemis.", "description": "Nuée de braises en 5×5, sans toucher ses alliés.", "bonus": {"mag": 3, "res": 2}, "growthBonus": {"mag": 10}, "requires": [[{"kind": "counter", "id": "burns", "min": 15}]] },
+        { "id": "spectre_de_cendre", "name": "Spectre de Cendre", "condition": "Vaincre un boss avec cette unité sous 5 PV.", "description": "Ses sorts ignorent 3 Rés ; il récupère la moitié des dégâts infligés.", "bonus": {"mag": 2, "pv": 2, "vit": 1}, "growthBonus": {"mag": 5, "pv": 10}, "requires": [[{"kind": "counter", "id": "bossWinLowHp", "min": 1}]] }
       ]
     },
     {
@@ -98,8 +98,8 @@
         { "id": "veille", "name": "Veille", "level": 15, "description": "Rend 3 PV aux alliés adjacents au début de sa phase." }
       ],
       "evolutions": [
-        { "id": "archi_lanterne", "name": "Archi-Lanterne", "condition": "Soigner 500 PV au total." },
-        { "id": "veilleuse_des_ames", "name": "Veilleuse des Âmes", "condition": "Terminer la quête « Les lanternes éteintes »." }
+        { "id": "archi_lanterne", "name": "Archi-Lanterne", "condition": "Soigner 500 PV au total.", "description": "Halo soigne en 3×3 ; aura : +3 Rés aux alliés adjacents.", "bonus": {"mag": 2, "res": 3}, "growthBonus": {"mag": 5, "res": 10}, "requires": [[{"kind": "counter", "id": "healed", "min": 500}]] },
+        { "id": "veilleuse_des_ames", "name": "Veilleuse des Âmes", "condition": "Terminer la quête « Les lanternes éteintes ».", "description": "Une fois par combat, le premier allié qui tomberait à 2 cases d'elle garde 1 PV.", "bonus": {"mag": 2, "res": 2, "chc": 1}, "growthBonus": {"res": 5, "chc": 10}, "requires": [[{"kind": "quest", "id": "lanternes_eteintes"}]] }
       ]
     },
     {
@@ -119,8 +119,8 @@
         { "id": "hymne", "name": "Hymne", "level": 15, "description": "Appel aux armes dure 1 tour de plus." }
       ],
       "evolutions": [
-        { "id": "marechal_de_cendre", "name": "Maréchal de Cendre", "condition": "Réputation Couronne ≥ Amical." },
-        { "id": "chantre_des_saisons", "name": "Chantre des Saisons", "condition": "Réputation Racines ≥ Amical." }
+        { "id": "marechal_de_cendre", "name": "Maréchal de Cendre", "condition": "Réputation Couronne au moins Amical.", "description": "Une fois par combat, Appel aux armes rend leur action aux alliés touchés.", "bonus": {"fo": 2, "mag": 1, "vit": 2}, "growthBonus": {"fo": 5, "vit": 5}, "requires": [[{"kind": "rep", "target": "couronne", "tier": "amical"}]] },
+        { "id": "chantre_des_saisons", "name": "Chantre des Saisons", "condition": "Réputation Racines au moins Amical.", "description": "Aura : +2 Déf et +2 Rés aux alliés à 2 cases ou moins.", "bonus": {"mag": 2, "res": 2, "chc": 1}, "growthBonus": {"mag": 5, "res": 5}, "requires": [[{"kind": "rep", "target": "racines", "tier": "amical"}]] }
       ]
     },
     {
@@ -140,8 +140,8 @@
         { "id": "distillation", "name": "Distillation", "level": 15, "description": "Les statuts qu’il inflige aux ennemis durent 1 tour de plus." }
       ],
       "evolutions": [
-        { "id": "grand_alchimiste_du_gel", "name": "Grand Alchimiste du Gel", "condition": "Étourdir 15 ennemis." },
-        { "id": "distillateur_de_venin", "name": "Distillateur de Venin", "condition": "Empoisonner un boss." }
+        { "id": "grand_alchimiste_du_gel", "name": "Grand Alchimiste du Gel", "condition": "Geler 15 ennemis.", "description": "Fiole du Gel touche une zone 3×3.", "bonus": {"mag": 3, "dex": 2}, "growthBonus": {"mag": 10}, "requires": [[{"kind": "counter", "id": "freezes", "min": 15}]] },
+        { "id": "distillateur_de_venin", "name": "Distillateur de Venin", "condition": "Vaincre un boss avec cet Alchimiste déployé.", "description": "Ses attaques empoisonnent la cible (Poison, 2 tours).", "bonus": {"mag": 2, "dex": 2, "vit": 1}, "growthBonus": {"dex": 10}, "requires": [[{"kind": "counter", "id": "bossWins", "min": 1}]] }
       ]
     },
     {
@@ -161,8 +161,8 @@
         { "id": "contre_courant", "name": "Contre-courant", "level": 15, "description": "+10 Résonance après chaque esquive." }
       ],
       "evolutions": [
-        { "id": "fil_de_vent", "name": "Fil-de-Vent", "condition": "Parcourir 100 cases sur l'eau." },
-        { "id": "tempete_dansante", "name": "Tempête-Dansante", "condition": "Réussir 10 doubles attaques au total." }
+        { "id": "fil_de_vent", "name": "Fil-de-Vent", "condition": "Parcourir 100 cases d'eau ou de marais en combat.", "description": "Toute case franchissable lui coûte 1, l'eau comprise.", "bonus": {"vit": 2, "chc": 2, "mob": 1}, "growthBonus": {"vit": 5, "chc": 5}, "requires": [[{"kind": "counter", "id": "waterSteps", "min": 100}]] },
+        { "id": "tempete_dansante", "name": "Tempête-Dansante", "condition": "Réussir 10 doubles attaques au total.", "description": "Frappe toujours deux fois ; +10 précision.", "bonus": {"fo": 2, "dex": 2, "vit": 1}, "growthBonus": {"fo": 5, "dex": 5}, "requires": [[{"kind": "counter", "id": "doubles", "min": 10}]] }
       ]
     },
     {
@@ -182,8 +182,8 @@
         { "id": "golem_ancien", "name": "Golem ancien", "level": 15, "description": "Ses golems ont +5 PV et +2 Fo." }
       ],
       "evolutions": [
-        { "id": "eveilleur_de_colosse", "name": "Éveilleur de Colosse", "condition": "Réaliser 10 invocations." },
-        { "id": "chuchoteur_de_menhirs", "name": "Chuchoteur de Menhirs", "condition": "Visiter 3 menhirs sur l'île." }
+        { "id": "eveilleur_de_colosse", "name": "Éveilleur de Colosse", "condition": "Réaliser 10 invocations.", "description": "Ses golems ont +15 PV et +3 Fo.", "bonus": {"mag": 3, "pv": 2}, "growthBonus": {"mag": 5, "pv": 5}, "requires": [[{"kind": "counter", "id": "summons", "min": 10}]] },
+        { "id": "chuchoteur_de_menhirs", "name": "Chuchoteur de Menhirs", "condition": "Visiter 3 menhirs sur l'île.", "description": "Éveil de pierre fait surgir un menhir-tour qui tire à 2 cases.", "bonus": {"mag": 2, "res": 2, "dex": 1}, "growthBonus": {"mag": 5, "dex": 5}, "requires": [[{"kind": "visit", "locations": ["menhir_aubemer", "menhir_foret", "menhir_cendre"], "min": 3}]] }
       ]
     },
     {
@@ -202,8 +202,8 @@
         { "id": "racines_profondes", "name": "Racines profondes", "level": 15, "description": "Mur de ronces : +1 case et +1 tour." }
       ],
       "evolutions": [
-        { "id": "sylvarque", "name": "Sylvarque", "condition": "Terminer la quête « Le Roi-Cerf souffre »." },
-        { "id": "tisseur_de_ronces", "name": "Tisseur de Ronces", "condition": "Infliger 100 dégâts via les ronces." }
+        { "id": "sylvarque", "name": "Sylvarque", "condition": "Terminer la quête « Le Roi-Cerf souffre ».", "description": "Mur de ronces fait pousser un bosquet ; les alliés en forêt regagnent 3 PV au début de sa phase.", "bonus": {"mag": 2, "def": 2, "res": 1}, "growthBonus": {"mag": 5, "res": 5}, "requires": [[{"kind": "quest", "id": "roi_cerf_souffre"}]] },
+        { "id": "tisseur_de_ronces", "name": "Tisseur de Ronces", "condition": "Infliger 100 dégâts avec les ronces (Épines).", "description": "Ses ronces infligent 5 dégâts aux ennemis collés, au début de sa phase.", "bonus": {"mag": 3, "pv": 2}, "growthBonus": {"mag": 10}, "requires": [[{"kind": "counter", "id": "thornDamage", "min": 100}]] }
       ]
     },
     {
@@ -223,8 +223,8 @@
         { "id": "mecanique_precise", "name": "Mécanique précise", "level": 15, "description": "Attaques normales ×1,2 contre armure lourde et monstres." }
       ],
       "evolutions": [
-        { "id": "artificier_sapeur", "name": "Artificier Sapeur", "condition": "Détruire 10 armures lourdes." },
-        { "id": "maitre_de_siege", "name": "Maître de Siège", "condition": "Visiter l'Aiguille brisée." }
+        { "id": "artificier_sapeur", "name": "Artificier Sapeur", "condition": "Détruire 10 armures lourdes.", "description": "Perce-armure blesse aussi de 4 PV les ennemis collés à la cible.", "bonus": {"fo": 2, "dex": 2, "def": 1}, "growthBonus": {"fo": 5, "dex": 5}, "requires": [[{"kind": "counter", "id": "heavyKills", "min": 10}]] },
+        { "id": "maitre_de_siege", "name": "Maître de Siège", "condition": "Visiter l'Aiguille brisée.", "description": "Portée +1 ; +30 % de dégâts s'il n'a pas bougé.", "bonus": {"fo": 3, "dex": 2}, "growthBonus": {"fo": 10}, "requires": [[{"kind": "visit", "locations": ["aiguille_brisee"], "min": 1}]] }
       ]
     },
     {
@@ -244,8 +244,8 @@
         { "id": "prise_ferme", "name": "Prise ferme", "level": 15, "description": "Harponné dure 1 tour de plus." }
       ],
       "evolutions": [
-        { "id": "harponneur_abyssal", "name": "Harponneur Abyssal", "condition": "Vaincre Sœur Mérrow." },
-        { "id": "traqueur_de_leviathans", "name": "Traqueur de Léviathans", "condition": "Vaincre 3 boss." }
+        { "id": "harponneur_abyssal", "name": "Harponneur Abyssal", "condition": "Vaincre Sœur Mérrow avec ce Chasseur déployé.", "description": "Harpon enchaîné attire la cible de 2 cases vers lui.", "bonus": {"fo": 2, "pv": 2, "def": 1}, "growthBonus": {"fo": 5, "pv": 5}, "requires": [[{"kind": "counter", "id": "boss:soeur_merrow", "min": 1}]] },
+        { "id": "traqueur_de_leviathans", "name": "Traqueur de Léviathans", "condition": "Vaincre 3 boss avec ce Chasseur déployé.", "description": "Chaque coup ajoute 5 % des PV max de la cible.", "bonus": {"fo": 3, "dex": 2}, "growthBonus": {"fo": 10}, "requires": [[{"kind": "counter", "id": "bossWins", "min": 3}]] }
       ]
     }
   ]

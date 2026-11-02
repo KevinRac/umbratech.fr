@@ -268,6 +268,35 @@ function crossCheck(data: GameData): string[] {
     }
   }
 
+  // Évolutions (jalon M6, n°141) : conditions qui renvoient à des quêtes, lieux, paliers, compteurs connus.
+  const questIdsE = new Set(data.quests.map((q) => q.id));
+  const locationIdsE = new Set(data.locations.map((l) => l.id));
+  const repTargets = new Set([...data.locations.filter((l) => l.reputation).map((l) => l.id), ...data.factions.map((f) => f.id)]);
+  const tierIdsE = new Set(data.reputation.tiers.map((t) => t.id));
+  const enemyIdsE = new Set(data.enemies.map((e) => e.id));
+  const zoneIdsE = new Set(data.zones.map((z) => z.id));
+  const plainCounters = new Set(['oathsKept', 'brokenOathTriple', 'bossWins', 'ambushWinsHealthy', 'longKills', 'burns', 'bossWinLowHp', 'healed', 'freezes', 'waterSteps', 'doubles', 'summons', 'thornDamage', 'heavyKills']);
+  const evoIds = new Set<string>();
+  for (const cls of data.classes) {
+    for (const evo of cls.evolutions) {
+      const at = `classes.json › évolution « ${evo.id} »`;
+      if (evoIds.has(evo.id) || data.classes.some((c) => c.id === evo.id)) issues.push(`${at} : identifiant en double`);
+      evoIds.add(evo.id);
+      for (const alt of evo.requires) {
+        for (const c of alt) {
+          if (c.kind === 'quest' && !questIdsE.has(c.id)) issues.push(`${at} : quête inconnue « ${c.id} »`);
+          if (c.kind === 'rep' && (!repTargets.has(c.target) || !tierIdsE.has(c.tier))) issues.push(`${at} : réputation inconnue « ${c.target} » / « ${c.tier} »`);
+          if (c.kind === 'visit') for (const l of c.locations) if (!locationIdsE.has(l)) issues.push(`${at} : lieu inconnu « ${l} »`);
+          if (c.kind === 'counter') {
+            const [head, arg] = c.id.split(':');
+            const ok = arg === undefined ? plainCounters.has(c.id) : head === 'boss' ? enemyIdsE.has(arg) : head === 'killsZone' ? zoneIdsE.has(arg) : false;
+            if (!ok) issues.push(`${at} : compteur inconnu « ${c.id} »`);
+          }
+        }
+      }
+    }
+  }
+
   // Compagnie (jalon M6) : classes connues, identifiants uniques, un niveau pour chaque recrue.
   const classIdsC = new Set(data.classes.map((c) => c.id));
   const companyIds = new Map<string, string>([[data.company.hero.id, 'héros']]);
@@ -510,7 +539,7 @@ function checkTowns(data: GameData, issues: string[]): void {
       checkLines(`${here}.shops.${shop.id}.refusal`, shop.refusal);
       for (const entry of shop.stock) {
         if (!itemIds.has(entry.item)) issues.push(`${here}.shops.${shop.id} : objet inconnu « ${entry.item} »`);
-        else if (!sellableIds.has(entry.item)) issues.push(`${here}.shops.${shop.id} : « ${entry.item} » n'a pas de prix, il ne peut pas être vendu`);
+        else if (!sellableIds.has(entry.item) && entry.price === undefined) issues.push(`${here}.shops.${shop.id} : « ${entry.item} » n'a pas de prix, il ne peut pas être vendu`);
       }
     }
     for (const r of loc.rewards) checkEffects(`${here}.rewards.${r.flag}`, r.effects);

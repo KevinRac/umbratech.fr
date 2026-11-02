@@ -9,6 +9,7 @@ import { memberSprite } from '../skinFrames';
 import type { AllyTemplateDef } from '../../data/allySchemas';
 import type { BossDef, ClassDef, EnemyDef, PartyMemberDef, StatBlock, WeaponDef } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
+import { evolvedGrowths } from '../progression/evolutions';
 import { equippedPassive, LINEAGE, PASSIVE, type OathKind } from '../progression/traits';
 import { statsAtLevel } from '../units/stats';
 import { refreshStats } from './status';
@@ -32,6 +33,8 @@ export type MemberLike = PartyMemberDef & {
   readonly oath?: OathKind | null;
   /** Lignée (classe de base) d'une unité évoluée ; absente : sa classe. */
   readonly lineage?: string;
+  /** Évolution (jalon M6) : la classe reste la classe de base. */
+  readonly evolution?: string | null;
 };
 
 /** Stats d'un membre blessé (décision n°138). */
@@ -55,11 +58,11 @@ export const emptyLoadout = (): Loadout => ({ weapon: null, accessory: null, ite
 
 type Fresh = Pick<
   BattleUnit,
-  'moved' | 'acted' | 'moveOrigin' | 'resonance' | 'bogPending' | 'bogged' | 'alerted' | 'cooldowns' | 'mods' | 'cantoLeft' | 'moveCap' | 'summonUntil' | 'gains' | 'ownerId' | 'extraMob'
+  'moved' | 'acted' | 'moveOrigin' | 'resonance' | 'bogPending' | 'bogged' | 'alerted' | 'cooldowns' | 'mods' | 'cantoLeft' | 'moveCap' | 'summonUntil' | 'gains' | 'ownerId' | 'extraMob' | 'tally'
 >;
 
 function fresh(): Fresh {
-  return { moved: false, acted: false, moveOrigin: null, resonance: 0, bogPending: false, bogged: false, alerted: false, cooldowns: {}, mods: [], cantoLeft: 0, moveCap: null, summonUntil: null, gains: {}, ownerId: null, extraMob: 0 };
+  return { moved: false, acted: false, moveOrigin: null, resonance: 0, bogPending: false, bogged: false, alerted: false, cooldowns: {}, mods: [], cantoLeft: 0, moveCap: null, summonUntil: null, gains: {}, ownerId: null, extraMob: 0, tally: {} };
 }
 
 function weaponOf(data: GameData, id: string): WeaponDef {
@@ -93,10 +96,12 @@ function classResources(cls: ClassDef, passive: string | null = null): Record<st
   return { [cls.resource.id]: cls.resource.perBattle + extra };
 }
 
-/** Fil d'eau du Danseur des Courants (n°126). */
-function waterThreadOf(data: GameData, lineage: string): BattleUnit['waterThread'] {
-  if (lineage !== LINEAGE.danseur) return null;
+/** Fil d'eau du Danseur des Courants (n°126) ; Fil-de-Vent (tout à 1) ; Sentinelle des Abysses (eau profonde). */
+function waterThreadOf(data: GameData, lineage: string, evolution: string | null = null): BattleUnit['waterThread'] {
   const w = data.balance.classMechanics.waterThread;
+  if (evolution === 'fil_de_vent') return { shallow: 1, deep: 1, flat: true };
+  if (evolution === 'sentinelle_des_abysses') return { shallow: null, deep: w.deepCost };
+  if (lineage !== LINEAGE.danseur) return null;
   return { shallow: w.shallowCost, deep: w.deepCost };
 }
 
@@ -116,6 +121,7 @@ export function memberUnit(data: GameData, rules: BattleRules, member: MemberLik
   const own = member.stats ? { ...member.stats } : statsAtLevel(cls.baseStats, cls.growths, member.level);
   const passive = equippedPassive(cls, member.level, member.passive);
   const lineage = member.lineage ?? cls.id;
+  const evo = member.evolution ? (cls.evolutions.find((e) => e.id === member.evolution) ?? null) : null;
   const base = withBonus(member.wounded ? woundedStats(own) : own, { ...(accessory?.bonus ?? {}), ...(passive === 'inebranlable' ? { pv: (accessory?.bonus.pv ?? 0) + PASSIVE.steadyHp } : {}) });
   const levelCap = member.levelCap ?? data.balance.levels.baseClassCap;
   const skill = signatureSkill(data, cls.id);
@@ -124,16 +130,17 @@ export function memberUnit(data: GameData, rules: BattleRules, member: MemberLik
     name: member.name,
     team: 'player',
     kindId: cls.id,
-    kindName: cls.name,
+    kindName: evo?.name ?? cls.name,
     sprite: member.hero ? 'heros' : memberSprite(cls.id, variant),
     level: member.level,
     lineage,
     passive,
+    evolution: evo?.id ?? null,
     oath: lineage === LINEAGE.lame ? { kind: member.oath ?? 'proteger', broken: false, kills: 0 } : null,
-    waterThread: waterThreadOf(data, lineage),
+    waterThread: waterThreadOf(data, lineage, evo?.id ?? null),
     wounded: member.wounded === true,
     xp: member.level >= levelCap ? 0 : (member.xp ?? 0),
-    growths: cls.growths,
+    growths: evolvedGrowths(cls, evo),
     levelCap,
     base,
     stats: base,
@@ -174,6 +181,7 @@ export function enemyUnit(data: GameData, rules: BattleRules, placed: { enemy: s
     kindName: def.title ?? def.name,
     sprite: def.sprite,
     level: placed.level,
+    evolution: null,
     lineage: def.id,
     passive: null,
     oath: null,
@@ -225,6 +233,7 @@ export function allyUnit(data: GameData, rules: BattleRules, template: AllyTempl
     kindName: cls.name,
     sprite: template.sprite,
     level: lvl,
+    evolution: null,
     lineage: cls.id,
     passive: null,
     oath: null,

@@ -222,5 +222,6 @@ export function buildBattle(base: EncounterDef, party: readonly MemberLike[], da
     itemsUsed: {},
     nextId,
     mechanics: data.balance.classMechanics,
+    wasAmbush: options.ambush === true,
   };
 }

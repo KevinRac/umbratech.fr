@@ -240,6 +240,10 @@ export const shopSchema = z.strictObject({
         item: idSchema,
         /** Palier minimal pour voir l'objet en vente (objets rares réservés aux amis). */
         minTier: tierId.optional(),
+        /** Prix de base imposé (objet sans prix au catalogue : Sceau de Maîtrise, n°140). */
+        price: z.number().int().positive().optional(),
+        /** Nombre d'exemplaires en vente pour toute la partie (absent : illimité). */
+        limit: z.number().int().positive().optional(),
       }),
     )
     .min(1),

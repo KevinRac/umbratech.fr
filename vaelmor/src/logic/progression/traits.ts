@@ -204,6 +204,7 @@ const alive = (state: BattleState): BattleUnit[] => state.units.filter((u) => u.
 /** Précision en plus pour `attacker` qui frappe depuis `from`. */
 export function hitBonus(state: BattleState, attacker: BattleUnit, from: Cell, target: BattleUnit, rules: BattleRules): number {
   let bonus = 0;
+  if (attacker.evolution === 'tempete_dansante') bonus += EVO.stormHit;
   if (attacker.passive === 'oeil_de_faucon') bonus += PASSIVE.hawkHit;
   if (attacker.passive === 'instinct_de_chasse' && target.isBoss) bonus += PASSIVE.huntHit;
   if (attacker.lineage === LINEAGE.veilleur && terrainOf(state.map, from)?.tags.includes('hauteur')) bonus += rules.data.balance.classMechanics.height.hit;
@@ -211,7 +212,7 @@ export function hitBonus(state: BattleState, attacker: BattleUnit, from: Cell, t
 }
 
 export function critBonus(attacker: BattleUnit): number {
-  return attacker.passive === 'fil_tranchant' ? PASSIVE.edgeCrit : 0;
+  return (attacker.passive === 'fil_tranchant' ? PASSIVE.edgeCrit : 0) + (attacker.evolution === 'executeur_lige' ? EVO.executionerCrit : 0);
 }
 
 /** Dégâts ajoutés avant la réduction (Lame d'honneur, Cendre ardente). */
@@ -222,22 +223,91 @@ export function damageBonus(attacker: BattleUnit, target: BattleUnit, physical: 
   return bonus;
 }
 
-/** Multiplicateur des dégâts d'un coup (Serment, Été, Mécanique précise). `skill` : frappe de compétence. */
-export function damageMultiplier(state: BattleState, attacker: BattleUnit, target: BattleUnit, skill: boolean, rules: BattleRules): number {
+/**
+ * Multiplicateur des dégâts d'un coup (Serment, Été, Mécanique précise ;
+ * Exécuteur Lige, Maître de Siège). `skill` : frappe de compétence ; `from` :
+ * case d'où frappe l'attaquant.
+ */
+export function damageMultiplier(state: BattleState, attacker: BattleUnit, target: BattleUnit, skill: boolean, rules: BattleRules, from: Cell = attacker): number {
   const m = rules.data.balance.classMechanics;
   let mult = 1;
+  if (attacker.evolution === 'executeur_lige' && target.hp * 2 < target.stats.pv) mult *= EVO.executionerMult;
+  if (attacker.evolution === 'maitre_de_siege' && !attacker.moved && from.x === attacker.x && from.y === attacker.y) mult *= EVO.siegeMult;
   if (oathHolds(attacker)) mult *= 1 + m.oath.damageBonus;
   if (isAlchemist(attacker) && seasonOf(state.turn) === 'ete') mult *= m.seasons.summerDamage;
   if (!skill && attacker.passive === 'mecanique_precise' && (target.armor === 'lourde' || target.armor === 'monstre')) mult *= PASSIVE.preciseMult;
   return mult;
 }
 
-/** Défense en plus de `target` posée sur `at` (Garde rapprochée : un allié adjacent). */
+/** Défense en plus de `target` posée sur `at` (Garde rapprochée : un allié adjacent ; aura du Chantre des Saisons). */
 export function defenseBonus(state: BattleState, target: BattleUnit, at: Cell): number {
-  if (target.passive !== 'garde_rapprochee') return 0;
-  const near = alive(state).some((u) => u !== target && !hostile(u.team, target.team) && manhattan(u, at) === 1);
-  return near ? PASSIVE.guardDef : 0;
+  let bonus = 0;
+  if (target.passive === 'garde_rapprochee' && alive(state).some((u) => u !== target && !hostile(u.team, target.team) && manhattan(u, at) === 1)) bonus += PASSIVE.guardDef;
+  if (auraFrom(state, target, at, 'chantre_des_saisons', EVO.chantRange)) bonus += EVO.chantDef;
+  return bonus;
 }
+
+/** Résistance en plus (aura de l'Archi-Lanterne, du Chantre des Saisons). */
+export function resistanceBonus(state: BattleState, target: BattleUnit, at: Cell): number {
+  let bonus = 0;
+  if (auraFrom(state, target, at, 'archi_lanterne', 1)) bonus += EVO.archRes;
+  if (auraFrom(state, target, at, 'chantre_des_saisons', EVO.chantRange)) bonus += EVO.chantRes;
+  return bonus;
+}
+
+/** Un allié vivant porteur de l'évolution `evo` est-il à `range` cases ou moins (l'unité elle-même exclue) ? */
+function auraFrom(state: BattleState, target: BattleUnit, at: Cell, evo: string, range: number): boolean {
+  return alive(state).some((u) => u !== target && u.evolution === evo && !hostile(u.team, target.team) && manhattan(u, at) <= range);
+}
+
+/* ---------- Évolutions : valeurs et règles (n°142, n°144) ---------- */
+
+export const EVO = {
+  stormHit: 10,
+  executionerCrit: 15,
+  executionerMult: 1.3,
+  siegeMult: 1.3,
+  siegeRange: 1,
+  falconRange: 2,
+  chantRange: 2,
+  chantDef: 2,
+  chantRes: 2,
+  archRes: 3,
+  spectreIgnoreRes: 3,
+  spectreDrain: 0.5,
+  leviathanRatio: 0.05,
+  venomTurns: 2,
+  colossusHp: 15,
+  colossusFo: 3,
+  tisseurThorns: 5,
+  sylvanHeal: 3,
+  sapperBlast: 4,
+  harpoonPull: 2,
+} as const;
+
+/** Toujours deux coups (Tempête-Dansante ; Faucon de Vent s'il n'a pas bougé). */
+export function alwaysDoubles(attacker: BattleUnit, from: Cell = attacker): boolean {
+  if (attacker.evolution === 'tempete_dansante') return true;
+  return attacker.evolution === 'faucon_de_vent' && !attacker.moved && from.x === attacker.x && from.y === attacker.y;
+}
+
+/** Dégâts ajoutés après la réduction (Traqueur de Léviathans : 5 % des PV max de la cible). */
+export const flatDamage = (attacker: BattleUnit, target: BattleUnit): number => (attacker.evolution === 'traqueur_de_leviathans' ? Math.floor(target.stats.pv * EVO.leviathanRatio) : 0);
+
+/** Riposte à toute attaque, même hors de portée (Rempart de Récif). */
+export const alwaysCounters = (defender: BattleUnit): boolean => defender.evolution === 'rempart_de_recif';
+
+/** Pas de riposte d'un ennemi isolé (Champion du Serment) : aucun autre ennemi au contact de la cible. */
+export function duelNoCounter(state: BattleState, attacker: BattleUnit, target: BattleUnit): boolean {
+  if (attacker.evolution !== 'champion_du_serment') return false;
+  return !alive(state).some((u) => u !== target && !hostile(u.team, target.team) && manhattan(u, target) === 1);
+}
+
+/** Le Tireur de Brume ignore la défense et l'esquive du terrain de sa cible. */
+export const ignoresTerrain = (attacker: BattleUnit): boolean => attacker.evolution === 'tireur_de_brume';
+
+/** Rés ignorée par les sorts (Spectre de Cendre). */
+export const resIgnored = (attacker: BattleUnit): number => (attacker.evolution === 'spectre_de_cendre' ? EVO.spectreIgnoreRes : 0);
 
 /** Esquive en plus de `target` posée sur `at` (Étendard, Pas léger, Fil d'eau). */
 export function avoidBonus(state: BattleState, target: BattleUnit, at: Cell): number {
@@ -286,8 +356,11 @@ export const bogs = (unit: BattleUnit, terrain: TerrainDef): boolean => terrain.
 /** Portée de l'arme depuis une case (Tir couvert : +1 depuis une case « hauteur »). */
 export function rangeFrom(map: BattleMap | null, unit: BattleUnit, from: Cell): readonly [number, number] {
   const [min, max] = unit.weapon.range;
-  if (map && unit.passive === 'tir_couvert' && terrainOf(map, from)?.tags.includes('hauteur')) return [min, max + 1];
-  return unit.weapon.range;
+  let extra = 0;
+  if (unit.evolution === 'faucon_de_vent') extra += EVO.falconRange;
+  if (unit.evolution === 'maitre_de_siege') extra += EVO.siegeRange;
+  if (map && unit.passive === 'tir_couvert' && terrainOf(map, from)?.tags.includes('hauteur')) extra += 1;
+  return extra === 0 ? unit.weapon.range : [min, max + extra];
 }
 
 /* ---------- Soins ---------- */

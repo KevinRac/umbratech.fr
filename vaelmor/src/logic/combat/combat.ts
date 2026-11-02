@@ -30,7 +30,8 @@
  * (Garde rapprochée), esquive (Étendard, Pas léger, Fil d'eau), portée (Tir
  * couvert), Résonance (Fanfare, Contre-courant).
  */
-import { avoidBonus, critBonus, damageBonus, damageMultiplier, defenseBonus, dodgeResonance, fanfareBonus, hitBonus, rangeFrom } from '../progression/traits';
+import { alwaysCounters, alwaysDoubles, avoidBonus, critBonus, damageBonus, damageMultiplier, defenseBonus, dodgeResonance, duelNoCounter, EVO, fanfareBonus, flatDamage, hitBonus, ignoresTerrain, rangeFrom, resIgnored, resistanceBonus } from '../progression/traits';
+import { applyStatus } from '../tactics/status';
 import { distance, terrainAt } from '../tactics/grid';
 import { avoidBonusOf, damageTakenOf, guardOf } from '../tactics/status';
 import type { BattleRules, BattleState, BattleUnit, Cell, Strike } from '../tactics/types';
@@ -83,18 +84,23 @@ export interface StrikeOdds {
 export function strikeOdds(state: BattleState, attacker: BattleUnit, target: BattleUnit, targetAt: Cell, rules: BattleRules, mods: StrikeMods = {}, attackerAt: Cell = attacker): StrikeOdds {
   const c = rules.combat;
   const w = attacker.weapon;
-  const terrain = terrainAt(state.map, targetAt.x, targetAt.y);
+  const ground = terrainAt(state.map, targetAt.x, targetAt.y);
+  // Tireur de Brume : le terrain de la cible ne la protège pas.
+  const terrain = ignoresTerrain(attacker) ? { ...ground, defense: 0, avoid: Math.min(0, ground.avoid) } : ground;
   const triangle = triangleEdge(w.element, target.element, rules);
   const physical = w.damage === 'physique';
   const power = (physical ? attacker.stats.fo : attacker.stats.mag) + w.power + triangle * c.elementAdvantage.damage + damageBonus(attacker, target, physical);
-  const reduction = physical ? Math.max(0, target.stats.def + defenseBonus(state, target, targetAt) - (mods.ignoreDef ?? 0)) + terrain.defense : target.stats.res;
+  const reduction = physical
+    ? Math.max(0, target.stats.def + defenseBonus(state, target, targetAt) - (mods.ignoreDef ?? 0)) + terrain.defense
+    : Math.max(0, target.stats.res + resistanceBonus(state, target, targetAt) - resIgnored(attacker));
   const effective = isEffective(attacker, target);
   let damage = Math.max(0, power - reduction);
   if (effective) damage = Math.floor(damage * c.effectiveMultiplier);
   if (mods.bonusVs?.includes(target.armor) && mods.bonusMult) damage = Math.floor(damage * mods.bonusMult);
   if (mods.damageMult) damage = Math.floor(damage * mods.damageMult);
-  const traitMult = damageMultiplier(state, attacker, target, mods.skill === true, rules);
+  const traitMult = damageMultiplier(state, attacker, target, mods.skill === true, rules, attackerAt);
   if (traitMult !== 1) damage = Math.floor(damage * traitMult);
+  damage += flatDamage(attacker, target);
   if (physical) damage = Math.max(0, damage - guardOf(target, rules));
   damage = Math.floor(damage * damageTakenOf(target, rules));
 
@@ -105,8 +111,8 @@ export function strikeOdds(state: BattleState, attacker: BattleUnit, target: Bat
   return { damage, hit, crit, triangle, effective };
 }
 
-export function doubles(attacker: BattleUnit, target: BattleUnit, rules: BattleRules): boolean {
-  return attacker.stats.vit >= target.stats.vit + rules.combat.doubleAttackSpeedGap;
+export function doubles(attacker: BattleUnit, target: BattleUnit, rules: BattleRules, from: Cell = attacker): boolean {
+  return alwaysDoubles(attacker, from) || attacker.stats.vit >= target.stats.vit + rules.combat.doubleAttackSpeedGap;
 }
 
 /** Prévision d'un camp dans l'échange (GDD §13.5). */
@@ -130,13 +136,13 @@ export interface Forecast {
 export function forecast(state: BattleState, attacker: BattleUnit, defender: BattleUnit, rules: BattleRules, from: Cell = attacker, mods: StrikeMods = {}): Forecast {
   const d = distance(from, defender);
   const [cmin, cmax] = rangeFrom(state.map, defender, defender);
-  const counter = mods.noCounter !== true && d >= cmin && d <= cmax;
+  const counter = mods.noCounter !== true && !duelNoCounter(state, attacker, defender) && (alwaysCounters(defender) || (d >= cmin && d <= cmax));
   return {
     attacker: {
       unitId: attacker.id,
       canStrike: true,
       odds: strikeOdds(state, attacker, defender, defender, rules, mods, from),
-      doubles: doubles(attacker, defender, rules),
+      doubles: doubles(attacker, defender, rules, from),
       hp: attacker.hp,
       maxHp: attacker.stats.pv,
     },
@@ -149,6 +155,23 @@ export function forecast(state: BattleState, attacker: BattleUnit, defender: Bat
       maxHp: defender.stats.pv,
     },
   };
+}
+
+/**
+ * Effets d'évolution après un coup qui porte : Spectre de Cendre (vol de vie),
+ * Distillateur de Venin (Poison), Veilleuse des Âmes (une fois par combat, un
+ * allié qui tomberait à 2 cases d'elle garde 1 PV).
+ */
+function afterHit(state: BattleState, striker: BattleUnit, target: BattleUnit, damage: number, rules: BattleRules): void {
+  if (striker.evolution === 'spectre_de_cendre' && striker.hp > 0) striker.hp = Math.min(striker.stats.pv, striker.hp + Math.floor(damage * EVO.spectreDrain));
+  if (target.hp <= 0 && target.team === 'player' && target.summonUntil === null) {
+    const keeper = state.units.find((u) => u.hp > 0 && u !== target && u.evolution === 'veilleuse_des_ames' && u.team === target.team && !u.tally['angel'] && Math.abs(u.x - target.x) + Math.abs(u.y - target.y) <= 2);
+    if (keeper) {
+      keeper.tally['angel'] = 1;
+      target.hp = 1;
+    }
+  }
+  if (striker.evolution === 'distillateur_de_venin' && target.hp > 0) applyStatus(state, target, 'poison', EVO.venomTurns, striker.id, rules);
 }
 
 /**
@@ -170,6 +193,7 @@ export function resolveExchange(state: BattleState, attacker: BattleUnit, defend
     const crit = hit && state.rng.chance(side.odds.crit);
     const damage = hit ? Math.min(target.hp, side.odds.damage * (crit ? rules.combat.critMultiplier : 1)) : 0;
     target.hp -= damage;
+    if (damage > 0) afterHit(state, striker, target, damage, rules);
     striker.resonance = Math.min(res.max, striker.resonance + res.perAttack + fanfareBonus(state, striker, rules));
     if (hit) target.resonance = Math.min(res.max, target.resonance + res.perHitTaken);
     else target.resonance = Math.min(res.max, target.resonance + dodgeResonance(target));

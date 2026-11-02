@@ -46,6 +46,8 @@ export interface Progress {
   company: Member[];
   /** Niveau et XP des alliés errants (décision n°132). */
   errants: Record<string, ErrantRecord>;
+  /** Objets achetés dans un stock limité (`boutique:objet` → quantité, n°140). */
+  bought?: Record<string, number>;
 }
 
 /** Quand un ennemi du monde a été vaincu : jour de repos, temps de jeu et compteur de zones à ce moment-là. */

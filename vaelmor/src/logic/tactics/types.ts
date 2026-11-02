@@ -109,9 +109,13 @@ export interface BattleUnit {
   /** Serment de la Lame (n°123), ou null. */
   readonly oath: OathState | null;
   /** Fil d'eau (Danseur, n°126) : coût des gués et marais, et de l'eau profonde ; null pour les autres. */
-  readonly waterThread: { readonly shallow: number; readonly deep: number } | null;
+  readonly waterThread: { readonly shallow: number | null; readonly deep: number; readonly flat?: boolean } | null;
   /** Mobilité en plus pour la phase en cours (Automne, n°125). */
   extraMob: number;
+  /** Évolution de classe (jalon M6, n°142), ou null. */
+  readonly evolution: string | null;
+  /** Compteurs du combat pour les conditions d'évolution (et usages « une fois par combat »). */
+  readonly tally: Record<string, number>;
   /** Stats sans statut (accessoire et phase de boss compris). */
   base: StatBlock;
   /** Stats effectives (base + statuts), recalculées par `refreshStats`. */
@@ -225,6 +229,8 @@ export interface BattleState {
   readonly itemsUsed: Record<string, number>;
   /** Compteur des identifiants d'unités créées en cours de combat (renforts, invocations). */
   nextId: number;
+  /** Le combat a commencé par une embuscade subie (condition d'évolution du Gardien). */
+  readonly wasAmbush: boolean;
   /** Mécaniques de classe (balance.json › classMechanics, jalon M6). */
   readonly mechanics: BalanceConfig['classMechanics'];
   /**

@@ -25,6 +25,7 @@ import { getLastDeployed, getLoadouts, getWorldState, setLastDeployed } from '..
 import { getGameCtx } from '../core/townContext';
 import { ensureCompany, settleBattle, testCompany, type BattleEnd, type Settlement } from '../logic/game';
 import { applyBattleProgress, applyErrantProgress, isWounded } from '../logic/units/company';
+import { applyBattleCounters } from '../logic/progression/evolutions';
 import { equippedPassive, learnedPassives, LINEAGE, passiveLearnedAt, OATH_INFO, OATH_KINDS, SEASON_NAMES, seasonOf, type OathKind } from '../logic/progression/traits';
 import { formatNotices } from '../ui/notices';
 import { uiScaleFor, zoomOrigin } from '../core/viewport';
@@ -2386,6 +2387,7 @@ export class BattleScene extends Phaser.Scene {
     if (!world) return;
     this.progressSaved = true;
     applyBattleProgress(world.progress.company, this.state.units, world.progress.day);
+    applyBattleCounters(world.progress.company, this.state, this.rules);
     applyErrantProgress(world.progress.errants, this.state.units);
   }
 

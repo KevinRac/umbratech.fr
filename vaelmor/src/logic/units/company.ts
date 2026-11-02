@@ -37,6 +37,10 @@ export interface Member {
   passive: string | null;
   /** Dernier serment choisi (Lame du Serment, n°123) ; null : « Protéger ». */
   oath: OathKind | null;
+  /** Évolution (classes.json › evolutions) ; null en classe de base. La classe (`class`) reste la classe de base. */
+  evolution: string | null;
+  /** Compteurs des conditions d'évolution (serments tenus, boss vaincus…). */
+  counters: Record<string, number>;
 }
 
 /** Le membre est-il blessé ce jour-là ? */
@@ -56,7 +60,7 @@ export function createMember(data: GameData, seed: MemberSeed): Member {
   if (!cls) throw new Error(`Classe inconnue : « ${seed.class} »`);
   const levelCap = data.balance.levels.baseClassCap;
   const level = Math.max(1, Math.min(levelCap, seed.level));
-  return { id: seed.id, name: seed.name, class: cls.id, hero: seed.hero === true, level, xp: 0, stats: statsAtLevel(cls.baseStats, cls.growths, level), levelCap, woundedDay: null, passive: null, oath: null };
+  return { id: seed.id, name: seed.name, class: cls.id, hero: seed.hero === true, level, xp: 0, stats: statsAtLevel(cls.baseStats, cls.growths, level), levelCap, woundedDay: null, passive: null, oath: null, evolution: null, counters: {} };
 }
 
 /**

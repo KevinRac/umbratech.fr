@@ -33,6 +33,7 @@
     { "id": "murmure_des_abysses", "name": "Murmure des abysses", "type": "tome", "range": [1, 2], "damage": "magique", "power": 11, "hit": 80, "crit": 0, "element": "maree", "effective": [] },
     { "id": "lance_engloutie", "name": "Lance engloutie", "type": "lance_courte", "range": [1, 2], "damage": "physique", "power": 11, "hit": 75, "crit": 0, "element": null, "effective": [] },
     { "id": "baton_noueux", "name": "Bâton noueux", "type": "baton", "range": [1, 2], "damage": "magique", "power": 2, "hit": 80, "crit": 0, "element": null, "effective": [], "heals": 5 },
+    { "id": "eclat_de_menhir", "name": "Éclat de menhir", "type": "eclats", "range": [1, 2], "damage": "physique", "power": 4, "hit": 80, "crit": 0, "element": "pierre", "effective": [] },
     { "id": "poing_de_menhir", "name": "Poing de menhir", "type": "poings", "range": [1, 1], "damage": "physique", "power": 4, "hit": 75, "crit": 0, "element": "pierre", "effective": [] }
   ],
   "consumables": [
@@ -54,7 +55,7 @@
     { "id": "bague_de_cendre", "name": "Bague de Cendre", "description": "Un anneau terni de la Couronne. +2 Mag.", "price": 260, "bonus": { "mag": 2 } }
   ],
   "keyItems": [
-    { "id": "sceau_de_maitrise", "name": "Sceau de Maîtrise", "description": "Un sceau de cire et de métal. Permet à une unité de niveau 10 d'évoluer (jalon M6)." },
+    { "id": "sceau_de_maitrise", "name": "Sceau de Maîtrise", "description": "Un sceau de cire et de métal. Permet à une unité de niveau 10 ou plus d’évoluer, si la condition de sa branche est remplie (menu Compagnie)." },
     { "id": "graine_du_bosquet", "name": "Graine du Bosquet", "description": "Une graine tiède qui bat comme un cœur. Elle ouvre la voie du Bosquet du Roi-Cerf." },
     { "id": "carte_des_brumes", "name": "Carte des Brumes", "description": "La carte de Lia : les points d'intérêt de la côte y sont marqués." },
     { "id": "lettre_de_la_regente", "name": "Lettre de la Régente", "description": "Un pli scellé de cire rouge, portant le sceau de la Couronne de Cendre." }

@@ -56,8 +56,11 @@ export function shopStock(ctx: GameCtx, shopId: string): ShopEntry[] {
   for (const entry of s.shop.stock) {
     if (entry.minTier && tierRank(s.tier) < tierRank(entry.minTier)) continue;
     const info = ctx.index.catalog.get(entry.item);
-    if (!info || info.price === null) continue;
-    out.push({ info, price: buyPrice(info.price, s.rep, ctx.data.reputation), owned: countItem(ctx.progress, info.id) });
+    const base = entry.price ?? info?.price ?? null;
+    if (!info || base === null) continue;
+    // Stock limité (Sceau de Maîtrise : 2 pour toute la partie, n°140).
+    if (entry.limit !== undefined && (ctx.progress.bought?.[`${shopId}:${entry.item}`] ?? 0) >= entry.limit) continue;
+    out.push({ info, price: buyPrice(base, s.rep, ctx.data.reputation), owned: countItem(ctx.progress, info.id) });
   }
   return out;
 }
@@ -79,6 +82,13 @@ export function buy(ctx: GameCtx, shopId: string, item: string, qty = 1): TradeR
   if (ctx.progress.gold < total) return { ok: false, reason: 'or' };
   if (spaceFor(ctx.progress, item, ctx.data.balance) < qty) return { ok: false, reason: 'sac' };
   const notices: Notice[] = [];
+  const limit = s.shop.stock.find((e) => e.item === item)?.limit;
+  if (limit !== undefined) {
+    const key = `${shopId}:${item}`;
+    const already = ctx.progress.bought?.[key] ?? 0;
+    if (already + qty > limit) return { ok: false, reason: 'stock' };
+    ctx.progress.bought = { ...(ctx.progress.bought ?? {}), [key]: already + qty };
+  }
   giveGold(ctx, -total, notices);
   giveItem(ctx, item, qty, notices);
   return { ok: true, notices };

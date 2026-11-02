@@ -15,11 +15,12 @@
  * leur action, soin des villages (compagnie et alliés).
  */
 import { resolveExchange } from '../combat/combat';
+import { tallyEvents } from '../progression/evolutions';
 import { grantXp } from '../progression/xp';
-import { PASSIVE, seasonMob, trackOaths } from '../progression/traits';
+import { EVO, PASSIVE, seasonMob, trackOaths } from '../progression/traits';
 import { BattleError, assertCanAct, assertCanAction, finishUnit, hurt, livingUnits, mend, settleOutcome } from './battleCore';
 import { checkBossPhases } from './bosses';
-import { canStop, getUnit, inWeaponRange, nearestFreeCell, pathTo, reachable, terrainAt } from './grid';
+import { canStop, getUnit, inWeaponRange, isFreeCell, nearestFreeCell, pathTo, reachable, terrainAt } from './grid';
 import { healUnit, useItem } from './items';
 import { useSkill } from './skills';
 import { expireStatuses, isStunned, statusDef } from './status';
@@ -35,6 +36,7 @@ export function readyUnits(state: BattleState): BattleUnit[] {
 /** Ajoute à la fin des événements d'une commande les serments brisés et l'XP gagnée (jalon M6). */
 function withXp(state: BattleState, rules: BattleRules, events: BattleEvent[]): BattleEvent[] {
   events.push(...trackOaths(state, events));
+  tallyEvents(state, events);
   events.push(...grantXp(state, rules, events));
   return events;
 }
@@ -61,7 +63,9 @@ export function moveUnit(state: BattleState, unitId: string, to: Cell): BattleEv
   unit.y = to.y;
   unit.moved = true;
   if (canto) finishUnit(state, unit);
-  return path.length > 1 ? [{ type: 'move', unitId, path }] : [];
+  const events: BattleEvent[] = path.length > 1 ? [{ type: 'move', unitId, path }] : [];
+  tallyEvents(state, events);
+  return events;
 }
 
 /** Annule le déplacement de ce tour (avant toute action). */
@@ -92,6 +96,15 @@ export function attackUnit(state: BattleState, attackerId: string, defenderId: s
 
   const strikes = resolveExchange(state, attacker, defender, rules);
   const events: BattleEvent[] = [{ type: 'combat', attackerId, defenderId, strikes }];
+  // Sentinelle des Abysses : repousse d'une case la cible touchée.
+  if (attacker.evolution === 'sentinelle_des_abysses' && defender.hp > 0 && attacker.hp > 0 && strikes.some((s) => s.attackerId === attacker.id && s.hit)) {
+    const to = { x: defender.x + Math.sign(defender.x - attacker.x), y: defender.y + Math.sign(defender.y - attacker.y) };
+    if (isFreeCell(state, to.x, to.y)) {
+      events.push({ type: 'move', unitId: defender.id, path: [{ x: defender.x, y: defender.y }, to] });
+      defender.x = to.x;
+      defender.y = to.y;
+    }
+  }
   for (const unit of [defender, attacker]) if (unit.hp <= 0) events.push({ type: 'ko', unitId: unit.id });
   finishUnit(state, attacker);
   events.push(...afterAction(state, rules));
@@ -213,15 +226,26 @@ function phaseTraits(state: BattleState, team: Team): BattleEvent[] {
       if (amount > 0) events.push({ type: 'heal', unitId: u.id, amount });
     }
   }
+  // Sylvarque : les alliés en forêt regagnent des PV au début de sa phase.
+  for (const keeper of living) {
+    if (keeper.team !== team || keeper.evolution !== 'sylvarque') continue;
+    for (const u of living) {
+      if (hostile(u.team, keeper.team) || u.hp <= 0 || !terrainAt(state.map, u.x, u.y).tags.includes('hauteur') || terrainAt(state.map, u.x, u.y).id !== 'foret') continue;
+      const amount = mend(u, EVO.sylvanHeal);
+      if (amount > 0) events.push({ type: 'heal', unitId: u.id, amount });
+    }
+  }
   for (const overlay of state.overlays) {
     if (overlay.team !== team || !overlay.sourceId) continue;
     const source = state.units.find((u) => u.id === overlay.sourceId);
-    if (!source || source.hp <= 0 || source.passive !== 'epines') continue;
+    // Épines (passive) : 3 dégâts ; Tisseur de Ronces (évolution) : 5.
+    const thorns = !source || source.hp <= 0 ? 0 : Math.max(source.passive === 'epines' ? PASSIVE.thornsDamage : 0, source.evolution === 'tisseur_de_ronces' ? EVO.tisseurThorns : 0);
+    if (!source || thorns === 0) continue;
     const ox = overlay.index % state.map.width;
     const oy = Math.floor(overlay.index / state.map.width);
     for (const u of state.units) {
       if (u.hp <= 0 || !hostile(u.team, source.team) || Math.abs(u.x - ox) + Math.abs(u.y - oy) !== 1) continue;
-      const dealt = hurt(u, PASSIVE.thornsDamage);
+      const dealt = hurt(u, thorns);
       events.push({ type: 'thorns', unitId: u.id, sourceId: source.id, damage: dealt, hp: u.hp });
       if (u.hp <= 0) events.push({ type: 'ko', unitId: u.id });
     }

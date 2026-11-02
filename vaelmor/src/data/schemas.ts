@@ -357,6 +357,17 @@ export const zonesFileSchema = z.strictObject({
 /* ---------- Classes ---------- */
 
 /** Les 12 rôles exigés par le GDD (§10.2) : chacun doit être couvert. */
+/** Condition d'évolution (jalon M6, décision n°141). */
+export const evolutionConditionSchema = z.discriminatedUnion('kind', [
+  /** Compteur gardé sur le membre (serments tenus, boss vaincus, PV soignés…). */
+  z.strictObject({ kind: z.literal('counter'), id: z.string().min(1), min: z.number().int().positive() }),
+  z.strictObject({ kind: z.literal('quest'), id: idSchema }),
+  /** Palier de réputation d'un lieu ou d'une faction. */
+  z.strictObject({ kind: z.literal('rep'), target: idSchema, tier: idSchema }),
+  /** Lieux découverts (au moins `min` d'entre eux). */
+  z.strictObject({ kind: z.literal('visit'), locations: z.array(idSchema).min(1), min: z.number().int().positive() }),
+]);
+
 export const CLASS_ROLES = [
   'tank',
   'degats_melee',
@@ -438,7 +449,16 @@ export const classSchema = z.strictObject({
       z.strictObject({
         id: idSchema,
         name: z.string().min(1),
+        /** Condition de branche, telle qu'affichée au joueur. */
         condition: z.string().min(1),
+        /** Trait de la classe avancée (jalon M6). */
+        description: z.string().min(1),
+        /** Stats gagnées en évoluant (GDD §10.1 : +3 à +5 réparties ; la Mob peut changer). */
+        bonus: z.partialRecord(z.enum(STAT_KEYS), z.number().int()),
+        /** Croissances en plus de celles de la classe de base. */
+        growthBonus: z.partialRecord(z.enum(GROWTH_KEYS), z.number().int()),
+        /** Alternatives : l'une des listes doit être entièrement remplie. */
+        requires: z.array(z.array(evolutionConditionSchema).min(1)).min(1),
       }),
     )
     .length(2, 'chaque classe doit avoir exactement 2 évolutions'),
@@ -793,6 +813,7 @@ export type ReputationConfig = z.infer<typeof reputationFileSchema>;
 export type BalanceConfig = z.infer<typeof balanceFileSchema>;
 export type ClassDef = z.infer<typeof classSchema>;
 export type ClassRole = (typeof CLASS_ROLES)[number];
+export type EvolutionCondition = z.infer<typeof evolutionConditionSchema>;
 export type StatKey = (typeof STAT_KEYS)[number];
 export type StatBlock = z.infer<typeof statBlock>;
 export type GrowthBlock = z.infer<typeof growthBlock>;

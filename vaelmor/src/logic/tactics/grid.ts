@@ -78,8 +78,10 @@ export function mobility(unit: BattleUnit): number {
 export function stepCost(unit: BattleUnit, terrain: TerrainDef): number | null {
   const w = unit.waterThread;
   if (w) {
-    if (terrain.tags.includes('enlise') || (terrain.tags.includes('eau') && terrain.moveCost !== null)) return w.shallow;
-    if (terrain.tags.includes('eau')) return w.deep;
+    // Fil-de-Vent : toute case franchissable coûte 1, l'eau comprise.
+    if (w.flat && terrain.moveCost !== null) return 1;
+    if (w.shallow !== null && (terrain.tags.includes('enlise') || (terrain.tags.includes('eau') && terrain.moveCost !== null))) return w.shallow;
+    if (terrain.tags.includes('eau') && terrain.moveCost === null) return w.deep;
   }
   return terrain.moveCost;
 }

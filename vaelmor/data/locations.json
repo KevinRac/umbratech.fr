@@ -2003,7 +2003,8 @@
             {"item":"dagues_jumelles"},
             {"item":"collier_d_ecume","minTier":"amical"},
             {"item":"bague_de_cendre","minTier":"amical"},
-            {"item":"eclat_de_lanterne","minTier":"allie"}
+            {"item":"eclat_de_lanterne","minTier":"allie"},
+            {"item":"sceau_de_maitrise","price":1500,"limit":2}
           ]
         }
       ],

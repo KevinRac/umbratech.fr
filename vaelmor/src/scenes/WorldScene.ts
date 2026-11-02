@@ -720,7 +720,7 @@ export class WorldScene extends Phaser.Scene {
     if (near && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startDialogue(near);
     else if (wanderer && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startWandererDialogue(wanderer);
     else if (surprise && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.engageFoe(surprise, { initiative: true });
-    if (time > this.modalCooldownUntil && this.actions.justPressed('menu')) this.openMenu('inventaire');
+    if (time > this.modalCooldownUntil && this.actions.justPressed('menu')) this.openMenu('compagnie');
     else if (time > this.modalCooldownUntil && this.actions.justPressed('journal')) this.openMenu('quetes');
   }
 

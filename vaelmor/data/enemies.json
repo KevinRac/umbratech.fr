@@ -331,6 +331,19 @@
       "ai": "defensif",
       "baseStats": {"pv": 20, "fo": 5, "mag": 0, "dex": 3, "vit": 2, "def": 8, "res": 2, "chc": 0, "mob": 3},
       "growths": {"pv": 0, "fo": 0, "mag": 0, "dex": 0, "vit": 0, "def": 0, "res": 0, "chc": 0}
+    },
+    {
+      "id": "menhir_tour",
+      "name": "Menhir-tour",
+      "title": "Invocation",
+      "family": "invocation",
+      "sprite": "golem_de_cendre",
+      "weapon": "eclat_de_menhir",
+      "element": "pierre",
+      "armor": "lourde",
+      "ai": "defensif",
+      "baseStats": {"pv": 16, "fo": 5, "mag": 0, "dex": 6, "vit": 0, "def": 6, "res": 4, "chc": 0, "mob": 1},
+      "growths": {"pv": 0, "fo": 0, "mag": 0, "dex": 0, "vit": 0, "def": 0, "res": 0, "chc": 0}
     }
   ]
 }

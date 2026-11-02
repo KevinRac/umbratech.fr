@@ -12,7 +12,7 @@
  */
 import type { SkillDef, SkillEffect } from '../../data/schemas';
 import { forecast, resolveExchange, type Forecast, type StrikeMods } from '../combat/combat';
-import { healBonus, LINEAGE, oathHolds, PASSIVE, resonanceCost } from '../progression/traits';
+import { EVO, healBonus, LINEAGE, oathHolds, PASSIVE, resonanceCost } from '../progression/traits';
 import { BattleError, assertCanAction, finishUnit, hurt, mend } from './battleCore';
 import { cellIndex, distance, getUnit, inBounds, isFreeCell, terrainAt, unitAt } from './grid';
 import { applyStatus, cleanse, damageTakenOf, guardOf, nextPhaseTurn } from './status';
@@ -51,8 +51,22 @@ export function costLabel(skill: SkillDef, resourceName?: string, resonance?: nu
 
 const firstEffect = (skill: SkillDef): SkillEffect => skill.effects[0] as SkillEffect;
 
+/**
+ * Zone d'une compétence pour ce lanceur (évolutions, n°144) : Nuée de braises
+ * en 5×5 pour le Maître de Braise, Halo et Fiole du Gel en 3×3 pour
+ * l'Archi-Lanterne et le Grand Alchimiste du Gel.
+ */
+export function areaOf(caster: { readonly evolution?: string | null }, skill: SkillDef): SkillDef['area'] {
+  const evo = caster.evolution ?? null;
+  if (evo === 'maitre_de_braise' && skill.owner === 'heritier_des_cendres' && skill.area) return { ...skill.area, size: skill.area.size + 1 };
+  if ((evo === 'archi_lanterne' && skill.owner === 'porte_lanterne') || (evo === 'grand_alchimiste_du_gel' && skill.owner === 'alchimiste_des_saisons')) return { shape: 'carre', size: 1 };
+  return skill.area;
+}
+
 /** Qui une compétence touche dans sa zone. */
-export function skillAffects(skill: SkillDef): 'ennemis' | 'allies' | 'tous' {
+export function skillAffects(skill: SkillDef, caster: { readonly evolution?: string | null } | null = null): 'ennemis' | 'allies' | 'tous' {
+  // Maître de Braise : la Nuée épargne les alliés.
+  if (caster?.evolution === 'maitre_de_braise' && skill.owner === 'heritier_des_cendres') return 'ennemis';
   if (skill.affects) return skill.affects;
   if (skill.target === 'ennemi') return 'ennemis';
   if (skill.target === 'allie' || skill.target === 'soi') return 'allies';
@@ -60,13 +74,13 @@ export function skillAffects(skill: SkillDef): 'ennemis' | 'allies' | 'tous' {
 }
 
 /** Cases touchées par la compétence visant `target` depuis la case de l'unité. */
-export function skillArea(state: BattleState, unit: Cell & { readonly passive?: string | null }, skill: SkillDef, target: Cell): Cell[] {
+export function skillArea(state: BattleState, unit: Cell & { readonly passive?: string | null; readonly evolution?: string | null }, skill: SkillDef, target: Cell): Cell[] {
   const { map } = state;
   const out: Cell[] = [];
   const add = (x: number, y: number): void => {
     if (inBounds(map, x, y)) out.push({ x, y });
   };
-  const area = skill.area;
+  const area = areaOf(unit, skill);
   if (!area) {
     add(target.x, target.y);
     return out;
@@ -88,7 +102,7 @@ export function skillArea(state: BattleState, unit: Cell & { readonly passive?: 
 
 /** Unités vivantes touchées dans la zone, selon `affects`. */
 export function unitsInArea(state: BattleState, caster: BattleUnit, skill: SkillDef, cells: readonly Cell[]): BattleUnit[] {
-  const affects = skillAffects(skill);
+  const affects = skillAffects(skill, caster);
   const out: BattleUnit[] = [];
   for (const c of cells) {
     const u = unitAt(state, c.x, c.y);
@@ -244,6 +258,7 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
         if (!defender) break;
         const strikes = resolveExchange(state, caster, defender, rules, frappeMods(state, caster, skill, effect));
         events.push({ type: 'combat', attackerId: caster.id, defenderId: defender.id, strikes, skillId: skill.id });
+        events.push(...evolutionStrikeEffects(state, caster, defender, skill, strikes.some((x) => x.attackerId === caster.id && x.hit), rules, ko));
         for (const u of [defender, caster]) if (u.hp <= 0) ko.push(u.id);
         const landed = strikes.some((s) => s.attackerId === caster.id && s.hit);
         if (effect.status && landed && defender.hp > 0) {
@@ -280,16 +295,28 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
           results.push(ok ? { unitId: u.id, status: effect.id, hp: u.hp } : { unitId: u.id, immune: effect.id, hp: u.hp });
           if (ok && u.team !== caster.team && hostile(u.team, caster.team)) u.alerted = true;
         }
+        // Maréchal de Cendre : une fois par combat, l'Appel rend leur action aux alliés touchés.
+        if (caster.evolution === 'marechal_de_cendre' && skill.owner === 'heraut_des_bannieres' && !caster.tally['rally']) {
+          caster.tally['rally'] = 1;
+          for (const u of touched) {
+            if (u === caster || hostile(u.team, caster.team) || !u.acted) continue;
+            u.acted = false;
+            u.moved = false;
+          }
+        }
         break;
       case 'invocation': {
-        const def = rules.enemies.get(effect.enemy);
+        // Chuchoteur de Menhirs : un menhir-tour qui tire à 2 cases au lieu du golem.
+        const def = rules.enemies.get(caster.evolution === 'chuchoteur_de_menhirs' ? 'menhir_tour' : effect.enemy);
         if (!def || !isFreeCell(state, target.x, target.y)) break;
         const summon = enemyUnit(rules.data, rules, { enemy: def.id, level: caster.level }, `s${state.nextId++}`, target.x, target.y, caster.team);
         summon.summonUntil = nextPhaseTurn(state, caster.team) + effect.turns;
         summon.ownerId = caster.id;
-        if (caster.passive === 'golem_ancien') {
-          // Golem ancien (n°93) : +5 PV, +2 Fo.
-          summon.base = { ...summon.base, pv: summon.base.pv + PASSIVE.ancientGolemHp, fo: summon.base.fo + PASSIVE.ancientGolemFo };
+        // Golem ancien (n°93) : +5 PV, +2 Fo ; Éveilleur de Colosse : +15 PV, +3 Fo.
+        const extraHp = (caster.passive === 'golem_ancien' ? PASSIVE.ancientGolemHp : 0) + (caster.evolution === 'eveilleur_de_colosse' ? EVO.colossusHp : 0);
+        const extraFo = (caster.passive === 'golem_ancien' ? PASSIVE.ancientGolemFo : 0) + (caster.evolution === 'eveilleur_de_colosse' ? EVO.colossusFo : 0);
+        if (extraHp > 0 || extraFo > 0) {
+          summon.base = { ...summon.base, pv: summon.base.pv + extraHp, fo: summon.base.fo + extraFo };
           summon.stats = { ...summon.base };
           summon.hp = summon.base.pv;
         }
@@ -301,7 +328,8 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
         break;
       }
       case 'terrain': {
-        const terrain = rules.terrains.get(effect.terrain);
+        // Sylvarque : le mur devient un bosquet (forêt), où ses alliés se soignent.
+        const terrain = rules.terrains.get(caster.evolution === 'sylvarque' ? 'foret' : effect.terrain);
         if (!terrain) break;
         const placed = terrainCells(state, caster, skill, target);
         for (const c of placed) {
@@ -318,6 +346,45 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
   }
   if (results.length > 0) events.push({ type: 'effects', sourceId: caster.id, element: skill.element, results });
   for (const id of ko) if (!events.some((e) => e.type === 'ko' && e.unitId === id)) events.push({ type: 'ko', unitId: id });
+  return events;
+}
+
+/**
+ * Effets d'évolution d'une frappe de compétence (n°144) : Harponneur Abyssal
+ * (attire la cible de 2 cases), Artificier Sapeur (Perce-armure blesse les
+ * ennemis collés à la cible).
+ */
+function evolutionStrikeEffects(state: BattleState, caster: BattleUnit, defender: BattleUnit, skill: SkillDef, landed: boolean, rules: BattleRules, ko: string[]): BattleEvent[] {
+  const events: BattleEvent[] = [];
+  if (!landed || caster.hp <= 0) return events;
+  if (caster.evolution === 'harponneur_abyssal' && skill.owner === 'chasseur_de_serpents_de_mer' && defender.hp > 0) {
+    const path = [{ x: defender.x, y: defender.y }];
+    for (let i = 0; i < EVO.harpoonPull; i++) {
+      const cur = path[path.length - 1] as Cell;
+      const dx = Math.sign(caster.x - cur.x);
+      const dy = dx !== 0 ? 0 : Math.sign(caster.y - cur.y);
+      const next = { x: cur.x + dx, y: cur.y + dy };
+      if ((next.x === caster.x && next.y === caster.y) || !isFreeCell(state, next.x, next.y)) break;
+      path.push(next);
+    }
+    if (path.length > 1) {
+      const end = path[path.length - 1] as Cell;
+      defender.x = end.x;
+      defender.y = end.y;
+      events.push({ type: 'move', unitId: defender.id, path });
+    }
+  }
+  if (caster.evolution === 'artificier_sapeur' && skill.owner === 'ingenieur_des_ruines') {
+    const results: EffectResult[] = [];
+    for (const u of state.units) {
+      if (u === defender || u.hp <= 0 || !hostile(u.team, caster.team) || Math.abs(u.x - defender.x) + Math.abs(u.y - defender.y) !== 1) continue;
+      const dealt = hurt(u, EVO.sapperBlast);
+      results.push({ unitId: u.id, damage: dealt, hp: u.hp });
+      if (u.hp <= 0) ko.push(u.id);
+    }
+    if (results.length > 0) events.push({ type: 'effects', sourceId: caster.id, element: 'pierre', results });
+  }
+  void rules;
   return events;
 }
 
