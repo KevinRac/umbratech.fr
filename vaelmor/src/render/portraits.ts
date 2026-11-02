@@ -40,7 +40,7 @@ function ensureVariantPortrait(scene: Phaser.Scene, id: string): void {
     ctx.drawImage(source, 0, 0);
     const image = ctx.getImageData(0, 0, source.width, source.height);
     const cols = Math.floor(source.width / PORTRAIT_SIZE);
-    for (let f = 0; f < frames; f++) paintDetails(image, (f % cols) * PORTRAIT_SIZE, Math.floor(f / cols) * PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE, variant, true);
+    for (let f = 0; f < frames; f++) paintDetails(image, (f % cols) * PORTRAIT_SIZE, Math.floor(f / cols) * PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE, variant, true, base);
     ctx.putImageData(image, 0, 0);
     canvas.refresh();
     if (frames > 1) for (let f = 0; f < frames; f++) canvas.add(f, 0, (f % cols) * PORTRAIT_SIZE, Math.floor(f / cols) * PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE);

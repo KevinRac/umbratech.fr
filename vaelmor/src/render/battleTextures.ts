@@ -131,7 +131,7 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
       const ctx = canvas.getContext();
       for (let row = 0; row < SKIN_ROWS.length; row++) ctx.drawImage(source, 0, row * BATTLE_CELL, source.width, BATTLE_CELL, 0, row * cellH + pad, source.width, BATTLE_CELL);
       const image = ctx.getImageData(0, 0, source.width, SKIN_ROWS.length * cellH);
-      for (let row = 0; row < SKIN_ROWS.length; row++) for (let col = 0; col < def.frames; col++) paintDetails(image, col * BATTLE_CELL, row * cellH, BATTLE_CELL, cellH, variant, false);
+      for (let row = 0; row < SKIN_ROWS.length; row++) for (let col = 0; col < def.frames; col++) paintDetails(image, col * BATTLE_CELL, row * cellH, BATTLE_CELL, cellH, variant, false, base);
       ctx.putImageData(image, 0, 0);
       canvas.refresh();
     }
