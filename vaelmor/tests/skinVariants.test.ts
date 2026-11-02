@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseSprite, skinVariant, variantSprite } from '../src/logic/skinFrames';
+import { memberSprite, parseSprite, skinVariant, variantSprite } from '../src/logic/skinFrames';
+import { SKIN_ALTS } from '../src/data/skins';
 import { CLASS_DETAILS, detailsFor, paintDetails } from '../src/render/skinDetails';
 import { SKINS } from '../src/data/skins';
 
@@ -33,7 +34,8 @@ describe('détails des recrues', () => {
     }
   });
   it('les 12 classes ont au moins 3 détails', () => {
-    for (const s of SKINS) if (s.id !== 'heros') expect((CLASS_DETAILS[s.id] ?? []).length, s.id).toBeGreaterThanOrEqual(3);
+    const alts = new Set(Object.values(SKIN_ALTS).flat());
+    for (const s of SKINS) if (s.id !== 'heros' && !alts.has(s.id)) expect((CLASS_DETAILS[s.id] ?? []).length, s.id).toBeGreaterThanOrEqual(3);
   });
   it('peint quelque chose sur une silhouette, rien sans variante', () => {
     const make = (): { width: number; height: number; data: Uint8ClampedArray } => {
@@ -51,5 +53,12 @@ describe('détails des recrues', () => {
     const ref = n.data.slice();
     paintDetails(n, 0, 0, 30, 30, 0, false);
     expect(n.data).toEqual(ref);
+  });
+  it('le 2e Veilleur est un autre personnage ; les suivants, le skin de la classe avec un détail', () => {
+    expect(memberSprite('veilleur_des_falaises', 0)).toBe('veilleur_des_falaises');
+    expect(memberSprite('veilleur_des_falaises', 1)).toBe('veilleur_des_falaises_v1');
+    expect(memberSprite('veilleur_des_falaises', 2)).toBe('veilleur_des_falaises#1');
+    expect(memberSprite('gardien_des_marees', 1)).toBe('gardien_des_marees#1');
+    for (const alts of Object.values(SKIN_ALTS)) for (const id of alts) expect(SKINS.some((s) => s.id === id), id).toBe(true);
   });
 });

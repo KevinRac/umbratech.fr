@@ -1,5 +1,5 @@
 /** Indices d'images dans une feuille d'apparence (rangées sud/nord/est, `frames` colonnes). Logique pure. */
-import { SKIN_ROWS, type SkinPose } from '../data/skins';
+import { SKIN_ALTS, SKIN_ROWS, type SkinPose } from '../data/skins';
 
 /** Index de l'image `frame` (modulo le nombre d'images) pour une pose. */
 export function skinFrameIndex(pose: SkinPose, frame: number, frames: number): number {
@@ -40,4 +40,16 @@ export function parseSprite(sprite: string): { base: string; variant: number } {
   if (i < 0) return { base: sprite, variant: 0 };
   const v = Number(sprite.slice(i + 1));
   return { base: sprite.slice(0, i), variant: Number.isInteger(v) && v > 0 ? v : 0 };
+}
+
+/**
+ * Sprite d'un membre de classe `base` pour son rang parmi les membres de cette classe (`skinVariant`) :
+ * 0 = skin de la classe ; puis les autres personnages générés (`SKIN_ALTS`) ; puis le skin de la classe
+ * avec un détail peint, en recommençant au premier détail.
+ */
+export function memberSprite(base: string, variant: number): string {
+  if (variant <= 0) return base;
+  const alts = SKIN_ALTS[base] ?? [];
+  if (variant <= alts.length) return alts[variant - 1] as string;
+  return variantSprite(base, variant - alts.length);
 }

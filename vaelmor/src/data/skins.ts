@@ -29,7 +29,18 @@ export const SKINS: readonly SkinDef[] = [
   { id: 'faconneur_de_racines', frames: 8 },
   { id: 'ingenieur_des_ruines', frames: 8 },
   { id: 'chasseur_de_serpents_de_mer', frames: 8 },
+  // Variantes générées (même classe, autre personnage) : voir SKIN_ALTS.
+  { id: 'veilleur_des_falaises_v1', frames: 8 },
 ];
+
+/**
+ * Autres personnages d'une classe (générés avec Pixellab : même métier, autre visage) : le 2e membre de la
+ * classe prend le premier, le 3e le deuxième… Au-delà, les recrues gardent le skin de la classe avec un
+ * détail peint (`render/skinDetails.ts`). Chaque id doit être dans SKINS, avec son portrait et ses expressions.
+ */
+export const SKIN_ALTS: Readonly<Record<string, readonly string[]>> = {
+  veilleur_des_falaises: ['veilleur_des_falaises_v1'],
+};
 
 /** Durée d'une image de marche, en ms (réglage du dessin d'origine). */
 export const SKIN_FRAME_MS = 170;
@@ -52,7 +63,7 @@ export const SKIN_POSES: Readonly<Record<string, readonly string[]>> = {
  * Elle est ajoutée à l'adresse des fichiers (`?v=`) pour que le navigateur ne garde pas une ancienne
  * feuille avec un nouveau code (cellules décalées, unité invisible).
  */
-export const SKIN_REV = 6;
+export const SKIN_REV = 7;
 
 /**
  * Expressions des portraits (générées avec Pixellab, `vocal-animation`, 3 positions de bouche) :

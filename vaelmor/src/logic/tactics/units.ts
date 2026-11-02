@@ -5,7 +5,7 @@
  *
  * Module pur : les définitions viennent des données validées.
  */
-import { variantSprite } from '../skinFrames';
+import { memberSprite } from '../skinFrames';
 import type { AllyTemplateDef } from '../../data/allySchemas';
 import type { BossDef, ClassDef, EnemyDef, PartyMemberDef, StatBlock, WeaponDef } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
@@ -81,7 +81,7 @@ export function memberUnit(data: GameData, rules: BattleRules, member: PartyMemb
     team: 'player',
     kindId: cls.id,
     kindName: cls.name,
-    sprite: member.hero ? 'heros' : variantSprite(cls.id, variant),
+    sprite: member.hero ? 'heros' : memberSprite(cls.id, variant),
     level: member.level,
     base,
     stats: base,
