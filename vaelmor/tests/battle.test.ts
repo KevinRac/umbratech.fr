@@ -7,7 +7,7 @@ import { battleRules, buildBattle, findEncounter } from '../src/logic/tactics/en
 import { cellIndex, distance, mobility, pathTo, reachable, threatCells } from '../src/logic/tactics/grid';
 import type { BattleState } from '../src/logic/tactics/types';
 import { statsAtLevel } from '../src/logic/units/stats';
-import { makeBattle, plains, rules, unit } from './helpers/battle';
+import { makeBattle, plains, rules, unit, plainUnit } from './helpers/battle';
 import { testWorld } from './helpers/world';
 
 const R = rules();
@@ -106,7 +106,7 @@ describe('formules de combat (GDD §9.7)', () => {
   // Écumeur niv. 2 : PV 19, Fo 5, Dex 4, Vit 5, Déf 3, Chc 2 ; hachette (Pui 6, Préc 75).
   it('prévision sur plaine', () => {
     const s = makeBattle(plains(4, 1), [{ class: 'lame_du_serment', level: 3, at: [0, 0] }], [{ enemy: 'ecumeur_sabreur', level: 2, at: [1, 0] }]);
-    const f = forecast(s, unit(s, 'p0'), unit(s, 'e0'), R);
+    const f = forecast(s, plainUnit(unit(s, 'p0')), unit(s, 'e0'), R);
     expect(f.attacker).toMatchObject({ canStrike: true, doubles: false, odds: { damage: 10, hit: 97, crit: 2, triangle: 0, effective: false } });
     expect(f.defender).toMatchObject({ canStrike: true, doubles: false, odds: { damage: 6, hit: 66, crit: 0 } });
   });

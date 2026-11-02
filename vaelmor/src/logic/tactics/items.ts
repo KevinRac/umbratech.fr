@@ -9,6 +9,7 @@
  * Pas de durabilité (décision n°12) ; les objets consommés sont comptés dans
  * `state.itemsUsed` et retirés du sac à la fin du combat. Module pur.
  */
+import { healBonus, itemHeal } from '../progression/traits';
 import type { ConsumableDef } from '../../data/schemas';
 import { BattleError, assertCanAction, finishUnit, hurt, mend } from './battleCore';
 import { distance, getUnit } from './grid';
@@ -68,7 +69,7 @@ export function useItem(state: BattleState, unitId: string, item: string, target
     target.alerted = true;
     result = { ...result, damage: dealt, hp: target.hp };
   }
-  if (b.heal !== undefined) result = { ...result, heal: mend(target, b.heal), hp: target.hp };
+  if (b.heal !== undefined) result = { ...result, heal: mend(target, itemHeal(state, unit, b.heal, rules)), hp: target.hp };
   if (b.cleanse === true && cleanse(target, rules)) result = { ...result, cleansed: true };
   if (b.status && target.hp > 0) {
     const ok = applyStatus(state, target, b.status.id, b.status.turns, unit.id, rules);
@@ -82,7 +83,7 @@ export function useItem(state: BattleState, unitId: string, item: string, target
 
 /** PV rendus par « Soigner » (bâton de soin). */
 export function staffHealAmount(unit: BattleUnit): number {
-  return unit.weapon.heals === undefined ? 0 : unit.weapon.heals + Math.floor(unit.stats.mag / 2);
+  return unit.weapon.heals === undefined ? 0 : unit.weapon.heals + Math.floor(unit.stats.mag / 2) + healBonus(unit);
 }
 
 /** Alliés blessés à portée du bâton de soin. */

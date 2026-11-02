@@ -11,7 +11,7 @@ import { itemTargets, staffHealAmount } from '../src/logic/tactics/items';
 import { skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../src/logic/tactics/skills';
 import { applyStatus, hasStatus } from '../src/logic/tactics/status';
 import type { BattleEvent, BattleState } from '../src/logic/tactics/types';
-import { makeBattle, plains, rules, unit } from './helpers/battle';
+import { makeBattle, plainUnit, plains, rules, unit } from './helpers/battle';
 
 const R = rules();
 const data = loadGameData();
@@ -80,7 +80,7 @@ describe('les 12 compétences signature', () => {
 
   it('Estocade jurée : touche garantie, dégâts ×1,5', () => {
     const s = makeBattle(plains(3, 1), [{ class: 'lame_du_serment', at: [0, 0] }], [{ enemy: 'ecumeur_sabreur', at: [1, 0] }]);
-    const lame = unit(s, 'p0');
+    const lame = plainUnit(unit(s, 'p0'));
     const enemy = unit(s, 'e0');
     const plain = forecast(s, lame, enemy, R).attacker.odds;
     const f = skillForecast(s, lame, skillDef(R, 'estocade_juree'), enemy, R)?.attacker.odds;
@@ -99,7 +99,7 @@ describe('les 12 compétences signature', () => {
 
   it('Nuée de braises : zone 3×3, alliés compris, Brûlure de 3 par tour pendant 2 tours', () => {
     const s = makeBattle(plains(7, 5), [{ class: 'heritier_des_cendres', at: [0, 2], level: 5 }, { class: 'gardien_des_marees', at: [3, 1] }], [{ enemy: 'ecumeur_sabreur', at: [3, 2], level: 5 }, { enemy: 'ecumeur_sabreur', at: [4, 3], level: 5 }]);
-    const mage = unit(s, 'p0');
+    const mage = plainUnit(unit(s, 'p0'));
     mage.resonance = 60;
     expect(skillArea(s, mage, skillDef(R, 'nuee_de_braises'), { x: 3, y: 2 })).toHaveLength(9);
     // Portée [1, 3] : (3,2) est à 3 cases.

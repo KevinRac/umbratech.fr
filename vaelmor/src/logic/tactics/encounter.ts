@@ -221,5 +221,6 @@ export function buildBattle(base: EncounterDef, party: readonly MemberLike[], da
     overlays: [],
     itemsUsed: {},
     nextId,
+    mechanics: data.balance.classMechanics,
   };
 }

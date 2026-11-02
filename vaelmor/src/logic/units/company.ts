@@ -10,6 +10,7 @@
  */
 import type { StatBlock } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
+import type { OathKind } from '../progression/traits';
 import type { BattleUnit, GrowthKey } from '../tactics/types';
 import { statsAtLevel } from './stats';
 
@@ -32,6 +33,10 @@ export interface Member {
    * tombé ; il reste blessé jusqu'au repos suivant. Null : en forme.
    */
   woundedDay: number | null;
+  /** Passive choisie (n°93) ; null : la dernière apprise. */
+  passive: string | null;
+  /** Dernier serment choisi (Lame du Serment, n°123) ; null : « Protéger ». */
+  oath: OathKind | null;
 }
 
 /** Le membre est-il blessé ce jour-là ? */
@@ -51,7 +56,7 @@ export function createMember(data: GameData, seed: MemberSeed): Member {
   if (!cls) throw new Error(`Classe inconnue : « ${seed.class} »`);
   const levelCap = data.balance.levels.baseClassCap;
   const level = Math.max(1, Math.min(levelCap, seed.level));
-  return { id: seed.id, name: seed.name, class: cls.id, hero: seed.hero === true, level, xp: 0, stats: statsAtLevel(cls.baseStats, cls.growths, level), levelCap, woundedDay: null };
+  return { id: seed.id, name: seed.name, class: cls.id, hero: seed.hero === true, level, xp: 0, stats: statsAtLevel(cls.baseStats, cls.growths, level), levelCap, woundedDay: null, passive: null, oath: null };
 }
 
 /**

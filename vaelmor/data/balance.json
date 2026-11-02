@@ -1,5 +1,5 @@
 {
-  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). `prep` : écran de préparation (cases bleues en plus du déploiement maximal, objets portés par unité, sac du combat d'essai). `allies` : alliés verts (GDD §7.8 ; distances en cases). Toute valeur de réglage passe par ce fichier. `economy` : or de départ, capacité du sac (lignes, GDD §13.2 : 40) et pile maximale ; `dialogue` : machine à écrire (GDD §13.3 : 30 caractères par seconde). `visuals` : effets HD-2D du monde ouvert (décision n°47).",
+  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). `prep` : écran de préparation (cases bleues en plus du déploiement maximal, objets portés par unité, sac du combat d'essai). `allies` : alliés verts (GDD §7.8 ; distances en cases). Toute valeur de réglage passe par ce fichier. `economy` : or de départ, capacité du sac (lignes, GDD §13.2 : 40) et pile maximale ; `dialogue` : machine à écrire (GDD §13.3 : 30 caractères par seconde). `visuals` : effets HD-2D du monde ouvert (décision n°47). `classMechanics` : Serment, Hauteur, Saisons, Fil d’eau, Fanfare (jalon M6, n°123 à n°127).",
   "exploration": {
     "tileSize": 16,
     "walkSpeed": 80,
@@ -40,6 +40,13 @@
     "baseClassCap": 20,
     "advancedClassCap": 30,
     "promotionMinLevel": 10
+  },
+  "classMechanics": {
+    "oath": { "damageBonus": 0.1, "slayCount": 3, "estocadeKept": 1.5, "estocadeBroken": 1.2 },
+    "height": { "hit": 10 },
+    "seasons": { "winterGelCost": 40, "springHeal": 1.2, "summerDamage": 1.2, "autumnMob": 1 },
+    "waterThread": { "shallowCost": 1, "deepCost": 2 },
+    "fanfare": { "range": 2, "resonance": 5 }
   },
   "defeat": {
     "fallbackVillage": "haut_gue",

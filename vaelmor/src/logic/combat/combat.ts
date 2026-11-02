@@ -23,7 +23,14 @@
  * les dégâts reçus, Voile de brume ajoute de l'esquive. Une compétence de
  * frappe modifie le coup (`StrikeMods`) : touche garantie, dégâts ×, Déf
  * ignorée, bonus contre une armure, pas de riposte.
+ *
+ * Passives et mécaniques de classe (jalon M6, `progression/traits.ts`) : précision
+ * (Œil de faucon, Hauteur, Instinct de chasse), critique (Fil tranchant), dégâts
+ * (Lame d'honneur, Cendre ardente, Serment, Été, Mécanique précise), défense
+ * (Garde rapprochée), esquive (Étendard, Pas léger, Fil d'eau), portée (Tir
+ * couvert), Résonance (Fanfare, Contre-courant).
  */
+import { avoidBonus, critBonus, damageBonus, damageMultiplier, defenseBonus, dodgeResonance, fanfareBonus, hitBonus, rangeFrom } from '../progression/traits';
 import { distance, terrainAt } from '../tactics/grid';
 import { avoidBonusOf, damageTakenOf, guardOf } from '../tactics/status';
 import type { BattleRules, BattleState, BattleUnit, Cell, Strike } from '../tactics/types';
@@ -36,6 +43,8 @@ export interface StrikeMods {
   readonly bonusVs?: readonly string[];
   readonly bonusMult?: number;
   readonly noCounter?: boolean;
+  /** Frappe de compétence (Mécanique précise ne joue que sur les attaques normales). */
+  readonly skill?: boolean;
 }
 
 /** +1 avantage, −1 désavantage, 0 neutre. */
@@ -67,27 +76,32 @@ export interface StrikeOdds {
   readonly effective: boolean;
 }
 
-/** Chiffres d'un coup de `attacker` sur `target` posée sur la case `targetAt` (son terrain la protège). */
-export function strikeOdds(state: BattleState, attacker: BattleUnit, target: BattleUnit, targetAt: Cell, rules: BattleRules, mods: StrikeMods = {}): StrikeOdds {
+/**
+ * Chiffres d'un coup de `attacker` posé sur `attackerAt` sur `target` posée sur
+ * la case `targetAt` (son terrain la protège).
+ */
+export function strikeOdds(state: BattleState, attacker: BattleUnit, target: BattleUnit, targetAt: Cell, rules: BattleRules, mods: StrikeMods = {}, attackerAt: Cell = attacker): StrikeOdds {
   const c = rules.combat;
   const w = attacker.weapon;
   const terrain = terrainAt(state.map, targetAt.x, targetAt.y);
   const triangle = triangleEdge(w.element, target.element, rules);
   const physical = w.damage === 'physique';
-  const power = (physical ? attacker.stats.fo : attacker.stats.mag) + w.power + triangle * c.elementAdvantage.damage;
-  const reduction = physical ? Math.max(0, target.stats.def - (mods.ignoreDef ?? 0)) + terrain.defense : target.stats.res;
+  const power = (physical ? attacker.stats.fo : attacker.stats.mag) + w.power + triangle * c.elementAdvantage.damage + damageBonus(attacker, target, physical);
+  const reduction = physical ? Math.max(0, target.stats.def + defenseBonus(state, target, targetAt) - (mods.ignoreDef ?? 0)) + terrain.defense : target.stats.res;
   const effective = isEffective(attacker, target);
   let damage = Math.max(0, power - reduction);
   if (effective) damage = Math.floor(damage * c.effectiveMultiplier);
   if (mods.bonusVs?.includes(target.armor) && mods.bonusMult) damage = Math.floor(damage * mods.bonusMult);
   if (mods.damageMult) damage = Math.floor(damage * mods.damageMult);
+  const traitMult = damageMultiplier(state, attacker, target, mods.skill === true, rules);
+  if (traitMult !== 1) damage = Math.floor(damage * traitMult);
   if (physical) damage = Math.max(0, damage - guardOf(target, rules));
   damage = Math.floor(damage * damageTakenOf(target, rules));
 
-  const accuracy = w.hit + attacker.stats.dex * 2 + Math.floor(attacker.stats.chc / 2) + triangle * c.elementAdvantage.hit;
-  const avoid = target.stats.vit * 2 + Math.floor(target.stats.chc / 2) + terrain.avoid + avoidBonusOf(target, rules);
+  const accuracy = w.hit + attacker.stats.dex * 2 + Math.floor(attacker.stats.chc / 2) + triangle * c.elementAdvantage.hit + hitBonus(state, attacker, attackerAt, target, rules);
+  const avoid = target.stats.vit * 2 + Math.floor(target.stats.chc / 2) + terrain.avoid + avoidBonusOf(target, rules) + avoidBonus(state, target, targetAt);
   const hit = mods.sureHit ? 100 : clamp(accuracy - avoid, c.hitChanceMin, c.hitChanceMax);
-  const crit = clamp(w.crit + Math.floor(attacker.stats.dex / 2) - target.stats.chc, 0, 100);
+  const crit = clamp(w.crit + Math.floor(attacker.stats.dex / 2) + critBonus(attacker) - target.stats.chc, 0, 100);
   return { damage, hit, crit, triangle, effective };
 }
 
@@ -115,12 +129,13 @@ export interface Forecast {
 /** Prévision de l'échange si `attacker` frappe `defender` depuis la case `from` (sa case actuelle par défaut). */
 export function forecast(state: BattleState, attacker: BattleUnit, defender: BattleUnit, rules: BattleRules, from: Cell = attacker, mods: StrikeMods = {}): Forecast {
   const d = distance(from, defender);
-  const counter = mods.noCounter !== true && d >= defender.weapon.range[0] && d <= defender.weapon.range[1];
+  const [cmin, cmax] = rangeFrom(state.map, defender, defender);
+  const counter = mods.noCounter !== true && d >= cmin && d <= cmax;
   return {
     attacker: {
       unitId: attacker.id,
       canStrike: true,
-      odds: strikeOdds(state, attacker, defender, defender, rules, mods),
+      odds: strikeOdds(state, attacker, defender, defender, rules, mods, from),
       doubles: doubles(attacker, defender, rules),
       hp: attacker.hp,
       maxHp: attacker.stats.pv,
@@ -128,7 +143,7 @@ export function forecast(state: BattleState, attacker: BattleUnit, defender: Bat
     defender: {
       unitId: defender.id,
       canStrike: counter,
-      odds: strikeOdds(state, defender, attacker, from, rules),
+      odds: strikeOdds(state, defender, attacker, from, rules, {}, defender),
       doubles: counter && doubles(defender, attacker, rules),
       hp: defender.hp,
       maxHp: defender.stats.pv,
@@ -155,8 +170,9 @@ export function resolveExchange(state: BattleState, attacker: BattleUnit, defend
     const crit = hit && state.rng.chance(side.odds.crit);
     const damage = hit ? Math.min(target.hp, side.odds.damage * (crit ? rules.combat.critMultiplier : 1)) : 0;
     target.hp -= damage;
-    striker.resonance = Math.min(res.max, striker.resonance + res.perAttack);
+    striker.resonance = Math.min(res.max, striker.resonance + res.perAttack + fanfareBonus(state, striker, rules));
     if (hit) target.resonance = Math.min(res.max, target.resonance + res.perHitTaken);
+    else target.resonance = Math.min(res.max, target.resonance + dodgeResonance(target));
     strikes.push({ attackerId: striker.id, targetId: target.id, counter, hit, crit, damage, targetHp: target.hp });
     if (target.hp <= 0) break;
   }

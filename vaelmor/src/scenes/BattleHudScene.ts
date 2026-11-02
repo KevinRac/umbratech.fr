@@ -86,6 +86,8 @@ export interface LevelUpView {
   readonly className: string;
   readonly stats: Readonly<Record<GrowthKey, number>>;
   readonly gains: StatGains;
+  /** Passive apprise à ce niveau (5 et 15, n°93). */
+  readonly learned?: string | null;
 }
 
 export interface MenuRequest {
@@ -112,6 +114,10 @@ export interface UnitExtra {
   readonly statuses: readonly { readonly name: string; readonly color: number }[];
   /** Accessoire porté. */
   readonly accessory: string | null;
+  /** Passive équipée (n°93). */
+  readonly passive?: string | null;
+  /** Serment de la Lame (n°123) : nom et état. */
+  readonly oath?: { readonly text: string; readonly broken: boolean } | null;
 }
 
 /** Aperçu d'une compétence, d'un objet ou d'un soin avant de valider (fenêtre de prévision). */
@@ -287,10 +293,11 @@ export class BattleHudScene extends Phaser.Scene {
     });
   }
 
-  setPhase(team: Team, turn: number): void {
+  /** `season` : saison du tour quand un Alchimiste des Saisons combat (n°125). */
+  setPhase(team: Team, turn: number, season: string | null = null): void {
     this.run(() => {
       if (!this.phaseLabel) return;
-      setText(this.phaseLabel, `Tour ${turn} · ${PHASE_LABEL[team]}`);
+      setText(this.phaseLabel, `${season ? `${season} · ` : ''}Tour ${turn} · ${PHASE_LABEL[team]}`);
       this.phaseLabel.setTint(TEAM_COLOR[team]);
     });
   }
@@ -441,7 +448,9 @@ export class BattleHudScene extends Phaser.Scene {
   private extraLines(unit: BattleUnit, extra: UnitExtra): [string, number][] {
     const lines: [string, number][] = [];
     if (unit.xp !== null) lines.push([unit.level >= unit.levelCap ? `Niveau ${unit.level} · EXP MAX` : `Niveau ${unit.level} · EXP ${unit.xp}/100`, PALETTE.jauneBle]);
-    if (unit.wounded) lines.push(['Blessé : −10 % aux stats, −2 Mob (jusqu’au repos)', PALETTE.braise]);
+    if (unit.wounded) lines.push(['Blessé : -10 % aux stats, -2 Mob (jusqu’au repos)', PALETTE.braise]);
+    if (extra.passive) lines.push([`Passive : ${extra.passive}`, PALETTE.ocreClair]);
+    if (extra.oath) lines.push([extra.oath.text, extra.oath.broken ? PALETTE.braise : 0x7fcf6a]);
     if (extra.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}${extra.skill.blocker ? ` (${extra.skill.blocker})` : ''}`, extra.skill.blocker ? PALETTE.metalClair : PALETTE.lumiereDoree]);
     if (extra.resource) lines.push([extra.resource, PALETTE.ocreClair]);
     if (extra.accessory) lines.push([`Accessoire : ${extra.accessory}`, PALETTE.parchemin]);
@@ -1348,7 +1357,7 @@ export class BattleHudScene extends Phaser.Scene {
         const S = this.S;
         const { width, height } = this.scale;
         const w = 432 * S;
-        const h = 196 * S;
+        const h = (view.learned ? 218 : 196) * S;
         const x = Math.round((width - w) / 2);
         const y = Math.round((height - h) / 2);
         const c = this.add.container(0, 0).setDepth(DEPTH.line);
@@ -1392,6 +1401,11 @@ export class BattleHudScene extends Phaser.Scene {
             this.tweens.add({ targets: glint, alpha: 0, duration: 380, onComplete: () => glint.destroy() });
           });
         });
+        if (view.learned) {
+          const learned = addText(this, x + w / 2, y + h - 30 * S, `Nouvelle passive : ${view.learned}`, { scale: S, color: PALETTE.lumiereDoree, align: 'center' }).setAlpha(0);
+          c.add(learned);
+          reveals.push(() => learned.setAlpha(1));
+        }
         c.setAlpha(0);
         c.setScale(1);
         this.tweens.add({ targets: c, alpha: 1, duration: 140 });

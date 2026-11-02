@@ -12,6 +12,7 @@
  */
 import type { SkillDef, SkillEffect } from '../../data/schemas';
 import { forecast, resolveExchange, type Forecast, type StrikeMods } from '../combat/combat';
+import { healBonus, LINEAGE, oathHolds, PASSIVE, resonanceCost } from '../progression/traits';
 import { BattleError, assertCanAction, finishUnit, hurt, mend } from './battleCore';
 import { cellIndex, distance, getUnit, inBounds, isFreeCell, terrainAt, unitAt } from './grid';
 import { applyStatus, cleanse, damageTakenOf, guardOf, nextPhaseTurn } from './status';
@@ -24,18 +25,26 @@ export function skillDef(rules: BattleRules, id: string): SkillDef {
   return skill;
 }
 
+/** Résonance que coûte la compétence à cette unité, ce tour-ci (Fiole du Gel en hiver, n°125). */
+export function skillResonance(state: BattleState, unit: BattleUnit, skill: SkillDef): number | undefined {
+  const base = skill.cost.resonance;
+  if (base === undefined) return undefined;
+  return resonanceCost(state, unit, skill.owner, base);
+}
+
 /** Ce qui manque pour lancer la compétence (null : elle est prête). */
 export function skillBlocker(state: BattleState, unit: BattleUnit, skill: SkillDef): string | null {
   const cost = skill.cost;
-  if (cost.resonance !== undefined && unit.resonance < cost.resonance) return `Résonance ${unit.resonance}/${cost.resonance}`;
+  const resonance = skillResonance(state, unit, skill);
+  if (resonance !== undefined && unit.resonance < resonance) return `Résonance ${unit.resonance}/${resonance}`;
   if (cost.resource && (unit.resources[cost.resource.id] ?? 0) < cost.resource.amount) return 'Plus de réserve';
   if (cost.cooldown !== undefined && state.turn < (unit.cooldowns[skill.id] ?? 0)) return `Prête au tour ${unit.cooldowns[skill.id]}`;
   return null;
 }
 
-/** Libellé du coût (« 40 Rés. », « 1 Pierre »). */
-export function costLabel(skill: SkillDef, resourceName?: string): string {
-  if (skill.cost.resonance !== undefined) return `${skill.cost.resonance} Rés.`;
+/** Libellé du coût (« 40 Rés. », « 1 Pierre ») ; `resonance` : coût du moment s'il diffère (hiver). */
+export function costLabel(skill: SkillDef, resourceName?: string, resonance?: number): string {
+  if (skill.cost.resonance !== undefined) return `${resonance ?? skill.cost.resonance} Rés.`;
   if (skill.cost.resource) return `${skill.cost.resource.amount} ${resourceName ?? skill.cost.resource.id}`;
   return `${skill.cost.cooldown ?? 0} t.`;
 }
@@ -51,7 +60,7 @@ export function skillAffects(skill: SkillDef): 'ennemis' | 'allies' | 'tous' {
 }
 
 /** Cases touchées par la compétence visant `target` depuis la case de l'unité. */
-export function skillArea(state: BattleState, unit: Cell, skill: SkillDef, target: Cell): Cell[] {
+export function skillArea(state: BattleState, unit: Cell & { readonly passive?: string | null }, skill: SkillDef, target: Cell): Cell[] {
   const { map } = state;
   const out: Cell[] = [];
   const add = (x: number, y: number): void => {
@@ -62,7 +71,8 @@ export function skillArea(state: BattleState, unit: Cell, skill: SkillDef, targe
     add(target.x, target.y);
     return out;
   }
-  const r = area.size;
+  // Racines profondes (n°93) : le mur de ronces gagne une case.
+  const r = area.size + (unit.passive === 'racines_profondes' && skill.effects.some((e) => e.kind === 'terrain') ? 1 : 0);
   if (area.shape === 'carre') {
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) add(target.x + dx, target.y + dy);
   } else if (area.shape === 'losange') {
@@ -140,14 +150,26 @@ export function strikeModsOf(effect: SkillEffect): StrikeMods {
     ...(effect.bonusMult !== undefined ? { bonusMult: effect.bonusMult } : {}),
     // Frapper puis glisser : la cible n'a pas le temps de riposter.
     ...(effect.noCounter !== undefined || effect.canto !== undefined ? { noCounter: true } : {}),
+    skill: true,
   };
+}
+
+/**
+ * Frappe de compétence d'une unité : Estocade jurée vaut ×1,5 si le Serment
+ * tient, ×1,2 s'il est brisé (n°123).
+ */
+export function frappeMods(state: BattleState, caster: BattleUnit, skill: SkillDef, effect: SkillEffect): StrikeMods {
+  const mods = strikeModsOf(effect);
+  if (skill.owner !== LINEAGE.lame || caster.oath === null) return mods;
+  const o = state.mechanics.oath;
+  return { ...mods, damageMult: oathHolds(caster) ? o.estocadeKept : o.estocadeBroken };
 }
 
 /** Prévision d'une frappe de compétence (même fenêtre que l'attaque). */
 export function skillForecast(state: BattleState, caster: BattleUnit, skill: SkillDef, target: BattleUnit, rules: BattleRules): Forecast | null {
   const effect = skill.effects.find((e) => e.kind === 'frappe');
   if (!effect) return null;
-  return forecast(state, caster, target, rules, caster, strikeModsOf(effect));
+  return forecast(state, caster, target, rules, caster, frappeMods(state, caster, skill, effect));
 }
 
 /** Dégâts d'un effet « dégâts » (sans jet) sur une unité. */
@@ -162,8 +184,8 @@ export function directDamage(state: BattleState, caster: BattleUnit, target: Bat
 
 /** Soin d'un effet « soin » sur une unité. */
 export function healAmount(caster: BattleUnit, target: BattleUnit, effect: Extract<SkillEffect, { kind: 'soin' }>): number {
-  if (effect.ratio !== undefined) return Math.max(1, Math.floor(target.stats.pv * effect.ratio));
-  return (effect.amount ?? 0) + Math.floor(caster.stats.mag / 2);
+  if (effect.ratio !== undefined) return Math.max(1, Math.floor(target.stats.pv * effect.ratio)) + healBonus(caster);
+  return (effect.amount ?? 0) + Math.floor(caster.stats.mag / 2) + healBonus(caster);
 }
 
 /** Aperçu d'une compétence sur une case : qui est touché et comment (fenêtre de prévision). */
@@ -187,7 +209,7 @@ export function previewSkill(state: BattleState, caster: BattleUnit, skill: Skil
       } else if (effect.kind === 'soin') line = { ...line, heal: Math.min(u.stats.pv - u.hp, healAmount(caster, u, effect)) };
       else if (effect.kind === 'statut') line = { ...line, status: effect.id, immune: u.boss?.def.immune.includes(effect.id) === true };
       else if (effect.kind === 'frappe') {
-        const f = forecast(state, caster, u, rules, caster, strikeModsOf(effect));
+        const f = forecast(state, caster, u, rules, caster, frappeMods(state, caster, skill, effect));
         line = { ...line, damage: f.attacker.odds.damage * (f.attacker.doubles ? 2 : 1) };
         if (effect.status) line = { ...line, status: effect.status.id, immune: u.boss?.def.immune.includes(effect.status.id) === true };
       }
@@ -199,7 +221,8 @@ export function previewSkill(state: BattleState, caster: BattleUnit, skill: Skil
 
 function payCost(state: BattleState, unit: BattleUnit, skill: SkillDef): void {
   const cost = skill.cost;
-  if (cost.resonance !== undefined) unit.resonance -= cost.resonance;
+  const resonance = skillResonance(state, unit, skill);
+  if (resonance !== undefined) unit.resonance -= resonance;
   if (cost.resource) unit.resources[cost.resource.id] = (unit.resources[cost.resource.id] ?? 0) - cost.resource.amount;
   if (cost.cooldown !== undefined) unit.cooldowns[skill.id] = state.turn + cost.cooldown;
 }
@@ -219,7 +242,7 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
       case 'frappe': {
         const defender = unitAt(state, target.x, target.y);
         if (!defender) break;
-        const strikes = resolveExchange(state, caster, defender, rules, strikeModsOf(effect));
+        const strikes = resolveExchange(state, caster, defender, rules, frappeMods(state, caster, skill, effect));
         events.push({ type: 'combat', attackerId: caster.id, defenderId: defender.id, strikes, skillId: skill.id });
         for (const u of [defender, caster]) if (u.hp <= 0) ko.push(u.id);
         const landed = strikes.some((s) => s.attackerId === caster.id && s.hit);
@@ -264,6 +287,12 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
         const summon = enemyUnit(rules.data, rules, { enemy: def.id, level: caster.level }, `s${state.nextId++}`, target.x, target.y, caster.team);
         summon.summonUntil = nextPhaseTurn(state, caster.team) + effect.turns;
         summon.ownerId = caster.id;
+        if (caster.passive === 'golem_ancien') {
+          // Golem ancien (n°93) : +5 PV, +2 Fo.
+          summon.base = { ...summon.base, pv: summon.base.pv + PASSIVE.ancientGolemHp, fo: summon.base.fo + PASSIVE.ancientGolemFo };
+          summon.stats = { ...summon.base };
+          summon.hp = summon.base.pv;
+        }
         // Elle vient d'apparaître : elle agira à la prochaine phase de son camp.
         summon.acted = state.phase === caster.team;
         summon.moved = summon.acted;
@@ -277,7 +306,9 @@ export function castSkill(state: BattleState, caster: BattleUnit, skill: SkillDe
         const placed = terrainCells(state, caster, skill, target);
         for (const c of placed) {
           const index = cellIndex(state.map, c.x, c.y);
-          state.overlays.push({ index, original: state.map.terrains[index] as typeof terrain, team: caster.team, until: nextPhaseTurn(state, caster.team) + effect.turns });
+          // Racines profondes (n°93) : un tour de plus.
+          const turns = effect.turns + (caster.passive === 'racines_profondes' ? 1 : 0);
+          state.overlays.push({ index, original: state.map.terrains[index] as typeof terrain, team: caster.team, until: nextPhaseTurn(state, caster.team) + turns, sourceId: caster.id });
           state.map.terrains[index] = terrain;
         }
         if (placed.length > 0) events.push({ type: 'terrain', cells: placed, terrain: terrain.id, on: true });

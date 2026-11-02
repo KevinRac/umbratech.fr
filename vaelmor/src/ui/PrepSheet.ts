@@ -22,6 +22,10 @@ export interface SheetView {
   readonly weapon: { readonly name: string; readonly range: string; readonly canChange: boolean };
   readonly accessory: { readonly name: string; readonly canChange: boolean };
   readonly skill: string | null;
+  /** Passive équipée (n°93) : un clic passe à l'autre si les deux sont apprises. */
+  readonly passive: { readonly name: string; readonly description: string; readonly canChange: boolean } | null;
+  /** Serment de la Lame (n°123) : un clic passe au suivant. */
+  readonly oath: { readonly name: string; readonly rule: string } | null;
   /** Une entrée par case du sac (null : case vide). */
   readonly slots: readonly (string | null)[];
   /** Objets du sac que l'on peut donner. */
@@ -33,6 +37,8 @@ export interface SheetView {
 export interface SheetCallbacks {
   readonly onWeapon: () => void;
   readonly onAccessory: () => void;
+  readonly onPassive: () => void;
+  readonly onOath: () => void;
   readonly onTake: (slot: number) => void;
   readonly onGive: (bagIndex: number) => void;
   readonly onClose: () => void;
@@ -69,7 +75,7 @@ export class PrepSheet {
     const parts = this.parts;
     const D = SHEET_DEPTH;
     const w = 600 * S;
-    const h = 400 * S;
+    const h = 468 * S;
     const x = Math.round((width - w) / 2);
     const y = Math.round((height - h) / 2);
 
@@ -112,14 +118,26 @@ export class PrepSheet {
       text(x + 260 * S, sy + 18 * S, view.skill, PALETTE.lumiereDoree, { maxWidth: w - 270 * S });
     }
 
+    // Passive (n°93) et Serment (n°123) : un clic change.
+    const ty = y + 140 * S;
+    text(x + 10 * S, ty, 'Talents', PALETTE.cyanEclat);
+    if (view.passive) {
+      this.button(x + 10 * S, ty + 18 * S, 285 * S, 26 * S, `Passive : ${view.passive.name}${view.passive.canChange ? '  »' : ''}`, view.passive.canChange, cb.onPassive);
+      parts.push(addText(this.scene, x + 10 * S, ty + 48 * S, view.passive.description, { scale: S, color: PALETTE.parchemin, maxWidth: 285 * S }).setDepth(D + 3));
+    } else text(x + 10 * S, ty + 22 * S, 'Passive : apprise au niveau 5', PALETTE.desactive);
+    if (view.oath) {
+      this.button(x + 305 * S, ty + 18 * S, 285 * S, 26 * S, `Serment : ${view.oath.name}  »`, true, cb.onOath);
+      parts.push(addText(this.scene, x + 305 * S, ty + 48 * S, `Tenu si ${view.oath.rule}.`, { scale: S, color: PALETTE.parchemin, maxWidth: 285 * S }).setDepth(D + 3));
+    }
+
     // Équipement : un clic change.
-    const ey = y + 140 * S;
+    const ey = y + 224 * S;
     text(x + 10 * S, ey, 'Équipement', PALETTE.cyanEclat);
     this.button(x + 10 * S, ey + 18 * S, 285 * S, 26 * S, `Arme : ${view.weapon.name} (${view.weapon.range})`, view.weapon.canChange, cb.onWeapon);
     this.button(x + 305 * S, ey + 18 * S, 285 * S, 26 * S, `Accessoire : ${view.accessory.name}`, view.accessory.canChange, cb.onAccessory);
 
     // Le sac : les cases, puis le contenu du sac de la compagnie.
-    const by = y + 200 * S;
+    const by = y + 282 * S;
     text(x + 10 * S, by, 'Sac', PALETTE.cyanEclat);
     text(x + w - 10 * S, by, view.count, PALETTE.parchemin, { align: 'right' });
     const slotW = 108 * S;

@@ -11,6 +11,7 @@
  * phase du joueur suivante ; Gelé (1 tour) posé sur un ennemi lui fait perdre
  * sa prochaine phase.
  */
+import { passiveImmune, statusTurnBonus } from '../progression/traits';
 import type { StatBlock, StatusDef } from '../../data/schemas';
 import { PHASE_ORDER, type BattleRules, type BattleState, type BattleUnit, type Modifier, type Team } from './types';
 
@@ -56,8 +57,10 @@ export function isImmune(unit: BattleUnit, id: string): boolean {
  */
 export function applyStatus(state: BattleState, unit: BattleUnit, id: string, turns: number, sourceId: string, rules: BattleRules): boolean {
   statusDef(rules, id);
-  if (isImmune(unit, id)) return false;
-  const until = nextPhaseTurn(state, unit.team) + turns;
+  if (isImmune(unit, id) || passiveImmune(unit, id)) return false;
+  // Passives qui allongent un statut (Braises vives, Hymne, Prise ferme, Distillation, n°93).
+  const source = state.units.find((u) => u.id === sourceId) ?? null;
+  const until = nextPhaseTurn(state, unit.team) + turns + statusTurnBonus(source, unit, id);
   const existing = unit.mods.findIndex((m) => m.status === id);
   const mod: Modifier = { status: id, until, sourceId };
   if (existing >= 0) {

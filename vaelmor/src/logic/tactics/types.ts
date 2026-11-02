@@ -29,6 +29,7 @@ import type {
   WeaponDef,
 } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
+import type { OathState } from '../progression/traits';
 import type { Rng } from '../rng';
 
 export type Team = 'player' | 'ally' | 'enemy';
@@ -101,6 +102,16 @@ export interface BattleUnit {
   readonly gains: StatGains;
   /** Invocation : unité qui l'a appelée (l'XP du golem va à l'invocateur, décision n°128). */
   ownerId: string | null;
+  /** Lignée : classe de base (elle reste après une évolution) ; porte les mécaniques de classe (n°123 à n°127). */
+  readonly lineage: string;
+  /** Passive équipée (niveaux 5 et 15, décision n°93), ou null. */
+  readonly passive: string | null;
+  /** Serment de la Lame (n°123), ou null. */
+  readonly oath: OathState | null;
+  /** Fil d'eau (Danseur, n°126) : coût des gués et marais, et de l'eau profonde ; null pour les autres. */
+  readonly waterThread: { readonly shallow: number; readonly deep: number } | null;
+  /** Mobilité en plus pour la phase en cours (Automne, n°125). */
+  extraMob: number;
   /** Stats sans statut (accessoire et phase de boss compris). */
   base: StatBlock;
   /** Stats effectives (base + statuts), recalculées par `refreshStats`. */
@@ -179,6 +190,8 @@ export interface TerrainOverlay {
   readonly original: TerrainDef;
   readonly team: Team;
   readonly until: number;
+  /** Unité qui l'a posé (Épines, n°93). */
+  readonly sourceId?: string;
 }
 
 export interface BattleState {
@@ -212,6 +225,8 @@ export interface BattleState {
   readonly itemsUsed: Record<string, number>;
   /** Compteur des identifiants d'unités créées en cours de combat (renforts, invocations). */
   nextId: number;
+  /** Mécaniques de classe (balance.json › classMechanics, jalon M6). */
+  readonly mechanics: BalanceConfig['classMechanics'];
   /**
    * Hasard des montées de niveau (jalon M6) : séparé de `rng` pour qu'une
    * montée de niveau ne change pas les jets du combat. Créé à la demande.
@@ -301,6 +316,10 @@ export type BattleEvent =
   | { readonly type: 'terrain'; readonly cells: readonly Cell[]; readonly terrain: string; readonly on: boolean }
   /** Après « Pas de marée » : l'unité peut encore marcher. */
   | { readonly type: 'canto'; readonly unitId: string; readonly range: number }
+  /** Épines (passive, n°93) : dégâts des ronces aux ennemis collés, au début de la phase de leur poseur. */
+  | { readonly type: 'thorns'; readonly unitId: string; readonly sourceId: string; readonly damage: number; readonly hp: number }
+  /** Serment brisé (Lame du Serment, n°123). */
+  | { readonly type: 'oath'; readonly unitId: string; readonly broken: true }
   /**
    * XP gagnée (jalon M6) : `amount` = XP de l'action (multiplicateurs compris)
    * + `bonus` de victoire ; montées de niveau dans l'ordre.

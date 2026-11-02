@@ -1,5 +1,5 @@
 {
-  "$comment": "12 classes de départ et 24 évolutions (GDD §10). Stats de base = niveau 1 (§10.3) ; croissances en % (§10.4). startingWeapon : arme de départ (data/items.json), de même type, portée et nature de dégâts que `weapon`. Les bonus de promotion, croissances avancées et compétences seront ajoutés au jalon M6.",
+  "$comment": "12 classes de départ et 24 évolutions (GDD §10). Stats de base = niveau 1 (§10.3) ; croissances en % (§10.4). startingWeapon : arme de départ (data/items.json), de même type, portée et nature de dégâts que `weapon`. `passives` : compétences passives apprises aux niveaux 5 et 15 (décision n°93, jalon M6) ; une seule est équipée. Les bonus de promotion et croissances avancées arrivent avec les évolutions (M6, étape 4).",
   "classes": [
     {
       "id": "gardien_des_marees",
@@ -12,6 +12,10 @@
       "armor": "lourde",
       "baseStats": { "pv": 24, "fo": 6, "mag": 0, "dex": 4, "vit": 3, "def": 8, "res": 3, "chc": 3, "mob": 4 },
       "growths": { "pv": 90, "fo": 50, "mag": 5, "dex": 40, "vit": 25, "def": 65, "res": 30, "chc": 25 },
+      "passives": [
+        { "id": "garde_rapprochee", "name": "Garde rapprochée", "level": 5, "description": "+2 Déf quand un allié lui est adjacent." },
+        { "id": "inebranlable", "name": "Inébranlable", "level": 15, "description": "Immunisé contre Entravé ; +5 PV max." }
+      ],
       "evolutions": [
         { "id": "rempart_de_recif", "name": "Rempart de Récif", "condition": "Défendre un village (quête « Le phare éteint » ou embuscade vaincue avec ce Gardien à ≥ 50 % PV)." },
         { "id": "sentinelle_des_abysses", "name": "Sentinelle des Abysses", "condition": "Port-Brume ≥ Amical et Sœur Mérrow vaincue avec ce Gardien déployé." }
@@ -29,6 +33,10 @@
       "resource": { "id": "serment", "name": "Serment" },
       "baseStats": { "pv": 20, "fo": 7, "mag": 0, "dex": 7, "vit": 7, "def": 4, "res": 2, "chc": 4, "mob": 5 },
       "growths": { "pv": 80, "fo": 60, "mag": 0, "dex": 55, "vit": 55, "def": 30, "res": 20, "chc": 35 },
+      "passives": [
+        { "id": "fil_tranchant", "name": "Fil tranchant", "level": 5, "description": "+10 critique." },
+        { "id": "lame_d_honneur", "name": "Lame d’honneur", "level": 15, "description": "+3 dégâts contre un boss ou un ennemi de niveau supérieur." }
+      ],
       "evolutions": [
         { "id": "champion_du_serment", "name": "Champion du Serment", "condition": "Respecter le Serment pendant 5 combats." },
         { "id": "executeur_lige", "name": "Exécuteur Lige", "condition": "Tuer 3 ennemis d'affilée pendant un Serment brisé." }
@@ -45,6 +53,10 @@
       "armor": "legere",
       "baseStats": { "pv": 18, "fo": 5, "mag": 0, "dex": 9, "vit": 6, "def": 3, "res": 2, "chc": 5, "mob": 5 },
       "growths": { "pv": 70, "fo": 45, "mag": 0, "dex": 65, "vit": 50, "def": 25, "res": 20, "chc": 40 },
+      "passives": [
+        { "id": "oeil_de_faucon", "name": "Œil de faucon", "level": 5, "description": "+10 précision." },
+        { "id": "tir_couvert", "name": "Tir couvert", "level": 15, "description": "+1 portée depuis une forêt, une montagne ou des ruines." }
+      ],
       "evolutions": [
         { "id": "faucon_de_vent", "name": "Faucon de Vent", "condition": "20 ennemis vaincus à l'arc à distance ≥ 3." },
         { "id": "tireur_de_brume", "name": "Tireur de Brume", "condition": "Explorer la zone Z3 et vaincre un ennemi caché dans le brouillard." }
@@ -61,6 +73,10 @@
       "armor": "legere",
       "baseStats": { "pv": 16, "fo": 0, "mag": 8, "dex": 6, "vit": 5, "def": 2, "res": 6, "chc": 3, "mob": 5 },
       "growths": { "pv": 60, "fo": 0, "mag": 65, "dex": 45, "vit": 40, "def": 15, "res": 40, "chc": 30 },
+      "passives": [
+        { "id": "braises_vives", "name": "Braises vives", "level": 5, "description": "La Brûlure qu’il pose dure 1 tour de plus." },
+        { "id": "cendre_ardente", "name": "Cendre ardente", "level": 15, "description": "+2 dégâts magiques sous 50 % de PV." }
+      ],
       "evolutions": [
         { "id": "maitre_de_braise", "name": "Maître de Braise", "condition": "Brûler 15 ennemis." },
         { "id": "spectre_de_cendre", "name": "Spectre de Cendre", "condition": "Vaincre un boss avec cette unité sous 5 PV." }
@@ -77,6 +93,10 @@
       "armor": "legere",
       "baseStats": { "pv": 17, "fo": 0, "mag": 5, "dex": 5, "vit": 5, "def": 2, "res": 8, "chc": 6, "mob": 5 },
       "growths": { "pv": 65, "fo": 0, "mag": 55, "dex": 40, "vit": 40, "def": 15, "res": 60, "chc": 50 },
+      "passives": [
+        { "id": "lumiere_douce", "name": "Lumière douce", "level": 5, "description": "Ses soins rendent 3 PV de plus." },
+        { "id": "veille", "name": "Veille", "level": 15, "description": "Rend 3 PV aux alliés adjacents au début de sa phase." }
+      ],
       "evolutions": [
         { "id": "archi_lanterne", "name": "Archi-Lanterne", "condition": "Soigner 500 PV au total." },
         { "id": "veilleuse_des_ames", "name": "Veilleuse des Âmes", "condition": "Terminer la quête « Les lanternes éteintes »." }
@@ -94,6 +114,10 @@
       "resource": { "id": "fanfare", "name": "Fanfare" },
       "baseStats": { "pv": 18, "fo": 3, "mag": 3, "dex": 6, "vit": 6, "def": 3, "res": 5, "chc": 7, "mob": 5 },
       "growths": { "pv": 70, "fo": 25, "mag": 25, "dex": 45, "vit": 45, "def": 25, "res": 40, "chc": 55 },
+      "passives": [
+        { "id": "etendard", "name": "Étendard", "level": 5, "description": "+10 esquive aux alliés à 2 cases ou moins." },
+        { "id": "hymne", "name": "Hymne", "level": 15, "description": "Appel aux armes dure 1 tour de plus." }
+      ],
       "evolutions": [
         { "id": "marechal_de_cendre", "name": "Maréchal de Cendre", "condition": "Réputation Couronne ≥ Amical." },
         { "id": "chantre_des_saisons", "name": "Chantre des Saisons", "condition": "Réputation Racines ≥ Amical." }
@@ -111,6 +135,10 @@
       "resource": { "id": "saisons", "name": "Cycle des Saisons" },
       "baseStats": { "pv": 16, "fo": 2, "mag": 6, "dex": 6, "vit": 5, "def": 2, "res": 6, "chc": 4, "mob": 5 },
       "growths": { "pv": 60, "fo": 10, "mag": 60, "dex": 50, "vit": 40, "def": 15, "res": 45, "chc": 35 },
+      "passives": [
+        { "id": "mains_sures", "name": "Mains sûres", "level": 5, "description": "Ses objets soignent 5 PV de plus." },
+        { "id": "distillation", "name": "Distillation", "level": 15, "description": "Les statuts qu’il inflige aux ennemis durent 1 tour de plus." }
+      ],
       "evolutions": [
         { "id": "grand_alchimiste_du_gel", "name": "Grand Alchimiste du Gel", "condition": "Étourdir 15 ennemis." },
         { "id": "distillateur_de_venin", "name": "Distillateur de Venin", "condition": "Empoisonner un boss." }
@@ -128,6 +156,10 @@
       "resource": { "id": "fil_d_eau", "name": "Fil d'eau" },
       "baseStats": { "pv": 17, "fo": 4, "mag": 0, "dex": 8, "vit": 10, "def": 2, "res": 3, "chc": 6, "mob": 7 },
       "growths": { "pv": 65, "fo": 40, "mag": 0, "dex": 55, "vit": 65, "def": 15, "res": 25, "chc": 45 },
+      "passives": [
+        { "id": "pas_leger", "name": "Pas léger", "level": 5, "description": "+15 esquive dans l’eau et le marais." },
+        { "id": "contre_courant", "name": "Contre-courant", "level": 15, "description": "+10 Résonance après chaque esquive." }
+      ],
       "evolutions": [
         { "id": "fil_de_vent", "name": "Fil-de-Vent", "condition": "Parcourir 100 cases sur l'eau." },
         { "id": "tempete_dansante", "name": "Tempête-Dansante", "condition": "Réussir 10 doubles attaques au total." }
@@ -145,6 +177,10 @@
       "resource": { "id": "pierres", "name": "Pierres", "perBattle": 3 },
       "baseStats": { "pv": 17, "fo": 0, "mag": 7, "dex": 5, "vit": 3, "def": 3, "res": 6, "chc": 3, "mob": 5 },
       "growths": { "pv": 65, "fo": 0, "mag": 60, "dex": 40, "vit": 25, "def": 25, "res": 45, "chc": 25 },
+      "passives": [
+        { "id": "pierre_de_plus", "name": "Pierre de plus", "level": 5, "description": "+1 Pierre par combat." },
+        { "id": "golem_ancien", "name": "Golem ancien", "level": 15, "description": "Ses golems ont +5 PV et +2 Fo." }
+      ],
       "evolutions": [
         { "id": "eveilleur_de_colosse", "name": "Éveilleur de Colosse", "condition": "Réaliser 10 invocations." },
         { "id": "chuchoteur_de_menhirs", "name": "Chuchoteur de Menhirs", "condition": "Visiter 3 menhirs sur l'île." }
@@ -161,6 +197,10 @@
       "armor": "legere",
       "baseStats": { "pv": 19, "fo": 2, "mag": 5, "dex": 5, "vit": 4, "def": 4, "res": 5, "chc": 3, "mob": 5 },
       "growths": { "pv": 75, "fo": 15, "mag": 45, "dex": 40, "vit": 30, "def": 35, "res": 40, "chc": 25 },
+      "passives": [
+        { "id": "epines", "name": "Épines", "level": 5, "description": "3 dégâts aux ennemis collés à ses ronces, au début de sa phase." },
+        { "id": "racines_profondes", "name": "Racines profondes", "level": 15, "description": "Mur de ronces : +1 case et +1 tour." }
+      ],
       "evolutions": [
         { "id": "sylvarque", "name": "Sylvarque", "condition": "Terminer la quête « Le Roi-Cerf souffre »." },
         { "id": "tisseur_de_ronces", "name": "Tisseur de Ronces", "condition": "Infliger 100 dégâts via les ronces." }
@@ -178,6 +218,10 @@
       "resource": { "id": "charges", "name": "Charges", "perBattle": 4 },
       "baseStats": { "pv": 19, "fo": 6, "mag": 0, "dex": 8, "vit": 4, "def": 5, "res": 2, "chc": 4, "mob": 5 },
       "growths": { "pv": 75, "fo": 45, "mag": 0, "dex": 55, "vit": 30, "def": 40, "res": 15, "chc": 30 },
+      "passives": [
+        { "id": "charge_de_plus", "name": "Charge de plus", "level": 5, "description": "+1 Charge par combat." },
+        { "id": "mecanique_precise", "name": "Mécanique précise", "level": 15, "description": "Attaques normales ×1,2 contre armure lourde et monstres." }
+      ],
       "evolutions": [
         { "id": "artificier_sapeur", "name": "Artificier Sapeur", "condition": "Détruire 10 armures lourdes." },
         { "id": "maitre_de_siege", "name": "Maître de Siège", "condition": "Visiter l'Aiguille brisée." }
@@ -195,6 +239,10 @@
       "resource": { "id": "prise", "name": "Prise" },
       "baseStats": { "pv": 21, "fo": 8, "mag": 0, "dex": 5, "vit": 4, "def": 4, "res": 1, "chc": 3, "mob": 5 },
       "growths": { "pv": 85, "fo": 60, "mag": 0, "dex": 40, "vit": 30, "def": 35, "res": 10, "chc": 25 },
+      "passives": [
+        { "id": "instinct_de_chasse", "name": "Instinct de chasse", "level": 5, "description": "+10 précision contre les boss." },
+        { "id": "prise_ferme", "name": "Prise ferme", "level": 15, "description": "Harponné dure 1 tour de plus." }
+      ],
       "evolutions": [
         { "id": "harponneur_abyssal", "name": "Harponneur Abyssal", "condition": "Vaincre Sœur Mérrow." },
         { "id": "traqueur_de_leviathans", "name": "Traqueur de Léviathans", "condition": "Vaincre 3 boss." }

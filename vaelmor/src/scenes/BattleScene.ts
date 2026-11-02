@@ -25,6 +25,7 @@ import { getLastDeployed, getLoadouts, getWorldState, setLastDeployed } from '..
 import { getGameCtx } from '../core/townContext';
 import { ensureCompany, settleBattle, testCompany, type BattleEnd, type Settlement } from '../logic/game';
 import { applyBattleProgress, applyErrantProgress, isWounded } from '../logic/units/company';
+import { equippedPassive, learnedPassives, LINEAGE, passiveLearnedAt, OATH_INFO, OATH_KINDS, SEASON_NAMES, seasonOf, type OathKind } from '../logic/progression/traits';
 import { formatNotices } from '../ui/notices';
 import { uiScaleFor, zoomOrigin } from '../core/viewport';
 import { loadGameData, type GameData } from '../data';
@@ -320,7 +321,7 @@ export class BattleScene extends Phaser.Scene {
 
     const boss = this.state.units.find((u) => u.isBoss);
     this.hud.setHeader(this.state.name, this.objectiveText(boss));
-    this.hud.setPhase(this.state.phase, 1);
+    this.hud.setPhase(this.state.phase, 1, this.seasonLabel());
     this.cameras.main.fadeIn(450, 0, 0, 0);
     // `?debug&prep=off` passe la préparation (déploiement par défaut).
     if (debug && url.get('prep') === 'off') {
@@ -1114,6 +1115,12 @@ export class BattleScene extends Phaser.Scene {
       weapon: { name: unit.weapon.name, range, canChange: weaponChoices(this.gameData, cls, this.convoy, this.loadouts, member).length > 1 },
       accessory: { name: accessory, canChange: accessoryChoices(this.gameData, this.convoy, this.loadouts, member).length > 1 || loadout.accessory !== null },
       skill: extra.skill ? `${extra.skill.name} · ${extra.skill.cost}` : null,
+      passive: (() => {
+        const learned = learnedPassives(cls, def.level);
+        const on = learned.find((p) => p.id === unit.passive);
+        return on ? { name: on.name, description: on.description, canChange: learned.length > 1 } : null;
+      })(),
+      oath: unit.oath ? { name: OATH_INFO[unit.oath.kind].name, rule: OATH_INFO[unit.oath.kind].rule } : null,
       slots,
       bag,
       count: `${carried(loadout)}/${max} objets`,
@@ -1122,6 +1129,19 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private sheetBag: string[] = [];
+
+  /**
+   * Passive ou serment choisi à la préparation (n°93, n°123) : gardé sur le
+   * membre de la compagnie (et donc pour les combats suivants).
+   */
+  private setMemberChoice(member: number, choice: { passive?: string | null; oath?: OathKind }): void {
+    const copy = this.party[member];
+    if (!copy) return;
+    this.party[member] = { ...copy, ...choice };
+    if (!this.persistent) return;
+    const saved = getWorldState()?.progress.company[member];
+    if (saved) Object.assign(saved, choice);
+  }
 
   /** Clic droit sur un membre (ou « Équipement », « Objets ») : sa fiche. */
   private openSheet(member: number): void {
@@ -1142,6 +1162,19 @@ export class BattleScene extends Phaser.Scene {
         const weapons = weaponChoices(this.gameData, cls, this.convoy, this.loadouts, member);
         const next = weapons[(weapons.indexOf(loadout.weapon ?? cls.startingWeapon) + 1) % weapons.length] as string;
         loadout.weapon = next === cls.startingWeapon ? null : next;
+        refresh();
+      },
+      onPassive: () => {
+        const cur = this.party[member] ?? m;
+        const learned = learnedPassives(cls, cur.level);
+        const current = equippedPassive(cls, cur.level, cur.passive);
+        const next = learned[(learned.findIndex((p) => p.id === current) + 1) % Math.max(1, learned.length)]?.id ?? null;
+        this.setMemberChoice(member, { passive: next });
+        refresh();
+      },
+      onOath: () => {
+        const current = (this.party[member] ?? m).oath ?? 'proteger';
+        this.setMemberChoice(member, { oath: OATH_KINDS[(OATH_KINDS.indexOf(current) + 1) % OATH_KINDS.length] as OathKind });
         refresh();
       },
       onAccessory: () => {
@@ -1206,7 +1239,14 @@ export class BattleScene extends Phaser.Scene {
         return { name: def?.name ?? m.status, color: Phaser.Display.Color.HexStringToColor(def?.color ?? '#ffffff').color };
       }),
       accessory: unit.accessory ? (this.gameData.accessories.find((a) => a.id === unit.accessory)?.name ?? unit.accessory) : null,
+      passive: unit.passive ? (cls?.passives.find((p) => p.id === unit.passive)?.name ?? unit.passive) : null,
+      oath: unit.oath ? { text: `Serment : ${OATH_INFO[unit.oath.kind].name}${unit.oath.broken ? ' (brisé)' : ' (tenu)'}`, broken: unit.oath.broken } : null,
     };
+  }
+
+  /** Saison du tour, affichée quand un Alchimiste des Saisons combat (n°125). */
+  private seasonLabel(): string | null {
+    return this.state.units.some((u) => u.hp > 0 && u.lineage === LINEAGE.alchimiste) ? SEASON_NAMES[seasonOf(this.state.turn)] : null;
   }
 
   /* ---------- Exploration de la carte (phase du joueur) ---------- */
@@ -1888,7 +1928,7 @@ export class BattleScene extends Phaser.Scene {
         }
         case 'phase':
           this.syncAll();
-          this.hud.setPhase(event.team, event.turn);
+          this.hud.setPhase(event.team, event.turn, this.seasonLabel());
           if (event.skipped) {
             this.hud.toast('Les ennemis, surpris, ne bougent pas.');
             break;
@@ -1962,6 +2002,21 @@ export class BattleScene extends Phaser.Scene {
         case 'xp':
           await this.animateXp(event);
           break;
+        case 'thorns': {
+          const unit = getUnit(this.state, event.unitId);
+          this.flashUnit(unit, PALETTE.olive);
+          this.floatText(unit, `${event.damage}`, PALETTE.olive);
+          this.updateHpBar(unit.id, event.hp);
+          await this.wait(300);
+          break;
+        }
+        case 'oath': {
+          const unit = getUnit(this.state, event.unitId);
+          this.floatText(unit, 'Serment brisé', PALETTE.braise, -6);
+          this.hud.toast(`${unit.name} a brisé son serment.`);
+          await this.wait(420);
+          break;
+        }
       }
     }
   }
@@ -1988,7 +2043,8 @@ export class BattleScene extends Phaser.Scene {
       const stats = {} as Record<GrowthKey, number>;
       for (const key of GROWTH_KEYS) stats[key] = unit.base[key] - (later[key] ?? 0);
       for (const [k, v] of Object.entries(up.gains)) later[k] = (later[k] ?? 0) + (v ?? 0);
-      return { level: up.level, className: unit.kindName, stats, gains: up.gains };
+      const cls = this.gameData.classes.find((c) => c.id === unit.kindId);
+      return { level: up.level, className: unit.kindName, stats, gains: up.gains, learned: cls ? (passiveLearnedAt(cls, up.level)?.name ?? null) : null };
     });
     for (const view of views.reverse()) {
       if (!this.alive) return;

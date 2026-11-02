@@ -3,6 +3,7 @@
  * unité, conditions de victoire et de défaite (GDD §9.10), dégâts directs.
  * Module pur.
  */
+import { bogs } from '../progression/traits';
 import { getUnit, terrainAt } from './grid';
 import type { BattleEvent, BattleState, BattleUnit, Team } from './types';
 
@@ -41,7 +42,7 @@ export function finishUnit(state: BattleState, unit: BattleUnit): void {
   unit.moved = true;
   unit.moveOrigin = null;
   unit.cantoLeft = 0;
-  if (unit.hp > 0 && terrainAt(state.map, unit.x, unit.y).tags.includes('enlise')) unit.bogPending = true;
+  if (unit.hp > 0 && bogs(unit, terrainAt(state.map, unit.x, unit.y))) unit.bogPending = true;
 }
 
 /** La compagnie au sens de la défaite : les membres (ni alliés verts ni invocations). */

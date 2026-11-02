@@ -89,5 +89,10 @@ export function makeBattle(
 
 export const unit = (state: BattleState, id: string): BattleUnit => getUnit(state, id);
 
+/** Retire passive et serment (jalon M6) : pour vérifier les formules de base à la main. */
+export function plainUnit(u: BattleUnit): BattleUnit {
+  return Object.assign(u, { passive: null, oath: null });
+}
+
 /** Rangée de plaine de la largeur voulue. */
 export const plains = (width: number, height: number): string[] => Array.from({ length: height }, () => '.'.repeat(width));

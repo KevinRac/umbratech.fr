@@ -256,6 +256,18 @@ function crossCheck(data: GameData): string[] {
   }
 
 
+  // Passives (jalon M6, n°93) : une au niveau 5, une au niveau 15, identifiants uniques.
+  const passiveIds = new Map<string, string>();
+  for (const cls of data.classes) {
+    const levels = cls.passives.map((p) => p.level).sort((a, b) => a - b);
+    if (levels[0] !== 5 || levels[1] !== 15) issues.push(`classes.json › « ${cls.id} ».passives : niveaux 5 et 15 attendus (trouvé ${levels.join(', ')})`);
+    for (const p of cls.passives) {
+      const previous = passiveIds.get(p.id);
+      if (previous !== undefined) issues.push(`classes.json › passive « ${p.id} » en double (${previous} et ${cls.id})`);
+      passiveIds.set(p.id, cls.id);
+    }
+  }
+
   // Compagnie (jalon M6) : classes connues, identifiants uniques, un niveau pour chaque recrue.
   const classIdsC = new Set(data.classes.map((c) => c.id));
   const companyIds = new Map<string, string>([[data.company.hero.id, 'héros']]);

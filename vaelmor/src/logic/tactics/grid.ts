@@ -8,6 +8,7 @@
  * - Portées en distance de Manhattan.
  */
 import type { TerrainDef } from '../../data/schemas';
+import { rangeFrom } from '../progression/traits';
 import { hostile, type BattleMap, type BattleState, type BattleUnit, type Cell } from './types';
 
 export const DIRECTIONS: readonly Cell[] = [
@@ -66,8 +67,21 @@ export function getUnit(state: BattleState, id: string): BattleUnit {
  */
 export function mobility(unit: BattleUnit): number {
   if (unit.cantoLeft > 0) return unit.cantoLeft;
-  const base = Math.max(1, unit.stats.mob - (unit.bogged ? 1 : 0));
+  const base = Math.max(1, unit.stats.mob + unit.extraMob - (unit.bogged ? 1 : 0));
   return unit.moveCap === null ? base : Math.min(base, unit.moveCap);
+}
+
+/**
+ * Coût d'une case pour une unité (null : infranchissable). Fil d'eau du Danseur
+ * (n°126) : gués et marais à son coût léger, rivière et eau profonde à son coût profond.
+ */
+export function stepCost(unit: BattleUnit, terrain: TerrainDef): number | null {
+  const w = unit.waterThread;
+  if (w) {
+    if (terrain.tags.includes('enlise') || (terrain.tags.includes('eau') && terrain.moveCost !== null)) return w.shallow;
+    if (terrain.tags.includes('eau')) return w.deep;
+  }
+  return terrain.moveCost;
 }
 
 export interface Reach {
@@ -112,7 +126,7 @@ export function reachable(state: BattleState, unit: BattleUnit, budget: number =
       if (!inBounds(map, nx, ny)) continue;
       const ni = cellIndex(map, nx, ny);
       if (blocked.has(ni)) continue;
-      const step = terrainAt(map, nx, ny).moveCost;
+      const step = stepCost(unit, terrainAt(map, nx, ny));
       if (step === null) continue;
       const total = base + step;
       if (total > budget) continue;
@@ -161,14 +175,16 @@ export function cellsInRange(map: BattleMap, from: Cell, range: readonly [number
   return out;
 }
 
-export const inWeaponRange = (unit: BattleUnit, from: Cell, target: Cell): boolean => {
+/** Portée de l'arme, depuis `from` (avec la carte : Tir couvert, n°93). */
+export const inWeaponRange = (unit: BattleUnit, from: Cell, target: Cell, map: BattleMap | null = null): boolean => {
   const d = distance(from, target);
-  return d >= unit.weapon.range[0] && d <= unit.weapon.range[1];
+  const [min, max] = rangeFrom(map, unit, from);
+  return d >= min && d <= max;
 };
 
 /** Ennemis vivants qu'une unité peut frapper depuis une case. */
 export function targetsFrom(state: BattleState, unit: BattleUnit, from: Cell): BattleUnit[] {
-  return state.units.filter((u) => u.hp > 0 && hostile(u.team, unit.team) && inWeaponRange(unit, from, u));
+  return state.units.filter((u) => u.hp > 0 && hostile(u.team, unit.team) && inWeaponRange(unit, from, u, state.map));
 }
 
 /**
@@ -177,7 +193,7 @@ export function targetsFrom(state: BattleState, unit: BattleUnit, from: Cell): B
  */
 export function threatCells(state: BattleState, unit: BattleUnit, reach: Reach = reachable(state, unit)): Set<number> {
   const out = new Set<number>();
-  for (const stop of reach.stops) for (const c of cellsInRange(state.map, stop, unit.weapon.range)) out.add(cellIndex(state.map, c.x, c.y));
+  for (const stop of reach.stops) for (const c of cellsInRange(state.map, stop, rangeFrom(state.map, unit, stop))) out.add(cellIndex(state.map, c.x, c.y));
   return out;
 }
 

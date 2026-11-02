@@ -219,6 +219,14 @@ export function grantXp(state: BattleState, rules: BattleRules, events: readonly
         if (earner) add(earner, killXp(rules, earner.level, victim.level, victim.isBoss));
         break;
       }
+      case 'thorns': {
+        if (event.hp > 0) break;
+        const victim = find(event.unitId);
+        const source = find(event.sourceId);
+        const earner = source ? earnerOf(state, source) : null;
+        if (victim && earner) add(earner, killXp(rules, earner.level, victim.level, victim.isBoss));
+        break;
+      }
       case 'outcome':
         if (event.outcome === 'victory') victory = true;
         break;

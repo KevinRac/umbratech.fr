@@ -222,6 +222,29 @@ export const balanceFileSchema = z.strictObject({
     advancedClassCap: z.number().int().positive(),
     promotionMinLevel: z.number().int().positive(),
   }),
+  /** Mécaniques de classe (jalon M6, décisions n°123 à n°127). */
+  classMechanics: z.strictObject({
+    /** Serment de la Lame : bonus de dégâts tant qu'il tient, ennemis à abattre sans boss, Estocade jurée tenu / brisé. */
+    oath: z.strictObject({
+      damageBonus: z.number().min(0),
+      slayCount: z.number().int().positive(),
+      estocadeKept: z.number().positive(),
+      estocadeBroken: z.number().positive(),
+    }),
+    /** Hauteur du Veilleur : précision depuis une case « hauteur » (forêt, montagne, ruines). */
+    height: z.strictObject({ hit: z.number().int().min(0) }),
+    /** Saisons de l'Alchimiste : une par tour, dans l'ordre. */
+    seasons: z.strictObject({
+      winterGelCost: z.number().int().min(0),
+      springHeal: z.number().positive(),
+      summerDamage: z.number().positive(),
+      autumnMob: z.number().int().min(0),
+    }),
+    /** Fil d'eau du Danseur : coût des gués et marais, de la rivière et de l'eau profonde. */
+    waterThread: z.strictObject({ shallowCost: z.number().int().positive(), deepCost: z.number().int().positive() }),
+    /** Fanfare du Héraut : rayon de l'aura, Résonance en plus par coup porté. */
+    fanfare: z.strictObject({ range: z.number().int().positive(), resonance: z.number().int().min(0) }),
+  }),
   defeat: z.strictObject({ goldLossRatio: z.number().min(0).max(1), /** Village où l'on se réveille si aucun village n'a encore été visité. */ fallbackVillage: z.string().min(1) }),
   /** Ennemis visibles du monde (jalon M3, GDD §7). Distances en cases, durées en ms, vitesses en px/s. */
   foes: foesBalanceSchema,
@@ -399,6 +422,17 @@ export const classSchema = z.strictObject({
     .optional(),
   baseStats: statBlock,
   growths: growthBlock,
+  /** Passives apprises aux niveaux 5 et 15 (décision n°93) ; une seule est équipée. */
+  passives: z
+    .array(
+      z.strictObject({
+        id: idSchema,
+        name: z.string().min(1),
+        level: z.number().int().min(1),
+        description: z.string().min(1),
+      }),
+    )
+    .length(2, 'chaque classe doit avoir exactement 2 passives (niveaux 5 et 15)'),
   evolutions: z
     .array(
       z.strictObject({

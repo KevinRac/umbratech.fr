@@ -16,7 +16,8 @@
  */
 import { resolveExchange } from '../combat/combat';
 import { grantXp } from '../progression/xp';
-import { BattleError, assertCanAct, assertCanAction, finishUnit, hurt, livingUnits, settleOutcome } from './battleCore';
+import { PASSIVE, seasonMob, trackOaths } from '../progression/traits';
+import { BattleError, assertCanAct, assertCanAction, finishUnit, hurt, livingUnits, mend, settleOutcome } from './battleCore';
 import { checkBossPhases } from './bosses';
 import { canStop, getUnit, inWeaponRange, nearestFreeCell, pathTo, reachable, terrainAt } from './grid';
 import { healUnit, useItem } from './items';
@@ -31,8 +32,9 @@ export function readyUnits(state: BattleState): BattleUnit[] {
   return livingUnits(state, state.phase).filter((u) => !u.acted);
 }
 
-/** Ajoute à la fin des événements d'une commande l'XP qu'ils rapportent (jalon M6). */
+/** Ajoute à la fin des événements d'une commande les serments brisés et l'XP gagnée (jalon M6). */
 function withXp(state: BattleState, rules: BattleRules, events: BattleEvent[]): BattleEvent[] {
+  events.push(...trackOaths(state, events));
   events.push(...grantXp(state, rules, events));
   return events;
 }
@@ -86,7 +88,7 @@ export function attackUnit(state: BattleState, attackerId: string, defenderId: s
   const defender = getUnit(state, defenderId);
   assertCanAction(state, attacker);
   if (defender.hp <= 0 || !hostile(defender.team, attacker.team)) throw new BattleError(`${defender.name} n'est pas une cible valable.`);
-  if (!inWeaponRange(attacker, attacker, defender)) throw new BattleError(`${defender.name} est hors de portée.`);
+  if (!inWeaponRange(attacker, attacker, defender, state.map)) throw new BattleError(`${defender.name} est hors de portée.`);
 
   const strikes = resolveExchange(state, attacker, defender, rules);
   const events: BattleEvent[] = [{ type: 'combat', attackerId, defenderId, strikes }];
@@ -163,6 +165,7 @@ function startPhase(state: BattleState, team: Team, rules: BattleRules): BattleE
     unit.cantoLeft = 0;
     unit.bogged = unit.bogPending;
     unit.bogPending = false;
+    unit.extraMob = seasonMob(state, unit, rules);
     if (unit.summonUntil !== null && state.turn >= unit.summonUntil) {
       unit.hp = 0;
       events.push({ type: 'vanish', unitId: unit.id });
@@ -189,7 +192,40 @@ function startPhase(state: BattleState, team: Team, rules: BattleRules): BattleE
       events.push({ type: 'heal', unitId: unit.id, amount });
     }
   }
+  events.push(...phaseTraits(state, team));
   events.push(...afterAction(state, rules));
+  return events;
+}
+
+/**
+ * Passives jouées au début de la phase d'un camp (n°93) : Veille (le
+ * Porte-Lanterne rend des PV aux alliés adjacents), Épines (les ronces du
+ * Façonneur blessent les ennemis qui y sont collés).
+ */
+function phaseTraits(state: BattleState, team: Team): BattleEvent[] {
+  const events: BattleEvent[] = [];
+  const living = state.units.filter((u) => u.hp > 0);
+  for (const keeper of living) {
+    if (keeper.team !== team || keeper.passive !== 'veille') continue;
+    for (const u of living) {
+      if (u === keeper || hostile(u.team, keeper.team) || Math.abs(u.x - keeper.x) + Math.abs(u.y - keeper.y) !== 1 || u.hp <= 0) continue;
+      const amount = mend(u, PASSIVE.vigilHeal);
+      if (amount > 0) events.push({ type: 'heal', unitId: u.id, amount });
+    }
+  }
+  for (const overlay of state.overlays) {
+    if (overlay.team !== team || !overlay.sourceId) continue;
+    const source = state.units.find((u) => u.id === overlay.sourceId);
+    if (!source || source.hp <= 0 || source.passive !== 'epines') continue;
+    const ox = overlay.index % state.map.width;
+    const oy = Math.floor(overlay.index / state.map.width);
+    for (const u of state.units) {
+      if (u.hp <= 0 || !hostile(u.team, source.team) || Math.abs(u.x - ox) + Math.abs(u.y - oy) !== 1) continue;
+      const dealt = hurt(u, PASSIVE.thornsDamage);
+      events.push({ type: 'thorns', unitId: u.id, sourceId: source.id, damage: dealt, hp: u.hp });
+      if (u.hp <= 0) events.push({ type: 'ko', unitId: u.id });
+    }
+  }
   return events;
 }
 

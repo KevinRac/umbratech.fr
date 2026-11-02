@@ -9,6 +9,7 @@ import { memberSprite } from '../skinFrames';
 import type { AllyTemplateDef } from '../../data/allySchemas';
 import type { BossDef, ClassDef, EnemyDef, PartyMemberDef, StatBlock, WeaponDef } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
+import { equippedPassive, LINEAGE, PASSIVE, type OathKind } from '../progression/traits';
 import { statsAtLevel } from '../units/stats';
 import { refreshStats } from './status';
 import type { AllySource, BattleRules, BattleUnit, ItemStack, Team } from './types';
@@ -25,6 +26,12 @@ export type MemberLike = PartyMemberDef & {
   readonly levelCap?: number;
   /** Blessé (GDD §9.13, n°138) : −10 % sur chaque stat (au moins 1 point), −2 Mob. */
   readonly wounded?: boolean;
+  /** Passive choisie (n°93) ; absente : la dernière apprise. */
+  readonly passive?: string | null;
+  /** Serment choisi à la préparation (Lame du Serment, n°123) ; absent : « Protéger ». */
+  readonly oath?: OathKind | null;
+  /** Lignée (classe de base) d'une unité évoluée ; absente : sa classe. */
+  readonly lineage?: string;
 };
 
 /** Stats d'un membre blessé (décision n°138). */
@@ -48,11 +55,11 @@ export const emptyLoadout = (): Loadout => ({ weapon: null, accessory: null, ite
 
 type Fresh = Pick<
   BattleUnit,
-  'moved' | 'acted' | 'moveOrigin' | 'resonance' | 'bogPending' | 'bogged' | 'alerted' | 'cooldowns' | 'mods' | 'cantoLeft' | 'moveCap' | 'summonUntil' | 'gains' | 'ownerId'
+  'moved' | 'acted' | 'moveOrigin' | 'resonance' | 'bogPending' | 'bogged' | 'alerted' | 'cooldowns' | 'mods' | 'cantoLeft' | 'moveCap' | 'summonUntil' | 'gains' | 'ownerId' | 'extraMob'
 >;
 
 function fresh(): Fresh {
-  return { moved: false, acted: false, moveOrigin: null, resonance: 0, bogPending: false, bogged: false, alerted: false, cooldowns: {}, mods: [], cantoLeft: 0, moveCap: null, summonUntil: null, gains: {}, ownerId: null };
+  return { moved: false, acted: false, moveOrigin: null, resonance: 0, bogPending: false, bogged: false, alerted: false, cooldowns: {}, mods: [], cantoLeft: 0, moveCap: null, summonUntil: null, gains: {}, ownerId: null, extraMob: 0 };
 }
 
 function weaponOf(data: GameData, id: string): WeaponDef {
@@ -79,9 +86,18 @@ export function signatureSkill(data: GameData, classId: string): string | null {
   return data.skills.find((s) => s.owner === classId)?.id ?? null;
 }
 
-/** Ressources de classe pour un combat (Pierres 3, Charges 4…). */
-function classResources(cls: ClassDef): Record<string, number> {
-  return cls.resource?.perBattle !== undefined ? { [cls.resource.id]: cls.resource.perBattle } : {};
+/** Ressources de classe pour un combat (Pierres 3, Charges 4… ; +1 avec Pierre de plus ou Charge de plus). */
+function classResources(cls: ClassDef, passive: string | null = null): Record<string, number> {
+  if (cls.resource?.perBattle === undefined) return {};
+  const extra = passive === 'pierre_de_plus' || passive === 'charge_de_plus' ? 1 : 0;
+  return { [cls.resource.id]: cls.resource.perBattle + extra };
+}
+
+/** Fil d'eau du Danseur des Courants (n°126). */
+function waterThreadOf(data: GameData, lineage: string): BattleUnit['waterThread'] {
+  if (lineage !== LINEAGE.danseur) return null;
+  const w = data.balance.classMechanics.waterThread;
+  return { shallow: w.shallowCost, deep: w.deepCost };
 }
 
 /** Arme portée : celle de l'équipement si elle convient à la classe, sinon l'arme de départ. */
@@ -98,7 +114,9 @@ export function memberUnit(data: GameData, rules: BattleRules, member: MemberLik
   const cls = classOf(data, member.class);
   const accessory = loadout.accessory ? data.accessories.find((a) => a.id === loadout.accessory) ?? null : null;
   const own = member.stats ? { ...member.stats } : statsAtLevel(cls.baseStats, cls.growths, member.level);
-  const base = withBonus(member.wounded ? woundedStats(own) : own, accessory?.bonus);
+  const passive = equippedPassive(cls, member.level, member.passive);
+  const lineage = member.lineage ?? cls.id;
+  const base = withBonus(member.wounded ? woundedStats(own) : own, { ...(accessory?.bonus ?? {}), ...(passive === 'inebranlable' ? { pv: (accessory?.bonus.pv ?? 0) + PASSIVE.steadyHp } : {}) });
   const levelCap = member.levelCap ?? data.balance.levels.baseClassCap;
   const skill = signatureSkill(data, cls.id);
   const unit: BattleUnit = {
@@ -109,6 +127,10 @@ export function memberUnit(data: GameData, rules: BattleRules, member: MemberLik
     kindName: cls.name,
     sprite: member.hero ? 'heros' : memberSprite(cls.id, variant),
     level: member.level,
+    lineage,
+    passive,
+    oath: lineage === LINEAGE.lame ? { kind: member.oath ?? 'proteger', broken: false, kills: 0 } : null,
+    waterThread: waterThreadOf(data, lineage),
     wounded: member.wounded === true,
     xp: member.level >= levelCap ? 0 : (member.xp ?? 0),
     growths: cls.growths,
@@ -126,7 +148,7 @@ export function memberUnit(data: GameData, rules: BattleRules, member: MemberLik
     x,
     y,
     skills: skill ? [skill] : [],
-    resources: classResources(cls),
+    resources: classResources(cls, passive),
     items: loadout.items.filter((s) => s.qty > 0).map((s) => ({ ...s })),
     boss: null,
     allySource: null,
@@ -152,6 +174,10 @@ export function enemyUnit(data: GameData, rules: BattleRules, placed: { enemy: s
     kindName: def.title ?? def.name,
     sprite: def.sprite,
     level: placed.level,
+    lineage: def.id,
+    passive: null,
+    oath: null,
+    waterThread: null,
     wounded: false,
     xp: null,
     growths: null,
@@ -199,6 +225,10 @@ export function allyUnit(data: GameData, rules: BattleRules, template: AllyTempl
     kindName: cls.name,
     sprite: template.sprite,
     level: lvl,
+    lineage: cls.id,
+    passive: null,
+    oath: null,
+    waterThread: waterThreadOf(data, cls.id),
     wounded: false,
     xp: learns ? (lvl >= levelCap ? 0 : xp) : null,
     growths: learns ? cls.growths : null,
