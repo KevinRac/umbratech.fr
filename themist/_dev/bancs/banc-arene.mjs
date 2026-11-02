@@ -9,7 +9,7 @@
 //    signes jamais sous le HUD, vue sûre tenable.
 // E. Souris : la visée va sous le curseur après un glissement de caméra, sans bouger la souris.
 // F. Journal des coups : 3 combats d'essai conduits (bot=1, dieu=1, boss d'essai, tirs), avec deux transformations : aucun coup sans signe.
-// G. Règle d'or : l'index.html d'avant (BANC_AVANT, défaut 9e92de2) et celui d'après rejouent la même descente (copie instrumentée : graine,
+// G. Règle d'or : l'index.html d'avant (BANC_AVANT, défaut 888578f depuis v18.7 : le clone peut ne pas avoir les commits plus anciens) et celui d'après rejouent la même descente (copie instrumentée : graine,
 //    horloge à la main) et comparent CHAQUE image du canevas (titre, Sanctuaire, combat, élite, Brèche, halte, autel, colporteur, gardiens I à III,
 //    gardiens provisoires, miniboss, boss final provisoire) dans les trois paliers : aucune différence de pixel. BANC_TEMOIN=1 : d'après contre d'après.
 //    BANC_IMAGES=n : images par salle (défaut 180) ; BANC_APRES=<fichier> : comparer une autre copie (contre-épreuve).
@@ -179,10 +179,11 @@ if (SEC.includes('C')) {
   }
   ok(pire.d <= DA.budget.rendu, `C : une image de l’arène pleine coûte ${pire.d >= 0 ? '+' : ''}${pire.d.toFixed(2)} ms de plus qu’une salle d’élite au même contenu (≤ +${DA.budget.rendu})`);
   const t = await A.page.evaluate(() => window.__arene.mesure());
-  ok(t.tuilesPosees <= 9 && t.tuiles === 12 && t.calques === DA.salles.final.etats.length, `C : ${t.tuilesPosees} tuiles posées sur ${t.tuiles} (≤ 9), ${t.calques} calques (un par état d'arène : ${DA.salles.final.etats.length}, l'état réel de la phase I du Brumeux compris depuis v18.6)`);
+  const NE = DA.salles.final.etats.filter(E => !E.tard).length;   // v18.7 : un état « tard » (la phase II du Brumeux) n'est pas peint à l'entrée
+  ok(t.tuilesPosees <= 9 && t.tuiles === 12 && t.calques === NE, `C : ${t.tuilesPosees} tuiles posées sur ${t.tuiles} (≤ 9), ${t.calques} calques (un par état d'arène peint à l'entrée : ${NE}, l'état réel de la phase I du Brumeux compris depuis v18.6 ; l'état « tard » de la phase II attend le Brumeux)`);
   // peinture à l'entrée, trois entrées
   const ps = []; for (let k = 0; k < 3; k++) { const p = await A.page.evaluate(ESSAI, { foule: 0 }); ps.push(p.peintureMs); }
-  ok(Math.max(...ps) <= DA.budget.peinture, `C : peinture des tuiles à l’entrée ${ps.map(x => x.toFixed(0)).join(' / ')} ms (≤ ${DA.budget.peinture}, ${12 * DA.salles.final.etats.length} tuiles)`);
+  ok(Math.max(...ps) <= DA.budget.peinture, `C : peinture des tuiles à l’entrée ${ps.map(x => x.toFixed(0)).join(' / ')} ms (≤ ${DA.budget.peinture}, ${12 * DA.salles.final.etats.filter(E => !E.tard).length} tuiles)`);
   ok(!A.errs.length && !O.errs.length, 'C : aucune erreur ' + A.errs.concat(O.errs).slice(0, 2).join(' | '));
   await A.ctx.close(); await O.ctx.close();
 }
@@ -275,7 +276,7 @@ if (SEC.includes('F')) {
 // ═══ G. Règle d'or : image par image, avant / après, trois paliers ═══════════════════════════════════════════════════════════════════
 if (SEC.includes('G')) {
   console.log('\n══ G · règle d’or : chaque image du canevas, avant / après, trois paliers ══');
-  const NF = +(process.env.BANC_IMAGES || 180), AVANT_REV = process.env.BANC_AVANT || '9e92de2';
+  const NF = +(process.env.BANC_IMAGES || 180), AVANT_REV = process.env.BANC_AVANT || '888578f';
   const APRES = readFileSync(process.env.BANC_APRES || join(THEMIST, 'index.html'), 'utf8');   // BANC_APRES=<fichier> : contre-épreuve (une copie modifiée doit être attrapée)
   const AVANT = process.env.BANC_TEMOIN ? APRES : execSync(`git -C ${JSON.stringify(THEMIST)} show ${AVANT_REV}:themist/index.html`, { maxBuffer: 64 << 20 }).toString('utf8');
   function HORLOGE(seed) {

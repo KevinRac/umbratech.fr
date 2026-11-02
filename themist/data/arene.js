@@ -8,7 +8,7 @@
  actif:false,
  // Salles qui reçoivent l'arène (Q1 : le boss final seulement). w × h : taille du monde en écrans (1 280 × 720) ; entree : point d'entrée
  // du joueur, en fractions du monde. etats : états d'arène (Q5) : 0 à 2 d'ESSAI (banc-arene A et C comptent sur eux, à leurs places) ; les états
-// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b).
+// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c).
  // Un état : bornes jouables (fractions des bornes dures), obstacles (piliers, disques), vides (fosses : on n'y marche pas, rien n'y apparaît),
  // sol (calque peint à l'entrée), brume de décor (ne cache jamais un télégraphe ni un signe de bord). fx, fy : fractions des bornes dures ; r en px.
  salles:{
@@ -27,7 +27,13 @@
     // colonnes sans texte et donnent un abri, toujours hors des fragments) ; pas de fosse ; brume de décor en haut, où son corps se devine.
     {id:'rappel',bornes:{fx0:0,fy0:0,fx1:1,fy1:1},sol:'pierre',
      obstacles:[{fx:0.3333,fy:0.18,r:26},{fx:0.3333,fy:0.82,r:26},{fx:0.6667,fy:0.18,r:26},{fx:0.6667,fy:0.82,r:26}],
-     vides:[],brume:[{fx:0.5,fy:0.04,r:320,a:0.14}]}]}},
+     vides:[],brume:[{fx:0.5,fy:0.04,r:320,a:0.14}]},
+    // 4 · phase II réelle du Brumeux, « L'Ouvrage » (fiche 5c, § 9) : arène pleine, le chantier est nu (c'est lui qui le remplit) ; sol cendre (il se
+    // distingue de la pierre de la phase I sans nouvelle peinture) ; brume de décor en haut, où son corps se devine. tard : son calque n'est pas peint
+    // à l'entrée (une arène sans le Brumeux ne le porte jamais : 12 tuiles de plus pesaient sur chaque image, banc-arene C) ; le Brumeux le peint une
+    // tuile par image pendant la phase I, et vers() finit d'un coup ce qui manquerait.
+    {id:'ouvrage',tard:true,bornes:{fx0:0,fy0:0,fx1:1,fy1:1},sol:'cendre',
+     obstacles:[],vides:[],brume:[{fx:0.5,fy:0.04,r:320,a:0.14}]}]}},
  // Bornes dures dans le monde : à la même distance des bords que l'arène d'un écran (AR : 56, 92, 56, 44).
  mur:{g:56,h:92,d:56,b:44},
  // La caméra (Q3). zone : zone morte (rectangle centré) ; tau : lissage exponentiel (s), jamais de dépassement ; avance : jusqu'à px dans le sens

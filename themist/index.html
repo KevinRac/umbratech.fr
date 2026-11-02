@@ -12987,7 +12987,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  // l'état de l'arène en cours (null hors de l'arène)
  const A={on:false,cle:null,M:null,etats:[],ie:0,etat:null,trans:null,cam:{x:0,y:0,ax:0,ay:0},indic:[],sig:{debut:{}},
   j:{coups:0,sansSigne:0,liste:[],horsVue:0,assertions:0,cibles:0},sol:{},peintureMs:0,tuilesPosees:0,hud:{m:Object.assign({},DA.vue.marges),blocs:[],t:-9},
-  essai:null,ouvrir:null,zoneCourante:null,px:null,py:null,ids:new WeakMap(),parent:new WeakMap(),nid:1,actif:null,sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null};   // v18.5 : crochets du Brumeux (v18.6 : solTrou)
+  essai:null,ouvrir:null,zoneCourante:null,px:null,py:null,ids:new WeakMap(),parent:new WeakMap(),nid:1,actif:null,sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null,jetonTir:null};   // v18.5 : crochets du Brumeux (v18.6 : solTrou ; v18.7 : jetonTir)
  const actif=()=>A.actif!=null?A.actif:!!DA.actif;
  const id=o=>{let v=A.ids.get(o);if(!v){v=A.nid++;A.ids.set(o,v);}return v;};
  const vue=()=>arVue(CAM,V);
@@ -12997,9 +12997,10 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  // ── le sol : tuiles peintes à l'entrée (un calque par sol d'état), posées seulement là où la vue passe
  const SOLS={pierre:['#15131c','#1d1a27','90,80,120'],cendre:['#17161a','#201e24','140,130,140'],braise:['#1a1214','#251719','170,80,60']};
  // un calque par état : son sol et sa brume de décor, cuits dans les tuiles (le fondu passe d'un calque à l'autre ; rien n'est peint pendant le combat)
- function peindre(M,etats){const t0=performance.now(),T=DA.tuiles,nx=Math.ceil(M.w/T.w),ny=Math.ceil(M.h/T.h),out={};
-  for(const [ie,E] of etats.entries()){const s=E.sol,p=SOLS[s]||SOLS.pierre,L=[];
-   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const c=document.createElement('canvas');c.width=T.w;c.height=T.h;const g=c.getContext('2d'),ox=i*T.w,oy=j*T.h;
+ // v18.7 : un état « tard » (data/arene.js) n'est pas peint à l'entrée ; peindreTard(ie,n) le peint n tuiles à la fois (le calque n'est posé
+ // qu'entier : solCalque ne voit jamais un calque à moitié peint)
+ function tuile(M,E,i,j){const T=DA.tuiles,s=E.sol,p=SOLS[s]||SOLS.pierre;
+    const c=document.createElement('canvas');c.width=T.w;c.height=T.h;const g=c.getContext('2d'),ox=i*T.w,oy=j*T.h;
     let r=(i*73856093^j*19349663^s.length*83492791)>>>0;const rnd=()=>{r=r+0x6D2B79F5|0;let t=Math.imul(r^r>>>15,1|r);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
     g.fillStyle=p[0];g.fillRect(0,0,T.w,T.h);
     for(let k=0;k<180;k++){g.fillStyle=`rgba(${p[2]},${0.03+rnd()*0.05})`;const w=4+rnd()*26;g.fillRect(rnd()*T.w,rnd()*T.h,w,w*0.5);}
@@ -13009,9 +13010,16 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
     if(ox<B.x0)g.fillRect(0,0,B.x0-ox,T.h);if(ox+T.w>B.x1)g.fillRect(B.x1-ox,0,ox+T.w-B.x1,T.h);if(oy<B.y0)g.fillRect(0,0,T.w,B.y0-oy);if(oy+T.h>B.y1)g.fillRect(0,B.y1-oy,T.w,oy+T.h-B.y1);
     g.strokeStyle='#3a3346';g.lineWidth=3;g.strokeRect(B.x0-ox-1.5,B.y0-oy-1.5,B.x1-B.x0+3,B.y1-B.y0+3);
     for(const b of E.brume){if(b.x+b.r<ox||b.x-b.r>ox+T.w||b.y+b.r<oy||b.y-b.r>oy+T.h)continue;const gr=g.createRadialGradient(b.x-ox,b.y-oy,0,b.x-ox,b.y-oy,b.r);gr.addColorStop(0,`rgba(150,140,175,${b.a})`);gr.addColorStop(1,'rgba(150,140,175,0)');g.fillStyle=gr;g.beginPath();g.arc(b.x-ox,b.y-oy,b.r,0,TAU);g.fill();}
-    L.push(c);}
+    return c;}
+ function peindre(M,etats){const t0=performance.now(),T=DA.tuiles,nx=Math.ceil(M.w/T.w),ny=Math.ceil(M.h/T.h),out={};A.tard={};
+  const S=DA.salles[A.cle];   // arEtat ne recopie pas « tard » : on le lit dans les données
+  for(const [ie,E] of etats.entries()){if(S&&S.etats[ie]&&S.etats[ie].tard&&ie!==A.ie){A.tard[ie]=[];continue;}const L=[];
+   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)L.push(tuile(M,E,i,j));
    out[ie]=L;}
   A.peintureMs=performance.now()-t0;return out;}
+ function peindreTard(ie,n){if(!A.on||!A.sol||A.sol[ie])return true;const L=A.tard&&A.tard[ie];if(!L)return true;const T=DA.tuiles,M=A.M,nx=Math.ceil(M.w/T.w),ny=Math.ceil(M.h/T.h);
+  while(n-->0&&L.length<nx*ny){const k=L.length;L.push(tuile(M,A.etats[ie],k%nx,(k/nx)|0));}
+  if(L.length>=nx*ny){A.sol[ie]=L;delete A.tard[ie];return true;}return false;}
  function solCalque(ie,a){const L=A.sol[ie];if(!L)return;const T=DA.tuiles,ts=arTuiles(vue(),A.M,T);A.tuilesPosees=ts.length;
   // seule la part visible de chaque tuile est posée (rectangle source recadré sur la vue)
   const v=vue();if(a<1)ctx.globalAlpha=a;
@@ -13078,7 +13086,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
    A.hud.m=m;A.hud.blocs=blocs;}catch(err){}}
  // ── les sources : ennemis, projectiles, boss d'essai et ses télégraphes
  function sources(){const L=[];
-  for(const e of enemies){if(e.dead)continue;L.push({id:id(e),o:e,k:e.type==='boss'?'boss':(e.elite||e.asm)?'elite':'ord',x:e.x,y:e.y,r:e.r});}
+  for(const e of enemies){if(e.dead||e.cons18)continue;L.push({id:id(e),o:e,k:e.type==='boss'?'boss':(e.elite||e.asm)?'elite':'ord',x:e.x,y:e.y,r:e.r});}   // v18.7 : une construction du Brumeux (entité fixe) n'est pas une source
   for(const p of eproj){if(p.dead)continue;L.push({id:id(p),o:p,k:'proj',x:p.x,y:p.y,r:p.r||6,vx:p.vx,vy:p.vy});}
   // le cercle d'apparition (violet) est le signe d'un ennemi qui va naître : vu à l'écran, il compte (pas de signe de bord : il ne frappe pas)
   for(const sp of room.spawning)L.push({id:id(sp),o:sp,k:'naissance',x:sp.x,y:sp.y,r:24});
@@ -13087,6 +13095,9 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
   const E=A.essai,b=E&&E.boss;
   if(b){L.push({id:id(b),o:b,k:'boss',x:b.x,y:b.y,r:b.r,charge:b.zones.length>0});
    for(const z of b.zones){const q=zonePoint(z);L.push({id:id(z),o:z,k:'tele',x:q.x,y:q.y,r:q.r,vise:!!z.vise,rempli:Math.min(1,z.t/z.charge),c:'zone'});}}
+  // v18.7 : les zones des mutations (Échos, Glas : cercles orange au sol) et l'Ombre sont des sources de signe (elles frappaient sans signe dans l'arène)
+  if(room.z18)for(const z of room.z18)if(!z.fini)L.push({id:id(z),o:z,k:'tele',x:z.x,y:z.y,r:z.r,vise:true,c:'zone'});
+  if(room.ombre18&&room.ombre18.x!=null)L.push({id:id(room.ombre18),o:room.ombre18,k:'ord',x:room.ombre18.x,y:room.ombre18.y,r:16});
   if(A.sourcesPlus)for(const s of A.sourcesPlus())L.push(Object.assign({},s,{id:id(s.o)}));   // v18.5 : les zones du Brumeux, sources de signe une à une
   return L;}
  function indicateurs(){const v=vue(),m=A.hud.m,sure=arSure(v,m),I=Object.assign({},IC,{blocs:A.hud.blocs.map(B=>({x0:B.x0+CAM.x,y0:B.y0+CAM.y,x1:B.x1+CAM.x,y1:B.y1+CAM.y}))});
@@ -13094,10 +13105,10 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
   const ids=[];for(const s of L)if(arDistRect(v,s.x,s.y)<=(s.r||0))ids.push(s.id);for(const x of A.indic)ids.push(...x.ids);
   arSignes(A.sig,RUN.time,ids);}
  // ── la transformation entre deux états
- function vers(n){if(!A.on||!A.etats[n]||A.trans)return false;A.trans=arTransNouveau(A.etat,A.etats[n]);A.ie=n;return true;}   // A.ie0 : le calque en place jusqu'à la fin du fondu
+ function vers(n){if(!A.on||!A.etats[n]||A.trans)return false;peindreTard(n,1e9);A.trans=arTransNouveau(A.etat,A.etats[n]);A.ie=n;return true;}   // A.ie0 : le calque en place jusqu'à la fin du fondu
  function transPas(dt){const T0=A.trans;if(!T0)return;const cre=[{x:P.x,y:P.y,r:P.r},...enemies.filter(e=>!e.dead).map(e=>({x:e.x,y:e.y,r:e.r}))];
   const T=A.trans=arTransPas(T0,dt,cre,DA.transformation);Object.assign(AR,T.bornes);
-  if(T.ph!=='annonce'&&(T0.ph==='annonce'||T.poses.length!==T0.poses.length))room.pillars=piliers(arTransObstacles(T));
+  if(T.ph!=='annonce'&&(T0.ph==='annonce'||T.poses.length!==T0.poses.length))room.pillars=piliers(arTransObstacles(T)).concat(room.pillars.filter(p=>p.brx18));   // v18.7 : les constructions du Brumeux (brx18) traversent la transformation
   if(T.ff)CAM.ff=1;if(T.ph==='fini'){A.etat=T.vers;A.ie0=A.ie;A.trans=null;Object.assign(AR,A.etat.bornes);}}
  // ── le boss d'essai : un fantôme (hors de enemies : rien ne le vise, on ne le frappe pas) qui charge des télégraphes de la grammaire
  function essaiBoss(){return A.essai&&A.essai.boss;}
@@ -13155,9 +13166,15 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  const _fs184=findSpawn;findSpawn=function(minD){if(!CAM.on)return _fs184.apply(this,arguments);return avecAR(zoneApp(),()=>_fs184(Math.max(minD==null?230:minD,HV.minD)));};
  const _tp184=themePos;themePos=function(sp,pc){if(!CAM.on||sp.x!=null)return _tp184.apply(this,arguments);return avecAR(zoneApp(),()=>_tp184(sp,pc));};
  const _sr184=setRule;setRule=function(){if(room&&room.arene)return;return _sr184.apply(this,arguments);};
- const _tt184=tryTok;tryTok=function(e,k){if(CAM.on&&e&&e.type!=='boss'&&arDistRect(vue(),e.x,e.y)>HV.jeton)return false;return _tt184.apply(this,arguments);};
+ const _tt184=tryTok;tryTok=function(e,k){if(CAM.on&&e&&e.type!=='boss'&&arDistRect(vue(),e.x,e.y)>(k==='r'&&A.jetonTir!=null?A.jetonTir:HV.jeton))return false;return _tt184.apply(this,arguments);};   // v18.7 : crochet jetonTir (combat du Brumeux : un tireur ne prend son jeton que dans la vue)
+ // v18.7 (Q9.3) : une fosse n'arrête pas les tirs, seulement quand l'arène est allumée (hors de l'arène : l'ancien résultat, au bit près). Elle arrête
+ // toujours la marche (collisions, carte FF). La ligne de tir des tireurs (losClear, locale au bloc v17.5, lue par keepRange) : quand seules des fosses
+ // la coupent, elles sont retirées le temps de l'appel (un Spectre tire par-dessus une douve).
+ const _hw184=hitsWall;hitsWall=function(x,y,r){if(!CAM.on)return _hw184.apply(this,arguments);if(x<AR.x0+r||x>AR.x1-r||y<AR.y0+r||y>AR.y1-r)return true;for(const p of room.pillars)if(p.kind!=='fosse18'&&hyp(x-p.x,y-p.y)<p.r+r)return true;return false;};
+ const _kr184=keepRange;keepRange=function(e,tg,sp,dt,near,far){if(!CAM.on||!room||!room.pillars||!tg||!tg.pl)return _kr184.apply(this,arguments);const all=room.pillars,coupe=p=>segDist(p.x,p.y,e.x,e.y,tg.x,tg.y)<p.r+6;
+  if(!all.some(p=>p.kind==='fosse18'&&coupe(p))||all.some(p=>p.kind!=='fosse18'&&coupe(p)))return _kr184.apply(this,arguments);room.pillars=all.filter(p=>p.kind!=='fosse18');try{return _kr184.apply(this,arguments);}finally{room.pillars=all;}};
  // ── le joueur frappe ce qu'il voit : aucun coup (hors brûlures et poisons) sur un ennemi au-delà de la vue + horsVue.coup
- const _he184=hitEnemy;hitEnemy=function(e,base,o){if(CAM.on&&e&&!(o&&o.dot)&&arDistRect(vue(),e.x,e.y)>HV.coup+(e.r||0)){A.j.horsVue++;return 0;}return _he184.apply(this,arguments);};
+ const _he184=hitEnemy;hitEnemy=function(e,base,o){if(CAM.on&&e&&!(o&&(o.dot||o.brx))&&arDistRect(vue(),e.x,e.y)>HV.coup+(e.r||0)){A.j.horsVue++;return 0;}return _he184.apply(this,arguments);};   // v18.7 : les coups des mécanismes du Brumeux (o.brx) sur ses ennemis en sont exemptés
  // ── aucun coup sans signe : chaque coup reçu dans l'arène est jugé (sa source signalée depuis au moins 0,6 s, 0,8 s pour le boss)
  const _hp184=hurtPlayer;
  hurtPlayer=function(dmg,src){if(!CAM.on||!P)return _hp184.apply(this,arguments);const h0=P.hp,s0=P.shield||0;const r=_hp184.apply(this,arguments);
@@ -13171,8 +13188,10 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
      if(best&&bd<14){ch.push(id(best));if(best.from)ch.push(id(best.from));if(best.boss)boss=true;sorte=best.essai18?'tir':best.from?'proj:'+best.from.type:'proj';}
      else{const g=rings.find(g=>Math.abs(Math.hypot(P.x-g.x,P.y-g.y)-g.r)<14+P.r);
       if(g){ch.push(id(g));const pa=g.src||A.parent.get(g);if(pa)ch.push(id(pa));sorte='anneau';}
-      else{let e0=null,ed=1e9;for(const e of enemies){if(e.dead)continue;const d=Math.hypot(e.x-P.x,e.y-P.y)-e.r-P.r;if(d<ed){ed=d;e0=e;}}
-       if(e0&&ed<24){ch.push(id(e0));boss=e0.type==='boss';sorte='contact:'+e0.type;}else if(room.asm&&room.asm.e&&!room.asm.e.dead){ch.push(id(room.asm.e));sorte='masque';}}}}
+      else{let e0=null,ed=1e9;for(const e of enemies){if(e.dead||e.cons18)continue;const d=Math.hypot(e.x-P.x,e.y-P.y)-e.r-P.r;if(d<ed){ed=d;e0=e;}}
+       const z18=room.z18&&room.z18.find(z=>z.fini&&Math.hypot(P.x-z.x,P.y-z.y)<z.r+P.r),O18=room.ombre18;   // v18.7 : zone de mutation qui éclate, ombre qui passe
+       if(z18){ch.push(id(z18));sorte='mutation:'+z18.k;}else if(O18&&O18.touche&&O18.x!=null&&Math.hypot(P.x-O18.x,P.y-O18.y)<60){ch.push(id(O18));sorte='mutation:ombre';}
+       else if(e0&&ed<24){ch.push(id(e0));boss=e0.type==='boss';sorte='contact:'+e0.type;}else if(room.asm&&room.asm.e&&!room.asm.e.dead){ch.push(id(room.asm.e));sorte='masque';}}}}
     const J=arJuge(A.sig,RUN.time,ch,boss,DA.preavis);A.j.coups++;
     if(!J.ok){A.j.sansSigne++;A.j.liste.push({t:+RUN.time.toFixed(2),depuis:isFinite(J.depuis)?+J.depuis.toFixed(2):null,boss,src:sorte,p:[P.x|0,P.y|0],cam:[CAM.x|0,CAM.y|0]});if(A.j.liste.length>60)A.j.liste.shift();}}}
   catch(err){console.error(err);}return r;};
@@ -13242,7 +13261,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
   addEventListener('load',()=>setTimeout(()=>{try{essai(QA[1],{cls:q('classe'),etat:+(q('etat')||0),w:+(q('w')||0)||undefined,h:+(q('h')||0)||undefined,foule:q('foule')!=null?+q('foule'):undefined,
    boss:q('boss')==='1',tirs:q('tirs')==='1',bot:q('bot')==='1',dieu:q('dieu')==='1'});}catch(err){console.error(err);}},400));}
  // ── console et bancs
- window.__arene={DA,essai,vers,
+ window.__arene={DA,essai,vers,peindreTard,
   etat:()=>({on:A.on,cle:A.cle,monde:A.M&&[A.M.w,A.M.h],etat:A.ie,trans:A.trans&&{ph:A.trans.ph,t:+A.trans.t.toFixed(2),journal:A.trans.journal.slice(),pousse:A.trans.pousse.slice()},AR:Object.assign({},AR),piliers:room&&room.pillars.length,peintureMs:A.peintureMs}),
   cam:()=>({x:CAM.x,y:CAM.y,on:CAM.on,vue:vue(),sure:arSure(vue(),DA.vue.marges),hud:A.hud,P:P&&{x:P.x,y:P.y}}),
   indic:()=>A.indic.map(s=>({k:s.k,x:+s.x.toFixed(1),y:+s.y.toFixed(1),sx:+(s.x-CAM.x).toFixed(1),sy:+(s.y-CAM.y).toFixed(1),cote:s.cote,n:s.n,c:s.c,ids:s.ids.length,ks:[...new Set(s.ks)]})),
@@ -13266,6 +13285,8 @@ function brxPhase(hp,maxHp,seuils){let k=0;for(const s of seuils){if(hp>maxHp*s)
 // ── La lecture (Q2). S : {prof:{axe:0..1|null}, eff:{cm:{s,n}}, ko:{cm:n}, cms:{cm:{ax,hi}}, par:{source:dégâts}, tue:{phase(1..n):élément},
 // adapt, portes, reserve, nemesis (gardés tels quels pour les phases III et IV) ; phase I (5b) : parA:{acte:dégâts}, parR:{règle:dégâts}, acte,
 // themes:{thème:{need}}, tab:{phase:{decor,theme,regle}}}. Rend {poids:{élément:p}, premier:élément|null, tab (le tableau qui t'a tué), …}.
+// v18.7 (5c) : rend aussi bati (la sorte qui s'est effondrée sur toi, ou « rails » quand la cloche t'a tué : le premier bâtir de la phase la
+// rejoue) et ce que lit le choix des constructions (prof, eff, ko, cms).
 function brxLire(D,S,phase){const L=D.lecture,poids={},par=S.par||{};let parTot=0;for(const k in par)parTot+=Math.max(0,par[k]||0);
  for(const id in D.elements){const el=D.elements[id];let w=1;
   if(el.pond){const v=S.prof?S.prof[el.pond.axe]:null;if(v!=null&&isFinite(v))w*=L.axe.plancher+L.axe.pente*(el.pond.sens>0?v:1-v);
@@ -13274,8 +13295,10 @@ function brxLire(D,S,phase){const L=D.lecture,poids={},par=S.par||{};let parTot=
   if(parTot>0&&el.sources&&el.sources.length){let p=0;for(const s of el.sources)p+=Math.max(0,par[s]||0);w*=1+L.par.poids*p/parTot;}
   poids[id]=Math.max(L.min,w);}
  const tue=S.tue&&S.tue[phase+1],tab=tue==='tableau'&&S.tab&&S.tab[phase+1]?Object.assign({},S.tab[phase+1]):null;
- return{phase,poids,premier:L.tue.premier&&tue&&D.elements[tue]&&!D.elements[tue].fixe?tue:null,tab:L.tue.premier?tab:null,adapt:S.adapt|0,portes:(S.portes||[]).slice(),reserve:(S.reserve||[]).slice(),nemesis:!!S.nemesis,
-  par:Object.assign({},par),parA:Object.assign({},S.parA||{}),parR:Object.assign({},S.parR||{}),acte:S.acte||1,themes:S.themes||{}};}
+ const bati=tue==='effondrement'&&S.bati&&typeof S.bati[phase+1]==='string'?S.bati[phase+1]:tue==='rail'?'rails':null;
+ return{phase,poids,premier:L.tue.premier&&tue&&D.elements[tue]&&!D.elements[tue].fixe?tue:null,tab:L.tue.premier?tab:null,bati:L.tue.premier?bati:null,adapt:S.adapt|0,portes:(S.portes||[]).slice(),reserve:(S.reserve||[]).slice(),nemesis:!!S.nemesis,
+  par:Object.assign({},par),parA:Object.assign({},S.parA||{}),parR:Object.assign({},S.parR||{}),acte:S.acte||1,themes:S.themes||{},
+  prof:Object.assign({},S.prof||{}),eff:Object.assign({},S.eff||{}),ko:Object.assign({},S.ko||{}),cms:Object.assign({},S.cms||{})};}
 // ── Budget d'une mesure libre et tirage (Q8) : le premier est ce qui t'a tué ; puis des éléments tirés au poids tant que le budget et le
 // non-cumul (cumul[sorte], compte tenu de ce qui est déjà en jeu : actifs) le permettent ; un élément fixe (la feinte, les gestes signature,
 // le tableau) n'est jamais tiré : il est au socle.
@@ -13308,7 +13331,10 @@ function brxDans(z,x,y,pr){pr=pr||0;switch(z.forme){case 'disque':return Math.hy
  case 'anneau':{const d=Math.hypot(x-z.x,y-z.y);if(!(d>z.r0-pr*0.5&&d<z.r1+pr*0.5))return false;
   // la brèche (5b, le Cadre) : un couloir de largeur l, du centre vers l'extérieur dans la direction a ; on y est à l'abri à pr/2 de ses bords
   if(z.breche){const ca=Math.cos(z.breche.a),sa=Math.sin(z.breche.a),u=(x-z.x)*ca+(y-z.y)*sa,v=-(x-z.x)*sa+(y-z.y)*ca;if(u>0&&Math.abs(v)<z.breche.l/2-pr*0.5)return false;}return true;}
- case 'case':return x>z.x0-pr*0.5&&x<z.x1+pr*0.5&&y>z.y0-pr*0.5&&y<z.y1+pr*0.5;}return false;}
+ case 'case':return x>z.x0-pr*0.5&&x<z.x1+pr*0.5&&y>z.y0-pr*0.5&&y<z.y1+pr*0.5;
+ // v18.7 (5c, la Truelle) : un cône {x, y, a, ouv, r0, r1} : de r0 à r1 de son sommet, dans l'angle ouv autour de a (marge angulaire de pr/2)
+ case 'cone':{const dx=x-z.x,dy=y-z.y,d=Math.hypot(dx,dy);if(d<z.r0-pr*0.5||d>z.r1+pr*0.5)return false;let da=Math.atan2(dy,dx)-z.a;while(da>Math.PI)da-=BRX_TAU;while(da<-Math.PI)da+=BRX_TAU;
+  return Math.abs(da)<z.ouv/2+(d>pr*0.5?Math.asin(pr*0.5/d):Math.PI);}}return false;}
 function brxSortie(D,zones,p,o){const S=D.sortie,pr=o.pr||0,v=o.v||180,R=o.arene;
  const libre=(x,y)=>x>=R.x0+pr&&x<=R.x1-pr&&y>=R.y0+pr&&y<=R.y1-pr&&!(o.bloque&&o.bloque(x,y))&&!zones.some(z=>brxDans(z,x,y,pr));
  if(libre(p[0],p[1]))return{ok:true,d:0,q:[p[0],p[1]]};
@@ -13367,9 +13393,12 @@ function brxTableau(D,lec,palier,rng,o){o=o||{};const T=D.tableaux,C=T.couts,W=b
  return{decor,theme,regle,densite,champion:champion>0,cout:B-bud,budget:B,rejoue};}
 // ── Les constructions comme système (Q9) : grille de la carte de distances (mêmes règles que FF : pas cs, marge pad, bornes de l'arène et
 // piliers bloquent), part de l'aire libre reliée à un point (inondation 4-connexe + diagonales non coupées, comme FF), aire couverte.
+// (v18.7 : chaque pilier marque les cases de sa boîte, au lieu que chaque case lise tous les piliers : même grille, plus vite)
 function brxGrille(M,R,piliers,G){const cs=G.cs,pad=G.pad,cols=Math.ceil(M.w/cs),rows=Math.ceil(M.h/cs),blk=new Uint8Array(cols*rows);let libres=0;
- for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=(c+0.5)*cs,y=(r+0.5)*cs;let b=x<R.x0+pad||x>R.x1-pad||y<R.y0+pad||y>R.y1-pad;
-  if(!b)for(const p of piliers)if(Math.hypot(x-p.x,y-p.y)<p.r+pad){b=true;break;}blk[r*cols+c]=b?1:0;if(!b)libres++;}
+ for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=(c+0.5)*cs,y=(r+0.5)*cs;if(x<R.x0+pad||x>R.x1-pad||y<R.y0+pad||y>R.y1-pad)blk[r*cols+c]=1;}
+ for(const p of piliers){const m=p.r+pad,c0=Math.max(0,Math.floor((p.x-m)/cs-0.5)),c1=Math.min(cols-1,Math.ceil((p.x+m)/cs-0.5)),r0=Math.max(0,Math.floor((p.y-m)/cs-0.5)),r1=Math.min(rows-1,Math.ceil((p.y+m)/cs-0.5));
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const x=(c+0.5)*cs,y=(r+0.5)*cs;if(Math.hypot(x-p.x,y-p.y)<m)blk[r*cols+c]=1;}}
+ for(let i=0;i<blk.length;i++)if(!blk[i])libres++;
  return{cols,rows,cs,blk,libres};}
 function brxConnexe(G,px,py){const cs=G.cs,cols=G.cols,rows=G.rows,blk=G.blk;if(!G.libres)return 0;
  let c0=Math.max(0,Math.min(cols-1,Math.floor(px/cs))),r0=Math.max(0,Math.min(rows-1,Math.floor(py/cs)));
@@ -13382,15 +13411,138 @@ function brxConnexe(G,px,py){const cs=G.cs,cols=G.cols,rows=G.rows,blk=G.blk;if(
 // Poser une construction c {x,y,r} : base = obstacles de l'état d'arène, cons = constructions déjà debout, j = {x,y,r} (toi), palier.
 // Refusée si : trop de constructions (paliers.*.constructions), sur toi (ou à moins de pad), aire couverte > constructions.aire de l'aire libre
 // de base, ou moins de constructions.connexite de l'aire libre reliée à toi. Rend {ok, raison, part, aire}.
-function brxPoser(D,M,R,base,cons,c,j,palier){const C=D.constructions,P=D.paliers[brxPalier(D,palier)];
+// v18.7 (5c) : c (et chaque élément de cons) peut être une chaîne {sorte, disques:[{x,y,r}], etats?, voie?} : la douve a deux états (deux
+// passerelles ouvertes sur quatre, en alternance) et chaque combinaison d'états est vérifiée (la pire compte) ; refus de plus : plafond de la
+// sorte (sortes.*.max), à moins de placement.bord px des bornes, sur la voie d'un rail (ou un rail à travers une construction).
+function brxDisques(c){return c.disques?c.disques:[c];}
+function brxEtats(c){return c.etats||[brxDisques(c)];}
+function brxTous(c){return c.etats?[].concat(c.disques,...c.etats):brxDisques(c);}
+function brxPoser(D,M,R,base,cons,c,j,palier){const C=D.constructions,P=D.paliers[brxPalier(D,palier)],pad=C.grille.pad,ch=!!c.disques;
  if(cons.length>=P.constructions)return{ok:false,raison:'plafond'};
- if(Math.hypot(c.x-j.x,c.y-j.y)<c.r+(j.r||0)+C.grille.pad)return{ok:false,raison:'joueur'};
- const G0=brxGrille(M,R,base,C.grille),G1=brxGrille(M,R,base.concat(cons,[c]),C.grille),aire=G0.libres?1-G1.libres/G0.libres:1,part=brxConnexe(G1,j.x,j.y);
+ const S=ch&&c.sorte?C.sortes[c.sorte]:null;if(S&&S.max!=null&&cons.filter(k=>k.sorte===c.sorte).length>=S.max)return{ok:false,raison:'sorte'};
+ const dc=brxTous(c);if(dc.some(d=>Math.hypot(d.x-j.x,d.y-j.y)<d.r+(j.r||0)+pad))return{ok:false,raison:'joueur'};
+ if(ch){const b=C.placement.bord;if(dc.some(d=>d.x-d.r<R.x0+b||d.x+d.r>R.x1-b||d.y-d.r<R.y0+b||d.y+d.r>R.y1-b))return{ok:false,raison:'bord'};
+  const sur=(v,L)=>L.some(d=>brxSeg(d.x,d.y,v.x0,v.y0,v.x1,v.y1)<v.w/2+d.r);
+  for(const k of cons)if(k.voie&&sur(k.voie,dc))return{ok:false,raison:'voie'};
+  if(c.voie&&cons.some(k=>sur(c.voie,brxTous(k))))return{ok:false,raison:'voie'};}
+ // la pire combinaison d'états (au plus deux : une seule douve debout ou annoncée à la fois)
+ let combos=[[]];for(const k of cons.concat([c])){const E=brxEtats(k),n=[];for(const cb of combos)for(const e of E)n.push(cb.concat(e));combos=n.slice(0,8);}
+ const G0=brxGrille(M,R,base,C.grille);let aire=0,part=1;
+ for(const cb of combos){const G1=brxGrille(M,R,base.concat(cb),C.grille);aire=Math.max(aire,G0.libres?1-G1.libres/G0.libres:1);part=Math.min(part,brxConnexe(G1,j.x,j.y));}
  if(aire>C.aire+1e-9)return{ok:false,raison:'aire',part,aire};
  if(part<C.connexite-1e-9)return{ok:false,raison:'connexite',part,aire};
  return{ok:true,part,aire};}
+// ── Phase II, « L'Ouvrage » (fiche 5c). Les gestes signature (géométrie) : h = ses mains, p = toi, R = les bornes {x0,y0,x1,y1}, rot : variante.
+// brxCoupe : le premier pilier qui arrête un tir (jamais une fosse) qu'un couloir de largeur w, de a vers b, touche (au contact de la main qui file) :
+// {l (la longueur jusqu'au contact), i (l'indice du pilier)} ou null. La Ruée s'arrête là : derrière, on est à l'abri, et ça se voit.
+function brxCoupe(ax,ay,bx,by,w,piliers){const dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;let best=null;
+ for(let i=0;i<piliers.length;i++){const q=piliers[i];if(q.kind==='fosse18'||q.fosse)continue;const t=(q.x-ax)*ux+(q.y-ay)*uy,dp=Math.abs(-(q.x-ax)*uy+(q.y-ay)*ux),m=q.r+w/2;
+  if(dp>=m||t<=0)continue;const l=Math.max(0,t-Math.sqrt(m*m-dp*dp));if(l<L&&(!best||l<best.l))best={l,i};}return best;}
+// la distance de (x,y) au bord des bornes R dans la direction (ux,uy)
+function brxBord(R,x,y,ux,uy){let t=Infinity;if(ux>1e-9)t=Math.min(t,(R.x1-x)/ux);if(ux<-1e-9)t=Math.min(t,(R.x0-x)/ux);if(uy>1e-9)t=Math.min(t,(R.y1-y)/uy);if(uy<-1e-9)t=Math.min(t,(R.y0-y)/uy);return Math.max(0,t);}
+// La Ruée : un couloir de ses mains vers toi et au-delà, jusqu'au bord (len au plus), coupé au premier pilier qui arrête un tir
+function brxRuee(el,h,p,R,piliers,rot){const a=Math.atan2(p[1]-h[1],p[0]-h[0])+(rot||0),ux=Math.cos(a),uy=Math.sin(a),l0=Math.min(el.len,brxBord(R,h[0],h[1],ux,uy)),c=brxCoupe(h[0],h[1],h[0]+ux*l0,h[1]+uy*l0,el.w,piliers||[]),l=c?c.l:l0;
+ return{zones:[{forme:'couloir',x0:h[0],y0:h[1],x1:h[0]+ux*l,y1:h[1]+uy*l,w:el.w}],coupe:c?c.i:-1,l};}
+// L'Équerre : deux couloirs croisés sur toi, alignés sur l'arène (rot : 45° en variante). La Truelle : un cône de ses mains vers toi.
+function brxEquerre(el,p,rot){const out=[];for(const a0 of [0,Math.PI/2]){const a=a0+(rot||0),ux=Math.cos(a)*el.len/2,uy=Math.sin(a)*el.len/2;out.push({forme:'couloir',x0:p[0]-ux,y0:p[1]-uy,x1:p[0]+ux,y1:p[1]+uy,w:el.w});}return out;}
+function brxTruelle(el,h,p,rot){return[{forme:'cone',x:h[0],y:h[1],a:Math.atan2(p[1]-h[1],p[0]-h[0])+(rot||0),ouv:el.ouverture*Math.PI/180,r0:el.r0,r1:el.r1}];}
+// ── Les six constructions (Q4), une par axe du profil. Lecture : seuil, poids, verdict de la contre-mesure jumelle, variété (debout : les sortes
+// debout ou annoncées, de la plus ancienne à la plus récente).
+const BRX_SORTES=['murailles','douves','colonnades','rails','puits','echafaudages'],BRX_CHUTE=['murailles','colonnades','echafaudages','puits'];
+function brxSorteScore(D,id,prof){const s=D.constructions.sortes[id],v=prof?prof[s.axe]:null;return v==null||!isFinite(v)?D.constructions.lecture.inconnu:(s.sens>0?v:1-v);}
+function brxSortesPoids(D,lec,debout){const C=D.constructions,L=D.lecture,poids={},eligibles=[];debout=debout||[];
+ for(const id of BRX_SORTES){const s=C.sortes[id],sc=brxSorteScore(D,id,lec.prof);let w=L.axe.plancher+L.axe.pente*sc;
+  const e=lec.eff&&lec.eff[s.jumelle];if(e&&e.s>0)w*=1+L.verdict.porte*Math.min(1,e.s);if(lec.ko&&(lec.ko[s.jumelle]||0)>=L.verdict.abandonApres)w*=L.verdict.abandon;
+  const n=debout.filter(k=>k===id).length;w*=Math.pow(C.lecture.variete,n);poids[id]=Math.max(L.min,w);
+  if(sc>=C.lecture.seuil-1e-9&&n<s.max)eligibles.push(id);}
+ return{poids,eligibles};}
+// l'ordre des sortes à essayer pour un bâtir : o.premier (ce qui t'a tué : la sorte qui s'est effondrée sur toi, ou les rails) en tête s'il reste de
+// la place pour sa sorte ; o.eviter (la sorte du premier bâtir de la boucle) écartée s'il reste une autre sorte éligible ; une sorte tirée au poids
+// parmi les éligibles, puis les autres éligibles dans l'ordre des poids (si aucune variante d'une sorte ne passe, il bâtit la suivante) ;
+// o.exclus : les sortes annulées dans la boucle (jamais rebâties dans la boucle)
+function brxOrdreSortes(D,lec,debout,rng,o){o=o||{};debout=debout||[];const W=brxSortesPoids(D,lec,debout),ex=o.exclus||[];let el=W.eligibles.filter(k=>!ex.includes(k));
+ if(o.eviter&&el.length>1)el=el.filter(k=>k!==o.eviter);const out=[];
+ if(o.premier&&BRX_SORTES.includes(o.premier)&&!ex.includes(o.premier)&&debout.filter(k=>k===o.premier).length<D.constructions.sortes[o.premier].max)out.push(o.premier);
+ const reste=el.filter(k=>!out.includes(k));
+ if(reste.length){const ch=brxPick(W.poids,reste,rng);out.push(ch);reste.filter(k=>k!==ch).sort((a,b)=>W.poids[b]-W.poids[a]||BRX_SORTES.indexOf(a)-BRX_SORTES.indexOf(b)).forEach(k=>out.push(k));}
+ return{ordre:out,poids:W.poids,eligibles:W.eligibles};}
+// la géométrie d'une sorte et ses variantes (placement.variantes : telle quelle, tournée de ±rotation degrés, glissée de glisse px). Une construction :
+// {sorte, disques:[{x,y,r,el}] (el : l'élément cassable du disque, PV partagés ; −1 : incassable), elements:[{pvPart}], c:[x,y] ; douve : etats (les deux
+// états de ses passerelles), portes, ile ; rail : voie {x0,y0,x1,y1,w}}. o.prof : le profil (la longueur d'une muraille suit la portée). [] : impossible.
+function brxRot(x,y,cx,cy,a){const c=Math.cos(a),s=Math.sin(a),dx=x-cx,dy=y-cy;return[cx+dx*c-dy*s,cy+dx*s+dy*c];}
+function brxGeo(D,id,p,h,R,rng,o){o=o||{};const C=D.constructions,S=C.sortes[id],PL=C.placement;if(!S)return[];
+ let ux=h[0]-p[0],uy=h[1]-p[1],dist=Math.hypot(ux,uy);if(dist<1){ux=0;uy=-1;dist=0;}else{ux/=dist;uy/=dist;}const vx=-uy,vy=ux;
+ const VAR=[[0,0],[PL.rotation,0],[-PL.rotation,0],[0,PL.glisse]].slice(0,PL.variantes),rad=d=>d*Math.PI/180;
+ const tourne=(L,cx,cy,a,gx,gy)=>L.map(d=>{const q=brxRot(d.x,d.y,cx,cy,a);return Object.assign({},d,{x:q[0]+gx,y:q[1]+gy});});
+ const fin=(ds,extra)=>{let x=0,y=0;for(const d of ds){x+=d.x;y+=d.y;}return Object.assign({sorte:id,disques:ds,c:[x/ds.length,y/ds.length]},extra);};
+ const el1=[{pvPart:S.pvPart}];
+ if(id==='murailles'){const P0=o.prof&&o.prof.portee!=null&&isFinite(o.prof.portee)?o.prof.portee:0.5,L=S.longueur,len=Math.max(L.min,Math.min(L.max,L.base+L.pente*(P0-0.5)/0.5));
+  const f=S.place.part[0]+(S.place.part[1]-S.place.part[0])*rng(),d=Math.max(dist*f,S.place.minJ);if(d>dist-40)return[];
+  const n=Math.max(2,Math.round(len/S.disque.pas)+1),cx=p[0]+ux*d,cy=p[1]+uy*d,base=[];for(let i=0;i<n;i++){const t=(i/(n-1)-0.5)*len;base.push({x:cx+vx*t,y:cy+vy*t,r:S.disque.r,el:0});}
+  return VAR.map(([deg,gl])=>{const ds=tourne(base,cx,cy,rad(deg),vx*gl,vy*gl);return fin(ds,{elements:el1,longueur:len});});}
+ if(id==='douves'){const A=S.anneau,PP=S.passerelles,dd=S.place.d[0]+(S.place.d[1]-S.place.d[0])*rng(),m=A.r+A.fosse+PL.bord+1;
+  // les fosses de l'anneau, hors des passerelles ; celles des passerelles (fermées) ; deux états : N et S ouvertes, puis E et O
+  const gap=(PP.l/2+A.fosse)/A.r,quart=Math.PI/2,ring=[],portes=[];
+  for(let q=0;q<PP.n;q++){const a0=q*quart+gap,a1=(q+1)*quart-gap,span=(a1-a0)*A.r,n=Math.ceil(span/A.pas)+1;for(let i=0;i<n;i++)ring.push({a:a0+(a1-a0)*i/(n-1)});
+   const g=[];for(const k of [-1,0,1])g.push({a:q*quart+k*(A.pas/A.r)});portes.push(g);}
+  return VAR.map(([deg,gl])=>{const a=rad(deg),q=brxRot(p[0]+ux*dd,p[1]+uy*dd,p[0],p[1],a);let cx=q[0]+vx*gl,cy=q[1]+vy*gl;
+   cx=Math.max(R.x0+m,Math.min(R.x1-m,cx));cy=Math.max(R.y0+m,Math.min(R.y1-m,cy));if(Math.hypot(cx-p[0],cy-p[1])<A.r+A.fosse+40)return null;
+   const pt=k=>({x:cx+Math.cos(k.a)*A.r,y:cy+Math.sin(k.a)*A.r,r:A.fosse,el:-1,fosse:true}),ds=ring.map(pt),pp=portes.map(g=>g.map(pt));
+   return fin(ds,{c:[cx,cy],ile:[cx,cy],elements:[],portes:pp,etats:[ds.concat(pp[0],pp[2]),ds.concat(pp[1],pp[3])],incassable:true});}).filter(Boolean);}
+ if(id==='colonnades'){const F=S.fut,cx=p[0]-ux*S.place.d,cy=p[1]-uy*S.place.d,base=[],els=[];
+  for(let r=0;r<S.rangees;r++)for(let k=0;k<S.parRangee;k++){const a=(k-(S.parRangee-1)/2)*F.pas,b=(r-(S.rangees-1)/2)*F.pas;base.push({x:cx+vx*a+ux*b,y:cy+vy*a+uy*b,r:F.r,el:els.length});els.push({pvPart:S.pvPart});}
+  return VAR.map(([deg,gl])=>fin(tourne(base,cx,cy,rad(deg),vx*gl,vy*gl),{elements:els.map(e=>Object.assign({},e))}));}
+ if(id==='rails'){const L=S.longueur,B=S.butoir,m=PL.bord+B.r;
+  return VAR.map(([deg,gl])=>{const a=Math.atan2(uy,ux)+rad(deg),wx=Math.cos(a),wy=Math.sin(a),Ri={x0:R.x0+m,y0:R.y0+m,x1:R.x1-m,y1:R.y1-m};
+   if(p[0]<Ri.x0||p[0]>Ri.x1||p[1]<Ri.y0||p[1]>Ri.y1)return null;const tp=brxBord(Ri,p[0],p[1],wx,wy),tm=brxBord(Ri,p[0],p[1],-wx,-wy);
+   const lo=-tm+L/2,hi=tp-L/2;if(lo>hi+1e-9)return null;const sh=Math.max(lo,Math.min(hi,gl));const cx=p[0]+wx*sh,cy=p[1]+wy*sh;
+   const ax=cx-wx*L/2,ay=cy-wy*L/2,bx=cx+wx*L/2,by=cy+wy*L/2;
+   return fin([{x:ax,y:ay,r:B.r,el:0},{x:bx,y:by,r:B.r,el:1}],{c:[cx,cy],elements:[{pvPart:B.pvPart},{pvPart:B.pvPart}],voie:{x0:ax,y0:ay,x1:bx,y1:by,w:C.placement.voie}});}).filter(Boolean);}
+ if(id==='puits'){const dd=S.place.d[0]+(S.place.d[1]-S.place.d[0])*rng(),a0=rng()*BRX_TAU;
+  return VAR.map(([deg,gl])=>{const a=a0+rad(deg),cx=p[0]+Math.cos(a)*dd-Math.sin(a)*gl,cy=p[1]+Math.sin(a)*dd+Math.cos(a)*gl;return fin([{x:cx,y:cy,r:S.r,el:0}],{elements:el1,rayon:S.rayon});});}
+ if(id==='echafaudages'){const T=brxTiers(R,0),t=T[brxTiersLoin(T,p[0],p[1],null)],b=S.place.bord,x0=Math.max(t.x0,R.x0+b),x1=Math.min(t.x1,R.x1-b),y0=R.y0+b,y1=R.y1-b,out=[];
+  if(x1<=x0||y1<=y0)return[];for(let k=0;k<24&&out.length<PL.variantes;k++){const x=x0+rng()*(x1-x0),y=y0+rng()*(y1-y0);if(Math.hypot(x-p[0],y-p[1])>=S.place.dMin)out.push(fin([{x,y,r:S.r,el:0}],{elements:el1}));}
+  return out;}
+ return[];}
+// bâtir : la première sorte (dans l'ordre de brxOrdreSortes) dont une variante passe brxPoser. base : obstacles de l'état d'arène ; cons : les
+// constructions debout ou annoncées (chaînes, ou piliers d'essai) ; j : toi {x,y,r} ; h : ses mains. Rend {sorte, c (la construction choisie, avec
+// k : sa variante), ordre, essais:[{sorte, k, raison}]} ; sorte null : aucune ne passe (la mesure saute).
+function brxBatir(D,M,R,base,cons,lec,j,h,palier,rng,o){o=o||{};const debout=cons.filter(k=>k.sorte).map(k=>k.sorte),O=brxOrdreSortes(D,lec,debout,rng,o),essais=[];
+ for(const id of O.ordre){const V=brxGeo(D,id,[j.x,j.y],h,R,rng,{prof:lec.prof});if(!V.length)essais.push({sorte:id,k:-1,raison:'place'});
+  for(let k=0;k<V.length;k++){const v=brxPoser(D,M,R,base,cons,V[k],j,palier);essais.push({sorte:id,k,raison:v.ok?'ok':v.raison});if(v.ok)return{sorte:id,c:Object.assign(V[k],{k,part:v.part,aire:v.aire}),ordre:O.ordre,poids:O.poids,essais};}}
+ return{sorte:null,c:null,ordre:O.ordre,poids:O.poids,essais};}
+// les PV d'un élément de construction (une part des PV de la phase II, pour que la calibration de 5g les emporte), la fissure (0 intacte, 1 fêlée,
+// 2 lézardée, 3 détruite), l'annulation pendant l'annonce (ses PV perdus pendant l'annonce ≥ part × les PV de la phase)
+function brxPvPart(D,part,palier){return Math.round(part*brxPv(D,palier)[1]);}
+function brxFissure(D,pv,max){if(pv<=0)return 3;const f=D.constructions.fissures,k=pv/max;return k>f[0]+1e-9?0:k>f[1]+1e-9?1:2;}
+function brxAnnule(D,perte,pvPhase){return perte>=D.constructions.annulation.part*pvPhase-1e-9;}
+// les constructions qui tiennent entières dans les bornes B (l'état IV) ; si la connexité manque, il retire d'abord les plus éloignées du centre
+function brxFiltreBornes(D,M,B,base,cons,j){const dans=k=>brxTous(k).every(d=>d.x-d.r>=B.x0&&d.x+d.r<=B.x1&&d.y-d.r>=B.y0&&d.y+d.r<=B.y1);
+ const garde=cons.filter(dans),retire=cons.filter(k=>!dans(k)),cx=(B.x0+B.x1)/2,cy=(B.y0+B.y1)/2,cen=k=>{const ds=brxDisques(k);let x=0,y=0;for(const d of ds){x+=d.x;y+=d.y;}return Math.hypot(x/ds.length-cx,y/ds.length-cy);};
+ for(let n=0;n<16&&garde.length;n++){let combos=[[]];for(const k of garde){const E=brxEtats(k),q=[];for(const cb of combos)for(const e of E)q.push(cb.concat(e));combos=q.slice(0,8);}
+  let part=1;for(const cb of combos)part=Math.min(part,brxConnexe(brxGrille(M,B,base.concat(cb),D.constructions.grille),j.x,j.y));
+  if(part>=D.constructions.connexite-1e-9)break;garde.sort((a,b)=>cen(b)-cen(a));retire.push(garde.shift());}
+ return{garde,retire};}
+// ── L'effondrement : la zone de chute d'une construction (vers toi) ; laquelle tombe : la debout effondrable (jamais une douve ni un rail) la plus
+// proche de toi dont la chute laisse une sortie (o : options de brxSortie ; autres : zones déjà en jeu) ; aucune : null (tout casser, c'est aussi
+// ne rien recevoir sur la tête)
+function brxChute(D,c,p){const S=D.constructions.sortes[c.sorte],F=S&&S.chute;if(!F)return[];const ds=c.disques.filter(d=>!d.casse);if(!ds.length)return[];
+ if(F.forme==='couloir'){const a=ds[0],b=ds[ds.length-1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;let nx=-dy/L,ny=dx/L;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;if((p[0]-mx)*nx+(p[1]-my)*ny<0){nx=-nx;ny=-ny;}
+  return[{forme:'couloir',x0:a.x+nx*F.decale,y0:a.y+ny*F.decale,x1:b.x+nx*F.decale,y1:b.y+ny*F.decale,w:F.w}];}
+ if(F.forme==='rayons')return ds.map(d=>{const dx=p[0]-d.x,dy=p[1]-d.y,l=Math.hypot(dx,dy)||1;return{forme:'couloir',x0:d.x,y0:d.y,x1:d.x+dx/l*F.len,y1:d.y+dy/l*F.len,w:F.w};});
+ const d=ds[0],dx=p[0]-d.x,dy=p[1]-d.y,l=Math.hypot(dx,dy)||1;return[{forme:'disque',x:d.x+dx/l*F.decale,y:d.y+dy/l*F.decale,r:F.r}];}
+function brxEffondrement(D,cons,p,o,autres){const cand=[];
+ for(const c of cons){if(c.etat==='annonce'||!BRX_CHUTE.includes(c.sorte))continue;const ds=c.disques.filter(d=>!d.casse);if(!ds.length)continue;cand.push({c,d:Math.min(...ds.map(d=>Math.hypot(d.x-p[0],d.y-p[1])-d.r))});}
+ cand.sort((a,b)=>a.d-b.d);for(const {c} of cand){const zs=brxChute(D,c,p);if(zs.length&&brxSortie(D,zs.concat(autres||[]),p,o).ok)return{c,zones:zs};}return null;}
+// la cloche d'un rail : un couloir de w px sur toute la voie (entre les butoirs)
+function brxCloche(D,c){const v=c.voie;return{forme:'couloir',x0:v.x0,y0:v.y0,x1:v.x1,y1:v.y1,w:D.constructions.sortes.rails.cloche.w};}
+// ── Les Manœuvres : l'équipe descendue au bout de ses fils, lue sur ce qu'il a bâti (recentes : les sortes debout, de la plus récente à la plus
+// ancienne) ; n places par palier (un rail : appelN ennemis pour une place), au plus max vivants (vivants : ceux de l'appel encore là)
+function brxAppel(D,palier,recentes,vivants){const M=D.manoeuvres,S=D.constructions.sortes,n=M.n[brxPalier(D,palier)]||M.n.normal,out=[];
+ for(let i=0;i<n;i++){const id=recentes&&recentes[i],s=id&&S[id],t=(s&&s.appel)||M.defaut,k=(s&&s.appelN)||1;for(let q=0;q<k;q++)out.push(t);}
+ return out.slice(0,Math.max(0,M.max-(vivants|0)));}
 // ── Sauvegarde (Q13) : SAVE.brumeux versionnée. Absente ou abîmée : état neuf ; version future : null (on n'y touche pas).
-function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[],tab:{}};}
+function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[],tab:{},bati:{}};}
 function brxLireSauve(S,D){if(!S||typeof S!=='object')return brxNeuf();if(typeof S.v==='number'&&S.v>BRX_V)return null;if(S.v!==BRX_V)return brxNeuf();
  const N=brxNeuf(),ent=(x,a,b)=>Number.isInteger(x)&&x>=a&&x<=b,n=D?D.phases.length:5;
  N.tentatives=ent(S.tentatives,0,1e6)?S.tentatives:0;N.victoires=ent(S.victoires,0,1e6)?S.victoires:0;N.phaseMax=ent(S.phaseMax,0,n)?S.phaseMax:0;
@@ -13399,14 +13551,18 @@ function brxLireSauve(S,D){if(!S||typeof S!=='object')return brxNeuf();if(typeof
  // tab (5b, facultatif) : le tableau qui t'a tué, par phase, seulement là où l'élément mortel est « tableau » ; un champ invalide est ignoré
  if(S.tab&&typeof S.tab==='object')for(const k in S.tab){const ph=+k,t=S.tab[k];if(!ent(ph,1,n)||N.mort[ph]!=='tableau'||!t||typeof t!=='object')continue;
   if(D?brxTabOk(D,t,null):(typeof t.decor==='string'&&typeof t.theme==='string'))N.tab[ph]={decor:t.decor,theme:t.theme,regle:t.regle==null?null:t.regle};}
+ // bati (5c, facultatif) : la sorte qui s'est effondrée sur toi, par phase, seulement là où l'élément mortel est « effondrement » ; une sorte inconnue
+ // ou qui ne s'effondre pas (douve, rail) est ignorée
+ if(S.bati&&typeof S.bati==='object')for(const k in S.bati){const ph=+k,b=S.bati[k];if(!ent(ph,1,n)||N.mort[ph]!=='effondrement'||typeof b!=='string'||!BRX_CHUTE.includes(b))continue;N.bati[ph]=b;}
  return N;}
-function brxEcrireSauve(S){const o={v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]};if(S.tab&&Object.keys(S.tab).length)o.tab=S.tab;return JSON.parse(JSON.stringify(o));}
+function brxEcrireSauve(S){const o={v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]};if(S.tab&&Object.keys(S.tab).length)o.tab=S.tab;if(S.bati&&Object.keys(S.bati).length)o.bati=S.bati;return JSON.parse(JSON.stringify(o));}
 // Noter un combat : o = {essai, phase (1..n, la plus haute atteinte), par (l'élément qui t'a tué, ou null), tab (si par vaut « tableau » : le
-// tableau, {decor, theme, regle}), win, vus (éléments rencontrés)}.
+// tableau, {decor, theme, regle}), bati (si par vaut « effondrement » : la sorte tombée sur toi), win, vus (éléments rencontrés)}.
 // Une descente d'essai n'écrit rien (l'état rendu est le même objet).
 function brxNoter(S,o,D){if(o.essai)return S;const N=brxLireSauve(brxEcrireSauve(S),D)||brxNeuf();N.tentatives++;N.phaseMax=Math.max(N.phaseMax,o.phase|0);
  if(o.win){N.victoires++;}else if(o.par&&(!D||D.elements[o.par])&&o.phase>=1){N.mort[o.phase]=o.par;
-  if(o.par==='tableau'&&o.tab&&(D?brxTabOk(D,o.tab,null):true))N.tab[o.phase]={decor:o.tab.decor,theme:o.tab.theme,regle:o.tab.regle==null?null:o.tab.regle};else delete N.tab[o.phase];}
+  if(o.par==='tableau'&&o.tab&&(D?brxTabOk(D,o.tab,null):true))N.tab[o.phase]={decor:o.tab.decor,theme:o.tab.theme,regle:o.tab.regle==null?null:o.tab.regle};else delete N.tab[o.phase];
+  if(o.par==='effondrement'&&typeof o.bati==='string'&&BRX_CHUTE.includes(o.bati))N.bati[o.phase]=o.bati;else delete N.bati[o.phase];}
  for(const id of o.vus||[])if(!N.vus.includes(id)&&(!D||D.elements[id]))N.vus.push(id);
  return N;}
 // ── Statistiques : moyenne et pire part (p95 par défaut) d'un échantillon de durées (ms)
@@ -13422,7 +13578,9 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
 // enveloppe updateBoss, hitEnemy, bossDefeated, drawEnemyBody / Post, drawTelegraphs, computeLights, g27GlypheHud, step, render, hurtPlayer.
 // v18.6 (action 5b) : la phase I, « le Rappel » (fiche validée le 2 novembre 2026) : ses gestes signature (les Fils, le Cadre, la Toile, la
 // feinte), ses tableaux convoqués (fragments de décor peints une fois à l'entrée du combat, vagues d'un thème existant, règles de salle confinées
-// au fragment, sans bulle), le rideau et la fenêtre à nu après chaque tableau vidé. Les phases II à V jouent encore la partition d'essai.
+// au fragment, sans bulle), le rideau et la fenêtre à nu après chaque tableau vidé. v18.7 (action 5c) : la phase II, « L'Ouvrage » (fiche validée
+// le 2 novembre 2026) : ses gestes signature (la Ruée, l'Équerre, la Truelle, la feinte), six constructions lues sur ton style (annonce en craie et
+// annulation, fissures, effondrement, cloche, passerelles, puits, échafaudages), les Manœuvres. Les phases III à V jouent encore la partition d'essai.
 // ═════════════════════════════════════════════════════════════════════════════
 (()=>{
  const DB=window.BRUME_DATA&&window.BRUME_DATA.brumeux,DA=window.BRUME_DATA&&window.BRUME_DATA.arene,XA=window.__arene;if(!DB||!DA||!XA)return;
@@ -13432,7 +13590,9 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  const neuf=()=>({on:false,e:null,phase:0,pv:[],seuils:[],palier:'normal',graine:0,rng:null,lec:null,boucle:null,im:0,ph:'entracte',t:0,tmes:0,zones:[],tirs:[],cons:[],ncons:0,trans:null,
   essai:null,bot:0,sauve:null,vus:new Set(),scene:null,regard:0,tue:null,note:false,zoneCourante:null,
   nb:0,ngrp:0,tab:null,tiers:null,tiersVus:[],cal:null,tueTab:null,feinteCoup:false,chute:0,ouvre:0,pench:0,   // v18.6 : la phase I (tableaux, calques, mains)
-  j:{phases:{},lancers:0,sautes:0,posees:0,refusees:[],lectures:0,transitions:[],tirages:[],tableaux:[],dallesSautees:0,rentres:0,peintureMs:null}});
+  bat:[],nbat:0,nbatPh:0,ncid:0,batB:null,batX:[],ann:null,mainsC:null,ruee:null,mod:null,tueBati:null,vacille:0,saute:false,   // v18.7 : la phase II (constructions, annonce, mains, Ruée, modules)
+  j:{phases:{},lancers:0,sautes:0,posees:0,refusees:[],lectures:0,transitions:[],tirages:[],tableaux:[],dallesSautees:0,rentres:0,peintureMs:null,
+   bati:[],annulees:0,cassees:0,elementsCasses:0,effondrees:0,cedees:0,ruees:0,brisees:0,cloches:0,clochesSautees:0,ecrases:0,tombes:0,appels:0,appelsSautes:0,mesuresSautees:0,rendus:0,puitsBu:0,assembleMs:[],modulesMs:null,cuissonMs:[]}});
  let X=neuf();
  // ── le glyphe (croix de manipulation et œil) : image pour le HUD et le signe de bord
  const GL={s:DB.dessin.glyphe,url:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(DB.dessin.glyphe),img:null};
@@ -13440,7 +13600,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // ── la sauvegarde (Q13) : lue à l'entrée du combat, écrite à sa fin ; une descente d'essai n'écrit rien
  function sauveLire(){try{const S=brxLireSauve(SAVE.brumeux,DB);return S;}catch(err){return brxNeuf();}}
  function noter(win){if(X.note||!X.e)return;X.note=true;
-  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,win,vus:[...X.vus]};
+  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,bati:!win&&X.tue==='effondrement'?X.tueBati:null,win,vus:[...X.vus]};
   const S=X.sauve||brxNeuf(),N=brxNoter(S,o,DB);X.j.note=o;
   if(!o.essai&&N!==S){SAVE.brumeux=brxEcrireSauve(N);X.sauve=N;try{persist();}catch(err){}}}
  const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/.test(location.search);
@@ -13451,6 +13611,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   S.cms={};for(const k in BE_D.contreMesures||{}){const c=BE_D.contreMesures[k];S.cms[k]={ax:c.ax,hi:!!c.hi};}
   S.par=Object.assign({},RUN.par18||{});S.tue=X.sauve?X.sauve.mort:{};
   S.parA=Object.assign({},RUN.par18A||{});S.parR=Object.assign({},RUN.par18R||{});S.acte=ACTE();S.themes=BE_D.themes||{};S.tab=X.sauve&&X.sauve.tab||{};   // v18.6 : les tableaux
+  S.bati=X.sauve&&X.sauve.bati||{};   // v18.7 : la sorte qui s'est effondrée sur toi
   try{S.adapt=adaptLv(P.cls);}catch(err){S.adapt=0;}
   S.portes=((RUN.memoire&&RUN.memoire.actifs)||[]).map(a=>({id:a.id,src:a.src,rang:a.rang,g:a.g||0}));
   S.reserve=(RUN.reserveBrume||[]).map(x=>({id:x.id,source:x.source,oublie:x.oublie}));
@@ -13460,7 +13621,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   return L;}
  function boucleNeuve(){const actifs={};for(const z of X.zones)if(!z.fait)actifs[DB.elements[z.id].sorte]=(actifs[DB.elements[z.id].sorte]||0)+1;
   // v18.6 : le premier tableau de la phase (première boucle) rejoue celui qui t'a tué ; chaque tiers sert une fois par boucle
-  X.boucle=brxBoucle(DB,X.lec,X.phase,X.palier,X.rng,actifs,{premiere:!X.nb++});X.im=0;X.tiersVus=[];X.j.tirages.push(X.boucle.filter(m=>m.k==='libre').map(m=>m.elements.join('+')).join(' | '));}
+  X.boucle=brxBoucle(DB,X.lec,X.phase,X.palier,X.rng,actifs,{premiere:!X.nb++});X.im=0;X.tiersVus=[];X.batB=null;X.batX=[];X.j.tirages.push(X.boucle.filter(m=>m.k==='libre').map(m=>m.elements.join('+')).join(' | '));}
  const ent=()=>brxPartition(DB,X.phase).entracteS;   // l'entracte de la partition de la phase
  // ── créer le Brumeux (un ennemi « boss » : barre de vie, Accoutumance, verrou de phase, plafond du Dernier Souvenir, biais de caméra, signe de bord)
  function creer(phase0){const ph=DB.phases[phase0],haut=ph.presence==='haut',cx=(AR.x0+AR.x1)/2;
@@ -13470,7 +13631,10 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   const h=hud();if(h){h.classList.add('brx18');h.querySelectorAll('.bossbar s.brx18').forEach((s,i)=>{s.style.left=(100-(X.seuils[i]||0)*100).toFixed(1)+'%';});}return e;}
  // ── la position : au-dessus de l'arène (ses mains suivent ton abscisse, sans te quitter des yeux), au sol (il garde ses distances)
  function presence(e,dt){const ph=DB.phases[X.phase];
-  if(ph.presence==='haut'){const tx=clamp(P.x,AR.x0+220,AR.x1-220),h0=AR.y0+DB.dessin.hauteur,ty=h0+DB.dessin.suit*Math.max(0,P.y-h0);e.x+=(tx-e.x)*Math.min(1,dt*0.6);if(e.hy==null)e.hy=ty;e.hy+=(ty-e.hy)*Math.min(1,dt*0.6);e.y=e.hy+(RM?0:Math.sin(T*0.9)*8)+X.chute;e.ang=Math.atan2(P.y-e.y,P.x-e.x);}
+  // v18.7 : sur une douve (annoncée ou debout), ses mains se retirent sur l'île (X.mainsC, mains px/s au plus) et y restent tant qu'elle tient
+  if(ph.presence==='haut'&&X.mainsC){const C=X.mainsC,mx=DB.constructions.sortes.douves.mains*dt;if(e.hy==null)e.hy=e.y;let dx=C.x-e.x,dy=C.y-e.hy;const l=hyp(dx,dy);if(l>mx){dx*=mx/l;dy*=mx/l;}e.x+=dx;e.hy+=dy;
+   e.y=e.hy+(RM?0:Math.sin(T*0.9)*8)+X.chute+(X.ann&&!RM?Math.sin(T*11)*3:0);e.ang=Math.atan2(P.y-e.y,P.x-e.x);}
+  else if(ph.presence==='haut'){const tx=clamp(P.x,AR.x0+220,AR.x1-220),h0=AR.y0+DB.dessin.hauteur,ty=h0+DB.dessin.suit*Math.max(0,P.y-h0);e.x+=(tx-e.x)*Math.min(1,dt*0.6);if(e.hy==null)e.hy=ty;e.hy+=(ty-e.hy)*Math.min(1,dt*0.6);e.y=e.hy+(RM?0:Math.sin(T*0.9)*8)+X.chute+(X.ann&&!RM?Math.sin(T*11)*3:0);e.ang=Math.atan2(P.y-e.y,P.x-e.x);}
   else{const d=hyp(P.x-e.x,P.y-e.y);if(d>260)moveTo(e,P.x,P.y,46,dt);else if(d<150)moveTo(e,2*e.x-P.x,2*e.y-P.y,40,dt);e.ang=Math.atan2(P.y-e.y,P.x-e.x);}}
  // ── les gestes d'essai. Un élément est lancé avec son préavis (jamais moins que preavis.boss, +0,3 s à la première rencontre), une zone seulement
  // si une sortie existe (brxPlacer : jusqu'à sortie.essais variantes, sinon elle saute), chaque zone est une source de signe à part entière (arène).
@@ -13485,12 +13649,16 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    // v18.6 : les gestes signature de la phase I (les Fils tournent de 0,15 rad par variante ; le Cadre, centré sur toi, tourne sa brèche)
    else if(el.forme==='rayons')zs=brxFils(el,[e.x,e.y],[P.x,P.y],(k%2?1:-1)*Math.ceil(k/2)*0.15);
    else if(el.forme==='cadre')zs=brxCadre(el,[e.x,e.y],[P.x,P.y],(k%2?1:-1)*Math.ceil(k/2)*0.6);
+   // v18.7 : l'Équerre (alignée sur l'arène, puis tournée de 45°, puis de ±22,5°), la Truelle (tournée de 0,2 rad par variante)
+   else if(el.forme==='croix')zs=brxEquerre(el,[P.x,P.y],[0,Math.PI/4,Math.PI/8,-Math.PI/8][k]||0);
+   else if(el.forme==='cone')zs=brxTruelle(el,[e.x,e.y],[P.x,P.y],(k%2?1:-1)*Math.ceil(k/2)*0.2);
    out.push(zs);}
   return out;}
  function lancer(id){const el=DB.elements[id],e=X.e;if(!el||!e)return false;X.j.lancers++;
   if(el.sorte==='feinte'){if(!room.bl&&typeof startBluff==='function')startBluff();X.tmes=Math.max(X.tmes,1.3);return true;}
   const charge=brxPreavis(DB,X.sauve,id);X.vus.add(id);
   if(el.sorte==='zone'&&el.forme==='damier')return toile(id,el,charge);
+  if(el.forme==='ruee')return ruee(id,el,charge);if(el.sorte==='effondrement')return effondrer(id,el,charge);if(el.sorte==='appel')return manoeuvres(id,el);   // v18.7
   if(el.sorte==='zone'){const V=variantes(el,e),k=brxPlacer(DB,V,[P.x,P.y],optSortie(charge));if(k<0){X.j.sautes++;return false;}
    const grp=++X.ngrp;   // un geste frappe une fois (deux fils qui se croisent sous toi ne comptent qu'un coup)
    for(const g of V[k])X.zones.push(Object.assign(g,{id,t:0,charge,degats:el.degats*dmgMul(),vise:!!el.vise,boss:true,src:e,fait:false,flash:0,essai:k,grp}));
@@ -13503,21 +13671,22 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function monde(){const d=XA.dbg();return d.A.M||{w:MONDE.w,h:MONDE.h};}
  function poser(id,el){const e=X.e,base=room.pillars.filter(p=>!p.brx18),a=X.rng()*TAU,d=170+X.rng()*90,r=(DB.constructions.sortes.pilier||{}).r||el.r;
   const c={x:clamp(P.x+Math.cos(a)*d,AR.x0+r+20,AR.x1-r-20),y:clamp(P.y+Math.sin(a)*d,AR.y0+r+20,AR.y1-r-20),r};
-  const v=brxPoser(DB,monde(),AR,base,X.cons.map(k=>({x:k.x,y:k.y,r:k.r})),c,{x:P.x,y:P.y,r:P.r},X.palier);
+  const v=brxPoser(DB,monde(),AR,base,X.cons.map(k=>({x:k.x,y:k.y,r:k.r})).concat(X.bat||[]),c,{x:P.x,y:P.y,r:P.r},X.palier);
   if(!v.ok){X.j.refusees.push(v.raison);return false;}
   X.cons.push({x:c.x,y:c.y,r:c.r,kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:0,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire});
   X.tmes=Math.max(X.tmes,DB.constructions.annonceS+0.2);return true;}
  function consPas(dt){const AT=DA.transformation.attenteMax;
   for(const c of X.cons){if(c.pose)continue;c.t+=dt;if(c.t<c.annonce)continue;
-   const cre=[{x:P.x,y:P.y,r:P.r},...enemies.filter(o=>!o.dead&&o!==X.e).map(o=>({x:o.x,y:o.y,r:o.r,o}))],sur=cre.filter(q=>hyp(q.x-c.x,q.y-c.y)<c.r+q.r);
+   const cre=[{x:P.x,y:P.y,r:P.r},...enemies.filter(o=>!o.dead&&o!==X.e&&!o.cons18).map(o=>({x:o.x,y:o.y,r:o.r,o}))],sur=cre.filter(q=>hyp(q.x-c.x,q.y-c.y)<c.r+q.r);
    if(sur.length&&c.attente<AT){c.attente+=dt;continue;}
    for(const q of sur){const dx=q.x-c.x,dy=q.y-c.y,d=hyp(dx,dy)||1,m=c.r+q.r+2,o=q.o||P;o.x=c.x+dx/d*m;o.y=c.y+dy/d*m;c.pousse=(c.pousse||0)+1;}
    c.pose=true;room.pillars.push(c);CAM.ff=1;X.j.posees++;}}
- function effacerCons(){if(!X.cons.length)return;room.pillars=room.pillars.filter(p=>!p.brx18);X.cons=[];CAM.ff=1;}
+ function effacerCons(){if(X.bat&&X.bat.length)for(const c of X.bat.slice())retirer(c,'efface');if(!X.cons.length)return;room.pillars=room.pillars.filter(p=>!p.brx18);X.cons=[];CAM.ff=1;}
  // ── les zones : charge, puis coup (sous la zone, pas en ruée) jugé par l'arène (zone signalée depuis 0,8 s)
- function zonesPas(dt){const e=X.e,frappe=new Set();
-  for(const z of X.zones){if(z.fait){z.flash-=dt;continue;}z.t+=dt;if(z.t<z.charge)continue;z.fait=true;z.flash=0.15;
-   if(!P.dead&&P.dashT<=0&&!(z.grp&&frappe.has(z.grp))&&brxDans(z,P.x,P.y,P.r)){if(z.grp)frappe.add(z.grp);X.zoneCourante=z;try{XA.coup(z,()=>hurtPlayer(z.degats,e));}finally{X.zoneCourante=null;}}}
+ function zonesPas(dt){const e=X.e,frappe=new Set(),finis=new Set();
+  for(const z of X.zones){if(z.fait){z.flash-=dt;continue;}if(z.cloche)continue;z.t+=dt;if(z.t<z.charge)continue;z.fait=true;z.flash=0.15;   // v18.7 : une cloche est menée par clochesPas
+   if(!P.dead&&P.dashT<=0&&!(z.grp&&frappe.has(z.grp))&&brxDans(z,P.x,P.y,P.r)){if(z.grp)frappe.add(z.grp);X.zoneCourante=z;try{XA.coup(z,()=>hurtPlayer(z.degats,e));}finally{X.zoneCourante=null;}}
+   if(z.fin&&!(z.grp&&finis.has(z.grp))){if(z.grp)finis.add(z.grp);try{z.fin(z);}catch(err){console.error(err);}}}   // v18.7 : la fin d'une Ruée, d'un effondrement
   X.zones=X.zones.filter(z=>!z.fait||z.flash>0);
   for(const tr of X.tirs){tr.t+=dt;if(tr.t<tr.charge)continue;tr.fait=true;const a0=Math.atan2(P.y-e.y,P.x-e.x);
    for(let i=0;i<tr.n;i++){const a=a0+(tr.n>1?(i-(tr.n-1)/2)*0.22:0);eproj.push({x:e.x+Math.cos(a)*e.r,y:e.y+Math.sin(a)*e.r,vx:Math.cos(a)*tr.vitesse,vy:Math.sin(a)*tr.vitesse,r:7,dmg:tr.degats,life:6,from:e,boss:true,col:TELE.proj,brx18:tr.id});}
@@ -13527,8 +13696,11 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function mesure(){const m=X.boucle&&X.boucle[X.im];
   if(!m){const nu=brxPartition(DB,X.phase).nuS;if(nu>0){X.e.vuln=Math.max(X.e.vuln||0,nu);X.ph='nu';X.t=nu;}else{boucleNeuve();X.ph='entracte';X.t=ent()*0.5;}return;}   // v18.6 : la phase I n'a pas de fenêtre après la boucle
   if(m.k==='tableau'){X.im++;accrocher(m);return;}   // v18.6 : un tableau convoqué (phase I)
-  X.tmes=0.4;if(m.k==='fixe')lancer(m.g);else for(const id of m.elements)lancer(id);
-  X.im++;X.ph='mesure';X.t=0;}
+  // v18.7 : bâtir (phase II) ; une mesure qui ne peut pas se jouer (aucune construction possible, rien à effondrer, appel au plafond) saute : comptée,
+  // l'entracte qui suit est réduit (partition.ouvrage.sauteS)
+  X.tmes=0.4;let r=true;if(m.k==='batir')r=batir();else if(m.k==='fixe')r=lancer(m.g);else for(const id of m.elements)lancer(id);
+  X.im++;if(!r&&(m.k==='batir'||m.g==='effondrement'||m.g==='manoeuvres')){X.j.mesuresSautees++;X.ph='entracte';X.t=(DB.partition[DB.phases[X.phase].id]||{}).sauteS||ent();return;}
+  X.ph='mesure';X.t=0;}
  function pas(e,dt){if(X.scene)return;presence(e,dt);consPas(dt);
   if(X.trans){transPas(dt);return;}
   zonesPas(dt);const J=X.j.phases[X.phase];if(J)J.t+=dt;
@@ -13544,7 +13716,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(X.tab)tabFin();X.nb=0;   // v18.6 : un tableau en cours rentre (ses ennemis disparaissent) ; le premier tableau d'une phase se compte à neuf
   const ph=DB.phases[n],de=DB.phases[X.phase];X.phase=n;e.phase=n+1;X.j.phases[n]=X.j.phases[n]||{t:0,coups:0};X.j.transitions.push({de:X.phase,vers:n,t:+RUN.time.toFixed(2)});
   X.trans={t:0,n,arene:false,cri:false,presence:de.presence!==ph.presence};
-  if(ph.id==='effacement')effacerCons();
+  if(ph.id==='effacement')effacerCons();else versCons(n);   // v18.7 : les constructions de la phase II restent (filtrées en IV)
   if(DB.transition.cri&&window.__brumeAction&&!(X.essai&&X.essai.muet))try{window.__brumeAction();}catch(err){}
   sfx('boss');shake(6,0.3);return true;}
  function transPas(dt){const Tn=X.trans,e=X.e,ph=DB.phases[Tn.n];Tn.t+=dt;
@@ -13555,7 +13727,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   const et=XA.etat();
   if(Tn.t>=DB.transition.dureeS&&Tn.arene&&!et.trans){X.trans=null;if(DB.transition.relecture)lire();boucleNeuve();X.ph='entracte';X.t=ent()*0.5;}}
  // ── la fin : sa croix tombe, ses fils se coupent, l'arène redevient brume ; rien n'est retardé (la salle est vidée tout de suite)
- function mort(e){room.bossDead=true;X.tab=null;for(const o of enemies)if(!o.dead&&o!==e){o.dead=true;mist(o.x,o.y,o.r);}
+ function mort(e){room.bossDead=true;X.tab=null;effacerCons();X.ann=null;X.mainsC=null;for(const o of enemies)if(!o.dead&&o!==e){o.dead=true;mist(o.x,o.y,o.r);}
   eproj=[];rings=[];room.spawning=[];room.bl=null;X.zones=[];X.tirs=[];X.scene={t:0,x:e.x,y:e.y,haut:DB.phases[X.phase].presence==='haut',r:e.r};
   mist(e.x,e.y,e.r*1.5);shake(12,0.6);freezeT=0.12;sfx('boss');noter(true);const h=hud();if(h)h.classList.remove('brx18');
   // hors essai (5g) : la victoire de la descente ; en essai : le combat se termine là, la salle reste ouverte
@@ -13571,11 +13743,13 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(dedans.length||bl){const r0=dedans.length?Math.min(...dedans.map(z=>z.charge-z.t)):0,zs=vives.filter(z=>z.charge-z.t<=r0+0.5);if(bl)zs.push({forme:'disque',x:bl.x,y:bl.y,r:bl.r});
    const s=brxSortie(DB,zs,[P.x,P.y],optSortie(9));if(s.ok&&s.q){tx=s.q[0];ty=s.q[1];}else{const z=dedans[0]||bl,q=z.forme==='couloir'?{x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2}:z,dx=P.x-q.x,dy=P.y-q.y,d=hyp(dx,dy)||1;tx=P.x+dx/d*200;ty=P.y+dy/d*200;}
    const reste=Math.min(...dedans.map(z=>z.charge-z.t),bl?bl.t:9);if(reste<0.3&&P.dashCh>0&&P.dashT<=0){press('Space');}}
-  else{const want=DIST[P.cls]||220,dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy)||1,ux=dx/d,uy=dy/d;
-   if(d>want+40){tx=e.x-ux*want;ty=e.y-uy*want;}else if(d<want-40){tx=P.x-ux*120;ty=P.y-uy*120;}else{tx=P.x-uy*120*B.strafe;ty=P.y+ux*120*B.strafe;}
+  const T2=cible2();   // v18.7 : la cible de la phase II (ses mains pendant une annonce, un butoir, un échafaudage) et le chemin d'une douve
+  if(dedans.length||bl);else if(T2&&T2.via){tx=T2.via[0];ty=T2.via[1];}
+  else{const tg=T2&&T2.o?T2.o:e,want=T2&&T2.want!=null?T2.want:DIST[P.cls]||220,dx=tg.x-P.x,dy=tg.y-P.y,d=hyp(dx,dy)||1,ux=dx/d,uy=dy/d;
+   if(d>want+40){tx=tg.x-ux*want;ty=tg.y-uy*want;}else if(d<want-40){tx=P.x-ux*120;ty=P.y-uy*120;}else{tx=P.x-uy*120*B.strafe;ty=P.y+ux*120*B.strafe;}
    tx=clamp(tx,AR.x0+40,AR.x1-40);ty=clamp(ty,AR.y0+40,AR.y1-40);}
   if(P.x<tx-12)keys.add('KeyD');else if(P.x>tx+12)keys.add('KeyA');if(P.y<ty-12)keys.add('KeyS');else if(P.y>ty+12)keys.add('KeyW');
-  let cible=e,bd=hyp(e.x-P.x,e.y-P.y);for(const o of enemies){if(o.dead||o===e)continue;const d=hyp(o.x-P.x,o.y-P.y);if(d<DB.bot.proche&&d<bd){bd=d;cible=o;}}
+  let cible=T2&&T2.o?T2.o:e,bd=hyp(cible.x-P.x,cible.y-P.y);if(!(T2&&T2.force))for(const o of enemies){if(o.dead||o===e||o.cons18)continue;const d=hyp(o.x-P.x,o.y-P.y);if(d<DB.bot.proche&&d<bd){bd=d;cible=o;}}
   mouse.x=cible.x;mouse.y=cible.y;mouse.sx=mouse.x-CAM.x;mouse.sy=mouse.y-CAM.y;
   const porte=bd<DB.bot.portee+cible.r;
   if(P.cls==='her'){const beat=P.beatPh!=null&&(P.beatPh<0.05||P.beatPh>0.95),bn=P.beatPh<0.5?Math.floor(P.beatN||0):Math.floor(P.beatN||0)+1;if(porte&&beat&&bn!==B.beat){B.beat=bn;mouse.l=true;P.clickQ=1;P.clickT=0.16;setTimeout(()=>{mouse.l=false;},90);}}
@@ -13610,9 +13784,10 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   return{n:I.n,moyenne:+(I.sum/I.n).toFixed(2),pire5:+(brxPire(I.res,p)||0).toFixed(2),intervalle:I.nI?+(I.sumI/I.nI).toFixed(2):null,intervallePire5:I.nI?+(brxPire(I.resI,p)||0).toFixed(2):null};}
  function statsRun(){if(!X.on&&!X.j.note)return null;const ph={};for(const k in X.j.phases)ph[+k+1]={t:Math.round(X.j.phases[k].t),coups:X.j.phases[k].coups};
   return{phases:ph,phase:X.phase+1,palier:X.palier,graine:X.graine,lancers:X.j.lancers,sautes:X.j.sautes,posees:X.j.posees,fin:X.j.note?(X.j.note.win?'victoire':'mort'):'en cours',par:X.j.note?X.j.note.par:null,
-   tableaux:X.j.tableaux.length,vides:X.j.tableaux.filter(t=>t.vide===true).length,rentres:X.j.rentres,dallesSautees:X.j.dallesSautees};}
+   tableaux:X.j.tableaux.length,vides:X.j.tableaux.filter(t=>t.vide===true).length,rentres:X.j.rentres,dallesSautees:X.j.dallesSautees,
+   bati:X.j.bati.filter(b=>b.sorte).length,annulees:X.j.annulees,cassees:X.j.cassees,effondrees:X.j.effondrees,ruees:X.j.ruees,brisees:X.j.brisees,cloches:X.j.cloches,appels:X.j.appels,mesuresSautees:X.j.mesuresSautees};}   // v18.7 : la phase II
  // la salle change : plus de Brumeux (crochets de l'arène rendus)
- const _mr=makeRoom;makeRoom=function(){const h=hud();if(h)h.classList.remove('brx18');if(X.on)XA.crochets({sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null});X=neuf();return _mr.apply(this,arguments);};
+ const _mr=makeRoom;makeRoom=function(){const h=hud();if(h)h.classList.remove('brx18');if(X.on)XA.crochets({sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null,jetonTir:null});X=neuf();return _mr.apply(this,arguments);};
  // ── dessin. Phases I–III : son corps se devine dans la brume au bord du monde ; ses mains, sa croix de manipulation et ses fils descendent dans
  // l'arène (et c'est là qu'on le frappe). Phases IV–V : corps entier au sol, à l'échelle d'un gardien. Point faible : l'anneau ivoire G27.anneau
  // sur ses mains (I, II), sa croix (III), son cœur (IV, V), seulement à nu (G27.aNu). Tout suit e.fade ; mouvements réduits : rien ne pulse.
@@ -13630,7 +13805,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // poser une image (1 px = 1 unité du monde) recadrée sur la vue : seule la part visible est posée (comme les tuiles de l'arène)
  // sans mise à l'échelle (1 unité = 1 pixel), l'image est calée sur un pixel entier (décalage ≤ 0,5 px, invisible) : la caméra a des positions
  // fractionnaires, et une image posée entre deux pixels se filtre (bilinéaire), ce qui coûte, en rendu logiciel, autant qu'un second sol
- function poseVue(c,img,sx,sy,sw,sh,dx,dy){const m=c.getTransform();if(m.a===1&&m.d===1&&!m.b&&!m.c){dx+=Math.round(m.e+dx)-(m.e+dx);dy+=Math.round(m.f+dy)-(m.f+dy);}
+ function poseVue(c,img,sx,sy,sw,sh,dx,dy,m0){const m=m0||c.getTransform();   // v18.7 : m0, la transformation lue une fois par l'appelant (getTransform alloue)if(m.a===1&&m.d===1&&!m.b&&!m.c){dx+=Math.round(m.e+dx)-(m.e+dx);dy+=Math.round(m.f+dy)-(m.f+dy);}
   const x0=Math.max(dx,CAM.x),y0=Math.max(dy,CAM.y),x1=Math.min(dx+sw,CAM.x+W),y1=Math.min(dy+sh,CAM.y+H);if(x1<=x0||y1<=y0)return;
   // les bornes de la part visible, entières dans l'image (un recadrage fractionnaire se filtrerait aussi)
   const ix0=Math.floor(x0-dx),iy0=Math.floor(y0-dy),ix1=Math.ceil(x1-dx),iy1=Math.ceil(y1-dy);c.drawImage(img,sx+ix0,sy+iy0,ix1-ix0,iy1-iy0,dx+ix0,dy+iy0,ix1-ix0,iy1-iy0);}
@@ -13665,6 +13840,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    else if(z.forme==='case'){const att=z.blanche&&X.zones.some(q=>q.grp===z.grp-1&&!q.fait);   // v18.6 : la Toile ; les cases blanches attendent (pointillé, sans remplissage) que les noires aient frappé
     if(att){c.globalAlpha*=0.7;c.setLineDash([5,5]);c.strokeRect(z.x0+1,z.y0+1,z.x1-z.x0-2,z.y1-z.y0-2);c.setLineDash([]);}
     else{c.fillRect(z.x0,z.y0,z.x1-z.x0,z.y1-z.y0);c.strokeRect(z.x0+1,z.y0+1,z.x1-z.x0-2,z.y1-z.y0-2);c.fillStyle=`rgba(${TELE.zone},0.26)`;const k2=z.blanche?Math.min(1,(z.t-(z.charge-DB.elements.toile.seconde))/DB.elements.toile.seconde):k,cx=(z.x0+z.x1)/2,cy=(z.y0+z.y1)/2,hw=(z.x1-z.x0)/2*Math.max(0,k2),hh=(z.y1-z.y0)/2*Math.max(0,k2);c.fillRect(cx-hw,cy-hh,2*hw,2*hh);}}
+   else if(z.forme==='cone'){const k2=z.r0+(z.r1-z.r0)*k;c.beginPath();c.arc(z.x,z.y,z.r1,z.a-z.ouv/2,z.a+z.ouv/2);c.arc(z.x,z.y,z.r0,z.a+z.ouv/2,z.a-z.ouv/2,true);c.closePath();c.fill();c.stroke();   // v18.7 : la Truelle
+    c.fillStyle=`rgba(${TELE.zone},0.26)`;c.beginPath();c.arc(z.x,z.y,k2,z.a-z.ouv/2,z.a+z.ouv/2);c.arc(z.x,z.y,z.r0,z.a+z.ouv/2,z.a-z.ouv/2,true);c.closePath();c.fill();}
    else if(z.forme==='anneau'){if(z.breche){const a=z.breche.a,l=z.breche.l,ca=Math.cos(a),sa=Math.sin(a),qx=-sa*l/2,qy=ca*l/2,L=z.r1+24;   // v18.6 : la brèche du Cadre, retirée par une découpe (pair-impair)
      c.beginPath();c.rect(z.x-L,z.y-L,2*L,2*L);c.moveTo(z.x+qx,z.y+qy);c.lineTo(z.x+qx+ca*L,z.y+qy+sa*L);c.lineTo(z.x-qx+ca*L,z.y-qy+sa*L);c.lineTo(z.x-qx,z.y-qy);c.closePath();c.clip('evenodd');}
     rond(c,z.x,z.y,z.r1);c.stroke();rond(c,z.x,z.y,z.r0);c.stroke();c.beginPath();c.arc(z.x,z.y,z.r1,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();c.fillStyle=`rgba(${TELE.zone},0.26)`;c.beginPath();c.arc(z.x,z.y,z.r0+(z.r1-z.r0)*k,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();}
@@ -13694,13 +13871,14 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function sources(){const out=[];if(!X.e||X.e.dead)return out;
   const B=room.bl;if(B)out.push({o:B,k:'tele',x:B.x,y:B.y,r:B.r,vise:true,rempli:Math.min(1,1-B.t/B.tot),c:'zone'});   // sa feinte (v14) est aussi une source de signe
   for(const z of X.zones){if(z.fait)continue;let q;if(z.forme==='couloir'){const dx=z.x1-z.x0,dy=z.y1-z.y0,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((P.x-z.x0)*dx+(P.y-z.y0)*dy)/l2));q={x:z.x0+dx*t,y:z.y0+dy*t,r:z.w/2};}
-   else if(z.forme==='anneau')q={x:z.x,y:z.y,r:z.r1};else if(z.forme==='case')q={x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2,r:Math.hypot(z.x1-z.x0,z.y1-z.y0)/2};else q={x:z.x,y:z.y,r:z.r};
+   else if(z.forme==='anneau')q={x:z.x,y:z.y,r:z.r1};else if(z.forme==='cone'){const m=(z.r0+z.r1)/2;q={x:z.x+Math.cos(z.a)*m,y:z.y+Math.sin(z.a)*m,r:(z.r1-z.r0)/2};}else if(z.forme==='case')q={x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2,r:Math.hypot(z.x1-z.x0,z.y1-z.y0)/2};else q={x:z.x,y:z.y,r:z.r};
    out.push({o:z,k:'tele',x:q.x,y:q.y,r:q.r,vise:!!z.vise,rempli:Math.min(1,z.t/z.charge),c:'zone'});}
   // v18.6 : chaque dalle d'un tableau (annoncée, puis ouverte) est une source de signe à part entière
   if(X.tab)for(const h of X.tab.dalles)out.push({o:h,k:'tele',x:h.x,y:h.y,r:h.r,vise:true,rempli:h.w>0?1-h.w/DB.tableaux.regles.sol.annonceS:1,c:'zone'});
   return out;}
  function debut(phase0){X.sauve=sauveLire();creer(phase0);X.on=true;room.blT=1e9;X.tiers=brxTiers({x0:AR.x0,y0:AR.y0,x1:AR.x1,y1:AR.y1},DB.tableaux.retrait);if(brxMesures(DB,phase0).some(m=>m.k==='tableau'))cuire();
-  XA.crochets({sourcesPlus:sources,bossCam:()=>X.e&&!X.e.dead?X.e:null,glypheBoss:glypheSigne,bossCharge:()=>X.tirs.length>0||X.zones.some(z=>!z.fait),
+  cuireModules();   // v18.7 : les modules des constructions, cuits à l'entrée du combat
+  XA.crochets({jetonTir:0,sourcesPlus:sources,bossCam:()=>X.e&&!X.e.dead?X.e:null,glypheBoss:glypheSigne,bossCharge:()=>X.tirs.length>0||X.zones.some(z=>!z.fait),
    solTrou:()=>{const T=X.tab;if(!T||!X.cal||fragAlpha(T)<1)return null;const f=T.frag;return{x0:Math.ceil(f.x0)+1,y0:Math.ceil(f.y0)+1,x1:Math.floor(f.x1)-1,y1:Math.floor(f.y1)-1};}});   // v18.6 : sous un fragment plein, le sol de l'arène n'est pas posé (il serait couvert)
   lire();boucleNeuve();X.ph='entracte';X.t=ent();}
  // ═══ v18.6 · Phase I, « le Rappel » (action 5b, fiche validée le 2 novembre 2026) ═══════════════════════════════════════════════════════════
@@ -13759,12 +13937,12 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
     if(brxPlacer(DB,[[d,...autres]],[P.x,P.y],optSortie(SOL.annonceS))<0)X.j.dallesSautees++;
     else T.dalles.push(Object.assign(d,{id:'dalle',w:SOL.annonceS,o:SOL.ouvertS,tick:0,boss:true,dalle18:1}));}}
   for(const h of T.dalles){if(h.w>0){h.w-=dt;continue;}h.o-=dt;h.tick-=dt;
-   if(h.tick<=0){h.tick=SOL.tickS;for(const o of enemies)if(!o.dead&&!o.brx18&&!o.fixed&&hyp(o.x-h.x,o.y-h.y)<h.r+o.r*0.3)hitEnemy(o,SOL.degatsEnnemis,{crit:false,color:'#9a86c8'});
+   if(h.tick<=0){h.tick=SOL.tickS;for(const o of enemies)if(!o.dead&&!o.brx18&&!o.fixed&&hyp(o.x-h.x,o.y-h.y)<h.r+o.r*0.3)hitEnemy(o,SOL.degatsEnnemis,{crit:false,color:'#9a86c8',brx:1});
     if(!P.dead&&hyp(P.x-h.x,P.y-h.y)<h.r){X.zoneCourante=h;try{XA.coup(h,()=>hurtPlayer(SOL.degatsJoueur,null));}finally{X.zoneCourante=null;}}}}
   T.dalles=T.dalles.filter(h=>h.o>0);}
  // ses ennemis rentrent dans le tableau (fondu : ils disparaissent, sans butin), avec ce qu'ils ont lancé (tirs en vol, ondes) : rien ne
  // frappe plus au nom d'un ennemi qui n'est plus là (son signe est parti avec lui)
- function rentrer(){const S=new Set();for(const o of enemies)if(!o.dead&&!o.brx18){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=[];
+ function rentrer(){const S=new Set();for(const o of enemies)if(!o.dead&&!o.brx18&&!o.cons18){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=[];
   if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(g=>!S.has(g.src));}X.j.rentres+=S.size;return S.size;}
  function rideau(vide){const T=X.tab,J=X.j.tableaux[X.j.tableaux.length-1];T.vide=vide;T.sub='rideau';T.t=0;T.dalles=[];
   if(J){J.fin=+RUN.time.toFixed(2);J.duree=+(J.fin-J.t0).toFixed(2);J.vide=vide;}}
@@ -13773,7 +13951,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(T.sub==='vie'){dallesPas(dt);
    // pendant un tableau, il ne lance rien d'autre qu'une feinte, une seule fois, si le tableau vit encore feinteApresS s après l'accroche
    if(!T.feinte&&T.t>=TB.feinteApresS&&!room.bl){T.feinte=true;lancer('feinte');}
-   const vivants=room.spawning.length>0||enemies.some(o=>!o.dead&&!o.brx18);
+   const vivants=room.spawning.length>0||enemies.some(o=>!o.dead&&!o.brx18&&!o.cons18);
    if(!vivants&&T.t>0.3)rideau(true);else if(T.t>=TB.vieMaxS){rentrer();rideau(false);}return;}
   if(T.sub==='rideau'){if(T.t>=TB.rideauS){T.sub='apres';T.t=0;T.braz=null;T.apresS=T.vide?TB.nuS:0.4;if(T.vide)X.e.vuln=Math.max(X.e.vuln||0,TB.nuS);}return;}
   if(T.sub==='apres'&&T.t>=T.apresS){X.tab=null;X.ph='entracte';X.t=ent();}}
@@ -13832,6 +14010,305 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // moins que le cercle d'une apparition (0,85 s), pour qu'une naissance se voie au moins le préavis de l'arène (0,6 s) avant de pouvoir frapper
  const _st186=step;step=function(dt){if(X.on&&room)for(const sp of room.spawning)if(!sp.brx18t){sp.brx18t=1;sp.t=Math.max(sp.t,TB.apparition[0]);}return _st186.apply(this,arguments);};
  const _cl186=computeLights;computeLights=function(){_cl186.apply(this,arguments);const T=X.on&&X.tab;if(T&&T.sub==='vie'&&T.braz)for(const b of T.braz)lights.push({x:b.x,y:b.y,r:BRZ.lumiere,c:'warm'});};
+ // ═══ v18.7 · Phase II, « L'Ouvrage » (action 5c, fiche validée le 2 novembre 2026) ════════════════════════════════════════════════════════
+ // Il bâtit l'arène contre ta façon de jouer : une construction par axe du profil (la version bâtie de la contre-mesure jumelle), qui gêne ton style
+ // et offre une réponse. Annonce en craie (1,5 s) : ses mains sont à nu ; frappées assez fort, la construction est annulée. Une construction ne blesse
+ // jamais en apparaissant (attente, puis poussée sans dégât) ; ce qui blesse est un mécanisme annoncé en orange : la cloche d'un rail, l'effondrement.
+ // Chaque construction est une chaîne de disques posés dans room.pillars (pilier18, fosse18 pour une douve ; brx18 : elles traversent les
+ // transformations de l'arène) et, pour ce qui se casse, des entités fixes de enemies (cons18 : PV partagés par élément, un coup par image, ni
+ // profil, ni Accoutumance, ni exécutions, ni pantins, ni PV volés, ni butin, ni ciblage automatique). Rendu en deux temps : modules cuits à
+ // l'entrée, image de la construction assemblée à son annonce, posée recadrée sur la vue et calée au pixel (poseVue).
+ const CN=DB.constructions,SO=CN.sortes,MA=CN.matieres,MN=DB.manoeuvres,PIECES={bloc:18,fut:14,butoir:22,puits:34,tour:30};
+ const crgb=(m,k,a)=>`rgba(${MA[m][k]},${a})`,fonce=(s,k)=>s.split(',').map(v=>Math.round(+v*k)).join(',');
+ const consTous=()=>X.cons.map(k=>({x:k.x,y:k.y,r:k.r})).concat(X.bat);   // ce que voit brxPoser : les piliers d'essai et les constructions (annonces comprises)
+ // ── les modules, cuits une fois à l'entrée du combat : une pièce par matière et par fissure (intacte, fêlée, lézardée), une fosse par matière
+ function cuireModules(){if(X.mod)return;const t0=performance.now(),M={};
+  for(const m in MA){M[m]={};const co=MA[m].corps,ar=MA[m].arete,fis=`rgba(${fonce(co,0.42)},1)`;
+   for(const pc in PIECES){const r=PIECES[pc],sz=Math.ceil(2*r+16),o=sz/2;M[m][pc]=[0,1,2].map(f=>{const c=document.createElement('canvas');c.width=c.height=sz;const g=c.getContext('2d');
+     g.fillStyle='rgba(0,0,0,.38)';g.beginPath();g.ellipse(o+4,o+r*0.45,r*1.05,r*0.55,0,0,TAU);g.fill();
+     g.fillStyle=`rgba(${co},1)`;g.beginPath();g.arc(o,o,r,0,TAU);g.fill();g.strokeStyle=`rgba(${ar},1)`;g.lineWidth=2;g.stroke();
+     g.strokeStyle=`rgba(${ar},.75)`;g.lineWidth=1.3;g.beginPath();
+     if(pc==='bloc'){g.moveTo(o-r*0.7,o);g.lineTo(o+r*0.7,o);g.moveTo(o,o-r*0.7);g.lineTo(o,o);}
+     else if(pc==='fut'){g.arc(o,o,r*0.55,0,TAU);}
+     else if(pc==='butoir'){g.moveTo(o-r*0.5,o-r*0.5);g.lineTo(o+r*0.5,o+r*0.5);g.moveTo(o+r*0.5,o-r*0.5);g.lineTo(o-r*0.5,o+r*0.5);}
+     else if(pc==='puits'){g.arc(o,o,r*0.62,0,TAU);}
+     else if(pc==='tour'){g.rect(o-r*0.55,o-r*0.55,r*1.1,r*1.1);g.moveTo(o-r*0.55,o-r*0.55);g.lineTo(o+r*0.55,o+r*0.55);g.moveTo(o+r*0.55,o-r*0.55);g.lineTo(o-r*0.55,o+r*0.55);}
+     g.stroke();if(pc==='puits'){g.fillStyle='rgba(4,3,8,.92)';g.beginPath();g.arc(o,o,r*0.6,0,TAU);g.fill();}
+     g.fillStyle='rgba(255,255,255,.06)';g.beginPath();g.arc(o-r*0.3,o-r*0.32,r*0.42,0,TAU);g.fill();
+     // la fissure : un tracé plus sombre du corps (jamais une couleur de la grammaire)
+     if(f>=1){g.strokeStyle=fis;g.lineWidth=Math.max(1.4,r*0.09);g.beginPath();g.moveTo(o-r*0.55,o-r*0.62);g.lineTo(o-r*0.12,o-r*0.12);g.lineTo(o+r*0.22,o+r*0.06);g.lineTo(o+r*0.48,o+r*0.58);g.stroke();}
+     if(f>=2){g.beginPath();g.moveTo(o+r*0.66,o-r*0.42);g.lineTo(o+r*0.16,o-r*0.22);g.lineTo(o-r*0.22,o+r*0.32);g.lineTo(o-r*0.58,o+r*0.42);g.moveTo(o-r*0.12,o-r*0.12);g.lineTo(o-r*0.66,o+r*0.06);g.stroke();}
+     return c;});}
+   const r=SO.douves.anneau.fosse,sz=2*r+4,c=document.createElement('canvas');c.width=c.height=sz;const g=c.getContext('2d');
+   g.fillStyle='#020104';g.beginPath();g.arc(sz/2,sz/2,r,0,TAU);g.fill();g.strokeStyle=`rgba(${ar},.6)`;g.lineWidth=2;g.stroke();M[m].fosse=c;}
+  X.mod={M,ms:0};
+  // une mise en train (une muraille et une douve d'essai, assemblées puis jetées) : le premier assemblage d'un combat ne paie pas la première toile
+  try{const R0={x0:0,y0:0,x1:4000,y1:4000},z=brxGeo(DB,'murailles',[600,900],[600,600],R0,desRng(1),{})[0],w=brxGeo(DB,'douves',[600,900],[600,600],R0,desRng(1),{})[0],n=X.j.assembleMs.length;
+   for(const g of [z,w])if(g){g.mat=Object.keys(MA)[0];assembler(g);}X.j.assembleMs.length=n;}catch(err){}
+  X.mod.ms=+(performance.now()-t0).toFixed(1);X.j.modulesMs=X.mod.ms;}
+ // ── l'image d'une construction, assemblée une fois à son annonce (≤ 3 ms), déjà tournée (les disques sont en place dans le monde) : la muraille
+ // (bande et blocs, une image par fissure), l'anneau d'une douve, le socle d'une colonnade, le rail et ses traverses, le liseré d'un puits
+ function assembler(c){if(!X.mod)cuireModules();const t0=performance.now(),M=X.mod.M[c.mat],m=c.mat,ds=c.disques;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  const ext=(x,y,r)=>{x0=Math.min(x0,x-r);y0=Math.min(y0,y-r);x1=Math.max(x1,x+r);y1=Math.max(y1,y+r);},toile=()=>{x0=Math.floor(x0);y0=Math.floor(y0);const cv=document.createElement('canvas');cv.width=Math.ceil(x1-x0)+2;cv.height=Math.ceil(y1-y0)+2;return cv;};
+  const pose=(g,im,x,y)=>g.drawImage(im,Math.round(x-x0-im.width/2),Math.round(y-y0-im.height/2));let img=null;
+  if(c.sorte==='murailles'){for(const d of ds)ext(d.x,d.y,d.r+12);const a=ds[0],b=ds[ds.length-1];
+   img={cv:[0,1,2].map(f=>{const cv=toile(),g=cv.getContext('2d');g.lineCap='round';g.strokeStyle='rgba(0,0,0,.35)';g.lineWidth=2*a.r+6;g.beginPath();g.moveTo(a.x-x0+4,a.y-y0+7);g.lineTo(b.x-x0+4,b.y-y0+7);g.stroke();
+    g.strokeStyle=`rgba(${fonce(MA[m].corps,0.8)},1)`;g.lineWidth=2*a.r*0.92;g.beginPath();g.moveTo(a.x-x0,a.y-y0);g.lineTo(b.x-x0,b.y-y0);g.stroke();for(const d of ds)pose(g,M.bloc[f],d.x,d.y);return cv;})};}
+  // l'anneau d'une douve, le rail, le liseré d'un puits : de grandes images presque vides coûtent à poser ; la douve pose ses fosses une à une
+  // (modules), le rail et le liseré sont des tracés assemblés une fois (Path2D)
+  else if(c.sorte==='douves'){const A=SO.douves.anneau,PP=SO.douves.passerelles,bout=(L,fn)=>{x0=1e9;y0=1e9;x1=-1e9;y1=-1e9;for(const d of L)ext(d.x,d.y,d.r+3);const cv=toile(),g=cv.getContext('2d');fn(g);return{cv,x0,y0};};
+   const q4=[[],[],[],[]];for(const d of ds){const a=(Math.atan2(d.y-c.ile[1],d.x-c.ile[0])+BRX_TAU)%BRX_TAU;q4[Math.floor(a/(Math.PI/2))%4].push(d);}
+   const quarts=q4.filter(L=>L.length).map(L=>bout(L,g=>{for(const d of L)pose(g,M.fosse,d.x,d.y);}));
+   const portes=c.portes.map((gp,q)=>({ferme:bout(gp,g=>{for(const d of gp)pose(g,M.fosse,d.x,d.y);}),ouvert:bout(gp,g=>{g.save();g.translate(c.ile[0]-x0,c.ile[1]-y0);g.rotate(q*Math.PI/2);g.fillStyle=crgb(m,'corps',0.95);g.fillRect(A.r-A.fosse-6,-PP.l/2+4,2*A.fosse+12,PP.l-8);
+     g.strokeStyle=crgb(m,'arete',0.9);g.lineWidth=1.5;for(let k=1;k<4;k++){const x=A.r-A.fosse-6+k*(2*A.fosse+12)/4;g.beginPath();g.moveTo(x,-PP.l/2+4);g.lineTo(x,PP.l/2-4);g.stroke();}g.strokeRect(A.r-A.fosse-6,-PP.l/2+4,2*A.fosse+12,PP.l-8);g.restore();})}));
+   c.douve={quarts,portes};}
+  else if(c.sorte==='colonnades')img=null;   // les fûts sont posés un à un (chacun sa fissure)
+  else if(c.sorte==='rails'){const v=c.voie,dx=v.x1-v.x0,dy=v.y1-v.y0,L=hyp(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux,tr=new Path2D(),ra=new Path2D();
+   for(let s=0;s<=L;s+=24){tr.moveTo(v.x0+ux*s-nx*16,v.y0+uy*s-ny*16);tr.lineTo(v.x0+ux*s+nx*16,v.y0+uy*s+ny*16);}for(const k of [-10,10]){ra.moveTo(v.x0+nx*k,v.y0+ny*k);ra.lineTo(v.x1+nx*k,v.y1+ny*k);}c.trace={tr,ra};}
+  else if(c.sorte==='puits'){const li=new Path2D();li.arc(ds[0].x,ds[0].y,c.rayon,0,TAU);c.trace={li};}
+  if(img){img.x0=x0;img.y0=y0;}c.img=img;const ms=performance.now()-t0;X.j.assembleMs.push(+ms.toFixed(2));return ms;}
+ function hull(P0){const p=P0.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]),cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]),lo=[],up=[];
+  for(const q of p){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q);}for(const q of p.slice().reverse()){while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q);}return lo.slice(0,-1).concat(up.slice(0,-1));}
+ // ── bâtir (mesure « batir ») : la sorte lue sur toi (brxBatir : ordre des sortes, variantes, brxPoser), sa matière tirée à graine parmi les décors
+ // traversés (jamais celle de la construction d'avant), son annonce en craie ; une graine par bâtir (la n-ième construction du combat), pour que
+ // le banc refasse le même calcul hors du jeu
+ const batRng=n=>desRng(((X.graine>>>0)^Math.imul(0x85EBCA6B,n))>>>0);
+ function matiere(rng){const dec=brxDecors(DB,(X.lec&&X.lec.acte)||ACTE()),L=Object.keys(MA).filter(k=>dec.includes(MA[k].decor)),last=X.bat.length?X.bat[X.bat.length-1].mat:null,pool=L.filter(k=>k!==last);
+  const P2=pool.length?pool:L.length?L:Object.keys(MA);return P2[Math.floor(rng()*P2.length)];}
+ // une copie sans références (les disques en jeu portent leur pilier et leur entité) : ce que le banc relit
+ const geo=k=>{const d=q=>({x:q.x,y:q.y,r:q.r,el:q.el,fosse:!!q.fosse});return k.sorte?{sorte:k.sorte,disques:k.disques.map(d),etats:k.etats?k.etats.map(L=>L.map(d)):null,voie:k.voie?Object.assign({},k.voie):null,etat:k.etat}:{x:k.x,y:k.y,r:k.r};};
+ function batir(){const e=X.e;if(!e||e.dead)return false;const n=++X.nbat,rng=batRng(n),base=room.pillars.filter(p=>!p.brx18),j={x:P.x,y:P.y,r:P.r},h=[e.x,e.y];
+  const opt={premier:!X.nbatPh&&X.lec?X.lec.bati:null,eviter:X.batB,exclus:X.batX.slice()};
+  const cons=consTous(),r=brxBatir(DB,monde(),AR,base,cons,X.lec,j,h,X.palier,rng,opt);
+  X.j.bati.push({n,p:[j.x,j.y],h,premier:opt.premier,eviter:opt.eviter,exclus:opt.exclus,base:base.map(q=>({x:q.x,y:q.y,r:q.r,kind:q.kind})),cons:cons.map(geo),
+   ordre:r.ordre,sorte:r.sorte,k:r.c?r.c.k:-1,disques:r.c?r.c.disques.map(q=>[+q.x.toFixed(2),+q.y.toFixed(2)]):null,essais:r.essais.length,etat:r.sorte?'annonce':'saute'});
+  if(!r.sorte)return false;X.nbatPh++;if(!X.batB)X.batB=r.sorte;construire(r.c,n,rng);return true;}
+ function construire(g,n,rng,o){o=o||{};const e=X.e;
+  const c=Object.assign(g,{id:++X.ncid,n,mat:o.mat||matiere(rng),etat:'annonce',t:0,annonce:CN.annonceS,attente:0,hp0:e.hp,elements:g.elements.map(q=>({pvMax:brxPvPart(DB,q.pvPart,X.palier),pv:brxPvPart(DB,q.pvPart,X.palier),coup:0,fiss:0})),etatI:0,bT:0,bu:0,surBot:0,chute:0});
+  if(c.sorte==='puits')c.cap=SO.puits.plein*P.s.maxHp;
+  if(c.sorte==='rails')c.cl={t:SO.rails.cloche.premiereS,z:null,s:0,de:0};
+  X.bat.push(c);X.ann=c;assembler(c);e.vuln=Math.max(e.vuln||0,c.annonce);if(c.sorte==='douves')X.mainsC={x:c.ile[0],y:c.ile[1]};
+  X.tmes=Math.max(X.tmes,c.annonce+0.3);if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.25);}catch(err){}return c;}
+ // la console et les bancs : poser une sorte (o.p : la place de référence, toi par défaut ; o.h : ses mains ; o.annonce : avec son annonce entière,
+ // sinon posée au pas suivant), sous brxPoser comme en jeu
+ function poserSorte(sorte,o){o=o||{};const e=X.e;if(!e||!SO[sorte]||!BRX_SORTES.includes(sorte))return{ok:false,raison:'sorte inconnue'};const p=o.p||[P.x,P.y],h=o.h||[e.x,e.y],rng=batRng(1e5+(++X.nbat));
+  const V=brxGeo(DB,sorte,p,h,AR,rng,{prof:X.lec&&X.lec.prof});let v={ok:false,raison:'place'};
+  for(let k=0;k<V.length;k++){v=brxPoser(DB,monde(),AR,room.pillars.filter(q=>!q.brx18),consTous(),V[k],{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){const c=construire(Object.assign(V[k],{k}),X.nbat,rng,o);if(!o.annonce)c.t=c.annonce;e.vuln=o.annonce?e.vuln:0;return Object.assign({id:c.id},v);}}return v;}
+ // ── la pose : une créature dessus attend au plus transformation.attenteMax s, puis elle est poussée hors des disques, du côté le plus proche, sans dégât
+ function creatures(){return[P,...enemies.filter(o=>!o.dead&&!o.cons18&&o!==X.e)];}
+ function dessus(ds){return creatures().filter(q=>ds.some(d=>hyp(q.x-d.x,q.y-d.y)<d.r+q.r));}
+ function pousser(ds){let n=0;for(let it=0;it<6;it++){let bouge=false;for(const q of creatures())for(const d of ds){const dx=q.x-d.x,dy=q.y-d.y,l=hyp(dx,dy)||1,m=d.r+q.r+2;if(l<m-0.01){q.x=d.x+dx/l*m;q.y=d.y+dy/l*m;bouge=true;n++;}}if(!bouge)break;}return n;}
+ const pilier=(c,d)=>({x:d.x,y:d.y,r:d.r,kind:d.fosse?'fosse18':'pilier18',brx18:true,cons18:c,cle:'brx18c:'+c.id+':'+d.x.toFixed(1)+','+d.y.toFixed(1)});
+ function etatDisques(c){return c.etats?c.etats[c.etatI]:c.disques;}
+ function poser2(c){const ds=etatDisques(c);c.pousse=(c.pousse||0)+pousser(ds);c.etat='debout';c.t=0;
+  for(const d of ds){d.pil=pilier(c,d);room.pillars.push(d.pil);}
+  for(const d of c.disques)if(d.el>=0){const o=createEnemy('mannequin',d.x,d.y);o.fixed=true;o.cons18={c,d,el:d.el};o.r=d.r;o.dmgLog=[];o.maxHp=o.hp=1e6;o.xp=0;o.spd=0;o.dmg=0;o.name='';d.e=o;}
+  CAM.ff=1;X.j.posees++;if(X.ann===c)X.ann=null;}
+ function consPas2(dt){const e=X.e,AT=DA.transformation.attenteMax;
+  for(const c of X.bat.slice()){if(c.etat!=='annonce')continue;c.t+=dt;
+   // l'annulation : ses PV perdus pendant l'annonce (comptés après plafond, verrou et Accoutumance : comme ils baissent vraiment)
+   if(e&&!e.dead&&brxAnnule(DB,c.hp0-e.hp,X.pv[1]||X.pv[X.phase])){annuler(c);continue;}
+   if(c.t<c.annonce)continue;if(dessus(etatDisques(c)).length&&c.attente<AT){c.attente+=dt;continue;}poser2(c);}
+  for(const c of X.bat){if(c.etat!=='debout')continue;
+   if(c.sorte==='douves'){c.bT+=dt;if(c.bT>=SO.douves.passerelles.basculeS)basculer(c,dt);if(c.bf<1)c.bf=Math.min(1,(c.bf||0)+dt/0.3);}
+   if(c.sorte==='rails')clochePas(c,dt);}}
+ function annuler(c){const e=X.e;c.etat='annulee';X.bat=X.bat.filter(k=>k!==c);if(X.ann===c)X.ann=null;if(c.sorte==='douves'&&!X.bat.some(k=>k.sorte==='douves'))X.mainsC=null;
+  X.batX.push(c.sorte);X.j.annulees++;const J=X.j.bati.find(b=>b.n===c.n);if(J)J.etat='annulee';
+  if(e){e.vuln=Math.max(e.vuln||0,0)+CN.annulation.nuS;}
+  // la craie s'émiette (pas de hasard du jeu : une poussière par disque)
+  for(const [i,d] of c.disques.entries())if(i%2===0)parts.push({x:d.x,y:d.y,vx:Math.cos(i*2.4)*40,vy:Math.sin(i*2.4)*40-30,life:0.7,max:0.7,size:2.6,col:`rgb(${COL.craie})`,layer:'post',drag:1.5});
+  if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.12);}catch(err){}}
+ // une passerelle qui se ferme sous une créature attend au plus attenteMax s, puis la pousse sans dégât ; jamais toutes fermées (bascule d'un coup)
+ function basculer(c,dt){const nI=1-c.etatI,ferme=c.portes.filter((g,q)=>!(c.etats[c.etatI].includes(g[0]))&&c.etats[nI].includes(g[0])).flat();
+  if(dessus(ferme).length&&(c.bA=(c.bA||0)+dt)<DA.transformation.attenteMax)return;pousser(ferme);c.bA=0;c.bT=0;c.bf=0;
+  room.pillars=room.pillars.filter(p=>!(p.cons18===c));c.etatI=nI;for(const d of etatDisques(c)){d.pil=pilier(c,d);room.pillars.push(d.pil);}CAM.ff=1;}
+ // ── les PV d'une construction : un coup par image et par élément (le plus gros), appliqué après le pas ; fissures ; détruite
+ function blesser(c,ei,d){const el=c.elements[ei];if(!el||el.pv<=0||c.etat!=='debout')return false;el.pv=Math.max(0,el.pv-d);el.fiss=brxFissure(DB,el.pv,el.pvMax);
+  if(el.pv>0)return false;X.j.elementsCasses++;for(const q of c.disques)if(q.el===ei){q.casse=true;if(q.pil)room.pillars=room.pillars.filter(p=>p!==q.pil);if(q.e){q.e.dead=true;mist(q.x,q.y,q.r,`rgb(${fonce(MA[c.mat].corps,0.7)})`);}}CAM.ff=1;
+  if(c.sorte==='rails'){c.inerte=true;if(c.cl&&c.cl.z){c.cl.z.fait=true;c.cl.z.flash=0;}if(c.disques.every(q=>q.casse))retirer(c,'casse');}
+  else if(c.disques.filter(q=>q.el>=0).every(q=>q.casse))retirer(c,'casse');return true;}
+ // retirer une construction : cassée (un puits rend ce qu'il a bu ; un échafaudage tombé le sonne), effondrée (rien n'est rendu, il n'est pas sonné),
+ // cédée (un obstacle de l'arène tombe dessus), effacée (phase V, sa mort)
+ function retirer(c,pq){const e=X.e;X.bat=X.bat.filter(k=>k!==c);room.pillars=room.pillars.filter(p=>p.cons18!==c);for(const d of c.disques){if(d.e)d.e.dead=true;}c.etat='tombee';CAM.ff=1;
+  if(X.ann===c)X.ann=null;if(c.sorte==='douves'&&!X.bat.some(k=>k.sorte==='douves'))X.mainsC=null;
+  if(pq==='casse'){X.j.cassees++;
+   if(c.sorte==='puits'&&c.bu>0&&P&&!P.dead){const n=c.bu;c.bu=0;X.rendu=true;try{heal(n,'puits');}finally{X.rendu=false;}X.j.rendus+=n;fx.push({k:'line',x1:c.disques[0].x,y1:c.disques[0].y,x2:P.x,y2:P.y,w:4,t:0.4,max:0.4,col:`rgba(${MA[c.mat].arete},`});}
+   if(c.sorte==='echafaudages'&&e&&!e.dead){e.vuln=Math.max(e.vuln||0,SO.echafaudages.sonneS);X.vacille=1;}}
+  else if(pq==='cede')X.j.cedees++;
+  for(const d of c.disques)if(!d.casse)mist(d.x,d.y,d.r*0.8,pq==='efface'||pq==='cede'?'#2a2440':`rgb(${fonce(MA[c.mat].corps,0.7)})`);}
+ function appliquerCoups(){for(const c of X.bat.slice())for(const [i,el] of c.elements.entries())if(el.coup>0){const d=el.coup;el.coup=0;const q=c.disques.find(z=>z.el===i&&!z.casse);if(q)addNum(q.x+0,q.y-q.r-6,Math.round(d),'n');blesser(c,i,d);}}
+ // ── la Ruée : un couloir de ses mains vers toi, coupé au premier pilier qui arrête un tir ; à sa fin, s'il a heurté quelque chose, sa main s'y brise
+ // (sonné sonneS s) et une construction heurtée perd un palier de fissure (un tiers de ses PV)
+ function ruee(id,el,charge){const e=X.e,rots=[0,0.15,-0.15,0.3],o=optSortie(charge);
+  for(let k=0;k<rots.length&&k<DB.sortie.essais;k++){const r=brxRuee(el,[e.x,e.y],[P.x,P.y],AR,room.pillars,rots[k]);if(!brxSortie(DB,r.zones,[P.x,P.y],o).ok)continue;
+   const coupe=r.coupe>=0?room.pillars[r.coupe]:null,grp=++X.ngrp;
+   for(const g of r.zones)X.zones.push(Object.assign(g,{id,t:0,charge,degats:el.degats*dmgMul(),vise:true,boss:true,src:e,fait:false,flash:0,essai:k,grp,coupe,fin:finRuee}));
+   X.tmes=Math.max(X.tmes,charge+el.course+0.3);return true;}
+  X.j.sautes++;return false;}
+ function finRuee(z){const e=X.e,el=DB.elements.ruee,ici=!!(z.coupe&&room.pillars.includes(z.coupe));X.j.ruees++;X.ruee={t:0,x0:z.x0,y0:z.y0,x1:z.x1,y1:z.y1,brisee:ici};
+  if(!ici||!e||e.dead)return;X.j.brisees++;e.vuln=Math.max(e.vuln||0,el.sonneS);sparks(z.x1,z.y1,10,z.coupe.cons18?`rgb(${MA[z.coupe.cons18.mat].arete})`:'#bfb4cc');shake(5,0.2);
+  const c=z.coupe.cons18;if(c&&c.etat==='debout'){const q=c.disques.find(d=>d.pil===z.coupe);if(q&&q.el>=0)blesser(c,q.el,c.elements[q.el].pvMax/3);}}
+ // ── l'effondrement : la construction la plus proche de toi dont la chute laisse une sortie (sinon la mesure saute) ; un fil de sa croix, elle penche
+ // vers toi pendant le préavis, puis tombe : toi dessous, les dégâts ; ses ennemis dessous, ennemis × les dégâts ; jamais lui
+ function effondrer(id,el,charge){const e=X.e,r=brxEffondrement(DB,X.bat.filter(c=>c.etat==='debout'),[P.x,P.y],optSortie(charge),X.zones.filter(z=>!z.fait));if(!r)return false;
+  const grp=++X.ngrp;r.c.chute=grp;r.c.chuteT=0;r.c.chuteC=charge;
+  for(const g of r.zones)X.zones.push(Object.assign(g,{id,t:0,charge,degats:el.degats*dmgMul(),vise:true,boss:true,src:e,fait:false,flash:0,grp,chuteC:r.c,sorte:r.c.sorte,fin:finChute}));
+  X.tmes=Math.max(X.tmes,charge+0.3);return true;}
+ function finChute(z){const c=z.chuteC,el=DB.elements.effondrement,zs=X.zones.filter(q=>q.grp===z.grp),dg=el.degats*el.ennemis;
+  for(const o of enemies){if(o.dead||o.type==='boss'||o.fixed||o.cons18)continue;if(zs.some(q=>brxDans(q,o.x,o.y,o.r)))hitEnemy(o,dg,{crit:false,brx:1,color:`rgb(${MA[c.mat].arete})`});}
+  if(c.etat==='debout'){retirer(c,'chute');X.j.effondrees++;shake(6,0.25);}}
+ // ── la cloche d'un rail : toutes les toutesS s, un couloir orange sur toute la voie (préavis), puis la cloche passe en passeS s ; elle ne part que
+ // si une sortie existe (sinon ce passage saute) ; elle écrase les ennemis (jamais lui) ; un butoir cassé : elle quitte le rail
+ function clochePas(c,dt){const K=SO.rails.cloche,el=DB.elements.rail,v=c.voie,L=hyp(v.x1-v.x0,v.y1-v.y0)||1,cl=c.cl;if(c.inerte)return;
+  if(!cl.z){cl.t-=dt;if(cl.t>0)return;cl.t=K.toutesS;const charge=brxPreavis(DB,X.sauve,'rail'),z=brxCloche(DB,c);
+   if(brxPlacer(DB,[[z]],[P.x,P.y],optSortie(charge))<0){X.j.clochesSautees++;return;}X.vus.add('rail');
+   cl.z=Object.assign(z,{id:'rail',t:0,charge,degats:el.degats*dmgMul(),vise:true,boss:true,src:X.e,fait:false,flash:0,cloche:c,touche:new Set(),grp:++X.ngrp});X.zones.push(cl.z);X.j.cloches++;return;}
+  const z=cl.z;if(z.fait){cl.z=null;return;}z.t+=dt;if(z.t<z.charge)return;
+  const s=Math.min(1,(z.t-z.charge)/K.passeS),de=cl.de,pos=de?1-s:s,bx=v.x0+(v.x1-v.x0)*pos,by=v.y0+(v.y1-v.y0)*pos;cl.s=pos;
+  if(!z.son){z.son=1;if(!(X.essai&&X.essai.muet))sfx('bigbell');}
+  const sous=(q,r)=>Math.abs(((q.x-v.x0)*(v.x1-v.x0)+(q.y-v.y0)*(v.y1-v.y0))/L-pos*L)<K.r+r*0.5&&brxDans(z,q.x,q.y,r);
+  if(!P.dead&&P.dashT<=0&&!z.touche.has(P)&&sous(P,P.r)){z.touche.add(P);c.surBot++;X.zoneCourante=z;try{XA.coup(z,()=>hurtPlayer(z.degats,X.e));}finally{X.zoneCourante=null;}}
+  for(const o of enemies){if(o.dead||o.type==='boss'||o.fixed||o.cons18||z.touche.has(o)||!sous(o,o.r))continue;z.touche.add(o);X.j.ecrases++;hitEnemy(o,(o.elite||o.asm)?K.ennemis.elite:K.ennemis.ord,{crit:false,brx:1,kb:160,sx:bx,sy:by,color:`rgb(${MA[c.mat].arete})`});}
+  if(s>=1){z.fait=true;z.flash=0.15;cl.de=1-de;cl.t=Math.max(0.5,K.toutesS-z.charge-K.passeS);}}
+ // ── les Manœuvres : une équipe descendue au bout de ses fils, lue sur ce qu'il a bâti ; au plus max vivants ; cercle violet, fil de ses mains
+ function manoeuvres(id){const rec=X.bat.filter(c=>c.etat==='debout').sort((a,b)=>b.id-a.id).map(c=>c.sorte),viv=enemies.filter(o=>!o.dead&&o.appel18).length+room.spawning.filter(q=>q.appel18).length,L=brxAppel(DB,X.palier,rec,viv);
+  if(!L.length){X.j.appelsSautes++;return false;}const v=XA.dbg().vue(),f={x0:Math.max(AR.x0+30,v.x0-MN.vue),y0:Math.max(AR.y0+30,v.y0-MN.vue),x1:Math.min(AR.x1-30,v.x1+MN.vue),y1:Math.min(AR.y1-30,v.y1+MN.vue)};
+  const pl=brxPlaces(f,L.length,[P.x,P.y],X.rng,{marge:20,minD:MN.minD,bloque:(x,y)=>room.pillars.some(q=>hyp(x-q.x,y-q.y)<q.r+30)}),A0=MN.apparition;
+  L.forEach((t,k)=>room.spawning.push({x:pl[k][0],y:pl[k][1],type:t,elite:false,t:A0[0]+X.rng()*(A0[1]-A0[0]),appel18:1}));X.j.appels++;X.vus.add('manoeuvres');X.tmes=Math.max(X.tmes,1.3);return true;}
+ // ── ce qui reste à une transition : un obstacle du nouvel état qui tombe sur une construction la fait céder ; en IV, seules restent celles qui
+ // tiennent entières dans les bornes (connexité revérifiée, les plus éloignées du centre d'abord) ; une annonce en cours s'efface
+ function versCons(n){const E=XA.dbg().A.etats[DB.phases[n].arene];if(!E)return;
+  for(const c of X.bat.slice())if(c.etat==='annonce'){X.bat=X.bat.filter(k=>k!==c);if(X.ann===c)X.ann=null;}
+  X.nbatPh=0;if(n!==1)X.mainsC=null;else if(X.bat.some(k=>k.sorte==='douves'))X.mainsC={x:X.bat.find(k=>k.sorte==='douves').ile[0],y:X.bat.find(k=>k.sorte==='douves').ile[1]};
+  const obs=E.obstacles.concat(E.vides);for(const c of X.bat.slice())if(brxTous(c).some(d=>obs.some(o=>hyp(d.x-o.x,d.y-o.y)<d.r+o.r)))retirer(c,'cede');
+  if(DB.phases[n].presence==='sol'){const R=brxFiltreBornes(DB,monde(),E.bornes,obs,X.bat.filter(c=>c.etat==='debout'),{x:P.x,y:P.y,r:P.r});for(const c of R.retire)retirer(c,'cede');}
+  X.ruee=null;for(const c of X.bat)if(c.cl)c.cl.z=null;}
+ // ── le bot (bot=2) en phase II : ses mains pendant une annonce, puis un butoir (quand la cloche l'a frappé deux fois), puis l'échafaudage le plus
+ // proche, puis le Brumeux ; contre une douve qui retient ses mains, une forme au contact longe l'anneau jusqu'à une passerelle ouverte
+ function cible2(){const e=X.e;if(!X.on||!e||e.dead||!X.bat)return null;
+  if(X.essai&&X.essai.cible&&!X.essai.cible.dead)return{o:X.essai.cible,force:true,want:Math.min(DIST[P.cls]||220,90)};   // banc : une cible imposée (temps pour casser une sorte)
+  if(X.ann)return{o:e,force:true,want:Math.min(DIST[P.cls]||220,140)};
+  const dispo=d=>d&&d.e&&!d.e.dead&&!d.casse;let best=null,bd=1e9;
+  for(const c of X.bat){if(c.etat!=='debout')continue;if(c.sorte==='rails'&&c.surBot>=2&&!c.inerte)for(const d of c.disques)if(dispo(d)){const q=hyp(d.x-P.x,d.y-P.y)-1e4;if(q<bd){bd=q;best=d;}}
+   if(c.sorte==='echafaudages')for(const d of c.disques)if(dispo(d)){const q=hyp(d.x-P.x,d.y-P.y);if(q<bd){bd=q;best=d;}}}
+  if(best)return{o:best.e,force:true,want:Math.min(DIST[P.cls]||220,90)};
+  const dv=X.bat.find(c=>c.sorte==='douves'&&c.etat==='debout');if(dv&&X.mainsC&&(DIST[P.cls]||220)<150){const A=SO.douves.anneau,cx=dv.ile[0],cy=dv.ile[1],d=hyp(P.x-cx,P.y-cy);
+   if(d>A.r-A.fosse-P.r){const ouv=[0,1,2,3].filter(q=>!dv.etats[dv.etatI].includes(dv.portes[q][0])),a0=Math.atan2(P.y-cy,P.x-cx);let q0=ouv[0],m=9;
+    for(const q of ouv){let da=Math.abs(((q*Math.PI/2-a0)%TAU+3*Math.PI)%TAU-Math.PI);if(da<m){m=da;q0=q;}}const ag=q0*Math.PI/2;
+    if(m<0.12)return{via:[cx+Math.cos(ag)*(A.r-90),cy+Math.sin(ag)*(A.r-90)]};
+    if(d<A.r+A.fosse+P.r+40){const sg=Math.sign(((ag-a0)%TAU+3*Math.PI)%TAU-Math.PI)||1,a=a0+sg*0.35;return{via:[cx+Math.cos(a)*(A.r+A.fosse+P.r+30),cy+Math.sin(a)*(A.r+A.fosse+P.r+30)]};}
+    return{via:[cx+Math.cos(ag)*(A.r+A.fosse+P.r+30),cy+Math.sin(ag)*(A.r+A.fosse+P.r+30)]};}}
+  return null;}
+ // ── dessin. Au sol (sous la brume) : les constructions debout (image assemblée, modules par fissure, passerelles, niveau du puits) ; par-dessus
+ // (comme les télégraphes) : l'annonce en craie et les fils de ses mains, la cloche, le fil d'un effondrement et celui d'un échafaudage, la main de
+ // la Ruée, les fils des Manœuvres. Mouvements réduits : rien ne tricote ni ne se balance ; la chute et la bascule sont des fondus.
+ function decal(c){if(!c.chute)return{x:0,y:0,a:1};const z=X.zones.find(q=>q.grp===c.chute&&!q.fait);if(!z)return{x:0,y:0,a:1};const k=Math.min(1,z.t/z.charge);
+  if(RM)return{x:0,y:0,a:1-0.5*k};const d=c.disques.find(q=>!q.casse)||c.disques[0],dx=P.x-d.x,dy=P.y-d.y,l=hyp(dx,dy)||1;return{x:dx/l*10*k,y:dy/l*10*k,a:1};}
+ // ── au sol, en deux parts. Les parties fixes des constructions debout (muraille, fûts, butoirs, rail, liseré, puits, tour, anneau d'une douve)
+ // sont CUITES dans les tuiles du sol de l'arène (celles de l'état en place et, pendant une transformation, de l'état d'arrivée) : peintes une fois,
+ // repeintes quand elles changent (pose, fissure, destruction, effondrement, changement d'état d'arène), la tuile d'origine gardée pour la rendre
+ // intacte ; aucune n'est donc redessinée à chaque image. Le reste est dessiné à chaque image : les passerelles d'une douve, le niveau d'un puits,
+ // et une construction qui s'effondre (elle penche vers toi pendant le préavis ; mouvements réduits : un fondu).
+ function boite(k){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const ext=(x,y,r)=>{x0=Math.min(x0,x-r);y0=Math.min(y0,y-r);x1=Math.max(x1,x+r);y1=Math.max(y1,y+r);};
+  for(const d of brxTous(k))ext(d.x,d.y,d.r+12);if(k.voie){ext(k.voie.x0,k.voie.y0,30);ext(k.voie.x1,k.voie.y1,30);}if(k.trace&&k.trace.li)ext(k.disques[0].x,k.disques[0].y,k.rayon+4);
+  if(k.img){ext(k.img.x0,k.img.y0,0);ext(k.img.x0+k.img.cv[0].width,k.img.y0+k.img.cv[0].height,0);}return{x0,y0,x1,y1};}
+ function peindreFixe(g,k){const mm=X.mod.M[k.mat],R=Math.round;
+  if(k.img){const f=k.sorte==='murailles'?(k.elements[0].fiss|0):0,cv=k.img.cv[Math.min(f,k.img.cv.length-1)];g.drawImage(cv,R(k.img.x0),R(k.img.y0));}
+  if(k.trace&&k.trace.tr){g.strokeStyle=`rgba(${fonce(MA[k.mat].corps,0.7)},.9)`;g.lineWidth=5;g.stroke(k.trace.tr);g.strokeStyle=crgb(k.mat,'arete',0.95);g.lineWidth=2.5;g.stroke(k.trace.ra);}
+  if(k.trace&&k.trace.li){g.strokeStyle=crgb(k.mat,'arete',0.45);g.lineWidth=2;g.setLineDash([10,9]);g.stroke(k.trace.li);g.setLineDash([]);}
+  if(k.douve)for(const b of k.douve.quarts)g.drawImage(b.cv,R(b.x0),R(b.y0));
+  const pc=SO[k.sorte].piece;if(pc&&k.sorte!=='murailles')for(const d of k.disques){if(d.casse||d.fosse)continue;const el=k.elements[d.el],im=mm[pc][Math.min(2,el?el.fiss|0:0)];g.drawImage(im,R(d.x-im.width/2),R(d.y-im.height/2));}}
+ function cuisson(){const A=XA.dbg().A;if(!A||!A.sol||!A.M||!X.mod)return;const T=DA.tuiles,nx=Math.ceil(A.M.w/T.w),ny=Math.ceil(A.M.h/T.h),cuit=X.bat.filter(k=>k.etat==='debout'&&!k.chute);
+  const sk=k=>k.id+':'+k.elements.map(e=>e.fiss).join('')+':'+k.disques.filter(d=>d.casse).length,ies=[...new Set([A.ie0,A.ie])],sig=ies.join(',')+'|'+cuit.map(sk).join(',');
+  const CU=X.cu||(X.cu={cuites:new Set(),vierges:new Map(),tsig:new Map(),sig:null});if(CU.sig===sig||X.cuGel)return;
+  // seule une tuile dont le contenu change est repeinte (rendue intacte, puis ses constructions repeintes)
+  const t0=performance.now(),bx=cuit.map(k=>[k,boite(k),sk(k)]),nouv=new Set(),vus=new Set();let n=0;
+  const rendre=tc=>{const v=CU.vierges.get(tc);if(!v)return;const g=tc.getContext('2d');g.save();g.globalCompositeOperation='copy';g.drawImage(v,0,0);g.restore();CU.tsig.delete(tc);n++;};
+  for(const ie of ies){const L=A.sol[ie];if(!L)continue;
+   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const tc=L[j*nx+i],tx=i*T.w,ty=j*T.h;if(!tc)continue;vus.add(tc);const ici=bx.filter(([k,b])=>b.x1>tx&&b.x0<tx+T.w&&b.y1>ty&&b.y0<ty+T.h);
+    if(!ici.length){if(CU.cuites.has(tc))rendre(tc);continue;}
+    const ts=ici.map(q=>q[2]).join(',');nouv.add(tc);if(CU.tsig.get(tc)===ts)continue;
+    if(!CU.vierges.has(tc)){const v=document.createElement('canvas');v.width=tc.width;v.height=tc.height;v.getContext('2d').drawImage(tc,0,0);CU.vierges.set(tc,v);}else rendre(tc);
+    const g=tc.getContext('2d');g.save();g.translate(-tx,-ty);for(const [k] of ici)peindreFixe(g,k);g.restore();CU.tsig.set(tc,ts);n++;}}
+  for(const tc of CU.cuites)if(!vus.has(tc))rendre(tc);
+  CU.cuites=nouv;CU.sig=sig;if(n){X.j.cuissonMs.push(+(performance.now()-t0).toFixed(2));if(X.j.cuissonMs.length>200)X.j.cuissonMs.shift();}}
+ function dessinSol2(){const M=X.mod&&X.mod.M;if(!M)return;const c=ctx,mt=c.getTransform(),pv=b=>poseVue(c,b.cv,0,0,b.cv.width,b.cv.height,b.x0,b.y0,mt);
+  for(const k of X.bat){if(k.etat!=='debout')continue;
+   if(k.chute){const o=decal(k);c.save();c.globalAlpha=o.a;c.translate(o.x,o.y);peindreFixe(c,k);c.restore();}
+   if(k.douve){const cl=k.etats[k.etatI],al=RM||k.bf==null?1:Math.min(1,k.bf);
+    // les passerelles : l'état en place, et l'état d'avant qui s'efface pendant la bascule (0,3 s ; un fondu, en mouvements réduits aussi)
+    for(const [q,g] of k.portes.entries()){const ferme=cl.includes(g[0]),P2=k.douve.portes[q];if(al<1){c.globalAlpha=1-al;pv(ferme?P2.ouvert:P2.ferme);}c.globalAlpha=al;pv(ferme?P2.ferme:P2.ouvert);c.globalAlpha=1;}}
+   if(k.sorte==='puits'&&k.cap>0&&k.bu>0){const d=k.disques[0],q=Math.min(1,k.bu/k.cap),o=decal(k);c.fillStyle=crgb(k.mat,'arete',0.25+0.55*q);c.beginPath();c.arc(d.x+o.x,d.y+o.y,d.r*0.58*Math.sqrt(q),0,TAU);c.fill();}}}
+ const _sol187=CAM.sol;CAM.sol=function(){if(!(X.on&&X.mod&&(X.bat.length||(X.cu&&X.cu.cuites.size))))return _sol187.apply(this,arguments);try{cuisson();}catch(err){console.error(err);}
+  const all=room.pillars;room.pillars=all.filter(p=>!p.cons18);try{_sol187.apply(this,arguments);}finally{room.pillars=all;}try{dessinSol2();}catch(err){console.error(err);}};
+ function croixXY(e){return[e.x,e.y-70];}
+ function dessinOuvrage(c){const e=X.e;if(!e)return;const [cx,cy]=croixXY(e),haut=DB.phases[X.phase].presence==='haut';
+  for(const k of X.bat){
+   if(k.etat==='annonce'){const kk=Math.min(1,k.t/k.annonce);c.save();c.strokeStyle=rgba('craie',RM?0.8:0.55+0.3*kk);c.lineWidth=2;c.setLineDash([7,6]);
+    for(const d of k.portes?k.disques.concat(...k.portes):k.disques){c.beginPath();c.arc(d.x,d.y,d.r,0,TAU);c.stroke();}
+    if(k.voie){c.beginPath();c.moveTo(k.voie.x0,k.voie.y0);c.lineTo(k.voie.x1,k.voie.y1);c.stroke();}if(k.sorte==='puits'){c.beginPath();c.arc(k.disques[0].x,k.disques[0].y,k.rayon,0,TAU);c.stroke();}
+    c.setLineDash([]);if(!e.dead&&haut){const ds=k.disques,a=ds[0],b=ds[ds.length-1],ent=RM?1:kk;c.strokeStyle=rgba('fils',0.75);c.lineWidth=1.3;c.beginPath();
+     for(const [hx,q] of [[e.x-e.r*0.7,a],[e.x-e.r*0.7,b],[e.x+e.r*0.7,a],[e.x+e.r*0.7,b]]){c.moveTo(hx,e.y);c.lineTo(hx+(q.x-hx)*ent,e.y+(q.y-e.y)*ent);}c.stroke();}
+    c.restore();}
+   else if(k.etat==='debout'){
+    if(k.sorte==='echafaudages'&&haut&&!e.dead){const d=k.disques[0];c.save();c.strokeStyle=crgb(k.mat,'arete',0.7);c.lineWidth=1.3;c.beginPath();c.moveTo(cx,cy);c.lineTo(d.x,d.y-d.r*0.6);c.stroke();c.restore();}
+    if(k.chute&&haut&&!e.dead){const d=k.disques.find(q=>!q.casse)||k.disques[0];c.save();c.strokeStyle=rgba('fils',0.8);c.lineWidth=1.6;c.beginPath();c.moveTo(cx,cy);c.lineTo(d.x,d.y);c.stroke();c.restore();}
+    if(k.sorte==='rails'&&!k.inerte){const v=k.voie,K=SO.rails.cloche,pos=k.cl.z&&k.cl.z.t>=k.cl.z.charge?k.cl.s:k.cl.de,bx=v.x0+(v.x1-v.x0)*pos,by=v.y0+(v.y1-v.y0)*pos;
+     c.save();c.fillStyle='rgba(0,0,0,.4)';c.beginPath();c.ellipse(bx+5,by+K.r*0.5,K.r,K.r*0.45,0,0,TAU);c.fill();c.fillStyle=crgb(k.mat,'corps',1);c.beginPath();c.arc(bx,by,K.r,0,TAU);c.fill();
+     c.strokeStyle=crgb(k.mat,'arete',1);c.lineWidth=3;c.stroke();c.beginPath();c.arc(bx,by,K.r*0.55,0,TAU);c.stroke();c.fillStyle='rgba(10,8,16,.85)';c.beginPath();c.arc(bx,by,K.r*0.22,0,TAU);c.fill();c.restore();}}}
+  // les fils des Manœuvres, de ses mains aux cercles d'apparition
+  if(haut&&!e.dead){c.save();c.strokeStyle=rgba('fils',0.6);c.lineWidth=1.2;c.beginPath();let n=0;for(const q of room.spawning)if(q.appel18){c.moveTo(e.x,e.y);c.lineTo(q.x,q.y);n++;}if(n)c.stroke();c.restore();}
+  // la main de la Ruée : elle file au bout de son fil, se brise contre l'obstacle (étincelles posées par finRuee)
+  const R=X.ruee;if(R&&!e.dead){const el=DB.elements.ruee,k=Math.min(1,R.t/el.course),x=R.x0+(R.x1-R.x0)*k,y=R.y0+(R.y1-R.y0)*k;c.save();c.strokeStyle=rgba('fils',0.8);c.lineWidth=1.3;c.beginPath();c.moveTo(R.x0,R.y0);c.lineTo(x,y);c.stroke();
+   c.fillStyle=rgba('yeux',0.92);c.beginPath();c.arc(x,y,e.r*0.42,0,TAU);c.fill();if(R.brisee&&k>=1){c.strokeStyle='rgba(10,8,16,.8)';c.lineWidth=2;c.beginPath();c.moveTo(x-8,y-6);c.lineTo(x+2,y+1);c.lineTo(x-4,y+8);c.stroke();}c.restore();}}
+ const _dt187=drawTelegraphs;drawTelegraphs=function(){_dt187.apply(this,arguments);if(X.on&&state==='play'&&X.bat)try{dessinOuvrage(ctx);}catch(err){console.error(err);}};
+ // la croix s'incline vers le chantier pendant une annonce, vacille quand un échafaudage tombe
+ const _mp187=mainsPas;mainsPas=function(e,dt){_mp187.apply(this,arguments);if(X.ann){const pe=clamp((X.ann.c[0]-e.x)/900,-1,1)*0.3;X.pench+=(pe-X.pench)*(RM?1:Math.min(1,dt*3));}
+  if(X.vacille>0){X.vacille-=dt;if(!RM)X.pench+=Math.sin(X.vacille*30)*0.02;}if(X.ruee){X.ruee.t+=dt;if(X.ruee.t>DB.elements.ruee.course+0.4)X.ruee=null;}};
+ // ── enveloppes de la phase II (les plus extérieures du bloc)
+ // une construction (entité fixe) : un coup par image et par élément, le plus gros ; ni brûlures, ni poisons, ni PV volés ; les nombres sont posés une
+ // fois par élément ; le Brumeux subit −40 % tant qu'un échafaudage tient (jamais invulnérable : à nu, 0,6 × 1,5)
+ const _he187=hitEnemy;hitEnemy=function(e,base,o){
+  if(e&&e.cons18){const k=e.cons18,el=k.c.elements[k.el];if(!X.on||(o&&o.dot)||!el||el.pv<=0||k.c.etat!=='debout')return 0;
+   const ls=P.s.lifesteal,n0=nums.length;P.s.lifesteal=0;let d=0;try{d=_he187.apply(this,arguments)||0;}finally{P.s.lifesteal=ls;e.hp=e.maxHp;if(nums.length>n0)nums.length=n0;}
+   if(d>el.coup)el.coup=d;return d;}
+  if(e&&e.brx18&&X.on&&X.bat&&X.bat.some(c=>c.sorte==='echafaudages'&&c.etat==='debout'))return _he187.call(this,e,base*SO.echafaudages.subi,o);
+  return _he187.apply(this,arguments);};
+ // un tir du joueur qui s'arrête sur une construction la frappe (dégâts du tir)
+ const _up187=updateProjectiles;updateProjectiles=function(dt){if(!(X.on&&X.bat&&X.bat.length))return _up187.apply(this,arguments);const av=pproj.slice(),r=_up187.apply(this,arguments);
+  try{const vivants=new Set(pproj);for(const p of av){if(vivants.has(p)||!p.dead||p.life<=0)continue;let best=null,bd=1e9;for(const q of room.pillars){if(!q.cons18||q.kind==='fosse18')continue;const d=hyp(p.x-q.x,p.y-q.y)-q.r;if(d<bd){bd=d;best=q;}}
+   if(best&&bd<6){const c=best.cons18,dd=c.disques.find(z=>z.pil===best);if(dd&&dd.e&&!p.hit.has(dd.e)){p.hit.add(dd.e);hitEnemy(dd.e,p.dmg,{light:p.light,cor:p.cor});}}}}catch(err){console.error(err);}return r;};
+ // le ciblage automatique (rebonds, tête chercheuse, plus proche) ne voit pas une construction
+ const _nf187=nearestFoe;nearestFoe=function(x,y,max,f){if(!X.on)return _nf187.apply(this,arguments);return _nf187.call(this,x,y,max,o=>!o.cons18&&(!f||f(o)));};
+ const _ne187=nearestEnemy;nearestEnemy=function(x,y,max,skip){if(!X.on||!X.bat||!X.bat.length)return _ne187.apply(this,arguments);let best=null,bd=max;for(const e of enemies){if(e.dead||e.cons18||(skip&&skip.has(e)))continue;const d=hyp(e.x-x,e.y-y);if(d<bd){bd=d;best=e;}}return best;};
+ // une charge (Brute, Masqué) qui heurte une construction est sonnée (crashed) et lui ôte un palier ; une Brute qui charge dans une douve y tombe
+ const _cr187=crashed;crashed=function(e){const r=_cr187.apply(this,arguments);if(!r||!X.on||!X.bat||!X.bat.length||!e||e.type==='boss')return r;
+  try{if(RUN.time-(e.crash18||-9)<0.5)return r;const tou=room.pillars.filter(p=>p.cons18&&hyp(e.x-p.x,e.y-p.y)<=p.r+e.r+1);if(!tou.length)return r;e.crash18=RUN.time;
+   if(tou.some(p=>p.kind==='fosse18')&&!e.elite&&!e.asm&&!e.fixed&&e.state==='charge'){tomber(e);return r;}
+   const vus=new Set();for(const p of tou){const c=p.cons18,q=c.disques.find(z=>z.pil===p);if(!q||q.el<0||vus.has(c.id+':'+q.el))continue;vus.add(c.id+':'+q.el);blesser(c,q.el,c.elements[q.el].pvMax/3);}}catch(err){console.error(err);}return r;};
+ function tomber(o){if(o.dead)return;X.j.tombes++;mist(o.x,o.y,o.r,'#0a0812');killEnemy(o);}
+ // un ennemi ordinaire repoussé dans une douve (élan ≥ chuteVitesse px/s) y tombe ; le joueur, jamais
+ function chutesPas(){const V=SO.douves.chuteVitesse;for(const o of enemies){if(o.dead||o.elite||o.asm||o.fixed||o.cons18||o.type==='boss')continue;if(hyp(o.kbx||0,o.kby||0)<V)continue;
+  if(room.pillars.some(p=>p.kind==='fosse18'&&p.cons18&&hyp(o.x-p.x,o.y-p.y)<=p.r+o.r+1))tomber(o);}}
+ // un Puits avide : dans son rayon, tu ne gardes que garde de tes soins, le reste le remplit (jusqu'à plein × tes PV max)
+ const _hl187=heal;heal=function(n,src){if(!(X.on&&!X.rendu&&n>0&&P&&X.bat&&X.bat.length))return _hl187.apply(this,arguments);const S=SO.puits;
+  const w=X.bat.find(c=>c.sorte==='puits'&&c.etat==='debout'&&hyp(P.x-c.disques[0].x,P.y-c.disques[0].y)<c.rayon&&c.bu<c.cap);if(!w)return _hl187.apply(this,arguments);
+  const bu=Math.min(n*(1-S.garde),w.cap-w.bu);w.bu+=bu;X.j.puitsBu+=bu;return _hl187.call(this,n-bu,src);};
+ // les ennemis des Manœuvres (appel18) ; « ce qui t'a tué » : l'effondrement (et la sorte tombée), un ennemi de l'appel
+ const _ce187=createEnemy;createEnemy=function(type,x,y){const e=_ce187.apply(this,arguments);try{if(X.on&&e&&room){const sp=room.spawning.find(q=>q.x===x&&q.y===y&&q.appel18);if(sp)e.appel18=1;}}catch(err){}return e;};
+ const _hp187=hurtPlayer;hurtPlayer=function(dmg,src){const h0=P?P.hp:0,z=X.zoneCourante,r=_hp187.apply(this,arguments);
+  try{if(X.on&&P&&P.hp<h0&&X.e&&!X.e.dead){if(z&&z.id==='effondrement')X.tueBati=z.sorte;
+   else if(!z){let a=src&&src.appel18?src:null;if(!a&&!src){for(const p of eproj)if(p.from&&p.from.appel18&&hyp(p.x-P.x,p.y-P.y)-(p.r||6)-P.r<14){a=p.from;break;}}if(a)X.tue='manoeuvres';}}}catch(err){}return r;};
+ // chaque pas : les constructions (annonces, poses, passerelles, cloches), les coups de l'image appliqués, les chutes dans une douve
+ const _st187=step;step=function(dt){const r=_st187.apply(this,arguments);if(!X.on||!X.e||!X.bat)return r;
+  try{XA.peindreTard(DB.phases[1].arene,1);if(!X.scene){if(!X.trans)consPas2(dt);appliquerCoups();chutesPas();for(const c of X.bat)for(const d of c.disques)if(d.e&&!d.e.dead){d.e.x=d.x;d.e.y=d.y;}}}catch(err){console.error(err);}return r;};
+
+ // une construction (entité fixe) n'a pas de corps d'ennemi : elle est dessinée au sol avec l'arène (et n'a ni barre de vie ni anneau)
+ const _deb187=drawEnemyBody;drawEnemyBody=function(e){if(e&&e.cons18)return;return _deb187.apply(this,arguments);};
+ const _dep187=drawEnemyPost;drawEnemyPost=function(e){if(e&&e.cons18)return;return _dep187.apply(this,arguments);};
+ function etatBat(){return X.bat.map(c=>({id:c.id,sorte:c.sorte,mat:c.mat,etat:c.etat,t:+c.t.toFixed(2),k:c.k,c:[+c.c[0].toFixed(1),+c.c[1].toFixed(1)],disques:c.disques.length,casses:c.disques.filter(d=>d.casse).length,
+  pv:c.elements.map(el=>Math.round(el.pv)),pvMax:c.elements.map(el=>Math.round(el.pvMax)),fiss:c.elements.map(el=>el.fiss),pousse:c.pousse||0,part:c.part!=null?+c.part.toFixed(3):null,aire:c.aire!=null?+c.aire.toFixed(3):null,
+  etatI:c.etatI,bu:c.bu?+c.bu.toFixed(1):0,cap:c.cap||0,inerte:!!c.inerte,cloche:c.cl?{t:+c.cl.t.toFixed(2),z:!!c.cl.z,s:+(c.cl.s||0).toFixed(2),de:c.cl.de}:null,surBot:c.surBot,chute:!!c.chute}));}
  // ── essai (Q17) : l'arène d'essai (sans boss d'essai, sans tirs, sans foule, sans Masqué), le Brumeux à la phase demandée
  function essai(phase,o){o=o||{};phase=clamp(((+phase||1)-1)|0,0,DB.phases.length-1);
   const r=XA.essai('final',{cls:o.cls,masque:false,foule:0,boss:false,tirs:false,bot:false,dieu:o.dieu!==false,etat:DB.phases[phase].arene});
@@ -13848,12 +14325,13 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0'});}catch(err){console.error(err);}},400));}
  // ── console et bancs
  window.__brumeux={DB,essai,vers:n=>vers(clamp((n|0)-1,0,DB.phases.length-1)),lire,images,statsRun,
-  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
+  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='batir'?'bâtir':m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
    tab:X.tab&&{i:X.tab.i,frag:Object.assign({},X.tab.frag),decor:X.tab.decor,theme:X.tab.theme,regle:X.tab.regle,densite:X.tab.densite,champion:X.tab.champion,rejoue:X.tab.rejoue,sub:X.tab.sub,t:+X.tab.t.toFixed(2),feinte:X.tab.feinte,vide:X.tab.vide,dalles:X.tab.dalles.length,braz:X.tab.braz?X.tab.braz.length:0,n:X.tab.n},
-   tiersVus:X.tiersVus.slice(),chute:+X.chute.toFixed(1),ouvre:+X.ouvre.toFixed(2),pench:+X.pench.toFixed(3),cal:!!X.cal,tueTab:X.tueTab,lec:X.lec&&{poids:X.lec.poids,premier:X.lec.premier},j:JSON.parse(JSON.stringify(X.j)),scene:!!X.scene,tue:X.tue}),
+   tiersVus:X.tiersVus.slice(),chute:+X.chute.toFixed(1),ouvre:+X.ouvre.toFixed(2),pench:+X.pench.toFixed(3),cal:!!X.cal,tueTab:X.tueTab,lec:X.lec&&{poids:X.lec.poids,premier:X.lec.premier,bati:X.lec.bati},j:JSON.parse(JSON.stringify(X.j)),scene:!!X.scene,tue:X.tue,
+   bat:etatBat(),ann:X.ann?X.ann.id:null,mainsC:X.mainsC&&{x:+X.mainsC.x.toFixed(1),y:+X.mainsC.y.toFixed(1)},tueBati:X.tueBati,batB:X.batB,batX:X.batX.slice(),mod:!!X.mod,ruee:!!X.ruee}),   // v18.7 : les constructions
   sauve:()=>({lu:X.sauve,brut:SAVE.brumeux||null}),noter:(o)=>brxNoter(X.sauve||brxNeuf(),o,DB),
-  lancer,poser:(x,y,r,o)=>{o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,X.cons.map(k=>({x:k.x,y:k.y,r:k.r})),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
-  dbg:()=>({get X(){return X;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab},glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights})};
+  lancer,batir,poserSorte,poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
+  dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel},glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

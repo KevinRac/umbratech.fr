@@ -349,11 +349,17 @@ ok(/function remettre\(\)\{Object\.assign\(AR,AR0\);MONDE\.w=W;MONDE\.h=H;CAM\.x
 ok(/A\.j\.assertions\+\+/.test(bloc), 'bloc : assertion de développement à chaque entrée hors arène');
 ok(/actif\(\)&&RUN&&!RUN\.hub&&!ESSAI_U&&RUN\.gardeNow==='final'/.test(bloc) && /const actif=\(\)=>A\.actif!=null\?A\.actif:!!DA\.actif;/.test(bloc), 'bloc : en jeu, l’arène ne s’ouvre que si actif (boss final) ; le mode d’essai l’ouvre même éteinte');
 ok(/RUN\.essai=1;/.test(bloc), 'bloc : l’essai pose RUN.essai');
-ok(/tryTok=function\(e,k\)\{if\(CAM\.on&&e&&e\.type!=='boss'&&arDistRect\(vue\(\),e\.x,e\.y\)>HV\.jeton\)return false;/.test(bloc), 'bloc : pas de jeton d’attaque hors de la vue élargie (le boss n’est pas concerné)');
-ok(/hitEnemy=function\(e,base,o\)\{if\(CAM\.on&&e&&!\(o&&o\.dot\)&&arDistRect\(vue\(\),e\.x,e\.y\)>HV\.coup/.test(bloc), 'bloc : le joueur frappe ce qu’il voit (vue + 60 px)');
+// v18.7 : le crochet jetonTir (combat du Brumeux : un tireur ne prend son jeton que dans la vue ; null ailleurs : HV.jeton, comme avant) ;
+// les coups des mécanismes du Brumeux (o.brx) sont exemptés de la règle « on ne frappe que ce qu'on voit », comme les brûlures (o.dot)
+ok(/tryTok=function\(e,k\)\{if\(CAM\.on&&e&&e\.type!=='boss'&&arDistRect\(vue\(\),e\.x,e\.y\)>\(k==='r'&&A\.jetonTir!=null\?A\.jetonTir:HV\.jeton\)\)return false;/.test(bloc), 'bloc : pas de jeton d’attaque hors de la vue élargie (le boss n’est pas concerné ; crochet jetonTir du Brumeux, nul ailleurs)');
+ok(/hitEnemy=function\(e,base,o\)\{if\(CAM\.on&&e&&!\(o&&\(o\.dot\|\|o\.brx\)\)&&arDistRect\(vue\(\),e\.x,e\.y\)>HV\.coup/.test(bloc), 'bloc : le joueur frappe ce qu’il voit (vue + 60 px ; les mécanismes du Brumeux, o.brx, exemptés)');
+ok(/solTrou:null,jetonTir:null\};/.test(bloc), 'bloc : jetonTir est nul par défaut (seul le combat du Brumeux le pose)');
 ok(/setRule=function\(\)\{if\(room&&room\.arene\)return;/.test(bloc), 'bloc : aucune règle de salle v14 dans l’arène');
 for (const f of ['findSpawn', 'themePos', 'drawFog', 'drawVignette', 'drawParts', 'drawNums', 'hurtPlayer', 'step', 'enterRoom', 'arrowPos', 'drawTelegraphs'])
   ok(new RegExp(`\\b${f}=function`).test(bloc), `bloc : ${f} enveloppé`);
+// v18.7 : les zones des mutations (Échos, Glas) et l'Ombre sont des sources de signe et le juge les reconnaît (un Glas frappait « sans signe »)
+ok(/if\(room\.z18\)for\(const z of room\.z18\)if\(!z\.fini\)L\.push\(\{id:id\(z\),o:z,k:'tele'/.test(bloc) && /if\(room\.ombre18&&room\.ombre18\.x!=null\)L\.push\(/.test(bloc), 'sources : zones des mutations et Ombre (v18.7)');
+ok(/room\.z18\.find\(z=>z\.fini&&Math\.hypot\(P\.x-z\.x,P\.y-z\.y\)<z\.r\+P\.r\)/.test(bloc) && /sorte='mutation:ombre'/.test(bloc), 'juge : la zone de mutation qui éclate, l\'Ombre qui passe (v18.7)');
 ok(!/\b(toast|showMur|murmur|msgPush)\(/.test(bloc), 'bloc : aucune bulle ni message (image d’abord)');
 ok(/window\.__arene=\{/.test(bloc) && ['etat:', 'cam:', 'vers', 'indic:', 'journal:', 'mesure:'].every(k => bloc.includes(k)), 'bloc : console __arene (etat, cam, vers, indic, journal, mesure)');
 

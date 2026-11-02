@@ -1,6 +1,6 @@
 // La Brume · données du Brumeux, le boss final (v18.5, chantier v18, action 5 ; cadrage Q1–Q17 validé le 1er novembre 2026)
-// Action 5a : le socle technique. Action 5b (v18.6) : la phase I, « le Rappel » (partition.rappel, gestes signature, tableaux). Les phases II à V
-// (5c à 5f) jouent encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
+// Action 5a : le socle technique. Action 5b (v18.6) : la phase I, « le Rappel » (partition.rappel, gestes signature, tableaux). Action 5c (v18.7) :
+// la phase II, « L'Ouvrage » (partition.ouvrage, gestes signature, constructions comme système). Les phases III à V (5d à 5f) jouent encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
 // pure /*brx:pur*/), par outils/sim-brumeux.mjs et par _dev/bancs/banc-brumeux.mjs. Le wiki ne lit de ce fichier rien d'autre que ce que
 // l'action 5g y branchera (sa carte, Q16) : ni les phases, ni la partition, ni la lecture, ni les tirages (secret).
 // En jeu, rien n'est allumé : l'arène (arene.js, actif:false) reste fermée et le boss final provisoire tient sa place jusqu'à l'action 5g.
@@ -9,12 +9,12 @@
  nom:'Le Brumeux',
  // ── Les cinq phases (Q1). id : nom de travail, jamais affiché ; presence : au-dessus de l'arène (mains, croix, fils ; haut) ou au sol (sol) ;
  // faible : ce que l'anneau ivoire entoure (G27.anneau) ; arene : l'état d'arène (data/arene.js, salles.final.etats : 0 pleine, 1 resserrée,
- // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; les autres états réels viennent avec les fiches 5c à 5f) ; libre : part improvisée visée (indicative, Q8) ;
+ // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; 4 la phase II réelle, « L'Ouvrage », action 5c ; les autres viennent avec 5d à 5f) ; libre : part improvisée visée (indicative, Q8) ;
  // pv : PV de la phase (placeholders, à calibrer au bot à l'action 5g : 50 à 70 s par phase, Q11). Pas de PV ni de dégâts en plus par palier (Q12).
  // exclut : les sortes d'éléments que cette phase ne tire jamais (I : bâtir, c'est la phase II ; V : l'arène se défait, rien n'y est bâti).
  phases:[
   {id:'rappel',presence:'haut',faible:'mains',arene:3,libre:0.25,pv:2400,exclut:['construction']},
-  {id:'ouvrage',presence:'haut',faible:'mains',arene:0,libre:0.40,pv:2400},
+  {id:'ouvrage',presence:'haut',faible:'mains',arene:4,libre:0.40,pv:2400},
   {id:'couture',presence:'haut',faible:'croix',arene:0,libre:0.50,pv:2400},
   {id:'emprunt',presence:'sol',faible:'coeur',arene:1,libre:0.50,pv:2400},
   {id:'effacement',presence:'sol',faible:'coeur',arene:2,libre:0.60,pv:2400,exclut:['construction']}],
@@ -29,7 +29,11 @@
  partition:{entracteS:1.6,nuS:2.2,
   essai:[{k:'fixe',g:'disque'},{k:'libre'},{k:'fixe',g:'feinte'},{k:'libre'},{k:'fixe',g:'couloir'},{k:'libre'}],
   // Phase I, « le Rappel » (fiche 5b) : une boucle d'environ 70 s, trois tableaux, trois gestes signature, la feinte, deux mesures libres
-  rappel:{entracteS:1.4,nuS:0,mesures:[{k:'tableau'},{k:'fixe',g:'fils'},{k:'libre'},{k:'tableau'},{k:'fixe',g:'feinte'},{k:'fixe',g:'cadre'},{k:'tableau'},{k:'libre'},{k:'fixe',g:'toile'}]}},
+  rappel:{entracteS:1.4,nuS:0,mesures:[{k:'tableau'},{k:'fixe',g:'fils'},{k:'libre'},{k:'tableau'},{k:'fixe',g:'feinte'},{k:'fixe',g:'cadre'},{k:'tableau'},{k:'libre'},{k:'fixe',g:'toile'}]},
+  // Phase II, « L'Ouvrage » (fiche 5c, § 2) : une boucle d'environ 32 s (bâtir · geste · bâtir · effondrement, avec les Manœuvres, la feinte et deux
+  // mesures libres) ; à nu 2,5 s après la boucle. Une mesure {k:'batir'} bâtit une construction lue sur ton style (constructions.sortes) ; une mesure
+  // qui ne peut pas se jouer (rien à effondrer, aucune construction possible, appel au plafond) saute, et l'entracte qui suit est réduit à sauteS.
+  ouvrage:{entracteS:1.4,nuS:2.5,sauteS:0.6,mesures:[{k:'batir'},{k:'fixe',g:'ruee'},{k:'libre'},{k:'batir'},{k:'fixe',g:'manoeuvres'},{k:'fixe',g:'feinte'},{k:'fixe',g:'equerre'},{k:'fixe',g:'effondrement'},{k:'libre'},{k:'fixe',g:'truelle'}]}},
  // ── Les éléments improvisables (Q8) et leur menace. sorte : zone, tir, saisie, construction (deux éléments de même sorte ne se cumulent
  // pas au-delà de cumul[sorte]). charge : préavis (s, ≥ preavis.boss) ; degats : avant la montée (dmgMul). pond : l'axe du profil qui pèse
  // (sens +1 : plus l'axe est haut, plus l'élément pèse ; −1 : l'inverse) ; sources : les ennemis de la descente dont les dégâts reçus
@@ -41,7 +45,8 @@
   anneau:{menace:3,sorte:'zone',forme:'anneau',r0:60,r1:260,charge:1.0,degats:10,vise:true,pond:{axe:'esquive',sens:1},sources:['hurleur']},
   tir:{menace:2,sorte:'tir',n:1,vitesse:380,degats:8,charge:0.8,pond:{axe:'portee',sens:1},sources:['spectre','voile']},
   rafale:{menace:3,sorte:'tir',n:3,vitesse:380,degats:6,charge:0.8,pond:{axe:'rythme',sens:1},sources:['spectre']},
-  construction:{menace:3,sorte:'construction',r:34,pond:{axe:'soin',sens:1},sources:[]},
+  // la construction d'essai de 5a (un pilier) : depuis 5c, fixe (jamais tirée) : bâtir est la mesure « batir » de la phase II ; __brumeux.poser reste pour les essais
+  construction:{menace:3,sorte:'construction',fixe:true,r:34,pond:{axe:'soin',sens:1},sources:[]},
   // fixe : jamais tiré dans une mesure libre (socle appris). La feinte (v14) est le fil rouge des cinq phases.
   feinte:{menace:0,sorte:'feinte',fixe:true},
   // ── Les gestes signature de la phase I (fiche 5b, § 1), toujours les mêmes, chacun avec deux sorties lisibles. Orange TELE.zone.
@@ -55,8 +60,22 @@
   //   sortie : changer de couleur de case entre les deux coups (ou sortir du damier).
   toile:{menace:3,sorte:'zone',forme:'damier',fixe:true,n:5,cote:90,charge:1.0,seconde:0.9,degats:10,vise:true},
   // Un tableau convoqué (phase I) : jamais tiré ; c'est l'élément noté dans la sauvegarde quand un de ses ennemis ou une de ses dalles t'a tué.
-  tableau:{menace:0,sorte:'tableau',fixe:true}},
- cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1,tableau:1},
+  tableau:{menace:0,sorte:'tableau',fixe:true},
+  // ── Les gestes signature de la phase II (fiche 5c, § 1), toujours les mêmes, deux sorties lisibles chacun. Orange TELE.zone.
+  // La Ruée : un couloir de w px, de ses mains vers toi et au-delà, jusqu'au bord de l'arène (len au plus) ; il s'arrête sur tout ce qui arrête un
+  //   tir (une construction, un montant ; jamais une fosse) : sa main s'y brise, il est sonné sonneS s, et la construction perd un palier de fissure.
+  //   course : la main file au bout de son fil après la charge (dessin seulement). Sorties : de côté, ou derrière une construction.
+  ruee:{menace:3,sorte:'zone',forme:'ruee',fixe:true,w:90,len:1400,charge:1.2,course:0.4,degats:14,vise:true,sonneS:2},
+  // L'Équerre : une croix de deux couloirs (w × len) croisés sur toi, alignés sur l'arène (tournés de 45° en variante) ; sorties : les quatre quadrants.
+  equerre:{menace:3,sorte:'zone',forme:'croix',fixe:true,w:70,len:900,charge:1.0,degats:12,vise:true},
+  // La Truelle : un cône d'ouverture degrés depuis ses mains vers toi, de r0 à r1 px de ses mains ; sorties : hors de l'angle, ou sous ses mains.
+  truelle:{menace:3,sorte:'zone',forme:'cone',fixe:true,ouverture:70,r0:60,r1:520,charge:1.1,degats:12,vise:true},
+  // L'effondrement : une construction debout tombe dans une zone annoncée (constructions.sortes.*.chute) ; ses ennemis dessous prennent ennemis × les dégâts.
+  effondrement:{menace:0,sorte:'effondrement',fixe:true,charge:1.4,degats:16,ennemis:2},
+  // La cloche d'un rail (constructions.sortes.rails.cloche) : noté quand elle t'a tué. Les Manœuvres (l'appel de la phase II) : noté quand un de ses ennemis t'a tué.
+  rail:{menace:0,sorte:'rail',fixe:true,charge:1.0,degats:12},
+  manoeuvres:{menace:0,sorte:'appel',fixe:true}},
+ cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1,tableau:1,effondrement:1,rail:2,appel:1},
  // ── Le budget d'une mesure libre, par phase (menace cumulée) et par palier (Q12 : ×1,25 en Difficile, ×1,5 en Extrême ; jamais de PV ni de
  // dégâts en plus). Un tirage prend des éléments tant que le budget et le non-cumul le permettent ; le premier est ce qui t'a tué (Q13).
  budget:{base:[4,5,6,6,7],palier:{normal:1,difficile:1.25,extreme:1.5}},
@@ -79,8 +98,62 @@
  // ── Les constructions, comme système (Q9) : jamais de dégât en apparaissant (annonce, puis elles poussent, après l'attente de arene.js) ;
  // connexité : après chaque construction, au moins cette part de l'aire libre reste reliée à ta position, sur la grille de la carte de
  // distances FF (cs : pas, pad : marge, les mêmes que le jeu) ; aire : part de l'aire libre qu'elles peuvent couvrir au plus ; max : par palier
- // (paliers.*.constructions). couleur d'annonce : craie (ΔE ≥ 25 de toute la grammaire, ivoire compris). Rendu : une image par sorte et par état.
- constructions:{connexite:0.85,aire:0.3,grille:{cs:20,pad:15},annonceS:1.5,poussee:true,sortes:{pilier:{r:34}}},
+ // (paliers.*.constructions, annonces comprises). couleur d'annonce : craie (ΔE ≥ 25 de toute la grammaire, ivoire compris).
+ // Phase II (fiche 5c, § 3 à § 7) : six sortes, une par axe du profil, version bâtie de la contre-mesure jumelle (BE_D.contreMesures) ; chacune
+ // gêne ton style et offre une réponse. Une construction est une chaîne de disques posés dans room.pillars (pilier18, ou fosse18 pour une douve) :
+ // collisions, tirs arrêtés, ligne de vue, carte FF et charges sonnées s'appliquent sans retouche. PV : une part (pvPart) des PV de la phase II,
+ // pour que la calibration de 5g les emporte ; fissures à 2/3 et 1/3 (intacte, fêlée, lézardée), puis détruite. Rendu en deux temps : des modules
+ // cuits à l'entrée du combat (par pièce, matière et fissure), l'image de chaque construction assemblée une fois à son annonce.
+ // Lecture (Q2) : une sorte n'est éligible que si son score (l'axe, ou 1 − l'axe pour une sorte « basse » ; inconnu : inconnu) vaut au moins seuil ;
+ // poids = lecture.axe (plancher + pente × score), × verdict de la jumelle (a porté, abandonnée), × variete par construction de la même sorte debout.
+ constructions:{connexite:0.85,aire:0.3,grille:{cs:20,pad:15},annonceS:1.5,poussee:true,
+  lecture:{seuil:0.35,inconnu:0.5,variete:0.5},
+  // placement : variantes essayées (rotation ±rotation degrés, glissement de glisse px) ; bord : jamais à moins de bord px des bornes ; voie : la bande
+  // d'un rail (px), où rien ne se pose (et un rail ne se pose pas à travers une construction)
+  placement:{variantes:4,rotation:20,glisse:60,bord:40,voie:96},
+  fissures:[2/3,1/3],
+  // l'annonce (1,5 s, craie) : ses mains sont à nu ; si ses PV perdent au moins part × les PV de la phase pendant l'annonce, la construction est
+  // annulée (la craie s'émiette) et il reste à nu nuS s de plus ; une construction annulée ne compte pas dans le plafond et n'est pas rebâtie dans la boucle
+  annulation:{part:0.05,nuS:1.5},
+  sortes:{
+   pilier:{r:34},   // la construction d'essai de 5a (__brumeux.poser)
+   // Murailles (portée haute, Traque) : un segment de longueur(portée) px, disques r tous les pas px, en travers de la ligne toi → ses mains, à part de
+   // la distance, perpendiculaire, jamais à moins de minJ px de toi ; sa Ruée s'y brise ; une charge (Brute, Masqué) qui la heurte lui ôte un palier.
+   murailles:{axe:'portee',sens:1,jumelle:'traque',max:3,pvPart:0.08,disque:{r:18,pas:20},longueur:{base:160,pente:80,min:160,max:240},
+    place:{part:[0.45,0.6],minJ:90},piece:'bloc',chute:{forme:'couloir',decale:90,w:150},appel:'brute'},
+   // Douves (portée basse, Pétards) : un anneau de fosses (axe r, fosses fosse tous les pas px) autour d'une île ; n passerelles de l px (N, E, S, O),
+   // ouvertes deux par deux en alternance toutes les basculeS s ; île à d px de toi, du côté de ses mains ; ses mains s'y retirent (mains px/s au plus)
+   // et y restent tant qu'elle tient. Incassable (Q9.4) : on passe par une passerelle ouverte ; une fosse n'arrête pas les tirs ; un ennemi ordinaire
+   // repoussé dedans (élan ≥ chuteVitesse px/s) tombe, une Brute qui charge aussi.
+   douves:{axe:'portee',sens:-1,jumelle:'petards',max:1,pvPart:0,incassable:true,anneau:{r:200,fosse:28,pas:36},passerelles:{n:4,l:64,basculeS:2.5},
+    place:{d:[340,440]},mains:300,chuteVitesse:60,appel:'bouffi'},
+   // Colonnades (esquive haute, Tir de barrage) : rangees × parRangee fûts r tous les pas px (d'axe en axe), centrée à d px de toi, du côté opposé à
+   // ses mains, face à lui ; pvPart par fût, la colonnade disparaît avec son dernier fût ; derrière, un abri contre ses salves.
+   colonnades:{axe:'esquive',sens:1,jumelle:'barrage',max:2,pvPart:0.02,fut:{r:14,pas:64},rangees:2,parRangee:4,place:{d:150},piece:'fut',
+    chute:{forme:'rayons',w:34,len:220},appel:'spectre'},
+   // Rails (esquive basse, Béliers) : un rail de longueur px qui passe par toi à l'annonce, orienté vers ses mains, deux butoirs r (pvPart chacun) aux
+   // bouts ; une cloche r le parcourt : toutes les toutesS s (la première premiereS s après la pose), couloir orange de w px sur tout le rail (préavis
+   // elements.rail.charge), puis la cloche passe en passeS s : elements.rail.degats ; elle écrase les ennemis (ord, elite ; jamais lui). Un butoir
+   // cassé : la cloche quitte le rail, le rail devient un décor inerte.
+   rails:{axe:'esquive',sens:-1,jumelle:'ruee',max:2,longueur:640,butoir:{r:22,pvPart:0.05},piece:'butoir',
+    cloche:{r:38,w:96,toutesS:6,premiereS:2,passeS:0.85,ennemis:{ord:60,elite:30}},appel:'rampant',appelN:2},
+   // Puits avides (soin haut, Brume avide) : un puits r, liseré au sol de rayon px ; dans son rayon, tu ne gardes que garde de tes soins, le reste
+   // remplit le puits (jusqu'à plein × tes PV max) ; cassé, il te rend d'un coup ce qu'il a bu ; effondré de lui-même, c'est perdu.
+   puits:{axe:'soin',sens:1,jumelle:'avide',max:2,pvPart:0.06,r:34,rayon:220,garde:0.3,plein:0.4,place:{d:[160,210]},piece:'puits',
+    chute:{forme:'disque',r:110,decale:0},appel:'rampant'},
+   // Échafaudages (rythme haut, Renforts) : une tour r reliée à sa croix par un fil ; à dMin px de toi au moins, dans le tiers de l'arène le plus loin
+   // de toi, à bord px des bornes ; tant qu'un échafaudage tient, il subit subi (jamais invulnérable) ; le faire tomber le sonne sonneS s.
+   echafaudages:{axe:'rythme',sens:1,jumelle:'renforts',max:2,pvPart:0.10,r:30,subi:0.6,sonneS:2,place:{dMin:520,bord:120},piece:'tour',
+    chute:{forme:'disque',r:140,decale:60},appel:'rampant'}},
+  // Les matières (fiche 5c, § 7) : morceaux des actes traversés, une par décor (corps, arête), jamais une couleur de la grammaire (ΔE ≥ 25 de tout).
+  // Le rail, les passerelles, le liseré du puits et le fil de l'échafaudage sont tracés dans l'arête ; la fissure, un tracé plus sombre du corps.
+  matieres:{pierre:{decor:'faub',corps:'92,84,72',arete:'132,118,96'},bronze:{decor:'crypt',corps:'104,78,44',arete:'150,116,64'},
+   chair:{decor:'coeur',corps:'112,50,46',arete:'152,82,76'}}},
+ // ── Les Manœuvres (fiche 5c, § 6) : une fois par boucle, il descend une équipe au bout de ses fils, choisie pour éprouver ce qu'il a bâti (de la
+ // construction debout la plus récente à la plus ancienne : constructions.sortes.*.appel ; un rail compte pour une place de appelN ennemis ; au-delà,
+ // defaut). n places par palier ; au plus max ennemis de l'appel vivants (l'appel est tronqué, et saute s'il ne reste aucune place). Jamais de
+ // champion ni de Masqué. Places à minD px de toi, dans la vue plus vue px ; cercle violet d'apparition.
+ manoeuvres:{n:{normal:2,difficile:2,extreme:3},max:4,defaut:'rampant',minD:230,vue:200,apparition:[0.85,1.3]},
  // ── Les tableaux de la phase I, « le Rappel » (fiche 5b, § 3 et § 4). Il « accroche » un tableau sur un tiers de l'arène : un fragment de décor
  // d'un acte traversé (peint une fois à l'entrée du combat, à la graine du combat), une vague d'un thème existant (WTHEMES : types et rôles
  // seulement ; les places sont tirées dans le fragment), au plus une règle de salle confinée au fragment (mêmes chiffres et mêmes dessins
@@ -120,7 +193,9 @@
  // hauteur : où ses mains pendent sous le haut de l'arène (px) ; suit : elles descendent vers toi de cette part de ce qui te sépare d'elles
  // (lissé), pour rester dans la vue quand tu te bats au milieu de l'arène ; son corps, lui, reste au bord du monde.
  // version 2 (action 5b) : fils tendus de ses mains au cadre d'un tableau, croix qui penche vers le tiers occupé, mains qui retombent et s'ouvrent au rideau.
- dessin:{version:2,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
+ // version 3 (action 5c) : ses doigts tricotent au-dessus d'une construction annoncée, fils jusqu'à son contour, croix qui s'incline vers le chantier ;
+ // la main de la Ruée qui se brise ; le fil d'un effondrement et celui d'un échafaudage ; les constructions dans leur matière.
+ dessin:{version:3,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
   glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#0a0810" stroke-width="4.4" stroke-linecap="round"/><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#c8c0d8" stroke-width="2.2" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#0a0810" stroke-width="2.6" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#b9b0c8" stroke-width="1.2" stroke-linecap="round"/><path d="M7 8.5Q12 3.4 17 8.5Q12 13.6 7 8.5Z" fill="#eee8da" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="8.5" r="1.9" fill="#0a0810"/></svg>'},
  // ── Le bot qui frappe (Q14, bot=2) : il attaque avec le kit de base de sa forme, sort des zones qui chargent (à sa vitesse de marche, par une
  // esquive s'il le faut), vise le Brumeux (ou l'ennemi le plus proche s'il est plus près que proche px). Il sert aussi à mesurer l'action 6.
