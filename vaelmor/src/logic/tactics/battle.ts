@@ -257,9 +257,8 @@ export interface BattleSummary {
   readonly enemiesDefeated: number;
   readonly enemiesTotal: number;
   /**
-   * Membres de la compagnie tombés. Après une victoire, ils reviennent avec
-   * 1 PV, « Blessés » jusqu'au prochain repos (règle « Blessure », GDD §9.13) ;
-   * la compagnie persistante qui gardera cet état arrive avec le recrutement (M6).
+   * Membres de la compagnie tombés : blessés jusqu'au prochain repos (règle
+   * « Blessure », GDD §9.13, décision n°138 : −10 % aux stats, −2 Mob).
    */
   readonly fallen: readonly string[];
   /** Alliés verts tombés. */

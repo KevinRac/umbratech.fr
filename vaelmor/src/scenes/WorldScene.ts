@@ -41,6 +41,9 @@ import {
   npcPresent,
   partyLevel,
   ensureCompany,
+  startingCompany,
+  testCompany,
+  DEFAULT_HERO_CLASS,
   questStatus,
   questTierOk,
   reputationOf,
@@ -63,6 +66,7 @@ import { facingPose, facingToward } from '../render/npcSprites';
 import { TOWN_TEX, ensureMarkerTextures, ensureNpcTexture } from '../render/townTextures';
 import type { MenuTab } from './MenuScene';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
+import { createMember } from '../logic/units/company';
 import { worldView, type WorldView } from '../render/viewport';
 import { parseQuality, type Quality } from '../render/atmosphere';
 import { WorldAtmosphere } from '../render/worldAtmosphere';
@@ -142,6 +146,8 @@ export interface BattleReturn {
 export interface WorldSceneData {
   /** Vrai pour une nouvelle partie : l'état du monde repart du point de départ. */
   readonly newGame?: boolean;
+  /** Classe choisie pour le héros à la nouvelle partie (n°133). */
+  readonly heroClass?: string;
   /** Retour d'un combat. */
   readonly battleReturn?: BattleReturn;
 }
@@ -263,11 +269,16 @@ export class WorldScene extends Phaser.Scene {
     ensureWorldTextures(this);
     ensureHeroAnimations(this);
 
-    if (data.newGame || !getWorldState()) setWorldState(newWorldState(this.map, newProgress({ balance: this.data_.balance, locations: this.data_.locations, factions: this.data_.factions })));
+    if (data.newGame || !getWorldState()) {
+      const progress = newProgress({ balance: this.data_.balance, locations: this.data_.locations, factions: this.data_.factions });
+      // Le héros dans la classe choisie, et les compagnons du départ (n°133, n°134).
+      progress.company = startingCompany(this.data_, data.heroClass ?? DEFAULT_HERO_CLASS);
+      setWorldState(newWorldState(this.map, progress));
+    }
     this.state = getWorldState() as WorldState;
     this.gameCtx = getGameCtx() as GameCtx;
     this.applyTownDebug(data.newGame === true);
-    ensureCompany(this.data_, this.state.progress, this.state.testLevel);
+    ensureCompany(this.data_, this.state.progress);
     this.grid = CollisionGrid.fromMap(this.map, this.state.openFlags);
     this.gateReq = gateRequirements(this.data_.zones);
     this.grid.setGateRequirements(this.gateReq);
@@ -546,10 +557,11 @@ export class WorldScene extends Phaser.Scene {
       const [target, value] = entry.split(':');
       if (target && value !== undefined && Number.isFinite(Number(value)) && progress.reputation[target] !== undefined) progress.reputation[target] = Math.max(-100, Math.min(100, Number(value)));
     }
-    if (params.has('lvl')) {
-      this.state.testLevel = Math.max(1, Math.min(30, Math.floor(Number(params.get('lvl')) || 1)));
-      progress.company = []; // recréée au niveau imposé
-    }
+    // `party=test` : la compagnie d'essai (une unité par classe, n°137) ; `lvl=N` : toute la compagnie au niveau N.
+    const level = params.has('lvl') ? Math.max(1, Math.min(20, Math.floor(Number(params.get('lvl')) || 1))) : undefined;
+    if (level !== undefined) this.state.testLevel = level;
+    if (params.get('party') === 'test') progress.company = testCompany(this.data_, level);
+    else if (level !== undefined) progress.company = progress.company.map((m) => createMember(this.data_, { ...m, level }));
     if (params.has('gold')) progress.gold = Math.max(0, Math.floor(Number(params.get('gold')) || 0));
     for (const flag of (params.get('flags') ?? '').split(',')) if (flag) addUnique(this.state.openFlags, flag);
   }

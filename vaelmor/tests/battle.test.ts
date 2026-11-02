@@ -31,7 +31,8 @@ describe('construction d’un combat', () => {
     const players = state.units.filter((u) => u.team === 'player');
     expect(players).toHaveLength(5);
     expect(players[0]).toMatchObject({ name: 'Voyageur', isHero: true });
-    expect(state.units.filter((u) => u.team === 'enemy')).toHaveLength(7);
+    // Cinq Écumeurs depuis la décision n°139 (compagnie de départ de 3 unités).
+    expect(state.units.filter((u) => u.team === 'enemy')).toHaveLength(5);
     expect(state).toMatchObject({ phase: 'player', turn: 1, outcome: 'ongoing', objective: 'rout', zone: 'z1' });
     expect(players.every((p) => p.hp === p.stats.pv && p.weapon.id === data.classes.find((c) => c.id === p.kindId)?.startingWeapon)).toBe(true);
   });

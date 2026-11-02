@@ -2,6 +2,7 @@
 export const SCENES = {
   boot: 'Boot',
   title: 'Title',
+  classSelect: 'ClassSelect',
   world: 'World',
   worldHud: 'WorldHud',
   dialogue: 'Dialogue',

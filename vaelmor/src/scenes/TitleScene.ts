@@ -205,12 +205,27 @@ export class TitleScene extends Phaser.Scene {
   }
 
   /** Fondu au noir puis arrivée sur l'île, au point de départ. */
+  /** Nouvelle partie : d'abord le choix de la classe du héros (jalon M6, n°133), puis l'île. */
   private startNewGame(): void {
     if (this.starting) return;
     this.starting = true;
     this.menu?.setLocked(true);
-    this.cameras.main.fadeOut(500, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.world, { newGame: true }));
+    this.scene.launch(SCENES.classSelect, {
+      onCancel: () => {
+        this.starting = false;
+        this.menu?.setLocked(false);
+        this.actions.consume('cancel');
+      },
+      onChoose: (heroClass: string) => {
+        const pick = this.scene.get(SCENES.classSelect);
+        pick.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+          this.scene.stop(SCENES.classSelect);
+          this.scene.start(SCENES.world, { newGame: true, heroClass });
+        });
+      },
+    });
   }
 
   /* ---------- Titre et menu ---------- */

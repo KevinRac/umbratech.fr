@@ -89,6 +89,8 @@ export interface BattleUnit {
   readonly sprite: string;
   /** Niveau : il monte en cours de combat avec l'XP (jalon M6). */
   level: number;
+  /** Membre blessé (GDD §9.13) : il se bat diminué jusqu'au prochain repos. */
+  readonly wounded: boolean;
   /** XP vers le niveau suivant (0 à 99), ou null pour une unité qui n'en gagne pas (ennemis, gardes, invocations). */
   xp: number | null;
   /** Croissances tirées à chaque montée de niveau (GDD §10.4) ; null sans XP. */

@@ -23,7 +23,19 @@ export type MemberLike = PartyMemberDef & {
   readonly stats?: StatBlock;
   readonly xp?: number;
   readonly levelCap?: number;
+  /** Blessé (GDD §9.13, n°138) : −10 % sur chaque stat (au moins 1 point), −2 Mob. */
+  readonly wounded?: boolean;
 };
+
+/** Stats d'un membre blessé (décision n°138). */
+export function woundedStats(stats: StatBlock): StatBlock {
+  const out: Record<keyof StatBlock, number> = { ...stats };
+  for (const key of Object.keys(out) as (keyof StatBlock)[]) {
+    if (key === 'mob') out.mob = Math.max(1, out.mob - 2);
+    else if (out[key] > 0) out[key] = Math.max(key === 'pv' ? 1 : 0, out[key] - Math.ceil(out[key] / 10));
+  }
+  return out;
+}
 
 /** Équipement choisi à la préparation (GDD §9.3) : arme (du type de la classe), accessoire, objets (5 au plus). */
 export interface Loadout {
@@ -85,7 +97,8 @@ export function weaponFor(data: GameData, cls: ClassDef, wanted: string | null):
 export function memberUnit(data: GameData, rules: BattleRules, member: MemberLike, loadout: Loadout, id: string, memberIndex: number, x: number, y: number, variant = 0): BattleUnit {
   const cls = classOf(data, member.class);
   const accessory = loadout.accessory ? data.accessories.find((a) => a.id === loadout.accessory) ?? null : null;
-  const base = withBonus(member.stats ? { ...member.stats } : statsAtLevel(cls.baseStats, cls.growths, member.level), accessory?.bonus);
+  const own = member.stats ? { ...member.stats } : statsAtLevel(cls.baseStats, cls.growths, member.level);
+  const base = withBonus(member.wounded ? woundedStats(own) : own, accessory?.bonus);
   const levelCap = member.levelCap ?? data.balance.levels.baseClassCap;
   const skill = signatureSkill(data, cls.id);
   const unit: BattleUnit = {
@@ -96,6 +109,7 @@ export function memberUnit(data: GameData, rules: BattleRules, member: MemberLik
     kindName: cls.name,
     sprite: member.hero ? 'heros' : memberSprite(cls.id, variant),
     level: member.level,
+    wounded: member.wounded === true,
     xp: member.level >= levelCap ? 0 : (member.xp ?? 0),
     growths: cls.growths,
     levelCap,
@@ -138,6 +152,7 @@ export function enemyUnit(data: GameData, rules: BattleRules, placed: { enemy: s
     kindName: def.title ?? def.name,
     sprite: def.sprite,
     level: placed.level,
+    wounded: false,
     xp: null,
     growths: null,
     levelCap: placed.level,
@@ -184,6 +199,7 @@ export function allyUnit(data: GameData, rules: BattleRules, template: AllyTempl
     kindName: cls.name,
     sprite: template.sprite,
     level: lvl,
+    wounded: false,
     xp: learns ? (lvl >= levelCap ? 0 : xp) : null,
     growths: learns ? cls.growths : null,
     levelCap: learns ? levelCap : lvl,

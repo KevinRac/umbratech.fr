@@ -40,8 +40,6 @@
         { "enemy": "ecumeur_lancier", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 2 },
-        { "enemy": "ecumeur_sabreur", "level": 3 },
-        { "enemy": "ecumeur_archer", "level": 3 },
         { "enemy": "ecumeur_archer", "level": 2 },
         { "enemy": "ecumeur_incendiaire", "level": 3 }
       ],

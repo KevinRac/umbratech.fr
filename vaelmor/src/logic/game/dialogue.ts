@@ -2,6 +2,7 @@
  * Dialogues des PNJ : paroles selon le palier, options disponibles, effets.
  * Pure logique : la scène affiche les pages et le menu que cette couche calcule.
  */
+import { joinCompany } from './companyRules';
 import {
   TIER_IDS,
   type Condition,
@@ -213,7 +214,7 @@ export function selectOption(ctx: GameCtx, npc: NpcDef, optionIndex: number): Ou
       const cost = option.gold ?? 0;
       if (ctx.progress.gold < cost) return say([`Il me faut ${cost} or. Reviens quand tu les auras.`], 'triste');
       if (cost > 0) giveGold(ctx, -cost, notices);
-      ctx.progress.recruited.push(option.unit.id);
+      if (!joinCompany(ctx.data, ctx.progress, option.unit) && !ctx.progress.recruited.includes(option.unit.id)) ctx.progress.recruited.push(option.unit.id);
       notices.push({ kind: 'recruit', name: option.unit.name });
       return say(pickLines(option.offer, tier), 'content', notices);
     }

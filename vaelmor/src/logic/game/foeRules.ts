@@ -3,6 +3,7 @@
  * qui est présent, quelle rencontre il engage, quel écart de niveau afficher,
  * et ce qu'un combat rapporte ou coûte. Pure : le hasard vient d'un `Rng`.
  */
+import { joinBossRecruits } from './companyRules';
 import type { EncounterDef, FoesBalance, PartyMemberDef, WorldFoeDef } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
 import { Rng } from '../rng';
@@ -168,6 +169,8 @@ export function settleBattle(ctx: GameCtx, report: BattleReport): Settlement {
   for (const reward of report.encounter.rewards?.items ?? []) giveItem(ctx, reward.item, reward.qty, notices);
 
   for (const flag of report.encounter.victoryFlags) if (!ctx.flags.includes(flag)) ctx.flags.push(flag);
+  // Recrue de boss (Rhyel après le Gardien de Cendre, décision n°136).
+  for (const member of joinBossRecruits(data, progress, report.encounter.victoryFlags)) notices.push({ kind: 'recruit', name: member.name });
   if (report.foeId !== null) progress.foes[report.foeId] = { day: progress.day, clock: progress.clock, visits: progress.zoneVisits };
   return { notices, wakeAt: null, goldWon: gold, goldLost: 0 };
 }

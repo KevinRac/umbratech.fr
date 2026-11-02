@@ -1,0 +1,26 @@
+{
+  "$comment": "La compagnie (jalon M6, GDD §5.7). `hero` : nom et niveau de départ du héros, dont la classe se choisit à la nouvelle partie (n°133). `start` : compagnons du départ, au niveau du héros (n°134 : Odran, garde de Haut-Gué, et Aurèle). `recruitLevels` : niveau fixé de chaque recrue ; elle rejoint au plus haut de ce niveau et de la moyenne de la compagnie moins `catchUpGap` (n°135), stats à la croissance moyenne. `bossRecruits` : rejoignent d'office après la victoire qui lève `flag` (n°136).",
+  "hero": { "id": "heros", "name": "Voyageur", "level": 2 },
+  "start": [
+    { "id": "odran", "name": "Odran", "class": "gardien_des_marees" },
+    { "id": "aurele", "name": "Aurèle", "class": "heritier_des_cendres" }
+  ],
+  "recruitLevels": {
+    "nessa": 2,
+    "ysolde": 5,
+    "mousse": 5,
+    "cendrine": 7,
+    "zephyrin": 7,
+    "alden": 8,
+    "corbin": 9,
+    "gerard": 9,
+    "tiphaine": 10,
+    "tobias": 12,
+    "ilmea": 13,
+    "rhyel": 15
+  },
+  "catchUpGap": 2,
+  "bossRecruits": [
+    { "flag": "boss_gardien_cendre", "unit": { "id": "rhyel", "name": "Rhyel", "class": "heritier_des_cendres" } }
+  ]
+}

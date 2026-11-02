@@ -46,6 +46,7 @@ import {
   type QuestDef,
 } from './townSchemas';
 import { alliesFileSchema, type AllyTemplateDef, type AllyVillageDef, type WandererDef } from './allySchemas';
+import { companyFileSchema, type CompanyFile } from './companySchemas';
 
 z.config(z.locales.fr());
 
@@ -65,6 +66,7 @@ export const DATA_SCHEMAS = {
   worldEnemies: worldEnemiesFileSchema,
   skills: skillsFileSchema,
   allies: alliesFileSchema,
+  company: companyFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -103,6 +105,8 @@ export interface GameData {
   readonly allyTemplates: readonly AllyTemplateDef[];
   readonly allyVillages: readonly AllyVillageDef[];
   readonly wanderers: readonly WandererDef[];
+  /** La compagnie : héros, compagnons du départ, niveaux des recrues (jalon M6). */
+  readonly company: CompanyFile;
 }
 
 export type ValidationResult =
@@ -251,6 +255,25 @@ function crossCheck(data: GameData): string[] {
     if (!roles.has(role)) issues.push(`classes.json › aucun rôle « ${role} » : les 12 rôles du GDD doivent être couverts`);
   }
 
+
+  // Compagnie (jalon M6) : classes connues, identifiants uniques, un niveau pour chaque recrue.
+  const classIdsC = new Set(data.classes.map((c) => c.id));
+  const companyIds = new Map<string, string>([[data.company.hero.id, 'héros']]);
+  const recruitRefs: { id: string; class: string; where: string }[] = [];
+  for (const unit of data.company.start) recruitRefs.push({ ...unit, where: 'company.json › start' });
+  for (const r of data.company.bossRecruits) recruitRefs.push({ ...r.unit, where: `company.json › bossRecruits (${r.flag})` });
+  for (const loc of data.locations) for (const npc of loc.npcs) for (const o of npc.options) if (o.kind === 'recruit') recruitRefs.push({ ...o.unit, where: `locations.json › ${npc.id}` });
+  for (const ref of recruitRefs) {
+    if (!classIdsC.has(ref.class)) issues.push(`${ref.where} › classe inconnue : « ${ref.class} »`);
+    const previous = companyIds.get(ref.id);
+    if (previous !== undefined) issues.push(`${ref.where} › recrue « ${ref.id} » en double (déjà : ${previous})`);
+    companyIds.set(ref.id, ref.where);
+    const isStart = data.company.start.some((u) => u.id === ref.id);
+    if (!isStart && data.company.recruitLevels[ref.id] === undefined) issues.push(`company.json › recruitLevels : niveau manquant pour « ${ref.id} »`);
+  }
+  for (const id of Object.keys(data.company.recruitLevels)) if (!recruitRefs.some((r) => r.id === id)) issues.push(`company.json › recruitLevels : « ${id} » n'est pas une recrue`);
+  for (const r of data.company.bossRecruits) if (!data.encounters.encounters.some((e) => e.victoryFlags.includes(r.flag))) issues.push(`company.json › bossRecruits : aucune rencontre ne lève « ${r.flag} »`);
+  if (data.company.hero.level > b.levels.baseClassCap) issues.push('company.json › hero.level dépasse le plafond de niveau');
   return issues;
 }
 
@@ -368,6 +391,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     worldEnemies: z.infer<typeof worldEnemiesFileSchema>;
     skills: z.infer<typeof skillsFileSchema>;
     allies: z.infer<typeof alliesFileSchema>;
+    company: z.infer<typeof companyFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -392,6 +416,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     allyTemplates: files.allies.templates,
     allyVillages: files.allies.villages,
     wanderers: files.allies.wanderers,
+    company: files.company,
   };
 
   const crossIssues = crossCheck(data);

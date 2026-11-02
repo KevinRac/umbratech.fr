@@ -441,6 +441,7 @@ export class BattleHudScene extends Phaser.Scene {
   private extraLines(unit: BattleUnit, extra: UnitExtra): [string, number][] {
     const lines: [string, number][] = [];
     if (unit.xp !== null) lines.push([unit.level >= unit.levelCap ? `Niveau ${unit.level} · EXP MAX` : `Niveau ${unit.level} · EXP ${unit.xp}/100`, PALETTE.jauneBle]);
+    if (unit.wounded) lines.push(['Blessé : −10 % aux stats, −2 Mob (jusqu’au repos)', PALETTE.braise]);
     if (extra.skill) lines.push([`${extra.skill.name} · ${extra.skill.cost}${extra.skill.blocker ? ` (${extra.skill.blocker})` : ''}`, extra.skill.blocker ? PALETTE.metalClair : PALETTE.lumiereDoree]);
     if (extra.resource) lines.push([extra.resource, PALETTE.ocreClair]);
     if (extra.accessory) lines.push([`Accessoire : ${extra.accessory}`, PALETTE.parchemin]);
@@ -1233,12 +1234,13 @@ export class BattleHudScene extends Phaser.Scene {
         [`Ennemis vaincus : ${summary.enemiesDefeated} / ${summary.enemiesTotal}`, PALETTE.parchemin],
       ];
       if (victory) {
-        lines.push(summary.fallen.length > 0 ? [`Blessés (1 PV, jusqu'au prochain repos) : ${summary.fallen.join(', ')}`, PALETTE.braise] : ['Aucun blessé', 0x7fcf6a]);
+        lines.push(summary.fallen.length > 0 ? [`Blessés jusqu’au prochain repos : ${summary.fallen.join(', ')}`, PALETTE.braise] : ['Aucun blessé', 0x7fcf6a]);
         if (summary.alliesFallen.length > 0) lines.push([`Alliés tombés : ${summary.alliesFallen.join(', ')}`, ALLY_OUTLINE]);
         if (opensWorld && summary.flags.length > 0) lines.push(['Un passage s’ouvre dans le monde…', PALETTE.cyanEclat]);
         if (rewards.length > 0) lines.push([`Butin : ${rewards.join(' · ')}`, PALETTE.lumiereDoree]);
       } else {
         lines.push(['La compagnie se replie.', PALETTE.metalClair]);
+        if (summary.fallen.length > 0) lines.push([`Blessés jusqu’au prochain repos : ${summary.fallen.join(', ')}`, PALETTE.braise]);
         if (rewards.length > 0) lines.push([rewards.join(' · '), PALETTE.braise]);
         if (note) lines.push([note, PALETTE.metalClair]);
       }
@@ -1356,13 +1358,13 @@ export class BattleHudScene extends Phaser.Scene {
         c.add(addText(this, x + w / 2, y + 16 * S, `NIVEAU ${view.level} !`, { font: 'body', scale: 2 * S, color: PALETTE.lumiereDoree, align: 'center', shadowOffset: 2 * S }));
         const faceBox = { x: x + 16 * S, y: y + 62 * S, w: 116 * S, h: 108 * S };
         c.add(this.add.rectangle(faceBox.x, faceBox.y, faceBox.w, faceBox.h, TEAM_COLOR[unit.team], 0.18).setOrigin(0, 0));
-        const face = portraitInBox(this, unit.sprite, faceBox.x + 6 * S, faceBox.y + 6 * S, faceBox.w - 12 * S, faceBox.h - 34 * S, S, 0, 'happy');
+        const face = portraitInBox(this, unit.sprite, faceBox.x + 6 * S, faceBox.y + 6 * S, faceBox.w - 12 * S, faceBox.h - 30 * S, S, 0, 'happy');
         if (face) {
           c.add(face);
           speak(this, face, unit.sprite, 'happy', 600);
         } else c.add(this.add.image(faceBox.x + faceBox.w / 2, faceBox.y + faceBox.h - 28 * S, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('ready', 2)).setOrigin(0.5, 1).setScale(2 * S));
-        c.add(fitText(addText(this, faceBox.x + faceBox.w / 2, faceBox.y + faceBox.h - 26 * S, unit.name, { scale: S, color: PALETTE.parchemin, align: 'center' }), faceBox.w - 4 * S));
-        c.add(fitText(addText(this, faceBox.x + faceBox.w / 2, faceBox.y + faceBox.h - 13 * S, view.className, { scale: S, color: PALETTE.metalClair, align: 'center' }), faceBox.w - 4 * S));
+        c.add(fitText(addText(this, faceBox.x + faceBox.w / 2, faceBox.y + faceBox.h - 20 * S, unit.name, { scale: S, color: PALETTE.parchemin, align: 'center' }), faceBox.w - 4 * S));
+        c.add(fitText(addText(this, x + w / 2, y + 46 * S, view.className, { scale: S, color: PALETTE.metalClair, align: 'center' }), w - 40 * S));
         // Deux colonnes de quatre stats.
         const colW = 128 * S;
         const gx = faceBox.x + faceBox.w + 22 * S;

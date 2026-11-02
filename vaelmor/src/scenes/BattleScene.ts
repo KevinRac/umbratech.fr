@@ -23,8 +23,8 @@ import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getLastDeployed, getLoadouts, getWorldState, setLastDeployed } from '../core/session';
 import { getGameCtx } from '../core/townContext';
-import { ensureCompany, settleBattle, testPartyAt, type BattleEnd, type Settlement } from '../logic/game';
-import { applyBattleProgress, applyErrantProgress } from '../logic/units/company';
+import { ensureCompany, settleBattle, testCompany, type BattleEnd, type Settlement } from '../logic/game';
+import { applyBattleProgress, applyErrantProgress, isWounded } from '../logic/units/company';
 import { formatNotices } from '../ui/notices';
 import { uiScaleFor, zoomOrigin } from '../core/viewport';
 import { loadGameData, type GameData } from '../data';
@@ -260,7 +260,8 @@ export class BattleScene extends Phaser.Scene {
       // La compagnie de la partie (jalon M6) ; la compagnie d'essai pour un combat lancé du titre.
       const world = params.returnTo === 'world' ? getWorldState() : null;
       this.persistent = world !== null;
-      this.party = world ? ensureCompany(this.gameData, world.progress, world.testLevel) : testPartyAt(this.gameData);
+      // Un membre blessé (tombé au combat, jusqu'au prochain repos) se bat diminué (n°138).
+      this.party = world ? ensureCompany(this.gameData, world.progress).map((m) => ({ ...m, wounded: isWounded(m, world.progress.day) })) : testCompany(this.gameData);
       this.convoy = getWorldState()?.progress.inventory ?? this.gameData.balance.prep.testItems.map((s) => ({ ...s }));
       this.loadouts = getLoadouts(this.party.length);
       reconcileLoadouts(this.loadouts, this.convoy);
@@ -962,7 +963,8 @@ export class BattleScene extends Phaser.Scene {
       const cls = this.gameData.classes.find((c) => c.id === m.class);
       const on = deployed.has(i);
       // Police pixel : « • » marque les unités déployées ; le héros est en or.
-      return { label: `${on ? '•' : '  '} ${m.name}`, right: `${shortClass(cls?.name ?? m.class)} ${m.level}`, color: on ? (m.hero ? PALETTE.lumiereDoree : PALETTE.parchemin) : PALETTE.metalClair };
+      // Un blessé est marqué d'un « + » rouge (n°138).
+      return { label: `${on ? '•' : '  '} ${m.name}${m.wounded ? ' +' : ''}`, right: `${shortClass(cls?.name ?? m.class)} ${m.level}`, color: m.wounded ? PALETTE.braise : on ? (m.hero ? PALETTE.lumiereDoree : PALETTE.parchemin) : PALETTE.metalClair };
     });
     const member = this.party[this.prepCursor];
     const unit = member
@@ -2327,7 +2329,7 @@ export class BattleScene extends Phaser.Scene {
     const world = getWorldState();
     if (!world) return;
     this.progressSaved = true;
-    applyBattleProgress(world.progress.company, this.state.units);
+    applyBattleProgress(world.progress.company, this.state.units, world.progress.day);
     applyErrantProgress(world.progress.errants, this.state.units);
   }
 

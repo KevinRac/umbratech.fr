@@ -13,6 +13,7 @@ import { BootScene } from './scenes/BootScene';
 import { DebugScene } from './scenes/DebugScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { MenuScene } from './scenes/MenuScene';
+import { ClassSelectScene } from './scenes/ClassSelectScene';
 import { TitleScene } from './scenes/TitleScene';
 import { WorldHudScene } from './scenes/WorldHudScene';
 import { WorldScene } from './scenes/WorldScene';
@@ -37,7 +38,7 @@ function start(): void {
       zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, TitleScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, DebugScene],
+    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, DebugScene],
   });
   bindDisplaySize(game);
   // Outil de debug : `?debug` expose le jeu à la console (`window.vaelmor`) pour inspecter les scènes.

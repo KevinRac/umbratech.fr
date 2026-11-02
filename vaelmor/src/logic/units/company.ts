@@ -27,7 +27,15 @@ export interface Member {
   stats: StatBlock;
   /** 20 en classe de base, 30 en classe avancée (décision n°131). */
   levelCap: number;
+  /**
+   * Blessure (GDD §9.13, décision n°138) : jour de repos où le membre est
+   * tombé ; il reste blessé jusqu'au repos suivant. Null : en forme.
+   */
+  woundedDay: number | null;
 }
+
+/** Le membre est-il blessé ce jour-là ? */
+export const isWounded = (member: Pick<Member, 'woundedDay'>, day: number): boolean => member.woundedDay !== null && day <= member.woundedDay;
 
 export interface MemberSeed {
   readonly id: string;
@@ -43,18 +51,20 @@ export function createMember(data: GameData, seed: MemberSeed): Member {
   if (!cls) throw new Error(`Classe inconnue : « ${seed.class} »`);
   const levelCap = data.balance.levels.baseClassCap;
   const level = Math.max(1, Math.min(levelCap, seed.level));
-  return { id: seed.id, name: seed.name, class: cls.id, hero: seed.hero === true, level, xp: 0, stats: statsAtLevel(cls.baseStats, cls.growths, level), levelCap };
+  return { id: seed.id, name: seed.name, class: cls.id, hero: seed.hero === true, level, xp: 0, stats: statsAtLevel(cls.baseStats, cls.growths, level), levelCap, woundedDay: null };
 }
 
 /**
  * Reporte sur la compagnie ce que ses membres ont gagné pendant un combat :
- * niveau, XP et stats des montées de niveau (`memberIndex` = rang dans la compagnie).
+ * niveau, XP et stats des montées de niveau (`memberIndex` = rang dans la
+ * compagnie). Un membre tombé est blessé jusqu'au prochain repos (n°138).
  */
-export function applyBattleProgress(company: Member[], units: readonly BattleUnit[]): void {
+export function applyBattleProgress(company: Member[], units: readonly BattleUnit[], day: number): void {
   for (const unit of units) {
     if (unit.team !== 'player' || unit.memberIndex === null || unit.summonUntil !== null || unit.xp === null) continue;
     const member = company[unit.memberIndex];
     if (!member) continue;
+    if (unit.hp <= 0) member.woundedDay = day;
     member.level = unit.level;
     member.xp = unit.xp;
     const stats: Record<keyof StatBlock, number> = { ...member.stats };
