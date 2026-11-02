@@ -13,6 +13,7 @@
  */
 import { CHAR_WALK_FRAMES, GEAR_H, GEAR_W, paintCharacterFrame, ramp3, type CharacterGear, type CharacterLook, type CharPose, type Ramp3 } from './characterSprite';
 import { HERO_LOOK } from './heroSprite';
+import { parseSprite } from '../logic/skinFrames';
 import { PALETTE as P, mixColor } from './palette';
 import type { PixelSink } from './waterTile';
 
@@ -240,7 +241,7 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
 
 /** Fiche d'un sprite ; une fiche inconnue retombe sur l'Écumeur (le test le signale). */
 export function unitSpriteSpec(sprite: string): UnitSpriteSpec {
-  return UNIT_SPRITES[sprite] ?? (UNIT_SPRITES['ecumeur_sabreur'] as UnitSpriteSpec);
+  return UNIT_SPRITES[parseSprite(sprite).base] ?? (UNIT_SPRITES['ecumeur_sabreur'] as UnitSpriteSpec);
 }
 
 /**

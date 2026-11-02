@@ -12,6 +12,7 @@
  * bleues ; la compagnie y est posée par défaut dans l'ordre (héros en premier),
  * puis l'écran de préparation la change (`prep.ts`).
  */
+import { skinVariant } from '../skinFrames';
 import type { GameData } from '../../data/validate';
 import type { EncounterDef, PartyMemberDef } from '../../data/schemas';
 import { Rng } from '../rng';
@@ -158,7 +159,7 @@ export function buildBattle(base: EncounterDef, party: readonly PartyMemberDef[]
     .forEach((memberIndex, i) => {
       const member = party[memberIndex] as PartyMemberDef;
       const slot = layout.slots[i] as Cell;
-      units.push(memberUnit(data, rules, member, options.loadouts?.[memberIndex] ?? emptyLoadout(), `p${i}`, memberIndex, slot.x, slot.y));
+      units.push(memberUnit(data, rules, member, options.loadouts?.[memberIndex] ?? emptyLoadout(), `p${i}`, memberIndex, slot.x, slot.y, skinVariant(party, memberIndex)));
     });
 
   encounter.enemies.forEach((placed, i) => {

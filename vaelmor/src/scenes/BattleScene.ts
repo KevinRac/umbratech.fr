@@ -28,6 +28,7 @@ import { formatNotices } from '../ui/notices';
 import { uiScaleFor, zoomOrigin } from '../core/viewport';
 import { loadGameData, type GameData } from '../data';
 import type { PartyMemberDef } from '../data/schemas';
+import { skinVariant } from '../logic/skinFrames';
 import { planAllyAction } from '../logic/ai/allyAi';
 import { planEnemyAction } from '../logic/ai/enemyAi';
 import { forecast } from '../logic/combat/combat';
@@ -957,7 +958,7 @@ export class BattleScene extends Phaser.Scene {
     });
     const member = this.party[this.prepCursor];
     const unit = member
-      ? (this.state.units.find((u) => u.memberIndex === this.prepCursor) ?? memberUnit(this.gameData, this.rules, member, this.loadouts[this.prepCursor] ?? { weapon: null, accessory: null, items: [] }, 'preview', this.prepCursor, -1, -1))
+      ? (this.state.units.find((u) => u.memberIndex === this.prepCursor) ?? memberUnit(this.gameData, this.rules, member, this.loadouts[this.prepCursor] ?? { weapon: null, accessory: null, items: [] }, 'preview', this.prepCursor, -1, -1, skinVariant(this.party, this.prepCursor)))
       : null;
     if (unit) ensureMapSprite(this, unit.sprite, 'player');
     // Ennemis groupés par type et niveau, boss en tête.
@@ -1076,7 +1077,7 @@ export class BattleScene extends Phaser.Scene {
     const cls = def ? this.gameData.classes.find((c) => c.id === def.class) : undefined;
     const loadout = this.loadouts[member];
     if (!def || !cls || !loadout || !this.plan) return null;
-    const unit = memberUnit(this.gameData, this.rules, def, loadout, 'sheet', member, 0, 0);
+    const unit = memberUnit(this.gameData, this.rules, def, loadout, 'sheet', member, 0, 0, skinVariant(this.party, member));
     const max = this.gameData.balance.prep.maxItems;
     const itemName = (id: string): string => this.gameData.consumables.find((c) => c.id === id)?.name ?? id;
     const slots: (string | null)[] = [];

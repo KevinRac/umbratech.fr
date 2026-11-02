@@ -5,6 +5,7 @@
  *
  * Module pur : les définitions viennent des données validées.
  */
+import { variantSprite } from '../skinFrames';
 import type { AllyTemplateDef } from '../../data/allySchemas';
 import type { BossDef, ClassDef, EnemyDef, PartyMemberDef, StatBlock, WeaponDef } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
@@ -69,7 +70,7 @@ export function weaponFor(data: GameData, cls: ClassDef, wanted: string | null):
 }
 
 /** Un membre de la compagnie. */
-export function memberUnit(data: GameData, rules: BattleRules, member: PartyMemberDef, loadout: Loadout, id: string, memberIndex: number, x: number, y: number): BattleUnit {
+export function memberUnit(data: GameData, rules: BattleRules, member: PartyMemberDef, loadout: Loadout, id: string, memberIndex: number, x: number, y: number, variant = 0): BattleUnit {
   const cls = classOf(data, member.class);
   const accessory = loadout.accessory ? data.accessories.find((a) => a.id === loadout.accessory) ?? null : null;
   const base = withBonus(statsAtLevel(cls.baseStats, cls.growths, member.level), accessory?.bonus);
@@ -80,7 +81,7 @@ export function memberUnit(data: GameData, rules: BattleRules, member: PartyMemb
     team: 'player',
     kindId: cls.id,
     kindName: cls.name,
-    sprite: member.hero ? 'heros' : cls.id,
+    sprite: member.hero ? 'heros' : variantSprite(cls.id, variant),
     level: member.level,
     base,
     stats: base,

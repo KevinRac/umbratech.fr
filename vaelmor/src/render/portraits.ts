@@ -7,6 +7,8 @@
 import Phaser from 'phaser';
 import { assetUrl } from '../core/config';
 import { PORTRAIT_MOODS, PORTRAIT_MOUTHS, SKINS, SKIN_REV, type PortraitMood } from '../data/skins';
+import { parseSprite } from '../logic/skinFrames';
+import { paintDetails } from './skinDetails';
 
 export const PORTRAIT_SIZE = 64;
 export const portraitKey = (id: string): string => `portrait:skin:${id}`;
@@ -21,7 +23,30 @@ export function preloadPortraits(scene: Phaser.Scene): void {
 }
 
 export function hasPortrait(scene: Phaser.Scene, id: string): boolean {
+  ensureVariantPortrait(scene, id);
   return scene.textures.exists(portraitKey(id));
+}
+
+/** Portrait et expressions d'une recrue avec un détail (`lame_du_serment#2`) : copies peintes, créées une fois. */
+function ensureVariantPortrait(scene: Phaser.Scene, id: string): void {
+  const { base, variant } = parseSprite(id);
+  if (variant === 0) return;
+  const copy = (from: string, to: string, frames: number): void => {
+    if (scene.textures.exists(to) || !scene.textures.exists(from)) return;
+    const source = scene.textures.get(from).getSourceImage() as HTMLImageElement;
+    const canvas = scene.textures.createCanvas(to, source.width, source.height);
+    if (!canvas) return;
+    const ctx = canvas.getContext();
+    ctx.drawImage(source, 0, 0);
+    const image = ctx.getImageData(0, 0, source.width, source.height);
+    const cols = Math.floor(source.width / PORTRAIT_SIZE);
+    for (let f = 0; f < frames; f++) paintDetails(image, (f % cols) * PORTRAIT_SIZE, Math.floor(f / cols) * PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE, variant, true);
+    ctx.putImageData(image, 0, 0);
+    canvas.refresh();
+    if (frames > 1) for (let f = 0; f < frames; f++) canvas.add(f, 0, (f % cols) * PORTRAIT_SIZE, Math.floor(f / cols) * PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE);
+  };
+  copy(portraitKey(base), portraitKey(id), 1);
+  copy(expressionKey(base), expressionKey(id), PORTRAIT_MOODS.length * PORTRAIT_MOUTHS.length);
 }
 
 /** Humeur selon les PV : abattu sous un quart, neutre sinon. */

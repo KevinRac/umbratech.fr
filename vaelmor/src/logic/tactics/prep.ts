@@ -11,6 +11,7 @@
  * En embuscade (GDD §7.4), les positions sont imposées : la formation est
  * verrouillée, l'équipement reste libre.
  */
+import { skinVariant } from '../skinFrames';
 import type { ClassDef, PartyMemberDef } from '../../data/schemas';
 import type { GameData } from '../../data/validate';
 import { distance } from './grid';
@@ -194,7 +195,7 @@ export function applyPlan(state: BattleState, plan: PrepPlan, party: readonly Pa
   order.sort((a, b) => Number(party[b.m]?.hero) - Number(party[a.m]?.hero) || a.i - b.i);
   for (const { m, i } of order) {
     const cell = plan.cells[i] as Cell;
-    fresh.push(memberUnit(data, rules, party[m] as PartyMemberDef, loadouts[m] ?? { weapon: null, accessory: null, items: [] }, `p${k++}`, m, cell.x, cell.y));
+    fresh.push(memberUnit(data, rules, party[m] as PartyMemberDef, loadouts[m] ?? { weapon: null, accessory: null, items: [] }, `p${k++}`, m, cell.x, cell.y, skinVariant(party, m)));
   }
   state.units.unshift(...fresh);
 }

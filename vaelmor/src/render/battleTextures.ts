@@ -10,6 +10,8 @@ import { PixelCanvas } from './pixelCanvas';
 import { CHAR_POSES, type CharPose } from './characterSprite';
 import { BATTLE_CELL, SKINS, SKIN_POSES, SKIN_FRAME_MS, SKIN_ROWS } from '../data/skins';
 import { hasSkin, skinCombatKey } from './skins';
+import { paintDetails } from './skinDetails';
+import { parseSprite } from '../logic/skinFrames';
 import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitFrameKind, type UnitTeam } from './unitSprites';
 
 export const BATTLE_TEX = {
@@ -59,7 +61,7 @@ export function ensureBattlefield(scene: Phaser.Scene, key: string, rows: readon
  */
 export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitTeam): void {
   const key = BATTLE_TEX.ms(sprite, team);
-  if (team === 'player' && hasSkin(scene, sprite)) {
+  if (team === 'player' && hasSkin(scene, parseSprite(sprite).base)) {
     ensureSkinMapSprite(scene, sprite, key);
     return;
   }
@@ -115,11 +117,22 @@ export function ensureMapSprite(scene: Phaser.Scene, sprite: string, team: UnitT
  * sur place / déplacement (la feuille compte 4 ou 8 images par direction).
  */
 function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void {
-  const def = SKINS.find((k) => k.id === id);
+  const { base, variant } = parseSprite(id);
+  const def = SKINS.find((k) => k.id === base);
   if (!def) return;
   if (!scene.textures.exists(key)) {
-    const source = scene.textures.get(skinCombatKey(id)).getSourceImage() as HTMLImageElement;
-    const texture = scene.textures.addImage(key, source);
+    const source = scene.textures.get(skinCombatKey(base)).getSourceImage() as HTMLImageElement;
+    // Recrue avec un détail : copie de la feuille sur un canevas, détail peint dans chaque image de marche.
+    const canvas = variant > 0 ? scene.textures.createCanvas(key, source.width, source.height) : null;
+    if (canvas) {
+      const ctx = canvas.getContext();
+      ctx.drawImage(source, 0, 0);
+      const image = ctx.getImageData(0, 0, source.width, source.height);
+      for (let row = 0; row < SKIN_ROWS.length; row++) for (let col = 0; col < def.frames; col++) paintDetails(image, col * BATTLE_CELL, row * BATTLE_CELL, BATTLE_CELL, BATTLE_CELL, variant, false);
+      ctx.putImageData(image, 0, 0);
+      canvas.refresh();
+    }
+    const texture = canvas ?? scene.textures.addImage(key, source);
     if (!texture) return;
     const at = (row: number, col: number): [number, number] => [col * BATTLE_CELL, row * BATTLE_CELL];
     const add = (name: string, row: number, col: number): void => {
