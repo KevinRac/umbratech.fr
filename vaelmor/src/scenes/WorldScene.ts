@@ -346,7 +346,8 @@ export class WorldScene extends Phaser.Scene {
     this.checkProgress(true);
     this.announceBattleReturn(data.battleReturn);
     // Sauvegarde automatique (n°160) : arrivée d'une nouvelle partie, retour d'un combat (défaite et réveil appliqués).
-    if (fresh || data.battleReturn) this.autoSaveNow();
+    // Juste après la première image, pour que le lieu et la zone du résumé soient connus.
+    if (fresh || data.battleReturn) this.time.delayedCall(600, () => this.autoSaveNow());
     if (data.loaded) this.time.delayedCall(700, () => this.hud.toast('Partie chargée.'));
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);

@@ -87,25 +87,40 @@ export function latestSlot(game: GameData, store: SaveStore = localStore): Loada
 export type WriteResult = { readonly ok: true } | { readonly ok: false; readonly message: string };
 
 /**
+ * Prévenu après chaque écriture ou suppression d'un emplacement (le compte en
+ * ligne s'y abonne pour envoyer la nouvelle version, lot M9b).
+ */
+type SlotListener = (key: SlotKey, deleted: boolean) => void;
+let slotListener: SlotListener | null = null;
+
+export function onSlotChange(listener: SlotListener | null): void {
+  slotListener = listener;
+}
+
+/**
  * Écrit une sauvegarde. L'ancienne version lisible part d'abord dans la copie
  * de secours. En cas d'échec, l'emplacement garde son ancien contenu.
  */
-export function writeSlot(key: SlotKey, envelope: SaveEnvelope, game: GameData, store: SaveStore = localStore): WriteResult {
+export function writeSlot(key: SlotKey, envelope: SaveEnvelope, game: GameData, store: SaveStore = localStore, silent = false): WriteResult {
   const previous = store.read(key);
   if (previous !== null && decodeSave(previous, game).ok) {
     const copied = store.write(backupKey(key), previous);
     if (!copied.ok && copied.reason !== 'quota') return { ok: false, message: copied.message };
   }
   const written = store.write(key, encodeEnvelope(envelope));
-  if (written.ok) return { ok: true };
+  if (written.ok) {
+    if (!silent && store === localStore) slotListener?.(key, false);
+    return { ok: true };
+  }
   if (written.reason === 'quota') return { ok: false, message: 'Espace de stockage plein : la partie n’a pas été sauvegardée. Supprime ou exporte un emplacement.' };
   return { ok: false, message: written.message };
 }
 
 /** Efface un emplacement et sa copie de secours. */
-export function deleteSlot(key: SlotKey, store: SaveStore = localStore): void {
+export function deleteSlot(key: SlotKey, store: SaveStore = localStore, silent = false): void {
   store.remove(key);
   store.remove(backupKey(key));
+  if (!silent && store === localStore) slotListener?.(key, true);
 }
 
 /** Une sauvegarde existe-t-elle (même abîmée) ? Pour griser « Continuer » sans tout lire. */

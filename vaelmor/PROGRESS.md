@@ -6,8 +6,8 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M9b : compte et sauvegarde en ligne** (GDD §14.3), dès que l'auteur a créé la base : connexion par e-mail sur le modèle de `gw1/api`. **Décisions n°170 à n°173 à valider.** Base MySQL **séparée** de celle de gw1, créée par l'auteur le 02/11/2026 ; secrets GitHub `VAELMOR_*` à créer par l'auteur (liste au GDD §14.3).
-Ensuite, dans l'ordre du GDD §17 : **lot « dialogues de combat » (moteur, voir ci-dessous)**, M7, M8, M10.
+**Lot « dialogues de combat » (moteur, voir ci-dessous)**, puis M7, M8, M10 (ordre du GDD §17).
+**À faire par l'auteur pour allumer le compte en ligne (M9b)** : voir `api/INSTALL.md` (importer `api/schema.sql` dans la base de Vaelmor, créer les secrets `VAELMOR_DB_*` et `VAELMOR_SECRET`, relancer le déploiement, essayer « Compte » au titre).
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
 
@@ -65,7 +65,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
   - [x] Alliés verts : gardes, alliés de passage, alliés errants, phase alliée (§7.8)
 - [x] **M6 : XP, niveaux, classes** (02/11/2026) — voir « Livré en M6 » ; décisions n°93 et n°123 à n°150 validées le 02/11/2026
 - [x] **M9 : sauvegarde** (02/11/2026) — voir « Livré en M9 » ; décisions n°151 à n°169 validées le 02/11/2026, n°170 à n°173 (compte en ligne) à valider
-- [ ] M9b (compte en ligne), lot « dialogues de combat », M7, M8, M10 (ordre du GDD §17)
+- [x] **M9b : compte et sauvegarde en ligne** (03/11/2026) — voir « Livré en M9b » ; décisions n°170 à n°173 validées le 03/11/2026 ; à allumer par l'auteur (`api/INSTALL.md`)
+- [ ] Lot « dialogues de combat », M7, M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -438,9 +439,17 @@ Sauvegarde complète dans le navigateur (GDD §14, §9.13). Modèle conseillé p
 - **n°168 — Rappels du Classique** : préparation, écran de fin, emplacements.
 - **n°169 — Pas de protection contre le rechargement** en Classique.
 
-### Décisions n°170 à n°173 (lot M9b, compte en ligne) — à valider par l'auteur
+### Décisions n°170 à n°173 (lot M9b, compte en ligne) — validées par l'auteur le 03/11/2026
 - **n°170 — M9 prépare le terrain** : interface `SaveStore`, identifiant de partie et date dans chaque sauvegarde, même format en ligne.
 - **n°171 — API `vaelmor/api/`** calquée sur `gw1/api` (PHP sur IONOS, MySQL, code à 6 chiffres par e-mail, cookie de session), secrets GitHub `VAELMOR_*`.
 - **n°172 — Jeu sans compte toujours possible** ; connecté, chaque sauvegarde part aussi sur le serveur ; la plus récente gagne ; conflit = le jeu demande.
 - **n°173 — Le serveur vérifie taille et somme**, pas le contenu du jeu.
 - **Base** : séparée de celle de gw1 (choix de l'auteur, 02/11/2026) ; base créée.
+
+## Livré en M9b (compte et sauvegarde en ligne, 03/11/2026)
+- **Serveur** `vaelmor/api/` (repris de `gw1/api`) : `index.php` (routes `auth/me`, `auth/request`, `auth/verify`, `auth/logout`, `saves/list`, `saves/get`, `saves/put`, `saves/delete`), `lib/common.php` (cookie `vaelmor_session` sur `/vaelmor/`, sessions, limites de débit ; `VAELMOR_API_CONFIG` pour les essais locaux), `lib/smtp.php` (copie de gw1, plus un pilote « journal » pour les tests), `lib/checksum.php` (JSON canonique et FNV-1a comme le jeu, nombres écrits comme JavaScript), `schema.sql` (MySQL), `config.sample.php`, `INSTALL.md`, `.htaccess` (SQL, Markdown, configuration et `lib/` non servis). Contrôle des conflits par révision (`rev`) : 409 si la version en ligne a changé.
+- **Déploiement** : étape « Écrire la configuration de l'API Vaelmor » dans `.github/workflows/deploy.yml` et `.github/scripts/vaelmor-config.mjs` (secrets `VAELMOR_*`, e-mails par `GW1_SMTP_*` à défaut) ; `vaelmor/api/config.local.php` ajouté au `.gitignore`. Sans `VAELMOR_SECRET`, l'étape est ignorée.
+- **Jeu** : `logic/save/sync.ts` (pur : `planSync`, `peekEnvelope`, clés et emplacements) ; `core/cloud.ts` (appels à l'API, état du compte, point de synchronisation par compte dans `vaelmor:sync`, synchronisation des 4 emplacements, envoi après chaque écriture via `onSlotChange` de `core/saves.ts`, conflits) ; `scenes/AccountScene.ts` (adresse, code, connecté, synchroniser, se déconnecter, conflits, hors ligne) ; titre : entrée **Compte**, synchronisation à l'arrivée (reconstruit le menu si une sauvegarde est reprise, ouvre le choix en cas de conflit) et avant « Continuer ». En debug, `window.vaelmorCloud` expose le module.
+- **Retouche M9** : la sauvegarde automatique d'arrivée (nouvelle partie, retour de combat) attend 0,6 s pour que le lieu du résumé soit connu (elle disait « Vaelmor »).
+- **Tests** : 680 au vert (+8 dans `tests/api.test.ts` : `planSync` dans tous les cas ; somme PHP identique à celle du jeu, accents, emoji, U+2028, objets vides, nombres ; l'API complète sous `php -S` avec SQLite et e-mails dans un fichier : code envoyé, délai entre deux codes, mauvais code, bon code, code à usage unique, écriture, conflit 409, liste, lecture, somme fausse, autre jeu, emplacement inconnu, 200 Ko, protection CSRF, suppression avec révision, déconnexion ; sautés sans PHP).
+- **Vérifié dans Chrome** avec le jeu compilé et l'API locale (PHP + SQLite) : connexion par code depuis le titre, envoi de la sauvegarde auto, conflit (autre appareil + changement local) présenté au titre et tranché en faveur de la version en ligne, sauvegarde auto en partie envoyée (révision 2 → 3).

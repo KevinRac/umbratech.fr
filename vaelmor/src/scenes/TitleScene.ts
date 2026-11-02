@@ -11,6 +11,7 @@ import { ActionInput } from '../core/input';
 import { loadGameData } from '../data';
 import { loadIntoSession, setPlayClock } from '../core/gameSave';
 import { anySave, latestSlot, readSlot } from '../core/saves';
+import { cloudStatus, refreshAccount, syncAll, type SyncConflict } from '../core/cloud';
 import { SAVE_KEYS } from '../logic/save/keys';
 import type { GameMode } from '../logic/game/progress';
 import type { SaveEnvelope } from '../logic/save/schema';
@@ -87,6 +88,7 @@ export class TitleScene extends Phaser.Scene {
     this.buildTitle();
     this.buildMenu();
     this.cameras.main.fadeIn(700, 0, 0, 0);
+    void this.syncOnline();
   }
 
   override update(_time: number, delta: number): void {
@@ -263,8 +265,45 @@ export class TitleScene extends Phaser.Scene {
     });
   }
 
-  /** Continuer : la plus récente des sauvegardes lisibles (n°162). */
-  private continueGame(): void {
+  /**
+   * Compte en ligne (lot M9b, n°172) : au titre, les emplacements sont
+   * synchronisés ; une sauvegarde reprise en ligne reconstruit le menu, un
+   * conflit ouvre l'écran du compte pour que le joueur choisisse.
+   */
+  private async syncOnline(): Promise<void> {
+    if (cloudStatus() === 'unknown') await refreshAccount();
+    if (cloudStatus() !== 'signedIn') return;
+    const report = await syncAll();
+    if (!this.scene.isActive() || this.starting) return;
+    if (report.pulled > 0) {
+      this.buildMenu();
+      this.toasts.push(`Sauvegardes en ligne : ${report.pulled} reprise(s).`);
+    }
+    if (report.conflicts.length > 0 && !this.menuBusy()) this.openAccount(report.conflicts);
+  }
+
+  /** Un écran est-il déjà ouvert par-dessus le titre ? */
+  private menuBusy(): boolean {
+    return this.confirm.active || this.scene.isActive(SCENES.saves) || this.scene.isActive(SCENES.classSelect) || this.scene.isActive(SCENES.account);
+  }
+
+  private openAccount(conflicts?: readonly SyncConflict[]): void {
+    if (this.starting) return;
+    this.menu?.setLocked(true);
+    this.scene.launch(SCENES.account, {
+      ...(conflicts ? { conflicts } : {}),
+      onClose: () => {
+        this.menu?.setLocked(false);
+        this.actions.consume('cancel');
+        this.buildMenu();
+      },
+    });
+  }
+
+  /** Continuer : la plus récente des sauvegardes lisibles (n°162), après la synchronisation en cours s'il y en a une. */
+  private async continueGame(): Promise<void> {
+    if (this.starting) return;
+    if (cloudStatus() === 'signedIn') await syncAll();
     if (this.starting) return;
     const latest = latestSlot(loadGameData());
     if (!latest) {
@@ -313,9 +352,10 @@ export class TitleScene extends Phaser.Scene {
   private buildMenu(): void {
     const hasSave = anySave();
     this.showMenu([
-      ...(hasSave ? [{ label: 'Continuer', onSelect: () => this.continueGame() }] : []),
+      ...(hasSave ? [{ label: 'Continuer', onSelect: () => void this.continueGame() }] : []),
       { label: 'Nouvelle partie', onSelect: () => this.startNewGame() },
       { label: 'Charger', enabled: hasSave, onSelect: () => this.openLoad() },
+      { label: 'Compte', onSelect: () => this.openAccount() },
       { label: 'Combat d’essai', onSelect: () => this.showBattleMenu() },
       { label: 'Options', onSelect: () => this.toasts.push('Les options arrivent au jalon M10.') },
     ]);

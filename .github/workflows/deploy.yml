@@ -83,6 +83,31 @@ jobs:
           node .github/scripts/gw1-config.mjs | sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o PubkeyAuthentication=no "$IONOS_USER@$IONOS_HOST" 'set -eu; umask 077; cd ~/public/gw1/api; cat > config.local.php.tmp; mv config.local.php.tmp config.local.php'
           echo "config.local.php écrit sur le serveur."
 
+      # Vaelmor : écrit vaelmor/api/config.local.php sur le serveur à partir des secrets GitHub
+      # (le fichier n'est jamais dans le dépôt). Sans VAELMOR_SECRET, l'étape est ignorée.
+      # L'envoi des e-mails reprend GW1_SMTP_* si VAELMOR_SMTP_* n'existent pas (même boîte).
+      - name: Écrire la configuration de l'API Vaelmor
+        env:
+          IONOS_HOST: ${{ secrets.SSH_IONOS }}
+          IONOS_USER: ${{ secrets.SSH_USER }}
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          VAELMOR_DB_HOST: ${{ secrets.VAELMOR_DB_HOST }}
+          VAELMOR_DB_NAME: ${{ secrets.VAELMOR_DB_NAME }}
+          VAELMOR_DB_USER: ${{ secrets.VAELMOR_DB_USER }}
+          VAELMOR_DB_PASS: ${{ secrets.VAELMOR_DB_PASS }}
+          VAELMOR_SECRET: ${{ secrets.VAELMOR_SECRET }}
+          VAELMOR_SMTP_USER: ${{ secrets.VAELMOR_SMTP_USER }}
+          VAELMOR_SMTP_PASS: ${{ secrets.VAELMOR_SMTP_PASS }}
+          GW1_SMTP_USER: ${{ secrets.GW1_SMTP_USER }}
+          GW1_SMTP_PASS: ${{ secrets.GW1_SMTP_PASS }}
+        run: |
+          if [ -z "$VAELMOR_SECRET" ]; then
+            echo "Secrets Vaelmor absents : configuration du serveur laissée telle quelle."
+            exit 0
+          fi
+          node .github/scripts/vaelmor-config.mjs | sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o PubkeyAuthentication=no "$IONOS_USER@$IONOS_HOST" 'set -eu; umask 077; cd ~/public/vaelmor/api; cat > config.local.php.tmp; mv config.local.php.tmp config.local.php'
+          echo "vaelmor/api/config.local.php écrit sur le serveur."
+
       # Ring Dodge : la page de mot de passe a été retirée (27 octobre 2026) ; on efface
       # l'ancienne empreinte du mot de passe restée sur le serveur (fichier hors dépôt).
       - name: Retirer l'ancien accès de Ring Dodge

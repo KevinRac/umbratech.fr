@@ -1384,14 +1384,19 @@ Messages brefs en haut : « +15 Réputation (Haut-Gué) », « Niveau 4 ! », «
 | **Après un chargement** | Le héros réapparaît à sa place et dans sa direction, ennemis et PNJ à leur poste, 4 s de grâce face aux ennemis (n°165) |
 | **Sécurité** | Aucun contenu exécutable : données seulement, validées par schéma |
 
-### 14.3 Compte et sauvegarde en ligne (prévu : lot M9b)
+### 14.3 Compte et sauvegarde en ligne (réalisé : lot M9b, 03/11/2026)
 
-Demande de l'auteur (02/11/2026) : une connexion par e-mail, sur le modèle de `gw1/api` (API PHP sur IONOS, base MySQL, code à 6 chiffres envoyé par e-mail valable 10 min et 5 essais, cookie de session d'un an, identifiants écrits au déploiement depuis des secrets GitHub). Propositions n°170 à n°173, à valider. Base MySQL **séparée** de celle de gw1 (choix de l'auteur, créée le 02/11/2026). Secrets GitHub à créer : `VAELMOR_DB_HOST`, `VAELMOR_DB_NAME`, `VAELMOR_DB_USER`, `VAELMOR_DB_PASS`, `VAELMOR_SECRET` (au moins 32 caractères), `VAELMOR_SMTP_USER`, `VAELMOR_SMTP_PASS` ; facultatifs : `VAELMOR_MAIL_FROM`, `VAELMOR_SMTP_HOST`, `VAELMOR_SMTP_PORT`, `VAELMOR_SMTP_SECURE`.
+Demande de l'auteur (02/11/2026) : une connexion par e-mail sur le modèle de `gw1/api`. Décisions n°170 à n°173, validées le 03/11/2026 ; base MySQL **séparée** de celle de gw1. Installation : `vaelmor/api/INSTALL.md`.
 
-- le stockage passe déjà par l'interface `SaveStore` (localStorage aujourd'hui) et chaque sauvegarde porte un identifiant de partie et une date : le format sera le même en ligne ;
-- API `vaelmor/api/` calquée sur gw1, secrets `VAELMOR_*` ;
-- jeu toujours jouable sans compte ; connecté, chaque sauvegarde part aussi sur le serveur ; au chargement la plus récente gagne ; si les deux versions ont changé depuis la dernière synchronisation, le jeu demande laquelle garder ;
-- le serveur vérifie la taille (200 Ko au plus) et la somme, pas le contenu du jeu.
+| Élément | Règle |
+|---|---|
+| **Serveur** | API PHP `vaelmor/api/` sur IONOS, base MySQL (`api/schema.sql` : `users`, `login_codes`, `sessions`, `saves`, `rate_hits`), configuration écrite au déploiement depuis les secrets GitHub `VAELMOR_*` (e-mails : `GW1_SMTP_*` si `VAELMOR_SMTP_*` n'existent pas, même boîte `no-reply@umbratech.fr`) |
+| **Connexion** | Titre › **Compte** : adresse e-mail, puis code à 6 chiffres reçu par e-mail (10 min, 5 essais, usage unique, 5 demandes par heure et par adresse) ; session par cookie HttpOnly d'un an, prolongée à l'usage ; déconnexion depuis le même écran. Champ de saisie HTML posé sur le canevas (le clavier du jeu est suspendu pendant la saisie) |
+| **Sans compte** | Le jeu reste entièrement jouable ; serveur injoignable (développement local, panne) : « Le serveur de sauvegarde est injoignable », les sauvegardes restent dans le navigateur |
+| **Envoi** | Connecté, chaque écriture ou suppression d'un emplacement (auto, manuelle, import) part aussi en ligne, dans l'ordre, sans bloquer le jeu |
+| **Synchronisation** | Après la connexion, à chaque écran titre et avant « Continuer » : les 4 emplacements sont comparés au point de la dernière synchronisation (somme et révision, gardés dans `vaelmor:sync`). Le côté qui a changé gagne (envoi ou reprise, y compris les suppressions) ; une sauvegarde locale illisible est réparée depuis le compte, jamais envoyée |
+| **Conflit** | Les deux côtés ont changé (ou jamais synchronisés et différents) : l'écran du compte montre les deux versions (héros, classe, niveau, lieu, temps de jeu, date) et le joueur choisit « Garder celle de ce navigateur », « Garder celle en ligne » ou « Décider plus tard » |
+| **Contrôles du serveur** | Taille (200 Ko au plus), enveloppe de Vaelmor, somme de contrôle recalculée en PHP (`lib/checksum.php`, identique au jeu : testé), emplacement connu, révision attendue (sinon 409 « conflit ») ; pas le contenu du jeu, que le jeu contrôle au chargement (n°173). En-tête maison contre les requêtes d'un autre site |
 
 ---
 
@@ -1625,7 +1630,7 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 30. **Musique** (précision de la n°23) : les pistes sont générées avec Suno par l'auteur (voir `music/README.md`) ; chaque piste retenue est tracée dans `CREDITS.md`.
 31. **Version de Phaser** (16/10/2026, précision de la n°1) : **Phaser 4** (4.2.1). La branche 3.x n'évolue plus depuis la 3.90 (mai 2025) ; Phaser 4 est stable depuis avril 2026, garde la même API de haut niveau et apporte un nouveau moteur de rendu (filtres, éclairage) utile au pilier « Beauté d'abord ». Le reste de la pile n° 1 est inchangé (TypeScript, Vite, Tiled).
 32. **Jalon M6** (02/11/2026) : passives (n°93), mécaniques de classe (n°123 à n°127), XP (n°128 à n°132), compagnie (n°133 à n°139), évolutions (n°140 à n°144) validées ; adaptations n°145 à n°150 validées le 02/11/2026. Détail dans PROGRESS.md.
-33. **Jalon M9 : sauvegarde** (02/11/2026) : décisions n°151 à n°169 validées (format, contrôles, copie de secours, migrations, sauvegardes automatiques et manuelles, écran titre, confirmations, export/import, mode Classique). Compte et sauvegarde en ligne par e-mail prévus au lot M9b (n°170 à n°173, à valider). Voir §9.13, §14 et PROGRESS.md.
+33. **Jalon M9 : sauvegarde** (02/11/2026) : décisions n°151 à n°169 validées (format, contrôles, copie de secours, migrations, sauvegardes automatiques et manuelles, écran titre, confirmations, export/import, mode Classique). Compte et sauvegarde en ligne par e-mail réalisés au lot M9b (03/11/2026, n°170 à n°173 validées, base séparée de gw1). Voir §9.13, §14 et PROGRESS.md.
 
 ---
 
