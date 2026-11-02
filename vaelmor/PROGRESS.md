@@ -6,7 +6,7 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M9b : compte et sauvegarde en ligne** (GDD §14.3), dès que l'auteur a créé la base : connexion par e-mail sur le modèle de `gw1/api`. **Décisions n°170 à n°173 à valider**, et une question à trancher : base séparée ou partagée avec gw1 (proposition : séparée).
+**M9b : compte et sauvegarde en ligne** (GDD §14.3), dès que l'auteur a créé la base : connexion par e-mail sur le modèle de `gw1/api`. **Décisions n°170 à n°173 à valider.** Base MySQL **séparée** de celle de gw1, créée par l'auteur le 02/11/2026 ; secrets GitHub `VAELMOR_*` à créer par l'auteur (liste au GDD §14.3).
 Ensuite, dans l'ordre du GDD §17 : **lot « dialogues de combat » (moteur, voir ci-dessous)**, M7, M8, M10.
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
@@ -443,4 +443,4 @@ Sauvegarde complète dans le navigateur (GDD §14, §9.13). Modèle conseillé p
 - **n°171 — API `vaelmor/api/`** calquée sur `gw1/api` (PHP sur IONOS, MySQL, code à 6 chiffres par e-mail, cookie de session), secrets GitHub `VAELMOR_*`.
 - **n°172 — Jeu sans compte toujours possible** ; connecté, chaque sauvegarde part aussi sur le serveur ; la plus récente gagne ; conflit = le jeu demande.
 - **n°173 — Le serveur vérifie taille et somme**, pas le contenu du jeu.
-- **Question ouverte** : base séparée (proposée, isole gw1) ou partagée (un seul compte pour les deux sites).
+- **Base** : séparée de celle de gw1 (choix de l'auteur, 02/11/2026) ; base créée.

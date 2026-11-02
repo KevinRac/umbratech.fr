@@ -1386,7 +1386,7 @@ Messages brefs en haut : « +15 Réputation (Haut-Gué) », « Niveau 4 ! », «
 
 ### 14.3 Compte et sauvegarde en ligne (prévu : lot M9b)
 
-Demande de l'auteur (02/11/2026) : une connexion par e-mail, sur le modèle de `gw1/api` (API PHP sur IONOS, base MySQL, code à 6 chiffres envoyé par e-mail valable 10 min et 5 essais, cookie de session d'un an, identifiants écrits au déploiement depuis des secrets GitHub). Propositions n°170 à n°173, à valider, avec une question ouverte (base séparée ou partagée avec gw1) :
+Demande de l'auteur (02/11/2026) : une connexion par e-mail, sur le modèle de `gw1/api` (API PHP sur IONOS, base MySQL, code à 6 chiffres envoyé par e-mail valable 10 min et 5 essais, cookie de session d'un an, identifiants écrits au déploiement depuis des secrets GitHub). Propositions n°170 à n°173, à valider. Base MySQL **séparée** de celle de gw1 (choix de l'auteur, créée le 02/11/2026). Secrets GitHub à créer : `VAELMOR_DB_HOST`, `VAELMOR_DB_NAME`, `VAELMOR_DB_USER`, `VAELMOR_DB_PASS`, `VAELMOR_SECRET` (au moins 32 caractères), `VAELMOR_SMTP_USER`, `VAELMOR_SMTP_PASS` ; facultatifs : `VAELMOR_MAIL_FROM`, `VAELMOR_SMTP_HOST`, `VAELMOR_SMTP_PORT`, `VAELMOR_SMTP_SECURE`.
 
 - le stockage passe déjà par l'interface `SaveStore` (localStorage aujourd'hui) et chaque sauvegarde porte un identifiant de partie et une date : le format sera le même en ligne ;
 - API `vaelmor/api/` calquée sur gw1, secrets `VAELMOR_*` ;
