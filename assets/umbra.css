@@ -589,6 +589,40 @@ a.ut-feature:hover .ut-feature__go svg { transform: translateX(4px); }
 .ut-js [data-reveal] { opacity: 0; transform: translate3d(0, 28px, 0); transition: opacity 0.9s var(--ut-ease), transform 0.9s var(--ut-ease); transition-delay: calc(var(--d, 0) * 1ms); }
 .ut-js [data-reveal].is-in { opacity: 1; transform: none; }
 
+/* Ouverture « la lanterne s'allume » (accueil, une fois par visite) -------
+   html.ut-cover : noir plein dès le premier rendu, avant le JavaScript.
+   html.ut-intro-on : le texte du hero attend la lumière.
+   html.ut-intro : cette visite joue l'ouverture (le titre sort de la brume). */
+@property --r { syntax: "<length>"; inherits: false; initial-value: 0px; }
+.ut-cover body::after { content: ""; position: fixed; inset: 0; z-index: 95; background: var(--ut-void); }
+.ut-intro-on .ut-slide.is-active > * { animation-play-state: paused; }
+.ut-intro .ut-carousel__ctrl { transition: opacity 0.6s var(--ut-ease) 0.2s; }
+.ut-intro-on .ut-carousel__ctrl { opacity: 0; }
+.ut-intro .ut-hero .ut-scene[data-enter] { animation: none; opacity: 1; }
+.ut-intro .ut-slide:first-child.is-active .ut-hero__title { animation: ut-fog 1.5s var(--ut-ease) both; animation-delay: 60ms; }
+.ut-intro-on .ut-slide:first-child.is-active .ut-hero__title { animation-play-state: paused; }
+.ut-veil-intro {
+  --x: 50%; --y: 50%;
+  position: fixed; inset: 0; z-index: 96; cursor: pointer; background: var(--ut-void);
+  -webkit-mask-image: radial-gradient(circle at var(--x) var(--y), transparent var(--r), #000 calc(var(--r) + 140px));
+  mask-image: radial-gradient(circle at var(--x) var(--y), transparent var(--r), #000 calc(var(--r) + 140px));
+  transition: opacity 0.3s var(--ut-ease);
+}
+.ut-veil-intro.is-done { opacity: 0; pointer-events: none; }
+.ut-veil-intro i {
+  position: fixed; left: var(--x); top: var(--y); width: 280px; height: 280px; translate: -50% -50%; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle, #fff6df 0, #f6c877 5px, rgba(242, 182, 90, 0.55) 14px, rgba(242, 182, 90, 0.18) 46px, transparent 70%);
+  animation: ut-allume 0.55s var(--ut-ease) both, ut-vacille 0.9s steps(1) 0.55s infinite;
+  transition: opacity 0.5s var(--ut-ease);
+}
+.ut-veil-intro.is-fading i { opacity: 0; }
+@keyframes ut-allume { 0% { opacity: 0; scale: 0.1; } 60% { opacity: 1; scale: 1.08; } 100% { opacity: 1; scale: 1; } }
+@keyframes ut-vacille { 0%, 100% { opacity: 1; } 33% { opacity: 0.86; } 66% { opacity: 0.95; } }
+@keyframes ut-fog {
+  from { opacity: 0; filter: blur(18px); letter-spacing: 0.06em; transform: translate3d(0, 12px, 0); }
+  to   { opacity: 1; filter: blur(0); letter-spacing: -0.055em; transform: none; }
+}
+
 /* ---------- 8. Responsive ---------- */
 @media (max-width: 1080px) {
   .ut-nav { display: none; }
@@ -639,6 +673,7 @@ a.ut-feature:hover .ut-feature__go svg { transform: translateX(4px); }
 
 /* ---------- 9. Préférences ---------- */
 @media (prefers-reduced-motion: reduce) {
+  .ut-veil-intro, .ut-cover body::after { display: none; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .ut-js .ut-hero [data-enter], .ut-js [data-reveal] { opacity: 1; transform: none; filter: none; }
   .ut-atmos::before, .ut-atmos::after, .ut-scene__mist::before, .ut-scene__mist::after { animation: none; }

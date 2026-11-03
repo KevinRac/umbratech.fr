@@ -84,6 +84,7 @@ Le dégradé ne sert qu'à trois endroits : le halo du bouton principal, la marq
 
 | Animation | Où | Objectif |
 |---|---|---|
+| Ouverture « la lanterne s'allume » (1re visite de la session, ~1,4 s, passable) : noir, point de lumière à la lanterne, halo qui grandit jusqu'à dévoiler la page, titre qui sort de la brume (flou, lettres qui se resserrent) | Toute la page | Le premier contact raconte l'idée du site : la lumière qui guide dans la brume |
 | Ouverture en cascade (fondu + flou qui se lève, 0 → 760 ms) | Hero | Lire dans l'ordre : statut, titre, promesse, action |
 | Lanterne qui suit le pointeur, puis revient à la lanterne | Scène du hero | Le moment mémorable ; dit « jeu d'exploration nocturne » sans un mot |
 | Carrousel du hero (7 s par projet : La Brume, Vaelmor, Guild Wars 1, Diablo IV) : fondu enchaîné, lent travelling avant, lumière qui glisse vers la source de chaque image, barre de progression | Hero | Montrer les quatre projets sans quitter la disposition du hero ; pause au survol du texte, au clavier et sur bouton (WCAG 2.2.2) |
