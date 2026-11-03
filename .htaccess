@@ -14,4 +14,7 @@
   ExpiresByType image/webp "access plus 1 week"
   ExpiresByType image/x-icon "access plus 1 week"
   ExpiresByType image/vnd.microsoft.icon "access plus 1 week"
+  # Polices du thème (assets/fonts) : elles ne changent pas de nom sans changer de contenu
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType application/font-woff "access plus 1 year"
 </IfModule>

@@ -2,10 +2,11 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Umbratech · Builds Guild Wars 1 &amp; Diablo IV, jeux indépendants</title>
-  <meta name="description" content="Configurations, builds et guides en français pour Guild Wars 1 et Diablo IV, ainsi que La Brume et Vaelmor, mes jeux indépendants." />
-  <meta name="theme-color" content="#07080c" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Umbratech · La Brume, builds Guild Wars 1 &amp; Diablo IV, jeux indépendants</title>
+  <meta name="description" content="Joue à La Brume, roguelite d’action dans le navigateur, et retrouve les builds et guides en français pour Guild Wars 1 et Diablo IV, ainsi que Vaelmor, RPG tactique." />
+  <meta name="theme-color" content="#05060a" />
+  <meta name="color-scheme" content="dark" />
   <link rel="canonical" href="https://umbratech.fr/" />
 
   <link rel="icon" href="/favicon.ico" sizes="48x48" />
@@ -15,8 +16,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Umbratech" />
   <meta property="og:locale" content="fr_FR" />
-  <meta property="og:title" content="Umbratech · Builds Guild Wars 1 &amp; Diablo IV, jeux indépendants" />
-  <meta property="og:description" content="Configurations, builds et guides en français pour Guild Wars 1 et Diablo IV, ainsi que La Brume et Vaelmor, mes jeux indépendants." />
+  <meta property="og:title" content="Umbratech · La Brume, builds Guild Wars 1 &amp; Diablo IV, jeux indépendants" />
+  <meta property="og:description" content="Joue à La Brume, roguelite d’action dans le navigateur, et retrouve les builds et guides en français pour Guild Wars 1 et Diablo IV." />
   <meta property="og:url" content="https://umbratech.fr/" />
   <meta property="og:image" content="https://umbratech.fr/img/og-umbratech.jpg" />
   <meta property="og:image:width" content="1200" />
@@ -43,561 +44,318 @@
         "name": "Umbratech",
         "url": "https://umbratech.fr/",
         "logo": { "@type": "ImageObject", "url": "https://umbratech.fr/apple-touch-icon.png", "width": 180, "height": 180 }
+      },
+      {
+        "@type": "VideoGame",
+        "@id": "https://umbratech.fr/themist/#game",
+        "name": "La Brume",
+        "url": "https://umbratech.fr/themist/",
+        "description": "Roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume, chaque retour au Sanctuaire te rend plus fort.",
+        "genre": ["Roguelite", "Action"],
+        "gamePlatform": "Navigateur web",
+        "inLanguage": "fr-FR",
+        "image": "https://umbratech.fr/img/la-brume.jpg",
+        "publisher": { "@id": "https://umbratech.fr/#organization" }
       }
     ]
   }
   </script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
-  <style>
-    :root {
-      --bg: #07080c;
-      --surface: rgba(16, 18, 25, 0.78);
-      --text: #f4f6fa;
-      --muted: #9aa3b2;
-      --line: rgba(255, 255, 255, 0.10);
-      --accent: #8b6cff;
-      --accent-2: #22d3ee;
-      --radius: 26px;
-      --ease: cubic-bezier(0.22, 1, 0.36, 1);
-      --serif: "Fraunces", Georgia, "Times New Roman", serif;
-      --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: var(--sans);
-      color: var(--text);
-      background: var(--bg);
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ---------- Ambiance de fond ---------- */
-    .backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: -2;
-      background:
-        radial-gradient(60% 50% at 12% 8%, rgba(139, 108, 255, 0.20), transparent 70%),
-        radial-gradient(50% 45% at 90% 90%, rgba(34, 211, 238, 0.14), transparent 70%),
-        var(--bg);
-    }
-
-    .mist {
-      position: fixed;
-      inset: -20%;
-      z-index: -1;
-      pointer-events: none;
-      background:
-        radial-gradient(40% 25% at 20% 30%, rgba(255, 255, 255, 0.05), transparent 70%),
-        radial-gradient(45% 28% at 75% 60%, rgba(160, 230, 220, 0.05), transparent 70%);
-      animation: drift 28s ease-in-out infinite alternate;
-    }
-
-    .grain {
-      position: fixed;
-      inset: 0;
-      z-index: 5;
-      pointer-events: none;
-      opacity: 0.06;
-      mix-blend-mode: overlay;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-    }
-
-    @keyframes drift {
-      from { transform: translate3d(-3%, -2%, 0) scale(1); }
-      to   { transform: translate3d(3%, 2%, 0) scale(1.08); }
-    }
-
-    /* ---------- Mise en page ---------- */
-    .page {
-      width: min(1220px, calc(100% - 48px));
-      margin: 0 auto;
-      padding: 28px 0 56px;
-    }
-
-    nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0 0;
-    }
-
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      font-size: 0.82rem;
-      color: var(--text);
-      text-decoration: none;
-    }
-
-    .brand-mark {
-      width: 30px;
-      height: 30px;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      box-shadow: 0 8px 24px rgba(139, 108, 255, 0.4);
-    }
-
-    .brand-mark svg { display: block; }
-
-    .nav-links {
-      display: flex;
-      gap: 6px;
-      padding: 5px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(14px);
-    }
-
-    .nav-links a {
-      padding: 8px 16px;
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 0.85rem;
-      font-weight: 500;
-      text-decoration: none;
-      transition: color 0.25s, background 0.25s;
-    }
-
-    .nav-links a:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
-
-    /* ---------- Hero ---------- */
-    header.hero {
-      text-align: center;
-      padding: clamp(56px, 9vw, 112px) 0 clamp(44px, 6vw, 72px);
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 16px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-    }
-
-    .eyebrow i {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent-2);
-      box-shadow: 0 0 12px var(--accent-2);
-    }
-
-    h1 {
-      margin: 26px auto 0;
-      max-width: 15ch;
-      font-family: var(--serif);
-      font-weight: 700;
-      font-size: clamp(2.7rem, 7vw, 5.4rem);
-      line-height: 1.02;
-      letter-spacing: -0.035em;
-    }
-
-    h1 em {
-      font-style: italic;
-      font-weight: 500;
-      background: linear-gradient(95deg, #b8a4ff 0%, var(--accent-2) 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .subtitle {
-      max-width: 640px;
-      margin: 24px auto 0;
-      color: var(--muted);
-      font-size: clamp(1rem, 1.6vw, 1.14rem);
-      line-height: 1.7;
-    }
-
-    .subtitle strong { color: var(--text); font-weight: 600; }
-
-    /* ---------- Catégories ---------- */
-    .category { scroll-margin-top: 24px; }
-    .category + .category { margin-top: clamp(36px, 5vw, 56px); }
-
-    .category-head {
-      display: flex;
-      align-items: baseline;
-      flex-wrap: wrap;
-      gap: 6px 18px;
-      margin-bottom: 18px;
-    }
-
-    .category-head h2 {
-      margin: 0;
-      font-family: var(--serif);
-      font-weight: 700;
-      font-size: clamp(1.55rem, 2.6vw, 2rem);
-      letter-spacing: -0.02em;
-    }
-
-    .category-head p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
-
-    .category-head::after {
-      content: "";
-      flex: 1 1 60px;
-      align-self: center;
-      height: 1px;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), transparent);
-    }
-
-    /* ---------- Tuiles ---------- */
-    .tiles {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
-
-    .tile {
-      --tile-color: #fff;
-      position: relative;
-      isolation: isolate;
-      min-height: 340px;
-      border-radius: var(--radius);
-      overflow: hidden;
-      display: flex;
-      align-items: flex-end;
-      color: inherit;
-      text-decoration: none;
-      background: #0d0f15;
-      border: 1px solid var(--line);
-      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
-      transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease), border-color 0.4s;
-      opacity: 0;
-      transform: translateY(28px);
-      animation: rise 0.9s var(--ease) forwards;
-    }
-
-    .tile:nth-child(2) { animation-delay: 0.12s; }
-    .tile:nth-child(3) { animation-delay: 0.24s; }
-
-    @keyframes rise { to { opacity: 1; transform: none; } }
-
-    .tile:hover,
-    .tile:focus-visible {
-      transform: translateY(-10px);
-      border-color: color-mix(in srgb, var(--tile-color) 55%, transparent);
-      box-shadow:
-        0 40px 90px rgba(0, 0, 0, 0.6),
-        0 0 70px color-mix(in srgb, var(--tile-color) 22%, transparent);
-      outline: none;
-    }
-
-    .tile-bg {
-      position: absolute;
-      inset: 0;
-      z-index: -3;
-      background-size: cover;
-      background-position: center;
-      transition: transform 1.2s var(--ease), filter 0.5s;
-    }
-
-    .tile:hover .tile-bg { transform: scale(1.08); filter: saturate(1.18) brightness(1.06); }
-
-    .tile::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: -2;
-      background: linear-gradient(180deg, rgba(5, 6, 10, 0.05) 0%, rgba(5, 6, 10, 0.25) 40%, rgba(5, 6, 10, 0.94) 100%);
-    }
-
-    .tile::after {
-      content: "";
-      position: absolute;
-      left: 0; right: 0; top: 0;
-      height: 3px;
-      z-index: 2;
-      background: linear-gradient(90deg, transparent, var(--tile-color), transparent);
-      opacity: 0.85;
-    }
-
-    .tile-index {
-      position: absolute;
-      top: 16px;
-      right: 20px;
-      font-family: var(--serif);
-      font-size: 0.95rem;
-      letter-spacing: 0.12em;
-      color: rgba(255, 255, 255, 0.55);
-    }
-
-    .tile-content {
-      width: 100%;
-      padding: 24px 26px 20px;
-    }
-
-    .game-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      padding: 7px 13px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--tile-color);
-      border: 1px solid color-mix(in srgb, var(--tile-color) 40%, transparent);
-      background: color-mix(in srgb, var(--tile-color) 15%, rgba(0, 0, 0, 0.35));
-      backdrop-filter: blur(10px);
-    }
-
-    .game-tag::before {
-      content: "";
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-      box-shadow: 0 0 10px currentColor;
-    }
-
-    .tile h3 {
-      margin: 12px 0 8px;
-      font-family: var(--serif);
-      font-weight: 700;
-      font-size: clamp(1.45rem, 2.1vw, 1.85rem);
-      line-height: 1.08;
-      letter-spacing: -0.02em;
-    }
-
-    .tile p {
-      margin: 0;
-      color: #c4cbd8;
-      font-size: 0.9rem;
-      line-height: 1.55;
-    }
-
-    .tile-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-top: 16px;
-      padding-top: 14px;
-      border-top: 1px solid rgba(255, 255, 255, 0.14);
-    }
-
-    .build-meta { color: var(--muted); font-size: 0.8rem; letter-spacing: 0.02em; }
-
-    .open-build {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      white-space: nowrap;
-      color: #0b0d12;
-      background: var(--tile-color);
-      transition: gap 0.3s var(--ease), box-shadow 0.3s;
-    }
-
-    .tile:hover .open-build {
-      gap: 14px;
-      box-shadow: 0 8px 26px color-mix(in srgb, var(--tile-color) 50%, transparent);
-    }
-
-    .gw      { --tile-color: #f0b94a; }
-    .brume   { --tile-color: #4fe3d0; }
-    .d4      { --tile-color: #ff5a4f; }
-    .vaelmor { --tile-color: #b48cff; }
-
-    /* ---------- Pied de page ---------- */
-    footer {
-      margin-top: 72px;
-      padding-top: 26px;
-      border-top: 1px solid var(--line);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px 24px;
-      justify-content: space-between;
-      color: var(--muted);
-      font-size: 0.82rem;
-    }
-
-    /* ---------- Responsive ---------- */
-    @media (max-width: 1020px) {
-      .category { max-width: 640px; margin-left: auto; margin-right: auto; }
-      .tiles { grid-template-columns: 1fr; }
-      .tile { min-height: 320px; }
-    }
-
-    @media (max-width: 560px) {
-      .page { width: calc(100% - 28px); }
-      .nav-links { display: none; }
-      .tile { min-height: 300px; }
-      .tile-content { padding: 20px 18px 18px; }
-      .tile-footer { flex-direction: column; align-items: flex-start; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition: none !important; }
-      .tile { opacity: 1; transform: none; }
-    }
-  </style>
+  <link rel="preload" href="/assets/fonts/outfit-700.woff" as="font" type="font/woff" crossorigin />
+  <link rel="preload" href="/assets/fonts/instrument-sans-400.woff" as="font" type="font/woff" crossorigin />
+  <link rel="preload" href="/img/la-brume-tuile.jpg" as="image" fetchpriority="high" />
+  <link rel="stylesheet" href="/assets/umbra.css" />
+  <script>document.documentElement.classList.add("ut-js");</script>
+  <script src="/assets/umbra.js" defer></script>
 </head>
 <body>
-  <div class="backdrop"></div>
-  <div class="mist"></div>
-  <div class="grain"></div>
+  <a class="ut-skip" href="#contenu">Aller au contenu</a>
+  <div class="ut-atmos" aria-hidden="true"></div>
+  <div class="ut-grain" aria-hidden="true"></div>
 
-  <main class="page">
-    <nav>
-      <a class="brand" href="/">
-        <span class="brand-mark" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 4v9a6 6 0 0 0 12 0V4" />
-          </svg>
+  <header class="ut-header">
+    <div class="ut-wrap ut-header__inner">
+      <a class="ut-brand" href="/" aria-label="Umbratech, accueil">
+        <span class="ut-brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v9a6 6 0 0 0 12 0V4" /></svg>
         </span>
-        Umbratech
+        <span class="ut-brand__name">Umbratech</span>
       </a>
-      <div class="nav-links">
-        <a href="#guides">Builds &amp; guides</a>
-        <a href="#jeux">Jeux</a>
+      <nav aria-label="Navigation principale">
+        <ul class="ut-nav">
+          <li><a href="#descente">La Brume</a></li>
+          <li><a href="#guides">Builds &amp; guides</a></li>
+          <li><a href="/vaelmor/">Vaelmor</a></li>
+          <li><a href="#questions">Questions</a></li>
+        </ul>
+      </nav>
+      <a class="ut-btn ut-btn--primary ut-btn--sm" href="/themist/">Jouer à La Brume</a>
+    </div>
+  </header>
+
+  <main id="contenu">
+    <!-- 1. Hero : La Brume -->
+    <section class="ut-hero" aria-labelledby="titre-brume">
+      <div class="ut-wrap ut-hero__grid">
+        <div class="ut-hero__copy">
+          <div data-enter style="--d: 0">
+            <span class="ut-badge ut-badge--live" style="--c: var(--ut-brume)">En développement · <span data-brume-version>v18.8</span></span>
+          </div>
+          <h1 class="ut-hero__title" id="titre-brume" data-enter style="--d: 120">
+            <span>La</span><span>Brume</span>
+          </h1>
+          <p class="ut-hero__lead" data-enter style="--d: 320">
+            Un <strong>roguelite d’action</strong> à jouer dans ton navigateur. Chaque descente te rapproche du cœur de la Brume, chaque retour au Sanctuaire te rend plus fort.
+          </p>
+          <p class="ut-hero__motto" data-enter style="--d: 460">Ce que tu oublies, la Brume s’en souvient.</p>
+          <div class="ut-hero__actions" data-enter style="--d: 600">
+            <a class="ut-btn ut-btn--primary" href="/themist/">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+              Jouer à La Brume
+            </a>
+            <a class="ut-btn ut-btn--secondary" href="/themist/wiki.html">Lire le wiki</a>
+          </div>
+          <dl class="ut-facts" data-enter style="--d: 760">
+            <div><dt>formes jouables</dt><dd>4</dd></div>
+            <div><dt>sous-classes par forme</dt><dd>3</dd></div>
+            <div><dt>actes de descente</dt><dd>10</dd></div>
+            <div><dt>paliers de difficulté</dt><dd>3</dd></div>
+          </dl>
+        </div>
+
+        <div class="ut-scene" data-enter style="--d: 0">
+          <img src="/img/la-brume-tuile.jpg" width="538" height="660" alt="Un voyageur encapuchonné tient une lanterne dans la brume, sous la pleine lune, face à une citadelle lointaine." fetchpriority="high" decoding="async" />
+          <div class="ut-scene__veil" aria-hidden="true"></div>
+          <div class="ut-scene__glow" aria-hidden="true"></div>
+          <div class="ut-scene__mist" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Destinations : tout ce que contient le site, en un coup d'œil -->
+    <nav class="ut-wrap" aria-label="Sur Umbratech">
+      <div class="ut-dest">
+        <a href="/themist/" style="--c: var(--ut-brume)"><b>La Brume</b><span>Roguelite d’action, jouable maintenant</span></a>
+        <a href="/gw1/" style="--c: var(--ut-gw)"><b>Guild Wars 1</b><span><span data-count="1442">1 442</span> compétences, 10 professions</span></a>
+        <a href="/d4/" style="--c: var(--ut-d4)"><b>Diablo IV</b><span>Builds de saison traduits en français</span></a>
+        <a href="/vaelmor/" style="--c: var(--ut-vaelmor)"><b>Vaelmor</b><span>RPG tactique au tour par tour</span></a>
       </div>
     </nav>
 
-    <header class="hero">
-      <div class="eyebrow"><i></i> Guides &amp; builds</div>
-      <h1>Mes <em>projets</em> du moment</h1>
-      <p class="subtitle">
-        Retrouve mes configurations, conseils et guides pour <strong>Guild Wars 1</strong> et <strong>Diablo IV</strong>
-        en français, ainsi que mes jeux <strong>« La Brume »</strong> et <strong>« Vaelmor »</strong>.
-      </p>
-    </header>
-
-    <section class="category" id="guides" aria-labelledby="titre-guides">
-      <div class="category-head">
-        <h2 id="titre-guides">Builds &amp; guides</h2>
-        <p>Builds, compétences et conseils en français.</p>
-      </div>
-
-      <div class="tiles">
-      <a class="tile gw" href="/gw1/">
-        <div class="tile-bg" style="background-image: url('img/guild-wars-1.svg');" role="img" aria-label="Illustration d’un crépuscule doré sur des montagnes et une arche en ruine"></div>
-        <span class="tile-index">01</span>
-
-        <div class="tile-content">
-          <span class="game-tag">Guild Wars 1</span>
-          <h3>Builds Guild Wars 1</h3>
-          <p>Builds PvP et PvE, compétences, attributs, équipement et synergies d’équipe pour optimiser ton personnage.</p>
-
-          <div class="tile-footer">
-            <span class="build-meta">PvE · PvP · Team builds</span>
-            <span class="open-build">
-              Voir les builds
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-            </span>
-          </div>
+    <!-- 3. La boucle de jeu : une vraie séquence -->
+    <section class="ut-section" id="descente" aria-labelledby="titre-descente">
+      <div class="ut-wrap">
+        <div class="ut-head" data-reveal>
+          <h2 id="titre-descente">Une descente, puis la suivante</h2>
+          <p>Une partie dure le temps d’une descente. Tu gagnes ou tu tombes, puis tu relances, plus fort.</p>
         </div>
-      </a>
-
-      <a class="tile d4" href="/d4/">
-        <div class="tile-bg" style="background-image: url('img/diablo-4.svg');" role="img" aria-label="Illustration de flèches gothiques sous un ciel écarlate, entourées de braises"></div>
-        <span class="tile-index">02</span>
-
-        <div class="tile-content">
-          <span class="game-tag">Diablo IV</span>
-          <h3>Builds Diablo 4</h3>
-          <p>Builds de saison, compétences, aspects, Paragon et optimisation de farm pour progresser efficacement.</p>
-
-          <div class="tile-footer">
-            <span class="build-meta">Saison · Endgame · Farm</span>
-            <span class="open-build">
-              Voir les builds
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-            </span>
-          </div>
+        <div class="ut-loop-wrap">
+        <span class="ut-loop__line" aria-hidden="true"></span>
+        <ol class="ut-loop">
+          <li data-reveal style="--d: 0">
+            <h3>Choisis ta forme</h3>
+            <p>Lumenarque, Gouffre, Héraut du Glas ou Tisse-Destin : chacune a trois sous-classes et son arbre de talents.</p>
+          </li>
+          <li data-reveal style="--d: 120">
+            <h3>Descends</h3>
+            <p>Dix actes, trois paliers : Normal d’abord, puis Difficile et Extrême, qui s’ouvrent quand tu gagnes.</p>
+          </li>
+          <li data-reveal style="--d: 240">
+            <h3>Choisis ce que tu oublies</h3>
+            <p>Tu portes dix talents à la fois. Ce que tu laisses en route ne disparaît pas tout à fait.</p>
+          </li>
+          <li data-reveal style="--d: 360">
+            <h3>Reviens plus fort</h3>
+            <p>Chaque retour au Sanctuaire te rend plus fort, et la descente suivante t’attend.</p>
+          </li>
+        </ol>
         </div>
-      </a>
       </div>
     </section>
 
-    <section class="category" id="jeux" aria-labelledby="titre-jeux">
-      <div class="category-head">
-        <h2 id="titre-jeux">Mes jeux</h2>
-        <p>Des jeux indépendants à découvrir dans le navigateur.</p>
-      </div>
-
-      <div class="tiles">
-      <a class="tile brume" href="/themist/">
-        <div class="tile-bg" style="background-image: url('img/la-brume-tuile.jpg'); background-position: center 40%;" role="img" aria-label="Cover de La Brume : un voyageur encapuchonné avec une lanterne sous la pleine lune"></div>
-        <span class="tile-index">01</span>
-
-        <div class="tile-content">
-          <span class="game-tag">Jeu indé</span>
-          <h3>La Brume</h3>
-          <p>Mon jeu indépendant : un roguelite d’action dans les terres englouties. Chaque descente te rapproche du cœur de la Brume.</p>
-
-          <div class="tile-footer">
-            <span class="build-meta">Roguelite · Action · Prototype jouable</span>
-            <span class="open-build">
-              Découvrir le jeu
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-            </span>
-          </div>
+    <!-- 4. Preuve : le journal de développement, lu en direct -->
+    <section class="ut-section" aria-labelledby="titre-journal">
+      <div class="ut-wrap ut-journal-wrap">
+        <div class="ut-head" data-reveal>
+          <h2 id="titre-journal">Le jeu change presque chaque jour</h2>
+          <p>Les dernières versions de La Brume, telles qu’elles sont publiées dans son journal.</p>
+          <a class="ut-btn ut-btn--tertiary ut-journal-more" href="/themist/wiki.html#versions">Tout le journal dans le wiki</a>
         </div>
-      </a>
-
-      <a class="tile vaelmor" href="/vaelmor/">
-        <div class="tile-bg" style="background-image: url('img/vaelmor.svg');" role="img" aria-label="Illustration d’une citadelle engloutie sous un ciel violet, devant une grille de combat tactique où un héros fait face à un monstre"></div>
-        <span class="tile-index">02</span>
-
-        <div class="tile-content">
-          <span class="game-tag">Jeu indé</span>
-          <h3>Vaelmor</h3>
-          <p>RPG tactique au tour par tour en monde ouvert : explore l’île de Vaelmor, combats sur grille et affronte le Roi-Marée Brisé.</p>
-
-          <div class="tile-footer">
-            <span class="build-meta">Tour par tour · Monde ouvert · Prototype</span>
-            <span class="open-build">
-              Découvrir le jeu
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-            </span>
-          </div>
-        </div>
-      </a>
+        <ol class="ut-journal" id="journal" aria-busy="true" aria-live="polite" data-reveal>
+          <li><time datetime="2026-11-03">3 novembre 2026</time><div><strong>v18.8</strong><p>Préparation du combat final : le Brumeux reprend un vieil ouvrage.</p></div></li>
+          <li><time datetime="2026-11-02">2 novembre 2026</time><div><strong>v18.7</strong><p>Préparation du combat final : le Brumeux apprend à se servir de ce qu’il trouve sur ton chemin.</p></div></li>
+          <li><time datetime="2026-11-02">2 novembre 2026</time><div><strong>v18.6</strong><p>Préparation du combat final : le Brumeux apprend à se souvenir de ta descente.</p></div></li>
+        </ol>
       </div>
     </section>
 
-    <footer>
-      <span>© <span id="year">2026</span> Umbratech</span>
-      <span>Guides non officiels · Guild Wars et Diablo sont des marques de leurs propriétaires respectifs.</span>
-    </footer>
+    <!-- 5. Guides et autres projets -->
+    <section class="ut-section" id="guides" aria-labelledby="titre-guides">
+      <div class="ut-wrap">
+        <div class="ut-head" data-reveal>
+          <h2 id="titre-guides">Builds et guides, en français</h2>
+          <p>Deux outils pour préparer ton personnage, sans quitter le navigateur.</p>
+        </div>
+
+        <div class="ut-showcase">
+          <a class="ut-card ut-feature" href="/gw1/" style="--c: var(--ut-gw)" data-reveal>
+            <span class="ut-feature__art" style="background-image: url('/img/guild-wars-1.svg')" role="img" aria-label="Crépuscule doré sur des montagnes et une arche en ruine"></span>
+            <span class="ut-feature__top" aria-hidden="true"></span>
+            <span class="ut-feature__body">
+              <span class="ut-feature__kind">Guild Wars 1</span>
+              <h3>Constructeur de barres de compétences</h3>
+              <p>Les 1 442 compétences des 10 professions, le code de modèle à copier dans le jeu et les builds de la communauté.</p>
+              <ul class="ut-tags" aria-label="Contenu">
+                <li class="ut-tag">PvE</li><li class="ut-tag">PvP</li><li class="ut-tag">Builds d’équipe</li>
+              </ul>
+              <span class="ut-feature__go">Ouvrir le constructeur <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></span>
+            </span>
+          </a>
+
+          <a class="ut-card ut-feature" href="/d4/" style="--c: var(--ut-d4); --d: 120" data-reveal>
+            <span class="ut-feature__art" style="background-image: url('/img/diablo-4.svg')" role="img" aria-label="Flèches gothiques sous un ciel écarlate, entourées de braises"></span>
+            <span class="ut-feature__top" aria-hidden="true"></span>
+            <span class="ut-feature__body">
+              <span class="ut-feature__kind">Diablo IV</span>
+              <h3>Grimoire de Sanctuaire</h3>
+              <p>Les builds de saison traduits : équipement, gemmes, runes, Parangon, tier list et tables de butin.</p>
+              <ul class="ut-tags" aria-label="Contenu">
+                <li class="ut-tag">Saison</li><li class="ut-tag">Endgame</li><li class="ut-tag">Planificateur</li>
+              </ul>
+              <span class="ut-feature__go">Voir les builds <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></span>
+            </span>
+          </a>
+
+          <a class="ut-card ut-feature ut-feature--wide" href="/vaelmor/" style="--c: var(--ut-vaelmor)" data-reveal>
+            <span class="ut-feature__art" style="background-image: url('/img/vaelmor.svg')" role="img" aria-label="Citadelle engloutie sous un ciel violet, devant une grille de combat tactique"></span>
+            <span class="ut-feature__top" aria-hidden="true"></span>
+            <span class="ut-feature__body">
+              <span class="ut-feature__kind">Aussi en chantier</span>
+              <h3>Vaelmor</h3>
+              <p>RPG tactique au tour par tour en monde ouvert : explore l’île de Vaelmor, combats sur grille et affronte le Roi-Marée Brisé.</p>
+              <span class="ut-feature__go">Découvrir le prototype <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></span>
+            </span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Ce qui distingue le site -->
+    <section class="ut-section" aria-labelledby="titre-pourquoi">
+      <div class="ut-wrap">
+        <div class="ut-head" data-reveal>
+          <h2 id="titre-pourquoi">Fait pour jouer, pas pour attendre</h2>
+        </div>
+        <ul class="ut-why">
+          <li data-reveal>
+            <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="28" height="22" rx="4" /><path d="M4 13h28" /><path d="M15 18.5v6l5-3z" fill="currentColor" stroke="none" /></svg>
+            <h3>Rien à installer</h3>
+            <p>Les jeux et les outils s’ouvrent dans le navigateur : un lien suffit pour lancer une descente ou monter un build.</p>
+          </li>
+          <li data-reveal style="--d: 120">
+            <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9h24v15H15l-6 5v-5H6z" /><path d="M12 14.5h12M12 19h7" /></svg>
+            <h3>Tout en français</h3>
+            <p>Compétences, objets, builds et jeux sont écrits ou traduits en français, du nom des runes au texte des talents.</p>
+          </li>
+          <li data-reveal style="--d: 240">
+            <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M29 18a11 11 0 1 1-3.2-7.8" /><path d="M29 6v6h-6" /><path d="M18 12v6l4 3" /></svg>
+            <h3>Suivi de près</h3>
+            <p>Chaque évolution de La Brume a sa ligne dans le journal : tu sais toujours ce qui vient de changer.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 7. Appel final -->
+    <section class="ut-section" aria-labelledby="titre-final">
+      <div class="ut-wrap">
+        <div class="ut-final" data-reveal>
+          <h2 id="titre-final">Garde ta lanterne allumée.</h2>
+          <p>La prochaine descente commence quand tu veux. Pas de compte à créer, pas de téléchargement.</p>
+          <div class="ut-hero__actions">
+            <a class="ut-btn ut-btn--primary" href="/themist/">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+              Jouer à La Brume
+            </a>
+            <a class="ut-btn ut-btn--secondary" href="#guides">Voir les builds</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Questions -->
+    <section class="ut-section" id="questions" aria-labelledby="titre-faq">
+      <div class="ut-wrap ut-faq-wrap">
+        <div class="ut-head" data-reveal>
+          <h2 id="titre-faq">Questions fréquentes</h2>
+        </div>
+        <div class="ut-faq" data-reveal>
+          <details>
+            <summary>Faut-il installer quelque chose ?</summary>
+            <div class="ut-faq__a"><p>Non. La Brume, Vaelmor et les deux outils de builds s’ouvrent directement dans le navigateur.</p></div>
+          </details>
+          <details>
+            <summary>Peut-on jouer à La Brume sur téléphone ?</summary>
+            <div class="ut-faq__a"><p>La Brume se joue au clavier et à la souris, donc sur ordinateur. Les guides Guild Wars 1 et Diablo IV, eux, s’utilisent aussi sur téléphone.</p></div>
+          </details>
+          <details>
+            <summary>La Brume est-elle terminée ?</summary>
+            <div class="ut-faq__a"><p>Pas encore : c’est un prototype jouable, en développement. Le <a href="/themist/wiki.html#versions">journal des versions</a> liste chaque évolution, et le combat final est en préparation.</p></div>
+          </details>
+          <details>
+            <summary>D’où viennent les données des guides ?</summary>
+            <div class="ut-faq__a"><p>Le constructeur Guild Wars 1 s’appuie sur la base de <a href="https://www.gwiki.fr/" rel="noopener">GWiki</a> (licence GFDL). Le Grimoire de Sanctuaire traduit en français les builds de Mobalytics pour Diablo IV.</p></div>
+          </details>
+          <details>
+            <summary>Les guides sont-ils officiels ?</summary>
+            <div class="ut-faq__a"><p>Non. Ce sont des guides de fan, indépendants d’ArenaNet et de Blizzard. Guild Wars et Diablo sont des marques de leurs propriétaires respectifs.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script>
-    document.getElementById("year").textContent = new Date().getFullYear();
-  </script>
+  <footer class="ut-footer">
+    <div class="ut-wrap">
+      <div class="ut-footer__grid">
+        <div class="ut-footer__about">
+          <a class="ut-brand" href="/">
+            <span class="ut-brand__mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v9a6 6 0 0 0 12 0V4" /></svg>
+            </span>
+            Umbratech
+          </a>
+          <p>Des jeux indépendants et des guides en français, à ouvrir dans le navigateur.</p>
+        </div>
+        <nav aria-labelledby="pied-jeux">
+          <h2 id="pied-jeux">Jeux</h2>
+          <ul>
+            <li><a href="/themist/">La Brume</a></li>
+            <li><a href="/themist/wiki.html">Wiki de La Brume</a></li>
+            <li><a href="/vaelmor/">Vaelmor</a></li>
+          </ul>
+        </nav>
+        <nav aria-labelledby="pied-guides">
+          <h2 id="pied-guides">Guides</h2>
+          <ul>
+            <li><a href="/gw1/">Builds Guild Wars 1</a></li>
+            <li><a href="/d4/">Builds Diablo IV</a></li>
+          </ul>
+        </nav>
+        <nav aria-labelledby="pied-site">
+          <h2 id="pied-site">Sur cette page</h2>
+          <ul>
+            <li><a href="#descente">La descente</a></li>
+            <li><a href="#guides">Builds &amp; guides</a></li>
+            <li><a href="#questions">Questions</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="ut-footer__legal">
+        <span>© <span data-year>2026</span> Umbratech</span>
+        <span>Guides non officiels · Guild Wars et Diablo sont des marques de leurs propriétaires respectifs.</span>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

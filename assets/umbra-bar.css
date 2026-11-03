@@ -1,0 +1,53 @@
+/* ==========================================================================
+   Umbratech · barre de navigation commune des sous-pages (guides, wiki…)
+   Autonome : ne pose rien sur :root ni sur les éléments de la page hôte.
+   Tout est rangé sous .ut-bar, les tokens y sont redéclarés (mêmes valeurs
+   que assets/umbra.css), pour ne jamais toucher à l'identité du guide.
+   Usage : <link rel="stylesheet" href="/assets/umbra-bar.css">
+   puis le bloc <nav class="ut-bar"> juste après <body> (voir _dev/DIRECTION-ARTISTIQUE.md, § 4).
+   ========================================================================== */
+@font-face { font-family: "Umbra Instrument"; src: url("/assets/fonts/instrument-sans-400.woff") format("woff"); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: "Umbra Instrument"; src: url("/assets/fonts/instrument-sans-700.woff") format("woff"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "Umbra Outfit"; src: url("/assets/fonts/outfit-700.woff") format("woff"); font-weight: 600 800; font-display: swap; }
+
+.ut-bar {
+  --ut-void: #05060a; --ut-text: #eef1f6; --ut-muted: #a3acbc; --ut-pale: #f3f6ff;
+  --ut-line: rgba(238, 241, 246, 0.10);
+  --ut-grad: linear-gradient(100deg, #9c84ff 0%, #3edbf0 62%, #f3f6ff 100%);
+  --ut-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative; z-index: 30;
+  display: flex; align-items: center; gap: 16px;
+  min-height: 52px; padding: 6px max(16px, env(safe-area-inset-left)) 6px max(16px, env(safe-area-inset-right));
+  background: rgba(5, 6, 10, 0.92);
+  border-bottom: 1px solid var(--ut-line);
+  color: var(--ut-text);
+  font: 500 14px/1.2 "Umbra Instrument", "Segoe UI", system-ui, -apple-system, sans-serif;
+  letter-spacing: 0; text-transform: none;
+  -webkit-font-smoothing: antialiased;
+}
+/* Page dont le <body> garde la marge par défaut du navigateur (8 px) : la barre va quand même d'un bord à l'autre */
+.ut-bar--bleed { margin: -8px -8px 8px; }
+.ut-bar *, .ut-bar *::before, .ut-bar *::after { box-sizing: border-box; }
+.ut-bar a { color: inherit; text-decoration: none; }
+.ut-bar a:focus-visible { outline: 2px solid #3edbf0; outline-offset: 2px; border-radius: 6px; }
+
+.ut-bar__brand { display: inline-flex; align-items: center; gap: 10px; margin-right: auto; font: 700 15px/1 "Umbra Outfit", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.02em; color: var(--ut-text) !important; }
+.ut-bar__mark { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--ut-grad); }
+.ut-bar__mark svg { width: 13px; height: 13px; display: block; }
+
+.ut-bar__nav { display: flex; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.ut-bar__nav a { display: block; padding: 8px 12px; border-radius: 999px; color: var(--ut-muted) !important; transition: color 0.16s, background-color 0.16s; }
+.ut-bar__nav a:hover { color: var(--ut-text) !important; background: rgba(238, 241, 246, 0.06); }
+.ut-bar__nav a[aria-current="page"] { color: var(--ut-text) !important; background: rgba(238, 241, 246, 0.08); }
+
+.ut-bar__cta {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 8px 14px; border-radius: 999px;
+  background: var(--ut-pale); color: var(--ut-void) !important; font-weight: 700; font-size: 13px; white-space: nowrap;
+  box-shadow: 0 0 0 1px rgba(62, 219, 240, 0.25), 0 6px 22px rgba(156, 132, 255, 0.28);
+  transition: transform 0.16s var(--ut-ease), box-shadow 0.32s var(--ut-ease);
+}
+.ut-bar__cta:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(62, 219, 240, 0.4), 0 8px 28px rgba(156, 132, 255, 0.45); }
+
+@media (max-width: 760px) { .ut-bar__nav { display: none; } }
+@media (prefers-reduced-motion: reduce) { .ut-bar * { transition: none !important; } }
+@media print { .ut-bar { display: none; } }
