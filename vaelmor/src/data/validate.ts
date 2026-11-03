@@ -11,6 +11,7 @@ import {
   CLASS_ROLES,
   balanceFileSchema,
   encountersFileSchema,
+  endingsFileSchema,
   itemsFileSchema,
   classesFileSchema,
   elementsFileSchema,
@@ -26,6 +27,7 @@ import {
   type ClassDef,
   type ElementDef,
   type EncountersFile,
+  type EndingsFile,
   type EnemyDef,
   type ReputationConfig,
   type WeaponDef,
@@ -47,7 +49,7 @@ import {
 import { alliesFileSchema, type AllyTemplateDef, type AllyVillageDef, type WandererDef } from './allySchemas';
 import { companyFileSchema, type CompanyFile } from './companySchemas';
 import { battleQuotesFileSchema, enemiesWithNamedFileSchema, type NamedEnemyDef, type SceneDef } from './talkSchemas';
-import { checkTalk } from './talkChecks';
+import { characterIds, checkTalk } from './talkChecks';
 
 z.config(z.locales.fr());
 
@@ -69,6 +71,7 @@ export const DATA_SCHEMAS = {
   allies: alliesFileSchema,
   company: companyFileSchema,
   battleQuotes: battleQuotesFileSchema,
+  endings: endingsFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -116,6 +119,8 @@ export interface GameData {
   readonly named: readonly NamedEnemyDef[];
   /** Scènes des dialogues de combat (`battleQuotes.json`). */
   readonly scenes: readonly SceneDef[];
+  /** Fins de l'histoire (`endings.json`, n°196). */
+  readonly endings: EndingsFile;
 }
 
 export type ValidationResult =
@@ -259,6 +264,7 @@ function crossCheck(data: GameData): string[] {
   checkSkills(data, issues);
   checkAllies(data, issues);
   checkTalk(data, issues);
+  checkEndings(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -444,6 +450,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     allies: z.infer<typeof alliesFileSchema>;
     company: z.infer<typeof companyFileSchema>;
     battleQuotes: z.infer<typeof battleQuotesFileSchema>;
+    endings: z.infer<typeof endingsFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -471,6 +478,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     company: files.company,
     named: files.enemies.named,
     scenes: files.battleQuotes.scenes,
+    endings: files.endings,
   };
 
   const crossIssues = crossCheck(data);
@@ -548,8 +556,10 @@ function checkTowns(data: GameData, issues: string[]): void {
       if (e.type === 'item' && !itemIds.has(e.item ?? '')) issues.push(`${at} : objet inconnu « ${e.item} »`);
     }
   };
-  const checkCond = (at: string, c: { quest?: string; recruited?: string } | undefined): void => {
+  const namedIds = new Set(data.named.map((n) => n.id));
+  const checkCond = (at: string, c: { quest?: string; recruited?: string; named?: { id: string } } | undefined): void => {
     if (c?.quest !== undefined && !questIds.has(c.quest)) issues.push(`${at}.when : quête inconnue « ${c.quest} »`);
+    if (c?.named !== undefined && !namedIds.has(c.named.id)) issues.push(`${at}.when : ennemi nommé inconnu « ${c.named.id} »`);
   };
 
   for (const loc of data.locations) {
@@ -577,6 +587,10 @@ function checkTowns(data: GameData, issues: string[]): void {
       if (previous !== undefined) issues.push(`${file} › PNJ « ${npc.id} » en double (déjà dans ${previous})`);
       npcIds.set(npc.id, loc.id);
       checkLines(`${at}.greeting`, npc.greeting);
+      (npc.greetings ?? []).forEach((g, i) => {
+        checkCond(`${at}.greetings[${i}]`, g.when);
+        checkLines(`${at}.greetings[${i}].lines`, g.lines);
+      });
       npc.options.forEach((o, i) => {
         const oat = `${at}.options[${i}]`;
         checkCond(oat, o.when);
@@ -823,4 +837,26 @@ function checkAllies(data: GameData, issues: string[]): void {
       else for (const e of option.effects ?? []) if (e.type === 'item' && !items.has(e.item)) issues.push(`${at} : objet inconnu « ${e.item} »`);
     }
   }
+}
+
+/** Fins (n°196) : le drapeau final est levé par une rencontre, les réputations existent, la dernière fin est la fin par défaut. */
+function checkEndings(data: GameData, issues: string[]): void {
+  const file = 'endings.json';
+  const { finalFlag, endings } = data.endings;
+  if (!data.encounters.encounters.some((e) => e.victoryFlags.includes(finalFlag))) issues.push(`${file} › finalFlag « ${finalFlag} » n'est levé par aucune rencontre`);
+  checkUniqueIds(file, 'fin', endings, issues);
+  const repTargets = new Set([...data.locations.filter((l) => l.reputation).map((l) => l.id), ...data.factions.map((f) => f.id)]);
+  const chars = characterIds(data);
+  const flags = new Set<string>();
+  endings.forEach((e, i) => {
+    const at = `${file} › « ${e.id} »`;
+    if (flags.has(e.flag)) issues.push(`${at}.flag : drapeau « ${e.flag} » déjà pris par une autre fin`);
+    flags.add(e.flag);
+    for (const r of e.when?.rep ?? []) {
+      if (!repTargets.has(r.target)) issues.push(`${at}.when.rep : réputation inconnue « ${r.target} »`);
+      if (r.tierMin === undefined && r.tierMax === undefined) issues.push(`${at}.when.rep : « ${r.target} » sans tierMin ni tierMax`);
+    }
+    if (e.when?.aliveDeployed !== undefined && !chars.has(e.when.aliveDeployed)) issues.push(`${at}.when.aliveDeployed : personnage inconnu « ${e.when.aliveDeployed} »`);
+    if (i === endings.length - 1 && e.when !== undefined) issues.push(`${at} : la dernière fin est la fin par défaut, sans condition`);
+  });
 }

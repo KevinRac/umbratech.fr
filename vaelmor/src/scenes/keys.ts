@@ -11,6 +11,7 @@ export const SCENES = {
   battleHud: 'BattleHud',
   saves: 'Saves',
   account: 'Account',
+  ending: 'Ending',
   debug: 'Debug',
 } as const;
 

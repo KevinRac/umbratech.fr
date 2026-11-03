@@ -858,3 +858,38 @@ export type ArmorKind = (typeof ARMOR_KINDS)[number];
 export type EncounterDef = z.infer<typeof encounterSchema>;
 export type PartyMemberDef = z.infer<typeof partyMemberSchema>;
 export type EncountersFile = z.infer<typeof encountersFileSchema>;
+
+/* ---------- Fins de l'histoire (jalon M7, décision n°196) ---------- */
+
+const endingRepSchema = z.strictObject({
+  target: idSchema,
+  tierMin: z.enum(['hostile', 'mefiant', 'neutre', 'amical', 'allie', 'heros_local']).optional(),
+  tierMax: z.enum(['hostile', 'mefiant', 'neutre', 'amical', 'allie', 'heros_local']).optional(),
+});
+
+export const endingSchema = z.strictObject({
+  id: idSchema,
+  title: z.string().min(1),
+  subtitle: z.string().min(1),
+  /** Drapeau levé quand cette fin est obtenue (`fin_*`). */
+  flag: idSchema,
+  /** Conditions (toutes) ; absente : fin par défaut. */
+  when: z
+    .strictObject({
+      rep: z.array(endingRepSchema).min(1).optional(),
+      /** Unité déployée et debout à la fin du combat final. */
+      aliveDeployed: idSchema.optional(),
+    })
+    .optional(),
+  lines: z.array(z.string().min(1)).min(1).max(8),
+});
+
+export const endingsFileSchema = z.strictObject({
+  $comment: comment,
+  /** Drapeau de victoire du boss final : le combat qui le lève déclenche la fin. */
+  finalFlag: idSchema,
+  endings: z.array(endingSchema).min(1),
+});
+
+export type EndingDef = z.infer<typeof endingSchema>;
+export type EndingsFile = z.infer<typeof endingsFileSchema>;

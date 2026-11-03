@@ -66,6 +66,8 @@ export const conditionSchema = z.strictObject({
   questStatus: z.enum(QUEST_STATUSES).optional(),
   gold: z.number().int().min(0).optional(),
   recruited: idSchema.optional(),
+  /** Sort d'un ennemi nommé dans la partie (jalon M7, n°201) : recruté, vaincu, perdu, ou « pending » (sort non réglé). */
+  named: z.strictObject({ id: idSchema, status: z.enum(['recruited', 'defeated', 'lost', 'pending']) }).optional(),
 });
 export type Condition = z.infer<typeof conditionSchema>;
 
@@ -237,6 +239,12 @@ export const npcSchema = z.strictObject({
   portrait: portraitSchema,
   /** Ce qu'il dit en premier, selon le palier de réputation du lieu. */
   greeting: linesSchema,
+  /**
+   * Saluts conditionnés (jalon M7, n°201) : le premier dont `when` est vraie
+   * remplace `greeting` (l'arc d'une recrue : Nessa après avoir retrouvé son
+   * père, Marthe après le retour de Hobb…). `expression` : celle du portrait.
+   */
+  greetings: z.array(z.strictObject({ when: conditionSchema, lines: linesSchema, expression: z.enum(EXPRESSIONS).optional() })).optional(),
   options: z.array(optionSchema),
   /** Vrai : à l'état « hostile », il ne propose plus rien (les gardes, les marchands). */
   refusesWhenHostile: z.boolean().optional(),

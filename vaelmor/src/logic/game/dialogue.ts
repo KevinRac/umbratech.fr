@@ -51,6 +51,10 @@ export function conditionMet(ctx: GameCtx, c: Condition | undefined, tier: TierI
   if (c.quest && !c.questStatus && questStatus(ctx, c.quest) === 'available') return false;
   if (c.gold !== undefined && ctx.progress.gold < c.gold) return false;
   if (c.recruited && !ctx.progress.recruited.includes(c.recruited)) return false;
+  if (c.named) {
+    const status = ctx.progress.named[c.named.id];
+    if (c.named.status === 'pending' ? status !== undefined : status !== c.named.status) return false;
+  }
   return true;
 }
 
@@ -119,6 +123,9 @@ export interface Greeting {
 
 export function greetingFor(ctx: GameCtx, npc: NpcDef): Greeting {
   const tier = tierAt(ctx, npcLocationId(ctx, npc.id));
+  // Salut conditionné (n°201) : le premier dont la condition tient l'emporte sur le salut par palier.
+  const variant = (npc.greetings ?? []).find((g) => conditionMet(ctx, g.when, tier));
+  if (variant) return { pages: pickLines(variant.lines, tier), expression: variant.expression ?? expressionFor(tier) };
   return { pages: pickLines(npc.greeting, tier), expression: expressionFor(tier) };
 }
 

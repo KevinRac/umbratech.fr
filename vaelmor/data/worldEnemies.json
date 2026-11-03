@@ -72,9 +72,10 @@
       "kind": "sentinelle",
       "zone": "z1",
       "at": [96, 70],
-      "sprite": "ecumeur_sabreur",
+      "sprite": "ecumeur_incendiaire",
       "encounter": "sentinelles_ecumeurs",
-      "facing": "s"
+      "facing": "s",
+      "named": "gorm"
     },
     {
       "id": "z1_brakk",
@@ -92,6 +93,16 @@
       "sprite": "milicien",
       "roam": 3,
       "town": "haut_gue"
+    },
+    {
+      "id": "z1_poste_rik",
+      "kind": "patrouille",
+      "zone": "z1",
+      "at": [95, 67],
+      "sprite": "ecumeur_sabreur",
+      "encounter": "patrouille_ecumeurs",
+      "path": [[95, 67], [99, 67], [99, 69], [95, 69]],
+      "named": "rik"
     },
     {
       "id": "z2_patrouille_chasseurs",

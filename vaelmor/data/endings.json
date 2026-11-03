@@ -1,0 +1,50 @@
+{
+  "$comment": "Fins de l'histoire (jalon M7, décision n°196, bible §4). `finalFlag` : drapeau de victoire du boss final (Orvane) ; quand un combat le lève, la fin est choisie parmi `endings`, dans l'ordre, la première dont `when` est vraie (la dernière n'a pas de condition : c'est la fin par défaut). `when` : `rep` (paliers minimaux ou maximaux d'une réputation), `aliveDeployed` (unité déployée et debout à la fin du combat). Chaque fin lève son `flag` (`fin_*`), affiche `title`, `subtitle` et ses `lines` sur l'écran de fin, puis le jeu continue (le jeu reste jouable après la fin).",
+  "finalFlag": "boss_orvane",
+  "endings": [
+    {
+      "id": "lanterne",
+      "title": "La lanterne",
+      "subtitle": "Le pacte renouvelé",
+      "flag": "fin_lanterne",
+      "when": { "rep": [{ "target": "marees", "tierMin": "amical" }], "aliveDeployed": "rhyel" },
+      "lines": [
+        "La Brume se retire des salles englouties comme une marée qu'on a enfin payée.",
+        "Rhyel tient la main de son grand-père jusqu'à ce qu'elle devienne de l'eau.",
+        "Vous descendez au récif. La dernière lanterne s'allume d'elle-même entre vos doigts.",
+        "Vous la posez. La mer la prend, doucement, et la garde allumée.",
+        "Au matin, Port-Brume voit le phare briller sans que personne ne l'ait rallumé.",
+        "Sur Vaelmor, on recommence à offrir des lumières. Plus jamais des vies."
+      ]
+    },
+    {
+      "id": "digue",
+      "title": "La digue",
+      "subtitle": "La Couronne scelle la mer",
+      "flag": "fin_digue",
+      "when": { "rep": [{ "target": "couronne", "tierMin": "allie" }, { "target": "marees", "tierMax": "neutre" }] },
+      "lines": [
+        "Orvane tombe, et la Brume reflue. La Régente n'attend pas la marée suivante.",
+        "Des canons de cendre ferment la chaussée ; des pierres comblent les salles englouties.",
+        "On ne parle plus de pacte à Valcendre. On parle de murs.",
+        "La mer gronde derrière la digue. Les Veilleurs disent qu'elle compte les hivers.",
+        "Votre lanterne reste éteinte. On vous l'a reprise pour la mettre sous verre.",
+        "Vaelmor est sauvée. Personne n'ose dire pour combien de temps."
+      ]
+    },
+    {
+      "id": "nuit_basse",
+      "title": "La nuit basse",
+      "subtitle": "La mer se retire",
+      "flag": "fin_nuit_basse",
+      "lines": [
+        "Orvane s'effondre sans un mot. La Brume ne reflue pas : elle s'immobilise.",
+        "La mer se retire, lentement, comme la Nuit Basse, il y a quarante et un ans.",
+        "Au récif, la dernière lanterne reste froide entre vos doigts. Personne ne l'a reconnue.",
+        "Les villages rallument leurs feux et attendent. Ils ont appris à attendre.",
+        "Un jour la marée reviendra. Un autre devra descendre au récif, avec une lumière.",
+        "Vous gardez la lanterne. On ne sait jamais."
+      ]
+    }
+  ]
+}

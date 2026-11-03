@@ -8,8 +8,9 @@ import { loadGameData } from '../src/data';
 import { characterIds } from '../src/data/talkChecks';
 import { figureLinked, planAllies, type VillageArea } from '../src/logic/game/allyRules';
 import { companyFull, joinCompany } from '../src/logic/game/companyRules';
-import { conditionMet, selectOption, visibleOptions } from '../src/logic/game/dialogue';
+import { conditionMet, greetingFor, selectOption, visibleOptions } from '../src/logic/game/dialogue';
 import { chooseEncounter, foePresent, foeSpriteOf, namedAtPost } from '../src/logic/game/foeRules';
+import { chooseEnding, endingReached, settleEnding } from '../src/logic/game/ending';
 import { newProgress } from '../src/logic/game/progress';
 import { Rng } from '../src/logic/rng';
 import { buildBattle, findEncounter } from '../src/logic/tactics/encounter';
@@ -27,10 +28,21 @@ const makeCtx = (): GameCtx => ({ data, index, progress: newProgress({ balance: 
 describe('nommés aux postes du monde (n°193)', () => {
   const posts = data.worldFoes.filter((f) => f.named !== undefined);
 
-  it('chaque nommé non boss de la bible tient un poste, sauf Rik et Gorm (apparition au hasard seulement)', () => {
+  it('chaque nommé non boss de la bible tient un poste (vigie, ou patrouille pour Rik)', () => {
     const held = posts.map((f) => f.named).sort();
-    expect(held).toEqual(['alderic', 'aldo', 'drak', 'hakon', 'hobb', 'ilse', 'maelis', 'orsen', 'oswin', 'veilleur_de_pierre']);
-    for (const f of posts) expect(f.kind).toBe('sentinelle');
+    expect(held).toEqual(['alderic', 'aldo', 'drak', 'gorm', 'hakon', 'hobb', 'ilse', 'maelis', 'orsen', 'oswin', 'rik', 'veilleur_de_pierre']);
+    for (const f of posts) expect(f.kind === 'sentinelle' || f.named === 'rik').toBe(true);
+  });
+
+  it('le poste d’un Écho de quête attend la fin de sa quête (Rik après « Le colporteur perdu »)', () => {
+    const post = posts.find((f) => f.named === 'rik') as (typeof posts)[number];
+    const ctx = makeCtx();
+    expect(foePresent(ctx, post)).toBe(false);
+    ctx.progress.quests['colporteur_perdu'] = 'done';
+    expect(foePresent(ctx, post)).toBe(true);
+    // Un poste sans condition (Gorm) est là dès le départ ; Maëlis (`pop: false`) aussi.
+    expect(foePresent(makeCtx(), posts.find((f) => f.named === 'gorm') as (typeof posts)[number])).toBe(true);
+    expect(foePresent(makeCtx(), posts.find((f) => f.named === 'maelis') as (typeof posts)[number])).toBe(true);
   });
 
   it('le poste porte le sprite d’Écho du nommé et l’ajoute à sa rencontre au niveau du plus fort + 1', () => {
@@ -263,5 +275,78 @@ describe('scènes écrites (n°203)', () => {
       expect(s.lines.length, s.id).toBeLessThanOrEqual(5);
       for (const l of [...s.lines, ...(s.onFail ?? [])]) expect(l.text.length, `${s.id} : ${l.text}`).toBeLessThanOrEqual(140);
     }
+  });
+});
+
+describe('fins de l’histoire (n°196)', () => {
+  const ctxWith = (reps: Record<string, number>): GameCtx => {
+    const ctx = makeCtx();
+    for (const [k, v] of Object.entries(reps)) ctx.progress.reputation[k] = v;
+    return ctx;
+  };
+
+  it('la lanterne : Marées ≥ Amical et Rhyel déployé debout ; sinon la digue si Couronne ≥ Allié et Marées < Amical ; sinon la nuit basse', () => {
+    expect(chooseEnding(ctxWith({ marees: 30 }), ['heros', 'rhyel']).id).toBe('lanterne');
+    expect(chooseEnding(ctxWith({ marees: 30 }), ['heros']).id).toBe('nuit_basse');
+    expect(chooseEnding(ctxWith({ marees: 30, couronne: 60 }), ['heros']).id).toBe('nuit_basse');
+    expect(chooseEnding(ctxWith({ marees: 10, couronne: 60 }), ['heros', 'rhyel']).id).toBe('digue');
+    expect(chooseEnding(ctxWith({ marees: -30, couronne: 90 }), []).id).toBe('digue');
+    expect(chooseEnding(ctxWith({}), []).id).toBe('nuit_basse');
+  });
+
+  it('seule la victoire sur Orvane règle une fin ; elle lève son drapeau une seule fois', () => {
+    const ctx = ctxWith({ marees: 40 });
+    expect(settleEnding(ctx, { victoryFlags: ['boss_brakk'], aliveDeployed: ['heros'] })).toBeNull();
+    const first = settleEnding(ctx, { victoryFlags: ['boss_orvane'], aliveDeployed: ['heros', 'rhyel'] });
+    expect(first?.id).toBe('lanterne');
+    expect(ctx.flags).toContain('fin_lanterne');
+    expect(endingReached(data, ctx.flags)?.id).toBe('lanterne');
+    expect(settleEnding(ctx, { victoryFlags: ['boss_orvane'], aliveDeployed: [] })).toBeNull();
+  });
+
+  it('les fins sont des données : le drapeau final est celui de la rencontre d’Orvane, la dernière fin est la fin par défaut', () => {
+    expect(data.endings.finalFlag).toBe('boss_orvane');
+    expect(findEncounter(data, 'roi_maree_brise').victoryFlags).toContain(data.endings.finalFlag);
+    expect(data.endings.endings.map((e) => e.id)).toEqual(['lanterne', 'digue', 'nuit_basse']);
+    expect(data.endings.endings[2]?.when).toBeUndefined();
+  });
+});
+
+describe('saluts de village selon l’arc des recrues (n°201)', () => {
+  const npc = (id: string) => data.locations.flatMap((l) => l.npcs).find((n) => n.id === id) as NonNullable<ReturnType<typeof data.locations.flatMap<(typeof data.locations)[number]['npcs'][number]>>[number]>;
+
+  it('chaque PNJ qui a un lien avec un nommé ou un boss change de salut après l’événement', () => {
+    const withVariants = data.locations.flatMap((l) => l.npcs).filter((n) => (n.greetings ?? []).length > 0).map((n) => n.id);
+    expect(withVariants.length).toBeGreaterThanOrEqual(20);
+    for (const id of ['maelys', 'thom', 'ilar', 'sylve', 'orin', 'dorn', 'marthe', 'hild', 'voss', 'dax', 'ysmene']) expect(withVariants).toContain(id);
+  });
+
+  it('Marthe salue selon le sort de Hobb ; Ilar selon celui de Rik ; Thom après Gorm', () => {
+    const ctx = makeCtx();
+    const base = greetingFor(ctx, npc('marthe')).pages[0];
+    ctx.progress.named['hobb'] = 'recruited';
+    const back = greetingFor(ctx, npc('marthe'));
+    expect(back.pages[0]).not.toBe(base);
+    expect(back.pages[0]).toContain('Hobb');
+    expect(back.expression).toBe('content');
+    ctx.progress.named['hobb'] = 'lost';
+    expect(greetingFor(ctx, npc('marthe')).expression).toBe('triste');
+    expect(greetingFor(makeCtx(), npc('ilar')).pages[0]).not.toContain('Rik');
+    ctx.progress.named['rik'] = 'recruited';
+    expect(greetingFor(ctx, npc('ilar')).pages[0]).toContain('Rik');
+    ctx.progress.named['gorm'] = 'defeated';
+    expect(greetingFor(ctx, npc('thom')).pages[0]).toContain('Gorm');
+  });
+
+  it('les drapeaux de boss et de fin changent les saluts ; le premier salut vrai l’emporte', () => {
+    const ctx = makeCtx();
+    ctx.flags.push('boss_brakk');
+    expect(greetingFor(ctx, npc('maelys')).pages[0]).toContain('Brakk');
+    ctx.flags.push('fin_lanterne');
+    expect(greetingFor(ctx, npc('maelys')).pages[0]).toContain('lanterne');
+    expect(greetingFor(ctx, npc('ysmene')).pages[0]).toContain('pacte');
+    expect(conditionMet(ctx, { named: { id: 'hobb', status: 'pending' } }, 'neutre')).toBe(true);
+    ctx.progress.named['hobb'] = 'defeated';
+    expect(conditionMet(ctx, { named: { id: 'hobb', status: 'pending' } }, 'neutre')).toBe(false);
   });
 });

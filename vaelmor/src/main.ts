@@ -18,6 +18,7 @@ import { MenuScene } from './scenes/MenuScene';
 import { ClassSelectScene } from './scenes/ClassSelectScene';
 import { SaveScene } from './scenes/SaveScene';
 import { AccountScene } from './scenes/AccountScene';
+import { EndingScene } from './scenes/EndingScene';
 import { TitleScene } from './scenes/TitleScene';
 import { WorldHudScene } from './scenes/WorldHudScene';
 import { WorldScene } from './scenes/WorldScene';
@@ -42,7 +43,7 @@ function start(): void {
       zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, SaveScene, AccountScene, DebugScene],
+    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, SaveScene, AccountScene, EndingScene, DebugScene],
   });
   bindDisplaySize(game);
   // Temps de jeu de la partie (n°155) : compté à chaque image, hors titre et hors pause.

@@ -34,6 +34,19 @@ export function linkedUnits(data: GameData, named: NamedEnemyDef): Set<string> {
   return ids;
 }
 
+/**
+ * La condition d'apparition `pop` d'un nommé tient-elle dans la partie ? Vaut
+ * pour le tirage au hasard (n°115) comme pour son poste dans le monde (n°193) :
+ * un Écho de quête n'est visible qu'une fois sa quête terminée. `pop: false`
+ * (jamais au hasard) ne ferme pas le poste.
+ */
+export function namedPopHolds(data: GameData, progress: Progress, flags: readonly string[], named: NamedEnemyDef): boolean {
+  if (named.pop === false || named.pop === undefined) return true;
+  const ctx = talkContextOf(progress, flags);
+  const env = { ctx, data, turn: 1, gold: progress.gold, deployed: () => false, seen: (id: string) => ctx.seen.includes(id) };
+  return evalCondition(named.pop, env);
+}
+
 /** Une rencontre peut-elle accueillir un nommé de passage (ni boss, ni carte de scénario, ni milice) ? */
 export function namedPopAllowed(data: GameData, encounter: EncounterDef): boolean {
   return encounter.objective.type !== 'boss' && encounter.sampled !== undefined && !data.balance.namedPop.excludeEncounters.includes(encounter.id);

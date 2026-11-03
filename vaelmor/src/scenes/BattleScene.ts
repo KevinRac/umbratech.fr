@@ -23,7 +23,8 @@ import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
 import { getGameCtx } from '../core/townContext';
-import { applyClassicLosses, applyTalkResults, ensureCompany, settleBattle, talkContextOf, testCompany, type BattleEnd, type Settlement } from '../logic/game';
+import { applyClassicLosses, applyTalkResults, ensureCompany, settleBattle, settleEnding, talkContextOf, testCompany, type BattleEnd, type Settlement } from '../logic/game';
+import type { EndingDef } from '../data/schemas';
 import { EMPTY_TALK_CONTEXT, namedDef, talkResults, talkTargets, talkableEnemies, type TalkContext } from '../logic/tactics/talk';
 import { buildTalkView, type FaceLookup } from '../ui/talkView';
 import { applyBattleProgress, applyErrantProgress, isWounded } from '../logic/units/company';
@@ -193,6 +194,8 @@ export class BattleScene extends Phaser.Scene {
   private prepCursor = 0;
   private prepPick: number | null = null;
   private prepMessage: string | null = null;
+  /** Fin de l'histoire obtenue par ce combat (victoire sur le boss final, n°196). */
+  private ending: EndingDef | null = null;
   /** Tri et filtre par classe de la liste de la compagnie (n°199) ; gardés pour la session. */
   private static prepSort: RosterSort = 'arrivee';
   private static prepFilter: string | null = null;
@@ -257,6 +260,7 @@ export class BattleScene extends Phaser.Scene {
     this.views = new Map();
     this.brambles = new Map();
     this.ended = null;
+    this.ending = null;
     this.settlement = null;
     this.losses = [];
     this.progressSaved = false;
@@ -378,6 +382,9 @@ export class BattleScene extends Phaser.Scene {
       if (kind === 'garde') out.push({ template: 'garde_haut_gue', level: 3, turn: 1, worldCell: null, source: 'garde', errantId: null, label: 'Les gardes de Haut-Gué accourent !' });
       if (kind === 'passage') out.push({ template: 'apprentie_haut_gue', level: 3, turn: 1, worldCell: null, source: 'passage', errantId: null, label: 'Renfort ! Un habitant de Haut-Gué vient à l’aide.' });
       if (kind === 'errant') out.push({ template: 'voyageur_arme', level: 3, turn: 1, worldCell: null, source: 'errant', errantId: null, label: 'Aldric se joint au combat !' });
+      // Un modèle nommé (figure de village, M7) : `&allies=ilar`.
+      const figure = this.gameData.allyTemplates.find((t) => t.id === kind && t.named === true);
+      if (figure) out.push({ template: figure.id, level: 5, turn: 1, worldCell: null, source: 'garde', errantId: figure.id, label: `${figure.name} accourt !` });
     }
     return out;
   }
@@ -2562,6 +2569,11 @@ export class BattleScene extends Phaser.Scene {
       itemsUsed: summary.itemsUsed,
       errantsFallen: summary.errantsFallen,
     });
+    // Victoire sur le boss final : la fin de l'histoire (n°196) est choisie et son drapeau levé.
+    if (end === 'victory') {
+      const alive = this.state.units.filter((u) => u.team === 'player' && u.hp > 0 && u.charId !== null && u.summonUntil === null).map((u) => u.charId as string);
+      this.ending = settleEnding(ctx, { victoryFlags: findEncounter(this.gameData, this.params.encounterId).victoryFlags, aliveDeployed: alive });
+    }
     return this.settlement;
   }
 
@@ -2622,7 +2634,9 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       if (this.params.returnTo === 'world' && world) {
-        this.scene.start(SCENES.world, { battleReturn: { end, wakeAt: this.settlement?.wakeAt?.location ?? null, notices: this.settlement?.notices ?? [], losses: this.losses } });
+        const battleReturn = { battleReturn: { end, wakeAt: this.settlement?.wakeAt?.location ?? null, notices: this.settlement?.notices ?? [], losses: this.losses } };
+        if (this.ending) this.scene.start(SCENES.ending, { ending: this.ending, battleReturn });
+        else this.scene.start(SCENES.world, battleReturn);
       } else this.scene.start(SCENES.title);
     });
   }

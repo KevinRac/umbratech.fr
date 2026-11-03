@@ -10,3 +10,4 @@ export * from './allyRules';
 export * from './companyRules';
 export * from './classic';
 export * from './namedRules';
+export * from './ending';

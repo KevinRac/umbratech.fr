@@ -69,6 +69,12 @@
             "allie": ["Ta chambre habituelle est prête. Et ce soir, la soupe est offerte."],
             "heros_local": ["Le héros de Haut-Gué ! Toute la maison est à toi, ce soir et tous les soirs."]
           },
+          "greetings": [
+            {"when": {"flag": "fin_lanterne"}, "lines": ["Le phare brille tout seul, à ce qu’on dit. Assieds-toi, porteur de lanterne : la soupe est pour toi."], "expression": "content"},
+            {"when": {"flag": "fin_digue"}, "lines": ["Ils ont muré la mer, paraît-il. Les anciens n’aiment pas ça. Mais le village dort, alors je me tais."]},
+            {"when": {"flag": "fin_nuit_basse"}, "lines": ["La mer s’est retirée comme du temps de ma mère. On rallume les feux et on attend. Mange, au moins."], "expression": "triste"},
+            {"when": {"flag": "boss_brakk"}, "lines": ["Brakk est tombé ! Les routes rouvrent, les colporteurs reviennent. Ce soir, la soupe est pour toi."], "expression": "content"}
+          ],
           "options": [
             {
               "kind": "inn",
@@ -122,6 +128,10 @@
             "amical": ["Ah, mon aide ! Les sacs tournent de nouveau, grâce à toi."],
             "allie": ["Le moulin tourne, le pain est bon : on te le doit."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "gorm", "status": "defeated"}}, "lines": ["Gorm ne brûlera plus de grange. Je dormirai sans sentir la fumée. Merci."], "expression": "content"},
+            {"when": {"flag": "boss_brakk", "quest": "farine_volee", "questStatus": "done"}, "lines": ["Le camp est vide et ma farine est rentrée. Le pain de Haut-Gué a de nouveau du goût !"], "expression": "content"}
+          ],
           "options": [
             {
               "kind": "quest",
@@ -170,6 +180,11 @@
             "allie": ["Mes hommes te saluent. Le village dort mieux depuis ton arrivée."],
             "heros_local": ["Le héros de Haut-Gué ! Je me mettrais au garde-à-vous si je n’avais pas ces genoux."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "rik", "status": "recruited"}}, "lines": ["Rik marche avec toi ? Le fils du charron... Garde-le près de toi. Il a besoin qu’on le regarde autrement."]},
+            {"when": {"named": {"id": "rik", "status": "lost"}}, "lines": ["On m’a dit pour Rik. Le fils du charron, chez les Écumeurs... J’aurais dû aller le chercher plus tôt."], "expression": "triste"},
+            {"when": {"flag": "boss_brakk"}, "lines": ["Brakk ne pillera plus personne. Mes hommes respirent. La Brume, elle, n’attend pas : le Vieux Pont mène à la forêt."]}
+          ],
           "options": [
             {
               "kind": "quest",
@@ -232,6 +247,9 @@
             "amical": ["Pour un ami, je trouve toujours une pièce de côté."],
             "allie": ["Ça me fait plaisir de forger pour toi. Choisis, c’est cadeau... enfin, presque."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "gorm", "status": "defeated"}}, "lines": ["Les haches des Écumeurs sortaient de ma forge, tu sais. Je ne le savais pas. Maintenant je choisis à qui je vends."]}
+          ],
           "options": [{"kind":"shop","label":"Voir la forge","shop":"forge_de_bran"}],
           "refusesWhenHostile": true
         },
@@ -311,6 +329,9 @@
             "neutre": ["Assieds-toi un moment, jeune. L’île a plus d’histoire que de routes."],
             "amical": ["Tu m’écoutes, c’est rare. Alors je te dis ce que peu savent."]
           },
+          "greetings": [
+            {"when": {"flag": "boss_brakk"}, "lines": ["Brakk... Je l’ai connu soldat, à la Citadelle, avant la Nuit Basse. Il gardait un quai. La mer l’a pris comme les autres."], "expression": "triste"}
+          ],
           "options": [
             {
               "kind": "topic",
@@ -450,6 +471,10 @@
             "allie": ["Les racines te reconnaissent. Ronceval est ouvert à toi."],
             "heros_local": ["Les racines te reconnaissent. Prends cette graine, elle ouvre la voie du Bosquet."]
           },
+          "greetings": [
+            {"when": {"flag": "boss_roi_cerf"}, "lines": ["Le Roi-Cerf a parlé : « Ysmar ». La forêt s’ouvre vers la côte et vers Valcendre. Va, les racines te suivent."]},
+            {"when": {"named": {"id": "oswin", "status": "recruited"}}, "lines": ["Oswin est revenu parmi les vivants. Ysolde ne le dira pas, mais elle sourit de nouveau."], "expression": "content"}
+          ],
           "options": [
             {
               "kind": "quest",
@@ -521,6 +546,10 @@
             "amical": ["Pour un ami des racines, j’ai quelques préparations spéciales."],
             "allie": ["Tout ce qui pousse ici est à ton service."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "oswin", "status": "recruited"}}, "lines": ["Oswin ! Je l’ai soigné cent fois, et je ne pouvais rien contre la Brume. Toi, tu as pu. Prends ce que tu veux."], "expression": "content"},
+            {"when": {"named": {"id": "hakon", "status": "defeated"}}, "lines": ["Hakon est en paix. Je l’ai soigné aussi, avant. La Brume ne laisse pas grand-chose à soigner."], "expression": "triste"}
+          ],
           "options": [{"kind":"shop","label":"Voir les herbes","shop":"herbes_d_orin"}],
           "refusesWhenHostile": true
         },
@@ -599,6 +628,9 @@
             "neutre": ["Ex-Couronne. Ne le dis pas à Valcendre, ou ils me reprendront."],
             "amical": ["Tu es du genre à ne pas cafter. J’aime ça."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "drak", "status": "defeated"}}, "lines": ["Drak est tombé ? Alors personne ne viendra me reprendre. Je respire, pour la première fois depuis Valcendre."], "expression": "content"}
+          ],
           "options": [
             {
               "kind": "topic",
@@ -652,6 +684,9 @@
             "neutre": ["Hé, tu veux savoir où sont les trésors ? Moi, je sais !"],
             "amical": ["Toi, t’es gentil ! Je te dis un secret."]
           },
+          "greetings": [
+            {"when": {"flag": "boss_roi_cerf"}, "lines": ["T’as sauvé le grand cerf ! Mousse dit que tu es un héros. Moi je dis que tu es très fort."], "expression": "content"}
+          ],
           "options": [
             {
               "kind": "topic",
@@ -787,6 +822,12 @@
             "allie": ["Un allié de l’Ordre est toujours le bienvenu sur ces quais, capitaine."],
             "heros_local": ["Le héros de Port-Brume ! La barque t’attend, quand tu voudras."]
           },
+          "greetings": [
+            {"when": {"flag": "fin_lanterne"}, "lines": ["Le pacte est renouvelé, sans une vie. Mérrow aurait voulu voir ça. L’Ordre te doit tout, porteur de lanterne."], "expression": "content"},
+            {"when": {"flag": "fin_digue"}, "lines": ["Ils ont muré la mer. On ne mure pas une dette. Les quais te saluent quand même : tu as fait tomber le roi."]},
+            {"when": {"named": {"id": "aldo", "status": "defeated"}}, "lines": ["Mon frère repose. Quarante ans à le chercher sur ce quai. Merci de l’avoir rendu à la mer."], "expression": "triste"},
+            {"when": {"named": {"id": "hobb", "status": "recruited"}}, "lines": ["Hobb navigue avec toi, à ce qu’on dit. Un bon capitaine. Marthe n’a pas dormi depuis qu’elle sait."]}
+          ],
           "options": [
             {
               "kind": "quest",
@@ -859,6 +900,10 @@
             "amical": ["Ah, un habitué ! Prends ce que tu veux."],
             "allie": ["Pour toi, mes meilleurs filets."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "hobb", "status": "recruited"}}, "lines": ["Hobb... Mon Hobb est revenu. Il ne se souvient pas de tout, mais il se souvient de mes filets. Prends ce que tu veux, tout."], "expression": "content"},
+            {"when": {"named": {"id": "hobb", "status": "lost"}}, "lines": ["On m’a dit, pour Hobb. Je le croyais mort depuis des années. Ça ne change rien. Ça change tout."], "expression": "triste"}
+          ],
           "options": [{"kind":"shop","label":"Voir les filets","shop":"filets_de_marthe"}],
           "refusesWhenHostile": true
         },
@@ -941,6 +986,9 @@
             ],
             "amical": ["Je t’ai marqué quelques points d’intérêt. Regarde mes cartes."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "aldo", "status": "defeated"}}, "lines": ["Aldo m’a appris les rivages de cette côte. Je mettrai son nom sur la carte, là où il marchait."], "expression": "triste"}
+          ],
           "options": [
             {
               "kind": "quest",
@@ -986,6 +1034,9 @@
             "neutre": ["Les marins viennent prier ici avant de partir. Certains reviennent."],
             "amical": ["Ta présence réchauffe ces vieux murs."]
           },
+          "greetings": [
+            {"when": {"flag": "boss_merrow"}, "lines": ["Sœur Mérrow repose. Sa lanterne n’était pas la bonne : l’offrande doit être une lumière, jamais une vie. Souviens-t’en."]}
+          ],
           "options": [
             {
               "kind": "donate",
@@ -1111,6 +1162,9 @@
             "amical": ["Un ami des Monts a droit à mes plus belles pièces."],
             "allie": ["J’ai une arme dans l’arrière-boutique que je ne montre qu’aux alliés."]
           },
+          "greetings": [
+            {"when": {"flag": "boss_gardien_cendre"}, "lines": ["Le Gardien est en morceaux. J’avais forgé ses plaques, jeune homme. Elles ont tenu longtemps. Trop longtemps."]}
+          ],
           "options": [{"kind":"shop","label":"Voir la forge","shop":"forge_de_halvar"}],
           "refusesWhenHostile": true
         },
@@ -1253,6 +1307,9 @@
             "amical": ["Je te connais, maintenant. Tu peux passer."],
             "allie": ["Plus rien ne te barre la route des Monts."]
           },
+          "greetings": [
+            {"when": {"flag": "boss_mere_harpie"}, "lines": ["La Mère-Harpie est tombée. Ses petits volent encore au-dessus du col : eux n’avaient rien fait. Les cols sont à toi."]}
+          ],
           "options": [
             {
               "kind": "quest",
@@ -1348,6 +1405,10 @@
             "amical": ["Un ami des Monts dort dans mon meilleur lit."],
             "allie": ["Toi, tu n’as rien à payer."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "ilse", "status": "recruited"}}, "lines": ["Ilse est rentrée des cols ! J’ai veillé avec elle tant de nuits. Ton lit est le meilleur, et il est gratuit."], "expression": "content"},
+            {"when": {"named": {"id": "ilse", "status": "lost"}}, "lines": ["Ilse ne redescendra pas. J’ai gardé sa lanterne allumée pour rien. Non... pas pour rien."], "expression": "triste"}
+          ],
           "options": [
             {
               "kind": "inn",
@@ -1430,6 +1491,11 @@
             "allie": ["Vous êtes un pilier de cette ville, capitaine. Dites-moi ce dont vous avez besoin."],
             "heros_local": ["Valcendre vous doit sa renaissance. Les portes de la Cathédrale vous sont ouvertes."]
           },
+          "greetings": [
+            {"when": {"flag": "fin_digue"}, "lines": ["La digue tient. Vaelmor est sauvée par la Couronne, et vous en êtes le bras. Qu’on ne vous dise jamais le contraire."], "expression": "content"},
+            {"when": {"flag": "fin_lanterne"}, "lines": ["Le pacte... renouvelé. Sans la Couronne. La mer s’est calmée, soit. Nous verrons ce qu’elle demandera ensuite."]},
+            {"when": {"flag": "fin_nuit_basse"}, "lines": ["La mer s’est retirée, et vous avez tué le roi. Valcendre vous en est reconnaissante. Officiellement."]}
+          ],
           "options": [
             {
               "kind": "quest",
@@ -1494,6 +1560,10 @@
             "amical": ["Tu as une bonne réputation. Ça, c’est utile pour un soldat."],
             "allie": ["Mes hommes te saluent, capitaine. Dis un mot, et je te prête une escouade."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "drak", "status": "defeated"}}, "lines": ["Drak a conspiré sous mon nez, dans ma propre caserne. Tu as fait mon travail. Je ne l’oublierai pas."]},
+            {"when": {"named": {"id": "alderic", "status": "recruited"}}, "lines": ["Aldéric Vance sous ta bannière ? Le meilleur officier que j’aie eu. Prends-en soin, capitaine."]}
+          ],
           "options": [
             {
               "kind": "choice",
@@ -1551,6 +1621,9 @@
             "amical": ["Un amateur averti. Regarde, j’ai ceci en réserve pour les connaisseurs."],
             "allie": ["Mon meilleur stock est à toi, et au prix le plus honnête."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "orsen", "status": "recruited"}}, "lines": ["Orsen marche avec vous ? Hum. Les formules que je lui ai achetées... disons que je les rends à qui de droit, à prix d’ami."]}
+          ],
           "options": [
             {"kind":"shop","label":"Voir les raretés","shop":"raretes_de_lorn"},
             {
@@ -1735,6 +1808,9 @@
             "amical": ["Tu as le cœur large, enfant. Les pauvres te bénissent."],
             "allie": ["Valcendre est plus doux depuis que tu y marches. Merci."]
           },
+          "greetings": [
+            {"when": {"named": {"id": "orsen", "status": "recruited"}}, "lines": ["Orsen est revenu de son côté sombre. J’ai soigné ceux que ses fioles ont brûlés. Qu’il soigne à son tour, maintenant."]}
+          ],
           "options": [
             {
               "kind": "donate",
@@ -1858,6 +1934,9 @@
             "amical": ["Mon champion préféré ! La foule demande ton nom."],
             "allie": ["L’arène t’attend, capitaine."]
           },
+          "greetings": [
+            {"when": {"quest": "arene_des_cendres", "questStatus": "done"}, "lines": ["Le champion de l’arène ! La foule crie encore ton nom. Il reste deux séries, si tu as faim de gloire."], "expression": "content"}
+          ],
           "options": [
             {
               "kind": "quest",
