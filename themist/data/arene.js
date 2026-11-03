@@ -8,7 +8,7 @@
  actif:false,
  // Salles qui reçoivent l'arène (Q1 : le boss final seulement). w × h : taille du monde en écrans (1 280 × 720) ; entree : point d'entrée
  // du joueur, en fractions du monde. etats : états d'arène (Q5) : 0 à 2 d'ESSAI (banc-arene A et C comptent sur eux, à leurs places) ; les états
-// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c).
+// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c ; 5 : phase III, action 5d).
  // Un état : bornes jouables (fractions des bornes dures), obstacles (piliers, disques), vides (fosses : on n'y marche pas, rien n'y apparaît),
  // sol (calque peint à l'entrée), brume de décor (ne cache jamais un télégraphe ni un signe de bord). fx, fy : fractions des bornes dures ; r en px.
  salles:{
@@ -33,7 +33,12 @@
     // à l'entrée (une arène sans le Brumeux ne le porte jamais : 12 tuiles de plus pesaient sur chaque image, banc-arene C) ; le Brumeux le peint une
     // tuile par image pendant la phase I, et vers() finit d'un coup ce qui manquerait.
     {id:'ouvrage',tard:true,bornes:{fx0:0,fy0:0,fx1:1,fy1:1},sol:'cendre',
-     obstacles:[],vides:[],brume:[{fx:0.5,fy:0.04,r:320,a:0.14}]}]}},
+     obstacles:[],vides:[],brume:[{fx:0.5,fy:0.04,r:320,a:0.14}]},
+    // 5 · phase III réelle du Brumeux, « La Couture » (fiche 5d, § 8) : arène pleine, ni obstacle ni fosse (rien ne tombe sur ses constructions : ce
+    // qu'il a bâti reste le terrain) ; sol cendre (le chantier reste le chantier) ; brume de décor plus dense en haut, d'où pendent ses fils.
+    // tard : son calque n'est pas peint à l'entrée d'une arène ; le Brumeux le peint une tuile par image pendant la phase II.
+    {id:'couture',tard:true,bornes:{fx0:0,fy0:0,fx1:1,fy1:1},sol:'cendre',
+     obstacles:[],vides:[],brume:[{fx:0.5,fy:0.04,r:380,a:0.18}]}]}},
  // Bornes dures dans le monde : à la même distance des bords que l'arène d'un écran (AR : 56, 92, 56, 44).
  mur:{g:56,h:92,d:56,b:44},
  // La caméra (Q3). zone : zone morte (rectangle centré) ; tau : lissage exponentiel (s), jamais de dépassement ; avance : jusqu'à px dans le sens

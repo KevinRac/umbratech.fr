@@ -9407,7 +9407,7 @@ function demoBoot(cls){
    const rfs=[...(e.asm.sv&&e.asm.sv.renfort?[e.asm.sv.renfort]:[]),...(R.nem&&R.nemStats?R.nemStats.renforts:[])];
    if(rfs.length)sbRenfort(e,rfs);
    if(MO){e.asm.mont={t:0,tot:MT(),n:0};e.asm.st.t=Math.max(e.asm.st.t,MT());}
-   showCard(e,false);sfx('asm_in');}}catch(err){console.error(err);}
+   if(!R.cousu18){showCard(e,false);sfx('asm_in');}}}catch(err){console.error(err);}   // v18.8 : un Masqué cousu par le Brumeux (phase III) n'a ni carte ni rire d'arrivée
   return e;};
  // pas de contre-mesure, pas de règle de salle, et la salle ne compte pas dans la moyenne qui sert à juger les contre-mesures
  const _bp=brumeuxPlan;brumeuxPlan=function(){if(room&&room.asm)return;return _bp.apply(this,arguments);};
@@ -9427,7 +9427,7 @@ function demoBoot(cls){
 
  // ── Comportement
  // v17.19 : la feinte du Brumeux (room.bl, un cercle posé sur toi, vrai ou faux) est une zone comme les autres
- function zoneAutre(e){if(rings.length||(room&&room.bl))return true;
+ function zoneAutre(e){if(rings.length||(room&&room.bl))return true;if(window.__zoneAutre18&&window.__zoneAutre18(e))return true;   // v18.8 : crochet du Brumeux (non-cumul avec ses zones et entre Masqués cousus, rien hors de la vue ; nul hors de son combat)
   for(const o of enemies){if(o===e||o.dead||o.asm)continue;if((o.type==='bouffi'&&o.state==='fuse')||(o.type==='brute'&&(o.state==='wind'||o.state==='charge'))||(o.type==='hurleur'&&o.state==='sing')||(o.type==='voile'&&(o.state==='blink'||o.state==='wind')))return true;}  // le clignement du Voilé précède toujours son cône
   return false;}
  // Tant que le Masqué charge ou lance un sort (ou que son onde court), les autres ennemis n'en lancent pas : ils attendent.
@@ -9447,7 +9447,7 @@ function demoBoot(cls){
   if(st.sb){st.sb=null;asmFin(A,st,null);}else if(st.ph==='charge'||st.ph==='effet')asmFin(A,st,null);
   S.z=null;S.dash=null;if(S.sb){S.sb.zc=null;S.sb.dash=null;S.sb.st=SB_REPOS;}}
  function onEvent(e,x){const S=e.asm,[t,k]=x;
-  if(t==='eveil'){showCard(e,true);sfx('asm_eveil');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'violet'});if(!RM)shake(4,0.15);S.fis=true;return;}
+  if(t==='eveil'){if(!e.cou18)showCard(e,true);sfx('asm_eveil');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'violet'});if(!RM)shake(4,0.15);S.fis=true;return;}
   if(t==='rage'){S.rage=true;tlights.push({x:e.x,y:e.y,r:300,t:0.45,max:0.45,c:'blood'});if(!RM)shake(4,0.15);sfx('asm_eveil');return;}
   // v17.19 · l'arme de la Brume : début de l'attaque (plafond et force du souvenir), puis ses étapes une à une
   if(t==='sbdebut'){const B=S.sb;B.st=S.st.sb;B.k=sbForce(SBJ,B.st.etapes,RUN.act,S.sv&&S.sv.force);B.prec=null;B.anc=null;B.etAtt=0;B.zc=null;B.vivants=[];return;}
@@ -9724,7 +9724,7 @@ function demoBoot(cls){
  const MO=A.montage,MT=()=>MO?MO.descenteS+MO.masqueS+MO.coutureS+MO.coupeS:0,ease=k=>1-Math.pow(1-clamp(k,0,1),3);
  function montOff(e){const M=e.asm&&e.asm.mont;if(!M||RM)return 0;const k=clamp(M.t/MO.descenteS,0,1),sm=k*k*(3-2*k);return -(1-sm)*MO.hauteur+(k<1?Math.sin(M.t*(MO.balancement||7))*4*(1-k):0);}  // descente lente puis posée, le corps se balance au bout des fils
  function montPost(c,e,M,fx,fy,h){const d0=MO.descenteS,d1=d0+MO.masqueS,d2=d1+MO.coutureS,off=M.off||0,FIL=MO.fil;
-  const by=Math.max(14,fy-off-250),bx=e.x,q=M.t<d2?0:clamp((M.t-d2)/MO.coupeS,0,1);
+  const by=Math.max(14,fy-off-(M.haut||250)),bx=e.x,q=M.t<d2?0:clamp((M.t-d2)/MO.coupeS,0,1);
   // masque : suspendu à son fil, il tombe sur la tête, puis il est cousu (points un par un, l'aiguille brille sur le dernier)
   let mx=fx,my=fy,sc=1;
   if(!M.pose){const k=ease((M.t-d0)/MO.masqueS);my=(fy-off)-(RM?0:(1-k)*170);if(RM)c.globalAlpha=M.t<d0?0:clamp((M.t-d0)/MO.masqueS,0.25,1);}
@@ -10253,7 +10253,7 @@ function demoBoot(cls){
  // la promotion. c : conditions (nemRefus) ; rend le bilan {refus, decision, uid, point}
  function nemPromo(c){const B={refus:nemRefus(c)};if(B.refus)return B;
   const S=nemLire(SAVE.nemesis);if(!S){B.refus='version';return B;}   // sauvegarde d'une version future : on n'y touche pas
-  const R=room.asm,acte=RUN.act,salle=RUN.roomIdx;B.decision=nemDecision(NM,S.liste,acte,R.nem||null);
+  const R=room.asm,acte=R.acte18||RUN.act,salle=R.salle18!=null?R.salle18:RUN.roomIdx;B.decision=nemDecision(NM,S.liste,acte,R.nem||null);   // v18.8 : un Masqué cousu promu au fond attend à l'acte III, salle 3 (R.acte18, R.salle18 ; rien pour une salle)
   if(B.decision==='occupe')return B;
   if(B.decision==='point'){const f=S.liste.find(x=>x.uid===R.nem);B.uid=f.uid;B.point=nemPoint(NM,f,{salle,coup:ncM()});}
   else{const M=RUN.memoire,sv=R.sv&&R.sv.x?{id:R.sv.x.id,rang:R.sv.x.rang,g:R.sv.x.g||0,fid:R.sv.fid,vars:R.sv.vars,renfort:R.sv.renfort}:null;
@@ -10481,6 +10481,11 @@ function demoBoot(cls){
    const R=room.asm;if(!R||R.nem!==f.uid){NES.on=false;return 'elle ne vient pas ici (salle '+RUN.roomIdx+')';}
    return f.nom+' · '+(f.sv?(NODES[f.sv.id]?NODES[f.sv.id].name:f.sv.id)+(f.sv.sansGeste?' (sans geste)':f.sv.renfort?' (renfort)':''):'sans souvenir')+' · '+pts+' point'+(pts>1?'s':'')+' · acte '+acte;}
   catch(err){console.error(err);return String(err);}};
+ // v18.8 (5d) : pour le Brumeux, une fiche construite EN MÉMOIRE (essai ?brumeux=3&nem=<talent>, jamais écrite) et la venue d'une némésis cousue
+ window.__nemesis.fiche=function(id,opt){opt=opt||{};try{const n=NODES[id];if(!n||!nemInfo(id)||!FAMS[id])return null;const acte=3,ctx={act:acte,salle:G(),J:SBJ},L=asmCombos(A,ctx).filter(c=>!opt.corps||c.corps===opt.corps);if(!L.length)return null;
+  const f=nemPromotion(A,NM,NSV,SBJ,{co:L[Math.floor((opt.rnd||Math.random)()*L.length)],sv:null},{acte,salle:3,run:0,palier:0,cls:n.cls},[{id,src:'t',rang:1,g:0}],nemInfo,FAMS,ctx,opt.rnd||Math.random);
+  f.points=Math.max(1,Math.min((NM.points&&NM.points.max)||5,Math.round(+opt.points)||1));f.attend={acte,salle:3};return f;}catch(err){console.error(err);return null;}};
+ window.__nemesis.venue=function(uid){if(!nemActif()||RUN.essai||ESSAI_URL)return false;const S=nemLire(SAVE.nemesis);if(!S)return false;const f=S.liste.find(x=>x.uid===uid);if(!f)return false;f.vu=(f.vu||0)+1;SAVE.nemesis=nemEcrire(S.liste);persist();return true;};
  window.__nemesis.essaiEtat=()=>({on:NES.on,fiche:NES.f&&JSON.parse(JSON.stringify(NES.f)),brisee:NES.brisee,dieu:NES.dieu,sauve:!!SAVE.nemesis&&nemLire(SAVE.nemesis).liste.length});
  const QN=/[?&]nemesis=([a-z0-9_]+)/.exec(location.search);
  if(QN&&!DEMO){const q=k=>{const m=new RegExp(`[?&]${k}=([^&]+)`).exec(location.search);return m?decodeURIComponent(m[1]):undefined;};
@@ -13103,6 +13108,9 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  function indicateurs(){const v=vue(),m=A.hud.m,sure=arSure(v,m),I=Object.assign({},IC,{blocs:A.hud.blocs.map(B=>({x0:B.x0+CAM.x,y0:B.y0+CAM.y,x1:B.x1+CAM.x,y1:B.y1+CAM.y}))});
   const L=sources();A.indic=arIndic(L,{vue:v,sure,joueur:{x:P.x,y:P.y}},I);
   const ids=[];for(const s of L)if(arDistRect(v,s.x,s.y)<=(s.r||0))ids.push(s.id);for(const x of A.indic)ids.push(...x.ids);
+  // v18.8 : un tir hérite du signe de son tireur (vu tirer, signalé : son tir l'est aussi, même si le tireur meurt avant qu'il arrive), comme un
+  // ennemi né d'un cercle d'apparition signalé ; le journal seulement (rien ne se dessine ni ne change en jeu)
+  for(const s of L)if(s.k==='proj'&&s.o.from&&A.sig.debut[s.id]==null){const d=A.sig.debut[id(s.o.from)];if(d!=null&&ids.includes(s.id))A.sig.debut[s.id]=d;}
   arSignes(A.sig,RUN.time,ids);}
  // ── la transformation entre deux états
  function vers(n){if(!A.on||!A.etats[n]||A.trans)return false;peindreTard(n,1e9);A.trans=arTransNouveau(A.etat,A.etats[n]);A.ie=n;return true;}   // A.ie0 : le calque en place jusqu'à la fin du fondu
@@ -13287,6 +13295,7 @@ function brxPhase(hp,maxHp,seuils){let k=0;for(const s of seuils){if(hp>maxHp*s)
 // themes:{thème:{need}}, tab:{phase:{decor,theme,regle}}}. Rend {poids:{élément:p}, premier:élément|null, tab (le tableau qui t'a tué), …}.
 // v18.7 (5c) : rend aussi bati (la sorte qui s'est effondrée sur toi, ou « rails » quand la cloche t'a tué : le premier bâtir de la phase la
 // rejoue) et ce que lit le choix des constructions (prof, eff, ko, cms).
+// v18.8 (5d) : rend aussi cousu (le Masqué cousu qui t'a tué : {corps, cle, id} ; le premier fil après la némésis le recoud)
 function brxLire(D,S,phase){const L=D.lecture,poids={},par=S.par||{};let parTot=0;for(const k in par)parTot+=Math.max(0,par[k]||0);
  for(const id in D.elements){const el=D.elements[id];let w=1;
   if(el.pond){const v=S.prof?S.prof[el.pond.axe]:null;if(v!=null&&isFinite(v))w*=L.axe.plancher+L.axe.pente*(el.pond.sens>0?v:1-v);
@@ -13296,14 +13305,15 @@ function brxLire(D,S,phase){const L=D.lecture,poids={},par=S.par||{};let parTot=
   poids[id]=Math.max(L.min,w);}
  const tue=S.tue&&S.tue[phase+1],tab=tue==='tableau'&&S.tab&&S.tab[phase+1]?Object.assign({},S.tab[phase+1]):null;
  const bati=tue==='effondrement'&&S.bati&&typeof S.bati[phase+1]==='string'?S.bati[phase+1]:tue==='rail'?'rails':null;
- return{phase,poids,premier:L.tue.premier&&tue&&D.elements[tue]&&!D.elements[tue].fixe?tue:null,tab:L.tue.premier?tab:null,bati:L.tue.premier?bati:null,adapt:S.adapt|0,portes:(S.portes||[]).slice(),reserve:(S.reserve||[]).slice(),nemesis:!!S.nemesis,
+ const cousu=tue==='couture'&&S.cousu&&S.cousu[phase+1]&&typeof S.cousu[phase+1]==='object'?Object.assign({},S.cousu[phase+1]):null;
+ return{phase,poids,premier:L.tue.premier&&tue&&D.elements[tue]&&!D.elements[tue].fixe?tue:null,tab:L.tue.premier?tab:null,bati:L.tue.premier?bati:null,cousu:L.tue.premier?cousu:null,adapt:S.adapt|0,portes:(S.portes||[]).slice(),reserve:(S.reserve||[]).slice(),nemesis:!!S.nemesis,
   par:Object.assign({},par),parA:Object.assign({},S.parA||{}),parR:Object.assign({},S.parR||{}),acte:S.acte||1,themes:S.themes||{},
   prof:Object.assign({},S.prof||{}),eff:Object.assign({},S.eff||{}),ko:Object.assign({},S.ko||{}),cms:Object.assign({},S.cms||{})};}
 // ── Budget d'une mesure libre et tirage (Q8) : le premier est ce qui t'a tué ; puis des éléments tirés au poids tant que le budget et le
 // non-cumul (cumul[sorte], compte tenu de ce qui est déjà en jeu : actifs) le permettent ; un élément fixe (la feinte, les gestes signature,
 // le tableau) n'est jamais tiré : il est au socle.
 function brxBudget(D,phase,palier){return D.budget.base[Math.min(phase,D.budget.base.length-1)]*(D.budget.palier[brxPalier(D,palier)]||1);}
-function brxTirer(D,lec,phase,palier,rng,actifs){let bud=brxBudget(D,phase,palier);const cnt=Object.assign({},actifs||{}),out=[],ex=(D.phases[phase]&&D.phases[phase].exclut)||[];
+function brxTirer(D,lec,phase,palier,rng,actifs,o){let bud=brxBudget(D,phase,palier);if(o&&o.moins)bud=Math.max(Math.min(bud,o.plancher||0),bud-o.moins);const cnt=Object.assign({},actifs||{}),out=[],ex=(D.phases[phase]&&D.phases[phase].exclut)||[];
  const peut=id=>{const el=D.elements[id];return el.sorte!=='feinte'&&!el.fixe&&!ex.includes(el.sorte)&&el.menace<=bud+1e-9&&(cnt[el.sorte]||0)<(D.cumul[el.sorte]||1);};
  const prend=id=>{const el=D.elements[id];out.push(id);bud-=el.menace;cnt[el.sorte]=(cnt[el.sorte]||0)+1;};
  if(lec.premier&&peut(lec.premier))prend(lec.premier);
@@ -13334,7 +13344,9 @@ function brxDans(z,x,y,pr){pr=pr||0;switch(z.forme){case 'disque':return Math.hy
  case 'case':return x>z.x0-pr*0.5&&x<z.x1+pr*0.5&&y>z.y0-pr*0.5&&y<z.y1+pr*0.5;
  // v18.7 (5c, la Truelle) : un cône {x, y, a, ouv, r0, r1} : de r0 à r1 de son sommet, dans l'angle ouv autour de a (marge angulaire de pr/2)
  case 'cone':{const dx=x-z.x,dy=y-z.y,d=Math.hypot(dx,dy);if(d<z.r0-pr*0.5||d>z.r1+pr*0.5)return false;let da=Math.atan2(dy,dx)-z.a;while(da>Math.PI)da-=BRX_TAU;while(da<-Math.PI)da+=BRX_TAU;
-  return Math.abs(da)<z.ouv/2+(d>pr*0.5?Math.asin(pr*0.5/d):Math.PI);}}return false;}
+  return Math.abs(da)<z.ouv/2+(d>pr*0.5?Math.asin(pr*0.5/d):Math.PI);}
+ // v18.8 (5d, le Surjet) : un losange {x, y, h (demi-diagonale), a (son axe)} : |u| + |v| < h, marge 0,5 × rayon × 1,2 (comme inZone du Masqué)
+ case 'losange':{const c=Math.cos(z.a||0),s=Math.sin(z.a||0),dx=x-z.x,dy=y-z.y;return Math.abs(dx*c+dy*s)+Math.abs(-dx*s+dy*c)<z.h+pr*0.6;}}return false;}
 function brxSortie(D,zones,p,o){const S=D.sortie,pr=o.pr||0,v=o.v||180,R=o.arene;
  const libre=(x,y)=>x>=R.x0+pr&&x<=R.x1-pr&&y>=R.y0+pr&&y<=R.y1-pr&&!(o.bloque&&o.bloque(x,y))&&!zones.some(z=>brxDans(z,x,y,pr));
  if(libre(p[0],p[1]))return{ok:true,d:0,q:[p[0],p[1]]};
@@ -13541,8 +13553,87 @@ function brxCloche(D,c){const v=c.voie;return{forme:'couloir',x0:v.x0,y0:v.y0,x1
 function brxAppel(D,palier,recentes,vivants){const M=D.manoeuvres,S=D.constructions.sortes,n=M.n[brxPalier(D,palier)]||M.n.normal,out=[];
  for(let i=0;i<n;i++){const id=recentes&&recentes[i],s=id&&S[id],t=(s&&s.appel)||M.defaut,k=(s&&s.appelN)||1;for(let q=0;q<k;q++)out.push(t);}
  return out.slice(0,Math.max(0,M.max-(vivants|0)));}
+// ── Phase III, « La Couture » (fiche 5d). Les gestes signature (géométrie) : h = sa croix, p = toi, rot : variante.
+// Le Surjet : n losanges le long d'une ligne de sa croix vers toi et au-delà, alternés de part et d'autre (± decale), le plus proche de toi centré sur ta
+// projection ; jamais derrière sa croix (au moins depart px devant elle : juste sous sa croix, on est à l'abri, comme sous la Truelle).
+function brxSurjet(el,h,p,rot){const a=Math.atan2(p[1]-h[1],p[0]-h[0])+(rot||0),ux=Math.cos(a),uy=Math.sin(a),vx=-uy,vy=ux,tp=Math.max(el.depart,(p[0]-h[0])*ux+(p[1]-h[1])*uy),c=Math.floor(el.n/2),out=[];
+ for(let k=0;k<el.n;k++){const t=tp+(k-c)*el.pas;if(t<el.depart)continue;const s=(k-c)%2?1:-1,dl=s*el.decale;out.push({forme:'losange',x:h[0]+ux*t+vx*dl,y:h[1]+uy*t+vy*dl,h:el.h,a,r:el.h});}
+ return out;}
+// Le Dé : deux coups ; le premier sur toi (dec : décalage d'une variante), le second là où tu es à son coup. La sortie des deux : une sortie du premier
+// avant charge, puis, d'où l'on en sort, une sortie d'un disque centré là, avant seconde s.
+function brxDe(el,p,dec){return[{forme:'disque',x:p[0]+(dec?dec[0]:0),y:p[1]+(dec?dec[1]:0),r:el.r}];}
+function brxSortieDe(D,el,zs,p,o,charge){const s1=brxSortie(D,zs,p,Object.assign({},o,{charge}));if(!s1.ok)return{ok:false};
+ const s2=brxSortie(D,[{forme:'disque',x:s1.q[0],y:s1.q[1],r:el.r}],s1.q,Object.assign({},o,{charge:el.seconde}));return{ok:s2.ok,q1:s1.q,q2:s2.q};}
+// Les Aiguilles : n couloirs (la trace de chaque aiguille, largeur 2 r) depuis sa croix, en éventail vers toi, jusqu'au bord, coupés au premier pilier
+// qui arrête un tir (jamais une fosse). Rend {zones, angles} ; la sortie se juge avec la charge plus le vol de l'aiguille jusqu'à toi.
+function brxAiguilles(el,h,p,R,piliers,rot){const a0=Math.atan2(p[1]-h[1],p[0]-h[0])+(rot||0),ou=el.ouverture*Math.PI/180,zones=[],angles=[];
+ for(let i=0;i<el.n;i++){const a=a0+(el.n>1?(i/(el.n-1)-0.5)*ou:0),ux=Math.cos(a),uy=Math.sin(a),l0=brxBord(R,h[0],h[1],ux,uy),c=brxCoupe(h[0],h[1],h[0]+ux*l0,h[1]+uy*l0,2*el.r,piliers||[]),l=c?c.l:l0;
+  zones.push({forme:'couloir',x0:h[0],y0:h[1],x1:h[0]+ux*l,y1:h[1]+uy*l,w:2*el.r});angles.push(a);}
+ return{zones,angles};}
+function brxVolAiguille(el,h,p){return Math.hypot(p[0]-h[0],p[1]-h[1])/el.vitesse;}
+// Les points de montage : à couture.points.d px de toi, à ecart px au moins l'un de l'autre, dans les bornes R à bord px, dans la vue V plus vue px,
+// hors des piliers (marge) et des constructions (leurs disques, la voie d'un rail, l'anneau d'une douve), reliés à toi (grille G, la pire combinaison d'états
+// d'une douve comptée par l'appelant). o.ile : le centre de l'île d'une douve qui tient (un des points y va, si tu n'y es pas) ; o.n : combien en chercher.
+// Rend la liste des points (moins de n si ce n'est pas possible).
+function brxPointsCouture(D,p,R,V,piliers,cons,G,rng,o){o=o||{};const K=D.couture.points,n=o.n==null?D.couture.fils:o.n,out=[],bo=K.bord,v0=V?{x0:V.x0-K.vue,y0:V.y0-K.vue,x1:V.x1+K.vue,y1:V.y1+K.vue}:R;
+ const X0=Math.max(R.x0+bo,v0.x0),Y0=Math.max(R.y0+bo,v0.y0),X1=Math.min(R.x1-bo,v0.x1),Y1=Math.min(R.y1-bo,v0.y1);if(n<=0)return out;
+ const libre=(x,y,ile)=>{if(piliers.some(q=>Math.hypot(x-q.x,y-q.y)<q.r+K.marge))return false;
+  for(const c of cons||[]){for(const d of brxTous(c))if(Math.hypot(x-d.x,y-d.y)<d.r+K.marge)return false;if(c.voie&&brxSeg(x,y,c.voie.x0,c.voie.y0,c.voie.x1,c.voie.y1)<c.voie.w/2+K.marge)return false;
+   if(c.ile&&!ile){const A=D.constructions.sortes.douves.anneau,dd=Math.hypot(x-c.ile[0],y-c.ile[1]);if(dd<A.r+A.fosse+K.marge)return false;}}
+  if(G){const cs=G.cs,ci=Math.floor(x/cs),ri=Math.floor(y/cs);if(ci<0||ri<0||ci>=G.cols||ri>=G.rows||G.blk[ri*G.cols+ci])return false;if(G.relie&&!ile&&!G.relie[ri*G.cols+ci])return false;}   // l'île d'une douve : atteinte par une passerelle ouverte (la grille compte toutes les fosses)
+  return true;};
+ if(o.ile&&out.length<n){const A=D.constructions.sortes.douves.anneau,x=o.ile[0],y=o.ile[1];if(Math.hypot(p[0]-x,p[1]-y)>A.r-A.fosse&&Math.hypot(p[0]-x,p[1]-y)>=K.minD&&libre(x,y,true))out.push([x,y]);}
+ for(let k=0;k<K.essais*n&&out.length<n&&X1>X0&&Y1>Y0;k++){const a=rng()*BRX_TAU,d=K.d[0]+rng()*(K.d[1]-K.d[0]),x=p[0]+Math.cos(a)*d,y=p[1]+Math.sin(a)*d;
+  if(x<X0||x>X1||y<Y0||y>Y1||d<K.minD)continue;if(out.some(q=>Math.hypot(q[0]-x,q[1]-y)<K.ecart))continue;if(!libre(x,y,false))continue;out.push([x,y]);}
+ return out;}
+// les cases de la grille reliées à toi (inondation, comme brxConnexe) : pour que les points de montage soient atteignables à pied
+function brxRelie(G,px,py){const cs=G.cs,cols=G.cols,rows=G.rows,blk=G.blk,vu=new Uint8Array(cols*rows);let c0=Math.max(0,Math.min(cols-1,Math.floor(px/cs))),r0=Math.max(0,Math.min(rows-1,Math.floor(py/cs)));
+ if(blk[r0*cols+c0]){let best=null,bd=1e9;for(let dr=-3;dr<=3;dr++)for(let dc=-3;dc<=3;dc++){const c=c0+dc,r=r0+dr;if(c<0||r<0||c>=cols||r>=rows||blk[r*cols+c])continue;const d=dc*dc+dr*dr;if(d<bd){bd=d;best=[c,r];}}if(!best)return vu;[c0,r0]=best;}
+ const pile=[r0*cols+c0];vu[r0*cols+c0]=1;const NB=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+ while(pile.length){const i=pile.pop(),c=i%cols,r=(i/cols)|0;for(const [dc,dr] of NB){const cc=c+dc,rr=r+dr;if(cc<0||rr<0||cc>=cols||rr>=rows)continue;const j=rr*cols+cc;if(blk[j]||vu[j])continue;if(dc&&dr&&(blk[r*cols+cc]||blk[rr*cols+c]))continue;vu[j]=1;pile.push(j);}}
+ return vu;}
+// Le souvenir d'un Masqué cousu : un talent de la réserve dont la famille a une arme de la Brume (fam : id → famille ; J : les armes de la Brume), pas
+// encore cousu dans ce combat (pris : ids), que peut(fid, entrée) permet ; tiré à la récence (recence : [plus ancien, plus récent], ordre : acte, salle,
+// puis entrée dans la réserve). Rend {x, fid, cap, vars, renfort, force} (comme asmSouvenir : force par rang et gravure, As = assemble.souvenir) ou null.
+function brxSouvenirCouture(D,res,fam,J,pris,rng,As,peut){if(!res||!res.length||!J)return null;
+ const ent=x=>((x.source==='talent'?J.talents:J.reliques)||{})[x.id]||{};
+ const L=res.filter(x=>x&&x.source==='talent'&&fam[x.id]&&J.familles[fam[x.id]]&&!(pris||[]).includes(x.id)&&(!peut||peut(fam[x.id],ent(x))));if(!L.length)return null;
+ const idx=L.map((x,i)=>({x,i})).sort((a,b)=>((a.x.oublie||{}).acte||0)-((b.x.oublie||{}).acte||0)||((a.x.oublie||{}).salle||0)-((b.x.oublie||{}).salle||0)||a.i-b.i);
+ const lo=D.couture.recence[0],hi=D.couture.recence[1],n=idx.length,w=new Map();idx.forEach((o,r)=>w.set(o.x,n>1?lo+(hi-lo)*r/(n-1):hi));
+ let tot=0;for(const x of L)tot+=w.get(x);let r=rng()*tot,x=L[L.length-1];for(const y of L){r-=w.get(y);if(r<=0){x=y;break;}}
+ const fid=fam[x.id],E=ent(x),rf=E.renfort&&J.renforts[E.renfort]?E.renfort:null;
+ return{x,fid,cap:rf?null:'sb:'+fid,vars:rf?[]:(E.v||[]).slice(),renfort:rf,force:1+((As&&As.parRang)||0)*Math.max(0,(x.rang||1)-1)+((As&&As.parGravure)||0)*(x.g||0)};}
+// La composition d'un Masqué cousu : AF = les fonctions pures du Masqué (asmTirage, asmCombos) ; A = assemble (bestiaire.js) ; poidsProfil allumé ICI
+// seulement (une copie des réglages) ; ctx = {act, salle, J} ; sv : le souvenir (ou null) ; dernier : la base du cousu d'avant (jamais la même) ;
+// prof : ton profil. Une arme qu'aucun assemblage ne porte : le souvenir tombe, Masqué ordinaire. Rend {co, sv} (co null : aucun assemblage).
+function brxCoudre(AF,A,ctx,sv,dernier,rnd,prof){const Ap=Object.assign({},A,{poidsProfil:Object.assign({},A.poidsProfil,{actif:true})});
+ let co=sv&&sv.cap?AF.asmTirage(Ap,Object.assign({porte:sv.cap},ctx),dernier,rnd,prof):null;
+ if(sv&&sv.cap&&(!co||!co.depart.includes(sv.cap))){co=null;sv=null;}
+ if(!co)co=AF.asmTirage(Ap,ctx,dernier,rnd,prof);return{co,sv:co?sv:null};}
+// La némésis cousue : une seule, la plus forte (points, puis la plus récente) parmi les fiches valides qui ne sont pas venues dans cette descente
+// (venus : uid → 1) et ne sont pas en répit
+function brxNemCouture(liste,venus){const L=(liste||[]).filter(f=>f&&f.uid&&!(venus&&venus[f.uid])&&!(f.repit>0)&&f.co&&f.co.corps);
+ L.sort((a,b)=>(b.points||1)-(a.points||1)||(((b.ne||{}).run||0)-((a.ne||{}).run||0))||String(a.uid).localeCompare(String(b.uid)));return L[0]||null;}
+// Le plafond : combien de fils lancer (une Couture ne lance que ce qui manque pour arriver à filsMax fils tendus) ; un montage peut-il aboutir (moins de
+// paliers.*.masques Masqués cousus vivants) ; la fenêtre à nu (plus aucun fil ne tient, au moins un coupé)
+function brxFilsALancer(D,tendus){return Math.max(0,Math.min(D.couture.fils,D.couture.filsMax-(tendus|0)));}
+function brxAboutit(D,palier,vivants){return(vivants|0)<D.paliers[brxPalier(D,palier)].masques;}
+function brxNuCouture(coupes,tendus){return(coupes|0)>0&&(tendus|0)===0;}
+// Le budget d'une mesure libre en phase III : réduit de budget.moins par Masqué cousu vivant, jamais sous budget.plancher ; chaque cousu compte pour une
+// source de tir (non-cumul)
+function brxBudgetCouture(D,phase,palier,vivants){const B=brxBudget(D,phase,palier),K=D.couture.budget;return Math.max(Math.min(B,K.plancher),B-K.moins*(vivants|0));}
+function brxActifsCouture(actifs,vivants){const a=Object.assign({},actifs||{});if(vivants)a.tir=(a.tir||0)+vivants;return a;}
+// Les PV d'un Masqué cousu (une part des PV de la phase III, × le corps, × le bonus de porteur, × les points d'une némésis) et d'un nœud
+function brxPvCousu(D,palier,corpsPv,bonus,nemPv){return Math.round(D.couture.cousus.pvPart*brxPv(D,palier)[2]*(corpsPv||1)*(bonus||1)*(nemPv||1));}
+function brxPvNoeud(D,palier){return Math.round(D.couture.noeud.pvPart*brxPv(D,palier)[2]);}
+// Le chargement d'un Masqué cousu : jamais sous plancherS (le préavis de l'arène) ; rend la charge et le temps restant prolongés (t décompte depuis tot)
+function brxPlancherCharge(D,t,tot){const F=D.couture.cousus.plancherS;if(!(tot>0)||tot>=F-1e-9)return{t,tot};return{t:t+(F-tot),tot:F};}
+// La promotion (Q13) : le Masqué cousu dont le coup t'a tué (le dernier coup reçu venait de lui, il y a moins de 1,5 s), jamais le Brumeux, ni un de ses
+// gestes, ni en descente d'essai ; une némésis promue au fond attend à couture.attente (acte du registre, salle)
+function brxPromu(o){return!!(o&&!o.essai&&o.source==='cousu'&&o.depuis>=0&&o.depuis<1.5);}
+function brxAttente(D){return Object.assign({},D.couture.attente);}
 // ── Sauvegarde (Q13) : SAVE.brumeux versionnée. Absente ou abîmée : état neuf ; version future : null (on n'y touche pas).
-function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[],tab:{},bati:{}};}
+function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[],tab:{},bati:{},cousu:{}};}
 function brxLireSauve(S,D){if(!S||typeof S!=='object')return brxNeuf();if(typeof S.v==='number'&&S.v>BRX_V)return null;if(S.v!==BRX_V)return brxNeuf();
  const N=brxNeuf(),ent=(x,a,b)=>Number.isInteger(x)&&x>=a&&x<=b,n=D?D.phases.length:5;
  N.tentatives=ent(S.tentatives,0,1e6)?S.tentatives:0;N.victoires=ent(S.victoires,0,1e6)?S.victoires:0;N.phaseMax=ent(S.phaseMax,0,n)?S.phaseMax:0;
@@ -13554,15 +13645,21 @@ function brxLireSauve(S,D){if(!S||typeof S!=='object')return brxNeuf();if(typeof
  // bati (5c, facultatif) : la sorte qui s'est effondrée sur toi, par phase, seulement là où l'élément mortel est « effondrement » ; une sorte inconnue
  // ou qui ne s'effondre pas (douve, rail) est ignorée
  if(S.bati&&typeof S.bati==='object')for(const k in S.bati){const ph=+k,b=S.bati[k];if(!ent(ph,1,n)||N.mort[ph]!=='effondrement'||typeof b!=='string'||!BRX_CHUTE.includes(b))continue;N.bati[ph]=b;}
+ // cousu (5d, facultatif) : le Masqué cousu qui t'a tué, par phase, seulement là où l'élément mortel est « couture » ; corps et clé en chaînes courtes,
+ // id d'un talent ou null (le jeu revérifie que l'assemblage tient encore avant de le recoudre) ; un champ invalide est ignoré
+ if(S.cousu&&typeof S.cousu==='object')for(const k in S.cousu){const ph=+k,c=S.cousu[k];if(!ent(ph,1,n)||N.mort[ph]!=='couture'||!brxCousuOk(c))continue;N.cousu[ph]={corps:c.corps,cle:c.cle,id:c.id==null?null:c.id};}
  return N;}
-function brxEcrireSauve(S){const o={v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]};if(S.tab&&Object.keys(S.tab).length)o.tab=S.tab;if(S.bati&&Object.keys(S.bati).length)o.bati=S.bati;return JSON.parse(JSON.stringify(o));}
+function brxCousuOk(c){return!!(c&&typeof c==='object'&&typeof c.corps==='string'&&/^[a-z]{2,16}$/.test(c.corps)&&typeof c.cle==='string'&&c.cle.length>0&&c.cle.length<=80&&c.cle.startsWith(c.corps+':')&&(c.id==null||(typeof c.id==='string'&&c.id.length>0&&c.id.length<=40)));}
+function brxEcrireSauve(S){const o={v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]};if(S.tab&&Object.keys(S.tab).length)o.tab=S.tab;if(S.bati&&Object.keys(S.bati).length)o.bati=S.bati;if(S.cousu&&Object.keys(S.cousu).length)o.cousu=S.cousu;return JSON.parse(JSON.stringify(o));}
 // Noter un combat : o = {essai, phase (1..n, la plus haute atteinte), par (l'élément qui t'a tué, ou null), tab (si par vaut « tableau » : le
-// tableau, {decor, theme, regle}), bati (si par vaut « effondrement » : la sorte tombée sur toi), win, vus (éléments rencontrés)}.
+// tableau, {decor, theme, regle}), bati (si par vaut « effondrement » : la sorte tombée sur toi), cousu (5d, si par vaut « couture » : le Masqué cousu
+// qui t'a tué, {corps, cle, id}), win, vus (éléments rencontrés)}.
 // Une descente d'essai n'écrit rien (l'état rendu est le même objet).
 function brxNoter(S,o,D){if(o.essai)return S;const N=brxLireSauve(brxEcrireSauve(S),D)||brxNeuf();N.tentatives++;N.phaseMax=Math.max(N.phaseMax,o.phase|0);
  if(o.win){N.victoires++;}else if(o.par&&(!D||D.elements[o.par])&&o.phase>=1){N.mort[o.phase]=o.par;
   if(o.par==='tableau'&&o.tab&&(D?brxTabOk(D,o.tab,null):true))N.tab[o.phase]={decor:o.tab.decor,theme:o.tab.theme,regle:o.tab.regle==null?null:o.tab.regle};else delete N.tab[o.phase];
-  if(o.par==='effondrement'&&typeof o.bati==='string'&&BRX_CHUTE.includes(o.bati))N.bati[o.phase]=o.bati;else delete N.bati[o.phase];}
+  if(o.par==='effondrement'&&typeof o.bati==='string'&&BRX_CHUTE.includes(o.bati))N.bati[o.phase]=o.bati;else delete N.bati[o.phase];
+  if(o.par==='couture'&&brxCousuOk(o.cousu))N.cousu[o.phase]={corps:o.cousu.corps,cle:o.cousu.cle,id:o.cousu.id==null?null:o.cousu.id};else delete N.cousu[o.phase];}
  for(const id of o.vus||[])if(!N.vus.includes(id)&&(!D||D.elements[id]))N.vus.push(id);
  return N;}
 // ── Statistiques : moyenne et pire part (p95 par défaut) d'un échantillon de durées (ms)
@@ -13600,7 +13697,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // ── la sauvegarde (Q13) : lue à l'entrée du combat, écrite à sa fin ; une descente d'essai n'écrit rien
  function sauveLire(){try{const S=brxLireSauve(SAVE.brumeux,DB);return S;}catch(err){return brxNeuf();}}
  function noter(win){if(X.note||!X.e)return;X.note=true;
-  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,bati:!win&&X.tue==='effondrement'?X.tueBati:null,win,vus:[...X.vus]};
+  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,bati:!win&&X.tue==='effondrement'?X.tueBati:null,cousu:!win&&X.tue==='couture'?X.tueCousu:null,win,vus:[...X.vus]};
   const S=X.sauve||brxNeuf(),N=brxNoter(S,o,DB);X.j.note=o;
   if(!o.essai&&N!==S){SAVE.brumeux=brxEcrireSauve(N);X.sauve=N;try{persist();}catch(err){}}}
  const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/.test(location.search);
@@ -13612,6 +13709,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   S.par=Object.assign({},RUN.par18||{});S.tue=X.sauve?X.sauve.mort:{};
   S.parA=Object.assign({},RUN.par18A||{});S.parR=Object.assign({},RUN.par18R||{});S.acte=ACTE();S.themes=BE_D.themes||{};S.tab=X.sauve&&X.sauve.tab||{};   // v18.6 : les tableaux
   S.bati=X.sauve&&X.sauve.bati||{};   // v18.7 : la sorte qui s'est effondrée sur toi
+  S.cousu=X.sauve&&X.sauve.cousu||{};   // v18.8 : le Masqué cousu qui t'a tué
   try{S.adapt=adaptLv(P.cls);}catch(err){S.adapt=0;}
   S.portes=((RUN.memoire&&RUN.memoire.actifs)||[]).map(a=>({id:a.id,src:a.src,rang:a.rang,g:a.g||0}));
   S.reserve=(RUN.reserveBrume||[]).map(x=>({id:x.id,source:x.source,oublie:x.oublie}));
@@ -13652,6 +13750,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    // v18.7 : l'Équerre (alignée sur l'arène, puis tournée de 45°, puis de ±22,5°), la Truelle (tournée de 0,2 rad par variante)
    else if(el.forme==='croix')zs=brxEquerre(el,[P.x,P.y],[0,Math.PI/4,Math.PI/8,-Math.PI/8][k]||0);
    else if(el.forme==='cone')zs=brxTruelle(el,[e.x,e.y],[P.x,P.y],(k%2?1:-1)*Math.ceil(k/2)*0.2);
+   // v18.8 : le Surjet (depuis sa croix, tourné de 0,12 rad par variante)
+   else if(el.forme==='losange')zs=brxSurjet(el,[e.x,e.y],[P.x,P.y],(k%2?1:-1)*Math.ceil(k/2)*0.12);
    out.push(zs);}
   return out;}
  function lancer(id){const el=DB.elements[id],e=X.e;if(!el||!e)return false;X.j.lancers++;
@@ -13688,8 +13788,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    if(!P.dead&&P.dashT<=0&&!(z.grp&&frappe.has(z.grp))&&brxDans(z,P.x,P.y,P.r)){if(z.grp)frappe.add(z.grp);X.zoneCourante=z;try{XA.coup(z,()=>hurtPlayer(z.degats,e));}finally{X.zoneCourante=null;}}
    if(z.fin&&!(z.grp&&finis.has(z.grp))){if(z.grp)finis.add(z.grp);try{z.fin(z);}catch(err){console.error(err);}}}   // v18.7 : la fin d'une Ruée, d'un effondrement
   X.zones=X.zones.filter(z=>!z.fait||z.flash>0);
-  for(const tr of X.tirs){tr.t+=dt;if(tr.t<tr.charge)continue;tr.fait=true;const a0=Math.atan2(P.y-e.y,P.x-e.x);
-   for(let i=0;i<tr.n;i++){const a=a0+(tr.n>1?(i-(tr.n-1)/2)*0.22:0);eproj.push({x:e.x+Math.cos(a)*e.r,y:e.y+Math.sin(a)*e.r,vx:Math.cos(a)*tr.vitesse,vy:Math.sin(a)*tr.vitesse,r:7,dmg:tr.degats,life:6,from:e,boss:true,col:TELE.proj,brx18:tr.id});}
+  for(const tr of X.tirs){tr.t+=dt;if(tr.t<tr.charge)continue;tr.fait=true;const a0=Math.atan2(P.y-e.y,P.x-e.x),ox=tr.h?tr.h[0]:e.x,oy=tr.h?tr.h[1]:e.y;   // v18.8 : les Aiguilles partent de là où elles ont été annoncées, à leurs angles
+   for(let i=0;i<tr.n;i++){const a=tr.ang?tr.ang[i]:a0+(tr.n>1?(i-(tr.n-1)/2)*0.22:0);eproj.push({x:ox+Math.cos(a)*e.r,y:oy+Math.sin(a)*e.r,vx:Math.cos(a)*tr.vitesse,vy:Math.sin(a)*tr.vitesse,r:tr.r||7,dmg:tr.degats,life:6,from:e,boss:true,col:TELE.proj,brx18:tr.id});}
    sfx('shoot');}
   X.tirs=X.tirs.filter(tr=>!tr.fait);}
  // ── la partition : entracte → mesure (fixe ou libre) → … → à nu (anneau ivoire) après la boucle, puis une boucle neuve (nouveaux tirages)
@@ -13729,7 +13829,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // ── la fin : sa croix tombe, ses fils se coupent, l'arène redevient brume ; rien n'est retardé (la salle est vidée tout de suite)
  function mort(e){room.bossDead=true;X.tab=null;effacerCons();X.ann=null;X.mainsC=null;for(const o of enemies)if(!o.dead&&o!==e){o.dead=true;mist(o.x,o.y,o.r);}
   eproj=[];rings=[];room.spawning=[];room.bl=null;X.zones=[];X.tirs=[];X.scene={t:0,x:e.x,y:e.y,haut:DB.phases[X.phase].presence==='haut',r:e.r};
-  mist(e.x,e.y,e.r*1.5);shake(12,0.6);freezeT=0.12;sfx('boss');noter(true);const h=hud();if(h)h.classList.remove('brx18');
+  X.scene.dy=croixDy();mist(e.x,e.y,e.r*1.5);shake(12,0.6);freezeT=0.12;sfx('boss');noter(true);const h=hud();if(h)h.classList.remove('brx18');
   // hors essai (5g) : la victoire de la descente ; en essai : le combat se termine là, la salle reste ouverte
   if(!X.essai){try{gainXp(e.xp);persist();}catch(err){}}}
  // ── le bot qui frappe (bot=2, Q14) : il sort des zones (à sa sortie calculée ; esquive s'il est pris de court), garde la distance de sa forme,
@@ -13739,7 +13839,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  const press=code=>{dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true}));};
  function pilote2(dt){const e=X.e;for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);if(!e||e.dead||P.dead)return;XA.dbg().pilote(true);
   const B=X.essai.b||(X.essai.b={t:0,beat:-1,strafe:1,sT:0});B.t+=dt;B.sT-=dt;if(B.sT<=0){B.sT=1.2+X.rng()*1.2;B.strafe=-B.strafe;}
-  let tx,ty;const vives=X.zones.filter(z=>!z.fait).concat(X.tab?X.tab.dalles.map(h=>({forme:'disque',x:h.x,y:h.y,r:h.r,charge:h.w>0?h.w:0,t:0})):[]),dedans=vives.filter(z=>brxDans(z,P.x,P.y,P.r+24)),bl=room.bl&&room.bl.real&&hyp(P.x-room.bl.x,P.y-room.bl.y)<room.bl.r+P.r+20?room.bl:null;
+  let tx,ty;const vives=X.zones.filter(z=>!z.fait).concat(X.tab?X.tab.dalles.map(h=>({forme:'disque',x:h.x,y:h.y,r:h.r,charge:h.w>0?h.w:0,t:0})):[]).concat(X.tirs.filter(q=>q.zs).flatMap(q=>q.zs.map(z=>Object.assign({},z,{charge:q.charge+0.4,t:q.t})))),dedans=vives.filter(z=>brxDans(z,P.x,P.y,P.r+24)),bl=room.bl&&room.bl.real&&hyp(P.x-room.bl.x,P.y-room.bl.y)<room.bl.r+P.r+20?room.bl:null;
   if(dedans.length||bl){const r0=dedans.length?Math.min(...dedans.map(z=>z.charge-z.t)):0,zs=vives.filter(z=>z.charge-z.t<=r0+0.5);if(bl)zs.push({forme:'disque',x:bl.x,y:bl.y,r:bl.r});
    const s=brxSortie(DB,zs,[P.x,P.y],optSortie(9));if(s.ok&&s.q){tx=s.q[0];ty=s.q[1];}else{const z=dedans[0]||bl,q=z.forme==='couloir'?{x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2}:z,dx=P.x-q.x,dy=P.y-q.y,d=hyp(dx,dy)||1;tx=P.x+dx/d*200;ty=P.y+dy/d*200;}
    const reste=Math.min(...dedans.map(z=>z.charge-z.t),bl?bl.t:9);if(reste<0.3&&P.dashCh>0&&P.dashT<=0){press('Space');}}
@@ -13785,14 +13885,17 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function statsRun(){if(!X.on&&!X.j.note)return null;const ph={};for(const k in X.j.phases)ph[+k+1]={t:Math.round(X.j.phases[k].t),coups:X.j.phases[k].coups};
   return{phases:ph,phase:X.phase+1,palier:X.palier,graine:X.graine,lancers:X.j.lancers,sautes:X.j.sautes,posees:X.j.posees,fin:X.j.note?(X.j.note.win?'victoire':'mort'):'en cours',par:X.j.note?X.j.note.par:null,
    tableaux:X.j.tableaux.length,vides:X.j.tableaux.filter(t=>t.vide===true).length,rentres:X.j.rentres,dallesSautees:X.j.dallesSautees,
-   bati:X.j.bati.filter(b=>b.sorte).length,annulees:X.j.annulees,cassees:X.j.cassees,effondrees:X.j.effondrees,ruees:X.j.ruees,brisees:X.j.brisees,cloches:X.j.cloches,appels:X.j.appels,mesuresSautees:X.j.mesuresSautees};}   // v18.7 : la phase II
+   bati:X.j.bati.filter(b=>b.sorte).length,annulees:X.j.annulees,cassees:X.j.cassees,effondrees:X.j.effondrees,ruees:X.j.ruees,brisees:X.j.brisees,cloches:X.j.cloches,appels:X.j.appels,mesuresSautees:X.j.mesuresSautees,
+   couture:X.cou?{coutures:X.cou.j.coutures,fils:X.cou.j.fils,coupes:X.cou.j.coupes,aboutis:X.cou.j.aboutis,suspendus:X.cou.j.suspendus,brises:X.cou.j.brises,nu:X.cou.j.nu,nemesis:!!X.cou.j.nemesis}:null};}   // v18.7 : la phase II ; v18.8 : la phase III
  // la salle change : plus de Brumeux (crochets de l'arène rendus)
  const _mr=makeRoom;makeRoom=function(){const h=hud();if(h)h.classList.remove('brx18');if(X.on)XA.crochets({sourcesPlus:null,bossCam:null,glypheBoss:null,bossCharge:null,solTrou:null,jetonTir:null});X=neuf();return _mr.apply(this,arguments);};
  // ── dessin. Phases I–III : son corps se devine dans la brume au bord du monde ; ses mains, sa croix de manipulation et ses fils descendent dans
  // l'arène (et c'est là qu'on le frappe). Phases IV–V : corps entier au sol, à l'échelle d'un gardien. Point faible : l'anneau ivoire G27.anneau
  // sur ses mains (I, II), sa croix (III), son cœur (IV, V), seulement à nu (G27.aNu). Tout suit e.fade ; mouvements réduits : rien ne pulse.
  const rgba=(k,a)=>`rgba(${COL[k]},${a})`;
- function faible(e){const ph=DB.phases[X.phase];if(ph.presence==='haut')return ph.faible==='croix'?[e.x,e.y-70,e.r*1.3]:[e.x,e.y,e.r*1.4];return[e.x,e.y+e.r*0.1,e.r*0.8];}
+ // v18.8 : en phase III (point faible : la croix), l'entité frappable EST la croix : l'anneau est dessiné là où l'on frappe (ses mains pendent dessous)
+ const croixDy=()=>DB.phases[X.phase]&&DB.phases[X.phase].faible==='croix'?70:0;
+ function faible(e){const ph=DB.phases[X.phase];if(ph.presence==='haut')return ph.faible==='croix'?[e.x,e.y,e.r*1.3]:[e.x,e.y,e.r*1.4];return[e.x,e.y+e.r*0.1,e.r*0.8];}
  function main(c,x,y,s,dir,ouv){ouv=ouv||0;c.save();c.translate(x,y);c.rotate(dir*0.25);c.fillStyle=rgba('yeux',0.92);c.strokeStyle='rgba(10,8,16,.8)';c.lineWidth=1.5;
   c.beginPath();c.ellipse(0,0,s*0.55,s*0.75,0,0,TAU);c.fill();c.stroke();
   // v18.6 : la main s'ouvre (ouv 0 → 1) pendant la fenêtre à nu d'un tableau vidé : les doigts s'écartent
@@ -13809,7 +13912,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   const x0=Math.max(dx,CAM.x),y0=Math.max(dy,CAM.y),x1=Math.min(dx+sw,CAM.x+W),y1=Math.min(dy+sh,CAM.y+H);if(x1<=x0||y1<=y0)return;
   // les bornes de la part visible, entières dans l'image (un recadrage fractionnaire se filtrerait aussi)
   const ix0=Math.floor(x0-dx),iy0=Math.floor(y0-dy),ix1=Math.ceil(x1-dx),iy1=Math.ceil(y1-dy);c.drawImage(img,sx+ix0,sy+iy0,ix1-ix0,iy1-iy0,dx+ix0,dy+iy0,ix1-ix0,iy1-iy0);}
- function corpsHaut(c,e,fd){const yb=AR.y0-20,xb=e.x,R=e.r;
+ function corpsHaut(c,e,fd){const yb=AR.y0-20,xb=e.x,R=e.r,dy=croixDy(),ey=e.y;e.y=ey+dy;try{corpsHaut0(c,e,fd);}finally{e.y=ey;}}
+ function corpsHaut0(c,e,fd){const yb=AR.y0-20,xb=e.x,R=e.r;
   // le corps, deviné dans la brume au bord du monde (jamais pris pour le corps : sous 35 % d'opacité)
   c.save();c.globalAlpha=0.35*fd;const ci=corpsImg();poseVue(c,ci,0,0,ci.width,ci.height,xb-310,yb-215);
   c.restore();oeilB(c,xb-26,yb-70,9,0.75*fd);oeilB(c,xb+26,yb-70,9,0.75*fd);
@@ -13845,13 +13949,14 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    else if(z.forme==='anneau'){if(z.breche){const a=z.breche.a,l=z.breche.l,ca=Math.cos(a),sa=Math.sin(a),qx=-sa*l/2,qy=ca*l/2,L=z.r1+24;   // v18.6 : la brèche du Cadre, retirée par une découpe (pair-impair)
      c.beginPath();c.rect(z.x-L,z.y-L,2*L,2*L);c.moveTo(z.x+qx,z.y+qy);c.lineTo(z.x+qx+ca*L,z.y+qy+sa*L);c.lineTo(z.x-qx+ca*L,z.y-qy+sa*L);c.lineTo(z.x-qx,z.y-qy);c.closePath();c.clip('evenodd');}
     rond(c,z.x,z.y,z.r1);c.stroke();rond(c,z.x,z.y,z.r0);c.stroke();c.beginPath();c.arc(z.x,z.y,z.r1,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();c.fillStyle=`rgba(${TELE.zone},0.26)`;c.beginPath();c.arc(z.x,z.y,z.r0+(z.r1-z.r0)*k,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();}
+   else if(z.forme==='losange'){const L=q=>{c.beginPath();c.moveTo(q,0);c.lineTo(0,q);c.lineTo(-q,0);c.lineTo(0,-q);c.closePath();};c.translate(z.x,z.y);c.rotate(z.a||0);L(z.h);c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;L(z.h*k);c.fill();}   // v18.8 : le Surjet
    else{rond(c,z.x,z.y,z.r);c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;rond(c,z.x,z.y,z.r*k);c.fill();}
    c.restore();}
   const e=X.e;if(e&&!e.dead)for(const tr of X.tirs){const k=Math.min(1,tr.t/tr.charge);c.save();c.globalAlpha=0.3+0.5*k;c.strokeStyle=`rgba(${TELE.proj},0.9)`;c.lineWidth=2;rond(c,e.x,e.y,e.r*(1.3-0.3*k));c.stroke();c.restore();}
   for(const o of X.cons){if(o.pose)continue;const k=Math.min(1,o.t/o.annonce);c.save();c.strokeStyle=rgba('craie',RM?0.75:0.5+0.3*k);c.lineWidth=2;c.setLineDash([8,6]);rond(c,o.x,o.y,o.r);c.stroke();c.setLineDash([]);c.strokeStyle=rgba('craie',0.9);rond(c,o.x,o.y,o.r*k);c.stroke();c.restore();}
   if(X.regard>0&&e&&!e.dead&&P){const a=Math.min(1,X.regard/1.2),ph=DB.phases[X.phase],sy=ph.presence==='haut'?AR.y0-90:e.y-e.r*0.55;c.save();c.globalAlpha=0.45*a;c.strokeStyle=rgba('yeux',1);c.lineWidth=1.2;c.setLineDash([3,9]);c.beginPath();c.moveTo(e.x,sy);c.lineTo(P.x,P.y);c.stroke();c.setLineDash([]);c.restore();}
   if(X.scene){const S=X.scene,k=Math.min(1,S.t/1.6),fd=1-k;c.save();c.globalAlpha=fd;
-   if(S.haut){const cy=S.y-70+k*160;c.strokeStyle=rgba('croix',0.95);c.lineWidth=5;c.lineCap='round';c.save();c.translate(S.x,cy);c.rotate(RM?0:k*1.2);c.beginPath();c.moveTo(-46,0);c.lineTo(46,0);c.moveTo(0,-22);c.lineTo(0,26);c.stroke();c.restore();
+   if(S.haut){const cy=S.y-70+(S.dy||0)+k*160;c.strokeStyle=rgba('croix',0.95);c.lineWidth=5;c.lineCap='round';c.save();c.translate(S.x,cy);c.rotate(RM?0:k*1.2);c.beginPath();c.moveTo(-46,0);c.lineTo(46,0);c.moveTo(0,-22);c.lineTo(0,26);c.stroke();c.restore();
     c.strokeStyle=rgba('fils',0.7);c.lineWidth=1.2;c.beginPath();for(const fx of [-46,46]){c.moveTo(S.x+fx,cy);c.lineTo(S.x+fx*1.3,cy+40+k*120);}c.stroke();}
    else{c.fillStyle=rgba('manteau',0.9);c.beginPath();c.ellipse(S.x,S.y+S.r*0.6,S.r*(1+k),S.r*0.4*(1-k*0.6),0,0,TAU);c.fill();}
    c.restore();}}
@@ -14241,7 +14346,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    if(k.sorte==='puits'&&k.cap>0&&k.bu>0){const d=k.disques[0],q=Math.min(1,k.bu/k.cap),o=decal(k);c.fillStyle=crgb(k.mat,'arete',0.25+0.55*q);c.beginPath();c.arc(d.x+o.x,d.y+o.y,d.r*0.58*Math.sqrt(q),0,TAU);c.fill();}}}
  const _sol187=CAM.sol;CAM.sol=function(){if(!(X.on&&X.mod&&(X.bat.length||(X.cu&&X.cu.cuites.size))))return _sol187.apply(this,arguments);try{cuisson();}catch(err){console.error(err);}
   const all=room.pillars;room.pillars=all.filter(p=>!p.cons18);try{_sol187.apply(this,arguments);}finally{room.pillars=all;}try{dessinSol2();}catch(err){console.error(err);}};
- function croixXY(e){return[e.x,e.y-70];}
+ function croixXY(e){return[e.x,e.y-70+croixDy()];}
  function dessinOuvrage(c){const e=X.e;if(!e)return;const [cx,cy]=croixXY(e),haut=DB.phases[X.phase].presence==='haut';
   for(const k of X.bat){
    if(k.etat==='annonce'){const kk=Math.min(1,k.t/k.annonce);c.save();c.strokeStyle=rgba('craie',RM?0.8:0.55+0.3*kk);c.lineWidth=2;c.setLineDash([7,6]);
@@ -14309,6 +14414,209 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function etatBat(){return X.bat.map(c=>({id:c.id,sorte:c.sorte,mat:c.mat,etat:c.etat,t:+c.t.toFixed(2),k:c.k,c:[+c.c[0].toFixed(1),+c.c[1].toFixed(1)],disques:c.disques.length,casses:c.disques.filter(d=>d.casse).length,
   pv:c.elements.map(el=>Math.round(el.pv)),pvMax:c.elements.map(el=>Math.round(el.pvMax)),fiss:c.elements.map(el=>el.fiss),pousse:c.pousse||0,part:c.part!=null?+c.part.toFixed(3):null,aire:c.aire!=null?+c.aire.toFixed(3):null,
   etatI:c.etatI,bu:c.bu?+c.bu.toFixed(1):0,cap:c.cap||0,inerte:!!c.inerte,cloche:c.cl?{t:+c.cl.t.toFixed(2),z:!!c.cl.z,s:+(c.cl.s||0).toFixed(2),de:c.cl.de}:null,surBot:c.surBot,chute:!!c.chute}));}
+ // ═══ v18.8 · Phase III, « La Couture » (action 5d, fiche validée le 2 novembre 2026) ════════════════════════════════════════════════════════
+ // Il coud ce que tu as oublié. Trois fils descendent de sa croix vers trois points du sol ; à chacun, le montage du Masqué (v16.28), ralenti. On coupe
+ // un fil en frappant son nœud (une entité fixe, comme une construction : un coup par image, ni brûlures ni poisons, ni PV volés, hors du ciblage
+ // automatique) : le corps retombe en brume. Un montage qui aboutit donne un Masqué cousu (assemblage sous le budget de l'acte, poidsProfil allumé ici
+ // seulement, souvenir de ta réserve tiré à la récence, sans remise) ; ta némésis, si elle n'a pas paru, est le premier fil. Au plus 2 / 2 / 3 cousus
+ // vivants et trois fils tendus : au plafond, un montage reste suspendu. Plus aucun fil : sa croix vacille, à nu 3 s ; un cousu brisé : à nu 2 s.
+ // Les règles du Masqué ne changent pas (budget, une zone à la fois, venue au contact, renoncement) ; un cousu n'a ni escorte, ni carte, ni récompense ;
+ // ses PV sont une part de ceux de la phase ; ses chargements ne descendent jamais sous le préavis de l'arène, et chacune de ses zones est une source
+ // de signe. Ses gestes signature : le Surjet (losanges), le Dé (disque en deux coups), les Aiguilles (projectiles), la feinte.
+ const CU=DB.couture,AS=()=>window.__asm,AM=BE_D.assemble,SVJ=window.BRUME_DATA.souvenirsBrume,FAM={};
+ try{const FF=(window.BRUME_DATA.souvenirs||{}).familles||{};for(const k in FF)(FF[k].t||[]).forEach(id=>{FAM[id]=k;});}catch(err){}
+ const couNeuf=()=>({fils:[],cur:null,nc:0,nf:0,pris:[],dernier:null,nemFait:false,cousuFait:false,bouts:[],attZ:0,
+  j:{coutures:0,sautees:0,fils:0,coupes:0,aboutis:0,suspendus:0,brises:0,decousus:0,nu:0,nemesis:null,cousuRejoue:false,porteurs:0,ordinaires:0,charges:0,prolonges:0,zonesJugees:0,coutureLog:[]}});
+ const couRng=n=>desRng(((X.graine>>>0)^Math.imul(0xC2B2AE35,n))>>>0);
+ const MOd=()=>AM.montage,MOtot=()=>{const m=MOd();return m.descenteS+m.masqueS+m.coutureS+m.coupeS;},MOcoupe=()=>{const m=MOd();return m.descenteS+m.masqueS+m.coutureS;};
+ const tendu=f=>f.etat==='attente'||f.etat==='montage'||f.etat==='suspendu';
+ const vivants=()=>enemies.filter(o=>!o.dead&&o.cou18&&o.cou18.etat==='abouti').length;
+ const ctxA=()=>({act:Math.max(1,RUN.act),salle:G(),J:SVJ});
+ // ── ce qu'il coud : la némésis (premier fil), le Masqué cousu qui t'a tué (premier fil après elle), puis un Masqué lu sur toi et ta réserve
+ function nemesisCousue(){const XC=X.cou;if(XC.nemFait)return null;XC.nemFait=true;
+  let f=X.essai&&X.essai.nemF||null;
+  if(!f&&window.__nemesis&&window.__nemesis.actif()&&!RUN.essai&&!ESSAI_URL18()){const L=(window.__nemesis.valider()||[]).filter(Boolean);f=brxNemCouture(L,RUN.nemVenus||{});}
+  if(!f)return null;const st=window.__nemesis.stats(f),sv=f.sv;
+  const svR=sv?{x:{id:sv.id,rang:sv.rang||1,g:sv.g||0,nem:f.uid},fid:sv.fid,cap:sv.renfort||sv.sansGeste?null:'sb:'+sv.fid,vars:(sv.vars||[]).slice(),renfort:sv.renfort||null,force:st.force}:null;
+  if(sv&&sv.id)XC.pris.push(sv.id);   // son souvenir n'est pas recousu sur un autre fil
+  (RUN.nemVenus=RUN.nemVenus||{})[f.uid]=1;if(!(X.essai&&X.essai.nemF))try{window.__nemesis.venue(f.uid);}catch(err){}
+  XC.j.nemesis={uid:f.uid,points:f.points,corps:f.co.corps};
+  return{co:{corps:f.co.corps,depart:f.co.depart.slice(),eveil:f.co.eveil,menace:f.co.menace,base:f.co.base,cle:f.co.cle},sv:svR,nom:f.nom,nem:f.uid,nemPoints:f.points,nemStats:st};}
+ function cousuRejoue(){const XC=X.cou,C=X.lec&&X.lec.cousu;if(XC.cousuFait||!C)return null;XC.cousuFait=true;const F2=AS();if(!F2)return null;const ctx=ctxA();
+  let sv=null;const x=C.id&&(RUN.reserveBrume||[]).find(y=>y.id===C.id&&y.source==='talent');
+  if(x&&!XC.pris.includes(x.id)&&FAM[x.id]&&SVJ.familles[FAM[x.id]]){const fid=FAM[x.id],E=(SVJ.talents||{})[x.id]||{},rf=E.renfort&&SVJ.renforts[E.renfort]?E.renfort:null,As=AM.souvenir||{};
+   sv={x,fid,cap:rf?null:'sb:'+fid,vars:rf?[]:(E.v||[]).slice(),renfort:rf,force:1+(As.parRang||0)*Math.max(0,(x.rang||1)-1)+(As.parGravure||0)*(x.g||0)};}
+  let co=F2.asmCombos(AM,Object.assign(sv&&sv.cap?{porte:sv.cap}:{},ctx)).find(c=>c.cle===C.cle)||null;
+  if(!co&&sv){sv=null;co=F2.asmCombos(AM,ctx).find(c=>c.cle===C.cle)||null;}
+  if(!co)return null;if(sv)XC.pris.push(sv.x.id);XC.j.cousuRejoue=true;return{co,sv};}
+ function coudreUn(rng){const XC=X.cou,F2=AS();if(!F2)return null;const ctx=ctxA();
+  const peut=(f,E)=>!!(E.renfort&&SVJ.renforts[E.renfort])||F2.asmCombos(AM,Object.assign({porte:'sb:'+f},ctx)).length>0;
+  const s0=brxSouvenirCouture(DB,RUN.reserveBrume||[],FAM,SVJ,XC.pris,rng,AM.souvenir,peut);let prof=null;try{prof=profile();}catch(err){}
+  const r=brxCoudre(F2,AM,ctx,s0,XC.dernier,rng,prof);if(!r.co)return null;if(r.sv)XC.pris.push(r.sv.x.id);return r;}
+ // ── la Couture (mesure « couture ») : les fils qui manquent pour trois, leurs points, ce qu'il coud ; une Couture qui ne peut rien lancer saute
+ function coudre(){const e=X.e,XC=X.cou;if(!e||e.dead||!XC)return false;const n0=brxFilsALancer(DB,XC.fils.filter(tendu).length);if(n0<=0){XC.j.sautees++;return false;}
+  const nc=++XC.nc,rng=couRng(nc),cons=X.bat.filter(c=>c.etat==='debout'),dv=cons.find(c=>c.sorte==='douves');
+  const worst=room.pillars.filter(q=>!q.cons18).concat(cons.flatMap(c=>brxTous(c))),G=brxGrille(monde(),AR,worst,DB.constructions.grille);G.relie=brxRelie(G,P.x,P.y);
+  const pts=brxPointsCouture(DB,[P.x,P.y],AR,XA.dbg().vue(),room.pillars.filter(q=>!q.cons18),cons,G,rng,{n:n0,ile:dv&&dv.ile});
+  if(!pts.length){XC.j.sautees++;return false;}
+  const cur={n:nc,ids:[],coupes:0,t:0,nu:false};XC.cur=cur;XC.bouts=[];XC.j.coutures++;
+  pts.forEach((p,k)=>{let q=null,nem=false,rej=false;
+   if(!XC.nemFait){q=nemesisCousue();nem=!!q;}if(!q&&!XC.cousuFait&&X.lec&&X.lec.cousu){q=cousuRejoue();rej=!!q;}if(!q)q=coudreUn(rng);if(!q)return;
+   XC.dernier=q.co.base;const seed=Math.floor(rng()*4294967296)>>>0,F2=AS();
+   const R={seed,rnd:F2.asmRng(seed),co:q.co,nom:q.nom||F2.asmNom(AM,q.co,SVJ),e:null,vaincu:false,wi:0,appel:null,sv:q.sv||null,cousu18:true,acte18:CU.attente.acte,salle18:CU.attente.salle};
+   if(q.nem){R.nem=q.nem;R.nemPoints=q.nemPoints;R.nemStats=q.nemStats;}
+   const f={id:++XC.nf,k,p,R,co:q.co,sv:q.sv||null,nem,rej,delai:k*CU.decalS,etat:'attente',t:0,e:null,noeud:null,el:{pv:0,pvMax:0,coup:0,fiss:0},n:nc};
+   XC.fils.push(f);cur.ids.push(f.id);XC.j.fils++;if(f.sv)XC.j.porteurs++;else XC.j.ordinaires++;});
+  XC.j.coutureLog.push({n:nc,p:[Math.round(P.x),Math.round(P.y)],pts:pts.map(q=>[Math.round(q[0]),Math.round(q[1])]),fils:cur.ids.map(id=>{const f=XC.fils.find(y=>y.id===id);return{corps:f.co.corps,cle:f.co.cle,sv:f.sv?f.sv.x.id:null,nem:f.nem,rej:f.rej};})});
+  if(!cur.ids.length){XC.j.sautees++;XC.cur=null;return false;}
+  X.ph='couture';X.t=0;if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.4);}catch(err){}return true;}
+ // un fil descend : le Masqué naît au bout (montage de la salle, ralenti ; intouchable), son nœud au-dessus de lui (entité fixe)
+ function lancerFil(f){const p=f.p,prev=room.asm;room.asm=f.R;let e=null;try{e=createEnemy(f.co.corps,p[0],p[1],true);}finally{room.asm=prev;}
+  if(!e||!e.asm){f.etat='coupe';return;}f.e=e;e.cou18=f;e.xp=0;
+  const x=f.sv&&f.sv.x,bonus=x?1+(AM.souvenir.pv||0)*(Math.max(0,(x.rang||1)-1)+(x.g||0)):1;
+  const rfs=[...(f.sv&&f.sv.renfort?[f.sv.renfort]:[]),...(f.R.nemStats?f.R.nemStats.renforts||[]:[])],rob=rfs.includes('pv')&&SVJ.renforts.pv?1+(SVJ.renforts.pv.pv||0):1;
+  e.maxHp=e.hp=Math.round(brxPvCousu(DB,X.palier,(AM.corps[f.co.corps]||{}).pv||1,bonus,f.R.nemStats?f.R.nemStats.pv:1)*rob);
+  if(e.asm.mont)e.asm.mont.haut=CU.noeud.haut;
+  const pv=brxPvNoeud(DB,X.palier),o=createEnemy('mannequin',p[0],p[1]-CU.noeud.haut);f.el={pv,pvMax:pv,coup:0,fiss:0};
+  o.fixed=true;o.cons18={c:{elements:[f.el],etat:'debout'},el:0,noeud:f};o.r=CU.noeud.r;o.dmgLog=[];o.maxHp=o.hp=1e6;o.xp=0;o.spd=0;o.dmg=0;o.name='';f.noeud=o;
+  f.etat='montage';f.t=0;sfx('asm_sol');}
+ // couper un fil : le corps retombe et se défait en brume, le masque tombe ; un bout de fil pend de sa croix ; plus aucun fil (au moins un coupé) : à nu
+ function couper(f){const e=f.e,XC=X.cou;f.etat='coupe';XC.j.coupes++;if(f.noeud){f.noeud.dead=true;f.noeud=null;}
+  if(e&&!e.dead){e.dead=true;mist(e.x,e.y,e.r,'#2a2440');sparks(e.x,e.y-e.r,8,`rgb(${COL.fils})`);eproj=eproj.filter(q=>q.from!==e);}
+  XC.bouts.push({x:f.p[0],y:f.p[1]-CU.noeud.haut,t:0});sfx('asm_coupe');
+  const cur=XC.cur;if(cur&&cur.ids.includes(f.id))cur.coupes++;
+  if(cur&&!cur.nu&&brxNuCouture(cur.coupes,XC.fils.filter(tendu).length)){cur.nu=true;XC.j.nu++;const B=X.e;if(B&&!B.dead){B.vuln=Math.max(B.vuln||0,CU.nuS);X.vacille=1;}
+   if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.1);}catch(err){}}}
+ // se découdre (transition III → IV, sa mort) : sans récompense ni promotion (la némésis garde sa fiche)
+ function decoudre(){const XC=X.cou;if(!XC)return;const S=new Set();
+  for(const f of XC.fils){if(f.noeud){f.noeud.dead=true;f.noeud=null;}const e=f.e;if(e&&!e.dead){e.dead=true;mist(e.x,e.y,e.r,'#2a2440');S.add(e);XC.j.decousus++;}if(tendu(f))f.etat='coupe';}
+  if(S.size){eproj=eproj.filter(q=>!S.has(q.from));const ZR=AS()&&AS().zr?AS().zr():null;if(ZR)for(let i=ZR.length-1;i>=0;i--)if(S.has(ZR[i].src))ZR.splice(i,1);}
+  XC.cur=null;XC.bouts=[];if(X.ph==='couture'){X.ph='entracte';X.t=ent();}}
+ // ── chaque pas : les fils qui descendent, les montages ralentis (suspendus au plafond), les nœuds frappés, les chargements des cousus (jamais
+ // sous le préavis de l'arène), la fin d'une Couture
+ function couPas(dt){const XC=X.cou;if(!XC)return;const MT=MOtot(),k=1-MT/CU.montage.dureeS,d2=MOcoupe();
+  for(const f of XC.fils){
+   if(f.etat==='attente'){f.t+=dt;if(f.t>=f.delai&&!X.trans)lancerFil(f);continue;}
+   if(f.etat==='montage'||f.etat==='suspendu'){const e=f.e;if(!e||e.dead){if(tendu(f))couper(f);continue;}const M=e.asm&&e.asm.mont;f.t+=dt;
+    if(f.noeud){f.noeud.x=f.p[0];f.noeud.y=f.p[1]-CU.noeud.haut;}
+    if(f.el.coup>0){const d=f.el.coup;f.el.coup=0;if(f.noeud)addNum(f.noeud.x,f.noeud.y-CU.noeud.r-6,Math.round(d),'n');f.el.pv=Math.max(0,f.el.pv-d);f.el.fiss=brxFissure(DB,f.el.pv,f.el.pvMax);if(f.el.pv<=0){couper(f);continue;}}
+    if(!M){f.etat='abouti';XC.j.aboutis++;if(f.noeud){f.noeud.dead=true;f.noeud=null;}continue;}
+    M.t-=dt*k;   // ralenti : ses proportions gardées, montage.dureeS en tout
+    const peut=brxAboutit(DB,X.palier,vivants());
+    if(M.t>=d2-0.02&&!peut){M.t=d2-0.02;if(f.etat!=='suspendu'){f.etat='suspendu';XC.j.suspendus++;}}
+    else if(f.etat==='suspendu'&&peut)f.etat='montage';}}
+  for(const b of XC.bouts)b.t+=dt;
+  // un tir de Masqué cousu né hors de la vue se perd dans la brume (sa source, hors de vue, n'est pas signalée : il frapperait sans signe)
+  {let v=null;for(const q of eproj){if(q.cu18||q.dead||!q.from||!q.from.cou18)continue;q.cu18=1;v=v||XA.dbg().vue();if(arDistRect(v,q.from.x,q.from.y)>0||arDistRect(v,q.x,q.y)>0){q.dead=true;XC.j.tirsPerdus=(XC.j.tirsPerdus||0)+1;}}if(v)eproj=eproj.filter(q=>!q.dead);}
+  // chargements des Masqués cousus : jamais sous le préavis de l'arène (étapes d'arme de la Brume comprises)
+  for(const o of enemies){if(o.dead||!o.cou18||!o.asm||o.asm.mont)continue;const st=o.asm.st;   if(st.sb&&st.sb.ph==='charge'){const q=brxPlancherCharge(DB,st.sb.t,st.sb.tot);if(q.tot!==st.sb.tot){st.sb.t=q.t;st.sb.tot=q.tot;st.t=q.t;st.tot=q.tot;XC.j.prolonges++;}}
+   else if(st.ph==='charge'){const q=brxPlancherCharge(DB,st.t,st.tot);if(q.tot!==st.tot){st.t=q.t;st.tot=q.tot;XC.j.prolonges++;}}}
+  const cur=XC.cur;if(cur){cur.t+=dt;const L=XC.fils.filter(f=>cur.ids.includes(f.id)),fini=L.every(f=>f.etat!=='attente'&&f.etat!=='montage');
+   if(X.ph==='couture'&&(fini||cur.t>CU.montage.dureeS+CU.decalS*CU.fils+2)){X.ph='entracte';X.t=ent();}}
+  XC.fils=XC.fils.filter(f=>tendu(f)||(f.etat==='abouti'&&f.e&&!f.e.dead));}
+ // ── le non-cumul : un Masqué cousu attend les zones du Brumeux et celles des autres cousus ; ses gestes, eux, attendent une zone de cousu en cours
+ // (au plus attenteZoneS), puis c'est le cousu qui attend (X.prio)
+ const zoneCousu=o=>!o.dead&&o.cou18&&o.asm&&!o.asm.mont&&(o.asm.st.ph==='charge'||o.asm.st.ph==='effet'||!!o.asm.st.sb);
+ function zoneAutre18(e){if(!X.on||!X.cou||!e||!e.cou18)return false;if(X.prio)return true;if(arDistRect(XA.dbg().vue(),e.x,e.y)>0)return true;   // un cousu ne lance rien hors de la vue (comme le jeton d'un tireur)
+ if(X.zones.some(z=>!z.fait&&!z.cloche)||X.tirs.length)return true;
+  for(const o of enemies)if(o!==e&&zoneCousu(o))return true;return false;}
+ const _me188=mesure;mesure=function(){
+  if(X.phase===2&&X.cou){const m=X.boucle&&X.boucle[X.im];
+   if(m&&m.k==='couture'){X.im++;X.attZ=0;if(!coudre()){X.j.mesuresSautees++;X.ph='entracte';X.t=(DB.partition.couture.sauteS)||ent();}return;}
+   if(m&&enemies.some(zoneCousu)&&X.attZ<CU.attenteZoneS){X.attZ+=0.1;X.t=0.1;return;}   // il attend la zone d'un cousu
+   if(m&&X.attZ>=CU.attenteZoneS)X.prio=true;X.attZ=0;
+   if(m&&m.k==='libre'){const v=vivants(),actifs={};for(const z of X.zones)if(!z.fait)actifs[DB.elements[z.id]?DB.elements[z.id].sorte:'zone']=(actifs[DB.elements[z.id]?DB.elements[z.id].sorte:'zone']||0)+1;
+    m.elements=brxTirer(DB,X.lec,X.phase,X.palier,X.rng,brxActifsCouture(actifs,v),{moins:CU.budget.moins*v,plancher:CU.budget.plancher}).elements;}}
+  return _me188.apply(this,arguments);};
+ // ── les gestes signature à deux temps : le Dé (deux disques) et les Aiguilles (trois tirs, trajectoires annoncées)
+ const _la188=lancer;lancer=function(id){const el=DB.elements[id],e=X.e;if(!el||!e)return _la188.apply(this,arguments);
+  if(el.forme==='de'){X.j.lancers++;const charge=brxPreavis(DB,X.sauve,id);X.vus.add(id);const decs=[[0,0],[40,0],[0,40],[-40,0]],o=optSortie(charge);
+   for(let k=0;k<decs.length&&k<DB.sortie.essais;k++){const zs=brxDe(el,[P.x,P.y],decs[k]);if(!brxSortieDe(DB,el,zs,[P.x,P.y],o,charge).ok)continue;
+    const grp=++X.ngrp;for(const g of zs)X.zones.push(Object.assign(g,{id,t:0,charge,degats:el.degats*dmgMul(),vise:true,boss:true,src:e,fait:false,flash:0,essai:k,grp,fin:deSecond}));
+    X.tmes=Math.max(X.tmes,charge+el.seconde+0.3);return true;}
+   X.j.sautes++;return false;}
+  if(el.forme==='aiguilles'){X.j.lancers++;const charge=brxPreavis(DB,X.sauve,id);X.vus.add(id);const h=[e.x,e.y],rots=[0,0.12,-0.12,0.24];
+   for(let k=0;k<rots.length&&k<DB.sortie.essais;k++){const r=brxAiguilles(el,h,[P.x,P.y],AR,room.pillars,rots[k]);if(!brxSortie(DB,r.zones,[P.x,P.y],optSortie(charge+brxVolAiguille(el,h,[P.x,P.y])*0.8)).ok)continue;
+    X.tirs.push({id,t:0,charge,n:el.n,vitesse:el.vitesse,degats:el.degats*dmgMul(),fait:false,ang:r.angles,h,r:el.r,zs:r.zones});X.tmes=Math.max(X.tmes,charge+0.5);return true;}
+   X.j.sautes++;return false;}
+  return _la188.apply(this,arguments);};
+ function deSecond(z){const el=DB.elements.de,e=X.e;if(!e||e.dead||X.trans)return;const zs=brxDe(el,[P.x,P.y]);
+  if(brxPlacer(DB,[zs],[P.x,P.y],optSortie(el.seconde))<0){X.j.sautes++;return;}
+  const grp=++X.ngrp;for(const g of zs)X.zones.push(Object.assign(g,{id:'de',t:0,charge:el.seconde,degats:el.degats*dmgMul(),vise:true,boss:true,src:e,fait:false,flash:0,grp,second:true}));}
+ // ── les zones des Masqués cousus, sources de signe une à une (le point de chaque zone le plus proche de toi)
+ function zonesCousus(){const out=[];for(const o of enemies){if(!zoneCousu(o))continue;const S=o.asm,L=[];if(S.z)L.push(S.z);if(S.flash&&S.flash.z)L.push(S.flash.z);if(S.sb&&S.sb.zc&&S.sb.zc.zs)L.push(...S.sb.zc.zs);
+   for(const z of L){let q;if(z.pts){let b=null,bd=1e9;for(const [x,y] of z.pts){const d=hyp(P.x-x,P.y-y);if(d<bd){bd=d;b=[x,y];}}q={x:b[0],y:b[1],r:z.h||40};}
+    else if(z.cells){let b=null,bd=1e9;for(const [x,y] of z.cells){const d=hyp(P.x-x,P.y-y);if(d<bd){bd=d;b=[x,y];}}q={x:b[0],y:b[1],r:z.q||40};}
+    else if(z.len&&z.a!=null){const t=clamp((P.x-z.x)*Math.cos(z.a)+(P.y-z.y)*Math.sin(z.a),0,z.len);q={x:z.x+Math.cos(z.a)*t,y:z.y+Math.sin(z.a)*t,r:(z.w||40)/2};}
+    else q={x:z.x,y:z.y,r:z.r||z.max||60};
+    out.push({o:z,k:'tele',x:q.x,y:q.y,r:q.r,vise:true,rempli:S.st&&S.st.tot?clamp(1-S.st.t/S.st.tot,0,1):1,c:'foe'});}}
+  return out;}
+ const _so188=sources;sources=function(){const out=_so188.apply(this,arguments);if(X.on&&X.cou)try{out.push(...zonesCousus());}catch(err){console.error(err);}return out;};
+ // ── les coups des Masqués cousus : la zone qui frappe (si elle existe) est jugée par l'arène, au préavis de l'arène ; le cousu de la salle (room.asm)
+ // le temps du coup (le coup mortel s'attribue, la promotion le lit : brxPromu) ; « ce qui t'a tué » : la couture
+ const _hp188=hurtPlayer;hurtPlayer=function(dmg,src){if(!(X.on&&X.cou&&P&&X.e&&!X.e.dead))return _hp188.apply(this,arguments);
+  let f=src&&src.cou18?src.cou18:null;
+  if(!f&&!src)for(const q of eproj){if(q.dead||!q.from||!q.from.cou18)continue;if(hyp(q.x-P.x,q.y-P.y)-(q.r||6)-P.r<14){f=q.from.cou18;break;}}
+  if(!f||!f.e)return _hp188.apply(this,arguments);
+  const e=f.e,S=e.asm,z=src&&S&&S.st&&S.st.ph!=='charge'?(S.z||(S.flash&&S.flash.z)||(S.sb&&S.sb.zc&&S.sb.zc.zs&&S.sb.zc.zs[0])||null):null,h0=P.hp,prev=room.asm,a=arguments;room.asm=Object.assign(f.R,{e});let r;
+  try{r=z?(X.cou.j.zonesJugees++,XA.coup(z,()=>_hp188.apply(this,a))):_hp188.apply(this,a);}
+  finally{const mort=P.dead||P.hp<=0;if(!(mort&&brxPromu({source:'cousu',depuis:0,essai:false})))room.asm=prev;}
+  try{if(P.hp<h0){X.tue='couture';X.tueCousu={corps:f.co.corps,cle:f.co.cle,id:f.sv&&f.sv.x?f.sv.x.id:null};}}catch(err){}
+  return r;};
+ // un Masqué cousu brisé : sa croix vacille, à nu 2 s
+ const _ke188=killEnemy;killEnemy=function(e){const was=e&&e.dead,r=_ke188.apply(this,arguments);
+  try{if(!was&&e&&e.dead&&e.cou18&&X.on&&X.e&&!X.e.dead&&e.cou18.etat==='abouti'){X.cou.j.brises++;X.e.vuln=Math.max(X.e.vuln||0,CU.briseS);X.vacille=1;}}catch(err){console.error(err);}return r;};
+ // le ciblage automatique ne voit pas un nœud (comme une construction)
+ const _ne188=nearestEnemy;nearestEnemy=function(x,y,max,skip){if(!X.on||!X.cou)return _ne188.apply(this,arguments);let best=null,bd=max;for(const e of enemies){if(e.dead||e.cons18||(skip&&skip.has(e)))continue;const d=hyp(e.x-x,e.y-y);if(d<bd){bd=d;best=e;}}return best;};
+ // ── les transitions : en entrant en III, ce qui reste des Manœuvres rentre dans la brume (tirs et ondes compris) ; en quittant III, tout se découd
+ const _ve188=vers;vers=function(n){const de=X.phase,r=_ve188.apply(this,arguments);if(!r)return r;
+  try{if(n===2){const S=new Set();for(const o of enemies)if(!o.dead&&o.appel18){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=room.spawning.filter(q=>!q.appel18);if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(g=>!S.has(g.src));}X.j.rentres+=S.size;
+    if(!X.cou)X.cou=couNeuf();}
+   if(de===2&&n!==2)decoudre();X.prio=false;X.attZ=0;}catch(err){console.error(err);}return r;};
+ const _de188=debut;debut=function(phase0){const r=_de188.apply(this,arguments);X.cou=couNeuf();X.prio=false;X.attZ=0;window.__zoneAutre18=zoneAutre18;return r;};
+ const _mt188=mort;mort=function(e){try{decoudre();}catch(err){}return _mt188.apply(this,arguments);};
+ // ── le bot (bot=2) en phase III : il coupe d'abord le nœud le plus proche (vers une île, par une passerelle ouverte), puis un Masqué cousu proche
+ // (choix par défaut du pilote), puis la croix
+ const _c2188=cible2;cible2=function(){if(!(X.on&&X.cou&&X.phase===2))return _c2188.apply(this,arguments);
+  if(X.essai&&X.essai.cible&&!X.essai.cible.dead)return{o:X.essai.cible,force:true,want:Math.min(DIST[P.cls]||220,90)};
+  let best=null,bd=1e9;for(const f of X.cou.fils)if(f.noeud&&!f.noeud.dead&&tendu(f)){const d=hyp(f.noeud.x-P.x,f.noeud.y-P.y);if(d<bd){bd=d;best=f;}}
+  if(!best)return null;const o=best.noeud,dv=X.bat.find(c=>c.sorte==='douves'&&c.etat==='debout');
+  if(dv&&hyp(best.p[0]-dv.ile[0],best.p[1]-dv.ile[1])<5&&(DIST[P.cls]||220)<150){const A2=SO.douves.anneau,cx=dv.ile[0],cy=dv.ile[1],d=hyp(P.x-cx,P.y-cy);
+   if(d>A2.r-A2.fosse-P.r){const ouv=[0,1,2,3].filter(q=>!dv.etats[dv.etatI].includes(dv.portes[q][0])),a0=Math.atan2(P.y-cy,P.x-cx);let q0=ouv[0],m=9;
+    for(const q of ouv){const da=Math.abs(((q*Math.PI/2-a0)%TAU+3*Math.PI)%TAU-Math.PI);if(da<m){m=da;q0=q;}}const ag=q0*Math.PI/2;
+    if(m<0.12)return{via:[cx+Math.cos(ag)*(A2.r-90),cy+Math.sin(ag)*(A2.r-90)]};
+    if(d<A2.r+A2.fosse+P.r+40){const sg=Math.sign(((ag-a0)%TAU+3*Math.PI)%TAU-Math.PI)||1,aa=a0+sg*0.35;return{via:[cx+Math.cos(aa)*(A2.r+A2.fosse+P.r+30),cy+Math.sin(aa)*(A2.r+A2.fosse+P.r+30)]};}
+    return{via:[cx+Math.cos(ag)*(A2.r+A2.fosse+P.r+30),cy+Math.sin(ag)*(A2.r+A2.fosse+P.r+30)]};}}
+  return{o,force:true,want:Math.min(DIST[P.cls]||220,110)};};
+ // ── dessin (par-dessus, comme les télégraphes) : les fils de sa croix aux montages (ils descendent en 0,3 s), les nœuds (une bobine dans sa matière,
+ // qui grossit à chaque point cousu, son fil noir s'amincit avec ses PV), les bouts de fils coupés qui pendent de sa croix, un fil mou au-dessus de
+ // chaque construction, la trace des Aiguilles qui chargent (pointillé violet). Mouvements réduits : rien ne se balance, les fils ne descendent pas.
+ function dessinCouture(c){const e=X.e,XC=X.cou;if(!e||e.dead||!XC)return;const haut=DB.phases[X.phase].presence==='haut',cx=e.x,cy=e.y;
+  c.save();c.lineCap='round';
+  if(haut){const S=[];for(const f of XC.fils){if(!tendu(f)||f.etat==='attente'||!f.noeud)continue;const nx=f.noeud.x,ny=f.noeud.y,k=RM?1:Math.min(1,f.t/0.3);S.push(cx+(nx-cx)*k,cy+(ny-cy)*k);}
+   if(S.length){const fil=(st,w)=>{c.strokeStyle=st;c.lineWidth=w;c.beginPath();for(let i=0;i<S.length;i+=2){c.moveTo(cx,cy);c.lineTo(S[i],S[i+1]);}c.stroke();};fil('rgba(8,6,12,.55)',4);fil(rgba('fils',0.9),1.6);}   // un chemin par trait (le coût)
+   // les bouts de fils coupés : ils pendent de sa croix (mous)
+   c.strokeStyle=rgba('fils',0.6);c.lineWidth=1.3;c.beginPath();for(const [i,b] of XC.bouts.entries()){const a=Math.atan2(b.y-cy,b.x-cx),L=46+12*i,sw=RM?0:Math.sin(T*1.6+i)*6;c.moveTo(cx,cy);c.quadraticCurveTo(cx+Math.cos(a)*L*0.5,cy+L*0.7,cx+Math.cos(a)*L*0.4+sw,cy+L);}c.stroke();
+   // un fil mou au-dessus de chaque construction
+   c.strokeStyle=rgba('fils',0.32);c.lineWidth=1;c.beginPath();for(const k of X.bat){if(k.etat!=='debout')continue;const x=k.c[0],y=k.c[1];c.moveTo(x,y-26);c.quadraticCurveTo(x+12,y-70,x+4,y-110);}c.stroke();}
+  // les nœuds
+  for(const f of XC.fils){const o=f.noeud;if(!o||o.dead)continue;const M=f.e&&f.e.asm&&f.e.asm.mont,pr=M?clamp(M.t/MOcoupe(),0,1):1,R2=CU.noeud.r*(0.8+0.25*pr),pv=f.el.pvMax?f.el.pv/f.el.pvMax:1;
+   c.fillStyle='rgba(6,4,10,.8)';c.beginPath();c.arc(o.x,o.y,R2+3,0,TAU);c.fill();c.fillStyle=rgba('croix',1);c.beginPath();c.arc(o.x,o.y,R2,0,TAU);c.fill();
+   c.strokeStyle=rgba('fils',0.95);c.lineWidth=2+3*pv;c.beginPath();c.arc(o.x,o.y,R2*0.62,-Math.PI/2,-Math.PI/2+TAU*Math.max(0.02,pv));c.stroke();
+   c.strokeStyle='rgba(6,4,10,.85)';c.lineWidth=1.5;c.beginPath();c.moveTo(o.x-R2*0.8,o.y-R2*0.3);c.lineTo(o.x+R2*0.8,o.y+R2*0.3);c.stroke();
+   if(f.etat==='suspendu'){c.strokeStyle=rgba('fils',0.7);c.setLineDash([3,4]);c.beginPath();c.arc(o.x,o.y,R2+7,0,TAU);c.stroke();c.setLineDash([]);}}
+  // la trace des Aiguilles qui chargent
+  for(const tr of X.tirs){if(!tr.zs)continue;const k=Math.min(1,tr.t/tr.charge);c.strokeStyle=`rgba(${TELE.proj},${0.35+0.45*k})`;c.lineWidth=1.6;c.setLineDash([6,8]);c.beginPath();for(const z of tr.zs){c.moveTo(z.x0,z.y0);c.lineTo(z.x1,z.y1);}c.stroke();c.setLineDash([]);}
+  c.restore();}
+ const _dt188=drawTelegraphs;drawTelegraphs=function(){_dt188.apply(this,arguments);if(X.on&&state==='play'&&X.cou)try{dessinCouture(ctx);}catch(err){console.error(err);}};
+ // ── chaque pas : la Couture (fils, montages, nœuds, chargements) ; le calque de la phase III peint une tuile par image pendant la phase II ; la
+ // priorité rendue au cousu quand ses gestes sont finis
+ const _st188=step;step=function(dt){const r=_st188.apply(this,arguments);if(!X.on||!X.e||!X.cou)return r;
+  try{if(X.phase===1)XA.peindreTard(DB.phases[2].arene,1);if(!X.scene&&state==='play'&&!paused)couPas(dt);if(X.prio&&X.ph==='entracte'&&!X.zones.some(z=>!z.fait)&&!X.tirs.length)X.prio=false;}catch(err){console.error(err);}return r;};
+ const _mr188=makeRoom;makeRoom=function(){window.__zoneAutre18=null;return _mr188.apply(this,arguments);};
+ function etatCou(){const XC=X.cou;if(!XC)return null;return{fils:XC.fils.map(f=>({id:f.id,k:f.k,etat:f.etat,corps:f.co.corps,cle:f.co.cle,sv:f.sv?f.sv.x.id:null,nem:f.nem,rej:f.rej,p:[Math.round(f.p[0]),Math.round(f.p[1])],pv:Math.round(f.el.pv),pvMax:f.el.pvMax,
+   noeud:f.noeud?[Math.round(f.noeud.x),Math.round(f.noeud.y)]:null,mont:f.e&&f.e.asm&&f.e.asm.mont?+f.e.asm.mont.t.toFixed(2):null,hp:f.e?[Math.round(f.e.hp),Math.round(f.e.maxHp)]:null})),
+  cur:XC.cur&&{n:XC.cur.n,ids:XC.cur.ids.slice(),coupes:XC.cur.coupes,nu:XC.cur.nu},vivants:vivants(),pris:XC.pris.slice(),bouts:XC.bouts.length,prio:!!X.prio,j:JSON.parse(JSON.stringify(XC.j))};}
  // ── essai (Q17) : l'arène d'essai (sans boss d'essai, sans tirs, sans foule, sans Masqué), le Brumeux à la phase demandée
  function essai(phase,o){o=o||{};phase=clamp(((+phase||1)-1)|0,0,DB.phases.length-1);
   const r=XA.essai('final',{cls:o.cls,masque:false,foule:0,boss:false,tirs:false,bot:false,dieu:o.dieu!==false,etat:DB.phases[phase].arene});
@@ -14317,21 +14625,23 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   X=neuf();X.palier=brxPalier(DB,(RUN&&RUN.palierD)||'normal');X.graine=(o.graine|0)||((Math.random()*4294967296)>>>0);X.rng=desRng(X.graine);
   if(o.reserve)for(const id of String(o.reserve).split(',')){if(!NODES[id])continue;RUN.reserveBrume=RUN.reserveBrume||[];if(!RUN.reserveBrume.some(x=>x.id===id))RUN.reserveBrume.push({id,source:'talent',rang:1,g:0,oublie:{acte:RUN.act||3,salle:RUN.roomIdx||1},porte:0});}
   X.essai={bot:o.bot|0,dieu:o.dieu!==false,muet:!!o.muet};X.bot=o.bot|0;
+  // v18.8 : une némésis construite EN MÉMOIRE (rien d'écrit), cousue en premier fil de la phase III : ?brumeux=3&nem=<talent>[&points=n]
+  if(o.nem&&window.__nemesis&&window.__nemesis.fiche)X.essai.nemF=window.__nemesis.fiche(o.nem,{points:o.points,rnd:desRng((X.graine^0x5bd1e995)>>>0)});
   room.waves=[];room.waveI=0;room.spawning=[];for(const e of enemies)if(!e.dead&&!e.brx18)e.dead=true;
   debut(phase);showBanner(DB.nom,'Au fond de la Brume',true);
   return{phase:phase+1,palier:X.palier,graine:X.graine,pv:X.pv.slice(),seuils:X.seuils.slice(),monde:r.monde,etat:r.etat,bot:X.bot};}
  const QB=/[?&]brumeux=(\d+)/.exec(location.search);
  if(QB&&!/[?&]demo=/.test(location.search)){const q=k=>(new RegExp('[?&]'+k+'=([^&]*)').exec(location.search)||[])[1];
-  addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0'});}catch(err){console.error(err);}},400));}
+  addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0',nem:q('nem'),points:q('points')});}catch(err){console.error(err);}},400));}
  // ── console et bancs
  window.__brumeux={DB,essai,vers:n=>vers(clamp((n|0)-1,0,DB.phases.length-1)),lire,images,statsRun,
-  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='batir'?'bâtir':m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
+  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='batir'?'bâtir':m.k==='couture'?'couture':m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
    tab:X.tab&&{i:X.tab.i,frag:Object.assign({},X.tab.frag),decor:X.tab.decor,theme:X.tab.theme,regle:X.tab.regle,densite:X.tab.densite,champion:X.tab.champion,rejoue:X.tab.rejoue,sub:X.tab.sub,t:+X.tab.t.toFixed(2),feinte:X.tab.feinte,vide:X.tab.vide,dalles:X.tab.dalles.length,braz:X.tab.braz?X.tab.braz.length:0,n:X.tab.n},
    tiersVus:X.tiersVus.slice(),chute:+X.chute.toFixed(1),ouvre:+X.ouvre.toFixed(2),pench:+X.pench.toFixed(3),cal:!!X.cal,tueTab:X.tueTab,lec:X.lec&&{poids:X.lec.poids,premier:X.lec.premier,bati:X.lec.bati},j:JSON.parse(JSON.stringify(X.j)),scene:!!X.scene,tue:X.tue,
-   bat:etatBat(),ann:X.ann?X.ann.id:null,mainsC:X.mainsC&&{x:+X.mainsC.x.toFixed(1),y:+X.mainsC.y.toFixed(1)},tueBati:X.tueBati,batB:X.batB,batX:X.batX.slice(),mod:!!X.mod,ruee:!!X.ruee}),   // v18.7 : les constructions
+   bat:etatBat(),cou:etatCou(),ann:X.ann?X.ann.id:null,mainsC:X.mainsC&&{x:+X.mainsC.x.toFixed(1),y:+X.mainsC.y.toFixed(1)},tueBati:X.tueBati,batB:X.batB,batX:X.batX.slice(),mod:!!X.mod,ruee:!!X.ruee}),   // v18.7 : les constructions
   sauve:()=>({lu:X.sauve,brut:SAVE.brumeux||null}),noter:(o)=>brxNoter(X.sauve||brxNeuf(),o,DB),
-  lancer,batir,poserSorte,poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
-  dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel},glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
+  lancer,batir,poserSorte,coudre:()=>coudre(),couper:id=>{const f=X.cou&&X.cou.fils.find(y=>y.id===id);if(f&&f.noeud)couper(f);return!!f;},fils:()=>X.cou?X.cou.fils:[],decoudre:()=>decoudre(),poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
+  dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu},glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2:()=>cible2(),zonesCousus:()=>zonesCousus(),zoneAutre18:e=>zoneAutre18(e),faible:()=>X.e?faible(X.e):null,croix:()=>X.e?croixXY(X.e):null,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

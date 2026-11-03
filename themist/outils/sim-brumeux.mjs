@@ -31,12 +31,22 @@
 //     pilier qui arrête un tir, jamais par une fosse ; Ruée, Équerre, Truelle : 10 000 positions chacune, sortie atteinte à temps ; abri derrière une
 //     construction et sous ses mains) ; effondrement (10 000 par sorte : la plus proche avec une sortie, aucune quand il n'y a rien) ; cloche
 //     (10 000 passages : sortie de côté) ; fissures et annulation ; appel ; tirs et fosses (les enveloppes de hitsWall et keepRange rendent l'ancien
-//     résultat au bit près hors de l'arène) ; champ bati ; branchements de la section v18.7.
+//     résultat au bit près hors de l'arène) ; champ bati ; branchements de la section v18.7 ;
+// 12. la phase III, « La Couture » (action 5d, v18.8) : données (gestes, partition.couture, montage, nœud, plafonds, PV des cousus, état d'arène réel
+//     en index 5 et tard, états 0 à 4 inchangés) ; gestes (Surjet, Dé en deux coups, Aiguilles coupées au premier pilier qui arrête un tir, jamais
+//     par une fosse : 10 000 positions chacun, avec et sans constructions, sortie atteinte à temps ; jour du Surjet, centre du premier Dé, abri derrière
+//     une construction) ; points de montage (10 000 : bornes, distances, hors constructions, voie et fosses, reliés à toi, l'île d'une douve) ;
+//     composition (10 000 Coutures : assemblages permis sous le budget de la registre III (+2 porteur), base différente, poidsProfil allumé ici
+//     seulement ; souvenirs sans remise, pondérés à la récence ; renforts ; réserve vide) ; plafond (10 000 phases abstraites : cousus vivants,
+//     fils tendus, suspendus) ; fenêtres à nu ; budget ; némésis (la plus forte, une seule) et promotion ; champ cousu ; plancher des chargements ;
+//     branchements de la section v18.8.
 // Contre-épreuves (une erreur introduite exprès doit être attrapée) : seuils inversés, budget dépassé, feinte tirée, sortie sans réflexe,
 // construction qui coupe le passage acceptée, sauvegarde d'essai écrite ; 5b : brèche fermée, damier plein, dalle hors fragment, tiers répété,
 // thème interdit, sauvegarde tab invalide acceptée ; 5c : douve aux quatre passerelles fermées acceptée, Ruée qui traverse une construction, fosse
 // qui arrête un tir, construction posée sur toi, douve à 200 px, cône sans abri sous ses mains, effondrement sans sortie posé, bati invalide accepté,
-// état 3 déplacé.
+// état 3 déplacé ; 5d : quatre fils tendus acceptés, point de montage dans une fosse, troisième cousu vivant en Normal, souvenir cousu deux fois,
+// némésis cousue après un autre, chargement de cousu à 0,5 s accepté, promotion par un coup du Brumeux, cousu invalide accepté, Surjet sans jour,
+// état 4 déplacé.
 //   node themist/outils/sim-brumeux.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -49,7 +59,7 @@ const bloc = (n) => { const m = html.match(new RegExp('/\\*' + n + ':pur\\*/([\\
 const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array };
 vm.createContext(ctx);
 for (const f of ['brumeux', 'arene', 'descente', 'bestiaire', 'versions', 'gardiens']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxPalier,brxPv,brxSeuils,brxPhase,brxLire,brxBudget,brxTirer,brxMesures,brxBoucle,brxPreavis,brxSeg,brxDans,brxSortie,brxPlacer,brxPartition,brxFils,brxCadre,brxToile,brxSortieToile,brxTiers,brxTiersLoin,brxDansRect,brxPlaces,brxDalle,brxDecors,brxTabOk,brxPoidsTab,brxPick,brxTableau,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,BRX_V,brxCoupe,brxBord,brxRuee,brxEquerre,brxTruelle,brxSorteScore,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxDisques,brxEtats,brxTous,BRX_SORTES,BRX_CHUTE};', ctx);
+vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxPalier,brxPv,brxSeuils,brxPhase,brxLire,brxBudget,brxTirer,brxMesures,brxBoucle,brxPreavis,brxSeg,brxDans,brxSortie,brxPlacer,brxPartition,brxFils,brxCadre,brxToile,brxSortieToile,brxTiers,brxTiersLoin,brxDansRect,brxPlaces,brxDalle,brxDecors,brxTabOk,brxPoidsTab,brxPick,brxTableau,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,BRX_V,brxCoupe,brxBord,brxRuee,brxEquerre,brxTruelle,brxSorteScore,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxDisques,brxEtats,brxTous,BRX_SORTES,BRX_CHUTE,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxVolAiguille,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxActifsCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu,brxAttente,brxCousuOk};', ctx);
 const F = ctx.F, BD = ctx.window.BRUME_DATA, D = BD.brumeux, DA = BD.arene, DS = BD.descente, BE = BD.bestiaire, VERS = BD.versions, GA = BD.gardiens;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
@@ -107,7 +117,7 @@ ok(!/\bid=|<filter|url\(|<script|<style/.test(G), 'glyphe : ni identifiant, ni f
 ok(/stroke-width="4\.4"/.test(G) && /<circle/.test(G), 'glyphe : croix de manipulation (trait épais) et œil');
 // journal et wiki (secret, Q16) : la ligne v18.5 ne dit ni phase, ni construction selon le style, ni tirage ; le wiki hors journal ne parle pas
 // du combat final (ni du Brumeux qui bâtit, lit ou tire)
-const j185 = VERS.journal.filter(x => x.h === 'v18.5' || x.h === 'v18.6' || x.h === 'v18.7');
+const j185 = VERS.journal.filter(x => x.h === 'v18.5' || x.h === 'v18.6' || x.h === 'v18.7' || x.h === 'v18.8');
 ok(/^v18\.([5-9])/.test(VERS.actuelle) && VERS.journal.some(x => x.h === 'v18.5'), 'journal : version actuelle v18.5 ou plus, une ligne v18.5');
 ok(VERS.actuelle !== 'v18.6' || (VERS.journal[0].h === 'v18.6'), 'journal (5b) : la ligne v18.6 est en tête');
 ok(VERS.actuelle !== 'v18.7' || (VERS.journal[0].h === 'v18.7'), 'journal (5c) : la ligne v18.7 est en tête');
@@ -183,9 +193,9 @@ ok(F.brxLire(D, Object.assign({}, S0, { prof: { portee: 1 }, ko: { traque: 9 } }
   for (let i = 0; i < 4000; i++) { const t = F.brxTirer(D, lb, 1, 'normal', F.desRng(i + 1e5), { zone: 1, construction: 1 }); if (t.elements[0] === 'rafale') nb++; if (t.elements[0] === 'tir') nt++; }
   ok(nb > nt * 2, `tirages : poids 3 contre 1 : la rafale sort en tête ${nb} fois, le tir ${nt} (≥ 2 fois plus)`);
   // boucle : les mesures libres sont résolues, les fixes gardent leur geste
-  const bo = F.brxBoucle(D, lec, 2, 'normal', F.desRng(3), {}); ok(bo.length === D.partition.essai.length && bo.every(m => m.k === 'fixe' ? !!m.g : Array.isArray(m.elements)), 'tirages : la boucle résout les mesures libres');
-  ok(F.brxMesures(D, 2).every((m, i) => m.k === D.partition.essai[i].k) && F.brxMesures(D, 3).length === D.partition.essai.length && F.brxMesures(D, 1).length === D.partition.ouvrage.mesures.length, 'tirages : la phase II joue sa partition (5c) ; les phases III à V jouent encore la partition d\'essai (5d à 5f)');
-  ok(F.brxMesures(D, 0).length === D.partition.rappel.mesures.length && F.brxPartition(D, 0).entracteS === 1.4 && F.brxPartition(D, 0).nuS === 0 && F.brxPartition(D, 2).nuS === D.partition.nuS, 'tirages : la phase I joue sa partition (le Rappel : entracte 1,4 s, pas de fenêtre à nu après la boucle)');
+  const bo = F.brxBoucle(D, lec, 3, 'normal', F.desRng(3), {}); ok(bo.length === D.partition.essai.length && bo.every(m => m.k === 'fixe' ? !!m.g : Array.isArray(m.elements)), 'tirages : la boucle résout les mesures libres');
+  ok(F.brxMesures(D, 3).every((m, i) => m.k === D.partition.essai[i].k) && F.brxMesures(D, 4).length === D.partition.essai.length && F.brxMesures(D, 1).length === D.partition.ouvrage.mesures.length && F.brxMesures(D, 2).length === D.partition.couture.mesures.length, 'tirages : les phases II et III jouent leur partition (5c, 5d) ; les phases IV et V jouent encore la partition d\'essai (5e, 5f)');
+  ok(F.brxMesures(D, 0).length === D.partition.rappel.mesures.length && F.brxPartition(D, 0).entracteS === 1.4 && F.brxPartition(D, 0).nuS === 0 && F.brxPartition(D, 3).nuS === D.partition.nuS, 'tirages : la phase I joue sa partition (le Rappel : entracte 1,4 s, pas de fenêtre à nu après la boucle)');
   // contre-épreuves : un budget dépassé ou une feinte tirée seraient attrapés par les comptes ci-dessus
   { const t = { elements: ['couloir', 'couloir', 'couloir'] }; let m = 0; for (const id of t.elements) m += D.elements[id].menace; ok(m > F.brxBudget(D, 0, 'normal'), 'contre-épreuve : trois couloirs dépasseraient le budget de la phase I (attrapé par le compte)'); } }
 
@@ -317,7 +327,7 @@ ok(!/actif:true/.test(readFileSync(join(ROOT, 'data', 'arene.js'), 'utf8')), 'ar
 has(/const QB=\/\[\?&\]brumeux=\(\\d\+\)\/\.exec\(location\.search\);/, 'essai par l\'adresse : ?brumeux=<phase>');
 has(/window\.__brumeux=\{DB,essai,vers/, 'console __brumeux');
 // v18.6 (5b) : la phase I en jeu
-const B186 = (html.match(/═══ v18\.6 · Phase I[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+const B186 = (html.match(/═══ v18\.6 · Phase I[\s\S]*?(?=═══ v18\.7 · Phase II)/) || [''])[0];   // jusqu'à la section suivante (5c)
 ok(B186.length > 4000, 'branchement (5b) : la section « v18.6 · Phase I » existe dans le bloc du Brumeux');
 ok(!/setRule\(|murmur\(|ruleTag|showBanner\(|toast\(/.test(B186), 'branchement (5b) : règles confinées sans bulle ni étiquette (ni setRule, ni murmur, ni toast, ni bandeau)');
 ok(!/'brume'|veil/.test(B186), 'branchement (5b) : la Brume plombée n\'est jamais jouée dans un fragment');
@@ -515,7 +525,7 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
   ok(F.brxPvPart(D, SO.echafaudages.pvPart, 'extreme') === 240 && F.brxPvPart(D, SO.murailles.pvPart, 'difficile') === 192, 'phase II : jamais de PV en plus selon le palier');
   ok(C.lecture.seuil === 0.35 && C.annulation.part === 0.05 && C.annulation.nuS === 1.5 && C.placement.variantes === 4 && C.placement.bord === 40 && C.placement.voie === 96, 'phase II : seuil 0,35, annulation 5 % (+1,5 s), quatre variantes, bord 40 px, voie 96 px');
   ok(D.manoeuvres.n.normal === 2 && D.manoeuvres.n.difficile === 2 && D.manoeuvres.n.extreme === 3 && D.manoeuvres.max === 4, 'phase II : Manœuvres 2 / 2 / 3, au plus 4 vivants');
-  ok(D.dessin.version === 3, 'phase II : dessin.version 3');
+  ok(D.dessin.version >= 3, 'phase II : dessin.version 3 ou plus');
   // matières : ΔE ≥ 25 de la grammaire, de la craie, de l'ivoire et des couleurs du Brumeux
   { let mn = 1e9; const tous = Object.assign({}, GRAM, D.couleurs);
     for (const [m, v] of Object.entries(C.matieres)) for (const k of ['corps', 'arete']) for (const [g, gc] of Object.entries(tous)) { const d = dE(v[k], gc); mn = Math.min(mn, d); ok(d >= 25, `matières : ${m}.${k} (${v[k]}) à ΔE ${d.toFixed(1)} ≥ 25 de ${g}`); }
@@ -682,7 +692,7 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
     { const brut = { v: 1, mort: { 2: 'effondrement' }, bati: { 2: 'douves' } }; ok(brut.bati[2] === 'douves' && !F.brxLireSauve(brut, D).bati[2], 'contre-épreuve : un bati invalide accepté serait attrapé'); }
     ok(F.brxLire(D, { prof: {}, tue: F.brxLireSauve(F.brxEcrireSauve(S1), D).mort, bati: F.brxLireSauve(F.brxEcrireSauve(S1), D).bati }, 1).bati === 'puits', 'sauvegarde : au combat suivant, le premier bâtir de la phase II rejoue la sorte qui t\'a tué'); }
   // ── branchements de la section « v18.7 · Phase II »
-  const B187 = (html.match(/═══ v18\.7 · Phase II[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+  const B187 = (html.match(/═══ v18\.7 · Phase II[\s\S]*?(?=═══ v18\.8 · Phase III|\/\/ ── essai \(Q17\))/) || [''])[0];
   ok(B187.length > 20000, `branchement (5c) : la section « v18.7 · Phase II » existe (${B187.length} caractères)`);
   ok(!/Math\.random\(\)|setRule\(|murmur\(|toast\(|showBanner\(/.test(B187), 'branchement (5c) : ni Math.random, ni setRule, ni murmur, ni bulle ni bandeau dans la section v18.7');
   { const E4 = DA.salles.final.etats[D.phases[1].arene];
@@ -714,6 +724,185 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
   has(/if\(!r&&\(m\.k==='batir'\|\|m\.g==='effondrement'\|\|m\.g==='manoeuvres'\)\)\{X\.j\.mesuresSautees\+\+;/, '(5c) une mesure qui ne peut pas se jouer saute (entracte réduit)');
   has(/bati:!win&&X\.tue==='effondrement'\?X\.tueBati:null/, '(5c) la sauvegarde garde la sorte effondrée sur toi');
   has(/S\.bati=X\.sauve&&X\.sauve\.bati\|\|\{\};/, '(5c) la lecture rend bati au combat suivant');
+}
+
+// ── 12. La phase III, « La Couture » (action 5d, v18.8)
+{ const PC = D.partition.couture, K = D.couture, EL = D.elements, M = F_mondeFinal(), R = { x0: MUR.g, y0: MUR.h, x1: M.w - MUR.d, y1: M.h - MUR.b }, GR = D.constructions.grille;
+  const PR14 = 14, OPT = ch => ({ pr: PR14, v: 180, reflexe: 0.05, charge: ch, arene: R }), rnd = mk(5180);
+  const fnv = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h.toString(16); };
+  // la logique pure du Masqué (asmCombos, asmTirage, asmSouvenir), extraite comme le fait sim-masque
+  const AC = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite }; vm.createContext(AC);
+  for (const f of ['bestiaire', 'souvenirs', 'souvenirs-brume']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), AC);
+  vm.runInContext(bloc('asm') + '\nthis.AF={asmCombos,asmTirage,asmSouvenir,asmRng};', AC);
+  const AF = AC.AF, A = AC.window.BRUME_DATA.bestiaire.assemble, SVJ = AC.window.BRUME_DATA.souvenirsBrume, SVF = AC.window.BRUME_DATA.souvenirs.familles;
+  const fam = {}; for (const [fid, Fm] of Object.entries(SVF)) for (const id of Fm.t || []) fam[id] = fid;
+  // ── données
+  const ET = DA.salles.final.etats, E5 = ET[5];
+  ok(D.phases[2].id === 'couture' && D.phases[2].arene === 5 && E5 && E5.id === 'couture' && E5.tard === true, 'phase III : état d\'arène réel « couture » en index 5, tard');
+  ok(E5.obstacles.length === 0 && E5.vides.length === 0 && E5.sol === 'cendre' && E5.bornes.fx0 === 0 && E5.bornes.fy0 === 0 && E5.bornes.fx1 === 1 && E5.bornes.fy1 === 1 && E5.brume.length === 1, 'phase III : arène pleine, ni obstacle ni fosse (rien ne cède), sol cendre, brume de décor en haut');
+  const EMP4 = fnv(JSON.stringify(ET.slice(0, 5)));
+  ok(fnv(JSON.stringify(ET.slice(0, 4))) === '74906d3f' && EMP4 === '2f47b641', `phase III : les états d'arène 0 à 4 sont inchangés (empreintes 74906d3f, ${EMP4})`);
+  { const E2 = clone(ET.slice(0, 5)); E2[4] = clone(E5); ok(fnv(JSON.stringify(E2)) !== EMP4, 'contre-épreuve : l\'état 4 déplacé (remplacé par celui de la phase III) serait attrapé'); }
+  const kinds = PC.mesures.map(m => m.k === 'fixe' ? m.g : m.k);
+  ok(kinds.join(' ') === 'couture surjet libre feinte aiguilles couture de libre', `phase III : partition (Couture · Surjet · libre · feinte · Aiguilles · Couture · Dé · libre) : ${kinds.join(' ')}`);
+  const DUR = { couture: K.decalS * (K.fils - 1) + K.montage.dureeS, surjet: EL.surjet.charge + 0.4, libre: 1.5, feinte: 1.2, aiguilles: EL.aiguilles.charge + 0.5, de: EL.de.charge + EL.de.seconde + 0.3 };
+  const boucle = kinds.reduce((s2, k) => s2 + DUR[k], 0) + PC.entracteS * kinds.length + PC.nuS;
+  ok(boucle >= 31 && boucle <= 35 && PC.entracteS === 1.4 && PC.nuS === 2.0 && PC.sauteS === 0.6, `phase III : une boucle d'environ 33 s, fenêtre comprise (${boucle.toFixed(1)} s), entracte 1,4 s, à nu 2,0 s, mesure sautée 0,6 s`);
+  ok(F.brxPartition(D, 2).nuS === 2 && F.brxMesures(D, 2).filter(m => m.k === 'couture').length === 2, 'phase III : brxPartition lit sa partition (deux Coutures)');
+  for (const [g, w] of [['surjet', { forme: 'losange', n: 7, h: 52, pas: 120, decale: 24, charge: 1.1, degats: 12 }], ['de', { forme: 'de', r: 110, charge: 1.0, seconde: 0.9, degats: 11 }]])
+    ok(EL[g].fixe === true && EL[g].sorte === 'zone' && EL[g].vise && Object.entries(w).every(([k, v]) => EL[g][k] === v) && EL[g].charge >= D.preavis.boss, `phase III : geste ${g} fixe, orange, ses chiffres (${JSON.stringify(w)})`);
+  ok(EL.de.seconde >= D.preavis.boss, 'phase III : le second coup du Dé a son propre préavis (0,9 s ≥ 0,8 s)');
+  ok(EL.aiguilles.fixe && EL.aiguilles.sorte === 'tir' && EL.aiguilles.n === 3 && EL.aiguilles.ouverture === 36 && EL.aiguilles.vitesse === 420 && EL.aiguilles.charge === 0.9 && EL.aiguilles.degats === 10 && EL.aiguilles.charge >= D.preavis.boss, 'phase III : les Aiguilles : trois tirs en éventail de 36°, 420 px/s, charge 0,9 s, 10 (grammaire des tirs)');
+  ok(EL.couture.fixe && EL.couture.menace === 0 && D.cumul.couture === 1, 'phase III : l\'élément « couture » (noté quand un Masqué cousu t\'a tué), fixe');
+  ok(K.fils === 3 && K.filsMax === 3 && K.decalS === 0.5 && K.montage.dureeS === 4.4 && K.noeud.haut === 110 && K.noeud.r === 20 && K.noeud.pvPart === 0.025 && K.nuS === 3 && K.briseS === 2, 'phase III : trois fils (0,5 s d\'écart), montage de 4,4 s, nœud 110 px au-dessus (r 20, 2,5 % des PV), à nu 3 s, cousu brisé 2 s');
+  { const mo = BE.assemble.montage, tot = mo.descenteS + mo.masqueS + mo.coutureS + mo.coupeS; ok(K.montage.dureeS > tot && K.montage.dureeS / tot < 1.3, `phase III : le montage de la Couture (${K.montage.dureeS} s) est celui des salles (${tot.toFixed(2)} s), ralenti`); }
+  ok(F.brxPvNoeud(D, 'normal') === 60 && F.brxPvCousu(D, 'normal', 1, 1, 1) === 360 && F.brxPvCousu(D, 'extreme', 1, 1, 1) === 360 && F.brxPvCousu(D, 'normal', 1.1, 1.2, 1.08) === Math.round(360 * 1.1 * 1.2 * 1.08), 'phase III : PV en parts des PV de la phase (nœud 60, cousu 360 × corps × porteur × points), jamais de PV en plus selon le palier');
+  ok(K.cousus.plancherS === DA.preavis.coup, `phase III : plancher des chargements des cousus = préavis de l'arène (${DA.preavis.coup} s)`);
+  ok(JSON.stringify(K.recence) === JSON.stringify(GA.attaques[3].souvenirs.recence), 'phase III : souvenirs pondérés à la récence du Glas (1 → 3)');
+  ok(K.budget.moins === 2 && K.budget.plancher === 2 && K.attente.acte === 3 && K.attente.salle === BE.assemble.premiereSalle && K.attenteZoneS === 1.5, 'phase III : budget −2 par cousu (plancher 2), attente à l\'acte III salle 3, non-cumul 1,5 s');
+  ok(D.dessin.version === 4, 'phase III : dessin.version 4');
+  ok(BE.assemble.poidsProfil.actif === false, 'phase III : bestiaire.js inchangé (poidsProfil éteint : allumé pour les cousus seulement, par une copie)');
+  // ── gestes : 10 000 positions chacun, avec et sans constructions
+  const croix = p => [Math.max(R.x0 + 220, Math.min(R.x1 - 220, p[0])), R.y0 + D.dessin.hauteur + D.dessin.suit * Math.max(0, p[1] - R.y0 - D.dessin.hauteur)];
+  { let bad = 0, n = { surjet: [0, 0], de: [0, 0], aiguilles: [0, 0] }, coupe = 0, fos = 0, jour = 0, jourT = 0;
+    for (let i = 0; i < 10000; i++) { const p = [R.x0 + 60 + rnd() * (R.x1 - R.x0 - 120), R.y0 + 180 + rnd() * (R.y1 - R.y0 - 220)], h = croix(p), piliers = [];
+      if (i % 2) for (let k = 0, m = 1 + Math.floor(rnd() * 5); k < m; k++) piliers.push({ x: R.x0 + 60 + rnd() * (R.x1 - R.x0 - 120), y: R.y0 + 60 + rnd() * (R.y1 - R.y0 - 120), r: 14 + rnd() * 20, kind: rnd() < 0.4 ? 'fosse18' : 'pilier18' });
+      const libre = piliers.filter(q => Math.hypot(q.x - p[0], q.y - p[1]) > q.r + 24 && Math.hypot(q.x - h[0], q.y - h[1]) > q.r + 12), bloque = (x, y) => libre.some(q => Math.hypot(x - q.x, y - q.y) < q.r + PR14), o = ch => Object.assign(OPT(ch), { bloque });
+      // le Surjet : le point le plus proche de toi te couvre ; un jour libre à moins de 45 px le long de la couture
+      const S = F.brxSurjet(EL.surjet, h, p, 0), tp = Math.hypot(p[0] - h[0], p[1] - h[1]); if (tp >= EL.surjet.depart && !S.some(z => F.brxDans(z, p[0], p[1], PR14))) bad++;
+      if (tp >= EL.surjet.depart) { const a = S[0] && S[0].a, ux = Math.cos(a), uy = Math.sin(a); jourT++; if ([-45, -40, 40, 45].some(d => !S.some(z => F.brxDans(z, p[0] + ux * d, p[1] + uy * d, PR14)))) jour++; }
+      const s1 = F.brxSortie(D, S, p, o(EL.surjet.charge)); if (s1.ok) { n.surjet[0]++; if (S.some(z => F.brxDans(z, s1.q[0], s1.q[1], PR14)) || bloque(s1.q[0], s1.q[1]) || s1.d > 180 * (EL.surjet.charge - 0.05) + 1e-6) bad++; } else n.surjet[1]++;
+      // le Dé : deux coups
+      const Dz = F.brxDe(EL.de, p), s2 = F.brxSortieDe(D, EL.de, Dz, p, o(), EL.de.charge); if (s2.ok) { n.de[0]++; if (F.brxDans(Dz[0], s2.q1[0], s2.q1[1], PR14) || F.brxDans({ forme: 'disque', x: s2.q1[0], y: s2.q1[1], r: EL.de.r }, s2.q2[0], s2.q2[1], PR14) || bloque(s2.q2[0], s2.q2[1])) bad++; } else n.de[1]++;
+      // les Aiguilles : coupées au premier pilier qui arrête un tir (jamais une fosse)
+      const Ag = F.brxAiguilles(EL.aiguilles, h, p, R, libre, 0);
+      for (const z of Ag.zones) { const tot2 = Math.hypot(z.x1 - z.x0, z.y1 - z.y0); for (const q of libre) { const d = F.brxSeg(q.x, q.y, z.x0, z.y0, z.x1, z.y1); if (q.kind !== 'fosse18' && d < q.r + EL.aiguilles.r - 1e-6 && Math.hypot(q.x - z.x1, q.y - z.y1) > q.r + EL.aiguilles.r + 1) bad++; if (q.kind === 'fosse18' && d < q.r + EL.aiguilles.r) fos++; } if (tot2 < F.brxBord(R, z.x0, z.y0, (z.x1 - z.x0) / (tot2 || 1), (z.y1 - z.y0) / (tot2 || 1)) - 1) coupe++; }
+      const s3 = F.brxSortie(D, Ag.zones, p, o(EL.aiguilles.charge + F.brxVolAiguille(EL.aiguilles, h, p) * 0.8)); if (s3.ok) n.aiguilles[0]++; else n.aiguilles[1]++; }
+    ok(bad === 0, 'gestes (5d) : le Surjet te couvre au point le plus proche ; chaque sortie rendue (Surjet, Dé en deux coups) est libre, hors des piliers, atteinte à pied à temps ; les Aiguilles s\'arrêtent au premier pilier qui arrête un tir');
+    ok(n.surjet[0] > 9500 && n.de[0] > 9500 && n.aiguilles[0] > 9500, `gestes (5d) : sortie trouvée : Surjet ${n.surjet[0]}, Dé ${n.de[0]}, Aiguilles ${n.aiguilles[0]} sur 10 000 (sans sortie, le geste saute : ${n.surjet[1]} / ${n.de[1]} / ${n.aiguilles[1]})`);
+    ok(jour === jourT, `gestes (5d) : le Surjet a toujours un jour à moins de 45 px le long de la couture (${jour} / ${jourT})`);
+    ok(coupe > 100 && fos > 10, `gestes (5d) : ${coupe} aiguilles coupées par une construction, ${fos} passent par-dessus une fosse`);
+    note(`gestes (5d) : Surjet ${n.surjet[0]} / Dé ${n.de[0]} / Aiguilles ${n.aiguilles[0]} avec sortie sur 10 000 ; ${coupe} aiguilles coupées`);
+    // le jour du Surjet, le centre du premier Dé, l'abri derrière une construction
+    const h = [1280, 400], p = [1280, 760], S = F.brxSurjet(EL.surjet, h, p, 0), a = S[0].a;
+    ok(!S.some(z => F.brxDans(z, p[0] + Math.cos(a) * 45, p[1] + Math.sin(a) * 45, PR14)) && !S.some(z => F.brxDans(z, p[0] + 100, p[1], PR14)), 'gestes (5d) : le Surjet : 45 px le long de la couture, à l\'abri ; 100 px de côté, à l\'abri');
+    { const plein = S.map(z => Object.assign({}, z, { h: 80 })); ok(plein.some(z => F.brxDans(z, p[0] + Math.cos(a) * 45, p[1] + Math.sin(a) * 45, PR14)), 'contre-épreuve : un Surjet sans jour (losanges jointifs) serait attrapé'); }
+    const De = F.brxSortieDe(D, EL.de, F.brxDe(EL.de, p), p, OPT(), EL.de.charge); ok(De.ok && !F.brxDans({ forme: 'disque', x: De.q1[0], y: De.q1[1], r: EL.de.r }, p[0], p[1], PR14), 'gestes (5d) : le Dé : revenir au centre du premier (il a déjà frappé) est hors du second');
+    const mur = []; for (let x = 1180; x <= 1380; x += 20) mur.push({ x, y: 580, r: 18, kind: 'pilier18' });
+    const Ag = F.brxAiguilles(EL.aiguilles, h, p, R, mur, 0); ok(!Ag.zones.some(z => F.brxDans(z, p[0], p[1], PR14)) && F.brxAiguilles(EL.aiguilles, h, p, R, [], 0).zones.some(z => F.brxDans(z, p[0], p[1], PR14)), 'gestes (5d) : derrière une muraille, les Aiguilles ne t\'atteignent pas ; sans elle, si');
+    ok(F.brxAiguilles(EL.aiguilles, h, p, R, mur.map(q => Object.assign({}, q, { kind: 'fosse18' })), 0).zones.some(z => F.brxDans(z, p[0], p[1], PR14)), 'gestes (5d) : une rangée de fosses n\'arrête pas les Aiguilles'); }
+  // ── points de montage : 10 000 tirages
+  { let bad = 0, tot = 0, n3 = 0, ile = 0, ileT = 0, ex = null; const vueDe = p => ({ x0: p[0] - 640, y0: p[1] - 360, x1: p[0] + 640, y1: p[1] + 360 });
+    for (let i = 0; i < 10000; i++) { const p = [R.x0 + 100 + rnd() * (R.x1 - R.x0 - 200), R.y0 + 200 + rnd() * (R.y1 - R.y0 - 260)], j = { x: p[0], y: p[1], r: PR14 }, cons = [];
+      for (const sorte of i % 2 ? ['douves', 'murailles', 'rails'] : ['colonnades', 'puits']) { const q = [p[0] + (rnd() - 0.5) * 300, p[1] + (rnd() - 0.5) * 200], V = F.brxGeo(D, sorte, q, croix(q), R, F.desRng(i * 3 + sorte.length), {}); for (const c of V) if (F.brxPoser(D, M, R, [], cons, c, j, 'extreme').ok) { cons.push(c); break; } }
+      const dv = cons.find(c => c.sorte === 'douves'), worst = cons.flatMap(c => F.brxEtats(c)[0]), G = F.brxGrille(M, R, worst, GR); G.relie = F.brxRelie(G, p[0], p[1]);
+      const V2 = vueDe(p), pts = F.brxPointsCouture(D, p, R, V2, [], cons, G, F.desRng(i + 50), { ile: dv && dv.ile }); tot += pts.length; if (pts.length === 3) n3++;
+      const ileLibre = dv && !cons.some(c => c !== dv && (F.brxTous(c).some(d => Math.hypot(dv.ile[0] - d.x, dv.ile[1] - d.y) < d.r + K.points.marge) || (c.voie && F.brxSeg(dv.ile[0], dv.ile[1], c.voie.x0, c.voie.y0, c.voie.x1, c.voie.y1) < c.voie.w / 2 + K.points.marge)));
+      if (ileLibre && Math.hypot(p[0] - dv.ile[0], p[1] - dv.ile[1]) >= K.points.minD) { ileT++; if (pts.some(q => q[0] === dv.ile[0] && q[1] === dv.ile[1])) ile++; }
+      for (const [k, q] of pts.entries()) { const d = Math.hypot(q[0] - p[0], q[1] - p[1]), surIle = dv && q[0] === dv.ile[0] && q[1] === dv.ile[1];
+        const E = []; if (q[0] < R.x0 + K.points.bord - 1e-6 || q[0] > R.x1 - K.points.bord + 1e-6 || q[1] < R.y0 + K.points.bord - 1e-6 || q[1] > R.y1 - K.points.bord + 1e-6) E.push('bornes');
+        if (!surIle && (d < K.points.d[0] - 1e-6 || d > K.points.d[1] + 1e-6)) E.push('distance ' + d.toFixed(0)); if (d < K.points.minD - 1e-6) E.push('trop près');
+        if (pts.some((o2, k2) => k2 !== k && Math.hypot(o2[0] - q[0], o2[1] - q[1]) < K.points.ecart - 1e-6) && !surIle) E.push('écart');
+        for (const c of cons) { for (const dd of F.brxTous(c)) if (Math.hypot(q[0] - dd.x, q[1] - dd.y) < dd.r + K.points.marge - 1e-6) E.push('sur une construction ' + c.sorte); if (c.voie && F.brxSeg(q[0], q[1], c.voie.x0, c.voie.y0, c.voie.x1, c.voie.y1) < c.voie.w / 2) E.push('voie'); }
+        const ci = Math.floor(q[0] / G.cs), ri = Math.floor(q[1] / G.cs); if (!G.relie[ri * G.cols + ci]) E.push('pas relié');
+        if (q[0] < V2.x0 - K.points.vue - 1e-6 || q[0] > V2.x1 + K.points.vue + 1e-6 || q[1] < V2.y0 - K.points.vue - 1e-6 || q[1] > V2.y1 + K.points.vue + 1e-6) E.push('hors de la vue');
+        if (E.length) { bad++; if (!ex) ex = E.join(', '); } } }
+    ok(bad === 0 && tot > 20000, `points de montage : ${tot} points sur 10 000 Coutures (${n3} à trois points) : bornes, distances, écart, hors constructions, voie et fosses, reliés à toi, dans la vue + 200 px${ex ? ' ; ' + ex : ''}`);
+    ok(ileT > 300 && ile === ileT, `points de montage : quand une douve tient (et que tu n'es pas sur son île), un point est sur l'île (${ile} / ${ileT})`);
+    note(`points de montage : ${tot} points, ${n3} Coutures à trois points sur 10 000 ; île ${ile} / ${ileT}`);
+    // contre-épreuve : un point dans l'anneau de fosses d'une douve serait attrapé
+    { const p = [1280, 820], V = F.brxGeo(D, 'douves', p, croix(p), R, F.desRng(1), {}), dv = V[0], f0 = dv.disques[0];
+      const bon = F.brxPointsCouture(D, p, R, null, [], [dv], null, F.desRng(2), { n: 3 }), dedans = Math.hypot(f0.x - dv.ile[0], f0.y - dv.ile[1]) < D.constructions.sortes.douves.anneau.r + 1;
+      ok(dedans && !bon.some(q => Math.hypot(q[0] - dv.ile[0], q[1] - dv.ile[1]) < D.constructions.sortes.douves.anneau.r + D.constructions.sortes.douves.anneau.fosse + K.points.marge - 1e-6), 'contre-épreuve : un point de montage dans une fosse serait attrapé (aucun n\'y tombe)'); } }
+  // ── composition : 10 000 Coutures
+  { const ctx = { act: 3, salle: 40, J: SVJ }, plaf = A.budgetMenace[3], armes = Object.keys(fam).filter(id => SVJ.familles[fam[id]] && SVJ.talents && SVJ.talents[id] !== undefined);
+    const peut = (f, E) => !!(E.renfort && SVJ.renforts[E.renfort]) || AF.asmCombos(A, Object.assign({ porte: 'sb:' + f }, ctx)).length > 0;
+    let bad = 0, base = 0, ord = 0, sv = 0, rf = 0, n = 0, rep2 = 0, ex = null; const freq = {};
+    for (let i = 0; i < 10000; i++) { const rng = F.desRng(i + 9000), res = []; const nr = i % 7 === 0 ? 0 : 1 + Math.floor(rng() * 6);
+      for (let k = 0; k < nr; k++) { const id = armes[Math.floor(rng() * armes.length)]; if (!res.some(x => x.id === id)) res.push({ id, source: 'talent', rang: 1 + Math.floor(rng() * 3), g: Math.floor(rng() * 2), oublie: { acte: 1 + k, salle: 2 } }); }
+      const pris = []; let dernier = null; const prof = { portee: rng(), esquive: rng(), soin: rng(), risque: rng(), rythme: rng(), puissance: rng() };
+      for (let f = 0; f < 3; f++) { const s0 = F.brxSouvenirCouture(D, res, fam, SVJ, pris, rng, A.souvenir, peut), r = F.brxCoudre(AF, A, ctx, s0, dernier, rng, prof); n++;
+        if (!r.co) { bad++; if (!ex) ex = 'aucun assemblage'; continue; }
+        const lim = plaf + (r.sv && r.sv.cap ? A.budgetPorteur : 0); if (r.co.menace > lim) { bad++; if (!ex) ex = `menace ${r.co.menace} > ${lim}`; }
+        if (!AF.asmCombos(A, Object.assign(r.sv && r.sv.cap ? { porte: r.sv.cap } : {}, ctx)).some(c => c.cle === r.co.cle)) { bad++; if (!ex) ex = 'assemblage non permis ' + r.co.cle; }
+        if (r.sv && r.sv.cap && !r.co.depart.includes(r.sv.cap)) { bad++; if (!ex) ex = 'arme hors des départs'; }
+        if (dernier && r.co.base === dernier && AF.asmCombos(A, ctx).some(c => c.base !== dernier)) base++;
+        if (s0) { if (pris.includes(s0.x.id)) rep2++; pris.push(s0.x.id); freq[s0.x.oublie.acte] = (freq[s0.x.oublie.acte] || 0) + 1; }
+        if (r.sv) { sv++; if (r.sv.renfort) rf++; } else ord++; dernier = r.co.base; } }
+    ok(bad === 0, `composition : ${n} Masqués cousus : assemblage permis sous le budget de la registre III (${plaf}, +${A.budgetPorteur} pour un porteur), l'arme toujours au départ${ex ? ' ; ' + ex : ''}`);
+    ok(base === 0, `composition : jamais la même base que le cousu d'avant (quand une autre existe) : ${base}`);
+    ok(rep2 === 0, 'composition : un souvenir n\'est jamais cousu deux fois dans le combat (sans remise)');
+    ok(sv > 5000 && rf > 0 && ord > 2000, `composition : ${sv} porteurs (dont ${rf} renforcés), ${ord} ordinaires (réserve vide ou épuisée)`);
+    // récence : le plus récemment oublié sort plus souvent (poids 1 → 3)
+    { const res = [1, 2, 3].map(k => ({ id: armes[k * 5], source: 'talent', rang: 1, g: 0, oublie: { acte: k, salle: 1 } })), cnt = [0, 0, 0];
+      for (let i = 0; i < 30000; i++) { const s0 = F.brxSouvenirCouture(D, res, fam, SVJ, [], F.desRng(i + 7e5), A.souvenir, null); cnt[s0.x.oublie.acte - 1]++; }
+      const att = [1 / 6, 2 / 6, 3 / 6].map(x => x * 30000); ok(cnt.every((c, k) => Math.abs(c - att[k]) < 4 * Math.sqrt(att[k])), `composition : récence (plus ancien → plus récent) ${cnt.join(' / ')} pour ${att.map(Math.round).join(' / ')} attendus`); }
+    // contre-épreuve : un souvenir tiré deux fois (pris ignoré) serait attrapé
+    { const res = [{ id: armes[0], source: 'talent', rang: 1, g: 0, oublie: { acte: 1, salle: 1 } }]; ok(F.brxSouvenirCouture(D, res, fam, SVJ, [armes[0]], F.desRng(1), A.souvenir, null) === null && F.brxSouvenirCouture(D, res, fam, SVJ, [], F.desRng(1), A.souvenir, null) !== null, 'contre-épreuve : un souvenir cousu deux fois serait attrapé (sans remise : rien à coudre)'); }
+    // poidsProfil : appliqué ici seulement (une copie)
+    { const prof = { portee: 1, esquive: 0, risque: 1 }; let tirs = 0, tirs0 = 0; for (let i = 0; i < 4000; i++) { const r = F.brxCoudre(AF, A, ctx, null, null, F.desRng(i + 3e5), prof); if (r.co.depart.includes('tirs') || r.co.eveil === 'tirs') tirs++; const r0 = AF.asmTirage(A, ctx, null, F.desRng(i + 3e5), null); if (r0.depart.includes('tirs') || r0.eveil === 'tirs') tirs0++; }
+      ok(tirs > tirs0 && A.poidsProfil.actif === false, `composition : poidsProfil allumé pour les cousus (portée 1 : Salve ${tirs} contre ${tirs0} sans), éteint dans bestiaire.js`); } }
+  // ── plafond : 10 000 phases abstraites (fils tendus, cousus vivants, suspendus)
+  { let bad = 0, nu = 0, susp = 0; const mx = { normal: 0, difficile: 0, extreme: 0 };
+    for (let i = 0; i < 10000; i++) { const pal = ['normal', 'difficile', 'extreme'][i % 3], rng = F.desRng(i + 4e5); let fils = [], viv = 0, tmax = 0;
+      for (let c = 0; c < 6; c++) { const n = F.brxFilsALancer(D, fils.length); for (let k = 0; k < n; k++) fils.push({ coupe: false }); tmax = Math.max(tmax, fils.length);
+        let coupes = 0; for (const f of fils) if (rng() < 0.4) { f.coupe = true; coupes++; }
+        fils = fils.filter(f => !f.coupe);
+        const reste = []; for (const f of fils) { if (F.brxAboutit(D, pal, viv)) viv++; else { reste.push(f); susp++; } } fils = reste;
+        if (F.brxNuCouture(coupes, fils.length)) nu++;
+        if (viv > D.paliers[pal].masques || fils.length > K.filsMax) bad++; mx[pal] = Math.max(mx[pal], viv);
+        for (let k = 0; k < viv; k++) if (rng() < 0.35) viv--; }
+      if (tmax > K.filsMax) bad++; }
+    ok(bad === 0 && mx.normal === 2 && mx.difficile === 2 && mx.extreme === 3, `plafond : 10 000 phases : jamais plus de 2 / 2 / 3 cousus vivants (${mx.normal} / ${mx.difficile} / ${mx.extreme}), jamais plus de trois fils tendus ; ${susp} montages suspendus, ${nu} fenêtres à nu`);
+    ok(F.brxFilsALancer(D, 3) === 0 && F.brxFilsALancer(D, 1) === 2 && F.brxFilsALancer(D, 0) === 3, 'plafond : une Couture ne lance que ce qui manque pour trois fils (trois tendus : elle saute)');
+    ok(!F.brxAboutit(D, 'normal', 2) && F.brxAboutit(D, 'extreme', 2) && !F.brxAboutit(D, 'extreme', 3), 'plafond : un montage aboutit sous le plafond, sinon il reste suspendu');
+    { const faux = (D2, t) => Math.min(D2.couture.fils + 1, D2.couture.filsMax + 1 - t); ok(faux(D, 0) === 4 && F.brxFilsALancer(D, 0) === 3, 'contre-épreuve : quatre fils tendus acceptés seraient attrapés'); }
+    { const D3 = clone(D); D3.paliers.normal.masques = 3; ok(F.brxAboutit(D3, 'normal', 2) && !F.brxAboutit(D, 'normal', 2), 'contre-épreuve : un troisième cousu vivant en Normal serait attrapé'); }
+    ok(F.brxNuCouture(1, 0) && !F.brxNuCouture(0, 0) && !F.brxNuCouture(2, 1), 'à nu : plus aucun fil (au moins un coupé) → à nu ; aucun coupé, ou un fil qui tient → non'); }
+  // ── budget et non-cumul
+  ok(F.brxBudgetCouture(D, 2, 'normal', 0) === 6 && F.brxBudgetCouture(D, 2, 'normal', 1) === 4 && F.brxBudgetCouture(D, 2, 'normal', 2) === 2 && F.brxBudgetCouture(D, 2, 'normal', 3) === 2 && F.brxBudgetCouture(D, 2, 'extreme', 3) === 3, 'budget : −2 par cousu vivant, plancher 2 (Normal 6 → 4 → 2 ; Extrême 9 → 3)');
+  { const lec = F.brxLire(D, { prof: {} }, 2); let bad = 0; for (let i = 0; i < 4000; i++) { const v = i % 4, pal = ['normal', 'difficile', 'extreme'][i % 3], a = F.brxActifsCouture({}, v), B = F.brxBudgetCouture(D, 2, pal, v), t = F.brxTirer(D, lec, 2, pal, F.desRng(i + 6e5), a, { moins: D.couture.budget.moins * v, plancher: D.couture.budget.plancher });
+      let m = 0, tirs = v; for (const id of t.elements) { m += D.elements[id].menace; if (D.elements[id].sorte === 'tir') tirs++; } if (m > B + 1e-9 || tirs > D.cumul.tir && t.elements.some(id => D.elements[id].sorte === 'tir')) bad++; }
+    ok(bad === 0, 'budget : 4 000 mesures libres : budget réduit tenu ; chaque cousu compte pour une source de tir (jamais plus de deux)'); }
+  // ── némésis et promotion
+  { const L = [{ uid: 'a', points: 2, ne: { run: 3 }, co: { corps: 'brute' } }, { uid: 'b', points: 4, ne: { run: 1 }, co: { corps: 'spectre' } }, { uid: 'c', points: 4, ne: { run: 5 }, co: { corps: 'voile' } }, { uid: 'd', points: 5, repit: 1, ne: { run: 9 }, co: { corps: 'brute' } }];
+    ok(F.brxNemCouture(L, {}).uid === 'c' && F.brxNemCouture(L, { c: 1 }).uid === 'b' && F.brxNemCouture(L, { a: 1, b: 1, c: 1 }) === null && F.brxNemCouture([], {}) === null, 'némésis : une seule, la plus forte (points, puis la plus récente), jamais en répit, jamais deux fois');
+    { const faux = l => l.slice().sort((x, y) => (x.points || 1) - (y.points || 1))[0]; ok(faux(L.filter(f => !f.repit)).uid !== F.brxNemCouture(L, {}).uid, 'contre-épreuve : une némésis cousue après un autre (la plus faible) serait attrapée'); }
+    ok(F.brxPromu({ source: 'cousu', depuis: 0.2 }) && !F.brxPromu({ source: 'cousu', depuis: 1.6 }) && !F.brxPromu({ source: 'brumeux', depuis: 0.1 }) && !F.brxPromu({ source: 'cousu', depuis: 0.1, essai: true }), 'promotion : le cousu dont le coup t\'a tué (moins de 1,5 s), jamais le Brumeux, jamais en essai');
+    { const faux = o => o.depuis < 1.5; ok(faux({ source: 'brumeux', depuis: 0.1 }) && !F.brxPromu({ source: 'brumeux', depuis: 0.1 }), 'contre-épreuve : une promotion par un coup du Brumeux serait attrapée'); }
+    ok(F.brxAttente(D).acte === 3 && F.brxAttente(D).salle === 3, 'promotion : une némésis promue au fond attend à l\'acte III, salle 3'); }
+  // ── plancher des chargements des cousus
+  { const a = F.brxPlancherCharge(D, 0.45, 0.45), b = F.brxPlancherCharge(D, 0.8, 0.8), c = F.brxPlancherCharge(D, 0.4, 0.5); ok(a.tot === 0.6 && Math.abs(a.t - 0.6) < 1e-9 && b.tot === 0.8 && b.t === 0.8 && c.tot === 0.6 && Math.abs(c.t - 0.5) < 1e-9, 'plancher : un chargement de cousu jamais sous 0,6 s (prolongé du manque), un chargement plus long inchangé');
+    let bad = 0; for (let i = 0; i < 2000; i++) { const tot = 0.3 + rnd() * 0.8, t = tot * rnd(), q = F.brxPlancherCharge(D, t, tot); if (q.tot < 0.6 - 1e-9 || q.tot - q.t !== tot - t && Math.abs((q.tot - q.t) - (tot - t)) > 1e-9) bad++; } ok(bad === 0, 'plancher : 2 000 chargements : jamais sous 0,6 s, le temps déjà écoulé gardé');
+    ok(BE.assemble.chargeMinS === 0.5, 'plancher : le Masqué de salle garde son chargement minimal (0,5 s)');
+    { const faux = (t, tot) => ({ t, tot }); ok(faux(0.5, 0.5).tot < 0.6 && F.brxPlancherCharge(D, 0.5, 0.5).tot === 0.6, 'contre-épreuve : un chargement de cousu à 0,5 s accepté serait attrapé'); } }
+  // ── la sauvegarde : champ cousu (toujours v:1)
+  { const N = F.brxNeuf(), C1 = { corps: 'brute', cle: 'brute:onde+sb:lame>cone', id: 'ray_n1' };
+    const S1 = F.brxNoter(N, { essai: false, phase: 3, par: 'couture', cousu: C1, win: false, vus: ['couture'] }, D);
+    ok(S1.mort[3] === 'couture' && S1.cousu[3].cle === C1.cle && F.brxEcrireSauve(S1).v === 1 && F.brxLireSauve(F.brxEcrireSauve(S1), D).cousu[3].id === 'ray_n1', 'sauvegarde : le Masqué cousu qui t\'a tué est écrit et relu (v:1)');
+    const S2 = F.brxNoter(S1, { essai: false, phase: 3, par: 'surjet', win: false }, D); ok(S2.mort[3] === 'surjet' && !S2.cousu[3] && !('cousu' in F.brxEcrireSauve(S2)), 'sauvegarde : une autre mort l\'efface (et un cousu vide n\'est pas écrit)');
+    ok(F.brxNoter(S1, { essai: true, phase: 3, par: 'couture', cousu: C1 }, D) === S1, 'sauvegarde : une descente d\'essai n\'écrit rien');
+    const inval = [{ mort: { 3: 'couture' }, cousu: { 3: { corps: 'Brute!', cle: 'x', id: null } } }, { mort: { 3: 'couture' }, cousu: { 3: { corps: 'brute', cle: 'spectre:a+b>c', id: null } } }, { mort: { 3: 'surjet' }, cousu: { 3: C1 } }, { mort: { 3: 'couture' }, cousu: { 9: C1 } }, { mort: { 3: 'couture' }, cousu: { 3: { corps: 'brute', cle: 'brute:a', id: 5 } } }, { mort: { 3: 'couture' }, cousu: 'x' }];
+    ok(inval.every(x => JSON.stringify(F.brxLireSauve(Object.assign({ v: 1 }, x), D).cousu) === '{}'), 'sauvegarde : un cousu invalide (corps, clé d\'un autre corps, mort qui n\'est pas une couture, phase hors bornes, id abîmé) est ignoré');
+    { const brut = { v: 1, mort: { 3: 'couture' }, cousu: { 3: { corps: 'Brute!', cle: 'x' } } }; ok(brut.cousu[3].corps === 'Brute!' && !F.brxLireSauve(brut, D).cousu[3], 'contre-épreuve : un cousu invalide accepté serait attrapé'); }
+    ok(F.brxLire(D, { prof: {}, tue: { 3: 'couture' }, cousu: { 3: C1 } }, 2).cousu.cle === C1.cle && F.brxLire(D, { prof: {}, tue: { 3: 'surjet' }, cousu: { 3: C1 } }, 2).cousu === null && F.brxLire(D, { prof: {}, tue: { 3: 'couture' } }, 2).premier === null, 'sauvegarde : au combat suivant, la lecture rend le cousu qui t\'a tué (rien en premier : il est au socle)'); }
+  // ── branchements de la section « v18.8 · Phase III »
+  const B188 = (html.match(/═══ v18\.8 · Phase III[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+  ok(B188.length > 15000, `branchement (5d) : la section « v18.8 · Phase III » existe (${B188.length} caractères)`);
+  ok(!/Math\.random\(\)|setRule\(|murmur\(|toast\(|showBanner\(|showCard\(|offreNemesis/.test(B188), 'branchement (5d) : ni Math.random, ni setRule, ni murmur, ni bulle, ni bandeau, ni carte d\'arrivée, ni offre de reprise dans la section v18.8');
+  has(/if\(!R\.cousu18\)\{showCard\(e,false\);sfx\('asm_in'\);\}/, '(5d) Masqué : un cousu n\'a ni carte d\'arrivée ni rire d\'arrivée (inerte pour le Masqué de salle)');
+  has(/function zoneAutre\(e\)\{if\(rings\.length\|\|\(room&&room\.bl\)\)return true;if\(window\.__zoneAutre18&&window\.__zoneAutre18\(e\)\)return true;/, '(5d) Masqué : crochet de non-cumul (inerte sans le Brumeux)');
+  ok(/if\(arDistRect\(XA\.dbg\(\)\.vue\(\),e\.x,e\.y\)>0\)return true;/.test(B188) && /q\.cu18=1;/.test(B188), '(5d) un Masqué cousu ne lance rien hors de la vue, et son tir né hors de la vue se perd (K-D : coups sans signe au Tisse-Destin)');
+  has(/for\(const s of L\)if\(s\.k==='proj'&&s\.o\.from&&A\.sig\.debut\[s\.id\]==null\)\{const d=A\.sig\.debut\[id\(s\.o\.from\)\];if\(d!=null&&ids\.includes\(s\.id\)\)A\.sig\.debut\[s\.id\]=d;\}/, '(5d) arène : un tir hérite du signe de son tireur (le journal seulement)');
+  has(/by=Math\.max\(14,fy-off-\(M\.haut\|\|250\)\)/, '(5d) Masqué : le nœud d\'un montage de la Couture à 110 px (250 en salle)');
+  has(/const R=room\.asm,acte=R\.acte18\|\|RUN\.act,salle=R\.salle18!=null\?R\.salle18:RUN\.roomIdx;/, '(5d) némésis : une némésis promue au fond attend à sa salle (inerte pour une salle)');
+  has(/XA\.peindreTard\(DB\.phases\[2\]\.arene,1\)/, '(5d) le Brumeux peint le calque de la phase III une tuile par image pendant la phase II');
+  has(/cousu:!win&&X\.tue==='couture'\?X\.tueCousu:null/, '(5d) la sauvegarde garde le Masqué cousu qui t\'a tué');
+  has(/S\.cousu=X\.sauve&&X\.sauve\.cousu\|\|\{\};/, '(5d) la lecture rend cousu au combat suivant');
+  ok(/brxPlancherCharge\(DB,/.test(B188) && /XA\.coup\(/.test(B188) && /brxPointsCouture\(DB,/.test(B188) && /brxCoudre\(/.test(B188) && /brxSouvenirCouture\(DB,/.test(B188) && /brxNemCouture\(/.test(B188), '(5d) la section v18.8 passe par la logique pure (points, couture, souvenirs, némésis, plancher) et juge les zones des cousus (XA.coup)');
+  // le journal v18.8 : ni couture, ni fil, ni Masqué, ni phase
+  for (const x of VERS.journal.filter(y => y.h === 'v18.8')) ok(!/cou(d|s)|couture|\bfils?\b|masqué|phase|némésis|aiguille|surjet|\bdé\b|montage/i.test(x.t), `journal v18.8 : ni couture, ni fil, ni Masqué, ni phase, ni geste nommé (secret)`);
+  ok(VERS.actuelle !== 'v18.8' || VERS.journal[0].h === 'v18.8', 'journal (5d) : la ligne v18.8 est en tête');
 }
 
 function F_mondeFinal() { const S = DA.salles.final; return { w: Math.round(S.w * W), h: Math.round(S.h * H) }; }

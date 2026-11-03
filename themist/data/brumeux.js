@@ -1,6 +1,7 @@
 // La Brume · données du Brumeux, le boss final (v18.5, chantier v18, action 5 ; cadrage Q1–Q17 validé le 1er novembre 2026)
 // Action 5a : le socle technique. Action 5b (v18.6) : la phase I, « le Rappel » (partition.rappel, gestes signature, tableaux). Action 5c (v18.7) :
-// la phase II, « L'Ouvrage » (partition.ouvrage, gestes signature, constructions comme système). Les phases III à V (5d à 5f) jouent encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
+// la phase II, « L'Ouvrage » (partition.ouvrage, gestes signature, constructions comme système). Action 5d (v18.8) : la phase III, « La Couture »
+// (partition.couture, gestes signature, couture : montages, nœuds, Masqués cousus). Les phases IV et V (5e, 5f) jouent encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
 // pure /*brx:pur*/), par outils/sim-brumeux.mjs et par _dev/bancs/banc-brumeux.mjs. Le wiki ne lit de ce fichier rien d'autre que ce que
 // l'action 5g y branchera (sa carte, Q16) : ni les phases, ni la partition, ni la lecture, ni les tirages (secret).
 // En jeu, rien n'est allumé : l'arène (arene.js, actif:false) reste fermée et le boss final provisoire tient sa place jusqu'à l'action 5g.
@@ -9,13 +10,14 @@
  nom:'Le Brumeux',
  // ── Les cinq phases (Q1). id : nom de travail, jamais affiché ; presence : au-dessus de l'arène (mains, croix, fils ; haut) ou au sol (sol) ;
  // faible : ce que l'anneau ivoire entoure (G27.anneau) ; arene : l'état d'arène (data/arene.js, salles.final.etats : 0 pleine, 1 resserrée,
- // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; 4 la phase II réelle, « L'Ouvrage », action 5c ; les autres viennent avec 5d à 5f) ; libre : part improvisée visée (indicative, Q8) ;
+ // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; 4 la phase II réelle, « L'Ouvrage », action 5c ; 5 la phase III réelle, « La Couture »,
+ // action 5d ; les autres viennent avec 5e et 5f) ; libre : part improvisée visée (indicative, Q8) ;
  // pv : PV de la phase (placeholders, à calibrer au bot à l'action 5g : 50 à 70 s par phase, Q11). Pas de PV ni de dégâts en plus par palier (Q12).
  // exclut : les sortes d'éléments que cette phase ne tire jamais (I : bâtir, c'est la phase II ; V : l'arène se défait, rien n'y est bâti).
  phases:[
   {id:'rappel',presence:'haut',faible:'mains',arene:3,libre:0.25,pv:2400,exclut:['construction']},
   {id:'ouvrage',presence:'haut',faible:'mains',arene:4,libre:0.40,pv:2400},
-  {id:'couture',presence:'haut',faible:'croix',arene:0,libre:0.50,pv:2400},
+  {id:'couture',presence:'haut',faible:'croix',arene:5,libre:0.50,pv:2400,exclut:['construction']},
   {id:'emprunt',presence:'sol',faible:'coeur',arene:1,libre:0.50,pv:2400},
   {id:'effacement',presence:'sol',faible:'coeur',arene:2,libre:0.60,pv:2400,exclut:['construction']}],
  // Les dégâts au-delà d'un seuil de phase ne passent pas à la phase suivante (même règle que les gardiens) ; le verrou de phase est celui
@@ -33,7 +35,11 @@
   // Phase II, « L'Ouvrage » (fiche 5c, § 2) : une boucle d'environ 32 s (bâtir · geste · bâtir · effondrement, avec les Manœuvres, la feinte et deux
   // mesures libres) ; à nu 2,5 s après la boucle. Une mesure {k:'batir'} bâtit une construction lue sur ton style (constructions.sortes) ; une mesure
   // qui ne peut pas se jouer (rien à effondrer, aucune construction possible, appel au plafond) saute, et l'entracte qui suit est réduit à sauteS.
-  ouvrage:{entracteS:1.4,nuS:2.5,sauteS:0.6,mesures:[{k:'batir'},{k:'fixe',g:'ruee'},{k:'libre'},{k:'batir'},{k:'fixe',g:'manoeuvres'},{k:'fixe',g:'feinte'},{k:'fixe',g:'equerre'},{k:'fixe',g:'effondrement'},{k:'libre'},{k:'fixe',g:'truelle'}]}},
+  ouvrage:{entracteS:1.4,nuS:2.5,sauteS:0.6,mesures:[{k:'batir'},{k:'fixe',g:'ruee'},{k:'libre'},{k:'batir'},{k:'fixe',g:'manoeuvres'},{k:'fixe',g:'feinte'},{k:'fixe',g:'equerre'},{k:'fixe',g:'effondrement'},{k:'libre'},{k:'fixe',g:'truelle'}]},
+  // Phase III, « La Couture » (fiche 5d, § 2) : une boucle d'environ 33 s, fenêtre comprise (deux Coutures, trois gestes signature, la feinte, deux mesures
+  // libres) ; à nu 2,0 s après la boucle. Une mesure {k:'couture'} lance ses fils (couture, plus bas) ; une Couture qui ne peut rien lancer (trois fils
+  // tendus, aucun point de montage) saute, et l'entracte qui suit est réduit à sauteS.
+  couture:{entracteS:1.4,nuS:2.0,sauteS:0.6,mesures:[{k:'couture'},{k:'fixe',g:'surjet'},{k:'libre'},{k:'fixe',g:'feinte'},{k:'fixe',g:'aiguilles'},{k:'couture'},{k:'fixe',g:'de'},{k:'libre'}]}},
  // ── Les éléments improvisables (Q8) et leur menace. sorte : zone, tir, saisie, construction (deux éléments de même sorte ne se cumulent
  // pas au-delà de cumul[sorte]). charge : préavis (s, ≥ preavis.boss) ; degats : avant la montée (dmgMul). pond : l'axe du profil qui pèse
  // (sens +1 : plus l'axe est haut, plus l'élément pèse ; −1 : l'inverse) ; sources : les ennemis de la descente dont les dégâts reçus
@@ -74,8 +80,20 @@
   effondrement:{menace:0,sorte:'effondrement',fixe:true,charge:1.4,degats:16,ennemis:2},
   // La cloche d'un rail (constructions.sortes.rails.cloche) : noté quand elle t'a tué. Les Manœuvres (l'appel de la phase II) : noté quand un de ses ennemis t'a tué.
   rail:{menace:0,sorte:'rail',fixe:true,charge:1.0,degats:12},
-  manoeuvres:{menace:0,sorte:'appel',fixe:true}},
- cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1,tableau:1,effondrement:1,rail:2,appel:1},
+  manoeuvres:{menace:0,sorte:'appel',fixe:true},
+  // ── Les gestes signature de la phase III (fiche 5d, § 1), toujours les mêmes, deux sorties lisibles chacun.
+  // Le Surjet : n losanges (demi-diagonale h px) tous les pas px le long d'une ligne de sa croix vers toi et au-delà, alternés à ± decale px de la ligne ;
+  //   le point le plus proche de toi est centré sur ta projection. Sorties : se glisser dans un jour (le long de la couture), ou s'écarter de côté. Orange.
+  surjet:{menace:3,sorte:'zone',forme:'losange',fixe:true,n:7,h:52,pas:120,decale:24,depart:40,charge:1.1,degats:12,vise:true},
+  // Le Dé : un disque r sur toi (charge), puis, à son coup, un second disque r là où tu es (seconde s). Sorties : sortir du premier, puis revenir à son
+  //   centre (il a déjà frappé) ou repartir plus loin. Orange.
+  de:{menace:3,sorte:'zone',forme:'de',fixe:true,r:110,charge:1.0,seconde:0.9,degats:11,vise:true},
+  // Les Aiguilles : n projectiles à liseré (r px) en éventail d'ouverture degrés depuis sa croix vers toi, à vitesse px/s ; ils s'arrêtent sur tout ce qui
+  //   arrête un tir (jamais sur une fosse). Charge de tir violette (grammaire des tirs). Sorties : entre deux aiguilles, de côté, derrière une construction.
+  aiguilles:{menace:2,sorte:'tir',forme:'aiguilles',fixe:true,n:3,r:10,ouverture:36,vitesse:420,charge:0.9,degats:10,vise:true},
+  // La Couture (l'élément noté quand un Masqué cousu t'a tué : le premier fil après la némésis le recoud au combat suivant, champ cousu de la sauvegarde)
+  couture:{menace:0,sorte:'couture',fixe:true}},
+ cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1,tableau:1,effondrement:1,rail:2,appel:1,couture:1},
  // ── Le budget d'une mesure libre, par phase (menace cumulée) et par palier (Q12 : ×1,25 en Difficile, ×1,5 en Extrême ; jamais de PV ni de
  // dégâts en plus). Un tirage prend des éléments tant que le budget et le non-cumul le permettent ; le premier est ce qui t'a tué (Q13).
  budget:{base:[4,5,6,6,7],palier:{normal:1,difficile:1.25,extreme:1.5}},
@@ -154,6 +172,21 @@
  // defaut). n places par palier ; au plus max ennemis de l'appel vivants (l'appel est tronqué, et saute s'il ne reste aucune place). Jamais de
  // champion ni de Masqué. Places à minD px de toi, dans la vue plus vue px ; cercle violet d'apparition.
  manoeuvres:{n:{normal:2,difficile:2,extreme:3},max:4,defaut:'rampant',minD:230,vue:200,apparition:[0.85,1.3]},
+ // ── La Couture de la phase III (fiche 5d, § 3 à § 7). Trois fils descendent de sa croix (decalS s entre deux) vers trois points du sol ; à chacun, le
+ // montage du Masqué (data/bestiaire.js, assemble.montage, ses proportions gardées), ralenti à montage.dureeS. Couper un fil : frapper son nœud (la
+ // petite croix du montage, haut px au-dessus du corps ; r px ; PV : pvPart des PV de la phase III ; entité fixe comme une construction : un coup par
+ // image, ni brûlures ni poisons, ni PV volés, hors du ciblage automatique). Au plus paliers.*.masques Masqués cousus vivants et filsMax fils tendus :
+ // un montage qui aboutit au plafond reste suspendu jusqu'à ce qu'une place se libère. Quand plus aucun fil ne tient (au moins un coupé), sa croix
+ // vacille : à nu nuS s ; un Masqué cousu brisé : à nu briseS s.
+ // points : à d px de toi, à ecart px au moins l'un de l'autre, à bord px des bornes, à marge px des constructions, dans la vue plus vue px, reliés à toi ;
+ // un point sur l'île d'une douve qui tient. cousus : PV en part des PV de la phase III (× le corps, × le bonus de porteur, × les points d'une némésis) ;
+ // chargements jamais sous plancherS (le préavis de l'arène) ; ni escorte, ni carte d'arrivée, ni récompense. souvenirs : tirés sans remise dans le
+ // combat, pondérés à la récence (recence : poids du plus ancien, du plus récent ; ceux du Glas). budget : chaque Masqué cousu vivant retire moins au
+ // budget d'une mesure libre (jamais sous plancher) et compte pour une source de tir. attente : une némésis promue au fond attend là (registre, salle).
+ // non-cumul : ses gestes attendent la zone d'un Masqué cousu en cours, au plus attenteZoneS s, puis c'est le Masqué qui attend.
+ couture:{fils:3,filsMax:3,decalS:0.5,montage:{dureeS:4.4},noeud:{haut:110,r:20,pvPart:0.025},nuS:3,briseS:2,
+  points:{d:[300,650],ecart:420,bord:80,marge:40,vue:200,minD:230,essais:80},
+  cousus:{pvPart:0.15,plancherS:0.6},recence:[1,3],budget:{moins:2,plancher:2},attente:{acte:3,salle:3},attenteZoneS:1.5},
  // ── Les tableaux de la phase I, « le Rappel » (fiche 5b, § 3 et § 4). Il « accroche » un tableau sur un tiers de l'arène : un fragment de décor
  // d'un acte traversé (peint une fois à l'entrée du combat, à la graine du combat), une vague d'un thème existant (WTHEMES : types et rôles
  // seulement ; les places sont tirées dans le fragment), au plus une règle de salle confinée au fragment (mêmes chiffres et mêmes dessins
@@ -195,7 +228,9 @@
  // version 2 (action 5b) : fils tendus de ses mains au cadre d'un tableau, croix qui penche vers le tiers occupé, mains qui retombent et s'ouvrent au rideau.
  // version 3 (action 5c) : ses doigts tricotent au-dessus d'une construction annoncée, fils jusqu'à son contour, croix qui s'incline vers le chantier ;
  // la main de la Ruée qui se brise ; le fil d'un effondrement et celui d'un échafaudage ; les constructions dans leur matière.
- dessin:{version:3,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
+ // version 4 (action 5d) : en phase III, sa croix est le corps frappable (ses mains pendent dessous) ; les fils de sa croix aux montages, les nœuds, les
+ // bouts de fils coupés qui pendent, la croix qui vacille, un fil mou au-dessus de chaque construction.
+ dessin:{version:4,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
   glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#0a0810" stroke-width="4.4" stroke-linecap="round"/><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#c8c0d8" stroke-width="2.2" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#0a0810" stroke-width="2.6" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#b9b0c8" stroke-width="1.2" stroke-linecap="round"/><path d="M7 8.5Q12 3.4 17 8.5Q12 13.6 7 8.5Z" fill="#eee8da" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="8.5" r="1.9" fill="#0a0810"/></svg>'},
  // ── Le bot qui frappe (Q14, bot=2) : il attaque avec le kit de base de sa forme, sort des zones qui chargent (à sa vitesse de marche, par une
  // esquive s'il le faut), vise le Brumeux (ou l'ennemi le plus proche s'il est plus près que proche px). Il sert aussi à mesurer l'action 6.

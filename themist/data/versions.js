@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v18.7',
+ actuelle:'v18.8',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-11-03',h:'v18.8',t:'Préparation du combat final : le Brumeux reprend un vieil ouvrage. Il ne t’attend pas encore au fond : rien ne change en jeu.'},
  {d:'2026-11-02',h:'v18.7',t:'Préparation du combat final : le Brumeux apprend à se servir de ce qu’il trouve sur ton chemin. Il ne t’attend pas encore au fond : rien ne change en jeu.'},
  {d:'2026-11-02',h:'v18.6',t:'Préparation du combat final : le Brumeux apprend à se souvenir de ta descente. Il ne t’attend pas encore au fond : rien ne change en jeu.'},
  {d:'2026-11-01',h:'v18.5',t:'Préparation du combat final : le Brumeux a désormais son emblème (une croix de manipulation où veille un œil), sa barre de vie et le socle de son combat, qui s’essaie en atelier. Il n’est pas encore au fond de la descente : rien ne change en jeu.'},
