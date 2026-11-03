@@ -133,8 +133,13 @@ export interface SkillPreviewView {
 export interface PrepView {
   readonly title: string;
   readonly objective: string;
-  /** Compagnie : une ligne par membre (marque de déploiement, nom, classe). */
+  /** Compagnie : une ligne par membre affiché (marque de déploiement, nom, classe), dans l'ordre du tri. */
   readonly roster: readonly ListRow[];
+  /** Ligne → indice du membre dans la compagnie (tri et filtre par classe, n°199). */
+  readonly order: readonly number[];
+  /** Libellés du tri et du filtre (entrées du menu). */
+  readonly sortLabel: string;
+  readonly filterLabel: string;
   readonly deployed: number;
   readonly maxDeploy: number;
   readonly cursor: number;
@@ -160,6 +165,9 @@ export interface PrepCallbacks {
   readonly onSheet: (member: number) => void;
   readonly onPlace: () => void;
   readonly onBack: (() => void) | null;
+  /** Tri et filtre de la compagnie (n°199) : chaque appel passe au suivant. */
+  readonly onSort?: () => void;
+  readonly onFilter?: () => void;
   /** Échap : l'interface est masquée (true) ou rendue (false), pour voir toute la carte. */
   readonly onUiHidden?: (hidden: boolean) => void;
 }
@@ -1081,7 +1089,9 @@ export class BattleHudScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const cb = this.prepCallbacks;
     if (!cb) return;
-    const cursor = view.cursor;
+    // Le curseur de la liste est une ligne ; le membre choisi peut être hors du filtre (ligne 0 alors).
+    const cursor = Math.max(0, view.order.indexOf(view.cursor));
+    const memberAt = (row: number): number => view.order[row] ?? view.cursor;
     const menuIndex = fresh ? 0 : (this.prepMenu?.selected ?? 0);
     this.prepRoster?.destroy();
     this.prepRoster = null;
@@ -1112,11 +1122,11 @@ export class BattleHudScene extends Phaser.Scene {
       depth: DEPTH.prep + 1,
       scale: S,
       onCursor: (i) => {
-        if (this.prepView && this.prepView.cursor !== i) cb.onCursor(i);
+        if (this.prepView && this.prepView.cursor !== memberAt(i)) cb.onCursor(memberAt(i));
       },
       hoverSelects: false,
-      onContext: (i) => cb.onSheet(i),
-      onActivate: (i) => cb.onToggle(i),
+      onContext: (i) => cb.onSheet(memberAt(i)),
+      onActivate: (i) => cb.onToggle(memberAt(i)),
     });
     this.prepRoster.reset(view.roster, cursor);
 
@@ -1163,6 +1173,8 @@ export class BattleHudScene extends Phaser.Scene {
 
     // Dans l'ordre où l'on prépare : formation, équipement, objets, puis « Combattre » (la validation) en bas.
     const items: MenuItem[] = [
+      ...(cb.onSort ? [{ label: `Trier : ${view.sortLabel}`, onSelect: () => cb.onSort?.() }] : []),
+      ...(cb.onFilter ? [{ label: `Classe : ${view.filterLabel}`, onSelect: () => cb.onFilter?.() }] : []),
       { label: 'Formation Auto', enabled: !view.locked, onSelect: () => cb.onAuto() },
       { label: 'Placer les unités', enabled: !view.locked, onSelect: () => cb.onPlace() },
       { label: 'Combattre !', onSelect: () => cb.onFight() },

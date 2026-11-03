@@ -133,6 +133,8 @@ export function applyTalkResults(data: GameData, progress: Progress, results: Ta
       continue;
     }
     if (progress.company.some((m) => m.id === def.id) || progress.fallen.includes(def.id)) continue;
+    // Compagnie au complet (n°199) : il reste recruté (hors de la compagnie), sans rançon.
+    if (progress.company.length >= data.balance.levels.rosterMax) continue;
     progress.gold = Math.max(0, progress.gold - r.ransom);
     // Il arrive tel qu'il a fini le combat : niveau de sa fiche, plus ce qu'il a gagné depuis (n°181).
     const member = createMember(data, { id: def.id, name: def.name, class: def.recruit.asClass, level: def.recruit.level });

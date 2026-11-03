@@ -1,5 +1,5 @@
 {
-  "$comment": "Scènes des dialogues de combat (GDD §7.9, bible narrative §7 à §9, décisions n°105 à n°115 et n°174 à n°191). Une scène lie un ennemi nommé ou un boss (`enemy`) à des unités (`units` : compagnie, ennemis nommés recrutés, alliés verts nommés). `kind` : `battle` (avant l'échange de coups, dans le sens `direction`), `talk` (Parler : `lines` au succès, `onFail` au refus), `death` (mort de l'ennemi, selon qui porte le coup ; `units` vide : quel que soit l'auteur), `phase` (passage du boss en phase 2, selon qui l'y pousse ; remplace la réplique de sa fiche), `mourn` (deuil : l'allié vert lié est tombé avant sa scène). `when` : conditions. `once` (défaut : vrai) : une fois par partie ; faux : une fois par combat. `speaker` : un personnage ; `mood` : humeur du portrait (neutral, happy, angry, sad, surprised). Contenu pilote du moteur (n°174) : l'écriture des scènes vient en M7.",
+  "$comment": "Scènes des dialogues de combat (GDD §7.9, bible narrative §7 à §9, décisions n°105 à n°115 et n°174 à n°191). Une scène lie un ennemi nommé ou un boss (`enemy`) à des unités (`units` : compagnie, ennemis nommés recrutés, alliés verts nommés). `kind` : `battle` (avant l'échange de coups, dans le sens `direction`), `talk` (Parler : `lines` au succès, `onFail` au refus), `death` (mort de l'ennemi, selon qui porte le coup ; `units` vide : quel que soit l'auteur), `phase` (passage du boss en phase 2, selon qui l'y pousse ; remplace la réplique de sa fiche), `mourn` (deuil : l'allié vert lié est tombé avant sa scène). `when` : conditions. `once` (défaut : vrai) : une fois par partie ; faux : une fois par combat. `speaker` : un personnage ; `mood` : humeur du portrait (neutral, happy, angry, sad, surprised). Scènes écrites au jalon M7 (n°203) : boss, nommés recrutables (Parler et refus), nommés non recrutables, figures de village et errants (bible §7).",
   "scenes": [
     {
       "id": "brakk_nessa",
@@ -24,13 +24,606 @@
       ]
     },
     {
+      "id": "brakk_ilar",
+      "enemy": "brakk",
+      "units": ["ilar"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ilar", "text": "Brakk. Tes hommes ont tué deux des miens au gué.", "mood": "angry" },
+        { "speaker": "brakk", "text": "Et la Couronne en a tué cent des miens à la Citadelle. On fait les comptes, capitaine ?" },
+        { "speaker": "ilar", "text": "On les fait. Ici, maintenant.", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "brakk_garrec",
+      "enemy": "brakk",
+      "units": ["garrec"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "garrec", "text": "Je t'ai connu avec un uniforme propre, petit. Tu montais la garde sur le récif." },
+        { "speaker": "brakk", "text": "Le vieux Garrec… Le récif a coulé. L'uniforme aussi." },
+        { "speaker": "garrec", "text": "Pas l'homme. Pas encore.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "brakk_rik",
+      "enemy": "brakk",
+      "units": ["rik"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "brakk", "text": "Rik ! Tu lèves la main sur moi, le Cadet ?", "mood": "angry" },
+        { "speaker": "rik", "text": "Tu m'as dit que personne ne viendrait. Quelqu'un est venu." },
+        { "speaker": "brakk", "text": "Alors tu mourras avec eux." }
+      ]
+    },
+    {
       "id": "brakk_phase",
       "enemy": "brakk",
       "units": ["nessa", "alden"],
       "kind": "phase",
       "lines": [
-        { "speaker": "brakk", "text": "Assez ! Vous croyez que je pille pour le plaisir ?" },
-        { "speaker": "brakk", "text": "Personne ne viendra ! Alors viens me chercher !" }
+        { "speaker": "brakk", "text": "Assez ! Vous croyez que je pille pour le plaisir ?", "mood": "angry" },
+        { "speaker": "brakk", "text": "Personne ne viendra ! Alors viens me chercher !", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "brakk_phase_autre",
+      "enemy": "brakk",
+      "units": [],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "brakk", "text": "Vous voulez le camp ? Prenez-le sur mon cadavre !", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "brakk_mort_nessa",
+      "enemy": "brakk",
+      "units": ["nessa"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "brakk", "text": "Ton père… a gardé sa pièce. Dis-lui… qu'il avait raison." },
+        { "speaker": "nessa", "text": "Je lui dirai. Et je lui dirai qui tu étais.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "brakk_mort_alden",
+      "enemy": "brakk",
+      "units": ["alden"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "brakk", "text": "Alden… ils nous ont laissés… sur le récif…" },
+        { "speaker": "alden", "text": "Je sais. Je le porterai pour nous deux.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "brakk_mort",
+      "enemy": "brakk",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "brakk", "text": "La mer… monte encore… Personne… ne vient…" }
+      ]
+    },
+    {
+      "id": "brakk_ilar_deuil",
+      "enemy": "brakk",
+      "units": ["ilar"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "brakk", "text": "Où est le capitaine ? Il a fini par tomber, lui aussi ?" }
+      ]
+    },
+    {
+      "id": "roi_cerf_mousse",
+      "enemy": "roi_cerf",
+      "units": ["mousse"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "mousse", "text": "Je ne veux pas te frapper. Je veux te rendre ta forêt.", "mood": "sad" },
+        { "speaker": "roi_cerf", "text": "…Graines… Qui… sème… des graines ?" },
+        { "speaker": "mousse", "text": "Moi. Ta gardienne. Tiens bon.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "roi_cerf_ysolde",
+      "enemy": "roi_cerf",
+      "units": ["ysolde"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ysolde", "text": "Oswin m'a appris à ne jamais tirer sur un cerf blanc.", "mood": "sad" },
+        { "speaker": "roi_cerf", "text": "…Le chasseur… est entré… dans la Brume… avant moi." },
+        { "speaker": "ysolde", "text": "Alors pardonne-moi cette flèche. Elle est pour lui aussi." }
+      ]
+    },
+    {
+      "id": "roi_cerf_oswin",
+      "enemy": "roi_cerf",
+      "units": ["oswin"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "oswin", "text": "Vieux roi. Nous avons tous deux goûté à la Brume." },
+        { "speaker": "roi_cerf", "text": "…Tu es… revenu ? Alors… on revient ?" },
+        { "speaker": "oswin", "text": "On revient. Si quelqu'un vous appelle par votre nom." }
+      ]
+    },
+    {
+      "id": "roi_cerf_sylve",
+      "enemy": "roi_cerf",
+      "units": ["sylve"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "sylve", "text": "Majesté des racines, c'est Sylve. Le Cercle est avec toi.", "mood": "sad" },
+        { "speaker": "roi_cerf", "text": "…Sylve… Coupe… les ronces… qui me tiennent." },
+        { "speaker": "sylve", "text": "Je coupe. Pardonne la hache." }
+      ]
+    },
+    {
+      "id": "roi_cerf_phase",
+      "enemy": "roi_cerf",
+      "units": ["mousse"],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "mousse", "text": "Je suis là. C'est moi, la petite qui ramassait tes graines.", "mood": "sad" },
+        { "speaker": "roi_cerf", "text": "…Ma… gardienne. Éloigne-toi. La Brume me tient." },
+        { "speaker": "mousse", "text": "Alors tiens-toi à moi." }
+      ]
+    },
+    {
+      "id": "roi_cerf_phase_autre",
+      "enemy": "roi_cerf",
+      "units": [],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "roi_cerf", "text": "La forêt… crie… en moi ! Que les racines… vous gardent !", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "roi_cerf_mort_mousse",
+      "enemy": "roi_cerf",
+      "units": ["mousse"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "roi_cerf", "text": "…Ysmar. Le nom… de la mer… Ysmar…" },
+        { "speaker": "mousse", "text": "Dors. Je garderai les graines. Toutes.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "roi_cerf_mort_sylve",
+      "enemy": "roi_cerf",
+      "units": ["sylve"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "roi_cerf", "text": "Sylve… plante-moi… au Bosquet…" },
+        { "speaker": "sylve", "text": "Sous le plus vieux chêne. Je te le promets.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "roi_cerf_mort",
+      "enemy": "roi_cerf",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "roi_cerf", "text": "…Ysmar… Allez… vers la mer…" }
+      ]
+    },
+    {
+      "id": "roi_cerf_sylve_deuil",
+      "enemy": "roi_cerf",
+      "units": ["sylve"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "roi_cerf", "text": "…La Première… est tombée ? Qui… gardera… le Cercle ?" }
+      ]
+    },
+    {
+      "id": "merrow_corbin",
+      "enemy": "soeur_merrow",
+      "units": ["corbin"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "corbin", "text": "Ma sœur, c'est Corbin. Vous m'avez béni avant la dernière chasse." },
+        { "speaker": "soeur_merrow", "text": "…Les harponneurs… Ils ne reviennent jamais tous." },
+        { "speaker": "corbin", "text": "Non. Mais celui-là est revenu pour vous." }
+      ]
+    },
+    {
+      "id": "merrow_tiphaine",
+      "enemy": "soeur_merrow",
+      "units": ["tiphaine"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "tiphaine", "text": "Sœur Mérrow… Le phare était à moi, ce soir-là. Pas à vous.", "mood": "sad" },
+        { "speaker": "soeur_merrow", "text": "…La petite garde. Tu as laissé la nuit entrer." },
+        { "speaker": "tiphaine", "text": "Je viens la faire ressortir.", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "merrow_ilmea",
+      "enemy": "soeur_merrow",
+      "units": ["ilmea"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ilmea", "text": "Une lanterne de l'Ordre… éteinte. Qui vous l'a donnée ?", "mood": "surprised" },
+        { "speaker": "soeur_merrow", "text": "…La mer la voulait. La mer veut… tout." },
+        { "speaker": "ilmea", "text": "La mer voulait une lumière. Pas une vie." }
+      ]
+    },
+    {
+      "id": "merrow_dorn",
+      "enemy": "soeur_merrow",
+      "units": ["dorn"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "dorn", "text": "Mérrow. Je t'ai cherchée sur trois marées.", "mood": "sad" },
+        { "speaker": "soeur_merrow", "text": "…Amiral. Tu aurais dû me laisser au récif." },
+        { "speaker": "dorn", "text": "L'Ordre ne laisse personne au récif. Plus jamais." }
+      ]
+    },
+    {
+      "id": "merrow_odo",
+      "enemy": "soeur_merrow",
+      "units": ["odo"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "odo", "text": "Ma mère en l'Ordre… Vous m'avez appris les prières de marée basse.", "mood": "sad" },
+        { "speaker": "soeur_merrow", "text": "…Odo. Tu les as… mal apprises. Elle est montée quand même." },
+        { "speaker": "odo", "text": "Alors apprenez-m'en une dernière." }
+      ]
+    },
+    {
+      "id": "merrow_phase_ilmea",
+      "enemy": "soeur_merrow",
+      "units": ["ilmea"],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "Éteignez-la… Ma lanterne… Ce n'était pas la bonne !" },
+        { "speaker": "ilmea", "text": "Je la vois. Tenez bon, ma sœur, j'arrive.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "merrow_phase_odo",
+      "enemy": "soeur_merrow",
+      "units": ["odo"],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "Odo… la mer parle par ma bouche… Ne l'écoute pas !" },
+        { "speaker": "odo", "text": "Je n'écoute que vous. Continuez de parler.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "merrow_phase",
+      "enemy": "soeur_merrow",
+      "units": [],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "La mer reprend ce qu'on lui doit… Noyez-vous avec moi !", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "merrow_mort_dorn",
+      "enemy": "soeur_merrow",
+      "units": ["dorn"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "Éteignez ma lanterne, amiral. Ce n'était pas la bonne." },
+        { "speaker": "dorn", "text": "Repose-toi, Mérrow. C'est fini.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "merrow_mort_odo",
+      "enemy": "soeur_merrow",
+      "units": ["odo"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "La prière… Odo… la dernière…" },
+        { "speaker": "odo", "text": "« Que la marée te rende au sable. » Dormez, ma mère.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "merrow_mort",
+      "enemy": "soeur_merrow",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "Une lanterne… pas une vie… Dites-leur…" }
+      ]
+    },
+    {
+      "id": "merrow_dorn_deuil",
+      "enemy": "soeur_merrow",
+      "units": ["dorn"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "…L'amiral est tombé ? La mer… prend aussi… les vieux loups." }
+      ]
+    },
+    {
+      "id": "merrow_odo_deuil",
+      "enemy": "soeur_merrow",
+      "units": ["odo"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "soeur_merrow", "text": "…Odo ? Mon petit Odo… La mer ne devait pas te prendre." }
+      ]
+    },
+    {
+      "id": "harpie_yrsa",
+      "enemy": "mere_harpie",
+      "units": ["yrsa"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "yrsa", "text": "Tu as pris trois bergers cet hiver. Je garde les cimes, pas les tombes.", "mood": "angry" },
+        { "speaker": "mere_harpie", "text": "Mes filles avaient faim. Vos lanternes se sont éteintes, Garde-Cime." },
+        { "speaker": "yrsa", "text": "Elles se rallument. Toi, non." }
+      ]
+    },
+    {
+      "id": "harpie_tobias",
+      "enemy": "mere_harpie",
+      "units": ["tobias"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "tobias", "text": "Un nid dans l'Aiguille… C'est là qu'on gardait les plans. Elle couve nos secrets.", "mood": "surprised" },
+        { "speaker": "mere_harpie", "text": "Vos secrets tiennent chaud, petit homme. Approche, j'en veux d'autres." }
+      ]
+    },
+    {
+      "id": "harpie_ilmea",
+      "enemy": "mere_harpie",
+      "units": ["ilmea"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ilmea", "text": "Les petits ne sont pas touchés par la Brume. Elle seule l'est.", "mood": "sad" },
+        { "speaker": "mere_harpie", "text": "Touche à un seul et je t'arrache la lumière des yeux.", "mood": "angry" },
+        { "speaker": "ilmea", "text": "Je ne touche qu'à toi." }
+      ]
+    },
+    {
+      "id": "harpie_phase_yrsa",
+      "enemy": "mere_harpie",
+      "units": ["yrsa"],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "mere_harpie", "text": "Mes filles ! Déchirez-les !", "mood": "angry" },
+        { "speaker": "yrsa", "text": "Visez la mère, pas les petites. Elles ne savent pas ce qu'elles font." }
+      ]
+    },
+    {
+      "id": "harpie_phase",
+      "enemy": "mere_harpie",
+      "units": [],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "mere_harpie", "text": "Mes filles ! Déchirez-les !", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "harpie_mort_yrsa",
+      "enemy": "mere_harpie",
+      "units": ["yrsa"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "mere_harpie", "text": "Le nid… Garde-Cime… tu les laisseras… voler ?" },
+        { "speaker": "yrsa", "text": "Je les laisserai. La montagne est assez grande.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "harpie_mort",
+      "enemy": "mere_harpie",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "mere_harpie", "text": "Mes filles… envolez-vous… loin de la Brume…" }
+      ]
+    },
+    {
+      "id": "harpie_yrsa_deuil",
+      "enemy": "mere_harpie",
+      "units": ["yrsa"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "mere_harpie", "text": "La Garde-Cime est tombée. Les cimes sont à mes filles, maintenant." }
+      ]
+    },
+    {
+      "id": "gardien_tobias",
+      "enemy": "gardien_de_cendre",
+      "units": ["tobias"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "tobias", "text": "Les plaques du bras gauche… c'est moi qui les ai mesurées. Je sais où tu plies.", "mood": "sad" },
+        { "speaker": "gardien_de_cendre", "text": "ORDRE : GARDER LES ARCHIVES. INTRUS : TOBIAS BOULON. RECONNU." },
+        { "speaker": "tobias", "text": "Alors tu sais que je viens finir mon travail." }
+      ]
+    },
+    {
+      "id": "gardien_gerard",
+      "enemy": "gardien_de_cendre",
+      "units": ["gerard"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "gerard", "text": "Je t'entends, pierre. Tu chantes faux. Quelqu'un t'a forcé." },
+        { "speaker": "gardien_de_cendre", "text": "ORDRE : GARDER. ORDRE : GARDER. ORDRE :…" },
+        { "speaker": "gerard", "text": "Je vais te rendre ton silence.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "gardien_yrsa",
+      "enemy": "gardien_de_cendre",
+      "units": ["yrsa"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "yrsa", "text": "Trois siècles que tu bloques ce col. Les Veilleurs ont assez contourné.", "mood": "angry" },
+        { "speaker": "gardien_de_cendre", "text": "ORDRE : NUL NE PASSE SANS LE SCEAU DU ROI." },
+        { "speaker": "yrsa", "text": "Le roi est au fond de la mer. Pousse-toi." }
+      ]
+    },
+    {
+      "id": "gardien_phase_tobias",
+      "enemy": "gardien_de_cendre",
+      "units": ["tobias"],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "gardien_de_cendre", "text": "… LA MONTAGNE… NE PLIE PAS…" },
+        { "speaker": "tobias", "text": "Les fissures au flanc droit ! Frappez là, c'est le joint que j'ai raté !", "mood": "surprised" }
+      ]
+    },
+    {
+      "id": "gardien_phase",
+      "enemy": "gardien_de_cendre",
+      "units": [],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "gardien_de_cendre", "text": "… LA MONTAGNE… NE PLIE PAS…", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "gardien_mort_tobias",
+      "enemy": "gardien_de_cendre",
+      "units": ["tobias"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "gardien_de_cendre", "text": "ORDRE… ANNULÉ… MERCI… INGÉNIEUR…" },
+        { "speaker": "tobias", "text": "De rien, vieux tas. De rien.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "gardien_mort",
+      "enemy": "gardien_de_cendre",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "gardien_de_cendre", "text": "ARCHIVES… OUVERTES… L'HÉRITIER… ATTEND…" }
+      ]
+    },
+    {
+      "id": "gardien_yrsa_deuil",
+      "enemy": "gardien_de_cendre",
+      "units": ["yrsa"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "gardien_de_cendre", "text": "GARDE-CIME : ÉLIMINÉE. ORDRE : GARDER." }
+      ]
+    },
+    {
+      "id": "orvane_heros",
+      "enemy": "orvane",
+      "units": ["heros"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "orvane", "text": "Cette lanterne… Qui te l'a donnée ? Elle n'est pas à toi." },
+        { "speaker": "heros", "text": "Personne. Je l'ai ramassée." },
+        { "speaker": "orvane", "text": "Alors la mer t'a choisi. Elle choisit toujours mal.", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "orvane_rhyel",
+      "enemy": "orvane",
+      "units": ["rhyel"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "rhyel", "text": "Vous êtes Orvane. Le roi qui a refusé l'offrande.", "mood": "angry" },
+        { "speaker": "orvane", "text": "Le roi qui a refusé sa fille. Tu as son feu dans les mains, petit. D'où le tiens-tu ?" },
+        { "speaker": "rhyel", "text": "…Je ne sais pas. Dites-le-moi.", "mood": "surprised" }
+      ]
+    },
+    {
+      "id": "orvane_alden",
+      "enemy": "orvane",
+      "units": ["alden"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "alden", "text": "Majesté. Mon serment vous était dû. Je viens le reprendre.", "mood": "angry" },
+        { "speaker": "orvane", "text": "Un chevalier sans roi. Garde ton serment, Alden. Il ne vaut plus rien ici." }
+      ]
+    },
+    {
+      "id": "orvane_cendrine",
+      "enemy": "orvane",
+      "units": ["cendrine"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "cendrine", "text": "On chante encore la Nuit Basse à Valcendre. Je l'ai chantée. Je la regrette.", "mood": "sad" },
+        { "speaker": "orvane", "text": "Chante-la encore. C'est la seule chose qui lui ressemble." }
+      ]
+    },
+    {
+      "id": "orvane_dorn",
+      "enemy": "orvane",
+      "units": ["dorn"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "dorn", "text": "Quarante et un ans, Orvane. Mon frère marche encore sur le quai.", "mood": "angry" },
+        { "speaker": "orvane", "text": "Alors il attend quelqu'un. Comme moi, amiral. Comme moi." }
+      ]
+    },
+    {
+      "id": "orvane_phase",
+      "enemy": "orvane",
+      "units": ["rhyel", "heros"],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "orvane", "text": "Vous ne comprenez pas. Elle a le droit de revenir.", "mood": "angry" },
+        { "speaker": "rhyel", "text": "C'est ma mère. Et elle n'est plus là. Père… grand-père… arrête.", "mood": "sad" },
+        { "speaker": "orvane", "text": "Elwen ?", "mood": "surprised" },
+        { "speaker": "rhyel", "text": "Non. Moi. Regarde-moi." }
+      ]
+    },
+    {
+      "id": "orvane_phase_autre",
+      "enemy": "orvane",
+      "units": [],
+      "kind": "phase",
+      "lines": [
+        { "speaker": "orvane", "text": "Elle a le droit de revenir… Partez, ou noyez-vous avec moi !", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "orvane_mort_rhyel",
+      "enemy": "orvane",
+      "units": ["rhyel"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "orvane", "text": "Elle… avait tes yeux." },
+        { "speaker": "rhyel", "text": "Je sais. Dors, grand-père. La mer vous attend tous les deux.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "orvane_mort_heros",
+      "enemy": "orvane",
+      "units": ["heros"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "orvane", "text": "La dernière lanterne. Enfin." },
+        { "speaker": "heros", "text": "…" }
+      ]
+    },
+    {
+      "id": "orvane_mort",
+      "enemy": "orvane",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "orvane", "text": "La marée… redescend… Elwen… attends-moi…" }
+      ]
+    },
+    {
+      "id": "orvane_dorn_deuil",
+      "enemy": "orvane",
+      "units": ["dorn"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "orvane", "text": "Le vieil amiral est tombé. La mer prendra son frère aussi. Elle prend tout." }
+      ]
+    },
+    {
+      "id": "rik_nessa",
+      "enemy": "rik",
+      "units": ["nessa"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "nessa", "text": "Rik ?! Baisse ça. C'est moi.", "mood": "surprised" },
+        { "speaker": "rik", "text": "Je sais que c'est toi. C'est pour ça que je ne vise pas la tête." }
       ]
     },
     {
@@ -50,6 +643,16 @@
       ]
     },
     {
+      "id": "rik_ilar",
+      "enemy": "rik",
+      "units": ["ilar"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ilar", "text": "Rik ? Le fils du charron ?", "mood": "surprised" },
+        { "speaker": "rik", "text": "Capitaine... Ne me regardez pas comme ça." }
+      ]
+    },
+    {
       "id": "rik_nessa_mort",
       "enemy": "rik",
       "units": ["nessa"],
@@ -57,6 +660,15 @@
       "lines": [
         { "speaker": "rik", "text": "Nessa... Dis au charron... que je suis désolé." },
         { "speaker": "nessa", "text": "Rik ! Non...", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "rik_mort",
+      "enemy": "rik",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "rik", "text": "Le charron… dites-lui…" }
       ]
     },
     {
@@ -70,12 +682,760 @@
       ]
     },
     {
+      "id": "gorm_ilar",
+      "enemy": "gorm",
+      "units": ["ilar"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ilar", "text": "Gorm. On t'a vu rire pendant que la grange brûlait.", "mood": "angry" },
+        { "speaker": "gorm", "text": "Le feu, c'est beau, capitaine. Viens voir de près." }
+      ]
+    },
+    {
+      "id": "gorm_bran",
+      "enemy": "gorm",
+      "units": ["bran"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "bran", "text": "Cette torche… le manche est de ma forge. Je l'ai vendue à un colporteur.", "mood": "surprised" },
+        { "speaker": "gorm", "text": "Il nous l'a vendue aussi. Beau travail, forgeron. Elle tient bien la chaleur." },
+        { "speaker": "bran", "text": "Je vais la reprendre.", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "gorm_aldric",
+      "enemy": "gorm",
+      "units": ["voyageur_arme"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "voyageur_arme", "text": "L'incendiaire des plaines. J'ai dormi dans trois granges que tu as brûlées." },
+        { "speaker": "gorm", "text": "Et tu dormiras dans la quatrième, voyageur." }
+      ]
+    },
+    {
       "id": "gorm_nessa_mort",
       "enemy": "gorm",
       "units": ["nessa"],
       "kind": "death",
       "lines": [
         { "speaker": "gorm", "text": "Le feu... finit toujours... par s'éteindre..." }
+      ]
+    },
+    {
+      "id": "gorm_mort",
+      "enemy": "gorm",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "gorm", "text": "Brakk… le camp… tient… pas…" }
+      ]
+    },
+    {
+      "id": "hakon_mousse",
+      "enemy": "hakon",
+      "units": ["mousse"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "mousse", "text": "Hakon ! C'est toi qui coupais au Bosquet. Tu chantais en coupant.", "mood": "sad" },
+        { "speaker": "hakon", "text": "…Chanter ? Je… la cognée… suit… quelque chose." },
+        { "speaker": "mousse", "text": "C'est la chanson. Tiens-toi à elle." }
+      ]
+    },
+    {
+      "id": "hakon_ysolde",
+      "enemy": "hakon",
+      "units": ["ysolde"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ysolde", "text": "Le bûcheron de Ronceval. La Brume t'a pris avant Oswin, ou après ?", "mood": "angry" },
+        { "speaker": "hakon", "text": "…Le chasseur… il courait… après un homme en rouge… je l'ai suivi…" }
+      ]
+    },
+    {
+      "id": "hakon_orin",
+      "enemy": "hakon",
+      "units": ["orin"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "orin", "text": "Hakon, c'est Orin. Je t'ai soigné l'épaule, l'été dernier. Elle tient ?", "mood": "sad" },
+        { "speaker": "hakon", "text": "…L'épaule… tient. Le reste… non." },
+        { "speaker": "orin", "text": "Alors laisse-moi soigner le reste." }
+      ]
+    },
+    {
+      "id": "hakon_sylve",
+      "enemy": "hakon",
+      "units": ["sylve"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "sylve", "text": "Tu as coupé un chêne du Cercle, Hakon. Je t'ai pardonné. La Brume, non.", "mood": "sad" },
+        { "speaker": "hakon", "text": "…Pardonné… Le chêne… criait… comme moi…" }
+      ]
+    },
+    {
+      "id": "hakon_brune",
+      "enemy": "hakon",
+      "units": ["chasseuse_errante"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "chasseuse_errante", "text": "Un bûcheron qui marche de travers. La Brume laisse de drôles de traces." },
+        { "speaker": "hakon", "text": "…Traces… Je suis… les traces…" }
+      ]
+    },
+    {
+      "id": "hakon_mort_mousse",
+      "enemy": "hakon",
+      "units": ["mousse"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "hakon", "text": "…La chanson… c'était… la tienne, petite…" },
+        { "speaker": "mousse", "text": "Je la chanterai au Bosquet. Pour toi.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "hakon_mort",
+      "enemy": "hakon",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "hakon", "text": "…Le bois… est à vous… Coupez… droit…" }
+      ]
+    },
+    {
+      "id": "oswin_ysolde",
+      "enemy": "oswin",
+      "units": ["ysolde"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ysolde", "text": "Maître… c'est Ysolde. Baissez l'arc. Vous m'avez appris à le tenir.", "mood": "sad" },
+        { "speaker": "oswin", "text": "…Ysolde ? Je connais ce nom. Je ne connais pas… ce visage." }
+      ]
+    },
+    {
+      "id": "oswin_mousse",
+      "enemy": "oswin",
+      "units": ["mousse"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "mousse", "text": "Oswin ! Les racines se souviennent de toi, même si toi tu oublies.", "mood": "sad" },
+        { "speaker": "oswin", "text": "…La petite des graines. Le Cercle… m'a laissé entrer dans la Brume." }
+      ]
+    },
+    {
+      "id": "oswin_orin",
+      "enemy": "oswin",
+      "units": ["orin"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "orin", "text": "Oswin, vieil ami. J'ai encore ton onguent sur l'étagère.", "mood": "sad" },
+        { "speaker": "oswin", "text": "…Orin. Ton onguent… sentait la sauge. Je me souviens… de la sauge." }
+      ]
+    },
+    {
+      "id": "oswin_ysolde_parler",
+      "enemy": "oswin",
+      "units": ["ysolde"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "ysolde", "text": "Maître Oswin. Le Cercle vous reconnaît. Et moi, je vous reconnais.", "mood": "sad" },
+        { "speaker": "oswin", "text": "…Ysolde. Tu tiens l'arc… comme je te l'ai montré. Main basse." },
+        { "speaker": "ysolde", "text": "Main basse. Venez. Il y a un braconnier qui court encore.", "mood": "happy" },
+        { "speaker": "oswin", "text": "Alors on chasse. Ensemble." }
+      ],
+      "onFail": [
+        { "speaker": "ysolde", "text": "Maître, c'est Ysolde !", "mood": "surprised" },
+        { "speaker": "oswin", "text": "…Les racines ne te connaissent pas. Moi non plus. Pas encore." }
+      ]
+    },
+    {
+      "id": "oswin_mousse_parler",
+      "enemy": "oswin",
+      "units": ["mousse"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "mousse", "text": "Oswin, les racines te rappellent. Tu entends ?", "mood": "sad" },
+        { "speaker": "oswin", "text": "…J'entends. Une voix de gamine qui ramasse des graines." },
+        { "speaker": "mousse", "text": "C'est moi. Et il y a une chasseuse qui t'attend. Elle s'appelle Ysolde." },
+        { "speaker": "oswin", "text": "…Ysolde. Oui. Conduis-moi." }
+      ],
+      "onFail": [
+        { "speaker": "mousse", "text": "Oswin ! C'est Mousse !", "mood": "surprised" },
+        { "speaker": "oswin", "text": "…Le Cercle ne t'a pas envoyée. Je ne suis… personne." }
+      ]
+    },
+    {
+      "id": "oswin_ysolde_mort",
+      "enemy": "oswin",
+      "units": ["ysolde"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "oswin", "text": "…Main basse… Ysolde. Tu as… bien tiré." },
+        { "speaker": "ysolde", "text": "Non. Non, maître, je…", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "oswin_mort",
+      "enemy": "oswin",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "oswin", "text": "…Dites à la petite… que la flèche… était juste." }
+      ]
+    },
+    {
+      "id": "aldo_tiphaine",
+      "enemy": "aldo",
+      "units": ["tiphaine"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "tiphaine", "text": "Aldo... Je tenais le phare, ce soir-là. Pardon.", "mood": "sad" },
+        { "speaker": "aldo", "text": "…" }
+      ]
+    },
+    {
+      "id": "aldo_dorn",
+      "enemy": "aldo",
+      "units": ["dorn"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "dorn", "text": "Mon frère. Je t'ai cherché pendant quarante ans.", "mood": "sad" },
+        { "speaker": "aldo", "text": "(un murmure, sans pouvoir répondre)" }
+      ]
+    },
+    {
+      "id": "aldo_corbin",
+      "enemy": "aldo",
+      "units": ["corbin"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "corbin", "text": "Il me rappelle quelqu'un. Ça fait mal de voir les noyés comme ça.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "aldo_lia",
+      "enemy": "aldo",
+      "units": ["lia"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "lia", "text": "Capitaine Vessyr… Ma carte de la côte porte encore vos notes. Vous écriviez mal.", "mood": "sad" },
+        { "speaker": "aldo", "text": "…" }
+      ]
+    },
+    {
+      "id": "aldo_anselme",
+      "enemy": "aldo",
+      "units": ["ermite_des_greves"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ermite_des_greves", "text": "Je prie pour toi chaque soir sur la grève, noyé. Tu ne m'entends jamais." },
+        { "speaker": "aldo", "text": "(un bruit d'eau, comme un sanglot)" }
+      ]
+    },
+    {
+      "id": "aldo_mort_tiphaine",
+      "enemy": "aldo",
+      "units": ["tiphaine"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "aldo", "text": "…le phare… il brillait…" },
+        { "speaker": "tiphaine", "text": "Il brillera encore. Je le jure sur ton nom.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "aldo_mort_dorn",
+      "enemy": "aldo",
+      "units": ["dorn"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "aldo", "text": "…Dorn…" },
+        { "speaker": "dorn", "text": "Je suis là. Rentre à la maison, petit frère.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "aldo_mort",
+      "enemy": "aldo",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "aldo", "text": "…" }
+      ]
+    },
+    {
+      "id": "aldo_dorn_deuil",
+      "enemy": "aldo",
+      "units": ["dorn"],
+      "kind": "mourn",
+      "lines": [
+        { "speaker": "aldo", "text": "(le noyé s'arrête, regarde la terre, puis reprend sa marche)" }
+      ]
+    },
+    {
+      "id": "hobb_corbin",
+      "enemy": "hobb",
+      "units": ["corbin"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "corbin", "text": "Capitaine ! C'est Gueule d'Os. Le seul qui est sorti du serpent avec vous.", "mood": "surprised" },
+        { "speaker": "hobb", "text": "…Le serpent. Oui. Il y avait… un équipage. Combien ?" },
+        { "speaker": "corbin", "text": "Douze. Vous les avez tous oubliés ?", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "hobb_marthe",
+      "enemy": "hobb",
+      "units": ["marthe"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "marthe", "text": "Hobb… Tu portes encore le filet que j'ai tissé pour notre noce.", "mood": "sad" },
+        { "speaker": "hobb", "text": "…Un filet de noce. Qui… l'a tissé ?" },
+        { "speaker": "marthe", "text": "Moi, imbécile. Moi.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "hobb_corbin_parler",
+      "enemy": "hobb",
+      "units": ["corbin"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "corbin", "text": "Capitaine. Douze noms. Je vais vous les dire, un par un, jusqu'à ce que ça revienne." },
+        { "speaker": "hobb", "text": "…Vas-y." },
+        { "speaker": "corbin", "text": "Jorn. Ysel. Le petit Tam. Maud… et Corbin. Moi. Le dernier." },
+        { "speaker": "hobb", "text": "…Corbin. Gueule d'Os. Tu m'as tiré par la jambe. Passe-moi mon harpon.", "mood": "happy" }
+      ],
+      "onFail": [
+        { "speaker": "corbin", "text": "Capitaine, c'est Corbin !", "mood": "surprised" },
+        { "speaker": "hobb", "text": "…Je ne connais pas ce port. Je ne connais personne ici." }
+      ]
+    },
+    {
+      "id": "hobb_dorn_parler",
+      "enemy": "hobb",
+      "units": ["dorn"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "dorn", "text": "Capitaine Hobb. L'Ordre des Marées n'a jamais rayé ton nom du registre." },
+        { "speaker": "hobb", "text": "…L'amiral. Le registre. J'y ai… signé." },
+        { "speaker": "dorn", "text": "Signe encore. On a besoin d'un harpon." }
+      ],
+      "onFail": [
+        { "speaker": "dorn", "text": "Hobb ! C'est Dorn !" },
+        { "speaker": "hobb", "text": "…Les amiraux parlent. La mer, non. Je suis la mer." }
+      ]
+    },
+    {
+      "id": "hobb_corbin_mort",
+      "enemy": "hobb",
+      "units": ["corbin"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "hobb", "text": "…Douze. Et maintenant… treize." },
+        { "speaker": "corbin", "text": "Non, capitaine. Non.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "hobb_mort",
+      "enemy": "hobb",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "hobb", "text": "…Le serpent… m'a rendu… pour ça ?" }
+      ]
+    },
+    {
+      "id": "ilse_ilmea",
+      "enemy": "ilse",
+      "units": ["ilmea"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "ilmea", "text": "Ilse ! Tu es partie rallumer les cols. Tu n'es jamais revenue.", "mood": "sad" },
+        { "speaker": "ilse", "text": "…Rallumer… Il y avait trop de nuit. J'ai pris le voile pour avoir moins froid." }
+      ]
+    },
+    {
+      "id": "ilse_odo",
+      "enemy": "ilse",
+      "units": ["odo"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "odo", "text": "Sœur Ilse… nous avons prié ensemble à Port-Brume, quand le phare s'est éteint.", "mood": "sad" },
+        { "speaker": "ilse", "text": "…Frère Odo. Tes prières étaient trop courtes. La nuit était trop longue." }
+      ]
+    },
+    {
+      "id": "ilse_hild",
+      "enemy": "ilse",
+      "units": ["hild"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "hild", "text": "Ilse, c'est Hild. On a veillé la lanterne du col ensemble, trois nuits.", "mood": "sad" },
+        { "speaker": "ilse", "text": "…Trois nuits. La quatrième, tu es rentrée. Moi, je suis restée." }
+      ]
+    },
+    {
+      "id": "ilse_ilmea_parler",
+      "enemy": "ilse",
+      "units": ["ilmea"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "ilmea", "text": "Ilse. Les lanternes sont rallumées. Toutes. Tu peux rentrer.", "mood": "sad" },
+        { "speaker": "ilse", "text": "…Toutes ? Même celle du col nord ?" },
+        { "speaker": "ilmea", "text": "Même celle-là. Regarde derrière toi." },
+        { "speaker": "ilse", "text": "…Je vois. Elle brûle. Ilmëa… j'ai froid.", "mood": "sad" }
+      ],
+      "onFail": [
+        { "speaker": "ilmea", "text": "Ilse, c'est moi !", "mood": "surprised" },
+        { "speaker": "ilse", "text": "…Rallume d'abord. Je ne rentre pas dans le noir." }
+      ]
+    },
+    {
+      "id": "ilse_ilmea_mort",
+      "enemy": "ilse",
+      "units": ["ilmea"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "ilse", "text": "…La lumière… tu l'as gardée… pour nous deux…" },
+        { "speaker": "ilmea", "text": "Ilse… j'aurais dû venir plus tôt.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "ilse_mort",
+      "enemy": "ilse",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "ilse", "text": "…Le voile… tombe… enfin…" }
+      ]
+    },
+    {
+      "id": "orsen_zephyrin",
+      "enemy": "orsen",
+      "units": ["zephyrin"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "zephyrin", "text": "Maître Orsen. La fiole que vous tenez porte ma formule. Mon écriture.", "mood": "angry" },
+        { "speaker": "orsen", "text": "Ton écriture, mon nom sur la facture. C'est ce qu'on appelle un maître, petit." },
+        { "speaker": "zephyrin", "text": "C'est ce qu'on appelle un voleur." }
+      ]
+    },
+    {
+      "id": "orsen_dax",
+      "enemy": "orsen",
+      "units": ["dax"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "dax", "text": "Orsen ! Tu as empoisonné mon champion en 1180. Je ne l'ai jamais prouvé." },
+        { "speaker": "orsen", "text": "Et tu ne le prouveras jamais, Dax. C'est tout l'art." }
+      ]
+    },
+    {
+      "id": "orsen_yvonne",
+      "enemy": "orsen",
+      "units": ["yvonne"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "yvonne", "text": "J'ai soigné quatre enfants qui avaient bu vos remèdes, maître Orsen.", "mood": "angry" },
+        { "speaker": "orsen", "text": "Et ils ont survécu, Mère. Vous voyez : ça marche." }
+      ]
+    },
+    {
+      "id": "orsen_lorn",
+      "enemy": "orsen",
+      "units": ["lorn"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "lorn", "text": "Orsen ! Les formules que tu m'as vendues valaient le tiers du prix.", "mood": "angry" },
+        { "speaker": "orsen", "text": "Elles valaient ce que tu étais prêt à payer, Lorn. C'est ta règle, pas la mienne." }
+      ]
+    },
+    {
+      "id": "orsen_garance",
+      "enemy": "orsen",
+      "units": ["mercenaire_repentie"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "mercenaire_repentie", "text": "L'alchimiste de la Couronne. Tes fioles ont fait de moi ce que j'ai été. J'ai arrêté." },
+        { "speaker": "orsen", "text": "On n'arrête pas, Garance. On change de fournisseur." }
+      ]
+    },
+    {
+      "id": "orsen_zephyrin_parler",
+      "enemy": "orsen",
+      "units": ["zephyrin"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "zephyrin", "text": "Maître. Je ne veux pas vos excuses. Je veux mes carnets.", "mood": "angry" },
+        { "speaker": "orsen", "text": "Ils sont à Valcendre, dans un coffre de la Couronne. Tu les auras. À une condition." },
+        { "speaker": "zephyrin", "text": "Laquelle ?" },
+        { "speaker": "orsen", "text": "Que tu m'apprennes la fiole du Gel. Je n'ai jamais réussi à la copier.", "mood": "happy" }
+      ],
+      "onFail": [
+        { "speaker": "zephyrin", "text": "Maître Orsen, écoutez-moi !", "mood": "surprised" },
+        { "speaker": "orsen", "text": "Je n'écoute que l'or, petit. Ou les gens que la Couronne a lâchés." }
+      ]
+    },
+    {
+      "id": "orsen_zephyrin_mort",
+      "enemy": "orsen",
+      "units": ["zephyrin"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "orsen", "text": "…La fiole du Gel… c'était la bonne… formule…" },
+        { "speaker": "zephyrin", "text": "Vous l'aurez su trop tard, maître.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "orsen_mort",
+      "enemy": "orsen",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "orsen", "text": "…Dites à Zéphyrin… que les carnets… sont à Valcendre…" }
+      ]
+    },
+    {
+      "id": "alderic_alden",
+      "enemy": "alderic",
+      "units": ["alden"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "alderic", "text": "Alden. Tu as jeté ton serment le jour où j'ai gardé le mien." },
+        { "speaker": "alden", "text": "Ton serment a sacrifié un régiment, Aldéric. Le mien a refusé.", "mood": "angry" },
+        { "speaker": "alderic", "text": "Et les deux ont pleuré les mêmes morts." }
+      ]
+    },
+    {
+      "id": "alderic_kael",
+      "enemy": "alderic",
+      "units": ["kael"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "kael", "text": "Capitaine Vance. J'ai déserté votre compagnie. Je ne le regrette pas.", "mood": "angry" },
+        { "speaker": "alderic", "text": "Kael. Moi non plus, je ne regrette pas que tu sois parti. Tu tirais mal." }
+      ]
+    },
+    {
+      "id": "alderic_voss",
+      "enemy": "alderic",
+      "units": ["voss"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "voss", "text": "Vance ! La caserne te croyait mort dans les cols.", "mood": "surprised" },
+        { "speaker": "alderic", "text": "La caserne me croit ce qu'on lui ordonne de croire, Voss. Tu le sais mieux que moi." }
+      ]
+    },
+    {
+      "id": "alderic_dax",
+      "enemy": "alderic",
+      "units": ["dax"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "dax", "text": "Aldéric Vance ! Trois séries invaincu, puis parti sans saluer la foule." },
+        { "speaker": "alderic", "text": "La foule voulait du sang, Dax. La Couronne aussi. J'ai choisi le client qui payait." }
+      ]
+    },
+    {
+      "id": "alderic_gauvain",
+      "enemy": "alderic",
+      "units": ["chevalier_errant"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "chevalier_errant", "text": "Un capitaine de la Couronne. Je sers une cause, monsieur. Pas une cour." },
+        { "speaker": "alderic", "text": "Alors tu mourras pour une idée. C'est plus propre, je te l'accorde." }
+      ]
+    },
+    {
+      "id": "alderic_alden_parler",
+      "enemy": "alderic",
+      "units": ["alden"],
+      "kind": "talk",
+      "lines": [
+        { "speaker": "alden", "text": "Aldéric. J'ai retrouvé les mots de mon serment. Ils ne parlaient pas de la Couronne." },
+        { "speaker": "alderic", "text": "…De quoi parlaient-ils ?" },
+        { "speaker": "alden", "text": "De ceux qu'on laisse derrière. Viens. On va les chercher.", "mood": "sad" },
+        { "speaker": "alderic", "text": "…Ils vont me pendre pour ça. Tant mieux. Je marcherai droit." }
+      ],
+      "onFail": [
+        { "speaker": "alden", "text": "Aldéric, écoute-moi !", "mood": "surprised" },
+        { "speaker": "alderic", "text": "Retrouve d'abord ton serment, Alden. Ensuite on parlera." }
+      ]
+    },
+    {
+      "id": "alderic_alden_mort",
+      "enemy": "alderic",
+      "units": ["alden"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "alderic", "text": "…Tu avais raison… de le jeter…" },
+        { "speaker": "alden", "text": "Non. J'aurais dû te le tendre.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "alderic_mort",
+      "enemy": "alderic",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "alderic", "text": "…Le régiment… je les rejoins… enfin." }
+      ]
+    },
+    {
+      "id": "drak_alden",
+      "enemy": "drak",
+      "units": ["alden"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "alden", "text": "Drak. L'embuscade du Val. Tu tirais depuis les rochers. J'ai vu ton carreau.", "mood": "angry" },
+        { "speaker": "drak", "text": "Et tu as vu ton ami tomber. Deux cents pièces, Alden. Il valait moins." }
+      ]
+    },
+    {
+      "id": "drak_cendrine",
+      "enemy": "drak",
+      "units": ["cendrine"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "cendrine", "text": "Sergent. C'est ma chanson qui vous a ouvert la porte du palais, cette nuit-là.", "mood": "sad" },
+        { "speaker": "drak", "text": "Une belle chanson, chanteuse. On a égorgé en mesure." }
+      ]
+    },
+    {
+      "id": "drak_kael",
+      "enemy": "drak",
+      "units": ["kael"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "kael", "text": "Drak ! C'est à cause de toi que j'ai déserté. Tu tirais sur les nôtres.", "mood": "angry" },
+        { "speaker": "drak", "text": "Les nôtres, les leurs… Quelqu'un paye, Kael. C'est ça, les nôtres." }
+      ]
+    },
+    {
+      "id": "drak_voss",
+      "enemy": "drak",
+      "units": ["voss"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "voss", "text": "Sergent Drak. La caserne t'a cherché pendant deux ans.", "mood": "angry" },
+        { "speaker": "drak", "text": "La caserne me cherchait, et la Régente me payait. Devine qui gagnait, capitaine." }
+      ]
+    },
+    {
+      "id": "drak_alden_mort",
+      "enemy": "drak",
+      "units": ["alden"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "drak", "text": "…Ceux qui m'ont payé… ne signent… jamais…" },
+        { "speaker": "alden", "text": "Je sais. Je trouverai leurs noms sans signature.", "mood": "angry" }
+      ]
+    },
+    {
+      "id": "drak_mort",
+      "enemy": "drak",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "drak", "text": "…Deux cents pièces… dans ma botte… prends-les…" }
+      ]
+    },
+    {
+      "id": "veilleur_gerard",
+      "enemy": "veilleur_de_pierre",
+      "units": ["gerard"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "gerard", "text": "Tu chantes juste, toi. Tu gardes ce col depuis combien de temps ?" },
+        { "speaker": "veilleur_de_pierre", "text": "TROIS CENT QUATRE HIVERS. LE ROI REVIENDRA. JE GARDE." },
+        { "speaker": "gerard", "text": "Il ne reviendra pas, vieux frère. Pose-toi.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "veilleur_tobias",
+      "enemy": "veilleur_de_pierre",
+      "units": ["tobias"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "tobias", "text": "Un menhir éveillé ! Les runes… personne ne sait plus les écrire.", "mood": "surprised" },
+        { "speaker": "veilleur_de_pierre", "text": "PERSONNE NE PASSE. PERSONNE NE LIT. JE GARDE." }
+      ]
+    },
+    {
+      "id": "veilleur_yrsa",
+      "enemy": "veilleur_de_pierre",
+      "units": ["yrsa"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "yrsa", "text": "Le Veilleur de Pierre. Trois siècles qu'on grimpe par la falaise à cause de toi.", "mood": "angry" },
+        { "speaker": "veilleur_de_pierre", "text": "LA FALAISE EST À VOUS. LE COL EST AU ROI." }
+      ]
+    },
+    {
+      "id": "veilleur_gerard_mort",
+      "enemy": "veilleur_de_pierre",
+      "units": ["gerard"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "veilleur_de_pierre", "text": "…LE ROI… NE REVIENT… PAS ?" },
+        { "speaker": "gerard", "text": "Non. Mais quelqu'un t'a appelé par ton nom. Ça compte.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "veilleur_mort",
+      "enemy": "veilleur_de_pierre",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "veilleur_de_pierre", "text": "…JE… NE GARDE… PLUS…" }
+      ]
+    },
+    {
+      "id": "maelis_heros",
+      "enemy": "maelis",
+      "units": ["heros"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "maelis", "text": "Halte. Nul ne passe sans l'offrande. Montre-la." },
+        { "speaker": "heros", "text": "Je la porte." },
+        { "speaker": "maelis", "text": "Alors tu passeras. Mais pas sans combattre : j'ai des ordres plus vieux que toi." }
+      ]
+    },
+    {
+      "id": "maelis_rhyel",
+      "enemy": "maelis",
+      "units": ["rhyel"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "maelis", "text": "Ce feu… Dame Elwen l'avait dans les mains le jour de la Nuit Basse.", "mood": "surprised" },
+        { "speaker": "rhyel", "text": "Elwen. Vous l'avez connue ?", "mood": "surprised" },
+        { "speaker": "maelis", "text": "Je l'ai regardée descendre au récif. Et j'ai obéi. Frappe, petit. Je l'ai mérité." }
+      ]
+    },
+    {
+      "id": "maelis_alden",
+      "enemy": "maelis",
+      "units": ["alden"],
+      "kind": "battle",
+      "lines": [
+        { "speaker": "alden", "text": "Ser Maëlis ! On enseigne encore votre serment à Valcendre.", "mood": "surprised" },
+        { "speaker": "maelis", "text": "Alors on enseigne mal. Un serment qui tient un mort à son poste n'est pas un serment." }
+      ]
+    },
+    {
+      "id": "maelis_rhyel_mort",
+      "enemy": "maelis",
+      "units": ["rhyel"],
+      "kind": "death",
+      "lines": [
+        { "speaker": "maelis", "text": "…Elle avait… ton feu… Dis-lui… que j'ai gardé… la porte…" },
+        { "speaker": "rhyel", "text": "Je lui dirai. Reposez-vous, Ser.", "mood": "sad" }
+      ]
+    },
+    {
+      "id": "maelis_mort",
+      "enemy": "maelis",
+      "units": [],
+      "kind": "death",
+      "lines": [
+        { "speaker": "maelis", "text": "…Le roi… est derrière… Soyez… doux avec lui…" }
       ]
     }
   ]

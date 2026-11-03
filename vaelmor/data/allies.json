@@ -1,5 +1,5 @@
 {
-  "$comment": "Alliés verts (jalon M5, GDD §7.8). `named` : allié vert nommé (errant, figure de village), qui a des scènes de combat avec les ennemis nommés (GDD §7.9). Toujours gérés par une IA, jamais par le joueur ; ils ne comptent ni dans le déploiement ni dans la défaite. `templates` : modèles d'unités (classe de classes.json, apparence de combat de render/unitSprites.ts dessinée en vert, niveau = milieu des niveaux de la zone + levelOffset). `villages` : gardes (fixes, garantis à partir d'« Amical » : 1 garde, 2 à partir d'« Allié » ; balance.allies) et alliés de passage (un tiré au sort, chance selon le palier : 0/10/20/35 %). `wanderers` : alliés errants, des PNJ (même format que locations.json) qui parcourent `route` en boucle, s'abordent (salutation, sujets, petit cadeau) et rejoignent les combats proches (d'office à moins de balance.allies.errantJoinRange cases, sinon 50 % s'ils le voient). Un errant tombé au combat est blessé jusqu'au prochain repos à l'auberge.",
+  "$comment": "Alliés verts (jalon M5, GDD §7.8). `npc` + `figures` (jalon M7, n°197) : les figures de village, PNJ combattants de locations.json promus alliés verts nommés (apparence et portrait du PNJ, équipement de leur classe) ; une figure liée à un ennemi nommé du combat vient d'abord, à la place d'un garde ou de l'allié de passage, dès « Amical », depuis sa zone. `named` : allié vert nommé (errant, figure de village), qui a des scènes de combat avec les ennemis nommés (GDD §7.9). Toujours gérés par une IA, jamais par le joueur ; ils ne comptent ni dans le déploiement ni dans la défaite. `templates` : modèles d'unités (classe de classes.json, apparence de combat de render/unitSprites.ts dessinée en vert, niveau = milieu des niveaux de la zone + levelOffset). `villages` : gardes (fixes, garantis à partir d'« Amical » : 1 garde, 2 à partir d'« Allié » ; balance.allies) et alliés de passage (un tiré au sort, chance selon le palier : 0/10/20/35 %). `wanderers` : alliés errants, des PNJ (même format que locations.json) qui parcourent `route` en boucle, s'abordent (salutation, sujets, petit cadeau) et rejoignent les combats proches (d'office à moins de balance.allies.errantJoinRange cases, sinon 50 % s'ils le voient). Un errant tombé au combat est blessé jusqu'au prochain repos à l'auberge.",
   "templates": [
     { "id": "garde_haut_gue", "name": "Garde de Haut-Gué", "class": "gardien_des_marees", "sprite": "milicien", "levelOffset": 0 },
     { "id": "milicien_haut_gue", "name": "Milicien de Haut-Gué", "class": "lame_du_serment", "sprite": "milicien", "levelOffset": -1 },
@@ -17,14 +17,31 @@
     { "id": "chasseuse_errante", "name": "Brune", "class": "veilleur_des_falaises", "sprite": "veilleur_des_falaises", "levelOffset": 0, "named": true },
     { "id": "ermite_des_greves", "name": "Frère Anselme", "class": "porte_lanterne", "sprite": "porte_lanterne", "levelOffset": 0, "named": true },
     { "id": "chevalier_errant", "name": "Sire Gauvain", "class": "gardien_des_marees", "sprite": "gardien_des_marees", "levelOffset": 0, "named": true },
-    { "id": "mercenaire_repentie", "name": "Garance", "class": "heraut_des_bannieres", "sprite": "heraut_des_bannieres", "levelOffset": 0, "named": true }
+    { "id": "mercenaire_repentie", "name": "Garance", "class": "heraut_des_bannieres", "sprite": "heraut_des_bannieres", "levelOffset": 0, "named": true },
+    { "id": "ilar", "name": "Capitaine Ilar", "class": "gardien_des_marees", "sprite": "figure_ilar", "levelOffset": 1, "named": true, "npc": "ilar" },
+    { "id": "bran", "name": "Bran", "class": "ingenieur_des_ruines", "sprite": "figure_bran", "levelOffset": 0, "named": true, "npc": "bran" },
+    { "id": "garrec", "name": "Vieux Garrec", "class": "heraut_des_bannieres", "sprite": "figure_garrec", "levelOffset": -1, "named": true, "npc": "garrec" },
+    { "id": "sylve", "name": "Sylve", "class": "faconneur_de_racines", "sprite": "figure_sylve", "levelOffset": 1, "named": true, "npc": "sylve" },
+    { "id": "orin", "name": "Orin", "class": "alchimiste_des_saisons", "sprite": "figure_orin", "levelOffset": 0, "named": true, "npc": "orin" },
+    { "id": "kael", "name": "Kael", "class": "lame_du_serment", "sprite": "figure_kael", "levelOffset": 0, "named": true, "npc": "kael" },
+    { "id": "dorn", "name": "Amiral Dorn", "class": "chasseur_de_serpents_de_mer", "sprite": "figure_dorn", "levelOffset": 2, "named": true, "npc": "dorn" },
+    { "id": "odo", "name": "Frère Odo", "class": "porte_lanterne", "sprite": "figure_odo", "levelOffset": 0, "named": true, "npc": "odo" },
+    { "id": "marthe", "name": "Marthe", "class": "danseur_des_courants", "sprite": "figure_marthe", "levelOffset": -1, "named": true, "npc": "marthe" },
+    { "id": "lia", "name": "Lia", "class": "veilleur_des_falaises", "sprite": "figure_lia", "levelOffset": 0, "named": true, "npc": "lia" },
+    { "id": "halvar", "name": "Maître Halvar", "class": "ingenieur_des_ruines", "sprite": "figure_halvar", "levelOffset": 1, "named": true, "npc": "halvar" },
+    { "id": "yrsa", "name": "Garde-Cime Yrsa", "class": "veilleur_des_falaises", "sprite": "figure_yrsa", "levelOffset": 1, "named": true, "npc": "yrsa" },
+    { "id": "hild", "name": "Hild", "class": "porte_lanterne", "sprite": "figure_hild", "levelOffset": -1, "named": true, "npc": "hild" },
+    { "id": "voss", "name": "Capitaine Voss", "class": "lame_du_serment", "sprite": "figure_voss", "levelOffset": 2, "named": true, "npc": "voss" },
+    { "id": "dax", "name": "Dax", "class": "lame_du_serment", "sprite": "figure_dax", "levelOffset": 1, "named": true, "npc": "dax" },
+    { "id": "yvonne", "name": "Mère Yvonne", "class": "porte_lanterne", "sprite": "figure_yvonne", "levelOffset": 0, "named": true, "npc": "yvonne" },
+    { "id": "lorn", "name": "Maître Lorn", "class": "alchimiste_des_saisons", "sprite": "figure_lorn", "levelOffset": -1, "named": true, "npc": "lorn" }
   ],
   "villages": [
-    { "location": "haut_gue", "guards": ["garde_haut_gue", "milicien_haut_gue"], "passers": ["milicien_haut_gue", "chasseuse_haut_gue", "apprentie_haut_gue"] },
-    { "location": "ronceval", "guards": ["sentinelle_ronceval", "druide_ronceval"], "passers": ["sentinelle_ronceval", "druide_ronceval"] },
-    { "location": "port_brume", "guards": ["garde_port_brume", "harponneur_port_brume"], "passers": ["harponneur_port_brume", "garde_port_brume"] },
-    { "location": "pierre_haute", "guards": ["garde_pierre_haute", "lanterne_pierre_haute"], "passers": ["lanterne_pierre_haute", "garde_pierre_haute"] },
-    { "location": "valcendre", "guards": ["garde_valcendre", "arbaletrier_valcendre"], "passers": ["arbaletrier_valcendre", "garde_valcendre"] }
+    { "location": "haut_gue", "guards": ["garde_haut_gue", "milicien_haut_gue"], "passers": ["milicien_haut_gue", "chasseuse_haut_gue", "apprentie_haut_gue"], "figures": ["ilar", "bran", "garrec"] },
+    { "location": "ronceval", "guards": ["sentinelle_ronceval", "druide_ronceval"], "passers": ["sentinelle_ronceval", "druide_ronceval"], "figures": ["sylve", "orin", "kael"] },
+    { "location": "port_brume", "guards": ["garde_port_brume", "harponneur_port_brume"], "passers": ["harponneur_port_brume", "garde_port_brume"], "figures": ["dorn", "odo", "marthe", "lia"] },
+    { "location": "pierre_haute", "guards": ["garde_pierre_haute", "lanterne_pierre_haute"], "passers": ["lanterne_pierre_haute", "garde_pierre_haute"], "figures": ["halvar", "yrsa", "hild"] },
+    { "location": "valcendre", "guards": ["garde_valcendre", "arbaletrier_valcendre"], "passers": ["arbaletrier_valcendre", "garde_valcendre"], "figures": ["voss", "dax", "yvonne", "lorn"] }
   ],
   "wanderers": [
     {

@@ -207,6 +207,18 @@ export const optionSchema = z.discriminatedUnion('kind', [
       .min(2),
     once: z.boolean().optional(),
   }),
+  /**
+   * Combat proposé par le PNJ (jalon M7, n°200 : les séries de l'Arène des
+   * Cendres) : il dit `lines`, puis la rencontre commence, sur sa carte fixe
+   * ou autour du héros. Les drapeaux de victoire font avancer les quêtes.
+   */
+  z.strictObject({
+    kind: z.literal('battle'),
+    ...optionBase,
+    encounter: idSchema,
+    lines: linesSchema,
+    expression: z.enum(EXPRESSIONS).optional(),
+  }),
 ]);
 export type NpcOption = z.infer<typeof optionSchema>;
 export type OptionKind = NpcOption['kind'];

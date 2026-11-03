@@ -56,8 +56,14 @@ export function recruitLevel(data: GameData, company: readonly Member[], id: str
  * Une recrue rejoint la compagnie (une seule fois). Renvoie le nouveau membre,
  * ou null s'il y était déjà ou s'il est tombé en mode Classique (n°167).
  */
+/** La compagnie est-elle au complet (roster de `balance.levels.rosterMax`, n°199) ? */
+export function companyFull(data: GameData, progress: Progress): boolean {
+  return progress.company.length >= data.balance.levels.rosterMax;
+}
+
 export function joinCompany(data: GameData, progress: Progress, unit: UnitRef): Member | null {
   if (progress.company.some((m) => m.id === unit.id) || progress.fallen.includes(unit.id)) return null;
+  if (companyFull(data, progress)) return null;
   const member = createMember(data, { ...unit, level: recruitLevel(data, progress.company, unit.id) });
   progress.company.push(member);
   if (!progress.recruited.includes(unit.id)) progress.recruited.push(unit.id);

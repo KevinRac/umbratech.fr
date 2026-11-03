@@ -39,6 +39,8 @@ import {
   enterLocation,
   foeFlees,
   foePresent,
+  foeSpriteOf,
+  namedAtPost,
   meanEnemyLevel,
   newProgress,
   newlyReady,
@@ -171,6 +173,8 @@ interface EngageOptions {
   readonly ambush?: boolean;
   readonly foeId?: string;
   readonly extraEnemies?: readonly { enemy: string; level: number }[];
+  /** Combat proposé par un PNJ (arène, n°200) : ni alliés verts ni nommé de passage. */
+  readonly closed?: boolean;
 }
 
 export class WorldScene extends Phaser.Scene {
@@ -854,10 +858,12 @@ export class WorldScene extends Phaser.Scene {
     this.scene.launch(SCENES.dialogue, {
       npcId: actor.def.id,
       saves: { place: this.placeName(), blocked: this.saveBlocker(), onLoad: (save: SaveEnvelope) => this.loadSavedGame(save) },
-      onClose: (result: { recruited: boolean }) => {
+      onClose: (result: { recruited: boolean; battle?: string }) => {
         if (result.recruited) this.removeNpc(actor);
         actor.talking = false;
         this.leaveModal();
+        // Combat proposé par le PNJ (n°200) : sur sa carte fixe, ou autour du héros.
+        if (result.battle) this.startBattle(result.battle, undefined, { closed: true });
       },
     });
   }
@@ -930,7 +936,7 @@ export class WorldScene extends Phaser.Scene {
    * Alliés verts qui rejoindront un combat engagé en `site` (GDD §7.8) : gardes
    * du village proche, allié de passage tiré au sort, alliés errants proches.
    */
-  private planBattleAllies(site: { x: number; y: number }): AllyJoin[] {
+  private planBattleAllies(site: { x: number; y: number }, enemies: readonly string[]): AllyJoin[] {
     const ctx = this.gameCtx;
     const tile = this.map.tileSize;
     const villages: VillageArea[] = [];
@@ -949,7 +955,8 @@ export class WorldScene extends Phaser.Scene {
     const errants = [...this.wanderers.values()].map((w) => ({ id: w.sim.def.id, cell: walkerCell(w.sim, tile) }));
     const zoneValue = this.map.zones[site.y * this.map.width + site.x] as number;
     const rng = Rng.fromSeed(`${site.x},${site.y}:${Math.round(this.state.progress.clock)}:allies`);
-    return planAllies({ data: this.data_, site, zoneValue, villages, errants, rng, errantRecords: this.state.progress.errants });
+    const progress = this.state.progress;
+    return planAllies({ data: this.data_, site, zoneValue, villages, errants, rng, errantRecords: progress.errants, enemies, wounded: progress.wounded ?? {}, day: progress.day });
   }
 
   /** Tirage d'un ennemi nommé de passage (n°115, n°185, n°186) ; le compteur anti-malchance vit dans la progression. */
@@ -1247,10 +1254,12 @@ export class WorldScene extends Phaser.Scene {
     camera.fadeOut(400, 255, 255, 255);
     const tile = this.map.tileSize;
     const where = site ?? { x: Math.floor(this.body_.x / tile), y: Math.floor((this.body_.y - 1) / tile) };
-    const allies = this.planBattleAllies(where);
-    // Un ennemi nommé peut surgir dans un combat ordinaire (GDD §7.9, n°115).
-    const named = this.rollNamed(encounterId, where);
+    // Un ennemi nommé peut surgir dans un combat ordinaire (GDD §7.9, n°115), sauf si un nommé y est déjà (poste, n°193).
+    const namedHere = (options.extraEnemies ?? []).some((e) => this.data_.named.some((n) => n.id === e.enemy));
+    const named = namedHere || options.closed ? null : this.rollNamed(encounterId, where);
     const extraEnemies = [...(options.extraEnemies ?? []), ...(named ? [named] : [])];
+    const enemyIds = [...findEncounter(this.data_, encounterId).enemies.map((e) => e.enemy), ...extraEnemies.map((e) => e.enemy)];
+    const allies = options.closed ? [] : this.planBattleAllies(where, enemyIds);
     const data = {
       encounterId,
       returnTo: 'world',
@@ -1301,7 +1310,7 @@ export class WorldScene extends Phaser.Scene {
         const color = Phaser.Display.Color.HexStringToColor(difficultyOf(foesCfg, level, this.partyLvl, boss).color).color;
         const det = foesCfg.detection[def.kind];
         const vision = det.radius > 0 || det.coneRange > 0 ? { circle: det.radius * tile, cone: det.coneRange * tile, coneAngle: det.coneAngle } : null;
-        this.foeActors.set(def.id, new FoeActor(this, sim, def.sprite, { color, boss, vision: boss || def.kind === 'embuscade' ? null : vision }, { entities: DEPTH.entities, marker: DEPTH.marker, shadow: DEPTH.shadow }));
+        this.foeActors.set(def.id, new FoeActor(this, sim, foeSpriteOf(this.data_, def), { color, boss, vision: boss || def.kind === 'embuscade' ? null : vision }, { entities: DEPTH.entities, marker: DEPTH.marker, shadow: DEPTH.shadow }));
       } else if (!present && actor) {
         actor.destroy();
         this.foeActors.delete(def.id);
@@ -1380,6 +1389,9 @@ export class WorldScene extends Phaser.Scene {
         extra.push({ enemy: pick.enemy, level: Math.max(1, pick.level - 1) });
       }
     }
+    // Le nommé qui tient ce poste rejoint la rencontre (n°193).
+    const named = namedAtPost(this.data_, sim.def, encounter);
+    if (named) extra.push(named);
     const tile = this.map.tileSize;
     // Une rencontre de repaire se joue autour du boss ; les autres, là où le héros se tient.
     const site = encounter.sampled?.anchor === 'enemy' ? feetCell(sim.x, sim.y, tile) : feetCell(this.body_.x, this.body_.y, tile);

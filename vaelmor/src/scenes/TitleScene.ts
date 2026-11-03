@@ -366,7 +366,9 @@ export class TitleScene extends Phaser.Scene {
    * (M3), on lance une rencontre directement depuis le titre.
    */
   private showBattleMenu(): void {
-    const encounters = loadGameData().encounters.encounters;
+    // Jalon M7 : 35 rencontres ne tiennent plus à l'écran ; le titre ne propose que les boss, les cartes fixes (arène) et deux rencontres ordinaires.
+    const ordinary = new Set(['embuscade_du_gue', 'brigands_foret_racine']);
+    const encounters = loadGameData().encounters.encounters.filter((e) => e.objective.type === 'boss' || e.map !== undefined || ordinary.has(e.id));
     this.showMenu([
       ...encounters.map((encounter) => ({ label: encounter.name, onSelect: () => this.startBattle(encounter.id) })),
       { label: 'Retour', onSelect: () => this.buildMenu() },

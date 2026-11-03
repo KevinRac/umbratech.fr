@@ -51,11 +51,16 @@ import {
   giveItem,
   planFromState,
   reconcileLoadouts,
+  rosterClasses,
+  rosterOrder,
+  ROSTER_SORTS,
+  ROSTER_SORT_LABELS,
   swapSlots,
   takeItem,
   toggleMember,
   weaponChoices,
   type PrepPlan,
+  type RosterSort,
 } from '../logic/tactics/prep';
 import { costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
 import { isStunned } from '../logic/tactics/status';
@@ -188,6 +193,9 @@ export class BattleScene extends Phaser.Scene {
   private prepCursor = 0;
   private prepPick: number | null = null;
   private prepMessage: string | null = null;
+  /** Tri et filtre par classe de la liste de la compagnie (n°199) ; gardés pour la session. */
+  private static prepSort: RosterSort = 'arrivee';
+  private static prepFilter: string | null = null;
   private slotTiles: Phaser.GameObjects.Image[] = [];
 
   private zoom = 3;
@@ -428,6 +436,8 @@ export class BattleScene extends Phaser.Scene {
     this.base = origin ? { x: origin.x * T, y: origin.y * T } : { x: 0, y: 0 };
     const w = this.state.map.width * T;
     const h = this.state.map.height * T;
+    // L'ombre des unités est une texture du monde : il la faut aussi sur une carte fixe (arène, n°200).
+    ensureWorldTextures(this);
     if (origin && this.worldMap) this.buildWorldField(this.worldMap);
     else this.buildPaintedField();
 
@@ -976,6 +986,16 @@ export class BattleScene extends Phaser.Scene {
       },
       onPlace: () => this.startPlace(),
       onBack: this.state.ambush ? null : () => this.retreatFromPrep(),
+      onSort: () => {
+        BattleScene.prepSort = ROSTER_SORTS[(ROSTER_SORTS.indexOf(BattleScene.prepSort) + 1) % ROSTER_SORTS.length] as RosterSort;
+        this.hud.updatePrep(this.prepView());
+      },
+      onFilter: () => {
+        const classes = rosterClasses(this.party, this.gameData.classes.map((c) => c.id));
+        const at = BattleScene.prepFilter === null ? -1 : classes.indexOf(BattleScene.prepFilter);
+        BattleScene.prepFilter = at + 1 < classes.length ? (classes[at + 1] as string) : null;
+        this.hud.updatePrep(this.prepView());
+      },
     });
   }
 
@@ -1017,13 +1037,16 @@ export class BattleScene extends Phaser.Scene {
   private prepView(): PrepView {
     const plan = this.plan as PrepPlan;
     const deployed = new Set(deployedMembers(plan));
-    const roster: ListRow[] = this.party.map((m, i) => {
+    const order = rosterOrder(this.party, BattleScene.prepSort, BattleScene.prepFilter, deployed);
+    const roster: ListRow[] = order.map((i) => {
+      const m = this.party[i] as (typeof this.party)[number];
       const cls = this.gameData.classes.find((c) => c.id === m.class);
       const on = deployed.has(i);
       // Police pixel : « • » marque les unités déployées ; le héros est en or.
       // Un blessé est marqué d'un « + » rouge (n°138).
       return { label: `${on ? '•' : '  '} ${m.name}${m.wounded ? ' +' : ''}`, right: `${shortClass(cls?.name ?? m.class)} ${m.level}`, color: m.wounded ? PALETTE.braise : on ? (m.hero ? PALETTE.lumiereDoree : PALETTE.parchemin) : PALETTE.metalClair };
     });
+    const filterLabel = BattleScene.prepFilter === null ? 'Toutes' : shortClass(this.gameData.classes.find((c) => c.id === BattleScene.prepFilter)?.name ?? BattleScene.prepFilter);
     const member = this.party[this.prepCursor];
     const unit = member
       ? (this.state.units.find((u) => u.memberIndex === this.prepCursor) ?? memberUnit(this.gameData, this.rules, member, this.loadouts[this.prepCursor] ?? { weapon: null, accessory: null, items: [] }, 'preview', this.prepCursor, -1, -1, skinVariant(this.party, this.prepCursor)))
@@ -1059,6 +1082,9 @@ export class BattleScene extends Phaser.Scene {
       title: this.state.name,
       objective: this.objectiveText(this.state.units.find((u) => u.isBoss)),
       roster,
+      order,
+      sortLabel: ROSTER_SORT_LABELS[BattleScene.prepSort],
+      filterLabel,
       deployed: deployed.size,
       maxDeploy: plan.maxDeploy,
       cursor: this.prepCursor,

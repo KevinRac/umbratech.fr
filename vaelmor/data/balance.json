@@ -39,7 +39,8 @@
   "levels": {
     "baseClassCap": 20,
     "advancedClassCap": 30,
-    "promotionMinLevel": 10
+    "promotionMinLevel": 10,
+    "rosterMax": 30
   },
   "classMechanics": {
     "oath": { "damageBonus": 0.1, "slayCount": 3, "estocadeKept": 1.5, "estocadeBroken": 1.2 },

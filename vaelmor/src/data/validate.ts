@@ -587,6 +587,12 @@ function checkTowns(data: GameData, issues: string[]): void {
           if (o.needsQuest !== undefined && !questIds.has(o.needsQuest)) issues.push(`${oat} : quête inconnue « ${o.needsQuest} »`);
         }
         if (o.kind === 'donate' && !repTargets.has(o.rep.target)) issues.push(`${oat} : réputation inconnue « ${o.rep.target} »`);
+        if (o.kind === 'battle') {
+          const enc = data.encounters.encounters.find((e) => e.id === o.encounter);
+          if (!enc) issues.push(`${oat} : rencontre inconnue « ${o.encounter} »`);
+          else if (enc.objective.type === 'boss') issues.push(`${oat} : un PNJ ne propose pas une rencontre de boss`);
+          checkLines(`${oat}.lines`, o.lines);
+        }
         if (o.kind === 'topic') checkEffects(oat, o.effects);
         if (o.kind === 'choice') {
           for (const c of o.choices) {
@@ -672,6 +678,12 @@ function checkWorldFoes(data: GameData, issues: string[]): void {
       const town = foe.town === undefined ? undefined : towns.get(foe.town);
       if (!town || town.reputation === null) issues.push(`${at}.town doit désigner un lieu habité (avec réputation)`);
     } else if (foe.town !== undefined) issues.push(`${at}.town n'a de sens que pour un garde`);
+    if (foe.named !== undefined) {
+      const named = data.named.find((n) => n.id === foe.named);
+      if (!named) issues.push(`${at}.named référence un nommé inconnu : « ${foe.named} »`);
+      if (foe.kind === 'boss' || foe.kind === 'garde') issues.push(`${at} : un boss ou un garde ne tient pas le poste d'un nommé (named)`);
+      if (data.worldFoes.some((o) => o !== foe && o.named === foe.named)) issues.push(`${at} : le nommé « ${foe.named} » tient déjà un autre poste`);
+    }
     if (foe.encounter === undefined && foe.kind !== 'boss' && !zone.encounterTable.some((t) => t.for.includes(foe.kind))) {
       issues.push(`${at} : aucune rencontre de « ${foe.kind} » dans la table de la zone « ${zone.id} »`);
     }
@@ -782,6 +794,20 @@ function checkAllies(data: GameData, issues: string[]): void {
     if (seen.has(v.location)) issues.push(`${at} : en double`);
     seen.add(v.location);
     for (const id of [...v.guards, ...v.passers]) if (!templates.has(id)) issues.push(`${at} : modèle inconnu « ${id} »`);
+    // Figures de village (n°197) : des modèles nommés, dont le PNJ vit dans ce lieu.
+    for (const id of v.figures ?? []) {
+      const t = data.allyTemplates.find((x) => x.id === id);
+      if (!t) issues.push(`${at}.figures : modèle inconnu « ${id} »`);
+      else if (t.named !== true || t.npc === undefined) issues.push(`${at}.figures : « ${id} » doit être un modèle nommé avec un PNJ (named, npc)`);
+      else if (!town?.npcs.some((n) => n.id === t.npc)) issues.push(`${at}.figures : le PNJ « ${t.npc} » n'est pas de ce lieu`);
+    }
+  }
+  const allNpcs = new Set(data.locations.flatMap((l) => l.npcs.map((n) => n.id)));
+  for (const t of data.allyTemplates) {
+    if (t.npc === undefined) continue;
+    if (!allNpcs.has(t.npc)) issues.push(`${file} › « ${t.id} ».npc : PNJ inconnu « ${t.npc} »`);
+    if (t.named !== true) issues.push(`${file} › « ${t.id} » : une figure de village est nommée (named)`);
+    if (t.id !== t.npc) issues.push(`${file} › « ${t.id} » : une figure porte l'identifiant de son PNJ (ses scènes le nomment ainsi)`);
   }
   // Les errants sont des PNJ : leur identifiant ne doit pas croiser celui d'un PNJ de village.
   const npcIds = new Set(data.locations.flatMap((l) => l.npcs.map((n) => n.id)));

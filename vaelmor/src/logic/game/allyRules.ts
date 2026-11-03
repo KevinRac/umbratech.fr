@@ -52,6 +52,11 @@ export interface AllyPlanInput {
   readonly rng: Rng;
   /** Niveau et XP gardés par les errants (décision n°132). */
   readonly errantRecords?: Readonly<Record<string, { readonly level: number; readonly xp: number }>>;
+  /** Ennemis de la rencontre (nommés compris) : décident quelles figures de village accourent (n°197). */
+  readonly enemies?: readonly string[];
+  /** Figures et errants blessés (absents jusqu'au repos) : `progress.wounded` et le jour courant. */
+  readonly wounded?: Readonly<Record<string, number>>;
+  readonly day?: number;
 }
 
 /** Distance (cases) d'une case au rectangle d'un village (0 dedans). */
@@ -71,31 +76,69 @@ export function allyLevel(data: GameData, zoneValue: number, template: string): 
   return Math.max(1, mid + offset);
 }
 
+/** Une figure de village est-elle liée à l'un des ennemis (scène avec lui, ou interlocutrice de son recrutement) ? */
+export function figureLinked(data: GameData, figure: string, enemies: readonly string[]): boolean {
+  if (enemies.length === 0) return false;
+  if (data.scenes.some((s) => enemies.includes(s.enemy) && s.units.includes(figure))) return true;
+  return data.named.some((n) => enemies.includes(n.id) && n.recruit?.talkers.includes(figure) === true);
+}
+
+/**
+ * Figures d'un village qui accourent (n°197) : liées à un ennemi du combat, pas
+ * blessées, dans l'ordre des données. Elles viennent dès « Amical », depuis leur
+ * zone entière (pas seulement à portée des gardes), pour que leurs scènes aient
+ * une chance de se jouer.
+ */
+function figuresFor(input: AllyPlanInput, villageId: string): string[] {
+  const { data } = input;
+  const def = data.allyVillages.find((v) => v.location === villageId);
+  const enemies = input.enemies ?? [];
+  const hurt = (id: string): boolean => {
+    const w = input.wounded?.[id];
+    return w !== undefined && (input.day ?? 0) <= w;
+  };
+  return (def?.figures ?? []).filter((f) => figureLinked(data, f, enemies) && !hurt(f));
+}
+
 /** Alliés verts qui rejoindront un combat engagé en `site`. */
 export function planAllies(input: AllyPlanInput): AllyJoin[] {
   const { data, site, rng } = input;
   const cfg = data.balance.allies;
   const joins: AllyJoin[] = [];
+  const taken = new Set<string>();
+  const figureJoin = (figure: string, village: VillageArea, turn: number, source: 'garde' | 'passage'): AllyJoin => {
+    taken.add(figure);
+    const name = data.allyTemplates.find((t) => t.id === figure)?.name ?? figure;
+    return { template: figure, level: allyLevel(data, input.zoneValue, figure), turn, worldCell: center(village), source, errantId: figure, label: `${name} accourt de ${village.name} !` };
+  };
 
-  // Gardes : le village le plus proche à portée, seulement à partir d'« Amical ».
+  // Gardes : le village le plus proche à portée, seulement à partir d'« Amical » ; une figure liée prend la première place.
   const near = input.villages.filter((v) => distanceToArea(v, site) <= cfg.guardRange).sort((a, b) => distanceToArea(a, site) - distanceToArea(b, site))[0];
   if (near) {
     const def = data.allyVillages.find((v) => v.location === near.id);
     const count = cfg.guardCount[near.tier];
     if (def && count > 0) {
+      const figures = figuresFor(input, near.id);
       for (let i = 0; i < count; i++) {
+        const figure = figures[i];
+        if (figure !== undefined) {
+          joins.push(figureJoin(figure, near, cfg.guardTurn[near.tier], 'garde'));
+          continue;
+        }
         const template = def.guards[i % def.guards.length] as string;
         joins.push({ template, level: allyLevel(data, input.zoneValue, template), turn: cfg.guardTurn[near.tier], worldCell: center(near), source: 'garde', errantId: null, label: `Les gardes de ${near.name} accourent !` });
       }
     }
   }
 
-  // Allié de passage : village de la zone le plus proche (tirage selon son palier).
+  // Allié de passage : village de la zone le plus proche (tirage selon son palier) ; une figure liée vient à coup sûr.
   const home = input.villages.filter((v) => v.zone === input.zoneValue).sort((a, b) => distanceToArea(a, site) - distanceToArea(b, site))[0];
   if (home) {
     const def = data.allyVillages.find((v) => v.location === home.id);
     const chance = cfg.passerChance[home.tier];
-    if (def && chance > 0 && rng.chance(chance)) {
+    const figure = figuresFor(input, home.id).find((f) => !taken.has(f));
+    if (def && chance > 0 && figure !== undefined) joins.push(figureJoin(figure, home, rng.pick(cfg.passerTurns), 'passage'));
+    else if (def && chance > 0 && rng.chance(chance)) {
       const template = rng.pick(def.passers);
       joins.push({ template, level: allyLevel(data, input.zoneValue, template), turn: rng.pick(cfg.passerTurns), worldCell: null, source: 'passage', errantId: null, label: `Renfort ! Un habitant de ${home.name} vient à l'aide.` });
     }

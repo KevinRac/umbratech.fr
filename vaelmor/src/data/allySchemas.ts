@@ -31,6 +31,12 @@ export const allyTemplateSchema = z.strictObject({
    * l'identifiant du modèle.
    */
   named: z.boolean().optional(),
+  /**
+   * Figure de village (jalon M7, n°197) : le PNJ de `locations.json` dont il
+   * prend le nom, l'apparence et le portrait ; en combat il porte l'équipement
+   * de sa classe. Toujours `named`.
+   */
+  npc: idSchema.optional(),
 });
 
 export const allyVillageSchema = z.strictObject({
@@ -40,6 +46,12 @@ export const allyVillageSchema = z.strictObject({
   guards: z.array(idSchema).min(1),
   /** Alliés de passage : un seul est tiré quand le sort le permet. */
   passers: z.array(idSchema).min(1),
+  /**
+   * Figures nommées du village (n°197) : quand un ennemi nommé lié à l'une
+   * d'elles est du combat, elle vient d'abord (à la place d'un garde ou de
+   * l'allié de passage), si le village l'aime assez et qu'elle n'est pas blessée.
+   */
+  figures: z.array(idSchema).optional(),
 });
 
 export const wandererSchema = npcSchema.extend({

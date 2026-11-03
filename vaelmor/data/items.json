@@ -32,6 +32,7 @@
     { "id": "lame_de_revenant", "name": "Lame de revenant", "type": "epee", "range": [1, 1], "damage": "physique", "power": 11, "hit": 80, "crit": 0, "element": "maree", "effective": [] },
     { "id": "murmure_des_abysses", "name": "Murmure des abysses", "type": "tome", "range": [1, 2], "damage": "magique", "power": 11, "hit": 80, "crit": 0, "element": "maree", "effective": [] },
     { "id": "lance_engloutie", "name": "Lance engloutie", "type": "lance_courte", "range": [1, 2], "damage": "physique", "power": 11, "hit": 75, "crit": 0, "element": null, "effective": [] },
+    { "id": "trident_de_maree", "name": "Trident de marée", "type": "lance_courte", "range": [1, 2], "damage": "magique", "power": 13, "hit": 85, "crit": 5, "element": "maree", "effective": [] },
     { "id": "baton_noueux", "name": "Bâton noueux", "type": "baton", "range": [1, 2], "damage": "magique", "power": 2, "hit": 80, "crit": 0, "element": null, "effective": [], "heals": 5 },
     { "id": "eclat_de_menhir", "name": "Éclat de menhir", "type": "eclats", "range": [1, 2], "damage": "physique", "power": 4, "hit": 80, "crit": 0, "element": "pierre", "effective": [] },
     { "id": "poing_de_menhir", "name": "Poing de menhir", "type": "poings", "range": [1, 1], "damage": "physique", "power": 4, "hit": 75, "crit": 0, "element": "pierre", "effective": [] }

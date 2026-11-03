@@ -271,6 +271,19 @@
       "growths": {"pv": 90, "fo": 55, "mag": 0, "dex": 40, "vit": 30, "def": 40, "res": 15, "chc": 25}
     },
     {
+      "id": "orvane",
+      "name": "Orvane",
+      "title": "Le Roi-Marée Brisé",
+      "family": "brume",
+      "sprite": "orvane",
+      "weapon": "trident_de_maree",
+      "element": "maree",
+      "armor": "lourde",
+      "ai": "boss",
+      "baseStats": {"pv": 56, "fo": 10, "mag": 12, "dex": 9, "vit": 8, "def": 10, "res": 11, "chc": 5, "mob": 4},
+      "growths": {"pv": 90, "fo": 45, "mag": 60, "dex": 45, "vit": 35, "def": 45, "res": 50, "chc": 30}
+    },
+    {
       "id": "revenant",
       "name": "Revenant",
       "family": "citadelle",
@@ -374,6 +387,140 @@
       "zone": "z1",
       "portrait": "Colosse roux aux sourcils brûlés, cornes d'os sur la capuche, sourire de travers.",
       "story": "Lieutenant de Brakk. Il a brûlé la grange de Thom."
+    },
+    {
+      "id": "hakon",
+      "name": "Hakon",
+      "title": "le Bûcheron",
+      "skinOf": "bucheron_corrompu",
+      "detail": 1,
+      "zone": "z2",
+      "portrait": "Homme large aux yeux voilés de brume, barbe pleine de sciure, bandeau de cuir au front, une épaule plus haute que l'autre.",
+      "story": "Il coupait le bois du Bosquet quand la Brume l'a pris. Ses coups de cognée suivent encore le rythme d'une chanson qu'il ne se rappelle plus."
+    },
+    {
+      "id": "oswin",
+      "name": "Oswin",
+      "title": "maître-chasseur",
+      "skinOf": "chasseur_de_ronces",
+      "detail": 1,
+      "zone": "z2",
+      "portrait": "Chasseur grisonnant, plume de geai à la capuche, cicatrice de ronce sur la joue, regard qui cherche un visage qu'il a oublié.",
+      "story": "Mentor d'Ysolde, touché par la Brume en poursuivant un braconnier de la Couronne. Il ne reconnaît plus sa propre élève.",
+      "recruit": {
+        "talkers": ["ysolde", "mousse"],
+        "requires": {"rep": {"target": "racines", "tierMin": "amical"}},
+        "asClass": "veilleur_des_falaises",
+        "level": 7
+      }
+    },
+    {
+      "id": "aldo",
+      "name": "Aldo Vessyr",
+      "title": "le Noyé",
+      "skinOf": "noye",
+      "detail": 1,
+      "zone": "z3",
+      "portrait": "Visage d'officier gonflé par l'eau, bandeau de marine délavé, algues dans les cheveux, yeux blancs qui regardent vers le large.",
+      "story": "Frère de l'Amiral Dorn, noyé la Nuit Basse. Il marche sur le quai chaque soir, comme s'il attendait encore la relève."
+    },
+    {
+      "id": "hobb",
+      "name": "Capitaine Hobb",
+      "title": "l'Avalé",
+      "skinOf": "harponneur",
+      "detail": 1,
+      "zone": "z3",
+      "portrait": "Marin trapu au tricorne cabossé, barbe tressée, une cicatrice en anneau autour du cou là où le serpent l'a tenu.",
+      "story": "Capitaine de Corbin, rescapé du serpent de Brume. La Brume lui fait oublier ses hommes, un par un ; il ne se souvient que de la chasse.",
+      "recruit": {
+        "talkers": ["corbin", "dorn"],
+        "requires": {"deployed": "corbin", "rep": {"target": "port_brume", "tierMin": "neutre"}},
+        "asClass": "chasseur_de_serpents_de_mer",
+        "level": 11
+      }
+    },
+    {
+      "id": "ilse",
+      "name": "Ilse",
+      "title": "la Veilleuse",
+      "skinOf": "voilee_de_brume",
+      "detail": 1,
+      "zone": "z4",
+      "portrait": "Jeune prêtresse au voile gris, anneau de lumière pâle au-dessus de la tête, lanterne éteinte à la ceinture, lèvres bleuies par le froid.",
+      "story": "Sœur d'ordre d'Ilmëa, partie dans la Brume pour rallumer les lanternes des cols. La Brume l'a vêtue de son voile et lui a pris son nom.",
+      "pop": {"questDone": "lanternes_eteintes"},
+      "recruit": {
+        "talkers": ["ilmea"],
+        "requires": {"questDone": "lanternes_eteintes"},
+        "deadline": {"hpBelow": 0.5},
+        "asClass": "porte_lanterne",
+        "level": 13
+      }
+    },
+    {
+      "id": "orsen",
+      "name": "Maître Orsen",
+      "title": "l'Alchimiste vendu",
+      "skinOf": "mercenaire_de_cendre",
+      "detail": 1,
+      "zone": "z4",
+      "portrait": "Vieil homme sec au chapeau de voyage usé, doigts tachés d'acide, lunettes rondes, sourire de marchand qui compte déjà.",
+      "story": "Ancien maître de Zéphyrin. Il a vendu ses formules à la Couronne et escorte désormais ses mercenaires, fioles à la ceinture.",
+      "recruit": {
+        "talkers": ["zephyrin"],
+        "ransom": {"gold": 300, "waivedIf": {"rep": {"target": "couronne", "tierMax": "mefiant"}}},
+        "asClass": "alchimiste_des_saisons",
+        "level": 14
+      }
+    },
+    {
+      "id": "alderic",
+      "name": "Aldéric Vance",
+      "title": "capitaine de la Couronne",
+      "skinOf": "mercenaire_de_cendre",
+      "detail": 2,
+      "zone": "z4",
+      "portrait": "Officier au visage dur, cimier de crin ivoire sur le casque, mâchoire carrée, cerne de cendre sous les yeux.",
+      "story": "Capitaine d'un régiment de la Couronne, ancien frère d'armes d'Alden. Il a obéi le jour où le régiment de Brakk a été sacrifié ; il n'a jamais cessé d'obéir.",
+      "pop": {"questDone": "serment_brise"},
+      "recruit": {
+        "talkers": ["alden"],
+        "requires": {"questDone": "serment_brise"},
+        "asClass": "gardien_des_marees",
+        "level": 14
+      }
+    },
+    {
+      "id": "drak",
+      "name": "Sergent Drak",
+      "title": "le Conspirateur",
+      "skinOf": "arbaletrier_de_cendre",
+      "detail": 1,
+      "zone": "z4",
+      "portrait": "Arbalétrier au nez cassé, plume noire au chapeau, dents en or, regard qui mesure la distance entre vous et lui.",
+      "story": "Conspirateur de la Couronne. C'est lui qui a tendu l'embuscade où est tombé l'ami d'Alden, sur l'ordre de gens qui ne signent jamais rien."
+    },
+    {
+      "id": "veilleur_de_pierre",
+      "name": "Le Veilleur de Pierre",
+      "title": "menhir éveillé",
+      "skinOf": "golem_de_pierre",
+      "detail": 1,
+      "zone": "z4",
+      "portrait": "Bloc de pierre grise au visage à peine ébauché, couronne de lichen, deux fentes où brille une rune bleue, mousse sur l'épaule.",
+      "story": "Menhir éveillé qui garde un col depuis trois siècles. Il ne fait que son travail : personne ne lui a dit que le royaume avait sombré."
+    },
+    {
+      "id": "maelis",
+      "name": "Ser Maëlis",
+      "title": "premier garde d'Orvane",
+      "skinOf": "garde_englouti",
+      "detail": 1,
+      "zone": "z5",
+      "portrait": "Chevalier noyé en armure verdie, cimier de crin blanchi par le sel, visage pâle et digne, une lanterne éteinte accrochée au plastron.",
+      "story": "Premier garde d'Orvane, resté à son poste depuis la Nuit Basse. Il ne laisse passer que la lanterne.",
+      "pop": false
     }
   ]
 }

@@ -37,6 +37,46 @@ export function deployedMembers(plan: PrepPlan): number[] {
   return plan.slots.filter((m): m is number => m !== null);
 }
 
+/** Tris de la compagnie dans la préparation (n°199) : ordre d'arrivée, niveau décroissant, classe puis nom, nom. */
+export const ROSTER_SORTS = ['arrivee', 'niveau', 'classe', 'nom'] as const;
+export type RosterSort = (typeof ROSTER_SORTS)[number];
+export const ROSTER_SORT_LABELS: Readonly<Record<RosterSort, string>> = { arrivee: 'Arrivée', niveau: 'Niveau', classe: 'Classe', nom: 'Nom' };
+
+const collator = new Intl.Collator('fr', { sensitivity: 'base' });
+
+/**
+ * Ordre d'affichage de la compagnie : indices des membres, triés, et limités à
+ * une classe quand `filter` en nomme une. Le héros reste en tête quel que soit
+ * le tri ; un membre déployé n'est jamais caché par le filtre (on doit pouvoir
+ * le retirer).
+ */
+export function rosterOrder(party: readonly { readonly name: string; readonly class: string; readonly level: number; readonly hero: boolean }[], sort: RosterSort, filter: string | null, deployed: ReadonlySet<number> = new Set()): number[] {
+  const className = (i: number): string => party[i]?.class ?? '';
+  const out = party.map((_, i) => i).filter((i) => filter === null || className(i) === filter || deployed.has(i) || party[i]?.hero === true);
+  const cmp = (a: number, b: number): number => {
+    const ma = party[a] as (typeof party)[number];
+    const mb = party[b] as (typeof party)[number];
+    if (ma.hero !== mb.hero) return ma.hero ? -1 : 1;
+    switch (sort) {
+      case 'niveau':
+        return mb.level - ma.level || a - b;
+      case 'classe':
+        return collator.compare(ma.class, mb.class) || collator.compare(ma.name, mb.name) || a - b;
+      case 'nom':
+        return collator.compare(ma.name, mb.name) || a - b;
+      default:
+        return a - b;
+    }
+  };
+  return out.sort(cmp);
+}
+
+/** Classes présentes dans la compagnie, dans l'ordre des données (pour faire tourner le filtre). */
+export function rosterClasses(party: readonly { readonly class: string }[], classOrder: readonly string[]): string[] {
+  const present = new Set(party.map((m) => m.class));
+  return classOrder.filter((c) => present.has(c));
+}
+
 export function slotOf(plan: PrepPlan, member: number): number {
   return plan.slots.indexOf(member);
 }

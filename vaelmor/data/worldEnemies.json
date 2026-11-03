@@ -322,6 +322,14 @@
       "path": [[10, 94], [16, 94], [16, 100], [10, 100]]
     },
     {
+      "id": "z5_orvane",
+      "kind": "boss",
+      "zone": "z5",
+      "at": [14, 101],
+      "sprite": "orvane",
+      "encounter": "roi_maree_brise"
+    },
+    {
       "id": "z5_errant_recif",
       "kind": "errant",
       "zone": "z5",
@@ -344,6 +352,106 @@
       "zone": "z5",
       "at": [18, 90],
       "sprite": "abyssal"
+    },
+    {
+      "id": "z2_poste_hakon",
+      "kind": "sentinelle",
+      "zone": "z2",
+      "at": [96, 47],
+      "sprite": "bucheron_corrompu",
+      "encounter": "sentinelles_de_ronces",
+      "facing": "w",
+      "named": "hakon"
+    },
+    {
+      "id": "z2_poste_oswin",
+      "kind": "sentinelle",
+      "zone": "z2",
+      "at": [24, 28],
+      "sprite": "chasseur_de_ronces",
+      "encounter": "chasseurs_de_ronces",
+      "facing": "w",
+      "named": "oswin"
+    },
+    {
+      "id": "z3_poste_aldo",
+      "kind": "sentinelle",
+      "zone": "z3",
+      "at": [86, 99],
+      "sprite": "noye",
+      "encounter": "sentinelles_du_noye",
+      "facing": "s",
+      "named": "aldo"
+    },
+    {
+      "id": "z3_poste_hobb",
+      "kind": "sentinelle",
+      "zone": "z3",
+      "at": [72, 103],
+      "sprite": "harponneur",
+      "encounter": "pillards_de_greve",
+      "facing": "s",
+      "named": "hobb"
+    },
+    {
+      "id": "z4_poste_ilse",
+      "kind": "sentinelle",
+      "zone": "z4",
+      "at": [84, 24],
+      "sprite": "voilee_de_brume",
+      "encounter": "sentinelles_de_cendre",
+      "facing": "n",
+      "named": "ilse"
+    },
+    {
+      "id": "z4_poste_alderic",
+      "kind": "sentinelle",
+      "zone": "z4",
+      "at": [112, 21],
+      "sprite": "mercenaire_de_cendre",
+      "encounter": "mercenaires_de_cendre",
+      "facing": "s",
+      "named": "alderic"
+    },
+    {
+      "id": "z4_poste_orsen",
+      "kind": "sentinelle",
+      "zone": "z4",
+      "at": [118, 25],
+      "sprite": "mercenaire_de_cendre",
+      "encounter": "mercenaires_de_cendre",
+      "facing": "w",
+      "named": "orsen"
+    },
+    {
+      "id": "z4_poste_drak",
+      "kind": "sentinelle",
+      "zone": "z4",
+      "at": [104, 32],
+      "sprite": "arbaletrier_de_cendre",
+      "encounter": "sentinelles_de_cendre",
+      "facing": "s",
+      "named": "drak"
+    },
+    {
+      "id": "z4_poste_veilleur",
+      "kind": "sentinelle",
+      "zone": "z4",
+      "at": [44, 23],
+      "sprite": "golem_de_cendre",
+      "encounter": "eboulis_vivants",
+      "facing": "s",
+      "named": "veilleur_de_pierre"
+    },
+    {
+      "id": "z5_poste_maelis",
+      "kind": "sentinelle",
+      "zone": "z5",
+      "at": [14, 94],
+      "sprite": "garde_englouti",
+      "encounter": "gardes_engloutis",
+      "facing": "n",
+      "named": "maelis"
     }
   ]
 }

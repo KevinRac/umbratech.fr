@@ -12,7 +12,9 @@
     "v": "village",
     "s": "plage",
     ",": "marais",
-    "w": "eau_profonde"
+    "w": "eau_profonde",
+    "b": "batiment",
+    "o": "obstacle"
   },
   "testParty": [
     { "name": "Voyageur", "class": "lame_du_serment", "level": 3, "hero": true },
@@ -41,7 +43,7 @@
         { "enemy": "ecumeur_sabreur", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 2 },
         { "enemy": "ecumeur_archer", "level": 2 },
-        { "enemy": "ecumeur_incendiaire", "level": 3 }
+        { "enemy": "ecumeur_incendiaire", "level": 3  }
       ],
       "victoryFlags": []
     },
@@ -59,7 +61,7 @@
         { "enemy": "ecumeur_archer", "level": 3 },
         { "enemy": "ecumeur_lancier", "level": 3 },
         { "enemy": "ecumeur_incendiaire", "level": 4 },
-        { "enemy": "rebouteuse", "level": 4 }
+        { "enemy": "rebouteuse", "level": 4  }
       ],
       "victoryFlags": ["brigands_foret_vaincus"]
     },
@@ -77,7 +79,7 @@
         { "enemy": "ecumeur_lancier", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 2 },
-        { "enemy": "ecumeur_incendiaire", "level": 3 }
+        { "enemy": "ecumeur_incendiaire", "level": 3  }
       ],
       "victoryFlags": ["boss_brakk"],
       "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "ecumeur_sabreur", "level": 2 }, { "enemy": "ecumeur_sabreur", "level": 2 }] }, { "turn": 6, "enemies": [{ "enemy": "ecumeur_archer", "level": 3 }, { "enemy": "rebouteuse", "level": 3 }] }],
@@ -94,7 +96,7 @@
         { "enemy": "rodeur_timide", "level": 2 },
         { "enemy": "rodeur_timide", "level": 2 },
         { "enemy": "rodeur_timide", "level": 1 },
-        { "enemy": "ecumeur_sabreur", "level": 2 }
+        { "enemy": "ecumeur_sabreur", "level": 2  }
       ],
       "victoryFlags": []
     },
@@ -109,7 +111,7 @@
         { "enemy": "ecumeur_sabreur", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 2 },
         { "enemy": "ecumeur_archer", "level": 3 },
-        { "enemy": "ecumeur_lancier", "level": 3 }
+        { "enemy": "ecumeur_lancier", "level": 3  }
       ],
       "victoryFlags": []
     },
@@ -124,7 +126,7 @@
         { "enemy": "ecumeur_lancier", "level": 3 },
         { "enemy": "ecumeur_archer", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 3 },
-        { "enemy": "ecumeur_sabreur", "level": 2 }
+        { "enemy": "ecumeur_sabreur", "level": 2  }
       ],
       "victoryFlags": []
     },
@@ -140,7 +142,7 @@
         { "enemy": "ecumeur_sabreur", "level": 3 },
         { "enemy": "ecumeur_sabreur", "level": 2 },
         { "enemy": "ecumeur_archer", "level": 2 },
-        { "enemy": "ecumeur_incendiaire", "level": 2 }
+        { "enemy": "ecumeur_incendiaire", "level": 2  }
       ],
       "victoryFlags": []
     },
@@ -155,7 +157,7 @@
         { "enemy": "milicien", "level": 3 },
         { "enemy": "milicien", "level": 3 },
         { "enemy": "milicien", "level": 4 },
-        { "enemy": "ecumeur_archer", "level": 3 }
+        { "enemy": "ecumeur_archer", "level": 3  }
       ],
       "victoryFlags": []
     },
@@ -170,7 +172,7 @@
         { "enemy": "chasseur_de_ronces", "level": 5 },
         { "enemy": "chasseur_de_ronces", "level": 5 },
         { "enemy": "chasseur_de_ronces", "level": 4 },
-        { "enemy": "bucheron_corrompu", "level": 5 }
+        { "enemy": "bucheron_corrompu", "level": 5  }
       ],
       "victoryFlags": []
     },
@@ -185,7 +187,7 @@
         { "enemy": "bucheron_corrompu", "level": 5 },
         { "enemy": "esprit_des_ronces", "level": 5 },
         { "enemy": "chasseur_de_ronces", "level": 4 },
-        { "enemy": "esprit_des_ronces", "level": 4 }
+        { "enemy": "esprit_des_ronces", "level": 4  }
       ],
       "victoryFlags": []
     },
@@ -200,7 +202,7 @@
         { "enemy": "ecumeur_lancier", "level": 5 },
         { "enemy": "ecumeur_archer", "level": 5 },
         { "enemy": "chasseur_de_ronces", "level": 5 },
-        { "enemy": "ecumeur_sabreur", "level": 5 }
+        { "enemy": "ecumeur_sabreur", "level": 5  }
       ],
       "victoryFlags": []
     },
@@ -216,7 +218,7 @@
         { "enemy": "chasseur_de_ronces", "level": 5 },
         { "enemy": "esprit_des_ronces", "level": 5 },
         { "enemy": "bucheron_corrompu", "level": 6 },
-        { "enemy": "bucheron_corrompu", "level": 5 }
+        { "enemy": "bucheron_corrompu", "level": 5  }
       ],
       "victoryFlags": []
     },
@@ -231,7 +233,7 @@
         { "enemy": "milicien", "level": 6 },
         { "enemy": "milicien", "level": 6 },
         { "enemy": "milicien", "level": 5 },
-        { "enemy": "chasseur_de_ronces", "level": 5 }
+        { "enemy": "chasseur_de_ronces", "level": 5  }
       ],
       "victoryFlags": []
     },
@@ -248,11 +250,11 @@
         { "enemy": "esprit_des_ronces", "level": 6 },
         { "enemy": "chasseur_de_ronces", "level": 6 },
         { "enemy": "chasseur_de_ronces", "level": 6 },
-        { "enemy": "bucheron_corrompu", "level": 6 }
+        { "enemy": "bucheron_corrompu", "level": 6  }
       ],
       "victoryFlags": ["boss_roi_cerf"],
       "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "esprit_des_ronces", "level": 6 }, { "enemy": "esprit_des_ronces", "level": 5 }] }, { "turn": 6, "enemies": [{ "enemy": "chasseur_de_ronces", "level": 6 }, { "enemy": "bucheron_corrompu", "level": 6 }] }],
-      "rewards": {"gold": 120, "items": [{ "item": "sceau_de_maitrise", "qty": 1 }, {"item": "hyper_potion", "qty": 2}, {"item": "broche_des_racines", "qty": 1}]}
+      "rewards": {"gold": 120, "items": [{ "item": "sceau_de_maitrise", "qty": 1 }, {"item": "hyper_potion", "qty": 2}, {"item": "broche_des_racines", "qty": 1 }] }
     },
     {
       "id": "pillards_de_greve",
@@ -266,7 +268,7 @@
         { "enemy": "pillard_des_epaves", "level": 9 },
         { "enemy": "pillard_des_epaves", "level": 8 },
         { "enemy": "harponneur", "level": 9 },
-        { "enemy": "voilee_de_brume", "level": 9 }
+        { "enemy": "voilee_de_brume", "level": 9  }
       ],
       "victoryFlags": []
     },
@@ -281,7 +283,7 @@
         { "enemy": "noye", "level": 9 },
         { "enemy": "noye", "level": 9 },
         { "enemy": "noye", "level": 10 },
-        { "enemy": "voilee_de_brume", "level": 9 }
+        { "enemy": "voilee_de_brume", "level": 9  }
       ],
       "victoryFlags": []
     },
@@ -296,7 +298,7 @@
         { "enemy": "harponneur", "level": 10 },
         { "enemy": "pillard_des_epaves", "level": 10 },
         { "enemy": "voilee_de_brume", "level": 10 },
-        { "enemy": "noye", "level": 9 }
+        { "enemy": "noye", "level": 9  }
       ],
       "victoryFlags": []
     },
@@ -312,7 +314,7 @@
         { "enemy": "noye", "level": 10 },
         { "enemy": "noye", "level": 10 },
         { "enemy": "noye", "level": 9 },
-        { "enemy": "voilee_de_brume", "level": 10 }
+        { "enemy": "voilee_de_brume", "level": 10  }
       ],
       "victoryFlags": []
     },
@@ -327,7 +329,7 @@
         { "enemy": "milicien", "level": 10 },
         { "enemy": "milicien", "level": 10 },
         { "enemy": "milicien", "level": 9 },
-        { "enemy": "harponneur", "level": 9 }
+        { "enemy": "harponneur", "level": 9  }
       ],
       "victoryFlags": []
     },
@@ -344,7 +346,7 @@
         { "enemy": "noye", "level": 10 },
         { "enemy": "voilee_de_brume", "level": 10 },
         { "enemy": "voilee_de_brume", "level": 10 },
-        { "enemy": "harponneur", "level": 10 }
+        { "enemy": "harponneur", "level": 10  }
       ],
       "victoryFlags": ["boss_merrow"],
       "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "noye", "level": 10 }, { "enemy": "noye", "level": 9 }] }, { "turn": 6, "enemies": [{ "enemy": "voilee_de_brume", "level": 10 }, { "enemy": "noye", "level": 10 }] }],
@@ -362,7 +364,7 @@
         { "enemy": "mercenaire_de_cendre", "level": 13 },
         { "enemy": "mercenaire_de_cendre", "level": 12 },
         { "enemy": "arbaletrier_de_cendre", "level": 13 },
-        { "enemy": "golem_de_cendre", "level": 13 }
+        { "enemy": "golem_de_cendre", "level": 13  }
       ],
       "victoryFlags": []
     },
@@ -377,7 +379,7 @@
         { "enemy": "golem_de_cendre", "level": 13 },
         { "enemy": "harpie", "level": 13 },
         { "enemy": "harpie", "level": 13 },
-        { "enemy": "arbaletrier_de_cendre", "level": 13 }
+        { "enemy": "arbaletrier_de_cendre", "level": 13  }
       ],
       "victoryFlags": []
     },
@@ -392,7 +394,7 @@
         { "enemy": "golem_de_cendre", "level": 14 },
         { "enemy": "mercenaire_de_cendre", "level": 14 },
         { "enemy": "arbaletrier_de_cendre", "level": 14 },
-        { "enemy": "arbaletrier_de_cendre", "level": 13 }
+        { "enemy": "arbaletrier_de_cendre", "level": 13  }
       ],
       "victoryFlags": []
     },
@@ -408,7 +410,7 @@
         { "enemy": "harpie", "level": 14 },
         { "enemy": "harpie", "level": 14 },
         { "enemy": "harpie", "level": 13 },
-        { "enemy": "arbaletrier_de_cendre", "level": 14 }
+        { "enemy": "arbaletrier_de_cendre", "level": 14  }
       ],
       "victoryFlags": []
     },
@@ -423,7 +425,7 @@
         { "enemy": "milicien", "level": 14 },
         { "enemy": "milicien", "level": 14 },
         { "enemy": "milicien", "level": 13 },
-        { "enemy": "arbaletrier_de_cendre", "level": 13 }
+        { "enemy": "arbaletrier_de_cendre", "level": 13  }
       ],
       "victoryFlags": []
     },
@@ -440,7 +442,7 @@
         { "enemy": "harpie", "level": 14 },
         { "enemy": "harpie", "level": 14 },
         { "enemy": "harpie", "level": 14 },
-        { "enemy": "arbaletrier_de_cendre", "level": 14 }
+        { "enemy": "arbaletrier_de_cendre", "level": 14  }
       ],
       "victoryFlags": ["boss_aiguille"],
       "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "harpie", "level": 13 }, { "enemy": "harpie", "level": 13 }] }, { "turn": 6, "enemies": [{ "enemy": "harpie", "level": 14 }, { "enemy": "arbaletrier_de_cendre", "level": 14 }] }],
@@ -459,7 +461,7 @@
         { "enemy": "golem_de_cendre", "level": 15 },
         { "enemy": "mercenaire_de_cendre", "level": 15 },
         { "enemy": "mercenaire_de_cendre", "level": 15 },
-        { "enemy": "arbaletrier_de_cendre", "level": 15 }
+        { "enemy": "arbaletrier_de_cendre", "level": 15  }
       ],
       "victoryFlags": ["boss_gardien_cendre"],
       "reinforcements": [{ "turn": 3, "enemies": [{ "enemy": "golem_de_cendre", "level": 14 }, { "enemy": "mercenaire_de_cendre", "level": 14 }] }, { "turn": 6, "enemies": [{ "enemy": "mercenaire_de_cendre", "level": 15 }, { "enemy": "arbaletrier_de_cendre", "level": 15 }] }],
@@ -477,7 +479,7 @@
         { "enemy": "revenant", "level": 17 },
         { "enemy": "revenant", "level": 16 },
         { "enemy": "abyssal", "level": 17 },
-        { "enemy": "garde_englouti", "level": 17 }
+        { "enemy": "garde_englouti", "level": 17  }
       ],
       "victoryFlags": []
     },
@@ -492,7 +494,7 @@
         { "enemy": "garde_englouti", "level": 18 },
         { "enemy": "garde_englouti", "level": 18 },
         { "enemy": "abyssal", "level": 18 },
-        { "enemy": "revenant", "level": 18 }
+        { "enemy": "revenant", "level": 18  }
       ],
       "victoryFlags": []
     },
@@ -508,9 +510,126 @@
         { "enemy": "abyssal", "level": 18 },
         { "enemy": "abyssal", "level": 18 },
         { "enemy": "revenant", "level": 18 },
-        { "enemy": "revenant", "level": 17 }
+        { "enemy": "revenant", "level": 17  }
       ],
       "victoryFlags": []
+    },
+    {
+      "id": "arene_serie_1",
+      "name": "Arène des Cendres · première série",
+      "zone": "z2",
+      "objective": {"type": "rout"},
+      "map": [
+        "bbbbbbbbbbbbbbbb",
+        "b..............b",
+        "b..o........o..b",
+        "b......rr......b",
+        "b..............b",
+        "b..............b",
+        "b..............b",
+        "b......rr......b",
+        "b..o........o..b",
+        "b..............b",
+        "b..............b",
+        "bbbbbbbbbbbbbbbb"
+      ],
+      "deploy": [[2, 4], [2, 5], [2, 6], [3, 4], [3, 6], [2, 3], [2, 7], [3, 5]],
+      "maxDeploy": 5,
+      "enemies": [
+        { "enemy": "mercenaire_de_cendre", "level": 7, "x": 12, "y": 4 },
+        { "enemy": "mercenaire_de_cendre", "level": 7, "x": 12, "y": 6 },
+        { "enemy": "ecumeur_sabreur", "level": 8, "x": 13, "y": 5 },
+        { "enemy": "ecumeur_sabreur", "level": 8, "x": 11, "y": 5 },
+        { "enemy": "arbaletrier_de_cendre", "level": 7, "x": 14, "y": 5 }
+      ],
+      "victoryFlags": ["arene_serie_1"],
+      "rewards": { "gold": 100}
+    },
+    {
+      "id": "arene_serie_2",
+      "name": "Arène des Cendres · deuxième série",
+      "zone": "z2",
+      "objective": {"type": "rout"},
+      "map": [
+        "bbbbbbbbbbbbbbbb",
+        "b..............b",
+        "b..o........o..b",
+        "b......rr......b",
+        "b..............b",
+        "b..............b",
+        "b..............b",
+        "b......rr......b",
+        "b..o........o..b",
+        "b..............b",
+        "b..............b",
+        "bbbbbbbbbbbbbbbb"
+      ],
+      "deploy": [[2, 4], [2, 5], [2, 6], [3, 4], [3, 6], [2, 3], [2, 7], [3, 5]],
+      "maxDeploy": 6,
+      "enemies": [
+        { "enemy": "golem_de_cendre", "level": 12, "x": 10, "y": 5 },
+        { "enemy": "golem_de_cendre", "level": 12, "x": 10, "y": 7 },
+        { "enemy": "arbaletrier_de_cendre", "level": 12, "x": 14, "y": 2 },
+        { "enemy": "arbaletrier_de_cendre", "level": 12, "x": 14, "y": 9 },
+        { "enemy": "mercenaire_de_cendre", "level": 13, "x": 12, "y": 6 },
+        { "enemy": "rebouteuse", "level": 11, "x": 13, "y": 4 }
+      ],
+      "victoryFlags": ["arene_serie_2"],
+      "rewards": { "gold": 500}
+    },
+    {
+      "id": "arene_serie_3",
+      "name": "Arène des Cendres · grande série",
+      "zone": "z2",
+      "objective": {"type": "rout"},
+      "map": [
+        "bbbbbbbbbbbbbbbb",
+        "b..............b",
+        "b..o........o..b",
+        "b......rr......b",
+        "b..............b",
+        "b..............b",
+        "b..............b",
+        "b......rr......b",
+        "b..o........o..b",
+        "b..............b",
+        "b..............b",
+        "bbbbbbbbbbbbbbbb"
+      ],
+      "deploy": [[2, 4], [2, 5], [2, 6], [3, 4], [3, 6], [2, 3], [2, 7], [3, 5]],
+      "maxDeploy": 6,
+      "enemies": [
+        { "enemy": "harpie", "level": 16, "x": 13, "y": 2 },
+        { "enemy": "harpie", "level": 16, "x": 13, "y": 9 },
+        { "enemy": "golem_de_cendre", "level": 16, "x": 11, "y": 5 },
+        { "enemy": "arbaletrier_de_cendre", "level": 16, "x": 14, "y": 5 },
+        { "enemy": "mercenaire_de_cendre", "level": 18, "x": 12, "y": 6 },
+        { "enemy": "mercenaire_de_cendre", "level": 17, "x": 12, "y": 4 }
+      ],
+      "victoryFlags": ["arene_serie_3"],
+      "rewards": { "gold": 800, "items": [{ "item": "sceau_de_maitrise", "qty": 1 }] }
+    },
+    {
+      "id": "roi_maree_brise",
+      "name": "Le Roi-Marée Brisé",
+      "zone": "z5",
+      "objective": {"type": "boss"},
+      "sampled": {"width": 32, "height": 24, "site": [14, 101], "anchor": "enemy"},
+      "maxDeploy": 8,
+      "enemies": [
+        { "enemy": "orvane", "level": 20, "boss": true },
+        { "enemy": "garde_englouti", "level": 18 },
+        { "enemy": "garde_englouti", "level": 18 },
+        { "enemy": "abyssal", "level": 18 },
+        { "enemy": "abyssal", "level": 18 },
+        { "enemy": "revenant", "level": 18 }
+      ],
+      "victoryFlags": ["boss_orvane"],
+      "reinforcements": [
+        { "turn": 3, "enemies": [{ "enemy": "revenant", "level": 17 }, { "enemy": "revenant", "level": 17 }] },
+        { "turn": 6, "enemies": [{ "enemy": "abyssal", "level": 18 }, { "enemy": "garde_englouti", "level": 18 }] }
+      ],
+      "rewards": { "gold": 1000, "items": [{ "item": "eclat_de_lanterne", "qty": 3 }] }
     }
   ]
 }

@@ -16,6 +16,11 @@ import type { PortraitMood } from '../data/skins';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
 import { PALETTE } from '../render/palette';
 import { portraitInBox, speak } from '../render/portraits';
+import { ensurePortrait } from '../render/townTextures';
+import type { Expression, NpcDef } from '../data/townSchemas';
+
+/** Humeur d'une réplique → expression d'un portrait de village. */
+const moodExpression = (mood: PortraitMood): Expression => (mood === 'angry' ? 'fache' : mood === 'sad' ? 'triste' : mood === 'happy' ? 'content' : 'neutre');
 import { ALLY_OUTLINE } from '../render/unitSprites';
 import { drawPanel } from './panel';
 import { addText, fitText, setText, type PixelText } from './text';
@@ -30,6 +35,8 @@ export interface TalkFace {
   readonly title: string | null;
   readonly sprite: string | null;
   readonly team: TalkTeam;
+  /** Figure de village (n°197) : son portrait de dialogue, peint comme au village. */
+  readonly npc?: NpcDef;
 }
 
 export interface TalkLineView {
@@ -178,7 +185,8 @@ export class TalkBox {
     if (this.slots[side]?.face.key !== line.face.key) this.place(side, line.face);
     for (const s of ['left', 'right'] as const) this.light(s, s === side);
     const slot = this.slots[side];
-    if (slot?.image && slot.portrait) speak(this.scene, slot.image, line.face.sprite ?? '', line.mood, Math.min(1400, line.text.length * 40));
+    if (slot?.image && slot.portrait && line.face.npc) slot.image.setTexture(ensurePortrait(this.scene, line.face.npc, moodExpression(line.mood)));
+    else if (slot?.image && slot.portrait) speak(this.scene, slot.image, line.face.sprite ?? '', line.mood, Math.min(1400, line.text.length * 40));
     else if (slot?.image && line.face.sprite) slot.image.setFrame(BATTLE_TEX.msFrame(line.mood === 'neutral' ? 'idle' : 'ready', line.mood === 'neutral' ? 0 : 2));
     setText(this.name, line.face.name);
     this.name.setTint(TEAM_TINT[line.face.team]);
@@ -229,8 +237,16 @@ export class TalkBox {
     parts.push(this.scene.add.rectangle(fx + 6 * S, fy + 6 * S, size - 12 * S, size - 12 * S, TEAM_TINT[face.team], 0.22).setOrigin(0, 0));
     let image: Phaser.GameObjects.Image | null = null;
     let portrait = false;
-    if (face.sprite) {
-      image = face.team === 'enemy' ? null : portraitInBox(this.scene, face.sprite, fx + 8 * S, fy + 8 * S, size - 16 * S, size - 16 * S, 2 * S, 0);
+    if (face.npc) {
+      // Figure de village : le portrait peint des dialogues, cadré sur le visage.
+      const key = ensurePortrait(this.scene, face.npc, 'neutre');
+      image = this.scene.add.image(fx + size / 2, fy + size / 2 + 6 * S, key).setDisplaySize(size - 8 * S, size - 8 * S);
+      image.setCrop(0, 0, image.width, image.height);
+      portrait = true;
+      if (side === 'right') image.setFlipX(true);
+      parts.push(image);
+    } else if (face.sprite) {
+      image = portraitInBox(this.scene, face.sprite, fx + 8 * S, fy + 8 * S, size - 16 * S, size - 16 * S, 2 * S, 0);
       portrait = image !== null;
       if (!image) {
         // Sans portrait peint (ennemis, M7) : le sprite de combat agrandi.

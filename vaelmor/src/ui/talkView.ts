@@ -20,7 +20,10 @@ export function talkFace(data: GameData, scene: SceneDef, charId: string, lookup
   const known = lookup(charId);
   if (known) return { key: charId, ...known };
   const template = data.allyTemplates.find((t) => t.id === charId);
-  if (template) return { key: charId, name: template.name, title: null, sprite: template.sprite, team: 'ally' };
+  if (template) {
+    const npc = template.npc === undefined ? undefined : data.locations.flatMap((l) => l.npcs).find((n) => n.id === template.npc);
+    return { key: charId, name: template.name, title: null, sprite: template.sprite, team: 'ally', ...(npc ? { npc } : {}) };
+  }
   const named = data.named.find((n) => n.id === charId);
   if (named) return { key: charId, name: named.name, title: null, sprite: named.recruit?.asClass ?? null, team: 'player' };
   for (const loc of data.locations) {

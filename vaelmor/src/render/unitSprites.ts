@@ -237,11 +237,29 @@ export const UNIT_SPRITES: Readonly<Record<string, UnitSpriteSpec>> = {
     look: look({ skin: SKIN_DARK, tunic: r(mixColor(P.mousse, P.ardoiseSombre, 0.5)), accent: r(P.cyanEclat), head: 'short', outfit: 'tunic' }),
     gear: { headgear: 'greathelm', weapon: 'spear', shield: true, build: 'armored' },
   },
+  // Orvane, le Roi-Marée Brisé (jalon M7, n°195) : armure verdie par la mer, couronne, trident qui luit, manteau de brume.
+  orvane: {
+    look: look({ skin: SKIN_PALE, hair: r(P.ecume), tunic: r(mixColor(P.ardoiseSombre, P.bleuNuit, 0.5)), accent: r(P.cyanEclat), pants: r(P.bleuNuit), head: 'long', outfit: 'cloak' }),
+    gear: { headgear: 'circlet', weapon: 'spear', glow: P.cyanEclat, build: 'armored', cape: true },
+  },
 };
+
+/** Fiches ajoutées à l'exécution (figures de village, n°197) : apparence d'un PNJ avec l'équipement de sa classe. */
+const EXTRA_SPRITES = new Map<string, UnitSpriteSpec>();
+
+export function registerUnitSprite(id: string, spec: UnitSpriteSpec): void {
+  EXTRA_SPRITES.set(id, spec);
+}
 
 /** Fiche d'un sprite ; une fiche inconnue retombe sur l'Écumeur (le test le signale). */
 export function unitSpriteSpec(sprite: string): UnitSpriteSpec {
-  return UNIT_SPRITES[parseSprite(sprite).base] ?? (UNIT_SPRITES['ecumeur_sabreur'] as UnitSpriteSpec);
+  const base = parseSprite(sprite).base;
+  return UNIT_SPRITES[base] ?? EXTRA_SPRITES.get(base) ?? (UNIT_SPRITES['ecumeur_sabreur'] as UnitSpriteSpec);
+}
+
+export function hasUnitSprite(sprite: string): boolean {
+  const base = parseSprite(sprite).base;
+  return UNIT_SPRITES[base] !== undefined || EXTRA_SPRITES.has(base);
 }
 
 /**

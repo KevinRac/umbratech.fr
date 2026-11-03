@@ -240,6 +240,8 @@ export const balanceFileSchema = z.strictObject({
     baseClassCap: z.number().int().positive(),
     advancedClassCap: z.number().int().positive(),
     promotionMinLevel: z.number().int().positive(),
+    /** Taille maximale de la compagnie (roster, décisions n°111 et n°199). */
+    rosterMax: z.number().int().positive(),
   }),
   /** Mécaniques de classe (jalon M6, décisions n°123 à n°127). */
   classMechanics: z.strictObject({
@@ -699,6 +701,12 @@ export const worldFoeSchema = z.strictObject({
   roam: z.number().int().min(1).max(12).optional(),
   /** Garde : village dont la réputation hostile le fait apparaître (décision n°65). */
   town: idSchema.optional(),
+  /**
+   * Ennemi nommé qui tient ce poste (jalon M7, n°193) : il rejoint la rencontre
+   * engagée, avec son sprite d'Écho ; le poste reste tant que son sort n'est pas
+   * réglé (vaincu, recruté ou perdu), puis disparaît pour de bon.
+   */
+  named: idSchema.optional(),
 });
 
 export const worldEnemiesFileSchema = z.strictObject({

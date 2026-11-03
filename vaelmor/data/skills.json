@@ -229,6 +229,32 @@
       "affects": "ennemis",
       "element": "pierre",
       "effects": [{ "kind": "degats", "power": 6, "damage": "physique", "status": { "id": "entrave", "turns": 1 } }]
+    },
+    {
+      "id": "vague_du_roi",
+      "name": "Vague du Roi",
+      "description": "Orvane lève son trident : une vague frappe une case à 3 cases au plus et ses voisines, et cloue sur place ceux qu'elle emporte.",
+      "owner": null,
+      "cost": { "cooldown": 3 },
+      "target": "case",
+      "range": [1, 3],
+      "area": { "shape": "losange", "size": 1 },
+      "affects": "ennemis",
+      "element": "maree",
+      "effects": [{ "kind": "degats", "power": 7, "damage": "magique", "status": { "id": "entrave", "turns": 1 } }]
+    },
+    {
+      "id": "nuit_basse",
+      "name": "Nuit Basse",
+      "description": "La Brume Noire se referme sur tout ce qui approche le roi à 2 cases.",
+      "owner": null,
+      "cost": { "cooldown": 2 },
+      "target": "soi",
+      "range": [0, 0],
+      "area": { "shape": "losange", "size": 2 },
+      "affects": "ennemis",
+      "element": "maree",
+      "effects": [{ "kind": "degats", "power": 9, "damage": "magique" }]
     }
   ],
   "bosses": [
@@ -289,6 +315,18 @@
         "skills": ["seisme"],
         "ai": "agressif",
         "stats": { "fo": 2 }
+      }
+    },
+    {
+      "enemy": "orvane",
+      "immune": ["gel", "entrave"],
+      "skills": ["vague_du_roi"],
+      "phase2": {
+        "threshold": 0.5,
+        "line": "Elle a le droit de revenir… Partez, ou noyez-vous avec moi !",
+        "skills": ["vague_du_roi", "nuit_basse"],
+        "ai": "agressif",
+        "stats": { "mag": 3, "res": 2 }
       }
     }
   ]

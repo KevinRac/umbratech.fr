@@ -2,7 +2,7 @@
  * Dialogues des PNJ : paroles selon le palier, options disponibles, effets.
  * Pure logique : la scène affiche les pages et le menu que cette couche calcule.
  */
-import { joinCompany } from './companyRules';
+import { companyFull, joinCompany } from './companyRules';
 import {
   TIER_IDS,
   type Condition,
@@ -90,6 +90,8 @@ function defaultLabel(ctx: GameCtx, o: NpcOption): string {
       return `Recruter ${o.unit.name}`;
     case 'donate':
       return `Faire un don (${o.amount} or)`;
+    case 'battle':
+      return `Combattre : ${ctx.data.encounters.encounters.find((e) => e.id === o.encounter)?.name ?? o.encounter}`;
     default:
       return 'Discuter';
   }
@@ -126,6 +128,8 @@ export type Outcome =
   | { readonly type: 'shop'; readonly shopId: string }
   /** Sauvegarde (n°161) : la scène ouvre les emplacements, puis dit `pages`. */
   | { readonly type: 'save'; readonly pages: string[]; readonly expression: Expression }
+  /** Combat (n°200) : la scène dit `pages`, se ferme, et le monde engage la rencontre. */
+  | { readonly type: 'battle'; readonly encounterId: string; readonly pages: string[]; readonly expression: Expression }
   | {
       readonly type: 'ask';
       readonly pages: string[];
@@ -218,6 +222,7 @@ export function selectOption(ctx: GameCtx, npc: NpcDef, optionIndex: number): Ou
       const needsRep = option.minTier !== undefined && tierRank(tier) < tierRank(option.minTier);
       const needsQuest = option.needsQuest !== undefined && questStatus(ctx, option.needsQuest) !== 'done';
       if (needsRep || needsQuest) return say(pickLines(option.locked, tier), 'triste');
+      if (companyFull(ctx.data, ctx.progress)) return say([`La compagnie est au complet (${ctx.data.balance.levels.rosterMax} unités). Reviens quand une place se libérera.`], 'triste');
       const cost = option.gold ?? 0;
       if (ctx.progress.gold < cost) return say([`Il me faut ${cost} or. Reviens quand tu les auras.`], 'triste');
       if (cost > 0) giveGold(ctx, -cost, notices);
@@ -242,6 +247,9 @@ export function selectOption(ctx: GameCtx, npc: NpcDef, optionIndex: number): Ou
       if (option.once) ctx.progress.heard.push(heardKey(npc, optionIndex));
       return say(pickLines(option.lines, tier), option.expression ?? base, notices);
     }
+
+    case 'battle':
+      return { type: 'battle', encounterId: option.encounter, pages: pickLines(option.lines, tier), expression: option.expression ?? base };
 
     case 'choice': {
       const available = option.choices.filter((c) => conditionMet(ctx, c.when, tier));

@@ -11,6 +11,7 @@ import { GameDataError, loadGameData } from '../data';
 import { paintTitleBackdrop } from '../render/backdrops/titleBackdrop';
 import { PALETTE } from '../render/palette';
 import { PIXEL_FONTS, buildPixelFont, loadPixelFontFaces, type FontKey } from '../render/pixelFont';
+import { registerFigureSprites } from '../render/npcSprites';
 import { preloadPortraits } from '../render/portraits';
 import { preloadSkins } from '../render/skins';
 import { WORLD_MAP_KEY, WORLD_TILESET_KEY } from '../render/worldTextures';
@@ -49,7 +50,8 @@ export class BootScene extends Phaser.Scene {
       await loadPixelFontFaces();
       this.drawProgress(0.4);
 
-      loadGameData();
+      // Les figures de village (n°197) prennent l'apparence de leur PNJ en combat.
+      registerFigureSprites(loadGameData());
       this.drawProgress(0.6);
 
       for (const key of Object.keys(PIXEL_FONTS) as FontKey[]) buildPixelFont(this, key);

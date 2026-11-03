@@ -1863,12 +1863,43 @@
               "kind": "quest",
               "quest": "arene_des_cendres",
               "offer": [
-                "Trois combats d’affilée dans l’Arène des Cendres. Gagne-les, et la foule t’adorera.",
-                "Les inscriptions ouvrent bientôt : reviens quand l’arène sera prête."
+                "Première série de l’Arène des Cendres : cinq mercenaires sur le sable, la foule autour.",
+                "Gagne-la, et Valcendre connaîtra ton nom. Tu t’inscris ?"
               ],
-              "remind": ["L’arène n’est pas encore ouverte. Patience, champion."],
+              "remind": ["La première série t’attend. Dis-moi « Combattre » quand ta compagnie est prête."],
               "done": ["Tu es notre champion ! Les cendres se souviendront de ton nom."],
               "locked": ["L’arène se mérite. Fais-toi un nom à Valcendre d’abord."]
+            },
+            {
+              "kind": "battle",
+              "label": "Combattre : première série",
+              "encounter": "arene_serie_1",
+              "when": {"quest": "arene_des_cendres", "questStatus": "active"},
+              "lines": ["Cinq mercenaires, pas de pitié, pas de renfort. Sur le sable !"],
+              "expression": "content"
+            },
+            {
+              "kind": "battle",
+              "label": "Combattre : deuxième série",
+              "encounter": "arene_serie_2",
+              "when": {"flag": "arene_serie_1", "notFlag": "arene_serie_2"},
+              "lines": ["La deuxième série : des arbalétriers sur les gradins et des golems de cendre au centre. Cinq cents pièces au vainqueur."],
+              "expression": "content"
+            },
+            {
+              "kind": "battle",
+              "label": "Combattre : troisième série",
+              "encounter": "arene_serie_3",
+              "when": {"flag": "arene_serie_2", "notFlag": "arene_serie_3"},
+              "lines": ["La grande série. Harpies, golems, et le champion de la Couronne. Le vainqueur repart avec un Sceau de Maîtrise."],
+              "expression": "content"
+            },
+            {
+              "kind": "topic",
+              "label": "Les séries de l’arène",
+              "when": {"flag": "arene_serie_3"},
+              "lines": ["Trois séries, trois victoires. Il n’y a plus personne à t’opposer, champion. Reviens boire à l’auberge du Corbeau."],
+              "expression": "content"
             }
           ],
           "refusesWhenHostile": true

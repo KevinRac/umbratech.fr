@@ -65,6 +65,16 @@ export const CLASS_DETAILS: Readonly<Record<string, readonly (readonly DetailKin
   // Échos d'ennemis nommés (n°175) : un détail de bandit, jamais une couleur (celles des camps).
   ecumeur_sabreur: [['masque'], ['bandeau'], ['masque', 'bandeau']],
   ecumeur_incendiaire: [['cornes'], ['masque'], ['bandeau']],
+  // Nommés de M7 (bible §6) : Hakon, Oswin, Aldo, Hobb, Ilse, Orsen puis Aldéric, Drak, le Veilleur de Pierre, Ser Maëlis.
+  bucheron_corrompu: [['bandeau'], ['laurier']],
+  chasseur_de_ronces: [['plume'], ['masque']],
+  noye: [['bandeau'], ['laurier']],
+  harponneur: [['chapeau'], ['bandeau']],
+  voilee_de_brume: [['aureole'], ['fleurs']],
+  mercenaire_de_cendre: [['chapeau'], ['cimier'], ['plume']],
+  arbaletrier_de_cendre: [['plume'], ['chapeau']],
+  golem_de_cendre: [['laurier'], ['fleurs']],
+  garde_englouti: [['cimier'], ['laurier']],
 };
 const DEFAULT_DETAILS: readonly (readonly DetailKind[])[] = [['laurier'], ['plume'], ['bandeau']];
 

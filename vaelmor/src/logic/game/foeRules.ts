@@ -20,6 +20,8 @@ export type BattleEnd = 'victory' | 'defeat' | 'retreat';
 export function foePresent(ctx: GameCtx, foe: WorldFoeDef): boolean {
   const { progress, data } = ctx;
   const down = progress.foes[foe.id];
+  // Le poste d'un nommé (n°193) disparaît dès que son sort est réglé, où que ce soit.
+  if (foe.named !== undefined && progress.named[foe.named] !== undefined) return false;
   switch (foe.kind) {
     case 'boss': {
       if (down) return false;
@@ -57,6 +59,23 @@ export function chooseEncounter(data: GameData, foe: WorldFoeDef, seed: string):
     if (roll <= 0) return encounters.find((e) => e.id === entry.encounter) as EncounterDef;
   }
   return encounters.find((e) => e.id === (entries[0] as { encounter: string }).encounter) as EncounterDef;
+}
+
+/** Apparence d'un ennemi du monde : celle de sa fiche, ou le sprite d'Écho du nommé qui tient le poste (n°193). */
+export function foeSpriteOf(data: GameData, foe: WorldFoeDef): string {
+  if (foe.named === undefined) return foe.sprite;
+  return data.enemies.find((e) => e.id === foe.named)?.sprite ?? foe.sprite;
+}
+
+/**
+ * Le nommé qui tient un poste rejoint la rencontre engagée (n°193), au niveau du
+ * plus haut ennemi de la rencontre plus le bonus des nommés (comme une apparition
+ * au hasard, n°186). Null si le poste n'en a pas.
+ */
+export function namedAtPost(data: GameData, foe: WorldFoeDef, encounter: EncounterDef): { enemy: string; level: number } | null {
+  if (foe.named === undefined) return null;
+  const top = Math.max(...encounter.enemies.map((e) => e.level));
+  return { enemy: foe.named, level: Math.min(30, top + data.balance.namedPop.levelBonus) };
 }
 
 /* ---------- Niveaux et indicateur de difficulté (GDD §7.5) ---------- */

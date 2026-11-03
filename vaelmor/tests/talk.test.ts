@@ -51,8 +51,9 @@ describe('données des ennemis nommés et des scènes', () => {
     const rik = data.enemies.find((e) => e.id === 'rik');
     expect(rik).toMatchObject({ name: 'Rik', title: 'le Cadet', sprite: 'ecumeur_sabreur#1', weapon: 'hachette' });
     expect(data.enemies.find((e) => e.id === 'gorm')?.sprite).toBe('ecumeur_incendiaire#1');
-    expect(data.named.map((n) => n.id)).toEqual(['rik', 'gorm']);
-    expect(data.scenes.length).toBeGreaterThanOrEqual(7);
+    // Jalon M7 : les 12 nommés de la bible (§6.2, §6.3) et leurs scènes (n°203).
+    expect(data.named.map((n) => n.id)).toEqual(['rik', 'gorm', 'hakon', 'oswin', 'aldo', 'hobb', 'ilse', 'orsen', 'alderic', 'drak', 'veilleur_de_pierre', 'maelis']);
+    expect(data.scenes.length).toBeGreaterThanOrEqual(130);
   });
 
   const broken = (mutate: (raw: Record<string, unknown>) => void): readonly string[] => {
@@ -143,12 +144,12 @@ describe('citations de mort et de phase (n°178)', () => {
     const s = makeBattle(plains(6, 3), [{ class: 'gardien_des_marees', at: [1, 1], id: 'heros', hero: true }], [{ enemy: 'gorm', at: [2, 1] }, { enemy: 'ecumeur_sabreur', at: [5, 2] }]);
     sure(unit(s, 'p0'));
     unit(s, 'e0').hp = 1;
-    expect(scenesOf(attackUnit(s, 'p0', 'e0', R))).toEqual([]);
-    const generic: SceneDef = { id: 'gorm_mort', enemy: 'gorm', units: [], kind: 'death', lines: [{ speaker: 'gorm', text: '…' }] };
+    // Sans la scène générique de Gorm (écrite en M7), rien ne se joue pour un auteur du coup qui n'est pas lié.
+    expect(scenesOf(attackUnit(s, 'p0', 'e0', withTalk({ scenes: data.scenes.filter((x) => x.id !== 'gorm_mort') })))).toEqual([]);
     const s2 = makeBattle(plains(6, 3), [{ class: 'gardien_des_marees', at: [1, 1], id: 'heros', hero: true }], [{ enemy: 'gorm', at: [2, 1] }, { enemy: 'ecumeur_sabreur', at: [5, 2] }]);
     sure(unit(s2, 'p0'));
     unit(s2, 'e0').hp = 1;
-    expect(scenesOf(attackUnit(s2, 'p0', 'e0', withTalk({ scenes: [...data.scenes, generic] })))).toMatchObject([{ sceneId: 'gorm_mort', unitId: null }]);
+    expect(scenesOf(attackUnit(s2, 'p0', 'e0', R))).toMatchObject([{ sceneId: 'gorm_mort', unitId: null }]);
   });
 
   it('la phase 2 de Brakk poussée par Nessa joue sa scène à la place de la réplique', () => {
@@ -170,9 +171,16 @@ describe('citations de mort et de phase (n°178)', () => {
     const brakk = unit(s, 'e0');
     brakk.hp = Math.floor(brakk.stats.pv / 2) + 1;
     unit(s, 'p0').base.fo = unit(s, 'p0').stats.fo = brakk.stats.def + 1;
-    const events = attackUnit(s, 'p0', 'e0', R);
+    // Sans la scène de phase générique (M7), la réplique de la fiche reste ; avec elle, la scène la remplace.
+    const events = attackUnit(s, 'p0', 'e0', withTalk({ scenes: data.scenes.filter((x) => x.id !== 'brakk_phase_autre') }));
     expect((events.find((e) => e.type === 'bossPhase') as { line: string }).line.length).toBeGreaterThan(5);
     expect(scenesOf(events)).toEqual([]);
+    const s2 = makeBattle(plains(6, 3), [{ class: 'danseur_des_courants', at: [1, 1], id: 'heros', hero: true }], [{ enemy: 'brakk', at: [2, 1], boss: true, level: 5 }], { objective: 'boss' });
+    sure(unit(s2, 'p0'), 0);
+    const brakk2 = unit(s2, 'e0');
+    brakk2.hp = Math.floor(brakk2.stats.pv / 2) + 1;
+    unit(s2, 'p0').base.fo = unit(s2, 'p0').stats.fo = brakk2.stats.def + 1;
+    expect(scenesOf(attackUnit(s2, 'p0', 'e0', R))).toMatchObject([{ sceneId: 'brakk_phase_autre', unitId: null }]);
   });
 });
 

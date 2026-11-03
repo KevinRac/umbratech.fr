@@ -4,8 +4,10 @@
  * tons que le héros. Pas de corpulence de combat : tous les villageois ont la
  * silhouette « normale ». Module sans DOM : il peint dans un puits de pixels.
  */
-import type { LookDef, NpcFacing } from '../data/townSchemas';
+import type { LookDef, NpcDef, NpcFacing } from '../data/townSchemas';
+import type { GameData } from '../data/validate';
 import { CHAR_H, CHAR_W, CHAR_WALK_FRAMES, paintCharacterFrame, ramp3, type CharPose, type CharacterLook } from './characterSprite';
+import { UNIT_SPRITES, registerUnitSprite } from './unitSprites';
 import { PALETTE as P, mixColor } from './palette';
 import type { PixelSink } from './waterTile';
 
@@ -68,4 +70,23 @@ export function paintNpcFrame(sink: PixelSink, ox: number, oy: number, look: Cha
 /** Peint une image de marche d'un PNJ au coin (ox, oy). */
 export function paintNpcWalkFrame(sink: PixelSink, ox: number, oy: number, look: CharacterLook, pose: CharPose, walkFrame: number): void {
   paintCharacterFrame(sink, ox, oy, look, pose, walkFrame);
+}
+
+/**
+ * Figures de village (jalon M7, n°197) : chaque modèle d'allié vert qui porte
+ * `npc` reçoit une fiche de sprite de combat, l'apparence du PNJ (couleurs,
+ * tête, tenue) avec l'équipement de sa classe (la fiche de la classe). La
+ * couleur du camp (vert) est posée au moment de peindre, comme pour les autres.
+ */
+export function registerFigureSprites(data: GameData): void {
+  const byId = new Map<string, NpcDef>();
+  for (const loc of data.locations) for (const npc of loc.npcs) byId.set(npc.id, npc);
+  for (const template of data.allyTemplates) {
+    if (template.npc === undefined) continue;
+    const npc = byId.get(template.npc);
+    const cls = UNIT_SPRITES[template.class];
+    if (!npc || !cls) continue;
+    const look: CharacterLook = { ...lookFromDef(npc.look), accessory: 'none' };
+    registerUnitSprite(template.sprite, { look, gear: cls.gear });
+  }
 }

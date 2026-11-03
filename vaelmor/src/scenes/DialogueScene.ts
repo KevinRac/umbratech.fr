@@ -26,8 +26,8 @@ import type { WorldHudScene } from './WorldHudScene';
 
 export interface DialogueSceneData {
   readonly npcId: string;
-  /** Appelé à la fermeture ; `recruited` : le PNJ a rejoint la compagnie et quitte le village. */
-  readonly onClose: (result: { recruited: boolean }) => void;
+  /** Appelé à la fermeture ; `recruited` : le PNJ a rejoint la compagnie et quitte le village ; `battle` : rencontre à engager (n°200). */
+  readonly onClose: (result: { recruited: boolean; battle?: string }) => void;
   /** Sauvegarde chez l'aubergiste (n°161) : lieu, empêchement, chargement. */
   readonly saves?: { readonly place: string; readonly blocked: string | null; readonly onLoad: (save: SaveEnvelope) => void };
 }
@@ -60,6 +60,7 @@ export class DialogueScene extends Phaser.Scene {
   private menuParts: Phaser.GameObjects.GameObject[] = [];
   private shop: ShopView | null = null;
   private recruited = false;
+  private battle: string | null = null;
 
   constructor() {
     super({ key: SCENES.dialogue, active: false });
@@ -77,6 +78,7 @@ export class DialogueScene extends Phaser.Scene {
     this.npc = npc;
     this.data_ = data;
     this.recruited = false;
+    this.battle = null;
     this.mode = 'closed';
     this.menu = null;
     this.menuParts = [];
@@ -323,6 +325,11 @@ export class DialogueScene extends Phaser.Scene {
       this.openSaves(outcome.pages, outcome.expression);
       return;
     }
+    if (outcome.type === 'battle') {
+      this.battle = outcome.encounterId;
+      this.say(outcome.pages, outcome.expression, [], () => this.close());
+      return;
+    }
     if (outcome.type === 'ask') {
       this.say(outcome.pages, outcome.expression, [], () => {
         const items: MenuItem[] = outcome.choices.map((c) => ({
@@ -405,7 +412,7 @@ export class DialogueScene extends Phaser.Scene {
     this.destroyMenu();
     this.shop?.destroy();
     this.shop = null;
-    const result = { recruited: this.recruited };
+    const result = { recruited: this.recruited, ...(this.battle ? { battle: this.battle } : {}) };
     this.scene.stop();
     this.data_.onClose(result);
   }
