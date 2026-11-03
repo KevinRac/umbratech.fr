@@ -86,6 +86,7 @@ Le dégradé ne sert qu'à trois endroits : le halo du bouton principal, la marq
 |---|---|---|
 | Ouverture en cascade (fondu + flou qui se lève, 0 → 760 ms) | Hero | Lire dans l'ordre : statut, titre, promesse, action |
 | Lanterne qui suit le pointeur, puis revient à la lanterne | Scène du hero | Le moment mémorable ; dit « jeu d'exploration nocturne » sans un mot |
+| Carrousel du hero (7 s par projet : La Brume, Vaelmor, Guild Wars 1, Diablo IV) : fondu enchaîné, lent travelling avant, lumière qui glisse vers la source de chaque image, barre de progression | Hero | Montrer les quatre projets sans quitter la disposition du hero ; pause au survol du texte, au clavier et sur bouton (WCAG 2.2.2) |
 | Brume qui dérive (34 s et 52 s) | Scène, fond de page | Profondeur et vie, sans attirer l'œil |
 | Halo du bouton principal qui s'intensifie au survol | CTA | Désigner l'action principale |
 | Point « en direct » qui respire | Badge de version | Signaler que le projet vit |

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Umbratech · La Brume, builds Guild Wars 1 &amp; Diablo IV, jeux indépendants</title>
+  <title>Umbratech · La Brume, Vaelmor, builds Guild Wars 1 &amp; Diablo IV</title>
   <meta name="description" content="Joue à La Brume, roguelite d’action dans le navigateur, et retrouve les builds et guides en français pour Guild Wars 1 et Diablo IV, ainsi que Vaelmor, RPG tactique." />
   <meta name="theme-color" content="#05060a" />
   <meta name="color-scheme" content="dark" />
@@ -94,40 +94,116 @@
   </header>
 
   <main id="contenu">
-    <!-- 1. Hero : La Brume -->
-    <section class="ut-hero" aria-labelledby="titre-brume">
+    <!-- 1. Hero : carrousel des quatre projets (La Brume, Vaelmor, Guild Wars 1, Diablo IV).
+         Sans JavaScript, seule la première diapositive s'affiche. -->
+    <section class="ut-hero ut-carousel" aria-roledescription="carrousel" aria-label="Projets à la une" data-dur="7000">
+      <h1 class="ut-sr">Umbratech : La Brume, Vaelmor, builds Guild Wars 1 et Diablo IV</h1>
       <div class="ut-wrap ut-hero__grid">
         <div class="ut-hero__copy">
-          <div data-enter style="--d: 0">
-            <span class="ut-badge ut-badge--live" style="--c: var(--ut-brume)">En développement · <span data-brume-version>v18.8</span></span>
+          <div class="ut-slides" aria-live="off">
+            <!-- La Brume -->
+            <div class="ut-slide is-active" role="group" aria-roledescription="diapositive" aria-label="1 sur 4 : La Brume" style="--c: var(--ut-brume)">
+              <div><span class="ut-badge ut-badge--live">En développement · <span data-brume-version>v18.8</span></span></div>
+              <h2 class="ut-hero__title"><span>La</span><span>Brume</span></h2>
+              <p class="ut-hero__lead">Un <strong>roguelite d’action</strong> à jouer dans ton navigateur. Chaque descente te rapproche du cœur de la Brume, chaque retour au Sanctuaire te rend plus fort.</p>
+              <p class="ut-hero__motto">Ce que tu oublies, la Brume s’en souvient.</p>
+              <div class="ut-hero__actions">
+                <a class="ut-btn ut-btn--primary" href="/themist/">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+                  Jouer à La Brume
+                </a>
+                <a class="ut-btn ut-btn--secondary" href="/themist/wiki.html">Lire le wiki</a>
+              </div>
+              <dl class="ut-facts">
+                <div><dt>formes jouables</dt><dd>4</dd></div>
+                <div><dt>sous-classes par forme</dt><dd>3</dd></div>
+                <div><dt>actes de descente</dt><dd>10</dd></div>
+                <div><dt>paliers de difficulté</dt><dd>3</dd></div>
+              </dl>
+            </div>
+
+            <!-- Vaelmor -->
+            <div class="ut-slide" role="group" aria-roledescription="diapositive" aria-label="2 sur 4 : Vaelmor" style="--c: var(--ut-vaelmor)">
+              <div><span class="ut-badge">Prototype jouable</span></div>
+              <h2 class="ut-hero__title ut-hero__title--one"><span>Vaelmor</span></h2>
+              <p class="ut-hero__lead">Un <strong>RPG tactique au tour par tour</strong> en monde ouvert. Explore l’île de Vaelmor, combats sur grille et affronte le Roi-Marée Brisé.</p>
+              <p class="ut-hero__motto">Les Marées de Cendre.</p>
+              <div class="ut-hero__actions">
+                <a class="ut-btn ut-btn--primary" href="/vaelmor/play/">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+                  Jouer à Vaelmor
+                </a>
+                <a class="ut-btn ut-btn--secondary" href="/vaelmor/">Découvrir Vaelmor</a>
+              </div>
+              <dl class="ut-facts ut-facts--words">
+                <div><dt>combats tactiques sur grille</dt><dd>Tour par tour</dd></div>
+                <div><dt>l’île de Vaelmor à explorer</dt><dd>Monde ouvert</dd></div>
+                <div><dt>fantasy médiévale</dt><dd>RPG</dd></div>
+              </dl>
+            </div>
+
+            <!-- Guild Wars 1 -->
+            <div class="ut-slide" role="group" aria-roledescription="diapositive" aria-label="3 sur 4 : Guild Wars 1" style="--c: var(--ut-gw)">
+              <div><span class="ut-badge">Builds &amp; guides</span></div>
+              <h2 class="ut-hero__title"><span>Guild</span><span>Wars 1</span></h2>
+              <p class="ut-hero__lead">Un <strong>constructeur de barres de compétences</strong> en français, avec le code de modèle à copier dans le jeu et les builds de la communauté.</p>
+              <p class="ut-hero__motto">PvE, PvP et builds d’équipe.</p>
+              <div class="ut-hero__actions">
+                <a class="ut-btn ut-btn--primary" href="/gw1/">Ouvrir le constructeur</a>
+                <a class="ut-btn ut-btn--secondary" href="#guides">Tous les guides</a>
+              </div>
+              <dl class="ut-facts">
+                <div><dt>compétences</dt><dd>1 442</dd></div>
+                <div><dt>professions</dt><dd>10</dd></div>
+                <div><dt>emplacements par barre</dt><dd>8</dd></div>
+                <div><dt>élite par barre</dt><dd>1</dd></div>
+              </dl>
+            </div>
+
+            <!-- Diablo IV -->
+            <div class="ut-slide" role="group" aria-roledescription="diapositive" aria-label="4 sur 4 : Diablo IV" style="--c: var(--ut-d4)">
+              <div><span class="ut-badge">Grimoire de Sanctuaire</span></div>
+              <h2 class="ut-hero__title"><span>Diablo</span><span>IV</span></h2>
+              <p class="ut-hero__lead">Les <strong>builds de saison</strong> traduits en français : équipement, gemmes, runes, Parangon, tier list et le boss qui lâche chaque unique.</p>
+              <p class="ut-hero__motto">Saison, endgame et farm.</p>
+              <div class="ut-hero__actions">
+                <a class="ut-btn ut-btn--primary" href="/d4/">Voir les builds</a>
+                <a class="ut-btn ut-btn--secondary" href="#guides">Tous les guides</a>
+              </div>
+              <dl class="ut-facts">
+                <div><dt>saison couverte</dt><dd>15</dd></div>
+                <div><dt>builds de fin de jeu</dt><dd>68</dd></div>
+                <div><dt>classes</dt><dd>8</dd></div>
+                <div><dt>rubriques, du butin au Parangon</dt><dd>7</dd></div>
+              </dl>
+            </div>
           </div>
-          <h1 class="ut-hero__title" id="titre-brume" data-enter style="--d: 120">
-            <span>La</span><span>Brume</span>
-          </h1>
-          <p class="ut-hero__lead" data-enter style="--d: 320">
-            Un <strong>roguelite d’action</strong> à jouer dans ton navigateur. Chaque descente te rapproche du cœur de la Brume, chaque retour au Sanctuaire te rend plus fort.
-          </p>
-          <p class="ut-hero__motto" data-enter style="--d: 460">Ce que tu oublies, la Brume s’en souvient.</p>
-          <div class="ut-hero__actions" data-enter style="--d: 600">
-            <a class="ut-btn ut-btn--primary" href="/themist/">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
-              Jouer à La Brume
-            </a>
-            <a class="ut-btn ut-btn--secondary" href="/themist/wiki.html">Lire le wiki</a>
-          </div>
-          <dl class="ut-facts" data-enter style="--d: 760">
-            <div><dt>formes jouables</dt><dd>4</dd></div>
-            <div><dt>sous-classes par forme</dt><dd>3</dd></div>
-            <div><dt>actes de descente</dt><dd>10</dd></div>
-            <div><dt>paliers de difficulté</dt><dd>3</dd></div>
-          </dl>
+
         </div>
 
+        <!-- La scène : une image par diapositive. data-light = source de lumière (x y, de 0 à 1, dans l'image) -->
+        <div class="ut-stage">
         <div class="ut-scene" data-enter style="--d: 0">
-          <img src="/img/la-brume-tuile.jpg" width="538" height="660" alt="Un voyageur encapuchonné tient une lanterne dans la brume, sous la pleine lune, face à une citadelle lointaine." fetchpriority="high" decoding="async" />
+          <img class="is-active" src="/img/la-brume-tuile.jpg" width="538" height="660" data-light="0.34 0.9" data-glow="#f2b65a" data-veil="1" style="object-position: 50% 92%" alt="Un voyageur encapuchonné tient une lanterne dans la brume, sous la pleine lune, face à une citadelle lointaine." fetchpriority="high" decoding="async" />
+          <img src="/img/vaelmor.svg" width="1000" height="1250" data-veil="0.55" data-light="0.68 0.58" data-glow="#b48cff" style="object-position: 60% 55%" alt="Une citadelle engloutie sous un ciel violet, devant une grille de combat tactique où un héros fait face à un monstre." aria-hidden="true" fetchpriority="low" decoding="async" />
+          <img src="/img/guild-wars-1.svg" width="1000" height="1250" data-veil="0.55" data-light="0.5 0.57" data-glow="#f0b94a" style="object-position: 50% 60%" alt="Un crépuscule doré sur des montagnes et une arche en ruine." aria-hidden="true" fetchpriority="low" decoding="async" />
+          <img src="/img/diablo-4.svg" width="1000" height="1250" data-veil="0.55" data-light="0.52 0.36" data-glow="#ff6a5c" style="object-position: 50% 40%" alt="Des flèches gothiques sous un ciel écarlate, entourées de braises." aria-hidden="true" fetchpriority="low" decoding="async" />
           <div class="ut-scene__veil" aria-hidden="true"></div>
           <div class="ut-scene__glow" aria-hidden="true"></div>
           <div class="ut-scene__mist" aria-hidden="true"></div>
+        </div>
+          <div class="ut-carousel__ctrl" role="group" aria-label="Choisir le projet affiché">
+            <button class="ut-carousel__pause" type="button" aria-label="Mettre en pause le défilement">
+              <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="5" width="3.5" height="14" rx="1" /><rect x="13.5" y="5" width="3.5" height="14" rx="1" /></svg>
+              <svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+            </button>
+            <div class="ut-carousel__dots">
+              <button class="ut-dot is-active" type="button" data-go="0" aria-current="true" style="--c: var(--ut-brume)"><span class="ut-dot__bar"><i></i></span>La Brume</button>
+              <button class="ut-dot" type="button" data-go="1" style="--c: var(--ut-vaelmor)"><span class="ut-dot__bar"><i></i></span>Vaelmor</button>
+              <button class="ut-dot" type="button" data-go="2" style="--c: var(--ut-gw)"><span class="ut-dot__bar"><i></i></span>Guild Wars 1</button>
+              <button class="ut-dot" type="button" data-go="3" style="--c: var(--ut-d4)"><span class="ut-dot__bar"><i></i></span>Diablo IV</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -136,9 +212,9 @@
     <nav class="ut-wrap" aria-label="Sur Umbratech">
       <div class="ut-dest">
         <a href="/themist/" style="--c: var(--ut-brume)"><b>La Brume</b><span>Roguelite d’action, jouable maintenant</span></a>
+        <a href="/vaelmor/" style="--c: var(--ut-vaelmor)"><b>Vaelmor</b><span>RPG tactique au tour par tour</span></a>
         <a href="/gw1/" style="--c: var(--ut-gw)"><b>Guild Wars 1</b><span><span data-count="1442">1 442</span> compétences, 10 professions</span></a>
         <a href="/d4/" style="--c: var(--ut-d4)"><b>Diablo IV</b><span>Builds de saison traduits en français</span></a>
-        <a href="/vaelmor/" style="--c: var(--ut-vaelmor)"><b>Vaelmor</b><span>RPG tactique au tour par tour</span></a>
       </div>
     </nav>
 

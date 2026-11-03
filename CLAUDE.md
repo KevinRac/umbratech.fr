@@ -44,7 +44,8 @@
 - `assets/umbra.js` (sans dépendance, tout optionnel) : header flouté, `[data-reveal]`, compteurs `[data-count]`, lanterne de `.ut-scene`, lumière des `a.ut-card`, journal `#journal` et `[data-brume-version]` lus dans `themist/data/versions.js` (seules les lignes dont `h` commence par `v` + chiffre). Les animations ne s'activent que sous `html.ut-js` ; mouvements réduits = rien ne bouge.
 - `assets/umbra-bar.css` : barre commune des sous-pages qui gardent leur identité (`/gw1/`, `/d4/`), autonome (tout sous `.ut-bar`, rien sur `:root`). Un nouveau guide copie le bloc `<nav class="ut-bar">` de `gw1/index.html` juste après `<body>` (`aria-current="page"` sur son lien ; `ut-bar--bleed` si son `<body>` garde la marge de 8 px).
 - Polices : Outfit (titres) et Instrument Sans (texte), OFL, sous-ensemble latin + français en WOFF dans `assets/fonts/` (licences à côté). Aucune requête Google Fonts sur l'accueil.
-- Faits affichés sur l'accueil (formes, actes, paliers, nombre de compétences GW1) : à tenir à jour si le jeu ou les guides changent ; ne jamais y expliquer les secrets de La Brume.
+- Hero en carrousel (`.ut-carousel`, ordre La Brume → Vaelmor → Guild Wars 1 → Diablo IV, `data-dur` = 7000 ms par diapositive) : une `.ut-slide` par projet et une image par diapositive dans `.ut-scene` (même ordre) ; `data-light="x y"` (0 à 1, dans l'image) place la lumière sur la source de l'image, `data-glow` sa couleur, `data-veil` l'opacité du voile. Pause au survol du texte ou des commandes, au focus clavier, onglet caché et bouton ; mouvements réduits = pas de défilement automatique ; sans JavaScript, seule La Brume s'affiche.
+- Faits affichés sur l'accueil (formes, actes, paliers, nombre de compétences GW1, saison, nombre de builds et de classes D4) : à tenir à jour si le jeu ou les guides changent ; ne jamais y expliquer les secrets de La Brume.
 
 ## Publication
 
