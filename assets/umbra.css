@@ -381,7 +381,7 @@ a.ut-card:focus-visible { outline-offset: 4px; border-radius: var(--ut-r-md); }
 .ut-hero__title span { display: block; }
 .ut-hero__lead { font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem); line-height: 1.5; color: var(--ut-soft); max-width: 31rem; }
 .ut-hero__lead strong { color: var(--ut-text); font-weight: 600; }
-.ut-hero__motto { font-family: var(--ut-display); font-weight: 400; font-size: var(--ut-t-lg); color: var(--ut-brume); letter-spacing: 0.005em; }
+.ut-hero__motto { font-family: var(--ut-display); font-weight: 400; font-size: var(--ut-t-lg); color: var(--c, var(--ut-brume)); letter-spacing: 0.005em; }
 .ut-hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ut-s-3) var(--ut-s-4); margin-top: var(--ut-s-2); }
 
 .ut-facts { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: var(--ut-s-5) var(--ut-s-6); margin: var(--ut-s-5) 0 0; padding: var(--ut-s-5) 0 0; border-top: 1px solid var(--ut-line); }
@@ -390,9 +390,11 @@ a.ut-card:focus-visible { outline-offset: 4px; border-radius: var(--ut-r-md); }
 .ut-facts dd { order: 1; margin: 0; font-family: var(--ut-display); font-weight: 700; font-size: var(--ut-t-xl); line-height: 1.1; font-variant-numeric: tabular-nums; }
 
 /* Visuel : la scène de La Brume, voilée ; la lanterne (ou le pointeur) l'éclaire */
+.ut-stage { position: relative; justify-self: end; width: 100%; max-width: calc(min(78vh, 720px) * 538 / 660); }
 .ut-scene {
-  --lx: 34%; --ly: 88%;
-  position: relative; aspect-ratio: 538 / 660; max-height: min(78vh, 720px); width: 100%; justify-self: end;
+  --lx: 34%; --ly: 88%; --glow: #f2b65a;
+  transition: --glow 1.2s var(--ut-ease-io);
+  position: relative; aspect-ratio: 538 / 660; width: 100%;
   border-radius: var(--ut-r-lg); overflow: hidden; isolation: isolate;
   background: #0d1418;
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--ut-line);
@@ -400,16 +402,20 @@ a.ut-card:focus-visible { outline-offset: 4px; border-radius: var(--ut-r-md); }
   -webkit-mask-image: radial-gradient(120% 95% at 50% 45%, #000 62%, transparent 100%);
   mask-image: radial-gradient(120% 95% at 50% 45%, #000 62%, transparent 100%);
 }
-.ut-scene img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.04); }
+.ut-scene img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.04); opacity: 0; transition: opacity 1.2s var(--ut-ease-io); }
+.ut-scene img.is-active { opacity: 1; }
+/* Lent travelling avant sur l'image affichée (et sur celle qui s'efface, pour éviter un saut) */
+.ut-js .ut-scene img.is-active, .ut-js .ut-scene img.is-leaving { animation: ut-zoom 9s linear both; transform-origin: var(--ox, 50%) var(--oy, 60%); }
 .ut-scene__veil, .ut-scene__mist { position: absolute; inset: 0; pointer-events: none; }
 .ut-scene__veil {
+  opacity: var(--veil, 1); transition: opacity 1.2s var(--ut-ease-io);
   background: radial-gradient(70% 55% at 50% 60%, rgba(14, 22, 28, 0.38), rgba(5, 8, 12, 0.78));
   -webkit-mask-image: radial-gradient(circle at var(--lx) var(--ly), transparent 0, transparent 70px, #000 250px);
   mask-image: radial-gradient(circle at var(--lx) var(--ly), transparent 0, transparent 70px, #000 250px);
 }
 .ut-scene__glow {
   position: absolute; left: var(--lx); top: var(--ly); width: 300px; height: 300px; translate: -50% -50%; pointer-events: none;
-  background: radial-gradient(circle, rgba(242, 182, 90, 0.28), rgba(242, 182, 90, 0.08) 40%, transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--glow) 28%, transparent), color-mix(in srgb, var(--glow) 8%, transparent) 40%, transparent 68%);
   mix-blend-mode: screen;
 }
 .ut-scene__mist { overflow: hidden; }
@@ -431,6 +437,56 @@ a.ut-card:focus-visible { outline-offset: 4px; border-radius: var(--ut-r-md); }
   display: flex; justify-content: space-between; gap: 12px; align-items: end;
   font-size: var(--ut-t-xs); color: rgba(230, 238, 242, 0.75);
 }
+
+/* 6.2 bis Carrousel du hero ------------------------------------------- */
+@property --glow { syntax: "<color>"; inherits: true; initial-value: #f2b65a; }
+.ut-hero__title--one { font-size: clamp(3.4rem, 0.6rem + 9.6vw, 8.5rem); }
+.ut-facts--words { grid-template-columns: repeat(3, auto); }
+.ut-facts--words dd { font-size: var(--ut-t-lg); }
+.ut-slide .ut-badge { --c: inherit; }
+.ut-slides { display: grid; }
+.ut-slide {
+  grid-area: 1 / 1; display: grid; gap: var(--ut-s-5); align-content: start;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.35s var(--ut-ease), visibility 0s linear 0.35s;
+}
+.ut-slide.is-active { opacity: 1; visibility: visible; transition: opacity 0.35s var(--ut-ease), visibility 0s; }
+.ut-js .ut-slide.is-active > * { animation: ut-rise 1s var(--ut-ease) both; }
+.ut-js .ut-slide.is-active > :nth-child(2) { animation-delay: 90ms; }
+.ut-js .ut-slide.is-active > :nth-child(3) { animation-delay: 240ms; }
+.ut-js .ut-slide.is-active > :nth-child(4) { animation-delay: 350ms; }
+.ut-js .ut-slide.is-active > :nth-child(5) { animation-delay: 460ms; }
+.ut-js .ut-slide.is-active > :nth-child(6) { animation-delay: 570ms; }
+
+.ut-carousel__ctrl {
+  display: none; align-items: center; gap: var(--ut-s-3);
+  position: absolute; left: 50%; bottom: 18px; translate: -50% 0; z-index: 3; width: min(100% - 32px, 30rem);
+  padding: 4px 16px 4px 4px; border-radius: var(--ut-r-pill); border: 1px solid var(--ut-line);
+  background: rgba(5, 6, 10, 0.62); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.ut-js .ut-carousel__ctrl { display: flex; }
+.ut-carousel__pause {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  border-radius: 50%; border: 1px solid var(--ut-line-strong); background: rgba(238, 241, 246, 0.04); color: var(--ut-soft);
+  transition: background-color var(--ut-fast), color var(--ut-fast), border-color var(--ut-fast);
+}
+.ut-carousel__pause:hover { background: rgba(238, 241, 246, 0.1); color: var(--ut-text); }
+.ut-carousel__pause svg { width: 16px; height: 16px; }
+.ut-carousel__pause .i-play, .ut-carousel.is-stopped .ut-carousel__pause .i-pause { display: none; }
+.ut-carousel.is-stopped .ut-carousel__pause .i-play { display: block; }
+.ut-carousel__dots { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--ut-s-3); max-width: 36rem; }
+.ut-dot {
+  display: grid; gap: 10px; align-content: center; min-height: 44px; padding: 6px 0; cursor: pointer; text-align: left;
+  border: 0; background: none; color: var(--ut-muted); font: 600 var(--ut-t-xs)/1.2 var(--ut-body);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--ut-fast);
+}
+.ut-dot:hover, .ut-dot.is-active { color: var(--ut-text); }
+.ut-dot__bar { display: block; height: 2px; border-radius: 2px; background: var(--ut-line-strong); overflow: hidden; }
+.ut-dot__bar i { display: block; height: 100%; background: var(--c); transform: scaleX(0); transform-origin: left; }
+.ut-dot.is-active .ut-dot__bar i { animation: ut-progress var(--dur, 7000ms) linear forwards; }
+.ut-carousel.is-paused .ut-dot.is-active .ut-dot__bar i { animation-play-state: paused; }
+.ut-carousel.is-stopped .ut-dot.is-active .ut-dot__bar i { animation: none; transform: scaleX(1); }
+.ut-hero__grid { touch-action: pan-y; }
 
 /* 6.3 Destinations (bandeau sous le hero) ------------------------------- */
 .ut-dest { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ut-line); border-bottom: 1px solid var(--ut-line); }
@@ -521,6 +577,8 @@ a.ut-feature:hover .ut-feature__go svg { transform: translateX(4px); }
 @keyframes ut-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.8); } }
 @keyframes ut-rise { from { opacity: 0; transform: translate3d(0, 24px, 0); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
 @keyframes ut-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ut-zoom { from { transform: scale(1.04); } to { transform: scale(1.1); } }
+@keyframes ut-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 /* Séquence d'ouverture du hero : seulement si JavaScript a posé .ut-js
    (sans JS, tout est visible tout de suite) */
@@ -535,9 +593,11 @@ a.ut-feature:hover .ut-feature__go svg { transform: translateX(4px); }
 @media (max-width: 1080px) {
   .ut-nav { display: none; }
   .ut-hero__grid { grid-template-columns: 1fr; }
-  .ut-scene { max-height: none; aspect-ratio: 4 / 3; justify-self: stretch; order: -1; --ly: 82%; }
-  .ut-scene img { object-position: center 75%; }
-  .ut-facts { grid-template-columns: repeat(2, auto); }
+  .ut-stage { order: -1; justify-self: center; max-width: 720px; }
+  /* Sur petit écran, les commandes passent sous l'image pour ne rien cacher de la scène */
+  .ut-carousel__ctrl { position: static; translate: none; width: auto; margin-top: var(--ut-s-3); padding: 0; border: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .ut-scene { aspect-ratio: 16 / 9; --ly: 82%; }
+  .ut-facts, .ut-facts--words { grid-template-columns: repeat(2, auto); }
   .ut-dest { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ut-dest a:nth-child(3) { border-left: 0; }
   .ut-dest a:nth-child(n + 3) { border-top: 1px solid var(--ut-line); }
@@ -557,6 +617,9 @@ a.ut-feature:hover .ut-feature__go svg { transform: translateX(4px); }
   .ut-feature::before { background: linear-gradient(180deg, rgba(5, 6, 10, 0.1) 0%, rgba(5, 6, 10, 0.78) 30%, rgba(5, 6, 10, 0.97) 60%); }
   .ut-hero__actions .ut-btn--primary, .ut-hero__actions .ut-btn--secondary { flex: 1 1 100%; }
   .ut-dest { grid-template-columns: 1fr; }
+  .ut-carousel__dots { gap: var(--ut-s-2); }
+  .ut-dot { font-size: 0.6875rem; }
+  .ut-carousel__pause { width: 40px; height: 40px; }
   .ut-dest a { border-left: 0; border-top: 1px solid var(--ut-line); padding: 18px 4px; }
   .ut-dest a:first-child { border-top: 0; }
   .ut-loop { grid-template-columns: 1fr; }
@@ -580,6 +643,8 @@ a.ut-feature:hover .ut-feature__go svg { transform: translateX(4px); }
   .ut-js .ut-hero [data-enter], .ut-js [data-reveal] { opacity: 1; transform: none; filter: none; }
   .ut-atmos::before, .ut-atmos::after, .ut-scene__mist::before, .ut-scene__mist::after { animation: none; }
   .ut-card { transform: none; }
+  .ut-js .ut-scene img.is-active, .ut-js .ut-scene img.is-leaving { animation: none; }
+  .ut-dot.is-active .ut-dot__bar i { animation: none; transform: scaleX(1); }
 }
 @media (prefers-contrast: more) {
   :root { --ut-muted: #c6ccd8; --ut-soft: #e2e6ee; --ut-line: rgba(238, 241, 246, 0.28); }

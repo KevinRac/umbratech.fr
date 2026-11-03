@@ -4,7 +4,8 @@
    - [data-reveal] : apparition au défilement
    - .ut-loop : la ligne de la descente se dessine
    - [data-count] : compteurs
-   - .ut-scene : la lumière suit le pointeur (lanterne)
+   - .ut-scene : la lumière se pose sur la source de l'image et suit le pointeur
+   - .ut-carousel : carrousel du hero (pause, balayage, mouvements réduits)
    - a.ut-card : lumière et inclinaison légère au survol
    - #journal : dernières versions de La Brume, lues dans themist/data/versions.js
    Mouvements réduits : rien ne bouge, tout est affiché. */
@@ -68,28 +69,156 @@
     compteurs.forEach((el) => obsC.observe(el));
   }
 
-  /* Lanterne : la lumière suit le pointeur, puis revient à la lanterne */
-  const scene = document.querySelector(".ut-scene");
-  if (scene && pointeurFin && !calme) {
-    const repos = { x: parseFloat(getComputedStyle(scene).getPropertyValue("--lx")) || 34, y: parseFloat(getComputedStyle(scene).getPropertyValue("--ly")) || 88 };
-    const cur = { ...repos }, cible = { ...repos };
-    let raf = 0;
-    const anime = () => {
-      cur.x += (cible.x - cur.x) * 0.12;
-      cur.y += (cible.y - cur.y) * 0.12;
+  /* Scène : la lumière (lanterne, soleil, braise…) se pose sur la source de
+     lumière de l'image affichée, et suit le pointeur quand il passe dessus.
+     La source est donnée dans l'image (data-light="x y", de 0 à 1) et
+     convertie dans le cadre, en tenant compte du recadrage (object-fit). */
+  const scenes = [...document.querySelectorAll(".ut-scene")].map((scene) => {
+    const cur = { x: 34, y: 88 }, cible = { x: 34, y: 88 }, repos = { x: 34, y: 88 };
+    let raf = 0, dessus = false, img = scene.querySelector("img.is-active") || scene.querySelector("img");
+    const pose = () => {
       scene.style.setProperty("--lx", cur.x.toFixed(2) + "%");
       scene.style.setProperty("--ly", cur.y.toFixed(2) + "%");
+    };
+    const anime = () => {
+      cur.x += (cible.x - cur.x) * 0.09;
+      cur.y += (cible.y - cur.y) * 0.09;
+      pose();
       raf = Math.abs(cible.x - cur.x) + Math.abs(cible.y - cur.y) > 0.05 ? requestAnimationFrame(anime) : 0;
     };
-    const lance = () => { if (!raf) raf = requestAnimationFrame(anime); };
-    scene.addEventListener("pointermove", (ev) => {
-      const r = scene.getBoundingClientRect();
-      cible.x = ((ev.clientX - r.left) / r.width) * 100;
-      cible.y = ((ev.clientY - r.top) / r.height) * 100;
-      lance();
+    const lance = () => { if (calme) { cur.x = cible.x; cur.y = cible.y; pose(); } else if (!raf) raf = requestAnimationFrame(anime); };
+    const source = () => {
+      if (!img || !img.dataset.light) return;
+      const [lx, ly] = img.dataset.light.split(/\s+/).map(Number);
+      const w = scene.clientWidth, h = scene.clientHeight;
+      const nw = img.naturalWidth || +img.getAttribute("width"), nh = img.naturalHeight || +img.getAttribute("height");
+      if (!w || !h || !nw || !nh) return;
+      const k = Math.max(w / nw, h / nh), rw = nw * k, rh = nh * k;
+      const [px, py] = getComputedStyle(img).objectPosition.split(" ").map((v) => parseFloat(v) / 100);
+      repos.x = (((w - rw) * (isNaN(px) ? 0.5 : px) + lx * rw) / w) * 100;
+      repos.y = (((h - rh) * (isNaN(py) ? 0.5 : py) + ly * rh) / h) * 100;
+      img.style.setProperty("--ox", repos.x.toFixed(1) + "%");
+      img.style.setProperty("--oy", repos.y.toFixed(1) + "%");
+    };
+    const montrer = (nouvelle) => {
+      img = nouvelle;
+      source();
+      if (img.dataset.glow) scene.style.setProperty("--glow", img.dataset.glow);
+      if (img.dataset.veil) scene.style.setProperty("--veil", img.dataset.veil);
+      if (!dessus) { cible.x = repos.x; cible.y = repos.y; lance(); }
+    };
+    source();
+    cur.x = cible.x = repos.x; cur.y = cible.y = repos.y; pose();
+    if (pointeurFin && !calme) {
+      scene.addEventListener("pointermove", (ev) => {
+        const r = scene.getBoundingClientRect();
+        dessus = true;
+        cible.x = ((ev.clientX - r.left) / r.width) * 100;
+        cible.y = ((ev.clientY - r.top) / r.height) * 100;
+        lance();
+      });
+      scene.addEventListener("pointerleave", () => { dessus = false; cible.x = repos.x; cible.y = repos.y; lance(); });
+    }
+    addEventListener("resize", () => { source(); if (!dessus) { cible.x = repos.x; cible.y = repos.y; lance(); } }, { passive: true });
+    if (img && !img.complete) img.addEventListener("load", () => montrer(img), { once: true });
+    return { el: scene, montrer };
+  });
+
+  /* Carrousel du hero : La Brume → Vaelmor → Guild Wars 1 → Diablo IV.
+     Avance seul toutes les data-dur ms ; s'arrête au survol, au focus clavier,
+     quand l'onglet est caché, et sur le bouton pause. Mouvements réduits :
+     ne défile pas tout seul (le bouton lecture le relance). */
+  document.querySelectorAll(".ut-carousel").forEach((car) => {
+    const slides = [...car.querySelectorAll(".ut-slide")];
+    const dots = [...car.querySelectorAll(".ut-dot")];
+    const box = car.querySelector(".ut-slides");
+    const btn = car.querySelector(".ut-carousel__pause");
+    const scene = scenes.find((s) => car.contains(s.el));
+    const imgs = scene ? [...scene.el.querySelectorAll("img")] : [];
+    const dur = Number(car.dataset.dur) || 7000;
+    if (slides.length < 2) return;
+    car.style.setProperty("--dur", dur + "ms");
+
+    let i = Math.max(0, slides.findIndex((s) => s.classList.contains("is-active")));
+    let arrete = calme, survol = false, focus = false, cache = document.hidden;
+    let timer = 0, t0 = 0, reste = dur;
+
+    const enPause = () => arrete || survol || focus || cache;
+    const lancer = () => { clearTimeout(timer); t0 = performance.now(); timer = setTimeout(() => aller(i + 1), reste); };
+    const etat = () => {
+      const p = enPause();
+      car.classList.toggle("is-paused", p);
+      car.classList.toggle("is-stopped", arrete);
+      box.setAttribute("aria-live", p ? "polite" : "off");
+      btn.setAttribute("aria-label", arrete ? "Reprendre le défilement" : "Mettre en pause le défilement");
+      if (p) { if (timer) { clearTimeout(timer); timer = 0; reste = Math.max(0, reste - (performance.now() - t0)); } }
+      else if (!timer) lancer();
+    };
+    const aller = (n) => {
+      const prec = i;
+      i = (n + slides.length) % slides.length;
+      clearTimeout(timer); timer = 0; reste = dur;
+      slides.forEach((s, k) => { s.classList.toggle("is-active", k === i); s.toggleAttribute("inert", k !== i); });
+      dots.forEach((d, k) => {
+        d.classList.toggle("is-active", k === i);
+        if (k === i) d.setAttribute("aria-current", "true"); else d.removeAttribute("aria-current");
+      });
+      if (imgs.length) {
+        imgs.forEach((im, k) => {
+          const actif = k === i;
+          im.classList.toggle("is-leaving", k === prec && !actif);
+          im.classList.toggle("is-active", actif);
+          if (actif) im.removeAttribute("aria-hidden"); else im.setAttribute("aria-hidden", "true");
+        });
+        setTimeout(() => imgs[prec] && imgs[prec].classList.remove("is-leaving"), 1300);
+        scene.montrer(imgs[i] || imgs[0]);
+      }
+      etat();
+    };
+
+    slides.forEach((s, k) => s.toggleAttribute("inert", k !== i));
+    dots.forEach((d, k) => {
+      d.addEventListener("click", () => { if (k !== i) aller(k); });
+      d.addEventListener("keydown", (e) => {
+        const pas = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!pas) return;
+        e.preventDefault();
+        aller(i + pas);
+        dots[i].focus();
+      });
     });
-    scene.addEventListener("pointerleave", () => { cible.x = repos.x; cible.y = repos.y; lance(); });
-  }
+    btn.addEventListener("click", () => {
+      arrete = !arrete;
+      if (!arrete) { reste = dur; const bar = dots[i] && dots[i].querySelector("i"); if (bar) { bar.style.animation = "none"; void bar.offsetWidth; bar.style.animation = ""; } }
+      etat();
+    });
+
+    /* Survol du texte (pour le lire) ou des commandes : pause ; la scène, elle, peut être explorée sans arrêter le défilement */
+    if (pointeurFin) {
+      [car.querySelector(".ut-hero__copy"), car.querySelector(".ut-carousel__ctrl")].forEach((zone) => {
+        if (!zone) return;
+        zone.addEventListener("pointerenter", () => { survol = true; etat(); });
+        zone.addEventListener("pointerleave", () => { survol = false; etat(); });
+      });
+    }
+    car.addEventListener("focusin", (e) => { if (e.target.matches(":focus-visible")) { focus = true; etat(); } });
+    car.addEventListener("focusout", (e) => { if (!car.contains(e.relatedTarget)) { focus = false; etat(); } });
+    document.addEventListener("visibilitychange", () => { cache = document.hidden; etat(); });
+
+    /* Balayage horizontal au doigt */
+    let x0 = null, y0 = 0;
+    const grille = car.querySelector(".ut-hero__grid") || car;
+    grille.addEventListener("pointerdown", (e) => { if (e.pointerType === "touch") { x0 = e.clientX; y0 = e.clientY; } });
+    grille.addEventListener("pointerup", (e) => {
+      if (x0 === null) return;
+      const dx = e.clientX - x0, dy = e.clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) aller(i + (dx < 0 ? 1 : -1));
+    });
+    grille.addEventListener("pointercancel", () => { x0 = null; });
+
+    etat();
+  });
 
   /* Cartes : lumière au pointeur et inclinaison très légère (≤ 1,5°) */
   if (pointeurFin) {
