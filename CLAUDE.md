@@ -37,6 +37,15 @@
 - `ringdodge/jeu/` est généré par `npm run publier` dans KevinRac/ringdodge : ne pas le modifier à la main.
 - Ouvert à tous depuis le 27 octobre 2026 (plus de mot de passe) : `ringdodge/.htaccess` sert `jeu/` à l'adresse `/ringdodge/` ; `noindex` pour les moteurs de recherche.
 
+## Thème du site (accueil, `assets/`)
+
+- Direction artistique, maquette, animations et points ouverts : `_dev/DIRECTION-ARTISTIQUE.md` (non servi). Planche vivante des tokens, composants et variantes de hero : `/dev/design-system.html` (`noindex`, exclue par `robots.txt`).
+- `assets/umbra.css` : tokens (`--ut-*`), base, composants (`.ut-btn`, `.ut-badge`, `.ut-card`, `.ut-field`, `.ut-faq`, `.ut-header`, `.ut-footer`) et sections de l'accueil. Variante un seul accent : `<html data-accent="sobre">`.
+- `assets/umbra.js` (sans dépendance, tout optionnel) : header flouté, `[data-reveal]`, compteurs `[data-count]`, lanterne de `.ut-scene`, lumière des `a.ut-card`, journal `#journal` et `[data-brume-version]` lus dans `themist/data/versions.js` (seules les lignes dont `h` commence par `v` + chiffre). Les animations ne s'activent que sous `html.ut-js` ; mouvements réduits = rien ne bouge.
+- `assets/umbra-bar.css` : barre commune des sous-pages qui gardent leur identité (`/gw1/`, `/d4/`), autonome (tout sous `.ut-bar`, rien sur `:root`). Un nouveau guide copie le bloc `<nav class="ut-bar">` de `gw1/index.html` juste après `<body>` (`aria-current="page"` sur son lien ; `ut-bar--bleed` si son `<body>` garde la marge de 8 px).
+- Polices : Outfit (titres) et Instrument Sans (texte), OFL, sous-ensemble latin + français en WOFF dans `assets/fonts/` (licences à côté). Aucune requête Google Fonts sur l'accueil.
+- Faits affichés sur l'accueil (formes, actes, paliers, nombre de compétences GW1) : à tenir à jour si le jeu ou les guides changent ; ne jamais y expliquer les secrets de La Brume.
+
 ## Publication
 
 - Push direct sur `main` (déploiement automatique sur IONOS).

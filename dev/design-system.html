@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design system · Umbratech</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#05060a" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/assets/umbra.css" />
+  <script>document.documentElement.classList.add("ut-js");</script>
+  <script src="/assets/umbra.js" defer></script>
+  <style>
+    /* Styles propres à cette planche, hors thème */
+    .ds-grid { display: grid; gap: var(--ut-s-5); grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    .ds-swatch { border-radius: var(--ut-r-md); border: 1px solid var(--ut-line); overflow: hidden; background: var(--ut-night); }
+    .ds-swatch i { display: block; height: 84px; }
+    .ds-swatch div { padding: 12px 14px; font-size: var(--ut-t-xs); color: var(--ut-muted); }
+    .ds-swatch b { display: block; color: var(--ut-text); font-size: var(--ut-t-sm); margin-bottom: 2px; }
+    .ds-row { display: flex; flex-wrap: wrap; gap: var(--ut-s-4); align-items: center; }
+    .ds-block + .ds-block { margin-top: var(--ut-s-8); }
+    .ds-block > h3 { font-size: var(--ut-t-xl); margin-bottom: var(--ut-s-5); }
+    .ds-type > * + * { margin-top: var(--ut-s-4); }
+    .ds-type small { display: block; font-family: var(--ut-body); font-size: var(--ut-t-xs); color: var(--ut-muted); letter-spacing: 0; font-weight: 500; margin-bottom: 4px; }
+    .ds-form { display: grid; gap: var(--ut-s-5); max-width: 560px; }
+    .ds-frame { border-radius: var(--ut-r-lg); border: 1px solid var(--ut-line); overflow: hidden; position: relative; isolation: isolate; }
+    .ds-frame + .ds-frame { margin-top: var(--ut-s-6); }
+    .ds-frame__label { position: absolute; top: 14px; right: 16px; z-index: 3; }
+    .ds-cards { display: grid; gap: var(--ut-s-5); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .ds-cards .ut-card { padding: var(--ut-s-6); gap: var(--ut-s-3); min-height: 200px; }
+    .ds-cards .ut-card p { color: var(--ut-soft); font-size: var(--ut-t-sm); }
+
+    /* Variante A · sobre corporate */
+    .hv-a { padding: clamp(56px, 8vw, 120px) var(--ut-gutter); text-align: center; background: var(--ut-void); }
+    .hv-a h2 { font-size: var(--ut-t-3xl); max-width: 16ch; margin: var(--ut-s-5) auto 0; }
+    .hv-a p { max-width: 36rem; margin: var(--ut-s-5) auto 0; color: var(--ut-soft); font-size: var(--ut-t-lg); }
+    .hv-a .ut-hero__actions { justify-content: center; margin-top: var(--ut-s-6); }
+    .hv-a .ut-btn--primary::before { background: var(--ut-cyan); opacity: 0.3; }
+
+    /* Variante B · futuriste */
+    .hv-b { position: relative; padding: clamp(64px, 9vw, 140px) var(--ut-gutter) clamp(120px, 14vw, 200px); overflow: hidden; background: #04050a; }
+    .hv-b::before { content: ""; position: absolute; left: -50%; right: -50%; bottom: -10%; height: 70%; z-index: -1;
+      background-image: linear-gradient(rgba(62, 219, 240, 0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(62, 219, 240, 0.22) 1px, transparent 1px);
+      background-size: 56px 56px; transform: perspective(520px) rotateX(62deg); transform-origin: top;
+      -webkit-mask-image: linear-gradient(180deg, transparent, #000 40%); mask-image: linear-gradient(180deg, transparent, #000 40%);
+      animation: hv-grid 6s linear infinite; }
+    .hv-b::after { content: ""; position: absolute; inset: -30% -10% auto; height: 80%; z-index: -2;
+      background: radial-gradient(40% 50% at 30% 50%, rgba(156, 132, 255, 0.35), transparent 70%), radial-gradient(35% 45% at 70% 40%, rgba(62, 219, 240, 0.28), transparent 70%);
+      filter: blur(20px); animation: ut-drift 18s var(--ut-ease-io) infinite alternate; }
+    .hv-b h2 { font-size: var(--ut-t-hero); line-height: 0.9; letter-spacing: -0.05em; max-width: 9ch;
+      background: var(--ut-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hv-b p { margin-top: var(--ut-s-5); max-width: 30rem; color: var(--ut-soft); font-size: var(--ut-t-lg); }
+    .hv-b .ut-hero__actions { margin-top: var(--ut-s-6); }
+    @keyframes hv-grid { to { background-position: 0 56px, 0 0; } }
+
+    /* Variante C · éditorial premium (celle retenue) : miniature du hero réel */
+    .hv-c { padding: var(--ut-s-8) var(--ut-gutter); background: var(--ut-void); }
+    .hv-c .ut-hero__title { font-size: clamp(3.4rem, 1rem + 7vw, 7rem); }
+    .hv-c .ut-scene { max-height: 520px; }
+
+    @media (prefers-reduced-motion: reduce) { .hv-b::before, .hv-b::after { animation: none; } }
+  </style>
+</head>
+<body>
+  <a class="ut-skip" href="#contenu">Aller au contenu</a>
+  <div class="ut-atmos" aria-hidden="true"></div>
+
+  <header class="ut-header">
+    <div class="ut-wrap ut-header__inner">
+      <a class="ut-brand" href="/">
+        <span class="ut-brand__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v9a6 6 0 0 0 12 0V4" /></svg></span>
+        <span class="ut-brand__name">Umbratech</span>
+      </a>
+      <nav aria-label="Planche">
+        <ul class="ut-nav">
+          <li><a href="#couleurs">Couleurs</a></li>
+          <li><a href="#typo">Typographie</a></li>
+          <li><a href="#composants">Composants</a></li>
+          <li><a href="#heros">Variantes de hero</a></li>
+        </ul>
+      </nav>
+      <button class="ut-btn ut-btn--secondary ut-btn--sm" type="button" id="accent" aria-pressed="false">Accent seul</button>
+    </div>
+  </header>
+
+  <main id="contenu">
+    <section class="ut-section">
+      <div class="ut-wrap">
+        <div class="ut-head">
+          <h1 style="font-size: var(--ut-t-3xl)">Design system</h1>
+          <p>La planche de référence du thème : tokens de <code>assets/umbra.css</code>, composants et états. Page de travail, non indexée.</p>
+        </div>
+
+        <div class="ds-block" id="couleurs">
+          <h3>Fonds et texte</h3>
+          <div class="ds-grid">
+            <div class="ds-swatch"><i style="background:#05060a"></i><div><b>--ut-void</b>#05060A · fond</div></div>
+            <div class="ds-swatch"><i style="background:#0b0d12"></i><div><b>--ut-night</b>#0B0D12 · cartes</div></div>
+            <div class="ds-swatch"><i style="background:#11141b"></i><div><b>--ut-deep</b>#11141B · champ actif</div></div>
+            <div class="ds-swatch"><i style="background:#181c25"></i><div><b>--ut-raise</b>#181C25 · survol</div></div>
+            <div class="ds-swatch"><i style="background:#eef1f6"></i><div><b>--ut-text</b>#EEF1F6 · 17,9:1</div></div>
+            <div class="ds-swatch"><i style="background:#c6ccd8"></i><div><b>--ut-soft</b>#C6CCD8 · 12,6:1</div></div>
+            <div class="ds-swatch"><i style="background:#a3acbc"></i><div><b>--ut-muted</b>#A3ACBC · 8,9:1</div></div>
+          </div>
+        </div>
+        <div class="ds-block">
+          <h3>Accents et projets</h3>
+          <div class="ds-grid">
+            <div class="ds-swatch"><i style="background:var(--ut-grad)"></i><div><b>--ut-grad</b>violet → cyan → blanc</div></div>
+            <div class="ds-swatch"><i style="background:#9c84ff"></i><div><b>--ut-violet</b>#9C84FF</div></div>
+            <div class="ds-swatch"><i style="background:#3edbf0"></i><div><b>--ut-cyan</b>#3EDBF0 · focus</div></div>
+            <div class="ds-swatch"><i style="background:#4fe3d0"></i><div><b>--ut-brume</b>#4FE3D0 · La Brume</div></div>
+            <div class="ds-swatch"><i style="background:#f2b65a"></i><div><b>--ut-lantern</b>#F2B65A · lanterne</div></div>
+            <div class="ds-swatch"><i style="background:#f0b94a"></i><div><b>--ut-gw</b>#F0B94A · Guild Wars 1</div></div>
+            <div class="ds-swatch"><i style="background:#ff6a5c"></i><div><b>--ut-d4</b>#FF6A5C · Diablo IV</div></div>
+            <div class="ds-swatch"><i style="background:#b48cff"></i><div><b>--ut-vaelmor</b>#B48CFF · Vaelmor</div></div>
+          </div>
+        </div>
+
+        <div class="ds-block ds-type" id="typo">
+          <h3>Typographie</h3>
+          <div><small>Hero · Outfit 700 · var(--ut-t-hero)</small><div class="ut-hero__title" style="font-size: clamp(3rem, 8vw, 6.5rem)">La Brume</div></div>
+          <div><small>H2 · Outfit 700 · var(--ut-t-2xl)</small><h2 style="font-size: var(--ut-t-2xl)">Builds et guides, en français</h2></div>
+          <div><small>H3 · Outfit 700 · var(--ut-t-xl)</small><h3 style="font-size: var(--ut-t-xl)">Choisis ta forme</h3></div>
+          <div><small>Chapeau · Instrument Sans 400 · var(--ut-t-lg)</small><p style="font-size: var(--ut-t-lg); color: var(--ut-soft); max-width: 38rem">Un roguelite d’action à jouer dans ton navigateur. Chaque descente te rapproche du cœur de la Brume.</p></div>
+          <div><small>Texte · Instrument Sans 400 · var(--ut-t-base), interligne 1,6</small><p style="max-width: 38rem">Tu portes dix talents à la fois. Ce que tu laisses en route ne disparaît pas tout à fait.</p></div>
+          <div><small>Label · Instrument Sans 700, capitales espacées de 0,14 em (statut uniquement)</small><span class="ut-label">Aussi en chantier</span></div>
+        </div>
+
+        <div class="ds-block" id="composants">
+          <h3>Boutons</h3>
+          <div class="ds-row">
+            <a class="ut-btn ut-btn--primary" href="#composants">Jouer à La Brume</a>
+            <a class="ut-btn ut-btn--secondary" href="#composants">Lire le wiki</a>
+            <a class="ut-btn ut-btn--tertiary" href="#composants">Tout le journal</a>
+            <a class="ut-btn ut-btn--primary ut-btn--sm" href="#composants">Petit</a>
+            <button class="ut-btn ut-btn--primary" type="button" disabled>Désactivé</button>
+            <button class="ut-btn ut-btn--secondary" type="button" disabled>Désactivé</button>
+          </div>
+          <p class="ut-help" style="margin-top: 12px">Survol : léger agrandissement et halo · Appui : 97 % · Focus clavier : anneau cyan de 2 px, décalé de 3 px.</p>
+        </div>
+
+        <div class="ds-block">
+          <h3>Badges et tags</h3>
+          <div class="ds-row">
+            <span class="ut-badge ut-badge--live" style="--c: var(--ut-brume)">En développement · v18.8</span>
+            <span class="ut-badge" style="--c: var(--ut-gw)">Guild Wars 1</span>
+            <span class="ut-badge" style="--c: var(--ut-d4)">Diablo IV</span>
+            <span class="ut-badge" style="--c: var(--ut-vaelmor)">Prototype</span>
+            <ul class="ut-tags"><li class="ut-tag">PvE</li><li class="ut-tag">PvP</li><li class="ut-tag">Builds d’équipe</li></ul>
+          </div>
+        </div>
+
+        <div class="ds-block">
+          <h3>Cartes</h3>
+          <div class="ds-cards">
+            <a class="ut-card" href="#composants" style="--c: var(--ut-brume)"><span class="ut-label" style="color: var(--ut-brume)">Lien</span><h4 style="font-size: var(--ut-t-xl)">Carte cliquable</h4><p>La lumière suit le pointeur, la bordure prend la couleur du projet, inclinaison ≤ 1,5°.</p></a>
+            <div class="ut-card"><span class="ut-label">Statique</span><h4 style="font-size: var(--ut-t-xl)">Carte d’information</h4><p>Même matière, sans effet de survol : elle ne promet pas d’action.</p></div>
+            <figure class="ut-card" style="margin: 0"><blockquote style="margin: 0; font-family: var(--ut-display); font-size: var(--ut-t-lg); line-height: 1.4">« Citation ou avis de joueur, quand il y en aura de vrais. »</blockquote><figcaption class="ut-help">Encadré de témoignage · à n’utiliser qu’avec un avis réel et sourcé</figcaption></figure>
+          </div>
+        </div>
+
+        <div class="ds-block">
+          <h3>Formulaire (démonstration, n’envoie rien)</h3>
+          <form class="ds-form" id="demo-form" novalidate>
+            <div class="ut-field">
+              <label for="f-nom">Pseudo</label>
+              <input class="ut-input" id="f-nom" name="nom" autocomplete="nickname" placeholder="Ton pseudo en jeu" />
+            </div>
+            <div class="ut-field">
+              <label for="f-mail">Adresse e-mail</label>
+              <input class="ut-input" id="f-mail" name="mail" type="email" autocomplete="email" required aria-describedby="f-mail-aide" placeholder="nom@exemple.fr" />
+              <span class="ut-help" id="f-mail-aide">Pour te répondre, rien d’autre.</span>
+            </div>
+            <div class="ut-field">
+              <label for="f-msg">Message</label>
+              <textarea class="ut-textarea" id="f-msg" name="msg" required minlength="10" aria-describedby="f-msg-aide" placeholder="Un bug, une idée de build, une remarque sur La Brume…"></textarea>
+              <span class="ut-help" id="f-msg-aide">10 caractères au moins.</span>
+            </div>
+            <div class="ut-field">
+              <label for="f-off">Champ désactivé</label>
+              <input class="ut-input" id="f-off" disabled value="Indisponible" />
+            </div>
+            <div class="ds-row"><button class="ut-btn ut-btn--primary" type="submit">Envoyer le message</button></div>
+            <div id="demo-retour" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+
+        <div class="ds-block">
+          <h3>FAQ</h3>
+          <div class="ut-faq">
+            <details open><summary>Question ouverte</summary><div class="ut-faq__a"><p>La croix tourne en ×, sa couleur passe au cyan.</p></div></details>
+            <details><summary>Question fermée</summary><div class="ut-faq__a"><p>Contenu.</p></div></details>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ut-section" id="heros">
+      <div class="ut-wrap">
+        <div class="ut-head">
+          <h2>Trois variantes de hero</h2>
+          <p>A et B sont des pistes ; C est celle de la page d’accueil.</p>
+        </div>
+
+        <div class="ds-frame hv-a">
+          <span class="ut-badge ds-frame__label" style="--c: var(--ut-muted)">A · Sobre</span>
+          <span class="ut-label">Umbratech</span>
+          <h2>Des jeux et des guides, à ouvrir dans le navigateur.</h2>
+          <p>La Brume et Vaelmor, mes jeux indépendants, et les builds Guild Wars 1 et Diablo IV en français.</p>
+          <div class="ut-hero__actions">
+            <a class="ut-btn ut-btn--primary" href="/themist/">Jouer à La Brume</a>
+            <a class="ut-btn ut-btn--secondary" href="/#guides">Voir les builds</a>
+          </div>
+        </div>
+
+        <div class="ds-frame hv-b">
+          <span class="ut-badge ds-frame__label" style="--c: var(--ut-cyan)">B · Futuriste</span>
+          <span class="ut-badge ut-badge--live" style="--c: var(--ut-brume)">En développement · v18.8</span>
+          <h2>Chaque descente change.</h2>
+          <p>La Brume, roguelite d’action dans le navigateur. Ce que tu oublies, la Brume s’en souvient.</p>
+          <div class="ut-hero__actions">
+            <a class="ut-btn ut-btn--primary" href="/themist/">Jouer à La Brume</a>
+            <a class="ut-btn ut-btn--secondary" href="/themist/wiki.html">Lire le wiki</a>
+          </div>
+        </div>
+
+        <div class="ds-frame hv-c">
+          <span class="ut-badge ds-frame__label" style="--c: var(--ut-lantern)">C · Éditorial (retenue)</span>
+          <div class="ut-hero__grid">
+            <div class="ut-hero__copy">
+              <div><span class="ut-badge ut-badge--live" style="--c: var(--ut-brume)">En développement · v18.8</span></div>
+              <div class="ut-hero__title"><span>La</span><span>Brume</span></div>
+              <p class="ut-hero__lead">Un <strong>roguelite d’action</strong> à jouer dans ton navigateur.</p>
+              <p class="ut-hero__motto">Ce que tu oublies, la Brume s’en souvient.</p>
+              <div class="ut-hero__actions"><a class="ut-btn ut-btn--primary" href="/themist/">Jouer à La Brume</a><a class="ut-btn ut-btn--secondary" href="/themist/wiki.html">Lire le wiki</a></div>
+            </div>
+            <div class="ut-scene">
+              <img src="/img/la-brume-tuile.jpg" width="538" height="660" alt="" loading="lazy" decoding="async" />
+              <div class="ut-scene__veil" aria-hidden="true"></div>
+              <div class="ut-scene__glow" aria-hidden="true"></div>
+              <div class="ut-scene__mist" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Bascule de l'accent seul
+    document.getElementById("accent").addEventListener("click", (e) => {
+      const on = document.documentElement.dataset.accent !== "sobre";
+      if (on) document.documentElement.dataset.accent = "sobre"; else delete document.documentElement.dataset.accent;
+      e.currentTarget.setAttribute("aria-pressed", String(on));
+    });
+    // Validation visuelle du formulaire de démonstration
+    const form = document.getElementById("demo-form"), retour = document.getElementById("demo-retour");
+    const aides = { "f-mail": "Pour te répondre, rien d’autre.", "f-msg": "10 caractères au moins." };
+    const erreurs = { "f-mail": "Cette adresse ne semble pas complète : il manque l’arobase ou le domaine.", "f-msg": "Le message est trop court : écris au moins 10 caractères." };
+    const verifier = (champ) => {
+      const f = champ.closest(".ut-field"), ok = champ.checkValidity();
+      f.classList.toggle("is-invalid", !ok);
+      f.classList.toggle("is-valid", ok && champ.value !== "");
+      champ.setAttribute("aria-invalid", String(!ok));
+      const aide = f.querySelector(".ut-help");
+      if (aide && aides[champ.id]) aide.textContent = ok ? aides[champ.id] : erreurs[champ.id];
+      return ok;
+    };
+    form.querySelectorAll("[required]").forEach((c) => c.addEventListener("blur", () => verifier(c)));
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const champs = [...form.querySelectorAll("[required]")];
+      const ok = champs.map(verifier).every(Boolean);
+      retour.innerHTML = ok
+        ? '<div class="ut-alert ut-alert--ok">Message prêt. (Démonstration : rien n’a été envoyé.)</div>'
+        : `<div class="ut-alert ut-alert--error">${champs.filter((c) => !c.checkValidity()).length > 1 ? "Deux champs sont à corriger" : "Un champ est à corriger"} avant l’envoi.</div>`;
+      if (!ok) champs.find((c) => !c.checkValidity()).focus();
+    });
+  </script>
+</body>
+</html>
