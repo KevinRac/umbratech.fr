@@ -65,7 +65,19 @@
   <link rel="preload" href="/assets/fonts/instrument-sans-400.woff" as="font" type="font/woff" crossorigin />
   <link rel="preload" href="/img/la-brume-tuile.jpg" as="image" fetchpriority="high" />
   <link rel="stylesheet" href="/assets/umbra.css" />
-  <script>document.documentElement.classList.add("ut-js");</script>
+  <script>
+    document.documentElement.classList.add("ut-js");
+    /* Ouverture « la lanterne s'allume » : une fois par visite, en haut de page, sans mouvements réduits.
+       Le noir est posé dès le premier rendu ; umbra.js joue l'animation. Filet de sécurité : tout s'affiche après 3 s. */
+    (function () {
+      try {
+        var d = document.documentElement;
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches || location.hash || sessionStorage.getItem("ut-intro")) return;
+        d.classList.add("ut-intro", "ut-intro-on", "ut-cover");
+        setTimeout(function () { d.classList.remove("ut-intro-on", "ut-cover"); }, 3000);
+      } catch (e) {}
+    })();
+  </script>
   <script src="/assets/umbra.js" defer></script>
 </head>
 <body>

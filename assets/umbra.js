@@ -6,6 +6,7 @@
    - [data-count] : compteurs
    - .ut-scene : la lumière se pose sur la source de l'image et suit le pointeur
    - .ut-carousel : carrousel du hero (pause, balayage, mouvements réduits)
+   - html.ut-intro-on : ouverture « la lanterne s'allume », une fois par visite
    - a.ut-card : lumière et inclinaison légère au survol
    - #journal : dernières versions de La Brume, lues dans themist/data/versions.js
    Mouvements réduits : rien ne bouge, tout est affiché. */
@@ -140,10 +141,10 @@
     car.style.setProperty("--dur", dur + "ms");
 
     let i = Math.max(0, slides.findIndex((s) => s.classList.contains("is-active")));
-    let arrete = calme, survol = false, focus = false, cache = document.hidden;
+    let arrete = calme, survol = false, focus = false, cache = document.hidden, intro = doc.classList.contains("ut-intro-on");
     let timer = 0, t0 = 0, reste = dur;
 
-    const enPause = () => arrete || survol || focus || cache;
+    const enPause = () => arrete || survol || focus || cache || intro;
     const lancer = () => { clearTimeout(timer); t0 = performance.now(); timer = setTimeout(() => aller(i + 1), reste); };
     const etat = () => {
       const p = enPause();
@@ -204,6 +205,7 @@
     car.addEventListener("focusin", (e) => { if (e.target.matches(":focus-visible")) { focus = true; etat(); } });
     car.addEventListener("focusout", (e) => { if (!car.contains(e.relatedTarget)) { focus = false; etat(); } });
     document.addEventListener("visibilitychange", () => { cache = document.hidden; etat(); });
+    document.addEventListener("ut:intro-fin", () => { intro = false; reste = dur; etat(); });
 
     /* Balayage horizontal au doigt */
     let x0 = null, y0 = 0;
@@ -219,6 +221,62 @@
 
     etat();
   });
+
+  /* Ouverture « la lanterne s'allume » (posée par le script en tête de index.html).
+     Noir → un point de lumière à la lanterne → le halo grandit et dévoile la page
+     → le titre sort de la brume. ~1,4 s ; un clic, une touche ou la molette la passe. */
+  if (doc.classList.contains("ut-intro-on")) {
+    const scene = document.querySelector(".ut-scene");
+    const img = scene && scene.querySelector("img.is-active");
+    const fin = () => {
+      doc.classList.remove("ut-intro-on", "ut-cover");
+      try { sessionStorage.setItem("ut-intro", "1"); } catch (e) {}
+      document.dispatchEvent(new Event("ut:intro-fin"));
+    };
+    if (!scene || scrollY > 80) fin();
+    else {
+      const voile = document.createElement("div");
+      voile.className = "ut-veil-intro";
+      voile.setAttribute("aria-hidden", "true");
+      voile.append(document.createElement("i"));
+      let raf = 0, fini = false;
+      const terminer = () => {
+        if (fini) return;
+        fini = true;
+        cancelAnimationFrame(raf);
+        fin();
+        voile.classList.add("is-done");
+        setTimeout(() => voile.remove(), 350);
+        ["pointerdown", "keydown", "wheel", "touchstart"].forEach((t) => removeEventListener(t, terminer, true));
+      };
+      const jouer = () => {
+        const r = scene.getBoundingClientRect();
+        const lx = parseFloat(scene.style.getPropertyValue("--lx")) || 34, ly = parseFloat(scene.style.getPropertyValue("--ly")) || 88;
+        const x = r.left + (r.width * lx) / 100, y = r.top + (r.height * ly) / 100;
+        const rmax = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) + 40;
+        voile.style.setProperty("--x", x + "px");
+        voile.style.setProperty("--y", y + "px");
+        document.body.append(voile);
+        doc.classList.remove("ut-cover");
+        ["pointerdown", "keydown", "wheel", "touchstart"].forEach((t) => addEventListener(t, terminer, { capture: true, passive: true }));
+        const t0 = performance.now(), attente = 380, ouverture = 1000;
+        let texte = false;
+        const pas = (t) => {
+          const e = t - t0;
+          if (!texte && e > attente + 120) { texte = true; doc.classList.remove("ut-intro-on"); }
+          if (e > attente + ouverture * 0.45) voile.classList.add("is-fading");
+          const k = Math.min(1, Math.max(0, (e - attente) / ouverture));
+          const ease = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+          voile.style.setProperty("--r", (ease * rmax).toFixed(1) + "px");
+          if (k < 1) raf = requestAnimationFrame(pas); else terminer();
+        };
+        raf = requestAnimationFrame(pas);
+      };
+      /* On attend l'image de la scène (au plus 700 ms) pour que la lumière tombe au bon endroit */
+      const pret = img && img.decode ? Promise.race([img.decode().catch(() => {}), new Promise((ok) => setTimeout(ok, 700))]) : Promise.resolve();
+      pret.then(() => requestAnimationFrame(jouer));
+    }
+  }
 
   /* Cartes : lumière au pointeur et inclinaison très légère (≤ 1,5°) */
   if (pointeurFin) {
