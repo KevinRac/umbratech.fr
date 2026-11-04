@@ -707,6 +707,11 @@ export const worldFoeSchema = z.strictObject({
    * réglé (vaincu, recruté ou perdu), puis disparaît pour de bon.
    */
   named: idSchema.optional(),
+  /**
+   * L'ennemi n'est présent qu'une fois le sort de ce nommé réglé (n°194 : Orvane
+   * n'attend au trône que lorsque Ser Maëlis, qui garde la chaussée, est tombée).
+   */
+  afterNamed: idSchema.optional(),
 });
 
 export const worldEnemiesFileSchema = z.strictObject({

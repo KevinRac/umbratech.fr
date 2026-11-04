@@ -245,6 +245,14 @@ describe('Orvane et Ser Maëlis (n°194, n°195)', () => {
     expect(maelis?.pop).toBe(false);
     expect(data.worldFoes.find((f) => f.named === 'maelis')).toMatchObject({ zone: 'z5', kind: 'sentinelle' });
   });
+
+  it('Orvane n’attend au trône qu’une fois Ser Maëlis tombée (combat obligatoire, n°194)', () => {
+    const orvane = data.worldFoes.find((f) => f.id === 'z5_orvane') as (typeof data.worldFoes)[number];
+    const ctx = makeCtx();
+    expect(foePresent(ctx, orvane)).toBe(false);
+    ctx.progress.named['maelis'] = 'defeated';
+    expect(foePresent(ctx, orvane)).toBe(true);
+  });
 });
 
 describe('scènes écrites (n°203)', () => {

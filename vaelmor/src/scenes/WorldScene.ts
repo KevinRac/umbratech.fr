@@ -577,7 +577,7 @@ export class WorldScene extends Phaser.Scene {
   /* ---------- Villages : PNJ, dialogues, réputation (jalon M2) ---------- */
 
   /**
-   * Outils de debug : `?debug&rep=haut_gue:-70,racines:20&gold=999&flags=boss_brakk`
+   * Outils de debug : `?debug&rep=haut_gue:-70,racines:20&gold=999&flags=boss_brakk&fate=hobb:recruited`
    * règlent réputations, or et drapeaux au lancement d'une partie (une seule fois).
    */
   private applyTownDebug(newGame: boolean): void {
@@ -597,6 +597,11 @@ export class WorldScene extends Phaser.Scene {
     else if (level !== undefined) progress.company = progress.company.map((m) => createMember(this.data_, { ...m, level }));
     if (params.has('gold')) progress.gold = Math.max(0, Math.floor(Number(params.get('gold')) || 0));
     for (const flag of (params.get('flags') ?? '').split(',')) if (flag) addUnique(this.state.openFlags, flag);
+    // `fate=hobb:recruited,gorm:defeated` : sort des nommés dans la partie (saluts de village, postes ; M7).
+    for (const entry of (params.get('fate') ?? '').split(',')) {
+      const [id, status] = entry.split(':');
+      if (id && (status === 'recruited' || status === 'defeated' || status === 'lost') && this.data_.named.some((n) => n.id === id)) progress.named[id] = status;
+    }
   }
 
   /** Cases où un PNJ peut marcher : libres, hors portes et devant-de-porte. */

@@ -692,6 +692,7 @@ function checkWorldFoes(data: GameData, issues: string[]): void {
       const town = foe.town === undefined ? undefined : towns.get(foe.town);
       if (!town || town.reputation === null) issues.push(`${at}.town doit désigner un lieu habité (avec réputation)`);
     } else if (foe.town !== undefined) issues.push(`${at}.town n'a de sens que pour un garde`);
+    if (foe.afterNamed !== undefined && !data.named.some((n) => n.id === foe.afterNamed)) issues.push(`${at}.afterNamed référence un nommé inconnu : « ${foe.afterNamed} »`);
     if (foe.named !== undefined) {
       const named = data.named.find((n) => n.id === foe.named);
       if (!named) issues.push(`${at}.named référence un nommé inconnu : « ${foe.named} »`);

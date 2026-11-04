@@ -338,7 +338,8 @@
       "zone": "z5",
       "at": [14, 101],
       "sprite": "orvane",
-      "encounter": "roi_maree_brise"
+      "encounter": "roi_maree_brise",
+      "afterNamed": "maelis"
     },
     {
       "id": "z5_errant_recif",

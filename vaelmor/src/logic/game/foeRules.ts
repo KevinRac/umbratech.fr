@@ -23,6 +23,8 @@ export function foePresent(ctx: GameCtx, foe: WorldFoeDef): boolean {
   const down = progress.foes[foe.id];
   // Le poste d'un nommé (n°193) n'apparaît que si sa condition d'apparition tient
   // (un Écho de quête attend la fin de sa quête) et disparaît dès que son sort est réglé, où que ce soit.
+  // Un ennemi qui attend qu'un nommé soit tombé (n°194 : Orvane derrière Ser Maëlis).
+  if (foe.afterNamed !== undefined && progress.named[foe.afterNamed] === undefined) return false;
   if (foe.named !== undefined) {
     if (progress.named[foe.named] !== undefined) return false;
     const def = data.named.find((n) => n.id === foe.named);
