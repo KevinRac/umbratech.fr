@@ -8,7 +8,7 @@
  actif:false,
  // Salles qui reçoivent l'arène (Q1 : le boss final seulement). w × h : taille du monde en écrans (1 280 × 720) ; entree : point d'entrée
  // du joueur, en fractions du monde. etats : états d'arène (Q5) : 0 à 2 d'ESSAI (banc-arene A et C comptent sur eux, à leurs places) ; les états
-// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c ; 5 : phase III, action 5d).
+// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c ; 5 : phase III, action 5d ; 6 : phase IV, action 5e).
  // Un état : bornes jouables (fractions des bornes dures), obstacles (piliers, disques), vides (fosses : on n'y marche pas, rien n'y apparaît),
  // sol (calque peint à l'entrée), brume de décor (ne cache jamais un télégraphe ni un signe de bord). fx, fy : fractions des bornes dures ; r en px.
  salles:{
@@ -38,7 +38,11 @@
     // qu'il a bâti reste le terrain) ; sol cendre (le chantier reste le chantier) ; brume de décor plus dense en haut, d'où pendent ses fils.
     // tard : son calque n'est pas peint à l'entrée d'une arène ; le Brumeux le peint une tuile par image pendant la phase II.
     {id:'couture',tard:true,bornes:{fx0:0,fy0:0,fx1:1,fy1:1},sol:'cendre',
-     obstacles:[],vides:[],brume:[{fx:0.5,fy:0.04,r:380,a:0.18}]}]}},
+     obstacles:[],vides:[],brume:[{fx:0.5,fy:0.04,r:380,a:0.18}]},
+    // 6 · phase IV réelle du Brumeux, « L'Emprunt » (fiche 5e, § 5) : les bornes d'une salle ordinaire d'un écran (1 168 × 584, celle de la justice des
+    // armes de la Brume) au centre du monde : la caméra se fixe ; ni obstacle ni fosse (l'abri, c'est ce qui reste de ses constructions) ; sol pierre (on est
+    // ailleurs) ; brume de décor sur les côtés, hors des bornes. tard : peint une tuile par image pendant la phase III.
+    {id:'emprunt',tard:true,bornes:{fx0:0.2614,fy0:0.1907,fx1:0.7386,fy1:0.8093},sol:'pierre',obstacles:[],vides:[],brume:[{fx:0.13,fy:0.5,r:300,a:0.2},{fx:0.87,fy:0.5,r:300,a:0.2}]}]}},
  // Bornes dures dans le monde : à la même distance des bords que l'arène d'un écran (AR : 56, 92, 56, 44).
  mur:{g:56,h:92,d:56,b:44},
  // La caméra (Q3). zone : zone morte (rectangle centré) ; tau : lissage exponentiel (s), jamais de dépassement ; avance : jusqu'à px dans le sens
@@ -69,7 +73,9 @@
  tuiles:{w:640,h:360,max:9},
  // La transformation entre deux états (Q5) : annonce (s, au moins), bascule (bornes à vitesse px/s au plus ; un obstacle attend qu'une créature
  // parte, au plus attenteMax s, puis la pousse), fondu du sol et de la brume (s). Pendant l'annonce et la bascule, le boss ne lance rien.
- transformation:{annonceS:1.2,vitesse:120,attenteMax:1,fonduS:0.6},
+ // parEtat : une vitesse propre à la bascule vers un état (par son id) ; v18.9 : vers la phase IV, les bornes avancent de 640 px de chaque côté (à 120 px/s,
+ // 5,3 s : 240 px/s, 2,7 s). Sans entrée, la vitesse générale.
+ transformation:{annonceS:1.2,vitesse:120,attenteMax:1,fonduS:0.6,parEtat:{emprunt:{vitesse:240}}},
  // Ce que le banc mesure (Q7) : une image de l'arène pleine ne coûte pas plus de rendu ms de plus qu'une salle d'élite au même contenu ;
  // la peinture des tuiles à l'entrée tient en peinture ms.
  budget:{rendu:1.5,peinture:250},

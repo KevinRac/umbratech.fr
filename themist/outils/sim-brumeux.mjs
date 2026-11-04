@@ -39,14 +39,23 @@
 //     composition (10 000 Coutures : assemblages permis sous le budget de la registre III (+2 porteur), base différente, poidsProfil allumé ici
 //     seulement ; souvenirs sans remise, pondérés à la récence ; renforts ; réserve vide) ; plafond (10 000 phases abstraites : cousus vivants,
 //     fils tendus, suspendus) ; fenêtres à nu ; budget ; némésis (la plus forte, une seule) et promotion ; champ cousu ; plancher des chargements ;
-//     branchements de la section v18.8.
+//     branchements de la section v18.8 ;
+// 13. la phase IV, « L'Emprunt » (action 5e, v18.9) : données (gestes, partition.emprunt, bloc emprunt, état d'arène réel en index 6 et tard, bornes
+//     1 168 × 584, états 0 à 5 inchangés, vitesse de bascule propre) ; empruntables sur les 240 talents (ultimes, sous-classes, renforts exclus ;
+//     variantes gardées et ignorées) ; tirage (10 000 boucles à graine : déterminisme, trois sans remise, jamais deux fois de suite la même famille,
+//     fréquences contre les poids, cas de référence ; premier emprunt) ; justice (chaque famille et variante gardée, 10 000 positions dans les bornes de
+//     l'état IV, avec et sans constructions, son corps comme obstacle : sortie atteinte à temps ou étape sautée ; chargements ≥ 0,8 s, ≥ 1,1 s à la
+//     première rencontre ; attaque ≤ 3,6 × 11) ; gestes (Passe, Révérence, Volte : 10 000 positions chacun) ; Dernier Souvenir (plafond sur la phase,
+//     inchangé pour tout autre fort ; défaite) ; constructions (10 000 phases : bornes, connexité, aire ≤ 30 %) ; sauvegarde emp ; branchements v18.9.
 // Contre-épreuves (une erreur introduite exprès doit être attrapée) : seuils inversés, budget dépassé, feinte tirée, sortie sans réflexe,
 // construction qui coupe le passage acceptée, sauvegarde d'essai écrite ; 5b : brèche fermée, damier plein, dalle hors fragment, tiers répété,
 // thème interdit, sauvegarde tab invalide acceptée ; 5c : douve aux quatre passerelles fermées acceptée, Ruée qui traverse une construction, fosse
 // qui arrête un tir, construction posée sur toi, douve à 200 px, cône sans abri sous ses mains, effondrement sans sortie posé, bati invalide accepté,
 // état 3 déplacé ; 5d : quatre fils tendus acceptés, point de montage dans une fosse, troisième cousu vivant en Normal, souvenir cousu deux fois,
 // némésis cousue après un autre, chargement de cousu à 0,5 s accepté, promotion par un coup du Brumeux, cousu invalide accepté, Surjet sans jour,
-// état 4 déplacé.
+// état 4 déplacé ; 5e : un ultime empruntable, la variante etourdit jouée, une étape chargée à 0,6 s, un renfort emprunté, deux fois de suite la même
+// famille, un plafond sur e.maxHp pour le Brumeux, une défaite qui laisse frapper la zone, un état 5 déplacé, emp invalide accepté, une Passe qui traverse
+// une construction.
 //   node themist/outils/sim-brumeux.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -59,7 +68,7 @@ const bloc = (n) => { const m = html.match(new RegExp('/\\*' + n + ':pur\\*/([\\
 const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array };
 vm.createContext(ctx);
 for (const f of ['brumeux', 'arene', 'descente', 'bestiaire', 'versions', 'gardiens']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxPalier,brxPv,brxSeuils,brxPhase,brxLire,brxBudget,brxTirer,brxMesures,brxBoucle,brxPreavis,brxSeg,brxDans,brxSortie,brxPlacer,brxPartition,brxFils,brxCadre,brxToile,brxSortieToile,brxTiers,brxTiersLoin,brxDansRect,brxPlaces,brxDalle,brxDecors,brxTabOk,brxPoidsTab,brxPick,brxTableau,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,BRX_V,brxCoupe,brxBord,brxRuee,brxEquerre,brxTruelle,brxSorteScore,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxDisques,brxEtats,brxTous,BRX_SORTES,BRX_CHUTE,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxVolAiguille,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxActifsCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu,brxAttente,brxCousuOk};', ctx);
+vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxPalier,brxPv,brxSeuils,brxPhase,brxLire,brxBudget,brxTirer,brxMesures,brxBoucle,brxPreavis,brxSeg,brxDans,brxSortie,brxPlacer,brxPartition,brxFils,brxCadre,brxToile,brxSortieToile,brxTiers,brxTiersLoin,brxDansRect,brxPlaces,brxDalle,brxDecors,brxTabOk,brxPoidsTab,brxPick,brxTableau,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,BRX_V,brxCoupe,brxBord,brxRuee,brxEquerre,brxTruelle,brxSorteScore,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxDisques,brxEtats,brxTous,BRX_SORTES,BRX_CHUTE,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxVolAiguille,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxActifsCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu,brxAttente,brxCousuOk,brxRefusEmprunt,brxEmpruntables,brxPoidsEmprunt,brxEmprunts,brxEtapesEmprunt,brxPasse,brxReverence,brxReverenceOk,brxVolte,brxFiltreAire,brxPlafondDs,brxPointChute,brxEmpOk,brxVariantesIV,brxDefaitable};', ctx);
 const F = ctx.F, BD = ctx.window.BRUME_DATA, D = BD.brumeux, DA = BD.arene, DS = BD.descente, BE = BD.bestiaire, VERS = BD.versions, GA = BD.gardiens;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
@@ -193,9 +202,9 @@ ok(F.brxLire(D, Object.assign({}, S0, { prof: { portee: 1 }, ko: { traque: 9 } }
   for (let i = 0; i < 4000; i++) { const t = F.brxTirer(D, lb, 1, 'normal', F.desRng(i + 1e5), { zone: 1, construction: 1 }); if (t.elements[0] === 'rafale') nb++; if (t.elements[0] === 'tir') nt++; }
   ok(nb > nt * 2, `tirages : poids 3 contre 1 : la rafale sort en tête ${nb} fois, le tir ${nt} (≥ 2 fois plus)`);
   // boucle : les mesures libres sont résolues, les fixes gardent leur geste
-  const bo = F.brxBoucle(D, lec, 3, 'normal', F.desRng(3), {}); ok(bo.length === D.partition.essai.length && bo.every(m => m.k === 'fixe' ? !!m.g : Array.isArray(m.elements)), 'tirages : la boucle résout les mesures libres');
-  ok(F.brxMesures(D, 3).every((m, i) => m.k === D.partition.essai[i].k) && F.brxMesures(D, 4).length === D.partition.essai.length && F.brxMesures(D, 1).length === D.partition.ouvrage.mesures.length && F.brxMesures(D, 2).length === D.partition.couture.mesures.length, 'tirages : les phases II et III jouent leur partition (5c, 5d) ; les phases IV et V jouent encore la partition d\'essai (5e, 5f)');
-  ok(F.brxMesures(D, 0).length === D.partition.rappel.mesures.length && F.brxPartition(D, 0).entracteS === 1.4 && F.brxPartition(D, 0).nuS === 0 && F.brxPartition(D, 3).nuS === D.partition.nuS, 'tirages : la phase I joue sa partition (le Rappel : entracte 1,4 s, pas de fenêtre à nu après la boucle)');
+  const bo = F.brxBoucle(D, lec, 4, 'normal', F.desRng(3), {});   // depuis 5e, la phase IV a sa partition : la V joue encore celle d'essai ok(bo.length === D.partition.essai.length && bo.every(m => m.k === 'fixe' ? !!m.g : Array.isArray(m.elements)), 'tirages : la boucle résout les mesures libres');
+  ok(F.brxMesures(D, 4).every((m, i) => m.k === D.partition.essai[i].k) && F.brxMesures(D, 4).length === D.partition.essai.length && F.brxMesures(D, 1).length === D.partition.ouvrage.mesures.length && F.brxMesures(D, 2).length === D.partition.couture.mesures.length && F.brxMesures(D, 3).length === D.partition.emprunt.mesures.length, 'tirages : les phases II à IV jouent leur partition (5c, 5d, 5e) ; la phase V joue encore la partition d\'essai (5f)');
+  ok(F.brxMesures(D, 0).length === D.partition.rappel.mesures.length && F.brxPartition(D, 0).entracteS === 1.4 && F.brxPartition(D, 0).nuS === 0 && F.brxPartition(D, 4).nuS === D.partition.nuS, 'tirages : la phase I joue sa partition (le Rappel : entracte 1,4 s, pas de fenêtre à nu après la boucle)');
   // contre-épreuves : un budget dépassé ou une feinte tirée seraient attrapés par les comptes ci-dessus
   { const t = { elements: ['couloir', 'couloir', 'couloir'] }; let m = 0; for (const id of t.elements) m += D.elements[id].menace; ok(m > F.brxBudget(D, 0, 'normal'), 'contre-épreuve : trois couloirs dépasseraient le budget de la phase I (attrapé par le compte)'); } }
 
@@ -760,7 +769,7 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
   ok(K.cousus.plancherS === DA.preavis.coup, `phase III : plancher des chargements des cousus = préavis de l'arène (${DA.preavis.coup} s)`);
   ok(JSON.stringify(K.recence) === JSON.stringify(GA.attaques[3].souvenirs.recence), 'phase III : souvenirs pondérés à la récence du Glas (1 → 3)');
   ok(K.budget.moins === 2 && K.budget.plancher === 2 && K.attente.acte === 3 && K.attente.salle === BE.assemble.premiereSalle && K.attenteZoneS === 1.5, 'phase III : budget −2 par cousu (plancher 2), attente à l\'acte III salle 3, non-cumul 1,5 s');
-  ok(D.dessin.version === 4, 'phase III : dessin.version 4');
+  ok(D.dessin.version >= 4, 'phase III : dessin.version 4 ou plus');
   ok(BE.assemble.poidsProfil.actif === false, 'phase III : bestiaire.js inchangé (poidsProfil éteint : allumé pour les cousus seulement, par une copie)');
   // ── gestes : 10 000 positions chacun, avec et sans constructions
   const croix = p => [Math.max(R.x0 + 220, Math.min(R.x1 - 220, p[0])), R.y0 + D.dessin.hauteur + D.dessin.suit * Math.max(0, p[1] - R.y0 - D.dessin.hauteur)];
@@ -887,7 +896,7 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
     { const brut = { v: 1, mort: { 3: 'couture' }, cousu: { 3: { corps: 'Brute!', cle: 'x' } } }; ok(brut.cousu[3].corps === 'Brute!' && !F.brxLireSauve(brut, D).cousu[3], 'contre-épreuve : un cousu invalide accepté serait attrapé'); }
     ok(F.brxLire(D, { prof: {}, tue: { 3: 'couture' }, cousu: { 3: C1 } }, 2).cousu.cle === C1.cle && F.brxLire(D, { prof: {}, tue: { 3: 'surjet' }, cousu: { 3: C1 } }, 2).cousu === null && F.brxLire(D, { prof: {}, tue: { 3: 'couture' } }, 2).premier === null, 'sauvegarde : au combat suivant, la lecture rend le cousu qui t\'a tué (rien en premier : il est au socle)'); }
   // ── branchements de la section « v18.8 · Phase III »
-  const B188 = (html.match(/═══ v18\.8 · Phase III[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+  const B188 = (html.match(/═══ v18\.8 · Phase III[\s\S]*?(?=═══ v18\.9 · Phase IV|\/\/ ── essai \(Q17\))/) || [''])[0];
   ok(B188.length > 15000, `branchement (5d) : la section « v18.8 · Phase III » existe (${B188.length} caractères)`);
   ok(!/Math\.random\(\)|setRule\(|murmur\(|toast\(|showBanner\(|showCard\(|offreNemesis/.test(B188), 'branchement (5d) : ni Math.random, ni setRule, ni murmur, ni bulle, ni bandeau, ni carte d\'arrivée, ni offre de reprise dans la section v18.8');
   has(/if\(!R\.cousu18\)\{showCard\(e,false\);sfx\('asm_in'\);\}/, '(5d) Masqué : un cousu n\'a ni carte d\'arrivée ni rire d\'arrivée (inerte pour le Masqué de salle)');
@@ -903,6 +912,199 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
   // le journal v18.8 : ni couture, ni fil, ni Masqué, ni phase
   for (const x of VERS.journal.filter(y => y.h === 'v18.8')) ok(!/cou(d|s)|couture|\bfils?\b|masqué|phase|némésis|aiguille|surjet|\bdé\b|montage/i.test(x.t), `journal v18.8 : ni couture, ni fil, ni Masqué, ni phase, ni geste nommé (secret)`);
   ok(VERS.actuelle !== 'v18.8' || VERS.journal[0].h === 'v18.8', 'journal (5d) : la ligne v18.8 est en tête');
+}
+
+// ── 13. La phase IV, « L'Emprunt » (action 5e, v18.9)
+{ const PE = D.partition.emprunt, E = D.emprunt, EL = D.elements, M = F_mondeFinal(), R = { x0: MUR.g, y0: MUR.h, x1: M.w - MUR.d, y1: M.h - MUR.b }, GR = D.constructions.grille;
+  const PR14 = 14, rnd = mk(5190), fnv = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h.toString(16); };
+  // la logique pure du Masqué et des armes de la Brume (asm, sb), du Dernier Souvenir (ds), comme sim-brume et sim-dernier
+  const AC = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite }; vm.createContext(AC);
+  for (const f of ['bestiaire', 'souvenirs', 'souvenirs-brume', 'talents']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), AC);
+  vm.runInContext(bloc('asm') + bloc('sb') + bloc('ds') + '\nthis.SF={sbEtapes,sbCharge,sbPlacer,sbSortie,sbDans,sbBrut,sbForce,sbPlafond,sbCoup,sbDegats,sbVerrou,sbPortee,asmAtteinte,dsPlafond};', AC);
+  const SF = AC.SF, BD2 = AC.window.BRUME_DATA, A = BD2.bestiaire.assemble, J = BD2.souvenirsBrume, SVF = BD2.souvenirs.familles, TN = BD2.talents.noeuds, DSd = BD2.souvenirs.dernier;
+  const fam = {}; for (const [fid, Fm] of Object.entries(SVF)) for (const id of Fm.t || []) fam[id] = fid;
+  const kind = {}, max = {}; for (const id in TN) { kind[id] = TN[id].k; max[id] = TN[id].max || 1; }
+  const T = { fam, kind, max, J };
+  // ── données
+  const ET = DA.salles.final.etats, E6 = ET[6];
+  ok(D.phases[3].id === 'emprunt' && D.phases[3].arene === 6 && D.phases[3].presence === 'sol' && D.phases[3].faible === 'coeur' && E6 && E6.id === 'emprunt' && E6.tard === true, 'phase IV : état d\'arène réel « emprunt » en index 6, tard ; au sol, point faible au cœur');
+  const B6 = { x0: Math.round(R.x0 + (R.x1 - R.x0) * E6.bornes.fx0), y0: Math.round(R.y0 + (R.y1 - R.y0) * E6.bornes.fy0), x1: Math.round(R.x0 + (R.x1 - R.x0) * E6.bornes.fx1), y1: Math.round(R.y0 + (R.y1 - R.y0) * E6.bornes.fy1) };
+  ok(B6.x1 - B6.x0 === 1168 && B6.y1 - B6.y0 === 584 && Math.abs((B6.x0 + B6.x1) - (R.x0 + R.x1)) < 3 && Math.abs((B6.y0 + B6.y1) - (R.y0 + R.y1)) < 3, `phase IV : bornes de l'état 6 : ${B6.x1 - B6.x0} × ${B6.y1 - B6.y0} au centre des bornes dures (la salle de la justice des armes de la Brume)`);
+  ok(E6.obstacles.length === 0 && E6.vides.length === 0 && E6.sol === 'pierre' && E6.brume.length === 2 && E6.brume.every(b => b.fx < E6.bornes.fx0 || b.fx > E6.bornes.fx1), 'phase IV : ni obstacle ni fosse, sol pierre, brume de décor hors des bornes');
+  const EMP5 = fnv(JSON.stringify(ET.slice(0, 6)));
+  ok(fnv(JSON.stringify(ET.slice(0, 5))) === '2f47b641' && EMP5 === 'b79785c9', `phase IV : les états d'arène 0 à 5 sont inchangés (empreintes 2f47b641, ${EMP5})`);
+  { const E2 = clone(ET.slice(0, 6)); E2[5] = clone(E6); ok(fnv(JSON.stringify(E2)) !== EMP5, 'contre-épreuve : l\'état 5 déplacé (remplacé par celui de la phase IV) serait attrapé'); }
+  ok(DA.transformation.vitesse === 120 && DA.transformation.parEtat && DA.transformation.parEtat.emprunt.vitesse === 240 && (B6.x0 - R.x0) / 240 < 3, `phase IV : bascule vers l'état IV à 240 px/s (${((B6.x0 - R.x0) / 240).toFixed(1)} s pour ${B6.x0 - R.x0} px), la vitesse générale reste 120`);
+  const kinds = PE.mesures.map(m => m.k === 'fixe' ? m.g : m.k);
+  ok(kinds.join(' ') === 'emprunt passe libre emprunt feinte reverence emprunt volte libre', `phase IV : partition (Emprunt · Passe · libre · Emprunt · feinte · Révérence · Emprunt · Volte · libre) : ${kinds.join(' ')}`);
+  const empS = E.priseS + 2.9 + E.nuS, DUR = { emprunt: empS, passe: EL.passe.charge + EL.passe.course, libre: 1.5, feinte: 1.2, reverence: EL.reverence.charge + 0.4, volte: EL.volte.charge + 0.3 };
+  const boucle = kinds.reduce((a, k) => a + DUR[k], 0) + PE.entracteS * kinds.length + PE.nuS;
+  ok(boucle >= 34 && boucle <= 38 && PE.entracteS === 1.2 && PE.nuS === 0 && PE.sauteS === 0.6 && kinds.filter(k => k === 'emprunt').length === 3, `phase IV : une boucle d'environ 36 s (${boucle.toFixed(1)} s), trois emprunts, entracte 1,2 s, pas de fenêtre après la boucle, mesure sautée 0,6 s`);
+  ok(F.brxPartition(D, 3).nuS === 0 && F.brxPartition(D, 3).entracteS === 1.2 && F.brxMesures(D, 3).filter(m => m.k === 'emprunt').length === 3, 'phase IV : brxPartition lit sa partition');
+  for (const [g, w] of [['passe', { forme: 'passe', len: 900, course: 0.45, charge: 1.1, degats: 14, sonneS: 2 }], ['reverence', { forme: 'reverence', ouverture: 150, r0: 0, r1: 190, atteinte: 0.8, attenteS: 2, charge: 0.9, degats: 13 }], ['volte', { forme: 'volte', r0: 70, r1: 380, breche: 120, charge: 1.1, degats: 12 }]])
+    ok(EL[g].fixe === true && EL[g].sorte === 'zone' && Object.entries(w).every(([k, v]) => EL[g][k] === v) && EL[g].charge >= D.preavis.boss, `phase IV : geste ${g} fixe, orange, ses chiffres (${JSON.stringify(w)})`);
+  ok(EL.emprunt.fixe && EL.emprunt.menace === 0 && D.cumul.emprunt === 1, 'phase IV : l\'élément « emprunt » (noté quand sa copie t\'a tué), fixe, cumul 1');
+  ok(JSON.stringify(E.variantes.gardees) === '["double","elargi"]' && JSON.stringify(E.variantes.ignorees) === '["etourdit","repousse","vol","traverse"]' && E.exclus.ultimes && E.exclus.renforts && E.exclus.reliques && E.exclus.genres.join() === 'c', 'phase IV : exclusions (ultimes, sous-classes, renforts, reliques) ; variantes gardées double, élargi ; ignorées étourdit, repousse, vol, perçant');
+  ok(E.poids.base === 0.5 && E.poids.gravure === 5 && E.parBoucle === 3 && E.priseS === 0.6 && E.plancherS === 0.8 && E.plancherS >= D.preavis.boss && E.premiereS === 0.3 && E.degats === 11 && E.nuS === 2 && E.defaitS === 4 && E.marche.vitesse === 120 && E.marche.distance.join() === '180,280', 'phase IV : poids (0,5 + rang / max) × (1 + 5 × g), trois par boucle, prise 0,6 s, plancher 0,8 s (+0,3), dégâts 11, à nu 2 / 4 s, marche 120 px/s à 180–280 px');
+  ok(D.dessin.version === 5 && D.dessin.r.sol === 48, 'phase IV : dessin.version 5, corps au sol r 48');
+  ok(D.budget.base[3] === 6 && Math.abs(F.brxBudget(D, 3, 'difficile') - 7.5) < 1e-9 && F.brxBudget(D, 3, 'extreme') === 9, 'phase IV : budget d\'une mesure libre 6 / 7,5 / 9');
+  // ── empruntables sur les 240 talents
+  { const ids = Object.keys(TN), act = ids.map(id => ({ id, src: 't', rang: 1, g: 0 })), Ls = F.brxEmpruntables(D, act, T), Lid = new Set(Ls.liste.map(x => x.id));
+    const nU = ids.filter(id => /_sk$/.test(id)).length, nC = ids.filter(id => TN[id].k === 'c').length, nR = ids.filter(id => J.talents[id] && J.talents[id].renfort).length, nX = ids.filter(id => /_sk$/.test(id) || TN[id].k === 'c' || (J.talents[id] && J.talents[id].renfort)).length;
+    ok(ids.length === 240 && nU === 12 && nC === 12 && nR === 24 && Ls.liste.length === 240 - nX, `empruntables : sur ${ids.length} talents, ${nU} ultimes, ${nC} sous-classes, ${nR} renforts exclus (${nX} en tout, recoupements comptés une fois) : ${Ls.liste.length} empruntables`);
+    ok(!ids.some(id => Lid.has(id) && (/_sk$/.test(id) || TN[id].k === 'c' || (J.talents[id] && J.talents[id].renfort))), 'empruntables : jamais un ultime, une sous-classe ni un renfort');
+    ok(Ls.liste.every(x => x.fam && J.familles[x.fam] && J.familles[x.fam].etapes.length), 'empruntables : chacun a une famille et son arme de la Brume');
+    const vc = {}; for (const x of Ls.liste) for (const v of x.vars) vc[v] = (vc[v] || 0) + 1; const brut = {}; for (const x of Ls.liste) for (const v of (J.talents[x.id].v || [])) brut[v] = (brut[v] || 0) + 1;
+    ok(vc.double === brut.double && vc.elargi === brut.elargi && !vc.etourdit && !vc.repousse && !vc.vol && !vc.traverse && (brut.etourdit || 0) + (brut.traverse || 0) > 0, `empruntables : variantes gardées ${JSON.stringify(vc)} ; ignorées (données) ${JSON.stringify({ etourdit: brut.etourdit, repousse: brut.repousse, vol: brut.vol, traverse: brut.traverse })}`);
+    ok(F.brxRefusEmprunt(D, { id: 'x', src: 'r' }, T) === 'relique' && F.brxEmpruntables(D, [{ id: ids.find(id => TN[id].k === 'm' && !J.talents[id].renfort), src: 'r' }], T).liste.length === 0, 'empruntables : une relique n\'est jamais empruntée');
+    // aucune étape d'un emprunt ne garde une variante ignorée (étapes comprises), aucune ne charge sous 0,8 s (1,1 à la première rencontre)
+    let bad = 0, bad2 = 0, mn = 9, mn1 = 9, potMax = 0, n = 0;
+    for (const x of Ls.liste) for (const vu of [true, false]) { const R2 = F.brxEtapesEmprunt(D, SF, J, A, x.fam, (J.talents[x.id].v || []), 3, vu); n++;
+      if (R2.etapes.some(e => (e.v || []).some(v => E.variantes.ignorees.includes(v)))) bad++;
+      for (const c of R2.charges) { if (vu) mn = Math.min(mn, c); else mn1 = Math.min(mn1, c); }
+      const k = SF.sbForce(J, R2.etapes, 3, 1 + 0.15 * 4 + 0.15 * 3); let tot = 0; for (const e of R2.etapes) tot += R2.dmg * SF.sbCoup(J, e, 3, k) * (e.f === 'projectile' && e.navette ? 2 : 1); potMax = Math.max(potMax, tot);
+      if (R2.etapes.some(e => Math.abs(R2.dmg * SF.sbDegats(J, e, 3) / e.degats - E.degats) > 1e-9)) bad2++; }
+    ok(bad === 0, `étapes : ${n} armes empruntées, aucune variante ignorée jouée (étourdit, repousse, vol, perçant)`);
+    ok(mn >= E.plancherS - 1e-9 && mn1 >= E.plancherS + E.premiereS - 1e-9, `étapes : chargements ≥ ${E.plancherS} s (au plus court ${mn.toFixed(3)}), ≥ ${E.plancherS + E.premiereS} s à la première rencontre (${mn1.toFixed(3)})`);
+    ok(bad2 === 0, 'étapes : une étape × 1,0 fait 11 (échelle d\'acte comprise)');
+    ok(potMax <= J.justice.degatsMax * E.degats + 1e-6, `étapes : une attaque entière, à la plus haute force (rang et gravures), reste sous le plafond (${potMax.toFixed(1)} ≤ ${(J.justice.degatsMax * E.degats).toFixed(1)})`);
+    // contre-épreuves
+    { const D2 = clone(D); D2.emprunt.exclus.ultimes = false; const u = ids.find(id => /_sk$/.test(id) && TN[id].k !== 'c' && fam[id] && !(J.talents[id] || {}).renfort); ok(u && F.brxEmpruntables(D2, [{ id: u, src: 't' }], T).liste.length === 1 && F.brxEmpruntables(D, [{ id: u, src: 't' }], T).liste.length === 0, 'contre-épreuve : un ultime empruntable serait attrapé'); }
+    { const D2 = clone(D); D2.emprunt.exclus.renforts = false; const r = ids.find(id => J.talents[id] && J.talents[id].renfort && !/_sk$/.test(id) && TN[id].k !== 'c'); ok(F.brxEmpruntables(D2, [{ id: r, src: 't' }], T).liste.length === 1 && F.brxEmpruntables(D, [{ id: r, src: 't' }], T).liste.length === 0, 'contre-épreuve : un renfort emprunté serait attrapé'); }
+    { const D2 = clone(D); D2.emprunt.variantes.ignorees = []; D2.emprunt.variantes.gardees.push('etourdit'); const t = ids.find(id => (J.talents[id].v || []).includes('etourdit') && Lid.has(id)), x = Ls.liste.find(y => y.id === t);
+      const a = F.brxEtapesEmprunt(D2, SF, J, A, x.fam, J.talents[t].v, 3, true), b = F.brxEtapesEmprunt(D, SF, J, A, x.fam, J.talents[t].v, 3, true); ok(a.etapes.some(e => (e.v || []).includes('etourdit')) && !b.etapes.some(e => (e.v || []).includes('etourdit')), 'contre-épreuve : la variante étourdit jouée serait attrapée'); }
+    { const D2 = clone(D); D2.emprunt.plancherS = 0.3; D2.emprunt.premiereS = 0; const x = Ls.liste.find(y => y.fam === 'fureur') || Ls.liste[0], a = F.brxEtapesEmprunt(D2, SF, J, A, x.fam, [], 3, true); ok(Math.min(...a.charges) < 0.8 - 1e-9 && Math.min(...F.brxEtapesEmprunt(D, SF, J, A, x.fam, [], 3, true).charges) >= 0.8 - 1e-9, `contre-épreuve : une étape chargée à ${Math.min(...a.charges).toFixed(2)} s serait attrapée`); }
+    // ── tirage : 10 000 boucles à graine
+    const nomF = Object.keys(J.familles).filter(f => Ls.liste.some(x => x.fam === f));
+    let det = 0, sansRemise = 0, suite = 0, total = 0, prem = 0, premF = 0; const tirer = (L, g, o) => F.brxEmprunts(D, L, F.desRng(g), o);
+    for (let i = 0; i < 10000; i++) { const rg = F.desRng(i + 77e4), k = 2 + Math.floor(rg() * 9), L = []; for (let q = 0; q < k * 3 && L.length < k; q++) { const x = Ls.liste[Math.floor(rg() * Ls.liste.length)]; if (!L.some(y => y.id === x.id)) L.push(Object.assign({}, x, { rang: 1 + Math.floor(rg() * x.max), g: rg() < 0.2 ? 1 + Math.floor(rg() * 2) : 0 })); }
+      const der = rg() < 0.5 ? L[0].fam : null, B1 = tirer(L, i, { dernier: der }), B2 = tirer(L, i, { dernier: der }); total++;
+      if (JSON.stringify(B1) !== JSON.stringify(B2)) det++;
+      if (B1.length !== 3 || (L.length >= 3 && new Set(B1.map(x => x.id)).size !== 3)) sansRemise++;
+      { let prev = der, pris = new Set(); for (const x of B1) { let R = L.filter(y => !pris.has(y.id)); if (!R.length) { pris = new Set(); R = L; } if (prev && x.fam === prev && R.some(y => y.fam !== prev)) suite++; pris.add(x.id); prev = x.fam; } }
+      // premier : le talent, sinon sa famille
+      const cible = L[Math.floor(rg() * L.length)], P1 = tirer(L, i + 1, { premier: { id: cible.id, fam: cible.fam } }); if (P1[0].id === cible.id && P1[0].premier === 'talent') prem++;
+      const P2 = tirer(L.filter(x => x.id !== cible.id), i + 2, { premier: { id: cible.id, fam: cible.fam } }), memes = L.filter(x => x.id !== cible.id && x.fam === cible.fam);
+      if (memes.length ? (P2[0].fam === cible.fam && P2[0].premier === 'famille' && F.brxPoidsEmprunt(D, P2[0]) === Math.max(...memes.map(x => F.brxPoidsEmprunt(D, x)))) : !P2[0].premier) premF++; }
+    ok(det === 0, `tirage : ${total} boucles à graine : même graine, même boucle`);
+    ok(sansRemise === 0, 'tirage : trois emprunts par boucle, sans remise tant qu\'il en reste');
+    ok(suite === 0, 'tirage : jamais deux fois de suite la même famille quand il en reste une autre à prendre (dans la boucle et d\'une boucle à l\'autre)');
+    ok(prem === total && premF === total, `tirage : le premier emprunt rejoue le talent qui t'a tué (${prem}), sinon le plus lourd de sa famille, sinon rien de particulier (${premF})`);
+    ok(F.brxEmprunts(D, [], F.desRng(1)).length === 0 && F.brxEmpruntables(D, ids.filter(id => /_sk$/.test(id)).map(id => ({ id, src: 't' })), T).liste.length === 0, 'tirage : une mémoire sans empruntable (ultimes seuls) : trois emprunts sautés');
+    { const faux = (L, rng) => { const o = []; for (let k = 0; k < 3; k++) o.push(L[Math.floor(rng() * L.length)]); return o; }; let v = 0; const L = Ls.liste.filter(x => x.fam === 'onde').slice(0, 2).concat(Ls.liste.filter(x => x.fam === 'lame').slice(0, 1)); for (let i = 0; i < 200; i++) { const o = faux(L, F.desRng(i)); for (let k = 1; k < 3; k++) if (o[k].fam === o[k - 1].fam) v++; } ok(v > 0, 'contre-épreuve : deux fois de suite la même famille serait attrapée'); }
+    // fréquences : le cas de référence (neuf talents au rang max, de neuf familles ; un gravé une fois, puis deux fois)
+    const ref = []; for (const f of nomF) { const x = Ls.liste.find(y => y.fam === f && y.max >= 1); if (x && ref.length < 9) ref.push(Object.assign({}, x, { rang: x.max, g: 0 })); }
+    for (const g of [1, 2]) { const L = ref.map((x, k) => Object.assign({}, x, { g: k === 4 ? g : 0 })); let n2 = 0; const N = 10000; for (let i = 0; i < N; i++) if (tirer(L, i + 9e5 + g * 1e5, {}).some(x => x.id === L[4].id)) n2++;
+      const att = g === 1 ? 0.82 : 0.93; ok(Math.abs(n2 / N - att) < 0.04, `fréquences : face à neuf talents au rang max, un talent gravé ${g} fois est joué dans ${(n2 / N * 100).toFixed(1)} % des boucles (≈ ${att * 100} %)`); note(`tirage : gravé ${g} fois : ${(n2 / N * 100).toFixed(1)} % des boucles`); }
+    { const L = ref.map(x => Object.assign({}, x)); const cnt = {}; for (let i = 0; i < 30000; i++) for (const x of tirer(L, i + 3e6, {})) cnt[x.id] = (cnt[x.id] || 0) + 1; const v = Object.values(cnt), m = v.reduce((a, b) => a + b, 0) / v.length; ok(v.length === 9 && v.every(c => Math.abs(c - m) < 0.08 * m), `fréquences : à poids égaux, chaque talent sort autant (${Math.min(...v)} à ${Math.max(...v)})`); }
+    // ── justice : chaque famille, chaque variante gardée, 10 000 positions dans les bornes de l'état IV, avec et sans constructions, son corps comme obstacle
+    const ER = D.dessin.r.sol, cons0 = []; { const V = F.brxGeo(D, 'murailles', [(B6.x0 + B6.x1) / 2, B6.y1 - 140], [(B6.x0 + B6.x1) / 2, B6.y0 + 120], B6, F.desRng(3), {}); if (V[0]) cons0.push(V[0]); const C2 = F.brxGeo(D, 'colonnades', [B6.x0 + 300, B6.y0 + 300], [B6.x0 + 600, B6.y0 + 150], B6, F.desRng(4), {}); if (C2[0]) cons0.push(C2[0]); }
+    const pil0 = cons0.flatMap(c => F.brxTous(c));
+    const vfam = {}; for (const x of Ls.liste) { vfam[x.fam] = vfam[x.fam] || new Set(['']); for (const v of x.vars) vfam[x.fam].add(v); }
+    const NJ = process.argv.includes('--vite') ? 1000 : 10000; let jbad = 0, jsaut = 0, jtot = 0, jex = null; const jpar = {};
+    for (const f of Object.keys(vfam)) { const vars = [...vfam[f]], par = jpar[f] = { n: 0, saute: 0 };
+      for (let i = 0; i < NJ; i++) { const vs = vars[i % vars.length] ? [vars[i % vars.length]] : [], avec = i % 2 === 1, pil = avec ? pil0 : [], R2 = F.brxEtapesEmprunt(D, SF, J, A, f, vs, 3, i % 3 === 0);
+        let b, p, ok2 = false; for (let t = 0; t < 30 && !ok2; t++) { b = [B6.x0 + ER + 10 + rnd() * (B6.x1 - B6.x0 - 2 * ER - 20), B6.y0 + ER + 10 + rnd() * (B6.y1 - B6.y0 - 2 * ER - 20)]; const a = rnd() * Math.PI * 2, d = ER + PR14 + 4 + rnd() * 360; p = [b[0] + Math.cos(a) * d, b[1] + Math.sin(a) * d];
+          ok2 = p[0] > B6.x0 + PR14 && p[0] < B6.x1 - PR14 && p[1] > B6.y0 + PR14 && p[1] < B6.y1 - PR14 && !pil.some(q => Math.hypot(q.x - p[0], q.y - p[1]) < q.r + PR14) && !pil.some(q => Math.hypot(q.x - b[0], q.y - b[1]) < q.r + ER); }
+        if (!ok2) continue; const bloque = (x, y) => pil.some(q => Math.hypot(x - q.x, y - q.y) < q.r + PR14), o = { lx: b[0], ly: b[1], er: ER, pr: PR14, pv: 180, arene: B6, bloque };
+        let prec = null, anc = null; for (const et of R2.etapes) { jtot++; par.n++; const c = { lx: b[0], ly: b[1], er: ER, px: p[0], py: p[1], ax: anc ? anc[0] : null, ay: anc ? anc[1] : null, a: Math.atan2(p[1] - b[1], p[0] - b[0]), prec, rnd: F.desRng(i * 7 + jtot) };
+          const pc = SF.sbPlacer(J, A, et, c, o, 3); if (!pc) { jsaut++; par.saute++; continue; }
+          // la sortie rendue : libre (bornes, piliers, son corps, la zone) et atteinte à pied à temps (sbSortie, recherche rejouée)
+          const s2 = SF.sbSortie(J, pc.zs, p, pc.verrou, o); if (!s2.ok || (s2.q && (bloque(s2.q[0], s2.q[1]) || Math.hypot(s2.q[0] - b[0], s2.q[1] - b[1]) < ER + PR14 - 1e-6 || pc.zs.some(z => SF.sbDans(z, s2.q[0], s2.q[1], PR14, ER, 0))))) { jbad++; if (!jex) jex = f + ' ' + et.f; }
+          prec = { ga: pc.ga }; anc = pc.ancre; } } }
+    ok(jbad === 0, `justice : ${jtot} étapes (${Object.keys(vfam).length} familles, variantes gardées, ${NJ} positions chacune, avec et sans constructions, son corps comme obstacle) : chaque étape posée a une sortie libre atteinte à pied à temps${jex ? ' ; ' + jex : ''}`);
+    ok(jsaut <= jtot * 0.1, `justice : ${jsaut} étapes sautées sur ${jtot} (aucune sortie : l'étape saute) ; ${Object.entries(jpar).map(([f, q]) => f + ' ' + q.saute).join(', ')}`);
+    note(`justice : ${jtot} étapes, ${jsaut} sautées ; par famille ${Object.entries(jpar).map(([f, q]) => f + ' ' + (q.saute / q.n * 100).toFixed(1) + ' %').join(', ')}`); }
+  // ── gestes : 10 000 positions chacun (son corps au sol, toi autour), avec et sans constructions, sortie libre atteinte à temps
+  { const ER = D.dessin.r.sol; let bad = 0, ex = null; const n = { passe: [0, 0], reverence: [0, 0, 0], volte: [0, 0] }; let coupe = 0, fosse = 0;
+    for (let i = 0; i < 10000; i++) { const b = [B6.x0 + 90 + rnd() * (B6.x1 - B6.x0 - 180), B6.y0 + 90 + rnd() * (B6.y1 - B6.y0 - 180)], a = rnd() * Math.PI * 2, d = ER + PR14 + 6 + rnd() * 320, p = [Math.max(B6.x0 + 20, Math.min(B6.x1 - 20, b[0] + Math.cos(a) * d)), Math.max(B6.y0 + 20, Math.min(B6.y1 - 20, b[1] + Math.sin(a) * d))];
+      if (Math.hypot(p[0] - b[0], p[1] - b[1]) < ER + PR14 + 2) continue;
+      const pil = []; if (i % 2) { const q = [b[0] + (p[0] - b[0]) * 0.55 + (rnd() - 0.5) * 60, b[1] + (p[1] - b[1]) * 0.55 + (rnd() - 0.5) * 60]; if (Math.hypot(q[0] - p[0], q[1] - p[1]) > 34 + PR14 + 30 && Math.hypot(q[0] - b[0], q[1] - b[1]) > 34 + ER + 10) pil.push({ x: q[0], y: q[1], r: 34, kind: i % 4 === 1 ? 'fosse18' : 'pilier18' }); }
+      const bloque = (x, y) => pil.some(q => Math.hypot(x - q.x, y - q.y) < q.r + PR14) || Math.hypot(x - b[0], y - b[1]) < ER + PR14, o = ch => ({ pr: PR14, v: 180, reflexe: 0.05, charge: ch, arene: B6, bloque });
+      for (const id of ['passe', 'reverence', 'volte']) { const el = D.elements[id];
+        if (id === 'reverence' && !F.brxReverenceOk(el, b, p)) { n.reverence[2]++; continue; }
+        const V = F.brxVariantesIV(D, id, b, p, B6, pil, ER, rnd() * Math.PI * 2), k = F.brxPlacer(D, V.map(v => v.zones), p, o(el.charge));
+        if (k < 0) { n[id][1]++; continue; } n[id][0]++; const s2 = F.brxSortie(D, V[k].zones, p, o(el.charge));
+        if (!s2.ok || V[k].zones.some(z => F.brxDans(z, s2.q[0], s2.q[1], PR14)) || bloque(s2.q[0], s2.q[1]) || s2.d > 180 * (el.charge - 0.05) + 1e-6) { bad++; if (!ex) ex = id; }
+        if (id === 'passe') { const v = V[k]; if (v.coupe >= 0) { coupe++; if (pil[v.coupe].kind === 'fosse18') { bad++; ex = 'passe coupée par une fosse'; } }
+          for (const q of pil) if (q.kind !== 'fosse18' && F.brxSeg(q.x, q.y, v.zones[0].x0, v.zones[0].y0, v.zones[0].x1, v.zones[0].y1) < q.r + ER - 1e-6) { bad++; ex = 'passe qui traverse une construction'; }
+          if (pil.some(q => q.kind === 'fosse18')) fosse++;
+          if (v.zones[0].x1 < B6.x0 + ER - 1e-6 || v.zones[0].x1 > B6.x1 - ER + 1e-6 || v.zones[0].y1 < B6.y0 + ER - 1e-6 || v.zones[0].y1 > B6.y1 - ER + 1e-6) { bad++; ex = 'passe hors des bornes'; } } } }
+    ok(bad === 0, `gestes (5e) : chaque sortie rendue (Passe, Révérence, Volte) est libre, hors des piliers et de son corps, atteinte à pied à temps ; la Passe s'arrête au premier pilier qui arrête un tir, jamais à une fosse, et son corps reste dans les bornes${ex ? ' ; ' + ex : ''}`);
+    ok(n.passe[0] > 9000 && n.reverence[0] > 2500 && n.volte[0] > 8000, `gestes (5e) : avec sortie : Passe ${n.passe[0]} (sautée ${n.passe[1]}), Révérence ${n.reverence[0]} (sautée ${n.reverence[1]}, trop loin ${n.reverence[2]} : il s'approche d'abord), Volte ${n.volte[0]} (sautée ${n.volte[1]})`);
+    ok(coupe > 300 && fosse > 300, `gestes (5e) : ${coupe} Passes coupées par une construction ; ${fosse} passent au-dessus d'une fosse`);
+    note(`gestes (5e) : Passe ${n.passe[0]} / Révérence ${n.reverence[0]} / Volte ${n.volte[0]} avec sortie ; ${coupe} Passes coupées`);
+    // les sorties neuves : derrière lui (Révérence), contre lui et par la brèche (Volte), de côté et derrière une construction (Passe)
+    const b = [1280, 540], p = [1280, 700], PRr = PR14, el = D.elements;
+    const Rv = F.brxReverence(el.reverence, b, p, 0); ok(F.brxDans(Rv[0], p[0], p[1], PRr) && !F.brxDans(Rv[0], b[0], b[1] - ER - PRr - 2, PRr) && !F.brxDans(Rv[0], b[0] + 150, b[1] - 40, PRr) && !F.brxDans(Rv[0], p[0], b[1] + 200, PRr), 'gestes (5e) : la Révérence : derrière lui, sur ses flancs, et au-delà de 190 px, à l\'abri');
+    const Vo = F.brxVolte(el.volte, b, 0); ok(!F.brxDans(Vo[0], b[0] + 30, b[1] + 50, 0) && F.brxDans(Vo[0], b[0], b[1] + 200, PRr) && !F.brxDans(Vo[0], b[0] + 200, b[1], PRr) && !F.brxDans(Vo[0], b[0], b[1] + 400, PRr), 'gestes (5e) : la Volte : contre lui (sous 70 px) et par la brèche, à l\'abri ; dans l\'anneau, non');
+    { const ferme = [{ forme: 'anneau', x: b[0], y: b[1], r0: el.volte.r0, r1: el.volte.r1 }]; ok(F.brxDans(ferme[0], b[0] + 200, b[1], PRr), 'contre-épreuve : une Volte sans brèche serait attrapée'); }
+    const Pa = F.brxPasse(el.passe, b, p, B6, [], ER, 0); ok(F.brxDans(Pa.zones[0], p[0], p[1], PRr) && !F.brxDans(Pa.zones[0], p[0] + 66, p[1], PRr) && Pa.zones[0].w === 2 * ER, 'gestes (5e) : la Passe : couloir de 2 r ; 66 px de côté, à l\'abri');
+    const mur = [{ x: 1280, y: 640, r: 18, kind: 'pilier18' }], Pm = F.brxPasse(el.passe, b, p, B6, mur, ER, 0); ok(Pm.coupe === 0 && !F.brxDans(Pm.zones[0], p[0], p[1], PRr) && Pm.l < 100 - 18, `gestes (5e) : la Passe arrêtée par une construction (son corps s'y brise à ${Pm.l.toFixed(0)} px) ; derrière, à l'abri`);
+    { const faux = { forme: 'couloir', x0: b[0], y0: b[1], x1: b[0], y1: B6.y1 - ER, w: 2 * ER }; ok(F.brxDans(faux, p[0], p[1], PRr) && !F.brxDans(Pm.zones[0], p[0], p[1], PRr), 'contre-épreuve : une Passe qui traverse une construction serait attrapée'); }
+    ok(F.brxPasse(el.passe, b, p, B6, mur.map(q => Object.assign({}, q, { kind: 'fosse18' })), ER, 0).coupe === -1, 'gestes (5e) : une fosse n\'arrête pas la Passe');
+    ok(F.brxReverenceOk(el.reverence, b, [b[0], b[1] + 150]) && !F.brxReverenceOk(el.reverence, b, [b[0], b[1] + 160]), 'gestes (5e) : la Révérence ne part qu\'à 0,8 × 190 = 152 px (sinon il s\'approche, 2 s au plus, puis renonce)'); }
+  // ── Dernier Souvenir : plafond calculé sur la phase pour le Brumeux (crochet pvPlaf18), inchangé pour tout autre fort ; la défaite
+  { const L = DSd.plafonds, pv = F.brxPv(D, 'normal'), tot = pv.reduce((a, b) => a + b, 0); const brx = { maxHp: tot, pvPlaf18: pv[3] }, glas = { maxHp: 3600 }, masque = { maxHp: 900 };
+    const vals = [1, 1.5, 2, 3].map(f => F.brxPlafondDs(L, f, brx)); ok(Math.abs(vals[0] - 96) < 1e-9 && Math.abs(vals[2] - 192) < 1e-9 && Math.abs(vals[3] - 192) < 1e-9, `Dernier Souvenir : contre le Brumeux, le plafond se calcule sur la phase en cours : ${vals.map(v => v.toFixed(0)).join(' / ')} PV (96 à 192 en Normal)`);
+    ok([1, 2, 3].every(f => Math.abs(F.brxPlafondDs(L, f, glas) - SF.dsPlafond(DSd, f, 3600)) < 1e-9 && Math.abs(F.brxPlafondDs(L, f, masque) - SF.dsPlafond(DSd, f, 900)) < 1e-9), 'Dernier Souvenir : tout autre fort (gardien, Masqué) garde le plafond d\'avant (e.maxHp)');
+    ok(SF.dsPlafond(DSd, 2, brx.maxHp) > 4 * F.brxPlafondDs(L, 2, brx), `contre-épreuve : un plafond sur e.maxHp pour le Brumeux (${SF.dsPlafond(DSd, 2, brx.maxHp).toFixed(0)} PV) serait attrapé`);
+    has(/function reste\(rec,e\)\{if\(!fortE\(e\)\)return Infinity;let B=BUD\.get\(rec\);if\(!B\)BUD\.set\(rec,B=new Map\(\)\);if\(!B\.has\(e\)\)B\.set\(e,dsPlafond\(DS,rec\.force,e\.pvPlaf18\|\|e\.maxHp\|\|0\)\);return B\.get\(e\);\}/, '(5e) Dernier Souvenir : reste() lit e.pvPlaf18 (crochet du Brumeux), sinon e.maxHp (inerte pour tout autre fort)');
+    ok((html.match(/pvPlaf18/g) || []).length >= 3 && !/\.pvPlaf18=/.test(html.replace(/═══ v18\.9 · Phase IV[\s\S]*?\/\/ ── essai \(Q17\)/, '')), '(5e) e.pvPlaf18 n\'est posé que dans la section v18.9 (sur le Brumeux seulement)');
+    // la défaite : de la prise au coup de la dernière étape
+    const st = (i, ph, n, L2) => ({ i, ph, n, etapes: new Array(L2).fill({}) });
+    ok(F.brxDefaitable(null, true) && F.brxDefaitable(st(0, 'charge', 0, 2), false) && F.brxDefaitable(st(1, 'charge', 0, 2), false) && F.brxDefaitable(st(1, 'attente', 0, 2), false) && !F.brxDefaitable(st(1, 'effet', 0, 2), false) && !F.brxDefaitable(st(1, 'repos', 1, 2), false), 'défaite : de la prise jusqu\'au coup de la dernière étape (après : trop tard)');
+    ok(E.defaitS === 4 && E.defaitS > E.nuS && E.dissousS <= 0.3, 'défaite : à nu 4,0 s au lieu de 2,0 ; la zone se dissout en 0,3 s');
+    { const zone = { frappe: true }; const defaire = (z, ok2) => { if (ok2) z.frappe = false; return z; }; ok(defaire(Object.assign({}, zone), true).frappe === false && defaire(Object.assign({}, zone), false).frappe === true, 'contre-épreuve : une défaite qui laisse frapper la zone serait attrapée (la zone défaite ne frappe plus)'); }
+    { const ids = Object.keys(TN).filter(id => fam[id] && !/_sk$/.test(id) && TN[id].k !== 'c' && !(J.talents[id] || {}).renfort).slice(0, 4), act = ids.map(id => ({ id, src: 't', rang: 1 })), apres = act.filter(a => a.id !== ids[0]), L2 = F.brxEmpruntables(D, apres, T).liste;
+      let v = 0; for (let i = 0; i < 2000; i++) if (F.brxEmprunts(D, L2, F.desRng(i), { premier: { id: ids[0], fam: fam[ids[0]] } }).some(x => x.id === ids[0])) v++; ok(v === 0, 'défaite : un talent brûlé n\'est plus porté : il n\'est plus jamais emprunté (même rejoué en premier)'); } }
+  // ── constructions qui restent : 10 000 phases abstraites (bornes, connexité ≥ 85 %, aire ≤ 30 % de l'aire libre de l'état IV, plus éloignées d'abord)
+  { const C = D.constructions; let bad = 0, garde = 0, retire = 0, parAire = 0, ex = null; const mains = p => [Math.max(R.x0 + 220, Math.min(R.x1 - 220, p[0])), R.y0 + 200];
+    const lec0 = F.brxLire(D, { prof: {} }, 1);
+    const NC = process.argv.includes('--vite') ? 1000 : 10000;
+    for (let i = 0; i < NC; i++) { const cons = []; for (let k = 0; k < 7; k++) { const p = [B6.x0 - 200 + rnd() * (B6.x1 - B6.x0 + 400), B6.y0 - 60 + rnd() * (B6.y1 - B6.y0 + 120)], j = { x: p[0], y: p[1], r: PR14 };
+        if (cons.some(c => F.brxTous(c).some(d => Math.hypot(d.x - j.x, d.y - j.y) < d.r + j.r))) continue; const lec = Object.assign({}, lec0, { prof: { portee: rnd(), esquive: rnd(), soin: rnd(), rythme: rnd() } });
+        const r = F.brxBatir(D, M, R, [], cons, lec, j, mains(p), 'extreme', F.desRng(i * 13 + k), {}); if (r.sorte) cons.push(r.c); }
+      const j = { x: (B6.x0 + B6.x1) / 2, y: B6.y1 - 100, r: PR14 }, Fb = F.brxFiltreBornes(D, M, B6, [], cons, j), Fa = F.brxFiltreAire(D, M, B6, [], Fb.garde);
+      garde += Fa.garde.length; retire += Fb.retire.length + Fa.retire.length; parAire += Fa.retire.length;
+      for (const c of Fa.garde) if (!F.brxTous(c).every(d => d.x - d.r >= B6.x0 && d.x + d.r <= B6.x1 && d.y - d.r >= B6.y0 && d.y + d.r <= B6.y1)) { bad++; ex = 'hors des bornes IV'; }
+      let combos = [[]]; for (const k of Fa.garde) { const q = []; for (const cb of combos) for (const e of F.brxEtats(k)) q.push(cb.concat(e)); combos = q.slice(0, 8); }
+      const G0 = F.brxGrille(M, B6, [], GR); let part = 1, aire = 0; for (const cb of combos) { const G1 = F.brxGrille(M, B6, cb, GR); part = Math.min(part, F.brxConnexe(G1, j.x, j.y)); aire = Math.max(aire, 1 - G1.libres / G0.libres); }
+      if (Fa.garde.length && (part < C.connexite - 1e-9 || aire > C.aire + 1e-9)) { bad++; if (!ex) ex = `connexité ${part.toFixed(2)} aire ${aire.toFixed(2)}`; }
+      if (Fa.retire.length) { const cx = (B6.x0 + B6.x1) / 2, cy = (B6.y0 + B6.y1) / 2, cen = k => { const ds = F.brxDisques(k); let x = 0, y = 0; for (const d of ds) { x += d.x; y += d.y; } return Math.hypot(x / ds.length - cx, y / ds.length - cy); };
+        const mx = Math.max(...Fa.garde.map(cen), -1); if (Fa.retire.some(k => cen(k) < mx - 1e-9)) { bad++; if (!ex) ex = 'une plus proche retirée avant une plus éloignée'; } } }
+    ok(bad === 0, `constructions (5e) : ${NC} phases : en IV, ${garde} gardées, ${retire} effacées (dont ${parAire} par l'aire) : toutes dans les bornes, connexité ≥ 85 %, aire ≤ 30 % de l'aire libre de l'état IV, les plus éloignées du centre retirées d'abord${ex ? ' ; ' + ex : ''}`);
+    note(`constructions (5e) : ${garde} gardées sur ${NC} phases (${(garde / NC).toFixed(2)} par phase), ${parAire} retirées par l'aire`);
+    // le point de chute (III → IV) : dans les bornes, à 200 px de toi au moins, hors des constructions
+    let cb = 0; for (let i = 0; i < 2000; i++) { const p = [B6.x0 + 30 + rnd() * (B6.x1 - B6.x0 - 60), B6.y0 + 30 + rnd() * (B6.y1 - B6.y0 - 60)], q = F.brxPointChute(D, B6, p, [], [], null, 48);
+      if (q[0] < B6.x0 + 48 || q[0] > B6.x1 - 48 || q[1] < B6.y0 + 48 || q[1] > B6.y1 - 48 || Math.hypot(q[0] - p[0], q[1] - p[1]) < D.emprunt.chute.minD - 1e-6) cb++; }
+    ok(cb === 0, 'transition (5e) : 2 000 chutes III → IV : dans les bornes de l\'état IV, à 200 px de toi au moins'); }
+  // ── la sauvegarde : champ emp (toujours v:1)
+  { const N = F.brxNeuf(), C1 = { id: 'ray_n1', fam: 'lumiere' };
+    const S1 = F.brxNoter(N, { essai: false, phase: 4, par: 'emprunt', emp: C1, win: false, vus: ['emprunt', 'emprunt:lumiere', 'passe'] }, D, J);
+    ok(S1.mort[4] === 'emprunt' && S1.emp[4].id === 'ray_n1' && F.brxEcrireSauve(S1).v === 1 && F.brxLireSauve(F.brxEcrireSauve(S1), D, J).emp[4].fam === 'lumiere', 'sauvegarde : le talent dont la copie t\'a tué est écrit et relu (v:1)');
+    ok(S1.vus.includes('emprunt:lumiere') && F.brxLireSauve(F.brxEcrireSauve(S1), D, J).vus.includes('emprunt:lumiere') && !F.brxLireSauve({ v: 1, vus: ['emprunt:Lumière!', 'rien'] }, D).vus.length, 'sauvegarde : la première rencontre d\'une famille empruntée (emprunt:<famille>) est gardée dans vus ; un élément inconnu non');
+    const S2 = F.brxNoter(S1, { essai: false, phase: 4, par: 'volte', win: false }, D, J); ok(S2.mort[4] === 'volte' && !S2.emp[4] && !('emp' in F.brxEcrireSauve(S2)), 'sauvegarde : une autre mort l\'efface (et un emp vide n\'est pas écrit)');
+    ok(F.brxNoter(S1, { essai: true, phase: 4, par: 'emprunt', emp: C1 }, D, J) === S1, 'sauvegarde : une descente d\'essai n\'écrit rien');
+    const inval = [{ mort: { 4: 'emprunt' }, emp: { 4: { id: 'Ray N1', fam: 'lumiere' } } }, { mort: { 4: 'emprunt' }, emp: { 4: { id: 'ray_n1', fam: 'licorne' } } }, { mort: { 4: 'volte' }, emp: { 4: C1 } }, { mort: { 4: 'emprunt' }, emp: { 9: C1 } }, { mort: { 4: 'emprunt' }, emp: { 4: { id: 5, fam: 'lumiere' } } }, { mort: { 4: 'emprunt' }, emp: 'x' }];
+    ok(inval.every(x => JSON.stringify(F.brxLireSauve(Object.assign({ v: 1 }, x), D, J).emp) === '{}'), 'sauvegarde : un emp invalide (id abîmé, famille inconnue, mort qui n\'est pas un emprunt, phase hors bornes) est ignoré');
+    { const brut = { v: 1, mort: { 4: 'emprunt' }, emp: { 4: { id: 'ray_n1', fam: 'licorne' } } }; ok(F.brxEmpOk(brut.emp[4], null) && !F.brxLireSauve(brut, D, J).emp[4], 'contre-épreuve : un emp invalide accepté (famille inconnue, sans relire souvenirs-brume) serait attrapé'); }
+    ok(F.brxLireSauve({ v: 1, tentatives: 1, mort: { 3: 'couture' }, cousu: { 3: { corps: 'brute', cle: 'brute:a', id: null } } }, D).emp && JSON.stringify(F.brxLireSauve({ v: 1, mort: {} }, D).emp) === '{}', 'sauvegarde : une sauvegarde d\'avant (sans emp) se relit, emp vide'); }
+  // ── branchements de la section « v18.9 · Phase IV »
+  const B189 = (html.match(/═══ v18\.9 · Phase IV[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+  ok(B189.length > 15000, `branchement (5e) : la section « v18.9 · Phase IV » existe (${B189.length} caractères)`);
+  ok(!/Math\.random\(\)|setRule\(|murmur\(|showCard\(|toast\(|showBanner\(/.test(B189), 'branchement (5e) : ni Math.random, ni setRule, ni murmur, ni showCard, ni bulle, ni bandeau dans la section v18.9');
+  ok(!/\.asm=/.test(B189.replace(/porteur\.asm|p\.asm/g, '')) && !/X\.e\.asm|e\.asm=/.test(B189), 'branchement (5e) : le Brumeux ne reçoit jamais e.asm (son porteur est un fantôme hors d\'enemies)');
+  ok(/brxEmprunts\(DB,/.test(B189) && /brxEtapesEmprunt\(DB,/.test(B189) && /brxVariantesIV\(DB,/.test(B189) && /brxFiltreAire\(DB,/.test(B189) && /brxPointChute\(DB,/.test(B189) && /XA\.coup\(/.test(B189) && /\.maj\(/.test(B189), '(5e) la section v18.9 passe par la logique pure (emprunts, étapes, gestes, aire, chute), mène le porteur par sbMaj et juge ses coups (XA.coup)');
+  has(/const E18=window\.__emp18\?window\.__emp18\(\):null/, '(5e) HUD : la tuile du talent emprunté (crochet __emp18, nul hors de son combat)');
+  has(/\$\{o\.emp\?' emp18':''\}/, '(5e) HUD : classe .emp18 sur la tuile (sans texte)');
+  has(/,R=A\.ie!=null&&S0&&S0\.etats\[A\.ie\]&&DA\.transformation\.parEtat&&DA\.transformation\.parEtat\[S0\.etats\[A\.ie\]\.id\]/, '(5e) arène : une vitesse de bascule propre à l\'état d\'arrivée (parEtat), sinon la générale');
+  has(/function drawZone\(c,z,k,fl,col\)\{/, '(5e) Masqué : drawZone accepte une couleur (inerte sans elle)');
+  has(/XA\.peindreTard\(DB\.phases\[3\]\.arene,1\)/, '(5e) le Brumeux peint le calque de la phase IV une tuile par image pendant la phase III');
+  has(/emp:!win&&X\.tue==='emprunt'\?X\.tueEmp:null/, '(5e) la sauvegarde garde le talent dont la copie t\'a tué');
+  // le journal v18.9 : ni emprunt, ni copie, ni phase, ni masque
+  for (const x of VERS.journal.filter(y => y.h === 'v18.9')) ok(!/empru|copi|phase|masqu|talent|souvenir|passe\b|volte|révérence/i.test(x.t), `journal v18.9 : ni emprunt, ni copie, ni phase, ni masque (secret)`);
+  ok(VERS.actuelle === 'v18.9' && VERS.journal[0].h === 'v18.9', 'journal (5e) : la ligne v18.9 est en tête, version actuelle');
 }
 
 function F_mondeFinal() { const S = DA.salles.final; return { w: Math.round(S.w * W), h: Math.round(S.h * H) }; }

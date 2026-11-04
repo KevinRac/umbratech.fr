@@ -9317,7 +9317,7 @@ function demoBoot(cls){
  window.__asm.dbg=()=>({P,RUN,room,enemies,state,rings,kill:killEnemy,entrer:t=>{trans=null;fade=0;doEnter(t);},lancer:()=>{chosenCls=CLS[SAVE.cls]?SAVE.cls:'lum';startRun();}});
 
  // ── Zones : géométrie figée au début du chargement (sauf le suivi de la charge, de la lame et de la salve)
- const CO=A.couleurs||{},FO=CO.zone||'255,58,52',EDGE=CO.bord||'255,96,84';   // v17.15 : couleurs dans bestiaire.js (assemble.couleurs), partagées avec les armes de la Brume
+ const CO=A.couleurs||{},FO=CO.zone||'255,58,52',EDGE=CO.bord||'255,96,84',FO0=FO,EDGE0=EDGE;   // v17.15 : couleurs dans bestiaire.js (assemble.couleurs), partagées avec les armes de la Brume
  function zoneDe(e,k){const S=A.signatures[k],X=S||A.capacites[k],a=Math.atan2(P.y-e.y,P.x-e.x),z={k,forme:X.forme,x:e.x,y:e.y,a,X,sig:!!S};
   if(X.forme==='disque')z.r=X.rayon;
   else if(X.forme==='anneau'){z.max=X.rayonMax;z.ga=e.asm.rnd()*TAU;z.gw=X.breche*Math.PI/180;}
@@ -9599,7 +9599,7 @@ function demoBoot(cls){
   else if(!fige&&!rooted&&(sst.ph==='repos'||sst.ph==='attente'||sst.ph==='entracte'||(sst.ph==='charge'&&et&&et.sur!=='lui')||(sst.ph==='effet'&&!B.dash)))move(e,dt,sp,tg,dP,sst.ph==='attente'&&sst.att>0);
   if(!B.dash&&!P.dead&&!S.sansContact&&dP<e.r+P.r-2)contact(e,e.dmg*A.stats.contact);}
  // dessin : la zone qui charge (k : avancement), les éclats des zones qui ont frappé ; projectiles : leur trajet en pointillé et l'orbe au liseré qui grossit
- function sbDessinProj(c,z,k,e){c.save();c.lineCap='round';
+ function sbDessinProj(c,z,k,e,col){const FO=col?col.fo:FO0,EDGE=col?col.edge:EDGE0;c.save();c.lineCap='round';
   for(let i=0;i<z.n;i++){const aa=z.a+(i-(z.n-1)/2)*z.ec,cs=Math.cos(aa),sn=Math.sin(aa),x0=z.x+cs*e.r,y0=z.y+sn*e.r,x1=z.x+cs*z.len,y1=z.y+sn*z.len;
    c.strokeStyle=`rgba(${FO},0.12)`;c.lineWidth=z.pr*2;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();
    c.strokeStyle=`rgba(${EDGE},${RM?0.75:0.5+0.25*Math.sin(T*24)})`;c.lineWidth=1.6;strokeDash(c);c.beginPath();c.moveTo(x0,y0);c.lineTo(x0+(x1-x0)*k,y0+(y1-y0)*k);c.stroke();c.setLineDash([]);
@@ -9626,7 +9626,9 @@ function demoBoot(cls){
   for(const k of L){const X=SBJ.renforts[k];if(X.pv){e.maxHp*=1+X.pv;e.hp=e.maxHp;}if(X.degats)e.dmg*=1+X.degats;if(X.vitesse)e.spd*=1+X.vitesse;red+=X.reduit||0;}
   if(red>0)e.asm.sbReduit=Math.min(0.3,red);}
  const _hetB=hitEnemy;hitEnemy=function(e,dmg,o){if(e&&e.asm&&e.asm.sbReduit&&typeof dmg==='number')dmg*=1-e.asm.sbReduit;return _hetB.call(this,e,dmg,o);};
- window.__asm.sb={J:SBJ,SB,joueur:()=>P,temps:()=>RUN&&RUN.time,sbEtourdit,sbForce,sbRenfort,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbPotentiel,sbIncompatibles,sbNouveau,sbPas};
+ window.__asm.zr=()=>ZR;   // v18.9 : les ondes en cours (le Brumeux retire celles de son porteur, et celles des Masqués décousus : decoudre, 5d, le cherchait déjà)
+ window.__asm.sb={maj:(e,dt,rooted,fige)=>sbMaj(e,dt,rooted,fige),zone:(c,z,k,fl,col)=>drawZone(c,z,k,fl,col),proj:(c,z,k,e,col)=>sbDessinProj(c,z,k,e,col),sbDans,sbVerrou,   // v18.9 : le porteur fantôme du Brumeux (phase IV)
+  J:SBJ,SB,joueur:()=>P,temps:()=>RUN&&RUN.time,sbEtourdit,sbForce,sbRenfort,sbVerifier,sbEtapes,sbPieces,sbSortie,sbPlacer,sbCharge,sbPlancher,sbPotentiel,sbIncompatibles,sbNouveau,sbPas};
  // ── v17.15 · Mode d'essai des armes de la Brume (développement seulement : aucune touche, aucun accès en jeu normal)
  // index.html?brume=<famille>|tout [&classe=lum|gou|her|tis] [&acte=1|2|3] [&variante=double,vol…] [&renfort=pv,…] [&dieu=0]
  // Ouvre une salle vide avec un Masqué d'essai qui ne fait que l'attaque de cette famille, en boucle (sans trait passif, sans éveil ni rage).
@@ -9688,9 +9690,10 @@ function demoBoot(cls){
 
  // ── Rendu : zones (rouges), onde à brèche, masque, icônes, barre de chargement, brisure
  function strokeDash(c){c.setLineDash([8,6]);c.lineDashOffset=RM?0:-T*30;}
- function drawZone(c,z,k,fl){const a0=fl?0.45*fl:0.12,a1=fl?0:0.26;c.save();
+ // v18.9 · col (facultatif) : {fo, edge, w} : les zones d'un emprunt du Brumeux (orange TELE.zone au liseré lavande plein de w px) ; sans col, l'ancien dessin au bit près
+ function drawZone(c,z,k,fl,col){const a0=fl?0.45*fl:0.12,a1=fl?0:0.26,FO=col?col.fo:FO0,EDGE=col?col.edge:EDGE0;c.save();
   const fill=(al,path)=>{c.fillStyle=`rgba(${FO},${al})`;path();c.fill();};
-  const edge=path=>{if(fl)return;c.strokeStyle=`rgba(${EDGE},${RM?0.8:0.6+0.3*Math.sin(T*24)})`;c.lineWidth=z.sig?2.4:1.8;strokeDash(c);path();c.stroke();c.setLineDash([]);};
+  const edge=path=>{if(fl)return;if(col){c.strokeStyle=`rgba(${FO},0.85)`;c.lineWidth=col.w+3;path();c.stroke();c.strokeStyle=`rgba(${EDGE},0.95)`;c.lineWidth=col.w;path();c.stroke();return;}c.strokeStyle=`rgba(${EDGE},${RM?0.8:0.6+0.3*Math.sin(T*24)})`;c.lineWidth=z.sig?2.4:1.8;strokeDash(c);path();c.stroke();c.setLineDash([]);};
   switch(z.forme){
   case 'disque':{const P_=r=>()=>{c.beginPath();c.arc(z.x,z.y,r,0,TAU);};fill(a0,P_(z.r));fill(a1,P_(z.r*k));edge(P_(z.r));break;}
   case 'cone':{const P_=r=>()=>{c.beginPath();c.moveTo(z.x,z.y);c.arc(z.x,z.y,r,z.a-z.arc/2,z.a+z.arc/2);c.closePath();};fill(a0,P_(z.r));fill(a1,P_(z.r*k));edge(P_(z.r));break;}
@@ -9700,7 +9703,8 @@ function demoBoot(cls){
     c.strokeStyle=`rgba(${EDGE},0.85)`;c.lineWidth=2.5;c.beginPath();c.moveTo(z.x,z.y);c.lineTo(z.x+Math.cos(aa)*z.len*k,z.y+Math.sin(aa)*z.len*k);c.stroke();}break;}
   case 'anneau':{const g0=z.ga+z.gw/2,g1=z.ga-z.gw/2+TAU,rr=60+60*k;
     c.fillStyle=`rgba(${FO},${0.06+0.12*k})`;c.beginPath();c.moveTo(z.x,z.y);c.arc(z.x,z.y,rr,g0,g1);c.closePath();c.fill();
-    c.strokeStyle=`rgba(${FO},${0.3+0.45*k})`;c.lineWidth=2.4;c.setLineDash([4,10]);c.lineDashOffset=RM?0:-T*40;c.beginPath();c.arc(z.x,z.y,z.max,g0,g1);c.stroke();c.setLineDash([]);break;}
+    c.strokeStyle=`rgba(${FO},${0.3+0.45*k})`;c.lineWidth=2.4;c.setLineDash([4,10]);c.lineDashOffset=RM?0:-T*40;c.beginPath();c.arc(z.x,z.y,z.max,g0,g1);c.stroke();c.setLineDash([]);
+    if(col&&!fl){c.strokeStyle=`rgba(${EDGE},0.95)`;c.lineWidth=col.w;c.beginPath();c.arc(z.x,z.y,z.max+4,g0,g1);c.stroke();}break;}
   case 'croix':{c.translate(z.x,z.y);c.rotate(z.a);const arm=l=>()=>{c.beginPath();for(let i=0;i<4;i++){c.save();c.rotate(i*Math.PI/2);c.rect(z.w/2,-z.w/2,l-z.w/2,z.w);c.restore();}c.rect(-z.w/2,-z.w/2,z.w,z.w);};
     fill(a0,arm(z.len));fill(a1,arm(z.w/2+(z.len-z.w/2)*k));edge(()=>{c.beginPath();const w=z.w/2,L=z.len;c.moveTo(w,-w);c.lineTo(L,-w);c.lineTo(L,w);c.lineTo(w,w);c.lineTo(w,L);c.lineTo(-w,L);c.lineTo(-w,w);c.lineTo(-L,w);c.lineTo(-L,-w);c.lineTo(-w,-w);c.lineTo(-w,-L);c.lineTo(w,-L);c.closePath();});break;}
   case 'losanges':{const D=(h)=>()=>{c.beginPath();for(const [x,y] of z.pts){c.moveTo(x,y-h);c.lineTo(x+h,y);c.lineTo(x,y+h);c.lineTo(x-h,y);c.closePath();}};fill(a0,D(z.h));fill(a1,D(z.h*k));edge(D(z.h));break;}
@@ -9713,7 +9717,7 @@ function demoBoot(cls){
    if(S.flash)drawZone(c,S.flash.z,1,S.flash.t/S.flash.max);}}catch(err){console.error(err);}};
  const _drg=drawRings;
  drawRings=function(){_drg();if(!ZR.length)return;const c=ctx;c.save();c.globalCompositeOperation='lighter';
-  for(const g of ZR){const k=1-g.r/g.max,g0=g.ga+g.gw/2,g1=g.ga-g.gw/2+TAU;c.strokeStyle=`rgba(${FO},${0.3*k+0.15})`;c.lineWidth=16;c.beginPath();c.arc(g.x,g.y,g.r,g0,g1);c.stroke();c.strokeStyle=`rgba(255,226,216,${0.7*k+0.2})`;c.lineWidth=3;c.beginPath();c.arc(g.x,g.y,g.r,g0,g1);c.stroke();}
+  for(const g of ZR){const k=1-g.r/g.max,g0=g.ga+g.gw/2,g1=g.ga-g.gw/2+TAU;c.strokeStyle=`rgba(${g.fo18||FO},${0.3*k+0.15})`;c.lineWidth=16;c.beginPath();c.arc(g.x,g.y,g.r,g0,g1);c.stroke();c.strokeStyle=`rgba(${g.ed18||'255,226,216'},${0.7*k+0.2})`;c.lineWidth=3;c.beginPath();c.arc(g.x,g.y,g.r,g0,g1);c.stroke();}
   c.restore();};
  // position de la tête : la Brute (vue de dessus) a la tête devant elle, dans le sens où elle regarde ; Spectre et Voilé l'ont en haut
  function facePos(e){const r=e.r;if(e.type==='spectre')return[e.x,e.y-r*0.55+Math.sin(e.wob*1.5)*3-4];if(e.type==='voile')return[e.x,e.y-r*1.25+Math.sin(e.wob*1.2)*2-6];
@@ -10815,7 +10819,7 @@ function demoBoot(cls){
  const fortE=e=>!!e&&(e.type==='boss'||!!e.asm);
  const dsCibles=()=>enemies.filter(e=>!e.dead&&!(e.puppet>0)&&!e.fixed);
  const VE=(rec,e)=>fortE(e)?rec.vf:rec.v;
- function reste(rec,e){if(!fortE(e))return Infinity;let B=BUD.get(rec);if(!B)BUD.set(rec,B=new Map());if(!B.has(e))B.set(e,dsPlafond(DS,rec.force,e.maxHp||0));return B.get(e);}
+ function reste(rec,e){if(!fortE(e))return Infinity;let B=BUD.get(rec);if(!B)BUD.set(rec,B=new Map());if(!B.has(e))B.set(e,dsPlafond(DS,rec.force,e.pvPlaf18||e.maxHp||0));return B.get(e);}   // v18.9 : e.pvPlaf18, les PV de la phase en cours du Brumeux (lui seul l'a)
  function charge(rec,e,x){if(!fortE(e)||!(x>0))return;const r=reste(rec,e);BUD.get(rec).set(e,Math.max(0,r-x));if(r-x<=1e-6)rec.plafonne=1;}
  // un coup de la brûlure : jamais de critique ; contre un fort, ni recul ni étourdi, et sous son plafond
  function dsHit(rec,e,base,o){if(!e||e.dead||e.puppet>0||!(base>0))return 0;const fort=fortE(e);if(fort&&reste(rec,e)<1)return 0;
@@ -11166,7 +11170,7 @@ function demoBoot(cls){
  function pips(a,rk){const mx=maxOf(a);if(mx<=1)return '';let h='<i class="pp">';for(let i=1;i<=mx;i++)h+=`<b${i<=rk?' class="on"':''}></b>`;return h+'</i>';}
  function tile(a,o){o=o||{};const g=genre(a),rk=o.rang!=null?o.rang:a.rang,off=o.off!=null?o.off:isOff(a);
   const gv=o.g!=null?o.g:(a.g||0);
-  return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}${gv?' gr':''}${a.trophee||o.tr?' tr':''}${o.ds?' ds':''}${o.bru?' bru':''}${o.fel?' fel':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${gv?`<i class="gv">${'<b></b>'.repeat(gv)}</i>`:''}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}${o.ds||o.bru?`<i class="dsb">${icon('u_braise')}</i>`:''}${o.ds?`<i class="dsh">${icon('u_hourglass')}</i>`:''}</span>`;}
+  return `<span class="mt k-${g}${off?' off':''}${o.big?' big':''}${gv?' gr':''}${a.trophee||o.tr?' tr':''}${o.ds?' ds':''}${o.bru?' bru':''}${o.fel?' fel':''}${o.emp?' emp18':''}" style="--c:${colOf(a)}"><span class="mt-in">${icon(icOf(a))}</span>${pips(a,rk)}${gv?`<i class="gv">${'<b></b>'.repeat(gv)}</i>`:''}${off?`<i class="mt-x">${icon('u_off')}</i>`:''}${o.ds||o.bru?`<i class="dsb">${icon('u_braise')}</i>`:''}${o.ds?`<i class="dsh">${icon('u_hourglass')}</i>`:''}</span>`;}
  const ROMG=['','I','II','III','IV'];
  function tipOf(a){const rk=a.rang,mx=maxOf(a);return `${nameOf(a)} · ${kindOf(a)}${branchOf(a)?' · '+branchOf(a):''}${mx>1?` · rang ${rk}/${mx}`:''}${a.g?' · gravure '+ROMG[a.g]:''}${isOff(a)?' · éteint : '+offWhy(a):''}${a.trophee?' · trophée : hors mémoire, figé':''} — ${descOf(a,rk)}`;}
 
@@ -11177,9 +11181,10 @@ function demoBoot(cls){
   if(!on()){row.hidden=true;return;}row.hidden=false;
   const M=MEM(),cells=[],L=portes();
   const D=dsActif()?designe():null,F=D?consequences(D,null).map(x=>x.id):[];   // v17.23 : la tuile désignée et ce qui s'éteindrait avec elle
-  for(let i=0;i<CAP();i++){const a=L[i];cells.push(a?`<span class="mcell" title="${esc(tipOf(a))}">${tile(a,{ds:a===D,fel:F.includes(a.id)})}</span>`:`<span class="mcell"><span class="mt empty"></span></span>`);}
+  const E18=window.__emp18?window.__emp18():null;   // v18.9 : la tuile du talent que le Brumeux emprunte (liseré lavande, sans texte ; nul hors de son combat)
+  for(let i=0;i<CAP();i++){const a=L[i];cells.push(a?`<span class="mcell" title="${esc(tipOf(a))}">${tile(a,{ds:a===D,fel:F.includes(a.id),emp:!!E18&&a.src==='t'&&a.id===E18})}</span>`:`<span class="mcell"><span class="mt empty"></span></span>`);}
   const TL=trophees();   // v17.10 · les trophées : dernière ligne du cadre, sous les dix
-  row.innerHTML=cells.join('')+(TL.length?`<div id="hTro" aria-label="Trophées">${TL.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a)}</span>`).join('')}</div>`:'');
+  row.innerHTML=cells.join('')+(TL.length?`<div id="hTro" aria-label="Trophées">${TL.map(a=>`<span class="mcell" title="${esc(tipOf(a))}">${tile(a,{emp:!!E18&&a.id===E18})}</span>`).join('')}</div>`:'');
   row.classList.toggle('full',full());
   row.querySelectorAll('.mcell').forEach(c=>c.addEventListener('click',()=>{if(state==='play'&&overlayEl.hidden)openPause();}));
  }
@@ -11586,6 +11591,7 @@ function demoBoot(cls){
 .mt .dsb .ic{width:12px;height:12px}.mt.big .dsb{width:20px;height:20px}.mt.big .dsb .ic{width:16px;height:16px}
 .mt.k-x .dsb{transform:rotate(-45deg)}
 .mt.bru .mt-in{filter:grayscale(.75) brightness(.75)}.mt.bru{border-style:dashed;opacity:.85}
+.mt.emp18{outline:2px solid rgba(180,160,255,.95);outline-offset:1px}
 .mt.fel{filter:saturate(.5)}
 .mt.fel::after{content:'';position:absolute;inset:2px;border-radius:inherit;pointer-events:none;background:linear-gradient(118deg,transparent 45%,rgba(255,150,90,.9) 46.5%,rgba(255,150,90,.9) 49%,transparent 50.5%)}
 .pzmem .mcell.dsok{cursor:pointer}.pzmem .mcell.dsno{cursor:not-allowed}.pzmem .mcell.dsok:hover .mt{transform:translateY(-1px)}
@@ -11627,7 +11633,8 @@ function demoBoot(cls){
   noeud:id=>NODES[id]?{id,kind:NODES[id].kind,max:NODES[id].max,reqS:NODES[id].reqS||'',br:NODES[id].br}:null,dispo:id=>nodeAvailable(id),offres:()=>rollOffers([]),gravables:()=>gravables().map(a=>a.id),
   arbre:id=>treeState(id,[]),legende:()=>treeBlock([]).includes('Brûlé'),
   // action 3 : ce qui dure encore, la cadence d'attaque du moment, le plafond d'une brûlure sur un ennemi
-  effets:()=>DSX.map(x=>x.f),cadence:()=>atkCooldown(),plafondDe:(e,force)=>e?dsPlafond(DS,force,e.maxHp):null,fort:e=>fortE(e)};
+  effets:()=>DSX.map(x=>x.f),cadence:()=>atkCooldown(),plafondDe:(e,force)=>e?dsPlafond(DS,force,e.pvPlaf18||e.maxHp):null,fort:e=>fortE(e)};
+ window.__memRender=()=>{try{renderMem();}catch(err){console.error(err);}};   // v18.9 : le Brumeux redessine la Mémoire quand il prend ou rend un talent
  // ── v17.23 (action 5) · Mode d'essai : index.html?dernier=<id de talent>[&acte=1|2|3][&gardien=1][&masque=1][&classe=lum|gou|her|tis]
  //    [&rang=n][&grave=n][&dieu=0] (développement seulement, barre de développement, aucune touche en plus de X)
  //    Ouvre une salle d'essai à l'acte demandé (une vague ; gardien=1 : la salle du gardien ; masque=1 : un Masqué), te donne le talent
@@ -12544,7 +12551,7 @@ const G27=(function(){
   const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],v=med(L.vide);return{avant:+(med(L.avant)-v).toFixed(3),apres:+(med(L.apres)-v).toFixed(3),vide:+v.toFixed(3)};}
  // aperçu (banc) : le corps puis les lueurs sur un canevas donné, origine au centre de touche
  function apercu(o,e,part){const keep=ctx;try{ctx=o;if(part!=='lueurs'){o.save();corps(o,e);o.restore();}if(part!=='corps'){o.save();o.globalCompositeOperation='lighter';o.translate(-e.x,-e.y);lueurs(e);o.restore();}}finally{ctx=keep;}}
- window.__gardiens=Object.assign(window.__gardiens||{},{mere:{etat,rig,corps,lueurs,imgRobe,imgBuste,imgTete,imgEnfant,EYP,mesure,apercu}});
+ window.__gardiens=Object.assign(window.__gardiens||{},{mere:{etat,rig,corps,lueurs,imgRobe,imgBuste,imgTete,imgEnfant,EYP,mesure,apercu,embleme}});
 })();
 
 // ═════════════════════════ v17.27 · action 6 · Entrées (G9) et morts (G10) des gardiens, mouvements réduits (G14)
@@ -13115,7 +13122,8 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  // ── la transformation entre deux états
  function vers(n){if(!A.on||!A.etats[n]||A.trans)return false;peindreTard(n,1e9);A.trans=arTransNouveau(A.etat,A.etats[n]);A.ie=n;return true;}   // A.ie0 : le calque en place jusqu'à la fin du fondu
  function transPas(dt){const T0=A.trans;if(!T0)return;const cre=[{x:P.x,y:P.y,r:P.r},...enemies.filter(e=>!e.dead).map(e=>({x:e.x,y:e.y,r:e.r}))];
-  const T=A.trans=arTransPas(T0,dt,cre,DA.transformation);Object.assign(AR,T.bornes);
+  const S0=DA.salles[A.cle],R=A.ie!=null&&S0&&S0.etats[A.ie]&&DA.transformation.parEtat&&DA.transformation.parEtat[S0.etats[A.ie].id]?Object.assign({},DA.transformation,DA.transformation.parEtat[S0.etats[A.ie].id]):DA.transformation;   // v18.9 : vers la phase IV, 240 px/s
+  const T=A.trans=arTransPas(T0,dt,cre,R);Object.assign(AR,T.bornes);
   if(T.ph!=='annonce'&&(T0.ph==='annonce'||T.poses.length!==T0.poses.length))room.pillars=piliers(arTransObstacles(T)).concat(room.pillars.filter(p=>p.brx18));   // v18.7 : les constructions du Brumeux (brx18) traversent la transformation
   if(T.ff)CAM.ff=1;if(T.ph==='fini'){A.etat=T.vers;A.ie0=A.ie;A.trans=null;Object.assign(AR,A.etat.bornes);}}
  // ── le boss d'essai : un fantôme (hors de enemies : rien ne le vise, on ne le frappe pas) qui charge des télégraphes de la grammaire
@@ -13632,13 +13640,89 @@ function brxPlancherCharge(D,t,tot){const F=D.couture.cousus.plancherS;if(!(tot>
 // gestes, ni en descente d'essai ; une némésis promue au fond attend à couture.attente (acte du registre, salle)
 function brxPromu(o){return!!(o&&!o.essai&&o.source==='cousu'&&o.depuis>=0&&o.depuis<1.5);}
 function brxAttente(D){return Object.assign({},D.couture.attente);}
+// ── Phase IV, « L'Emprunt » (fiche 5e). Ce qu'il peut emprunter : un talent porté (src 't'), sauf les ultimes (*_sk), les sous-classes (genre c),
+// les talents classés renfort, et ce qui n'a pas d'arme de la Brume. T = {fam:{id → famille}, kind:{id → genre}, max:{id → rang max}, J (souvenirs-brume.js)}.
+// Rend le code du refus ('' : empruntable).
+function brxRefusEmprunt(D,a,T){const X=D.emprunt.exclus;if(!a||a.src!=='t')return 'relique';if(X.ultimes&&/_sk$/.test(a.id))return 'ultime';
+ if((X.genres||[]).includes(T.kind&&T.kind[a.id]))return 'genre';const E=((T.J&&T.J.talents)||{})[a.id]||{};if(X.renforts&&E.renfort)return 'renfort';
+ const f=T.fam&&T.fam[a.id];if(!f||!T.J||!T.J.familles[f])return 'arme';return '';}
+// la liste des empruntables (dans l'ordre de ta mémoire) : {id, fam, rang, max, g, vars (variantes gardées seulement)} ; refus comptés
+function brxEmpruntables(D,actifs,T){const out=[],refus={},G=D.emprunt.variantes.gardees;
+ for(const a of actifs||[]){const r=brxRefusEmprunt(D,a,T);if(r){refus[r]=(refus[r]||0)+1;continue;}const E=((T.J&&T.J.talents)||{})[a.id]||{};
+  out.push({id:a.id,fam:T.fam[a.id],rang:Math.max(1,a.rang||1),max:Math.max(1,(T.max&&T.max[a.id])||1),g:Math.max(0,a.g||0),vars:(E.v||[]).filter(v=>G.includes(v))});}
+ return{liste:out,refus};}
+// poids d'un empruntable : (base + rang / rang max) × (1 + gravure × gravures) (« un talent gravé est presque sûr d'être joué », Q6)
+function brxPoidsEmprunt(D,x){const W=D.emprunt.poids;return(W.base+Math.min(1,x.rang/Math.max(1,x.max)))*(1+W.gravure*(x.g||0));}
+// les emprunts d'une boucle (tirage à graine) : n sans remise tant qu'il en reste (puis à nouveau tout le pool), jamais deux fois de suite la même famille
+// s'il en reste une autre (o.dernier : la famille du dernier emprunt joué) ; o.premier = {id, fam} (ce qui t'a tué, champ emp) : le premier emprunt rejoue
+// ce talent s'il est empruntable, sinon le plus lourd de sa famille, sinon rien de particulier. Aucun empruntable : [] (chaque emprunt saute).
+function brxEmprunts(D,L,rng,o){o=o||{};const n=o.n!=null?o.n:D.emprunt.parBoucle,out=[];if(!L||!L.length)return out;let pris=new Set(),der=o.dernier||null;const w=x=>brxPoidsEmprunt(D,x);
+ for(let k=0;k<n;k++){let C=L.filter(x=>!pris.has(x.id));if(!C.length){pris=new Set();C=L.slice();}
+  if(k===0&&o.premier){let p=C.find(x=>x.id===o.premier.id)||null,via='talent';
+   if(!p){const F=C.filter(x=>x.fam===o.premier.fam);if(F.length){p=F.reduce((a,b)=>w(b)>w(a)?b:a);via='famille';}}
+   if(p){out.push(Object.assign({},p,{premier:via}));pris.add(p.id);der=p.fam;continue;}}
+  // jamais deux fois de suite la même famille s'il en reste une autre parmi ce qui n'a pas encore été pris dans la boucle (sans remise d'abord)
+  if(der&&C.some(x=>x.fam!==der))C=C.filter(x=>x.fam!==der);
+  let tot=0;for(const x of C)tot+=w(x);let r=rng()*tot,ch=C[C.length-1];for(const x of C){r-=w(x);if(r<=0){ch=x;break;}}
+  out.push(Object.assign({},ch));pris.add(ch.id);der=ch.fam;}
+ return out;}
+// les étapes d'un emprunt : l'arme de la famille (SF : fonctions pures des armes de la Brume, sbEtapes et sbCharge ; J : souvenirs-brume.js ; A : assemble),
+// variantes gardées seulement (les ignorées retirées aussi des étapes), aucune étape ne charge sous plancherS (+premiereS à la première rencontre de la
+// famille : vu faux) ; dmg : les dégâts du porteur pour qu'une étape × 1,0 fasse degats à cet acte (échelle d'acte comprise).
+function brxEtapesEmprunt(D,SF,J,A,fid,vars,act,vu){const E=D.emprunt,F=J.familles[fid];if(!F)return null;const vs=(vars||[]).filter(v=>E.variantes.gardees.includes(v));
+ const f=Math.pow(A.accelerationActe,Math.max(0,(act||1)-A.desActe)),pl=E.plancherS+(vu?0:E.premiereS),k=Math.max(1,Math.min(3,act||1))-1;
+ const etapes=SF.sbEtapes(J,fid,vs).map(e=>Object.assign({},e,{v:(e.v||[]).filter(x=>!E.variantes.ignorees.includes(x)),chargeS:Math.max(e.chargeS,(pl+1e-6)/f)}));
+ return{etapes,vars:vs,plancher:pl,dmg:E.degats/F.acte[k],charges:etapes.map(e=>SF.sbCharge(J,A,e,act))};}
+// La Passe : un couloir de 2 r (son diamètre) de son corps b vers toi et au-delà, jusqu'au bord (len au plus), coupé au premier pilier qui arrête un tir ;
+// son corps le parcourt jusqu'à l (où il touche le pilier, s'il y en a un), jamais à moins de r des bornes
+function brxPasse(el,b,p,R,piliers,r,rot){const a=Math.atan2(p[1]-b[1],p[0]-b[0])+(rot||0),ux=Math.cos(a),uy=Math.sin(a),Rr={x0:R.x0+r,y0:R.y0+r,x1:R.x1-r,y1:R.y1-r},l0=Math.max(0,Math.min(el.len,brxBord(Rr,b[0],b[1],ux,uy))),w=2*r,c=brxCoupe(b[0],b[1],b[0]+ux*l0,b[1]+uy*l0,w,piliers||[]),l=c?c.l:l0;
+ return{zones:[{forme:'couloir',x0:b[0],y0:b[1],x1:b[0]+ux*l,y1:b[1]+uy*l,w}],coupe:c?c.i:-1,l,fin:[b[0]+ux*l,b[1]+uy*l]};}
+// La Révérence : un cône de son centre vers toi ; elle ne part que si tu es à atteinte × r1 (brxReverenceOk)
+function brxReverence(el,b,p,rot){return[{forme:'cone',x:b[0],y:b[1],a:Math.atan2(p[1]-b[1],p[0]-b[0])+(rot||0),ouv:el.ouverture*Math.PI/180,r0:el.r0,r1:el.r1}];}
+function brxReverenceOk(el,b,p){return Math.hypot(p[0]-b[0],p[1]-b[1])<=el.atteinte*el.r1+1e-9;}
+// La Volte : un anneau à brèche fixe autour de lui, brèche orientée a
+function brxVolte(el,b,a){return[{forme:'anneau',x:b[0],y:b[1],r0:el.r0,r1:el.r1,breche:{a,l:el.breche}}];}
+// Les constructions qui restent en IV : en plus du filtre des bornes (brxFiltreBornes), elles ne couvrent pas plus de constructions.aire de l'aire libre de
+// l'état IV (bornes B, obstacles base ; la pire combinaison d'états d'une douve) ; au-delà, les plus éloignées du centre sont retirées d'abord
+function brxFiltreAire(D,M,B,base,cons){const C=D.constructions,G0=brxGrille(M,B,base,C.grille),cx=(B.x0+B.x1)/2,cy=(B.y0+B.y1)/2,garde=cons.slice(),retire=[];
+ const cen=k=>{const ds=brxDisques(k);let x=0,y=0;for(const d of ds){x+=d.x;y+=d.y;}return Math.hypot(x/ds.length-cx,y/ds.length-cy);};
+ const aire=()=>{let combos=[[]];for(const k of garde){const E=brxEtats(k),q=[];for(const cb of combos)for(const e of E)q.push(cb.concat(e));combos=q.slice(0,8);}
+  let a=0;for(const cb of combos){const G1=brxGrille(M,B,base.concat(cb),C.grille);a=Math.max(a,G0.libres?1-G1.libres/G0.libres:1);}return a;};
+ let a=aire();while(garde.length&&a>C.aire+1e-9){garde.sort((x,y)=>cen(y)-cen(x));retire.push(garde.shift());a=aire();}
+ return{garde,retire,aire:a};}
+// Le plafond du Dernier Souvenir sur un fort (comme dsPlafond) : contre le Brumeux, calculé sur les PV de la phase en cours (e.pvPlaf18), sinon sur e.maxHp
+function brxPlafondDs(L,force,e){return Math.min((L.gardienPv||0)*force,L.gardienPvMax||0)*((e&&e.pvPlaf18)||(e&&e.maxHp)||0);}
+// La chute de la transition III → IV : au centre des bornes B si possible, à chute.minD px de toi au moins, sur un point relié à toi (grille G, G.relie),
+// hors des piliers et des constructions (r : son rayon), jamais sur l'île d'une douve. Rend [x, y] (le plus loin trouvé si aucun ne tient).
+function brxPointChute(D,B,p,piliers,cons,G,r){const K=D.emprunt.chute,cx=(B.x0+B.x1)/2,cy=(B.y0+B.y1)/2,m=r+20;let best=null,bd=-1;
+ const A=D.constructions.sortes.douves.anneau;
+ const ok=(x,y)=>{if(x<B.x0+m||x>B.x1-m||y<B.y0+m||y>B.y1-m)return false;if(piliers.some(q=>Math.hypot(x-q.x,y-q.y)<q.r+r+10))return false;
+  for(const c of cons||[]){if(brxTous(c).some(d=>Math.hypot(x-d.x,y-d.y)<d.r+r+10))return false;if(c.ile&&Math.hypot(x-c.ile[0],y-c.ile[1])<A.r+A.fosse+r)return false;}
+  if(G&&G.relie){const ci=Math.floor(x/G.cs),ri=Math.floor(y/G.cs);if(ci<0||ri<0||ci>=G.cols||ri>=G.rows||!G.relie[ri*G.cols+ci])return false;}return true;};
+ for(let rr=0;rr<=900;rr+=20){const n=rr?Math.max(12,Math.round(rr/12)):1;for(let k=0;k<n;k++){const a=k/n*BRX_TAU,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;if(!ok(x,y))continue;const d=Math.hypot(x-p[0],y-p[1]);
+   if(d>=K.minD)return[x,y];if(d>bd){bd=d;best=[x,y];}}}
+ return best||[cx,cy];}
+// les variantes d'un geste de la phase IV (b : son corps, p : toi, r : son rayon, a0 : l'angle de la brèche de la Volte, tiré à graine) : la Passe et la
+// Révérence tournées (0, ±0,15 / ±0,2, puis 0,3 / 0,4 rad) ; la Volte : la brèche à graine, puis tournée vers toi, puis à ±0,6 rad de toi. brxPlacer garde la
+// première qui laisse une sortie (sinon le geste saute). Rend [{zones, coupe?, l?, fin?}].
+function brxVariantesIV(D,id,b,p,R,piliers,r,a0){const el=D.elements[id],n=D.sortie.essais;
+ if(id==='passe')return[0,0.15,-0.15,0.3].slice(0,n).map(k=>brxPasse(el,b,p,R,piliers,r,k));
+ if(id==='reverence')return[0,0.2,-0.2,0.4].slice(0,n).map(k=>({zones:brxReverence(el,b,p,k)}));
+ if(id==='volte'){const t=Math.atan2(p[1]-b[1],p[0]-b[0]);return[a0,t,t+0.6,t-0.6].slice(0,n).map(a=>({zones:brxVolte(el,b,a)}));}
+ return[];}
+// le lien au Dernier Souvenir : de la prise jusqu'au coup de sa dernière étape, brûler le talent emprunté défait la copie (st : la file de l'arme, sbPas ;
+// prise : la prise est en cours) ; une fois la dernière étape lâchée, il est trop tard
+function brxDefaitable(st,prise){if(prise)return true;if(!st||st.n>0)return false;const L=st.etapes.length;return!(st.i>=L-1&&(st.ph==='effet'||st.ph==='repos'));}
+// le talent dont la copie t'a tué (champ emp) : id court, famille connue (de J.familles si J est donné)
+function brxEmpOk(c,J){return!!(c&&typeof c==='object'&&typeof c.id==='string'&&/^[a-z0-9_]{1,40}$/.test(c.id)&&typeof c.fam==='string'&&/^[a-z]{2,16}$/.test(c.fam)&&(!J||!!(J.familles&&J.familles[c.fam])));}
+const brxVu=(id,D)=>typeof id==='string'&&(!D||!!D.elements[id]||/^emprunt:[a-z]{2,16}$/.test(id));   // v18.9 : « emprunt:<famille> » (première rencontre d'une famille empruntée)
 // ── Sauvegarde (Q13) : SAVE.brumeux versionnée. Absente ou abîmée : état neuf ; version future : null (on n'y touche pas).
-function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[],tab:{},bati:{},cousu:{}};}
-function brxLireSauve(S,D){if(!S||typeof S!=='object')return brxNeuf();if(typeof S.v==='number'&&S.v>BRX_V)return null;if(S.v!==BRX_V)return brxNeuf();
+function brxNeuf(){return{v:BRX_V,tentatives:0,victoires:0,phaseMax:0,mort:{},vus:[],tab:{},bati:{},cousu:{},emp:{}};}
+function brxLireSauve(S,D,J){if(!S||typeof S!=='object')return brxNeuf();if(typeof S.v==='number'&&S.v>BRX_V)return null;if(S.v!==BRX_V)return brxNeuf();
  const N=brxNeuf(),ent=(x,a,b)=>Number.isInteger(x)&&x>=a&&x<=b,n=D?D.phases.length:5;
  N.tentatives=ent(S.tentatives,0,1e6)?S.tentatives:0;N.victoires=ent(S.victoires,0,1e6)?S.victoires:0;N.phaseMax=ent(S.phaseMax,0,n)?S.phaseMax:0;
  if(S.mort&&typeof S.mort==='object')for(const k in S.mort){const ph=+k,id=S.mort[k];if(ent(ph,1,n)&&typeof id==='string'&&(!D||D.elements[id]))N.mort[ph]=id;}
- if(Array.isArray(S.vus))N.vus=S.vus.filter(id=>typeof id==='string'&&(!D||D.elements[id])).slice(0,64);
+ if(Array.isArray(S.vus))N.vus=S.vus.filter(id=>brxVu(id,D)).slice(0,64);
  // tab (5b, facultatif) : le tableau qui t'a tué, par phase, seulement là où l'élément mortel est « tableau » ; un champ invalide est ignoré
  if(S.tab&&typeof S.tab==='object')for(const k in S.tab){const ph=+k,t=S.tab[k];if(!ent(ph,1,n)||N.mort[ph]!=='tableau'||!t||typeof t!=='object')continue;
   if(D?brxTabOk(D,t,null):(typeof t.decor==='string'&&typeof t.theme==='string'))N.tab[ph]={decor:t.decor,theme:t.theme,regle:t.regle==null?null:t.regle};}
@@ -13648,19 +13732,22 @@ function brxLireSauve(S,D){if(!S||typeof S!=='object')return brxNeuf();if(typeof
  // cousu (5d, facultatif) : le Masqué cousu qui t'a tué, par phase, seulement là où l'élément mortel est « couture » ; corps et clé en chaînes courtes,
  // id d'un talent ou null (le jeu revérifie que l'assemblage tient encore avant de le recoudre) ; un champ invalide est ignoré
  if(S.cousu&&typeof S.cousu==='object')for(const k in S.cousu){const ph=+k,c=S.cousu[k];if(!ent(ph,1,n)||N.mort[ph]!=='couture'||!brxCousuOk(c))continue;N.cousu[ph]={corps:c.corps,cle:c.cle,id:c.id==null?null:c.id};}
+ // emp (5e, facultatif) : le talent dont la copie t'a tué, par phase, seulement là où l'élément mortel est « emprunt » ; un champ invalide est ignoré
+ if(S.emp&&typeof S.emp==='object')for(const k in S.emp){const ph=+k,c=S.emp[k];if(!ent(ph,1,n)||N.mort[ph]!=='emprunt'||!brxEmpOk(c,J))continue;N.emp[ph]={id:c.id,fam:c.fam};}
  return N;}
 function brxCousuOk(c){return!!(c&&typeof c==='object'&&typeof c.corps==='string'&&/^[a-z]{2,16}$/.test(c.corps)&&typeof c.cle==='string'&&c.cle.length>0&&c.cle.length<=80&&c.cle.startsWith(c.corps+':')&&(c.id==null||(typeof c.id==='string'&&c.id.length>0&&c.id.length<=40)));}
-function brxEcrireSauve(S){const o={v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]};if(S.tab&&Object.keys(S.tab).length)o.tab=S.tab;if(S.bati&&Object.keys(S.bati).length)o.bati=S.bati;if(S.cousu&&Object.keys(S.cousu).length)o.cousu=S.cousu;return JSON.parse(JSON.stringify(o));}
+function brxEcrireSauve(S){const o={v:BRX_V,tentatives:S.tentatives|0,victoires:S.victoires|0,phaseMax:S.phaseMax|0,mort:S.mort||{},vus:S.vus||[]};if(S.tab&&Object.keys(S.tab).length)o.tab=S.tab;if(S.bati&&Object.keys(S.bati).length)o.bati=S.bati;if(S.cousu&&Object.keys(S.cousu).length)o.cousu=S.cousu;if(S.emp&&Object.keys(S.emp).length)o.emp=S.emp;return JSON.parse(JSON.stringify(o));}
 // Noter un combat : o = {essai, phase (1..n, la plus haute atteinte), par (l'élément qui t'a tué, ou null), tab (si par vaut « tableau » : le
 // tableau, {decor, theme, regle}), bati (si par vaut « effondrement » : la sorte tombée sur toi), cousu (5d, si par vaut « couture » : le Masqué cousu
-// qui t'a tué, {corps, cle, id}), win, vus (éléments rencontrés)}.
+// qui t'a tué, {corps, cle, id}), emp (5e, si par vaut « emprunt » : le talent dont la copie t'a tué, {id, fam}), win, vus (éléments rencontrés)}.
 // Une descente d'essai n'écrit rien (l'état rendu est le même objet).
-function brxNoter(S,o,D){if(o.essai)return S;const N=brxLireSauve(brxEcrireSauve(S),D)||brxNeuf();N.tentatives++;N.phaseMax=Math.max(N.phaseMax,o.phase|0);
+function brxNoter(S,o,D,J){if(o.essai)return S;const N=brxLireSauve(brxEcrireSauve(S),D,J)||brxNeuf();N.tentatives++;N.phaseMax=Math.max(N.phaseMax,o.phase|0);
  if(o.win){N.victoires++;}else if(o.par&&(!D||D.elements[o.par])&&o.phase>=1){N.mort[o.phase]=o.par;
   if(o.par==='tableau'&&o.tab&&(D?brxTabOk(D,o.tab,null):true))N.tab[o.phase]={decor:o.tab.decor,theme:o.tab.theme,regle:o.tab.regle==null?null:o.tab.regle};else delete N.tab[o.phase];
   if(o.par==='effondrement'&&typeof o.bati==='string'&&BRX_CHUTE.includes(o.bati))N.bati[o.phase]=o.bati;else delete N.bati[o.phase];
-  if(o.par==='couture'&&brxCousuOk(o.cousu))N.cousu[o.phase]={corps:o.cousu.corps,cle:o.cousu.cle,id:o.cousu.id==null?null:o.cousu.id};else delete N.cousu[o.phase];}
- for(const id of o.vus||[])if(!N.vus.includes(id)&&(!D||D.elements[id]))N.vus.push(id);
+  if(o.par==='couture'&&brxCousuOk(o.cousu))N.cousu[o.phase]={corps:o.cousu.corps,cle:o.cousu.cle,id:o.cousu.id==null?null:o.cousu.id};else delete N.cousu[o.phase];
+  if(o.par==='emprunt'&&brxEmpOk(o.emp,J))N.emp[o.phase]={id:o.emp.id,fam:o.emp.fam};else delete N.emp[o.phase];}
+ for(const id of o.vus||[])if(!N.vus.includes(id)&&brxVu(id,D))N.vus.push(id);
  return N;}
 // ── Statistiques : moyenne et pire part (p95 par défaut) d'un échantillon de durées (ms)
 function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((a,b)=>a-b),k=Math.max(0,Math.min(s.length-1,Math.floor(s.length*(1-part))));let m=0;for(let i=k;i<s.length;i++)m+=s[i];return m/(s.length-k);}
@@ -13677,7 +13764,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
 // feinte), ses tableaux convoqués (fragments de décor peints une fois à l'entrée du combat, vagues d'un thème existant, règles de salle confinées
 // au fragment, sans bulle), le rideau et la fenêtre à nu après chaque tableau vidé. v18.7 (action 5c) : la phase II, « L'Ouvrage » (fiche validée
 // le 2 novembre 2026) : ses gestes signature (la Ruée, l'Équerre, la Truelle, la feinte), six constructions lues sur ton style (annonce en craie et
-// annulation, fissures, effondrement, cloche, passerelles, puits, échafaudages), les Manœuvres. Les phases III à V jouent encore la partition d'essai.
+// annulation, fissures, effondrement, cloche, passerelles, puits, échafaudages), les Manœuvres. v18.8 (action 5d) : la phase III, « La Couture ».
+// v18.9 (action 5e) : la phase IV, « L'Emprunt » (fiche validée le 3 novembre 2026). La phase V joue encore la partition d'essai.
 // ═════════════════════════════════════════════════════════════════════════════
 (()=>{
  const DB=window.BRUME_DATA&&window.BRUME_DATA.brumeux,DA=window.BRUME_DATA&&window.BRUME_DATA.arene,XA=window.__arene;if(!DB||!DA||!XA)return;
@@ -13695,10 +13783,10 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  const GL={s:DB.dessin.glyphe,url:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(DB.dessin.glyphe),img:null};
  function glyphe(){if(!GL.img){GL.img=new Image();GL.img.src=GL.url;}return GL.img.complete&&GL.img.naturalWidth>0?GL.img:null;}
  // ── la sauvegarde (Q13) : lue à l'entrée du combat, écrite à sa fin ; une descente d'essai n'écrit rien
- function sauveLire(){try{const S=brxLireSauve(SAVE.brumeux,DB);return S;}catch(err){return brxNeuf();}}
+ function sauveLire(){try{const S=brxLireSauve(SAVE.brumeux,DB,window.BRUME_DATA.souvenirsBrume);return S;}catch(err){return brxNeuf();}}
  function noter(win){if(X.note||!X.e)return;X.note=true;
-  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,bati:!win&&X.tue==='effondrement'?X.tueBati:null,cousu:!win&&X.tue==='couture'?X.tueCousu:null,win,vus:[...X.vus]};
-  const S=X.sauve||brxNeuf(),N=brxNoter(S,o,DB);X.j.note=o;
+  const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,bati:!win&&X.tue==='effondrement'?X.tueBati:null,cousu:!win&&X.tue==='couture'?X.tueCousu:null,emp:!win&&X.tue==='emprunt'?X.tueEmp:null,win,vus:[...X.vus]};
+  const S=X.sauve||brxNeuf(),N=brxNoter(S,o,DB,window.BRUME_DATA.souvenirsBrume);X.j.note=o;
   if(!o.essai&&N!==S){SAVE.brumeux=brxEcrireSauve(N);X.sauve=N;try{persist();}catch(err){}}}
  const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/.test(location.search);
  // ── la lecture (Q2) : ce que le jeu sait de toi, vers les poids des tirages ; en image : son regard passe sur ton héros, puis son petit rire
@@ -14617,6 +14705,219 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function etatCou(){const XC=X.cou;if(!XC)return null;return{fils:XC.fils.map(f=>({id:f.id,k:f.k,etat:f.etat,corps:f.co.corps,cle:f.co.cle,sv:f.sv?f.sv.x.id:null,nem:f.nem,rej:f.rej,p:[Math.round(f.p[0]),Math.round(f.p[1])],pv:Math.round(f.el.pv),pvMax:f.el.pvMax,
    noeud:f.noeud?[Math.round(f.noeud.x),Math.round(f.noeud.y)]:null,mont:f.e&&f.e.asm&&f.e.asm.mont?+f.e.asm.mont.t.toFixed(2):null,hp:f.e?[Math.round(f.e.hp),Math.round(f.e.maxHp)]:null})),
   cur:XC.cur&&{n:XC.cur.n,ids:XC.cur.ids.slice(),coupes:XC.cur.coupes,nu:XC.cur.nu},vivants:vivants(),pris:XC.pris.slice(),bouts:XC.bouts.length,prio:!!X.prio,j:JSON.parse(JSON.stringify(XC.j))};}
+ // ═══ v18.9 · Phase IV, « L'Emprunt » (action 5e, fiche validée le 3 novembre 2026) ═════════════════════════════════════════════════════════
+ // Pour la première fois il est au sol, à l'échelle d'un gardien (r 48), masqué à ta couleur et à l'emblème de ta forme ; il garde 180 à 280 px de toi. Ses
+ // gestes partent de son corps : la Passe (couloir de 2 r que son corps parcourt ; coupé au premier pilier qui arrête un tir, son corps s'y brise : sonné
+ // 2 s), la Révérence (cône de 150° au contact : il s'approche, 2 s au plus, puis renonce), la Volte (anneau à brèche autour de lui), la feinte. Trois fois
+ // par boucle, il emprunte un de tes talents portés et joue l'arme de la Brume de sa famille, par un porteur fantôme collé à son corps (hors de enemies,
+ // mené par la file d'étapes du Masqué, sbMaj, comme le Reflet du Glas) : zones orange au liseré lavande, chaque étape source de signe jugée au préavis du
+ // boss, jamais sous 0,8 s ; la tuile du talent emprunté prend un liseré lavande dans ton HUD. Épuisé : à nu 2 s. Brûler le talent emprunté (Dernier
+ // Souvenir), de la prise au coup de la dernière étape, défait la copie (zone dissoute sans frapper) : à nu 4 s. Le plafond d'une brûlure se calcule sur les
+ // PV de la phase en cours (e.pvPlaf18, ses cinq phases). Son corps ne blesse jamais au contact. Rien n'est tiré au hasard du jeu (graine du combat).
+ const EM=DB.emprunt,SBX=()=>window.__asm&&window.__asm.sb,AM9=BE_D.assemble,LAV='180,160,255',ZCOL={fo:TELE.zone,edge:LAV,w:2},IV=['passe','reverence','volte'];
+ const TN9=(window.BRUME_DATA.talents||{}).noeuds||{},KIND9={},MAX9={};for(const id in TN9){KIND9[id]=TN9[id].k;MAX9[id]=TN9[id].max||1;}
+ const T9={fam:FAM,kind:KIND9,max:MAX9,J:SVJ};
+ const empNeuf=()=>({liste:[],boucle:[],ib:0,nb:0,dernier:null,cur:null,joues:[],dissous:[],fele:0,ic:null,
+  j:{emprunts:0,sautes:0,joues:0,dissous:0,etapes:0,etapesSautees:0,renonces:0,nu:0,defaites:0,coups:0,passes:0,brisees:0,reverences:0,renoncesRev:0,voltes:0,premier:null,boucles:[],log:[],consRestantes:null,consAire:0,consBornes:0,chute:null,charges:[]}});
+ const empRng=n=>desRng(((X.graine>>>0)^Math.imul(0x27D4EB2F,n+1))>>>0);
+ const empActifs=()=>((RUN&&RUN.memoire&&RUN.memoire.actifs)||[]).map(a=>({id:a.id,src:a.src,rang:a.rang,g:a.g||0,trophee:!!a.trophee}));
+ const brule9=id=>!!(RUN&&RUN.memoire&&(RUN.memoire.brules||[]).some(b=>b.id===id));
+ const porte9=id=>!!(RUN&&RUN.memoire&&RUN.memoire.actifs.some(a=>a.src==='t'&&a.id===id));
+ const memRedessin=()=>{if(window.__memRender)window.__memRender();};
+ // ── la lecture : le talent dont la copie t'a tué la dernière fois (champ emp) ; la boucle : ses trois emprunts, relus sur ce que tu portes
+ const _li189=lire;lire=function(){const L=_li189.apply(this,arguments);try{const S=X.sauve,c=S&&S.mort&&S.mort[4]==='emprunt'&&S.emp&&S.emp[4];L.emp=c?{id:c.id,fam:c.fam}:null;}catch(err){}return L;};
+ const _bn189=boucleNeuve;boucleNeuve=function(){const r=_bn189.apply(this,arguments);try{if(X.phase===3&&X.emp)boucleEmp();}catch(err){console.error(err);}return r;};
+ function boucleEmp(){const XE=X.emp,n=XE.nb++,L=brxEmpruntables(DB,empActifs(),T9).liste,f=X.essai&&X.essai.emp,premier=n===0?(f&&FAM[f]?{id:f,fam:FAM[f]}:X.lec&&X.lec.emp)||null:null;
+  XE.liste=L;XE.boucle=brxEmprunts(DB,L,empRng(n),{dernier:XE.dernier,premier});XE.ib=0;if(n===0)XE.j.premier=premier;
+  XE.j.boucles.push({n,ids:XE.boucle.map(x=>x.id),fams:XE.boucle.map(x=>x.fam),premier:premier&&premier.id,liste:L.map(x=>x.id),dernier:XE.dernier});if(XE.j.boucles.length>40)XE.j.boucles.shift();}
+ // ── l'emprunt (mesure « emprunt ») : la prise (0,6 s), puis l'arme par le porteur fantôme, puis épuisé (à nu 2 s) ; rien à emprunter : la mesure saute
+ function emprunter(){const e=X.e,XE=X.emp;if(!e||e.dead||!XE)return false;const pick=XE.boucle[XE.ib++];if(!pick)return false;
+  const a=RUN.memoire&&RUN.memoire.actifs.find(x=>x.src==='t'&&x.id===pick.id);if(!a||brxRefusEmprunt(DB,a,T9))return false;   // brûlé ou oublié depuis la boucle
+  const SB=SBX();if(!SB||!window.__asm)return false;const vu=!!(X.sauve&&(X.sauve.vus||[]).includes('emprunt:'+pick.fam));
+  const R=brxEtapesEmprunt(DB,{sbEtapes:SB.sbEtapes,sbCharge:SB.sbCharge},SVJ,AM9,pick.fam,pick.vars,RUN.act,vu);if(!R||!R.etapes.length)return false;
+  X.vus.add('emprunt');X.vus.add('emprunt:'+pick.fam);
+  const force=1+((AM9.souvenir||{}).parRang||0)*Math.max(0,(a.rang||1)-1)+((AM9.souvenir||{}).parGravure||0)*(a.g||0),st=SB.sbNouveau(SVJ,pick.fam,R.vars);st.etapes=R.etapes;
+  const seed=Math.floor(empRng(1000+XE.j.emprunts)()*4294967296)>>>0;
+  const p={brx18p:true,type:'brx18e',name:DB.nom,x:e.x,y:e.y,r:e.r,dmg:R.dmg*dmgMul(),spd:EM.marche.vitesse,dir:1,ang:e.ang||0,face:e.ang||0,stun:0,kbx:0,kby:0,thornT:1e9,ctT:0,wT:0,wob:0,dead:false,elite:false,hp:1,maxHp:1,
+   asm:{brx18p:true,rnd:window.__asm.asmRng(seed),co:{corps:'voile'},st:{ph:'pause',t:0,tot:1,k:null,caps:[],sig:null},sansContact:true,
+    sb:{fid:pick.fam,vars:R.vars,st,k:1,force,recu:0,sauts:0,seul:true},autre:()=>X.zones.some(z=>!z.fait)||X.tirs.length>0}};
+  XE.cur={id:a.id,fam:pick.fam,premier:pick.premier||null,t:0,ph:'prise',p,R,rec:null,cle:null,joue:false,defait:false,tf:0,fin:0};XE.dernier=pick.fam;
+  XE.j.emprunts++;XE.joues.push({id:a.id,fam:pick.fam});XE.j.log.push({id:a.id,fam:pick.fam,vars:R.vars,charges:R.charges.map(v=>+v.toFixed(3)),vu,force:+force.toFixed(3),premier:pick.premier||null,t:+RUN.time.toFixed(2)});if(XE.j.log.length>60)XE.j.log.shift();
+  X.ph='emprunt';X.t=0;memRedessin();if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.3);}catch(err){}return true;}
+ // ce que le porteur a lâché (projectiles, ondes) : retiré sans frapper ; ses zones qui chargent : dissoutes (dessin seulement)
+ function nettoyerPorteur(c,dissoudre){const p=c.p,B=p&&p.asm.sb;if(!B)return;
+  if(dissoudre&&B.zc&&B.zc.zs&&B.st.ph==='charge'){X.emp.dissous.push({zs:B.zc.zs,t:0,proj:B.zc.zs.some(z=>z.forme==='projectile'),p});X.emp.j.dissous++;}
+  B.zc=null;B.dash=null;B.flash=null;B.vivants=[];eproj=eproj.filter(q=>q.from!==p);const Z=window.__asm.zr?window.__asm.zr():[];for(let i=Z.length-1;i>=0;i--)if(Z[i].src===p)Z.splice(i,1);}
+ function finEmprunt(){const XE=X.emp;if(!XE||!XE.cur)return;XE.cur=null;memRedessin();}
+ // la copie défaite par le Dernier Souvenir (le talent emprunté brûlé, de la prise au coup de la dernière étape) : la zone qui charge se dissout sans frapper,
+ // les étapes suivantes sont annulées, l'icône s'embrase et tombe, le masque se fend ; à nu 4 s
+ function defaire(c){const e=X.e,XE=X.emp;c.defait=true;nettoyerPorteur(c,true);c.ph='defait';c.tf=EM.defaitS;XE.j.defaites++;XE.fele=EM.defaitS;XE.ic={t:0,ic:(SVJ.familles[c.fam]||{}).ic,x:e?e.x:0,y:e?e.y:0};
+  if(e&&!e.dead){e.vuln=Math.max(e.vuln||0,EM.defaitS);}memRedessin();if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(0.1);}catch(err){}}
+ // arrêter un emprunt (IV → V, sa mort, une transition) : sans fenêtre, sans coup
+ function arreterEmprunt(){const XE=X.emp,c=XE&&XE.cur;if(!c)return;nettoyerPorteur(c,true);finEmprunt();}
+ function empPas(dt){const e=X.e,XE=X.emp,c=XE&&XE.cur;if(!c){X.ph='entracte';X.t=ent();return;}c.t+=dt;
+  if((c.ph==='prise'||c.ph==='jeu')&&!c.defait&&brule9(c.id)&&!porte9(c.id)&&brxDefaitable(c.ph==='jeu'?c.p.asm.sb.st:null,c.ph==='prise')){defaire(c);return;}
+  if(c.ph==='prise'){if(c.t>=EM.priseS){c.ph='jeu';c.t=0;}return;}
+  if(c.ph==='jeu'){const SB=SBX(),p=c.p,B=p.asm.sb,st=B.st,d0=!!B.dash;p.x=e.x;p.y=e.y;p.r=e.r;p.stun=0;
+   SB.maj(p,dt,true,false);p.stun=0;
+   if(B.dash||d0){e.x=p.x;e.y=p.y;e.ang=p.ang;}
+   // la ruée empruntée s'arrête sur une construction : son corps s'y brise (sonné 2 s), la construction perd un palier (comme la Passe)
+   if(d0&&!B.dash){const q=room.pillars.find(o=>o.cons18&&o.kind!=='fosse18'&&hyp(p.x-o.x,p.y-o.y)<=o.r+p.r+1);if(q)briser(q);}
+   // ce qu'il lâche prend sa couleur : ses tirs (grammaire des tirs, comme les siens), ses ondes (orange au liseré lavande)
+   for(const q of eproj)if(q.from===p&&!q.e18){q.e18=1;q.boss=true;q.col=TELE.proj;q.brx18='emprunt';}
+   for(const g of (window.__asm.zr?window.__asm.zr():[]))if(g.src===p&&!g.fo18){g.fo18=TELE.zone;g.ed18=LAV;}
+   // chaque étape : une source de signe à part entière (de son chargement à la fin de ce qu'elle a lâché)
+   const cle=st.n+':'+st.i;if(st.ph==='charge'&&c.cle!==cle){c.cle=cle;c.rec={id:'emprunt',emp18:true,boss:true,fam:c.fam,i:st.i,x:e.x,y:e.y,r:60,t0:RUN.time};c.joue=true;XE.j.etapes++;XE.j.charges.push(+st.tot.toFixed(3));if(XE.j.charges.length>200)XE.j.charges.shift();}
+   if(c.rec&&B.zc&&B.zc.zs&&B.zc.zs[0]){const z=B.zc.zs[0],q=z.pts?z.pts[0]:z.cells?z.cells[0]:[z.x,z.y];c.rec.x=q[0];c.rec.y=q[1];}
+   const vivant=(B.vivants||[]).some(f=>f())||!!B.dash;
+   if(st.n>0&&!vivant){XE.j.etapesSautees+=B.sauts||0;
+    if(c.joue){c.ph='epuise';c.tf=EM.nuS;XE.j.joues++;XE.j.nu++;if(e&&!e.dead)e.vuln=Math.max(e.vuln||0,EM.nuS);memRedessin();}
+    else{XE.j.renonces++;finEmprunt();X.j.mesuresSautees++;X.ph='entracte';X.t=DB.partition.emprunt.sauteS;}return;}
+   if(c.t>25){arreterEmprunt();X.ph='entracte';X.t=ent();}return;}   // garde-fou
+  if(c.ph==='epuise'||c.ph==='defait'){c.tf-=dt;if(c.tf<=0){finEmprunt();X.ph='entracte';X.t=ent();}}}
+ // ── les gestes au corps : la Passe, la Révérence (approche, puis cône), la Volte
+ const optIV=charge=>{const o=optSortie(charge),e=X.e,b0=o.bloque;o.bloque=(x,y)=>b0(x,y)||!!(e&&hyp(x-e.x,y-e.y)<e.r+o.pr);return o;};
+ function poserIV(id,charge){const e=X.e,el=DB.elements[id],V=brxVariantesIV(DB,id,[e.x,e.y],[P.x,P.y],AR,room.pillars,e.r,id==='volte'?X.rng()*TAU:0),k=brxPlacer(DB,V.map(v=>v.zones),[P.x,P.y],optIV(charge));
+  if(k<0){X.j.sautes++;X.sauteIV=true;return false;}const v=V[k],grp=++X.ngrp;
+  for(const g of v.zones)X.zones.push(Object.assign(g,{id,t:0,charge,degats:el.degats*dmgMul(),vise:!!el.vise,boss:true,src:e,fait:false,flash:0,essai:k,grp,corps18:true,
+   passe18:id==='passe'?{fin:v.fin,coupe:v.coupe>=0?room.pillars[v.coupe]:null,w:2*e.r}:null,fin:id==='passe'?finPasse:null}));
+  X.emp.j[id==='passe'?'passes':id==='reverence'?'reverences':'voltes']++;X.tmes=Math.max(X.tmes,X.t+charge+(id==='passe'?el.course:0)+0.3);return true;}
+ const _la189=lancer;lancer=function(id){const el=DB.elements[id],e=X.e;if(!el||!e||!IV.includes(id))return _la189.apply(this,arguments);
+  X.j.lancers++;const charge=brxPreavis(DB,X.sauve,id);X.vus.add(id);
+  if(id==='reverence'){X.rev18={t:0,charge};X.tmes=99;return true;}
+  return poserIV(id,charge);};
+ function finPasse(z){const e=X.e,P2=z.passe18;if(!e||e.dead||!P2)return;X.passe18={t:0,x0:e.x,y0:e.y,x1:P2.fin[0],y1:P2.fin[1],coupe:P2.coupe};}
+ // le corps se brise sur une construction (Passe, ruée empruntée) : sonné 2 s, un palier de fissure en moins
+ function briser(q){const e=X.e;if(!e||e.dead)return;X.emp.j.brisees++;e.vuln=Math.max(e.vuln||0,DB.elements.passe.sonneS);sparks(q.x,q.y,10,q.cons18&&q.cons18.mat?`rgb(${MA[q.cons18.mat].arete})`:'#bfb4cc');shake(5,0.2);
+  const c=q.cons18;if(c&&c.etat==='debout'){const d=c.disques.find(x=>x.pil===q);if(d&&d.el>=0)blesser(c,d.el,c.elements[d.el].pvMax/3);}}
+ function passePas(dt){const Q=X.passe18,e=X.e;if(!Q||!e)return;Q.t+=dt;const k=Math.min(1,Q.t/DB.elements.passe.course);e.x=Q.x0+(Q.x1-Q.x0)*k;e.y=Q.y0+(Q.y1-Q.y0)*k;e.kbx=0;e.kby=0;
+  if(k>=1){X.passe18=null;if(Q.coupe&&room.pillars.includes(Q.coupe))briser(Q.coupe);}}
+ function revPas(dt){const R=X.rev18,e=X.e,el=DB.elements.reverence;if(!R||!e)return;R.t+=dt;
+  if(brxReverenceOk(el,[e.x,e.y],[P.x,P.y])){X.rev18=null;if(!poserIV('reverence',R.charge)){X.j.mesuresSautees++;X.ph='entracte';X.t=DB.partition.emprunt.sauteS;X.sauteIV=false;return;}X.tmes=X.t+R.charge+0.3;return;}
+  if(R.t>=el.attenteS){X.rev18=null;X.emp.j.renoncesRev++;X.j.mesuresSautees++;X.ph='entracte';X.t=DB.partition.emprunt.sauteS;}}
+ // une mesure de la phase IV : un emprunt ; un geste sans sortie saute (entracte réduit)
+ const _me189=mesure;mesure=function(){
+  if(X.phase===3&&X.emp){const m=X.boucle&&X.boucle[X.im];
+   if(m&&m.k==='emprunt'){X.im++;if(!emprunter()){X.emp.j.sautes++;X.j.mesuresSautees++;X.ph='entracte';X.t=DB.partition.emprunt.sauteS;}return;}
+   X.sauteIV=false;const r=_me189.apply(this,arguments);if(X.sauteIV){X.sauteIV=false;X.j.mesuresSautees++;X.ph='entracte';X.t=DB.partition.emprunt.sauteS;}return r;}
+  return _me189.apply(this,arguments);};
+ // ── sa marche : 120 px/s, il garde 180 à 280 px de toi ; il s'approche pour la Révérence et pour une étape au contact ; immobile pendant un geste au
+ // corps qui charge, une étape posée sur lui, la course de la Passe ; il ne marche jamais dans une fosse (collisions du jeu)
+ function marcheIV(e,dt){const c=X.emp&&X.emp.cur,M2=EM.marche;if(X.passe18||X.trans)return;
+  if(X.zones.some(z=>!z.fait&&z.corps18))return;
+  if(X.rev18){moveTo(e,P.x,P.y,M2.vitesse*DB.elements.reverence.approche,dt);return;}
+  if(c&&c.ph==='jeu'){const B=c.p.asm.sb,st=B.st,et=st.etapes[st.i];if(B.dash)return;if(st.ph==='charge'&&et&&et.sur==='lui')return;if(st.ph==='attente'&&st.att>0){moveTo(e,P.x,P.y,M2.vitesse*M2.approche,dt);return;}}
+  const d=hyp(P.x-e.x,P.y-e.y);if(d>M2.distance[1])moveTo(e,P.x,P.y,M2.vitesse,dt);else if(d<M2.distance[0])moveTo(e,2*e.x-P.x,2*e.y-P.y,M2.vitesse,dt);
+  e.ang=Math.atan2(P.y-e.y,P.x-e.x);}
+ // la chute de la transition III → IV : ses fils lâchent, il tombe (0,8 s ; mouvements réduits : un fondu) sur un point relié à toi, à 200 px au moins
+ function chuteIV(e){const E6=XA.dbg().A.etats[DB.phases[3].arene];if(!E6)return;const B=E6.bornes,base=room.pillars.filter(q=>!q.cons18),cons=X.bat.filter(k=>k.etat==='debout');
+  const worst=base.concat(cons.flatMap(k=>brxTous(k))),G=brxGrille(monde(),B,worst,DB.constructions.grille);G.relie=brxRelie(G,clamp(P.x,B.x0+20,B.x1-20),clamp(P.y,B.y0+20,B.y1-20));
+  const q=brxPointChute(DB,B,[P.x,P.y],base,cons,G,DB.dessin.r.sol);mist(e.x,e.y,e.r,'#2a2440');
+  X.chute18={t:0,x0:e.x,y0:e.y,x1:q[0],y1:q[1]};e.r=DB.dessin.r.sol;e.hy=null;X.emp.j.chute={p:[Math.round(P.x),Math.round(P.y)],q:[Math.round(q[0]),Math.round(q[1])],d:Math.round(hyp(q[0]-P.x,q[1]-P.y))};}
+ function chutePas(e,dt){const C=X.chute18;C.t+=dt;const k=Math.min(1,C.t/EM.chute.dureeS);
+  if(RM){e.x=C.x1;e.y=C.y1;e.fade=k;}else{e.x=C.x0+(C.x1-C.x0)*k;e.y=C.y0+(C.y1-C.y0)*k*k;e.fade=1;}
+  if(k>=1){X.chute18=null;e.fade=1;mist(e.x,e.y+e.r*0.6,e.r*1.2,'#2a2440');if(!RM)shake(5,0.2);}}
+ const _pr189=presence;presence=function(e,dt){if(X.phase===3&&X.emp){if(X.chute18){chutePas(e,dt);return;}if(X.trans&&X.trans.presence&&!X.trans.deplace)return;return marcheIV(e,dt);}return _pr189.apply(this,arguments);};
+ const _tp189=transPas;transPas=function(dt){const Tn=X.trans,e=X.e;if(Tn&&Tn.n===3&&Tn.presence&&!Tn.deplace&&Tn.t+dt>=0.6&&e){Tn.deplace=true;try{chuteIV(e);}catch(err){console.error(err);}}return _tp189.apply(this,arguments);};
+ // les constructions qui restent en IV : en plus des bornes et de la connexité (versCons), au plus 30 % de l'aire libre de l'état IV
+ const _vc189=versCons;versCons=function(n){const n0=X.bat.filter(c=>c.etat==='debout').length,r=_vc189.apply(this,arguments);
+  try{if(n===3&&X.emp){const E=XA.dbg().A.etats[DB.phases[3].arene],obs=E.obstacles.concat(E.vides),R=brxFiltreAire(DB,monde(),E.bornes,obs,X.bat.filter(c=>c.etat==='debout'));for(const c of R.retire)retirer(c,'cede');
+   X.emp.j.consBornes=n0-X.bat.filter(c=>c.etat==='debout').length-R.retire.length;X.emp.j.consAire=R.retire.length;X.emp.j.consRestantes=X.bat.filter(c=>c.etat==='debout').map(c=>c.sorte);}}catch(err){console.error(err);}return r;};
+ // ── les transitions : en entrant en IV, l'emprunt se prépare ; en quittant IV (et à sa mort), une copie en cours s'arrête sans fenêtre ; ce qu'il a joué
+ // en IV (X.emp.joues) reste pour la phase V (5f). Le plafond du Dernier Souvenir suit la phase en cours (e.pvPlaf18, ses cinq phases).
+ const _ve189=vers;vers=function(n){const de=X.phase,r=_ve189.apply(this,arguments);if(!r)return r;
+  try{if(de===3)arreterEmprunt();if(n===3){X.emp=X.emp||empNeuf();X.emp.nb=0;}X.rev18=null;X.passe18=null;X.sauteIV=false;if(X.e)X.e.pvPlaf18=X.pv[n]||X.e.maxHp;}catch(err){console.error(err);}return r;};
+ const _de189=debut;debut=function(phase0){const r=_de189.apply(this,arguments);X.emp=empNeuf();if(X.e)X.e.pvPlaf18=X.pv[X.phase]||X.e.maxHp;
+  window.__emp18=()=>{const c=X.on&&X.phase===3&&X.emp&&X.emp.cur;return c&&(c.ph==='prise'||c.ph==='jeu')&&!c.defait?c.id:null;};
+  if(X.phase===3&&X.boucle&&X.emp.nb===0)boucleEmp();   // le combat commence en IV : la boucle a été tirée avant que l'emprunt existe
+  return r;};
+ const _mt189=mort;mort=function(e){try{arreterEmprunt();X.rev18=null;X.passe18=null;}catch(err){}return _mt189.apply(this,arguments);};
+ const _mr189=makeRoom;makeRoom=function(){const vu=!!(window.__emp18&&window.__emp18());window.__emp18=null;const r=_mr189.apply(this,arguments);if(vu)memRedessin();return r;};
+ // ── chaque pas de son combat en IV : la Passe (course), la Révérence (approche), l'emprunt ; ton héros ne traverse pas son corps (sans dégât)
+ const _pas189=pas;pas=function(e,dt){const r=_pas189.apply(this,arguments);if(X.phase!==3||!X.emp||X.scene)return r;
+  try{if(!X.trans){passePas(dt);if(X.ph==='mesure'&&X.rev18)revPas(dt);if(X.ph==='emprunt')empPas(dt);}
+   if(!X.chute18&&P&&!P.dead){const dx=P.x-e.x,dy=P.y-e.y,d=hyp(dx,dy)||1,m=e.r+P.r;if(d<m){P.x=e.x+dx/d*m;P.y=e.y+dy/d*m;collidePlayer();}}
+   for(const D2 of X.emp.dissous)D2.t+=dt;X.emp.dissous=X.emp.dissous.filter(D2=>D2.t<EM.dissousS);if(X.emp.fele>0)X.emp.fele-=dt;if(X.emp.ic){X.emp.ic.t+=dt;if(X.emp.ic.t>0.7)X.emp.ic=null;}}catch(err){console.error(err);}return r;};
+ // la cloche d'un rail attend qu'une zone d'emprunt soit finie (une zone à la fois au contact du joueur ; la sortie garantie compte ce qui est en jeu)
+ const _cp189=clochePas;clochePas=function(c,dt){const C=X.emp&&X.emp.cur;if(X.phase===3&&C&&C.ph==='jeu'&&!c.cl.z&&c.cl.t<=dt){const B=C.p.asm.sb;if(B.st.ph==='charge'||B.dash||(B.vivants||[]).some(f=>f())){c.cl.t=Math.max(c.cl.t,0.1);return;}}return _cp189.apply(this,arguments);};
+ // ── ses coups : une étape d'emprunt est jugée au préavis du boss, sur sa propre source de signe (XA.coup) ; « ce qui t'a tué » : l'emprunt (et le talent)
+ // ; une copie défaite ne frappe plus
+ const _hp189=hurtPlayer;hurtPlayer=function(dmg,src){const c=X.on&&X.emp&&X.emp.cur;if(!c||!c.p||!P)return _hp189.apply(this,arguments);
+  let mine=src===c.p;if(!mine&&!src)for(const q of eproj){if(q.dead||q.from!==c.p)continue;if(hyp(q.x-P.x,q.y-P.y)-(q.r||6)-P.r<14){mine=true;break;}}
+  if(!mine)return _hp189.apply(this,arguments);if(c.defait)return;
+  const rec=c.rec||{id:'emprunt',emp18:true,boss:true},a=arguments,zc=X.zoneCourante,h0=P.hp;let r;X.zoneCourante=rec;
+  try{r=XA.coup(rec,()=>_hp189.apply(this,a));}finally{X.zoneCourante=zc;}
+  if(P.hp<h0){X.tueEmp={id:c.id,fam:c.fam};X.emp.j.coups++;}return r;};
+ // les sources de signe : chaque étape d'un emprunt (de son chargement à la fin de ce qu'elle a lâché)
+ const _so189=sources;sources=function(){const out=_so189.apply(this,arguments);try{const c=X.on&&X.emp&&X.emp.cur;
+  if(c&&c.ph==='jeu'&&c.rec){const B=c.p.asm.sb,st=B.st;if(st.ph==='charge'||st.ph==='effet'||B.dash||(B.vivants||[]).some(f=>f()))out.push({o:c.rec,k:'tele',x:c.rec.x,y:c.rec.y,r:c.rec.r,vise:true,rempli:st.ph==='charge'&&st.tot?clamp(1-st.t/st.tot,0,1):1,c:'zone'});}}catch(err){console.error(err);}return out;};
+ // la caméra et le signe de bord voient ses zones d'emprunt (bossCharge)
+ // ── le bot (bot=2) en phase IV : pendant une étape d'emprunt, il va à la sortie calculée (comme le Reflet du Glas)
+ const _pi189=pilote2;pilote2=function(dt){_pi189.apply(this,arguments);const c=X.on&&X.phase===3&&X.emp&&X.emp.cur;if(!c||c.ph!=='jeu'||P.dead)return;
+  const B=c.p.asm.sb,st=B.st;if(!B.fuiteQ||!(st.ph==='charge'||B.dash||(B.vivants||[]).some(f=>f())))return;const [tx,ty]=B.fuiteQ;for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);
+  if(P.x<tx-8)keys.add('KeyD');else if(P.x>tx+8)keys.add('KeyA');if(P.y<ty-8)keys.add('KeyS');else if(P.y>ty+8)keys.add('KeyW');};
+ // ── le point faible : son cœur, sous le capuchon (0,25 × r au-dessus de son centre) ; l'entité frappable est son corps
+ const _fb189=faible;faible=function(e){if(DB.phases[X.phase].presence==='sol')return[e.x,e.y-0.25*e.r,e.r*0.8];return _fb189.apply(this,arguments);};
+ // ── dessin. Son corps entier au sol (cuit par forme et par état : normal, terni ; G27) : ombre, manteau (la traîne et la brume au-delà de 1,15 × r sous 35 %),
+ // capuchon, masque à ta couleur (G27.copie) et à l'emblème de ta forme, deux yeux pâles derrière, croix de manipulation à la ceinture, fils au sol. Par-dessus :
+ // la prise (fil lavande de sa main à ton héros), l'icône de la famille cerclée de lavande et sa barre de chargement, la fêlure de braise, la copie dissoute.
+ const rgbm=(a,b,t)=>a.split(',').map((v,i)=>Math.round(+v+(+b.split(',')[i]-+v)*t)).join(',');
+ function imgCorps(cls,etat,R){const col=G27.copie(),mk=etat==='t'?rgbm(col,'120,116,130',0.6):col;
+  return G27.image('brx18s:'+cls+':'+etat+':'+R+':'+col,-1.6*R,-1.4*R,3.2*R,2.9*R,o=>{
+   o.save();o.globalAlpha=0.18;o.fillStyle=rgba('manteau',1);o.beginPath();o.moveTo(-0.62*R,0.82*R);o.quadraticCurveTo(-1.35*R,1.15*R,-1.5*R,1.3*R);o.lineTo(1.5*R,1.3*R);o.quadraticCurveTo(1.35*R,1.15*R,0.62*R,0.82*R);o.closePath();o.fill();   // la traîne qui se défait (au-delà, sous 35 % : 0,18 et 0,18 superposés)
+   o.globalAlpha=0.18;o.strokeStyle=rgba('fils',1);o.lineWidth=1.2;o.beginPath();for(const [a,b] of [[-0.2,-1.45],[0.25,1.5],[0.05,-1.2]]){o.moveTo(0.36*R,0.4*R);o.quadraticCurveTo(0.8*R*b,0.95*R,1.05*R*b,1.25*R+a*R);}o.stroke();o.restore();   // ses fils, au sol
+   o.fillStyle='rgba(0,0,0,.3)';o.beginPath();o.ellipse(0,0.8*R,0.68*R,0.18*R,0,0,TAU);o.fill();
+   o.fillStyle=rgba('manteau',0.97);o.beginPath();o.moveTo(-0.72*R,0.82*R);o.quadraticCurveTo(-0.8*R,-0.1*R,-0.42*R,-0.62*R);o.quadraticCurveTo(0,-0.86*R,0.42*R,-0.62*R);o.quadraticCurveTo(0.8*R,-0.1*R,0.72*R,0.82*R);o.quadraticCurveTo(0,0.95*R,-0.72*R,0.82*R);o.closePath();o.fill();
+   o.strokeStyle='rgba(10,8,16,.8)';o.lineWidth=1.6;o.stroke();
+   o.fillStyle=rgba('capuche',0.99);o.beginPath();o.moveTo(-0.5*R,-0.05*R);o.quadraticCurveTo(-0.56*R,-0.85*R,0,-1.08*R);o.quadraticCurveTo(0.56*R,-0.85*R,0.5*R,-0.05*R);o.quadraticCurveTo(0,-0.2*R,-0.5*R,-0.05*R);o.closePath();o.fill();o.stroke();
+   o.fillStyle='rgba(6,4,10,.92)';o.beginPath();o.ellipse(0,-0.5*R,0.3*R,0.36*R,0,0,TAU);o.fill();   // l'ombre du capuchon
+   // le masque, à ta couleur ; les yeux pâles derrière ; l'emblème de ta forme au front
+   o.fillStyle=`rgb(${mk})`;o.beginPath();o.ellipse(0,-0.5*R,0.22*R,0.28*R,0,0,TAU);o.fill();o.strokeStyle='rgba(10,8,16,.85)';o.lineWidth=1.4;o.stroke();
+   for(const s of [-1,1]){o.fillStyle='#07050b';o.beginPath();o.ellipse(s*0.09*R,-0.52*R,0.055*R,0.04*R,0,0,TAU);o.fill();o.fillStyle=rgba('yeux',etat==='t'?0.4:0.95);o.beginPath();o.arc(s*0.09*R,-0.52*R,0.022*R,0,TAU);o.fill();}
+   const G=window.__gardiens&&window.__gardiens.mere&&window.__gardiens.mere.embleme;if(G){o.save();o.translate(0,-0.68*R);o.globalAlpha=etat==='t'?0.55:1;try{G(o,cls,0.075*R,mk);}catch(err){}o.restore();}
+   // le cœur sous le capuchon (point faible), à peine deviné
+   o.fillStyle=rgba('yeux',0.18);o.beginPath();o.arc(0,-0.25*R,0.09*R,0,TAU);o.fill();
+   // sa croix de manipulation, à la ceinture
+   o.strokeStyle=rgba('croix',0.95);o.lineWidth=3.2;o.lineCap='round';o.beginPath();o.moveTo(0.18*R,0.4*R);o.lineTo(0.54*R,0.4*R);o.moveTo(0.36*R,0.26*R);o.lineTo(0.36*R,0.64*R);o.stroke();});}
+ corpsSol=function(c,e,fd){if(X.trans&&X.trans.n===3&&X.trans.presence&&!X.trans.deplace)return corpsHaut0(c,e,fd);
+  const XE=X.emp,cur=XE&&XE.cur,et=cur&&cur.ph==='epuise'?'t':'n',I=imgCorps(P.cls,et,e.r);c.save();c.globalAlpha=fd;c.translate(e.x,e.y);G27.poser(c,I);
+  // la main qui prend (vers toi) ; la fêlure de braise d'une copie défaite
+  const a=e.ang||0;c.fillStyle=rgba('yeux',0.92);c.beginPath();c.ellipse(Math.cos(a)*0.62*e.r,Math.sin(a)*0.4*e.r+0.15*e.r,0.13*e.r,0.17*e.r,a,0,TAU);c.fill();
+  if(XE&&XE.fele>0){const k=Math.min(1,XE.fele/EM.defaitS),R=e.r;c.strokeStyle=`rgba(${COL.braise},${0.4+0.6*k})`;c.lineWidth=2;c.beginPath();c.moveTo(-0.05*R,-0.78*R);c.lineTo(0.04*R,-0.6*R);c.lineTo(-0.06*R,-0.46*R);c.lineTo(0.05*R,-0.26*R);c.stroke();}
+  c.restore();};
+ function dessinEmprunt(c){const e=X.e,XE=X.emp;if(!e||!XE)return;const SB=SBX(),cur=XE.cur;c.save();
+  // la copie dissoute (défaite, ou arrêtée) : ses zones s'effacent en 0,3 s, sans frapper (mouvements réduits : un fondu seulement)
+  for(const D2 of XE.dissous){const k=Math.min(1,D2.t/EM.dissousS);c.save();c.globalAlpha=1-k;for(const z of D2.zs){if(z.forme==='projectile')SB.proj(c,z,1,D2.p,ZCOL);else SB.zone(c,z,1,0,{fo:COL.braise,edge:COL.braise,w:2});}c.restore();
+   if(!RM)for(const z of D2.zs){const q=z.pts?z.pts[0]:z.cells?z.cells[0]:[z.x,z.y];for(let i=0;i<5;i++){const an=i*1.26+k*2,rr=12+k*40+i*6;c.fillStyle=`rgba(${COL.braise},${0.8*(1-k)})`;c.beginPath();c.arc(q[0]+Math.cos(an)*rr,q[1]+Math.sin(an)*rr-k*18,2.2,0,TAU);c.fill();}}}
+  if(cur&&cur.p){const p=cur.p,B=p.asm.sb,st=B.st;
+   // ses zones : orange (c'est lui qui frappe), cernées d'un liseré lavande de 2 px (c'est un souvenir)
+   if(cur.ph==='jeu'){if(B.flash)for(const f of B.flash)if(f.z.forme!=='projectile')SB.zone(c,f.z,1,f.t/f.max,ZCOL);
+    if(st.ph==='charge'&&B.zc){const k=clamp(1-st.t/st.tot,0,1);for(const z of B.zc.zs){if(z.forme==='projectile')SB.proj(c,z,k,p,ZCOL);else if(z.forme==='couloir'&&z.mode==='ruee')SB.zone(c,Object.assign({},z,{w:e.r*2}),k,0,ZCOL);else SB.zone(c,z,k,0,ZCOL);}}}
+   // la prise : un fil lavande part de sa main vers ton héros et se retire (rien ne te touche) ; mouvements réduits : un fondu
+   if(cur.ph==='prise'&&P){const k=Math.min(1,cur.t/EM.priseS),a=Math.atan2(P.y-e.y,P.x-e.x),hx=e.x+Math.cos(a)*0.62*e.r,hy=e.y+Math.sin(a)*0.4*e.r+0.15*e.r,ext=RM?1:k<0.5?k*2:2-2*k,al=RM?Math.sin(Math.PI*k):1;
+    c.strokeStyle=`rgba(${LAV},${0.85*al})`;c.lineWidth=1.6;c.beginPath();c.moveTo(hx,hy);c.quadraticCurveTo((hx+P.x)/2,(hy+P.y)/2-(RM?0:20),hx+(P.x-hx)*ext,hy+(P.y-hy)*ext);c.stroke();}
+   // l'icône de la famille, cerclée de lavande, au-dessus de lui ; la barre de chargement de l'étape (comme le Masqué)
+   if(cur.ph==='prise'||cur.ph==='jeu'){const F=SVJ.familles[cur.fam],lit=cur.ph==='jeu'&&st.ph==='charge',sz=16,top=e.y-e.r*1.15-18,iy=top-(lit?12:2),al=cur.ph==='prise'?Math.min(1,cur.t/0.25):1;
+    c.save();c.globalAlpha=al;c.fillStyle='rgba(8,6,14,.78)';rr(c,e.x-sz/2-6,iy-sz/2-4,sz+12,sz+8,6);c.fill();c.strokeStyle=`rgba(${LAV},.95)`;c.lineWidth=1.6;c.beginPath();c.arc(e.x,iy,sz*0.74,0,TAU);c.stroke();
+     drawIcon(c,F.ic,e.x,iy,sz,'rgba(240,232,255,.98)',2);
+     if(lit){const k=clamp(1-st.t/st.tot,0,1),w=44,y=top+2;c.fillStyle='rgba(0,0,0,.8)';c.fillRect(e.x-w/2-2,y-2,w+4,9);c.fillStyle=`rgb(${TELE.zone})`;c.fillRect(e.x-w/2,y,w*k,5);}c.restore();}}
+  // l'icône d'une copie défaite s'embrase et tombe (mouvements réduits : elle s'efface sur place)
+  if(XE.ic&&XE.ic.ic){const k=Math.min(1,XE.ic.t/0.7),y=e.y-e.r*1.15-20+(RM?0:k*40);c.save();c.globalAlpha=1-k;drawIcon(c,XE.ic.ic,e.x,y,16,`rgb(${COL.braise})`,2.2);c.restore();}
+  // la Passe : le bout du couloir arrondi (la zone est un couloir aux bouts ronds : rien ne frappe hors de ce qui est dessiné)
+  for(const z of X.zones){if(z.fait||z.id!=='passe')continue;const k=Math.min(1,z.t/z.charge),a=Math.atan2(z.y1-z.y0,z.x1-z.x0);c.save();c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
+   c.beginPath();c.arc(z.x1,z.y1,z.w/2,a-Math.PI/2,a+Math.PI/2);c.closePath();c.fill();c.stroke();if(k>=1){c.fillStyle=`rgba(${TELE.zone},0.26)`;c.fill();}c.restore();}
+  c.restore();}
+ const _dt189=drawTelegraphs;drawTelegraphs=function(){_dt189.apply(this,arguments);if(X.on&&state==='play'&&X.emp)try{dessinEmprunt(ctx);}catch(err){console.error(err);}};
+ // ── chaque pas : le calque de la phase IV peint une tuile par image pendant la phase III
+ const _st189=step;step=function(dt){const r=_st189.apply(this,arguments);if(!X.on||!X.e)return r;try{if(X.phase===2)XA.peindreTard(DB.phases[3].arene,1);}catch(err){console.error(err);}return r;};
+ const _sr189=statsRun;statsRun=function(){const o=_sr189.apply(this,arguments);if(o&&X.emp){const J2=X.emp.j;o.emprunt={emprunts:J2.emprunts,sautes:J2.sautes,joues:J2.joues,etapes:J2.etapes,etapesSautees:J2.etapesSautees,nu:J2.nu,defaites:J2.defaites,coups:J2.coups,passes:J2.passes,brisees:J2.brisees,reverences:J2.reverences,renoncesRev:J2.renoncesRev,voltes:J2.voltes};}return o;};
+ function etatEmp(){const XE=X.emp;if(!XE)return null;const c=XE.cur,B=c&&c.p&&c.p.asm.sb;
+  return{liste:XE.liste.map(x=>({id:x.id,fam:x.fam,rang:x.rang,max:x.max,g:x.g,vars:x.vars.slice(),poids:+brxPoidsEmprunt(DB,x).toFixed(4)})),boucle:XE.boucle.map(x=>x.id),ib:XE.ib,nb:XE.nb,dernier:XE.dernier,
+   cur:c?{id:c.id,fam:c.fam,ph:c.ph,t:+c.t.toFixed(2),defait:c.defait,premier:c.premier,st:B?{ph:B.st.ph,i:B.st.i,n:B.st.n,t:+B.st.t.toFixed(3),tot:+(B.st.tot||0).toFixed(3),L:B.st.etapes.length}:null,zc:!!(B&&B.zc),dash:!!(B&&B.dash),fuite:B&&B.fuiteQ?B.fuiteQ.map(Math.round):null,rec:c.rec?{x:Math.round(c.rec.x),y:Math.round(c.rec.y),t0:c.rec.t0}:null}:null,
+   tuile:window.__emp18?window.__emp18():null,joues:XE.joues.slice(),dissous:XE.dissous.length,fele:+XE.fele.toFixed(2),rev:!!X.rev18,passe:!!X.passe18,chute:!!X.chute18,j:JSON.parse(JSON.stringify(XE.j))};}
+ // console et bancs : emprunter(id) (le prochain emprunt prend ce talent), defaire() (comme si le talent emprunté brûlait), l'état
+ function emprunterId(id){const XE=X.emp;if(!XE||X.phase!==3||XE.cur)return false;const L=brxEmpruntables(DB,empActifs(),T9).liste,x=L.find(y=>y.id===id);if(!x)return false;
+  XE.boucle.splice(XE.ib,0,Object.assign({},x));if(!X.boucle)X.boucle=[];X.boucle.splice(X.im,0,{k:'emprunt'});X.ph='entracte';X.t=0.01;return true;}
  // ── essai (Q17) : l'arène d'essai (sans boss d'essai, sans tirs, sans foule, sans Masqué), le Brumeux à la phase demandée
  function essai(phase,o){o=o||{};phase=clamp(((+phase||1)-1)|0,0,DB.phases.length-1);
   const r=XA.essai('final',{cls:o.cls,masque:false,foule:0,boss:false,tirs:false,bot:false,dieu:o.dieu!==false,etat:DB.phases[phase].arene});
@@ -14627,21 +14928,26 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   X.essai={bot:o.bot|0,dieu:o.dieu!==false,muet:!!o.muet};X.bot=o.bot|0;
   // v18.8 : une némésis construite EN MÉMOIRE (rien d'écrit), cousue en premier fil de la phase III : ?brumeux=3&nem=<talent>[&points=n]
   if(o.nem&&window.__nemesis&&window.__nemesis.fiche)X.essai.nemF=window.__nemesis.fiche(o.nem,{points:o.points,rnd:desRng((X.graine^0x5bd1e995)>>>0)});
+  // v18.9 : les talents portés (portes=id[:rang[:g]],… : pris comme __dernier.prendre), le premier emprunt forcé (emp), le lien au Dernier Souvenir (ds=1 :
+  // la braise active, le talent emp désigné) ; rien n'est écrit (RUN.essai)
+  if(o.portes&&window.__dernier)for(const t of String(o.portes).split(',')){const [id,rg,g]=t.split(':');if(NODES[id])window.__dernier.prendre(id,Math.max(1,+rg||1),Math.max(0,+g||0));}
+  if(o.emp)X.essai.emp=String(o.emp);
   room.waves=[];room.waveI=0;room.spawning=[];for(const e of enemies)if(!e.dead&&!e.brx18)e.dead=true;
   debut(phase);showBanner(DB.nom,'Au fond de la Brume',true);
+  if(o.ds&&window.__dernier){window.__dernier.activer(true);if(o.emp)window.__dernier.designer(String(o.emp));}
   return{phase:phase+1,palier:X.palier,graine:X.graine,pv:X.pv.slice(),seuils:X.seuils.slice(),monde:r.monde,etat:r.etat,bot:X.bot};}
  const QB=/[?&]brumeux=(\d+)/.exec(location.search);
  if(QB&&!/[?&]demo=/.test(location.search)){const q=k=>(new RegExp('[?&]'+k+'=([^&]*)').exec(location.search)||[])[1];
-  addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0',nem:q('nem'),points:q('points')});}catch(err){console.error(err);}},400));}
+  addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0',nem:q('nem'),points:q('points'),portes:q('portes')&&decodeURIComponent(q('portes')),emp:q('emp'),ds:q('ds')==='1'});}catch(err){console.error(err);}},400));}
  // ── console et bancs
  window.__brumeux={DB,essai,vers:n=>vers(clamp((n|0)-1,0,DB.phases.length-1)),lire,images,statsRun,
-  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='batir'?'bâtir':m.k==='couture'?'couture':m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
+  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='batir'?'bâtir':m.k==='couture'?'couture':m.k==='emprunt'?'emprunt':m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
    tab:X.tab&&{i:X.tab.i,frag:Object.assign({},X.tab.frag),decor:X.tab.decor,theme:X.tab.theme,regle:X.tab.regle,densite:X.tab.densite,champion:X.tab.champion,rejoue:X.tab.rejoue,sub:X.tab.sub,t:+X.tab.t.toFixed(2),feinte:X.tab.feinte,vide:X.tab.vide,dalles:X.tab.dalles.length,braz:X.tab.braz?X.tab.braz.length:0,n:X.tab.n},
    tiersVus:X.tiersVus.slice(),chute:+X.chute.toFixed(1),ouvre:+X.ouvre.toFixed(2),pench:+X.pench.toFixed(3),cal:!!X.cal,tueTab:X.tueTab,lec:X.lec&&{poids:X.lec.poids,premier:X.lec.premier,bati:X.lec.bati},j:JSON.parse(JSON.stringify(X.j)),scene:!!X.scene,tue:X.tue,
-   bat:etatBat(),cou:etatCou(),ann:X.ann?X.ann.id:null,mainsC:X.mainsC&&{x:+X.mainsC.x.toFixed(1),y:+X.mainsC.y.toFixed(1)},tueBati:X.tueBati,batB:X.batB,batX:X.batX.slice(),mod:!!X.mod,ruee:!!X.ruee}),   // v18.7 : les constructions
+   bat:etatBat(),cou:etatCou(),emp:etatEmp(),ann:X.ann?X.ann.id:null,mainsC:X.mainsC&&{x:+X.mainsC.x.toFixed(1),y:+X.mainsC.y.toFixed(1)},tueBati:X.tueBati,batB:X.batB,batX:X.batX.slice(),mod:!!X.mod,ruee:!!X.ruee}),   // v18.7 : les constructions
   sauve:()=>({lu:X.sauve,brut:SAVE.brumeux||null}),noter:(o)=>brxNoter(X.sauve||brxNeuf(),o,DB),
-  lancer,batir,poserSorte,coudre:()=>coudre(),couper:id=>{const f=X.cou&&X.cou.fils.find(y=>y.id===id);if(f&&f.noeud)couper(f);return!!f;},fils:()=>X.cou?X.cou.fils:[],decoudre:()=>decoudre(),poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
-  dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu},glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2:()=>cible2(),zonesCousus:()=>zonesCousus(),zoneAutre18:e=>zoneAutre18(e),faible:()=>X.e?faible(X.e):null,croix:()=>X.e?croixXY(X.e):null,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
+  lancer,batir,poserSorte,emprunter:id=>emprunterId(id),defaire:()=>{const c=X.emp&&X.emp.cur;if(!c||c.defait)return false;defaire(c);return true;},coudre:()=>coudre(),couper:id=>{const f=X.cou&&X.cou.fils.find(y=>y.id===id);if(f&&f.noeud)couper(f);return!!f;},fils:()=>X.cou?X.cou.fils:[],decoudre:()=>decoudre(),poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
+  dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu,brxEmpruntables,brxPoidsEmprunt,brxEmprunts,brxEtapesEmprunt,brxPasse,brxReverence,brxReverenceOk,brxVolte,brxFiltreAire,brxPlafondDs,brxPointChute,brxVariantesIV,brxDefaitable,brxRefusEmprunt},T9,imgCorps:(cls,et)=>imgCorps(cls||P.cls,et||'n',DB.dessin.r.sol),emp:()=>X.emp,glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2:()=>cible2(),zonesCousus:()=>zonesCousus(),zoneAutre18:e=>zoneAutre18(e),faible:()=>X.e?faible(X.e):null,croix:()=>X.e?croixXY(X.e):null,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

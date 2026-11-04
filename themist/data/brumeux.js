@@ -1,7 +1,8 @@
 // La Brume · données du Brumeux, le boss final (v18.5, chantier v18, action 5 ; cadrage Q1–Q17 validé le 1er novembre 2026)
 // Action 5a : le socle technique. Action 5b (v18.6) : la phase I, « le Rappel » (partition.rappel, gestes signature, tableaux). Action 5c (v18.7) :
 // la phase II, « L'Ouvrage » (partition.ouvrage, gestes signature, constructions comme système). Action 5d (v18.8) : la phase III, « La Couture »
-// (partition.couture, gestes signature, couture : montages, nœuds, Masqués cousus). Les phases IV et V (5e, 5f) jouent encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
+// (partition.couture, gestes signature, couture : montages, nœuds, Masqués cousus). Action 5e (v18.9) : la phase IV, « L'Emprunt » (partition.emprunt,
+// gestes signature au corps, emprunt : il joue l'arme de la Brume d'un de tes talents portés). La phase V (5f) joue encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
 // pure /*brx:pur*/), par outils/sim-brumeux.mjs et par _dev/bancs/banc-brumeux.mjs. Le wiki ne lit de ce fichier rien d'autre que ce que
 // l'action 5g y branchera (sa carte, Q16) : ni les phases, ni la partition, ni la lecture, ni les tirages (secret).
 // En jeu, rien n'est allumé : l'arène (arene.js, actif:false) reste fermée et le boss final provisoire tient sa place jusqu'à l'action 5g.
@@ -11,14 +12,14 @@
  // ── Les cinq phases (Q1). id : nom de travail, jamais affiché ; presence : au-dessus de l'arène (mains, croix, fils ; haut) ou au sol (sol) ;
  // faible : ce que l'anneau ivoire entoure (G27.anneau) ; arene : l'état d'arène (data/arene.js, salles.final.etats : 0 pleine, 1 resserrée,
  // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; 4 la phase II réelle, « L'Ouvrage », action 5c ; 5 la phase III réelle, « La Couture »,
- // action 5d ; les autres viennent avec 5e et 5f) ; libre : part improvisée visée (indicative, Q8) ;
+ // action 5d ; 6 la phase IV réelle, « L'Emprunt », action 5e ; la phase V vient avec 5f) ; libre : part improvisée visée (indicative, Q8) ;
  // pv : PV de la phase (placeholders, à calibrer au bot à l'action 5g : 50 à 70 s par phase, Q11). Pas de PV ni de dégâts en plus par palier (Q12).
  // exclut : les sortes d'éléments que cette phase ne tire jamais (I : bâtir, c'est la phase II ; V : l'arène se défait, rien n'y est bâti).
  phases:[
   {id:'rappel',presence:'haut',faible:'mains',arene:3,libre:0.25,pv:2400,exclut:['construction']},
   {id:'ouvrage',presence:'haut',faible:'mains',arene:4,libre:0.40,pv:2400},
   {id:'couture',presence:'haut',faible:'croix',arene:5,libre:0.50,pv:2400,exclut:['construction']},
-  {id:'emprunt',presence:'sol',faible:'coeur',arene:1,libre:0.50,pv:2400},
+  {id:'emprunt',presence:'sol',faible:'coeur',arene:6,libre:0.50,pv:2400},
   {id:'effacement',presence:'sol',faible:'coeur',arene:2,libre:0.60,pv:2400,exclut:['construction']}],
  // Les dégâts au-delà d'un seuil de phase ne passent pas à la phase suivante (même règle que les gardiens) ; le verrou de phase est celui
  // de data/gardiens.js (verrouPhase : 1,2 s à 15 %). dureeS : la transition entière (verrou, cri, transformation de l'arène, relecture).
@@ -39,7 +40,12 @@
   // Phase III, « La Couture » (fiche 5d, § 2) : une boucle d'environ 33 s, fenêtre comprise (deux Coutures, trois gestes signature, la feinte, deux mesures
   // libres) ; à nu 2,0 s après la boucle. Une mesure {k:'couture'} lance ses fils (couture, plus bas) ; une Couture qui ne peut rien lancer (trois fils
   // tendus, aucun point de montage) saute, et l'entracte qui suit est réduit à sauteS.
-  couture:{entracteS:1.4,nuS:2.0,sauteS:0.6,mesures:[{k:'couture'},{k:'fixe',g:'surjet'},{k:'libre'},{k:'fixe',g:'feinte'},{k:'fixe',g:'aiguilles'},{k:'couture'},{k:'fixe',g:'de'},{k:'libre'}]}},
+  couture:{entracteS:1.4,nuS:2.0,sauteS:0.6,mesures:[{k:'couture'},{k:'fixe',g:'surjet'},{k:'libre'},{k:'fixe',g:'feinte'},{k:'fixe',g:'aiguilles'},{k:'couture'},{k:'fixe',g:'de'},{k:'libre'}]},
+  // Phase IV, « L'Emprunt » (fiche 5e, § 2) : une boucle d'environ 36 s (trois emprunts, trois gestes signature au corps, la feinte, deux mesures libres) ;
+  // pas de fenêtre après la boucle (nuS 0) : chaque emprunt a la sienne (épuisé, emprunt.nuS). Une mesure {k:'emprunt'} joue l'arme de la Brume d'un de tes
+  // talents portés (emprunt, plus bas) ; un emprunt sans empruntable, une Révérence qui renonce, un geste sans sortie sautent (entracte réduit à sauteS).
+  // Entracte 1,2 s (1,4 en I à III) : le duel se joue plus serré, dans une arène quatre fois plus petite.
+  emprunt:{entracteS:1.2,nuS:0,sauteS:0.6,mesures:[{k:'emprunt'},{k:'fixe',g:'passe'},{k:'libre'},{k:'emprunt'},{k:'fixe',g:'feinte'},{k:'fixe',g:'reverence'},{k:'emprunt'},{k:'fixe',g:'volte'},{k:'libre'}]}},
  // ── Les éléments improvisables (Q8) et leur menace. sorte : zone, tir, saisie, construction (deux éléments de même sorte ne se cumulent
  // pas au-delà de cumul[sorte]). charge : préavis (s, ≥ preavis.boss) ; degats : avant la montée (dmgMul). pond : l'axe du profil qui pèse
  // (sens +1 : plus l'axe est haut, plus l'élément pèse ; −1 : l'inverse) ; sources : les ennemis de la descente dont les dégâts reçus
@@ -92,8 +98,22 @@
   //   arrête un tir (jamais sur une fosse). Charge de tir violette (grammaire des tirs). Sorties : entre deux aiguilles, de côté, derrière une construction.
   aiguilles:{menace:2,sorte:'tir',forme:'aiguilles',fixe:true,n:3,r:10,ouverture:36,vitesse:420,charge:0.9,degats:10,vise:true},
   // La Couture (l'élément noté quand un Masqué cousu t'a tué : le premier fil après la némésis le recoud au combat suivant, champ cousu de la sauvegarde)
-  couture:{menace:0,sorte:'couture',fixe:true}},
- cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1,tableau:1,effondrement:1,rail:2,appel:1,couture:1},
+  couture:{menace:0,sorte:'couture',fixe:true},
+  // ── Les gestes signature de la phase IV (fiche 5e, § 1), toujours les mêmes : pour la première fois il est au sol, et ses gestes partent de SON CORPS
+  // (formes reprises : couloir, cône, anneau à brèche ; sorties neuves : derrière lui, contre lui). Orange TELE.zone. Son corps ne blesse jamais au contact.
+  // La Passe : un couloir de 2 r (son diamètre), de son corps vers toi et au-delà, jusqu'au bord (len au plus) ; après la charge, son corps le parcourt en
+  //   course s ; coupé au premier pilier qui arrête un tir (jamais une fosse) : son corps s'y brise, sonné sonneS s, la construction perd un palier.
+  //   Sorties : de côté, ou derrière une construction restée debout.
+  passe:{menace:3,sorte:'zone',forme:'passe',fixe:true,len:900,course:0.45,charge:1.1,degats:14,vise:true,sonneS:2},
+  // La Révérence : un cône d'ouverture degrés, de r0 à r1 px de son centre, vers toi ; il s'approche d'abord à atteinte × r1 (règle du Masqué), attenteS s
+  //   au plus, puis renonce (la mesure saute). Sorties : derrière lui ou sur ses flancs (hors de l'angle), ou reculer au-delà de r1.
+  reverence:{menace:3,sorte:'zone',forme:'reverence',fixe:true,ouverture:150,r0:0,r1:190,atteinte:0.8,attenteS:2,approche:1.3,charge:0.9,degats:13,vise:true},
+  // La Volte : un anneau à brèche fixe autour de lui (r0 → r1), brèche de breche px orientée à graine. Sorties : contre lui (à moins de r0 de son
+  //   centre), par la brèche, ou au-delà de r1.
+  volte:{menace:3,sorte:'zone',forme:'volte',fixe:true,r0:70,r1:380,breche:120,charge:1.1,degats:12,vise:false},
+  // L'emprunt (l'élément noté quand sa copie d'un de tes talents t'a tué : le premier emprunt du combat suivant le rejoue, champ emp de la sauvegarde)
+  emprunt:{menace:0,sorte:'emprunt',fixe:true}},
+ cumul:{zone:1,saisie:1,tir:2,construction:1,feinte:1,tableau:1,effondrement:1,rail:2,appel:1,couture:1,emprunt:1},
  // ── Le budget d'une mesure libre, par phase (menace cumulée) et par palier (Q12 : ×1,25 en Difficile, ×1,5 en Extrême ; jamais de PV ni de
  // dégâts en plus). Un tirage prend des éléments tant que le budget et le non-cumul le permettent ; le premier est ce qui t'a tué (Q13).
  budget:{base:[4,5,6,6,7],palier:{normal:1,difficile:1.25,extreme:1.5}},
@@ -184,6 +204,19 @@
  // combat, pondérés à la récence (recence : poids du plus ancien, du plus récent ; ceux du Glas). budget : chaque Masqué cousu vivant retire moins au
  // budget d'une mesure libre (jamais sous plancher) et compte pour une source de tir. attente : une némésis promue au fond attend là (registre, salle).
  // non-cumul : ses gestes attendent la zone d'un Masqué cousu en cours, au plus attenteZoneS s, puis c'est le Masqué qui attend.
+ // ── L'emprunt de la phase IV (fiche 5e, § 3 et § 4). Il joue l'ARME DE LA BRUME (souvenirs-brume.js, familles) d'un de tes talents portés, par un
+ // porteur fantôme collé à son corps (hors de enemies, mené par la file d'étapes du Masqué : sbMaj, comme le Reflet du Glas). Le talent reste à toi.
+ // exclus : les ultimes (*_sk), les sous-classes (genre c), les talents classés renfort, les reliques ; variantes : gardées (elles changent la forme)
+ // et ignorées (contrôles sur toi, soin du porteur, tirs qui traverseraient tes constructions) ; poids d'un empruntable = (base + rang / rang max) ×
+ // (1 + gravure × gravures) ; parBoucle emprunts par boucle, sans remise tant qu'il en reste, jamais deux fois de suite la même famille s'il en reste
+ // une autre ; le premier de la phase rejoue celui qui t'a tué (le talent, sinon sa famille). priseS : la prise (fil lavande, icône, liseré de la tuile) ;
+ // plancherS : aucune étape ne charge moins (le préavis du boss), +premiereS à la première rencontre de la famille empruntée ; degats : une étape × 1,0
+ // fait tant (échelle d'acte comprise, avant la montée) ; force par rang et gravure comme le Masqué (assemble.souvenir), sous sbPlafond ; nuS : épuisé
+ // après un emprunt joué ; defaitS : à nu quand tu brûles le talent emprunté (Dernier Souvenir), de la prise au coup de la dernière étape ; dissousS :
+ // la zone défaite se dissout sans frapper ; marche : sa vitesse, la distance qu'il garde, l'élan d'une approche (× vitesse).
+ emprunt:{exclus:{ultimes:true,genres:['c'],renforts:true,reliques:true},variantes:{gardees:['double','elargi'],ignorees:['etourdit','repousse','vol','traverse']},
+  poids:{base:0.5,gravure:5},parBoucle:3,priseS:0.6,plancherS:0.8,premiereS:0.3,degats:11,nuS:2.0,defaitS:4.0,dissousS:0.3,
+  marche:{vitesse:120,distance:[180,280],approche:1.3},chute:{dureeS:0.8,minD:200}},
  couture:{fils:3,filsMax:3,decalS:0.5,montage:{dureeS:4.4},noeud:{haut:110,r:20,pvPart:0.025},nuS:3,briseS:2,
   points:{d:[300,650],ecart:420,bord:80,marge:40,vue:200,minD:230,essais:80},
   cousus:{pvPart:0.15,plancherS:0.6},recence:[1,3],budget:{moins:2,plancher:2},attente:{acte:3,salle:3},attenteZoneS:1.5},
@@ -214,7 +247,8 @@
   lecture:{poids:0.8,min:0.05,aucune:1}},
  // ── Couleurs (r,g,b), hors grammaire : craie = annonce d'une construction ; les autres sont la matière du Brumeux (jamais une couleur de
  // télégraphe : orange, rouge, violet, cyan ; ni la lavande des souvenirs, ni l'ivoire du point faible). Le simulateur vérifie ΔE ≥ 25.
- couleurs:{craie:'160,185,150',yeux:'175,185,205',fils:'170,165,185',croix:'120,110,140',capuche:'52,44,70',manteau:'70,60,95'},
+ // braise (v18.9) : la fêlure de son masque et la copie qui se dissout quand tu brûles le talent emprunté (ΔE ≥ 25 de l'orange des zones et de l'ivoire).
+ couleurs:{craie:'160,185,150',yeux:'175,185,205',fils:'170,165,185',croix:'120,110,140',capuche:'52,44,70',manteau:'70,60,95',braise:'255,214,110'},
  // ── Sauvegarde (Q13) : SAVE.brumeux, versionnée. tentatives, phase atteinte au plus haut, l'élément qui t'a tué par phase, victoires.
  // Une descente d'essai n'écrit rien. Au combat suivant, il rejoue d'abord ce qui t'a tué (lecture.tue).
  sauvegarde:{v:1},
@@ -230,7 +264,10 @@
  // la main de la Ruée qui se brise ; le fil d'un effondrement et celui d'un échafaudage ; les constructions dans leur matière.
  // version 4 (action 5d) : en phase III, sa croix est le corps frappable (ses mains pendent dessous) ; les fils de sa croix aux montages, les nœuds, les
  // bouts de fils coupés qui pendent, la croix qui vacille, un fil mou au-dessus de chaque construction.
- dessin:{version:4,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
+ // version 5 (action 5e) : en phases IV et V, son corps entier au sol (capuchon, manteau, yeux pâles derrière le masque à ta forme et son emblème, croix à
+ // la ceinture, fils au sol), le cœur sous le capuchon (point faible), la prise (fil lavande), l'épuisement (masque terni), la copie défaite (fêlure de
+ // braise), la chute de la transition III → IV.
+ dessin:{version:5,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
   glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#0a0810" stroke-width="4.4" stroke-linecap="round"/><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#c8c0d8" stroke-width="2.2" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#0a0810" stroke-width="2.6" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#b9b0c8" stroke-width="1.2" stroke-linecap="round"/><path d="M7 8.5Q12 3.4 17 8.5Q12 13.6 7 8.5Z" fill="#eee8da" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="8.5" r="1.9" fill="#0a0810"/></svg>'},
  // ── Le bot qui frappe (Q14, bot=2) : il attaque avec le kit de base de sa forme, sort des zones qui chargent (à sa vitesse de marche, par une
  // esquive s'il le faut), vise le Brumeux (ou l'ennemi le plus proche s'il est plus près que proche px). Il sert aussi à mesurer l'action 6.
