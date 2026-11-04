@@ -1,5 +1,5 @@
 {
-  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). `prep` : écran de préparation (cases bleues en plus du déploiement maximal, objets portés par unité, sac du combat d'essai). `allies` : alliés verts (GDD §7.8 ; distances en cases). Toute valeur de réglage passe par ce fichier. `economy` : or de départ, capacité du sac (lignes, GDD §13.2 : 40) et pile maximale ; `dialogue` : machine à écrire (GDD §13.3 : 30 caractères par seconde). `visuals` : effets HD-2D du monde ouvert (décision n°47). `classMechanics` : Serment, Hauteur, Saisons, Fil d’eau, Fanfare (jalon M6, n°123 à n°127).",
+  "$comment": "Constantes d'équilibrage centralisées (GDD §4.2, §9.7, §9.12, §8.2). `prep` : écran de préparation (cases bleues en plus du déploiement maximal, objets portés par unité, sac du combat d'essai). `allies` : alliés verts (GDD §7.8 ; distances en cases). Toute valeur de réglage passe par ce fichier. `economy` : or de départ, capacité du sac (lignes, GDD §13.2 : 40) et pile maximale ; `dialogue` : machine à écrire (GDD §13.3 : 30 caractères par seconde). `visuals` : effets HD-2D du monde ouvert (décision n°47). `classMechanics` : Serment, Hauteur, Saisons, Fil d’eau, Fanfare (jalon M6, n°123 à n°127). `closeup` : écran de combat rapproché (jalon M8, n°209 ; GDD §11.2 et §11.3), durées en ms à la vitesse « Normales » et durée maximale d'un échange coup + riposte (`budget`).",
   "exploration": {
     "tileSize": 16,
     "walkSpeed": 80,
@@ -160,5 +160,28 @@
     "levelBonus": 1,
     "excludeEncounters": ["milice_aubemer", "milice_racine", "milice_brume", "milice_cendre"],
     "sceneCap": 3
+  },
+  "closeup": {
+    "entry": 220,
+    "exit": 260,
+    "between": 120,
+    "prep": 150,
+    "dash": 120,
+    "strike": 80,
+    "impact": 100,
+    "hitStop": 60,
+    "recoil": 150,
+    "pose": 200,
+    "back": 250,
+    "draw": 150,
+    "rune": 150,
+    "fly": 220,
+    "settle": 150,
+    "critDark": 200,
+    "critCut": 90,
+    "critCuts": 3,
+    "critPose": 320,
+    "shake": { "hit": 4, "crit": 10, "critMs": 300 },
+    "budget": { "normal": 3500, "fast": 1800 }
   }
 }

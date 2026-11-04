@@ -18,7 +18,7 @@
  * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
 import Phaser from 'phaser';
-import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, loadAnimSpeed, nextAnimSpeed, saveAnimSpeed, type AnimSpeed } from '../core/settings';
+import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, BATTLE_VIEW_LABEL, loadAnimSpeed, loadBattleView, nextAnimSpeed, nextBattleView, saveAnimSpeed, saveBattleView, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
@@ -63,7 +63,10 @@ import {
   type PrepPlan,
   type RosterSort,
 } from '../logic/tactics/prep';
-import { costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
+import { areaOf, costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
+import { attackKind, backdropFor, planSegments, projectileFor, type CombatEvent, type Segment } from '../logic/anim/closeup';
+import { gradeMatrix } from '../render/grade';
+import type { BattleCloseupScene, CloseupFighter, CloseupSpec } from './BattleCloseupScene';
 import { isStunned } from '../logic/tactics/status';
 import { hostile, type BattleEvent, type BattleRules, type BattleState, type BattleUnit, type Cell, type EffectResult, type GrowthKey, type ItemStack, type Strike, type Team } from '../logic/tactics/types';
 import { GROWTH_KEYS } from '../data/schemas';
@@ -248,6 +251,11 @@ export class BattleScene extends Phaser.Scene {
   private camTarget = { x: 0, y: 0 };
   private viewSize = { w: 480, h: 246 };
   private dodge: DodgeSide = 'left';
+  /** Écran de combat rapproché (jalon M8) et son réglage (n°221). */
+  private closeup: BattleCloseupScene | null = null;
+  private view: BattleView = 'closeup';
+  /** `?debug&slow=N` : l'écran rapproché N fois plus lent (captures image par image). */
+  private slow = 1;
 
   constructor() {
     super(SCENES.battle);
@@ -290,7 +298,7 @@ export class BattleScene extends Phaser.Scene {
       this.loadouts = world ? getLoadouts(this.party.map((m) => m.id)) : this.party.map(() => emptyLoadout());
       reconcileLoadouts(this.loadouts, this.convoy);
       // `?debug&named=rik` (ou `rik:6`) : un ennemi nommé rejoint ce combat (dialogues de combat, n°191).
-      const extraEnemies = [...(params.extraEnemies ?? []), ...(debug ? this.debugNamed(url.get('named'), encounter.enemies) : [])];
+      const extraEnemies = [...(params.extraEnemies ?? []), ...(debug ? this.debugNamed(url.get('named'), encounter.enemies) : []), ...(debug ? this.benchEnemy(url) : [])];
       this.state = buildBattle(encounter, this.party, this.gameData, {
         seed,
         initiative: params.initiative === true,
@@ -309,9 +317,15 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.speed = loadAnimSpeed();
+    this.view = loadBattleView();
+    this.slow = debug ? Math.max(1, Number(url.get('slow')) || 1) : 1;
     this.actions = new ActionInput(this);
     this.scene.launch(SCENES.battleHud);
     this.hud = this.scene.get(SCENES.battleHud) as BattleHudScene;
+    // L'écran rapproché passe au-dessus de tout le combat (jalon M8).
+    this.scene.launch(SCENES.battleCloseup);
+    this.scene.bringToTop(SCENES.battleCloseup);
+    this.closeup = this.scene.get(SCENES.battleCloseup) as BattleCloseupScene;
 
     ensureBattleFxTextures(this);
     for (const unit of this.state.units) ensureMapSprite(this, unit.sprite, unit.team);
@@ -351,7 +365,10 @@ export class BattleScene extends Phaser.Scene {
     this.hud.setPhase(this.state.phase, 1, this.seasonLabel());
     this.cameras.main.fadeIn(450, 0, 0, 0);
     // `?debug&prep=off` passe la préparation (déploiement par défaut).
-    if (debug && url.get('prep') === 'off') {
+    if (debug && url.has('closeup')) {
+      this.focusHero();
+      void this.closeupBench(url);
+    } else if (debug && url.get('prep') === 'off') {
       this.focusHero();
       void this.openingSequence();
     } else this.startPrep();
@@ -1914,6 +1931,15 @@ export class BattleScene extends Phaser.Scene {
           close();
         },
       },
+      {
+        label: `Écran : ${BATTLE_VIEW_LABEL[this.view]}`,
+        onSelect: () => {
+          this.view = nextBattleView(this.view);
+          saveBattleView(this.view);
+          this.hud.toast(`Échanges : écran ${BATTLE_VIEW_LABEL[this.view].toLowerCase()}`);
+          close();
+        },
+      },
       { label: 'Retraite', onSelect: () => this.retreat() },
     ];
     this.hud.openMenu({ title: 'Menu', items, onCancel: close, centered: true });
@@ -2029,7 +2055,16 @@ export class BattleScene extends Phaser.Scene {
   /* ---------- Événements → animations ---------- */
 
   private async playEvents(events: readonly BattleEvent[]): Promise<void> {
-    for (const event of events) {
+    const segments: Segment[] = this.useCloseup() ? planSegments(events, (c) => this.closeupEligible(c)) : events.map((event) => ({ kind: 'event', event }));
+    for (const segment of segments) {
+      if (!this.alive) return;
+      if (segment.kind === 'closeup') await this.playCloseup(segment.combat, segment.falls);
+      else await this.playEvent(segment.event);
+    }
+  }
+
+  private async playEvent(event: BattleEvent): Promise<void> {
+    {
       if (!this.alive) return;
       switch (event.type) {
         case 'move':
@@ -2501,12 +2536,189 @@ export class BattleScene extends Phaser.Scene {
     shot.destroy();
   }
 
+  /* ---------- Écran de combat rapproché (jalon M8) ---------- */
+
+  /** Les échanges passent par l'écran rapproché : réglage « Rapproché » et animations non désactivées (n°221). */
+  private useCloseup(): boolean {
+    return this.closeup !== null && this.view === 'closeup' && this.speed !== 'off';
+  }
+
+  /** Un échange va dans l'écran rapproché, sauf celui d'une compétence de zone (n°205). */
+  private closeupEligible(combat: CombatEvent): boolean {
+    if (combat.skillId === undefined) return true;
+    const attacker = this.state.units.find((u) => u.id === combat.attackerId);
+    return areaOf(attacker ?? {}, skillDef(this.rules, combat.skillId)) === undefined;
+  }
+
+  /** Joue un échange dans l'écran rapproché, puis met la carte à jour (PV, chutes). */
+  private async playCloseup(combat: CombatEvent, falls: readonly string[]): Promise<void> {
+    const closeup = this.closeup;
+    if (!closeup) {
+      await this.animateCombat(combat.attackerId, combat.defenderId, combat.strikes);
+      for (const id of falls) await this.animateKo(id);
+      return;
+    }
+    await this.showCloseup(this.closeupSpec(combat, falls));
+    for (const id of [combat.attackerId, combat.defenderId]) {
+      const unit = this.state.units.find((u) => u.id === id);
+      if (!unit) continue;
+      this.updateHpBar(unit.id, unit.hp);
+      this.syncUnit(unit);
+    }
+    for (const id of falls) this.hideFallen(id);
+  }
+
+  /**
+   * Données de l'échange pour l'écran rapproché : PV d'avant l'échange (la
+   * logique les a déjà retirés), prévision, geste, projectile, fonds.
+   * `before` : PV de départ imposés (banc d'essai).
+   */
+  /**
+   * Joue l'écran rapproché ; la carte et l'interface du combat, cachées dessous,
+   * ne sont plus dessinées pendant l'échange (l'écran est opaque).
+   */
+  private async showCloseup(spec: CloseupSpec): Promise<void> {
+    if (!this.closeup) return;
+    const covered = [SCENES.battle, SCENES.battleHud] as const;
+    try {
+      void this.time.delayedCall(Math.max(16, this.gameData.balance.closeup.entry * 0.25), () => {
+        if (this.closeup?.playing) for (const key of covered) this.scene.setVisible(false, key);
+      });
+      await this.closeup.play(spec);
+    } finally {
+      for (const key of covered) this.scene.setVisible(true, key);
+    }
+  }
+
+  private closeupSpec(combat: CombatEvent, falls: readonly string[], before?: ReadonlyMap<string, number>, distance?: number, from?: Cell): CloseupSpec {
+    const attacker = getUnit(this.state, combat.attackerId);
+    const defender = getUnit(this.state, combat.defenderId);
+    const lost = (u: BattleUnit): number => combat.strikes.filter((s) => s.targetId === u.id).reduce((n, s) => n + s.damage, 0);
+    const startHp = (u: BattleUnit): number => before?.get(u.id) ?? Math.min(u.stats.pv, u.hp + lost(u));
+    const f = forecast(this.state, attacker, defender, this.rules, from ?? attacker);
+    const d = distance ?? Math.abs(attacker.x - defender.x) + Math.abs(attacker.y - defender.y);
+    const anims = this.gameData.battleAnims;
+    const fighter = (u: BattleUnit): CloseupFighter => {
+      const side = u.id === attacker.id ? f.attacker : f.defender;
+      const kind = attackKind(u.weapon, d);
+      return {
+        id: u.id,
+        name: u.name,
+        title: `${u.kindName} · Niv ${u.level}`,
+        team: u.team,
+        sprite: u.sprite,
+        isBoss: u.isBoss,
+        hp: startHp(u),
+        maxHp: u.stats.pv,
+        weaponName: u.weapon.name,
+        elementColor: this.weaponElementColor(u.weapon.element),
+        odds: side.canStrike ? { hit: side.odds.hit, damage: side.odds.damage, crit: side.odds.crit, doubles: side.doubles } : null,
+        kind,
+        projectile: projectileFor(u.weapon, kind, anims),
+        platform: backdropFor(terrainAt(this.state.map, u.x, u.y).id, this.state.zone, anims),
+      };
+    };
+    const playerFirst = attacker.team !== 'enemy';
+    const [left, right] = playerFirst ? [attacker, defender] : [defender, attacker];
+    const quality = loadQuality();
+    const zone = this.gameData.zones.find((z) => z.id === this.state.zone);
+    const visuals = this.gameData.balance.visuals;
+    return {
+      left: fighter(left),
+      right: fighter(right),
+      backdrop: backdropFor(terrainAt(this.state.map, defender.x, defender.y).id, this.state.zone, anims),
+      distance: d,
+      strikes: combat.strikes,
+      falls,
+      timings: this.gameData.balance.closeup,
+      factor: () => ANIM_SPEED_FACTOR[this.speed] * (this.actions?.isDown('sprint') ? 0.5 : 1) * this.slow,
+      grade: quality === 'off' || !zone ? null : { matrix: gradeMatrix(zone.grade), vignette: visuals.vignette },
+    };
+  }
+
+  /** Couleur de l'élément d'une arme, ou null sans élément. */
+  private weaponElementColor(element: string | null): number | null {
+    return element ? this.elementColor(element) : null;
+  }
+
+  /** Une unité tombée dans l'écran rapproché disparaît de la carte (sans rejouer sa chute). */
+  private hideFallen(unitId: string): void {
+    const unit = this.state.units.find((u) => u.id === unitId);
+    const view = this.views.get(unitId);
+    if (unit) this.hud.toast(this.fallenText(unit));
+    view?.container.setVisible(false);
+    this.marked.delete(unitId);
+  }
+
+  private fallenText(unit: BattleUnit): string {
+    return unit.team === 'player' ? `${unit.name} est hors de combat.` : unit.team === 'ally' ? `${unit.name}, notre allié, est tombé.` : `${unit.name} est vaincu${unit.isBoss ? ' !' : '.'}`;
+  }
+
+  /** `?debug&closeup=<classe>:<ennemi>` : l'ennemi du banc rejoint le combat. */
+  private benchEnemy(url: URLSearchParams): { enemy: string; level: number }[] {
+    const spec = url.get('closeup');
+    const foe = spec?.split(':')[1];
+    if (!foe || !this.gameData.enemies.some((e) => e.id === foe)) return [];
+    return [{ enemy: foe, level: Number(url.get('foelvl')) || 5 }];
+  }
+
+  /**
+   * Banc d'essai de l'écran rapproché (n°222) :
+   * `?debug&closeup=<classe ou heros>:<ennemi>[&crit=1][&miss=1][&kill=1][&double=1][&nocounter=1][&range=2][&from=right][&slow=N]`.
+   * Rejoue l'échange en boucle (R) ; `window.vaelmorCloseupPlay()` le relance et se résout à la fin.
+   */
+  private async closeupBench(url: URLSearchParams): Promise<void> {
+    this.setMode('busy');
+    const [mine, foe] = (url.get('closeup') ?? '').split(':');
+    const mineMatch = (u: BattleUnit): boolean => u.team === 'player' && (mine === 'heros' ? u.isHero : u.kindId === mine && !u.isHero);
+    // La classe demandée n'est pas déployée (5 places) : le membre de la compagnie d'essai rejoint le banc.
+    if (!this.state.units.some(mineMatch)) {
+      const index = this.party.findIndex((m) => m.class === mine && !m.hero);
+      const member = this.party[index];
+      const hero = this.state.units.find((u) => u.isHero);
+      if (member && hero) this.state.units.push(memberUnit(this.gameData, this.rules, member, emptyLoadout(), `banc_${mine}`, index, hero.x, hero.y));
+    }
+    const left = this.state.units.find(mineMatch) ?? this.state.units.find((u) => u.team === 'player');
+    const right = this.state.units.find((u) => u.team === 'enemy' && u.kindId === foe) ?? this.state.units.find((u) => u.team === 'enemy');
+    if (!left || !right) return;
+    const fromRight = url.get('from') === 'right';
+    const [a, b] = fromRight ? [right, left] : [left, right];
+    const range = Number(url.get('range')) || 1;
+    // Prévision comme si l'attaquant était à `range` cases de sa cible.
+    const f = forecast(this.state, a, b, this.rules, { x: b.x - range, y: b.y });
+    const hp = new Map<string, number>([[a.id, a.hp], [b.id, b.hp]]);
+    const strikes: Strike[] = [];
+    const blow = (from: BattleUnit, to: BattleUnit, odds: { damage: number }, crit: boolean, hit: boolean, counter: boolean): void => {
+      const dmg = hit ? (crit ? odds.damage * 3 : odds.damage) : 0;
+      const left = Math.max(0, (hp.get(to.id) ?? 0) - dmg);
+      hp.set(to.id, left);
+      strikes.push({ attackerId: from.id, targetId: to.id, counter, hit, crit, damage: dmg, targetHp: left });
+    };
+    const kill = url.has('kill');
+    blow(a, b, f.attacker.odds, url.has('crit'), !url.has('miss'), false);
+    if (!url.has('nocounter') && !kill) blow(b, a, f.defender.odds, false, true, true);
+    if (url.has('double') && !kill) blow(a, b, f.attacker.odds, false, true, false);
+    if (kill) {
+      const last = strikes[strikes.length - 1] as Strike;
+      strikes[strikes.length - 1] = { ...last, hit: true, damage: (hp.get(b.id) ?? 0) + last.damage, targetHp: 0 };
+    }
+    const combat: CombatEvent = { type: 'combat', attackerId: a.id, defenderId: b.id, strikes };
+    const before = new Map<string, number>([[a.id, a.hp], [b.id, b.hp]]);
+    const play = async (): Promise<void> => {
+      if (!this.closeup || this.closeup.playing) return;
+      await this.showCloseup(this.closeupSpec(combat, kill ? [b.id] : [], before, range, { x: b.x - range, y: b.y }));
+    };
+    Object.assign(window, { vaelmorCloseupPlay: play });
+    this.input.keyboard?.on('keydown-R', () => void play());
+    await this.wait(700);
+    await play();
+  }
+
   private async animateKo(unitId: string): Promise<void> {
     const unit = getUnit(this.state, unitId);
     const view = this.views.get(unitId);
     if (!view) return;
-    const fallen = unit.team === 'player' ? `${unit.name} est hors de combat.` : unit.team === 'ally' ? `${unit.name}, notre allié, est tombé.` : `${unit.name} est vaincu${unit.isBoss ? ' !' : '.'}`;
-    this.hud.toast(fallen);
+    this.hud.toast(this.fallenText(unit));
     flashWhite(view.sprite, true);
     await this.tween({ targets: view.container, alpha: 0, duration: this.dur(MS.ko, 120), ease: 'Stepped', easeParams: [5] });
     view.container.setVisible(false).setAlpha(1);
@@ -2722,6 +2934,8 @@ export class BattleScene extends Phaser.Scene {
     this.plan = null;
     this.registry.remove('debug.info');
     this.scene.stop(SCENES.battleHud);
+    this.scene.stop(SCENES.battleCloseup);
+    this.closeup = null;
   }
 }
 

@@ -164,6 +164,44 @@ export const namedPopBalanceSchema = z.strictObject({
 });
 export type NamedPopBalance = z.infer<typeof namedPopBalanceSchema>;
 
+const ms = z.number().int().min(0).max(5000);
+
+/**
+ * Écran rapproché (jalon M8, n°209). Séquence d'un coup de mêlée (GDD §11.2) :
+ * préparation, dash, frappe, impact (dont l'arrêt sur image), recul, pose,
+ * retour ; un coup à distance remplace le dash par `draw` (arme levée) et
+ * `fly` (projectile), un sort par `rune` et `fly` ; ils finissent par `settle`
+ * (retour en garde, sans trajet). Critique (§11.3) : écran assombri (`critDark`),
+ * `critCuts` coupes de `critCut` ms à la place de la frappe, pose tenue
+ * `critPose`. Un coup répété (double attaque) saute la préparation.
+ */
+export const closeupBalanceSchema = z.strictObject({
+  entry: ms,
+  exit: ms,
+  between: ms,
+  prep: ms,
+  dash: ms,
+  strike: ms,
+  impact: ms,
+  hitStop: ms,
+  recoil: ms,
+  pose: ms,
+  back: ms,
+  draw: ms,
+  rune: ms,
+  fly: ms,
+  settle: ms,
+  critDark: ms,
+  critCut: ms,
+  critCuts: z.number().int().min(1).max(5),
+  critPose: ms,
+  /** Secousse de l'écran, en pixels d'écran : coup ordinaire, critique (et sa durée). */
+  shake: z.strictObject({ hit: z.number().int().min(0).max(24), crit: z.number().int().min(0).max(24), critMs: ms }),
+  /** Critère « vitesse acceptable » (n°209) : durée maximale d'un échange coup + riposte, transitions comprises. */
+  budget: z.strictObject({ normal: ms, fast: ms }),
+});
+export type CloseupTimings = z.infer<typeof closeupBalanceSchema>;
+
 const alliesBalanceSchema = z.strictObject({
   /** Un combat engagé à moins de tant de cases d'un village (son rectangle) y appelle ses gardes. */
   guardRange: z.number().int().min(0),
@@ -290,6 +328,8 @@ export const balanceFileSchema = z.strictObject({
   allies: alliesBalanceSchema,
   /** Ennemis nommés et dialogues de combat (n°115, n°176, n°185, n°186). */
   namedPop: namedPopBalanceSchema,
+  /** Écran de combat rapproché (jalon M8, GDD §11.2 et §11.3) : durées en ms à la vitesse « Normales ». */
+  closeup: closeupBalanceSchema,
   /** Effets HD-2D du monde ouvert (décision n°47) ; le réglage « Qualité » choisit lesquels s'appliquent. */
   visuals: z.strictObject({
     /** Flou de profondeur : bande nette centrée de hauteur `focus` (fraction d'écran), fondu `fade`, force `blur`. */
@@ -898,3 +938,57 @@ export const endingsFileSchema = z.strictObject({
 
 export type EndingDef = z.infer<typeof endingSchema>;
 export type EndingsFile = z.infer<typeof endingsFileSchema>;
+
+/* ---------- Écran de combat rapproché (jalon M8, `battleAnims.json`) ---------- */
+
+/** Fonds de l'écran rapproché, peints par code (`render/closeupBackdrop.ts`, n°208). */
+export const BACKDROP_IDS = ['plaine', 'foret', 'montagne', 'riviere', 'cote', 'marais', 'ruines', 'village', 'citadelle'] as const;
+export type BackdropId = (typeof BACKDROP_IDS)[number];
+
+/** Projectiles d'une arme qui frappe à distance (dessinés par code). */
+export const PROJECTILE_IDS = ['fleche', 'carreau', 'javeline', 'harpon', 'eclat', 'fiole', 'orbe'] as const;
+export type ProjectileId = (typeof PROJECTILE_IDS)[number];
+
+/** Animations d'une feuille peinte (rangée de la feuille, nombre d'images, image d'impact). */
+export const FIGHTER_ANIMS = ['garde', 'attaque', 'critique', 'competence', 'coup', 'ko'] as const;
+export type FighterAnim = (typeof FIGHTER_ANIMS)[number];
+
+const fighterAnimSchema = z.strictObject({
+  row: z.number().int().min(0).max(15),
+  frames: z.number().int().min(1).max(24),
+  /** Image où l'arme touche (attaque, critique, compétence). */
+  impact: z.number().int().min(0).max(23).optional(),
+});
+
+export const fighterSchema = z.strictObject({
+  /** Fichier `assets/combat/<sheet>.png` : une rangée par animation, images de `frame` pixels, tournées vers l'est. */
+  sheet: idSchema,
+  frame: z.tuple([z.number().int().min(16).max(160), z.number().int().min(16).max(160)]),
+  /** Pieds du personnage dans une image (pixels) : le point posé sur le socle. */
+  feet: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
+  /** Agrandissement entier à l'écran. */
+  scale: z.number().int().min(1).max(6),
+  anims: z.partialRecord(z.enum(FIGHTER_ANIMS), fighterAnimSchema),
+});
+export type FighterDef = z.infer<typeof fighterSchema>;
+
+export const battleAnimsFileSchema = z.strictObject({
+  $comment: comment,
+  backdrops: z.strictObject({
+    default: z.enum(BACKDROP_IDS),
+    /** Terrain du défenseur → fond. */
+    terrains: z.record(idSchema, z.enum(BACKDROP_IDS)),
+    /** Zone qui impose son fond (la Citadelle). */
+    zones: z.record(idSchema, z.enum(BACKDROP_IDS)),
+  }),
+  projectiles: z.strictObject({
+    byWeaponType: z.record(idSchema, z.enum(PROJECTILE_IDS)),
+    /** Arme physique à distance d'un type absent de la liste. */
+    physical: z.enum(PROJECTILE_IDS),
+    /** Arme magique (teintée par son élément). */
+    magic: z.enum(PROJECTILE_IDS),
+  }),
+  /** Feuilles peintes, par apparence (`sprite` sans détail `#n`). */
+  fighters: z.record(z.string().regex(/^[a-z][a-z0-9_]*$/), fighterSchema),
+});
+export type BattleAnimsFile = z.infer<typeof battleAnimsFileSchema>;

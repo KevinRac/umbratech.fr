@@ -9,6 +9,7 @@ import { tickPlayClock } from './core/gameSave';
 import * as cloud from './core/cloud';
 import { bindDisplaySize, measureDisplay } from './render/displayScaler';
 import { PALETTE, toCss } from './render/palette';
+import { BattleCloseupScene } from './scenes/BattleCloseupScene';
 import { BattleHudScene } from './scenes/BattleHudScene';
 import { BattleScene } from './scenes/BattleScene';
 import { BootScene } from './scenes/BootScene';
@@ -43,7 +44,7 @@ function start(): void {
       zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, SaveScene, AccountScene, EndingScene, DebugScene],
+    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, BattleCloseupScene, SaveScene, AccountScene, EndingScene, DebugScene],
   });
   bindDisplaySize(game);
   // Temps de jeu de la partie (n°155) : compté à chaque image, hors titre et hors pause.

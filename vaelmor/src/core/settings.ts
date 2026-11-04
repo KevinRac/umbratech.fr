@@ -52,3 +52,27 @@ export function loadAnimSpeed(): AnimSpeed {
 export function saveAnimSpeed(speed: AnimSpeed): void {
   writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), battleAnim: speed }));
 }
+
+/* ---------- Écran de combat rapproché (jalon M8, décision n°221) ---------- */
+
+/** « Rapproché » : chaque échange se joue dans l'écran rapproché ; « Carte » : sur la carte, comme avant M8. */
+export type BattleView = 'closeup' | 'map';
+
+export const BATTLE_VIEWS: readonly BattleView[] = ['closeup', 'map'];
+export const BATTLE_VIEW_LABEL: Readonly<Record<BattleView, string>> = { closeup: 'Rapproché', map: 'Carte' };
+
+export function parseBattleView(value: unknown): BattleView {
+  return BATTLE_VIEWS.includes(value as BattleView) ? (value as BattleView) : 'closeup';
+}
+
+export function nextBattleView(view: BattleView): BattleView {
+  return BATTLE_VIEWS[(BATTLE_VIEWS.indexOf(view) + 1) % BATTLE_VIEWS.length] as BattleView;
+}
+
+export function loadBattleView(): BattleView {
+  return parseBattleView(readSettings()['battleView']);
+}
+
+export function saveBattleView(view: BattleView): void {
+  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), battleView: view }));
+}

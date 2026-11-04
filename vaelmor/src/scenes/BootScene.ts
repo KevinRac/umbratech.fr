@@ -69,6 +69,12 @@ export class BootScene extends Phaser.Scene {
     }
 
     this.scene.launch(SCENES.debug);
+    // Banc de l'écran rapproché (jalon M8, n°222) : `?debug&closeup=<classe>:<ennemi>[&enc=<rencontre>]` ouvre un combat d'essai.
+    const url = new URLSearchParams(window.location.search);
+    if (url.has('debug') && url.has('closeup')) {
+      this.time.delayedCall(120, () => this.scene.start(SCENES.battle, { encounterId: url.get('enc') ?? 'embuscade_du_gue', returnTo: 'title' }));
+      return;
+    }
     this.time.delayedCall(120, () => this.scene.start(SCENES.title));
   }
 

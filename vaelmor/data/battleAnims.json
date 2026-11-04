@@ -1,0 +1,40 @@
+{
+  "$comment": "Écran de combat rapproché (jalon M8, GDD §11, décisions n°204 à n°222). `backdrops` : fond peint par code selon le terrain du défenseur (`terrains`), remplacé par celui de la zone quand elle en impose un (`zones`), sinon `default`. `projectiles` : ce qui part d'une arme qui frappe à distance (par type d'arme) ; une arme magique lance `magic` (teinté par son élément). `fighters` : feuilles peintes de l'écran rapproché, par apparence (`sprite` sans détail) ; une apparence absente garde son sprite de carte agrandi (repli, n°215). Durées : `balance.json › closeup`.",
+  "backdrops": {
+    "default": "plaine",
+    "terrains": {
+      "plaine": "plaine",
+      "route": "plaine",
+      "foret": "foret",
+      "ronces": "foret",
+      "montagne": "montagne",
+      "riviere": "riviere",
+      "gue": "riviere",
+      "pont": "riviere",
+      "eau_profonde": "cote",
+      "plage": "cote",
+      "marais": "marais",
+      "ruines": "ruines",
+      "village": "village",
+      "batiment": "village",
+      "obstacle": "plaine"
+    },
+    "zones": {
+      "z5": "citadelle"
+    }
+  },
+  "projectiles": {
+    "byWeaponType": {
+      "arc": "fleche",
+      "arbalete": "carreau",
+      "lance_courte": "javeline",
+      "harpon": "harpon",
+      "eclats": "eclat",
+      "ramure": "eclat",
+      "fioles": "fiole"
+    },
+    "physical": "fleche",
+    "magic": "orbe"
+  },
+  "fighters": {}
+}

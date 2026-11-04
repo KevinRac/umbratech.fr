@@ -12,6 +12,7 @@ import {
   balanceFileSchema,
   encountersFileSchema,
   endingsFileSchema,
+  battleAnimsFileSchema,
   itemsFileSchema,
   classesFileSchema,
   elementsFileSchema,
@@ -28,6 +29,7 @@ import {
   type ElementDef,
   type EncountersFile,
   type EndingsFile,
+  type BattleAnimsFile,
   type EnemyDef,
   type ReputationConfig,
   type WeaponDef,
@@ -72,6 +74,7 @@ export const DATA_SCHEMAS = {
   company: companyFileSchema,
   battleQuotes: battleQuotesFileSchema,
   endings: endingsFileSchema,
+  battleAnims: battleAnimsFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -121,6 +124,8 @@ export interface GameData {
   readonly scenes: readonly SceneDef[];
   /** Fins de l'histoire (`endings.json`, n°196). */
   readonly endings: EndingsFile;
+  /** Écran de combat rapproché (`battleAnims.json`, jalon M8). */
+  readonly battleAnims: BattleAnimsFile;
 }
 
 export type ValidationResult =
@@ -265,6 +270,7 @@ function crossCheck(data: GameData): string[] {
   checkAllies(data, issues);
   checkTalk(data, issues);
   checkEndings(data, issues);
+  checkBattleAnims(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -451,6 +457,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     company: z.infer<typeof companyFileSchema>;
     battleQuotes: z.infer<typeof battleQuotesFileSchema>;
     endings: z.infer<typeof endingsFileSchema>;
+    battleAnims: z.infer<typeof battleAnimsFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -479,6 +486,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     named: files.enemies.named,
     scenes: files.battleQuotes.scenes,
     endings: files.endings,
+    battleAnims: files.battleAnims,
   };
 
   const crossIssues = crossCheck(data);
@@ -860,4 +868,31 @@ function checkEndings(data: GameData, issues: string[]): void {
     if (e.when?.aliveDeployed !== undefined && !chars.has(e.when.aliveDeployed)) issues.push(`${at}.when.aliveDeployed : personnage inconnu « ${e.when.aliveDeployed} »`);
     if (i === endings.length - 1 && e.when !== undefined) issues.push(`${at} : la dernière fin est la fin par défaut, sans condition`);
   });
+}
+
+/**
+ * Écran rapproché (`battleAnims.json`, n°210) : terrains, zones et types d'armes
+ * connus ; chaque terrain a un fond ; les feuilles peintes visent une apparence
+ * existante (classe, ennemi, héros) et leurs images d'impact tombent dans l'animation.
+ */
+function checkBattleAnims(data: GameData, issues: string[]): void {
+  const file = 'battleAnims.json';
+  const { backdrops, projectiles, fighters } = data.battleAnims;
+  const terrains = new Set(data.terrains.map((t) => t.id));
+  for (const id of Object.keys(backdrops.terrains)) if (!terrains.has(id)) issues.push(`${file} › backdrops.terrains : terrain inconnu « ${id} »`);
+  for (const t of terrains) if (!(t in backdrops.terrains)) issues.push(`${file} › backdrops.terrains : le terrain « ${t} » n'a pas de fond`);
+  const zones = new Set(data.zones.map((z) => z.id));
+  for (const id of Object.keys(backdrops.zones)) if (!zones.has(id)) issues.push(`${file} › backdrops.zones : zone inconnue « ${id} »`);
+  const weaponTypes = new Set(data.weapons.map((w) => w.type));
+  for (const id of Object.keys(projectiles.byWeaponType)) if (!weaponTypes.has(id)) issues.push(`${file} › projectiles.byWeaponType : type d'arme inconnu « ${id} »`);
+  const looks = new Set<string>(['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite.split('#')[0] ?? e.sprite)]);
+  for (const [id, f] of Object.entries(fighters)) {
+    const at = `${file} › fighters « ${id} »`;
+    if (!looks.has(id)) issues.push(`${at} : apparence inconnue`);
+    if (f.feet[0] >= f.frame[0] || f.feet[1] >= f.frame[1]) issues.push(`${at}.feet : en dehors de l'image`);
+    for (const [name, anim] of Object.entries(f.anims)) {
+      if (anim.impact !== undefined && anim.impact >= anim.frames) issues.push(`${at}.anims.${name}.impact : au-delà de la dernière image`);
+    }
+    if (!f.anims.garde) issues.push(`${at}.anims : la garde est obligatoire`);
+  }
 }
