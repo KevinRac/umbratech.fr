@@ -6,7 +6,7 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md`, `docs/STORY_BIBLE.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M7 (contenu du monde)**, puis M8, M10 (ordre du GDD §17). Le lot « dialogues de combat » (moteur) est livré le 03/11/2026 : M7 y ajoute les scènes, les portraits des nommés et les alliés verts nommés.
+**M8 (animations de combat)**, puis M10 (ordre du GDD §17). M7 (contenu du monde) est livré le 04/11/2026 : voir « Livré en M7 ». Pour M8, la bible §10 prévoit les cut-ins de phase et de mort ; les poses d'attaque, de compétence, de coup reçu et de KO sont gardées pour les animations rapprochées.
 Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2026** (schéma importé, secrets créés, connexion et sauvegarde OK).
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
@@ -16,7 +16,7 @@ Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2
 Livré : **`docs/STORY_BIBLE.md`** (ton, chronologie, héros, intrigue en 3 actes, 12 recrues, boss, 6 nommés recrutables, 6 nommés non recrutables, table des liens, scènes d'exemple, schéma de données) et **GDD §7.9** (règles). Aucun code. Modèle : citations de combat et « Parler » de *Fire Emblem : The Sacred Stones*. **Pas de dialogues ni de bonus entre alliés** (décision de l'auteur) : seuls comptent les ennemis nommés et les boss.
 
 - [x] **Lot « dialogues de combat » (moteur)** — livré le 03/11/2026, voir « Livré : dialogues de combat » ; décisions n°174 à n°191 validées le 03/11/2026.
-- [ ] **M7 (contenu)** : écrire environ 50 scènes, portraits des nommés, promouvoir en alliés verts nommés une vingtaine de figures de village (n°109, bible §7.4), ajouter Orvane et les 3 fins, relire les dialogues de village pour qu'ils suivent l'arc de chaque recrue.
+- [x] **M7 (contenu)** — livré le 04/11/2026, voir « Livré en M7 » : 139 scènes, 18 portraits peints, 17 alliés verts nommés, Orvane et les 3 fins, saluts de village selon l'arc des recrues.
 - [x] **Sauvegarde des dialogues de combat** : format v2 (`scenesSeen`, `named`, `namedPity`), première vraie migration v1 → v2, testée sur `tests/fixtures/save-v1.json` (n°189).
 
 ### Décisions n°105 à n°115 — validées par l'auteur le 22/10/2026 (n°109 et n°111 révisées le 21/10 : plus nombreuses)
@@ -67,7 +67,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M9 : sauvegarde** (02/11/2026) — voir « Livré en M9 » ; décisions n°151 à n°169 validées le 02/11/2026, n°170 à n°173 (compte en ligne) à valider
 - [x] **M9b : compte et sauvegarde en ligne** (03/11/2026) — voir « Livré en M9b » ; décisions n°170 à n°173 validées le 03/11/2026 ; en service depuis le 03/11/2026
 - [x] **Lot « dialogues de combat » (moteur)** (03/11/2026) — voir « Livré : dialogues de combat » ; décisions n°174 à n°191 validées le 03/11/2026
-- [ ] M7, M8, M10 (ordre du GDD §17)
+- [x] **M7 : contenu du monde** (04/11/2026) — voir « Livré en M7 » ; décisions n°192 à n°203 validées le 03/11/2026
+- [ ] M8, M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -487,3 +488,33 @@ Règles et réglages : GDD §7.9.1. Modèle conseillé pour M7 : Opus, effort mo
 - **n°189 — Sauvegarde v2** (`scenesSeen`, `named`, `namedPity`).
 - **n°190 — Roster de 30 et tri / filtre par classe** : laissés à M7.
 - **n°191 — Outils de debug** : `named`, `quests`, `scenes=reset`, ligne SCÈNES.
+
+## Livré en M7 (contenu du monde, 04/11/2026)
+Règles et réglages : GDD §7.9.2. Critère du GDD (« parcours complet de Z1 à Z5 sans bug bloquant ») : `tests/parcours.test.ts`. Modèle conseillé pour M8 : Opus, effort moyen à élevé (rendu et animation).
+
+- **Nommés aux postes (lot 1, n°193)** : 10 nouvelles fiches dans `enemies.json › named` (Hakon, Oswin, Aldo Vessyr, Capitaine Hobb, Ilse, Maître Orsen, Aldéric Vance, Sergent Drak, le Veilleur de Pierre, Ser Maëlis) avec leur détail de sprite ; chacun des 12 nommés tient un poste du monde (`worldEnemies.json › named`), Gorm la vigie nord du camp, Rik une patrouille à l'est du Pont des Trois Arches. Le poste n'apparaît que si la condition `pop` tient (`namedPopHolds`) et disparaît dès que le sort du nommé est réglé.
+- **Roster de 30 (n°199)** : `balance.levels.rosterMax` ; préparation : « Trier » (arrivée, niveau, classe, nom) et « Classe » (filtre), `logic/tactics/prep.ts › rosterOrder`, `rosterClasses`.
+- **Arène des Cendres (n°200)** : option de dialogue `battle` (`DialogueScene` → `WorldScene`) ; Dax propose 3 séries sur carte fixe (`arene_serie_1` à `_3`) ; la première termine la quête et rend Gérard recrutable. Ombre des unités sur carte fixe corrigée.
+- **Scènes (lot 2, n°203)** : 139 scènes dans `battleQuotes.json` (boss et nommés avec leurs liens de la bible, Parler et refus, morts, phases, deuils, figures de village, errants).
+- **Alliés verts nommés (lot 3, n°197)** : 17 figures de village (`allies.json › templates`, champ `npc`, classe selon le métier) ; un village envoie d'abord une figure liée à un ennemi du combat (`allyRules.ts › figureLinked`), sinon un garde ; figure blessée jusqu'au repos ; portrait de village dans la boîte de scène.
+- **Portraits (lot 4, n°198)** : 18 portraits (6 boss, 12 nommés) dans `assets/portraits/ennemis/`, Pixellab *Pro Flash* 64×64 avec le portrait du Gardien des Marées comme image de style ; liste `data/skins.ts › FOE_PORTRAITS` ; `render/portraits.ts › foePortraitInBox` (teinte de Brume en scène de phase) ; `TalkFace.foe` / `dark` dans `ui/talkView.ts`. Coût : 95 générations (essai sur Brakk 10, puis 5 par image pour les 17 autres) ; solde Pixellab après la série : 959 / 2 000. Trait clair parasite sur la dernière rangée du Roi-Cerf et de Hobb, remplacé par la rangée du dessus.
+- **Orvane, Ser Maëlis, fins (lot 5, n°194 à n°196)** : arme *Trident de marée*, compétences *Vague du roi* et *Nuit basse*, fiche de boss (immunisé Gelé et Entravé, phase 2 à 50 %), rencontre `roi_maree_brise` (renforts tours 3 et 6), boss du monde `z5_orvane` présent seulement après Ser Maëlis (`worldEnemies › afterNamed`). `data/endings.json`, `logic/game/ending.ts` (`chooseEnding`, `settleEnding`), `scenes/EndingScene.ts` ; drapeau `fin_<id>` ; le jeu reste jouable.
+- **Saluts de village (lot 6, n°201)** : `npcs[].greetings` (le premier `when` vrai l'emporte), condition `named` (`recruited`, `defeated`, `lost`, `pending`) ; 37 variantes sur 23 PNJ.
+- **Titre** : le menu « Combat d'essai » ne propose plus que les boss, les cartes fixes et deux rencontres.
+- **Debug** : `?debug&fate=hobb:recruited,gorm:defeated` (sort des nommés dans la partie), `&seen=all` (toutes les scènes relisibles dans le journal des rencontres).
+- **Tests** : 761 au vert (+54 : `tests/m7.test.ts` — postes, présence liée à la quête, figures, roster, arène, Orvane derrière Maëlis, scènes, fins, saluts, portraits ; `tests/parcours.test.ts` — Brakk → Roi-Cerf → Mérrow et la barque → Mère-Harpie et Gardien (Rhyel) → accès de Yrsa → Maëlis → Orvane → fin ; l'arène et Gérard).
+- **Vérifié dans Chrome** (SwiftShader, 960×540) : préparation de l'arène, tri et filtre ; embuscade au gué avec les gardes puis le Capitaine Ilar face à Gorm ; victoire sur Orvane et fin « La digue » ; saluts de Maëlys (après Brakk) et de Marthe (après le retour de Hobb) ; portraits des boss et des nommés dans la boîte de scène.
+
+### Décisions n°192 à n°203 (jalon M7) — validées par l'auteur le 03/11/2026
+- **n°192 — Lots** : socle, scènes, alliés verts nommés, portraits, Orvane et fins, villages, parcours ; une validation par lot visible (captures validées le 04/11/2026).
+- **n°193 — Postes des nommés** : chaque nommé tient un poste à l'endroit de son histoire, en plus du tirage au hasard ; un poste ne réapparaît jamais.
+- **n°194 — Ser Maëlis** garde la chaussée : combat obligatoire avant Orvane, non recrutable.
+- **n°195 — Orvane** : élément Marée, trident (portée 1–2), 2 phases, renforts revenants aux tours 3 et 6, immunisé Gelé et Entravé.
+- **n°196 — Fins** : la lanterne (Marées ≥ Amical et Rhyel debout), la digue (Couronne ≥ Allié et Marées < Amical), sinon la nuit basse ; une par partie, jeu jouable après.
+- **n°197 — Alliés verts nommés** : 17 figures, classe selon le métier, priorité à une figure liée, blessée et jamais perdue.
+- **n°198 — Portraits** : 18 par Pro Flash, sans expressions ; la phase 2 assombrit par code ; un seul essai validé avant la série.
+- **n°199 — Roster de 30**, tri et filtre par classe.
+- **n°200 — Arène des Cendres** : 3 séries sur carte fixe depuis Dax.
+- **n°201 — Saluts de village** conditionnés par quête, drapeau et sort des nommés.
+- **n°202 — Parcours Z1 → Z5** : test automatisé de la chaîne principale.
+- **n°203 — Écriture** : toutes les scènes dans le ton de la bible (2 à 5 répliques, ≤ 140 caractères).

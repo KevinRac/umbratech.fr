@@ -358,3 +358,13 @@ describe('saluts de village selon l’arc des recrues (n°201)', () => {
     expect(conditionMet(ctx, { named: { id: 'hobb', status: 'pending' } }, 'neutre')).toBe(false);
   });
 });
+
+describe('portraits des boss et des nommés (n°198)', () => {
+  it('chaque ennemi qui parle dans une scène a son portrait peint, et le fichier existe', async () => {
+    const { FOE_PORTRAITS } = await import('../src/data/skins');
+    const { existsSync } = await import('node:fs');
+    const speakers = [...new Set(data.scenes.map((s) => s.enemy))].sort();
+    expect([...FOE_PORTRAITS].sort()).toEqual(speakers);
+    for (const id of FOE_PORTRAITS) expect(existsSync(`assets/portraits/ennemis/${id}.png`), id).toBe(true);
+  });
+});

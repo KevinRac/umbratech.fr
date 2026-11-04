@@ -15,7 +15,7 @@ import type { ActionInput } from '../core/input';
 import type { PortraitMood } from '../data/skins';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
 import { PALETTE } from '../render/palette';
-import { portraitInBox, speak } from '../render/portraits';
+import { foePortraitInBox, portraitInBox, speak } from '../render/portraits';
 import { ensurePortrait } from '../render/townTextures';
 import type { Expression, NpcDef } from '../data/townSchemas';
 
@@ -37,6 +37,10 @@ export interface TalkFace {
   readonly team: TalkTeam;
   /** Figure de village (n°197) : son portrait de dialogue, peint comme au village. */
   readonly npc?: NpcDef;
+  /** Boss ou ennemi nommé (n°198) : id de son portrait peint (`assets/portraits/ennemis/`). */
+  readonly foe?: string;
+  /** Scène de phase 2 : le portrait de l'ennemi s'assombrit. */
+  readonly dark?: boolean;
 }
 
 export interface TalkLineView {
@@ -75,6 +79,8 @@ interface FaceSlot {
   readonly parts: Phaser.GameObjects.GameObject[];
   readonly image: Phaser.GameObjects.Image | null;
   readonly portrait: boolean;
+  /** Portrait d'ennemi peint : une seule image, rien ne bouge quand il parle. */
+  readonly foe: boolean;
 }
 
 export class TalkBox {
@@ -185,7 +191,9 @@ export class TalkBox {
     if (this.slots[side]?.face.key !== line.face.key) this.place(side, line.face);
     for (const s of ['left', 'right'] as const) this.light(s, s === side);
     const slot = this.slots[side];
-    if (slot?.image && slot.portrait && line.face.npc) slot.image.setTexture(ensurePortrait(this.scene, line.face.npc, moodExpression(line.mood)));
+    if (slot?.foe) {
+      // Portrait d'ennemi : une seule image, pas d'expressions (n°198).
+    } else if (slot?.image && slot.portrait && line.face.npc) slot.image.setTexture(ensurePortrait(this.scene, line.face.npc, moodExpression(line.mood)));
     else if (slot?.image && slot.portrait) speak(this.scene, slot.image, line.face.sprite ?? '', line.mood, Math.min(1400, line.text.length * 40));
     else if (slot?.image && line.face.sprite) slot.image.setFrame(BATTLE_TEX.msFrame(line.mood === 'neutral' ? 'idle' : 'ready', line.mood === 'neutral' ? 0 : 2));
     setText(this.name, line.face.name);
@@ -237,7 +245,16 @@ export class TalkBox {
     parts.push(this.scene.add.rectangle(fx + 6 * S, fy + 6 * S, size - 12 * S, size - 12 * S, TEAM_TINT[face.team], 0.22).setOrigin(0, 0));
     let image: Phaser.GameObjects.Image | null = null;
     let portrait = false;
-    if (face.npc) {
+    let foe = false;
+    const foeImage = face.foe ? foePortraitInBox(this.scene, face.foe, fx + 8 * S, fy + 8 * S, size - 16 * S, size - 16 * S, 2 * S, 0, face.dark === true) : null;
+    if (foeImage) {
+      // Boss ou ennemi nommé : son portrait peint, tourné vers l'autre visage.
+      image = foeImage;
+      portrait = true;
+      foe = true;
+      if (side === 'left') image.setFlipX(true);
+      parts.push(image);
+    } else if (face.npc) {
       // Figure de village : le portrait peint des dialogues, cadré sur le visage.
       const key = ensurePortrait(this.scene, face.npc, 'neutre');
       image = this.scene.add.image(fx + size / 2, fy + size / 2 + 6 * S, key).setDisplaySize(size - 8 * S, size - 8 * S);
@@ -261,7 +278,7 @@ export class TalkBox {
     }
     parts.push(fitText(addText(this.scene, fx + size / 2, top ? fy + size + 3 * S : fy - 16 * S, face.name, { scale: S, color: TEAM_TINT[face.team], align: 'center' }), size + 40 * S));
     this.root.addAt(parts, 1);
-    this.slots[side] = { face, parts, image, portrait };
+    this.slots[side] = { face, parts, image, portrait, foe };
   }
 
   /** Celui qui parle est éclairé, l'autre dans l'ombre. */

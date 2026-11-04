@@ -1,7 +1,7 @@
 # VAELMOR — Bible narrative v0.1
 
 > Statut : **brouillon à valider** (21/10/2026). Aucun code. Les règles de fonctionnement des dialogues de combat sont dans `GDD_Vaelmor.md` **§7.9** ; ce document porte l'histoire, les personnages, les liens entre unités et ennemis nommés, et des scènes d'exemple.
-> Il s'appuie sur ce qui existe déjà dans `data/` (PNJ de `locations.json`, ennemis de `enemies.json`, quêtes de `quests.json`, alliés de `allies.json`) : les ids cités sont ceux du dépôt. Tout ce qui est marqué **(nouveau)** reste à créer en M7.
+> Il s'appuie sur ce qui existe déjà dans `data/` (PNJ de `locations.json`, ennemis de `enemies.json`, quêtes de `quests.json`, alliés de `allies.json`) : les ids cités sont ceux du dépôt. Tout ce qui est marqué **(nouveau)** a été créé en M7 (04/11/2026, voir GDD §7.9.2).
 
 ---
 
@@ -63,12 +63,12 @@ Calée sur les quêtes `principal: true` existantes (`eclaireur_de_la_brume`, `r
    - **Phase 1** : trident d'eau, le roi se bat pour qu'on parte.
    - **Phase 2** : la Brume l'envahit. Rhyel et le héros doivent le **rappeler à lui-même**.
 
-### Fins (à écrire en M7, n°114)
+### Fins (écrites en M7, n°114 et n°196 : `data/endings.json`, évaluées dans cet ordre à la victoire sur Orvane)
 | Fin | Condition | Résultat |
 |---|---|---|
-| **La lanterne** (juste) | Réputation Marées ≥ Amical **et** Rhyel dans l'équipe | Le héros dépose la lanterne : le pacte est renouvelé sans sacrifice. La Brume reflue. |
-| **La digue** | Réputation Couronne ≥ Allié, Marées < Amical | La Couronne scelle la Citadelle. La Brume est contenue, pas vaincue. Fin amère. |
-| **La nuit basse** | Orvane tué sans Rhyel | La mer se retire de nouveau. Fin sombre, mais le jeu reste jouable après le générique. |
+| **La lanterne** (juste) | Réputation Marées ≥ Amical **et** Rhyel déployé, encore debout à la fin du combat | Le héros dépose la lanterne : le pacte est renouvelé sans sacrifice. La Brume reflue. |
+| **La digue** | Réputation Couronne ≥ Allié, Marées ≤ Neutre | La Couronne scelle la Citadelle. La Brume est contenue, pas vaincue. Fin amère. |
+| **La nuit basse** | Tous les autres cas (Orvane tué sans Rhyel, ou sans l'appui des Marées ni de la Couronne) | La mer se retire de nouveau. Fin sombre, mais le jeu reste jouable après le générique. |
 
 ---
 
@@ -326,7 +326,7 @@ Les scènes de `talk` ont un champ de plus : `onFail` (lignes jouées en cas de 
 |---|---|
 | **Avant M7** | Moteur de dialogues de combat (déclencheurs, Parler, recrutement d'un ennemi, journal). À faire entre M6 et M7 (voir PROGRESS). |
 | **M6** | Un ennemi recruté reçoit une fiche d'unité complète (classe, niveau, équipement). Pas de changement du travail de M6, seulement des données. |
-| **M7** | Écriture des ~50 scènes, portraits des nommés, promotion des alliés verts nommés, nouveau boss Orvane, fins. |
+| **M7** (fait le 04/11/2026) | 139 scènes, 18 portraits peints (boss et nommés), 17 alliés verts nommés, Ser Maëlis et Orvane, les trois fins, saluts de village selon l'arc des recrues. |
 | **M9** | La sauvegarde retient les scènes vues, les recrutables recrutés ou perdus, les nommés vaincus. |
 | **M8** | Cut-ins de phase et de mort dans l'écran de combat cinématique. |
 
@@ -334,7 +334,7 @@ Les scènes de `talk` ont un champ de plus : `onFail` (lignes jouées en cas de 
 
 ## 11. Points ouverts (à écrire plus tard)
 
-- Les dialogues libres de village (déjà dans `data/locations.json`) devront évoluer pour refléter l'arc de chaque recrue (par exemple, Nessa change de ton après avoir retrouvé son père).
+- Les dialogues libres de village suivent l'arc des recrues depuis M7 (`greetings`, n°201) pour les PNJ qui restent au village (Marthe et Hobb, Ilar et Rik, Hild et Ilse, Dorn et Aldo, Orin et Oswin…). Une recrue qui rejoint la compagnie quitte son village : son propre ton évolue dans ses scènes de combat.
 - Les conversations de camp et soutiens entre alliés, **abandonnés** (décision du 21/10/2026) : seuls les dialogues avec ennemis nommés et alliés verts nommés existent.
 - La **Régente Ysmène** et le **Capitaine Voss** n'ont pas de lien de combat prévu ; ils jouent dans les quêtes politiques.
 - Une fin supplémentaire liée à Mousse et au Roi-Cerf pourra être ajoutée si le budget le permet.

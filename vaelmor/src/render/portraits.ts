@@ -6,7 +6,7 @@
  */
 import Phaser from 'phaser';
 import { assetUrl } from '../core/config';
-import { PORTRAIT_MOODS, PORTRAIT_MOUTHS, SKINS, SKIN_REV, type PortraitMood } from '../data/skins';
+import { FOE_PORTRAITS, PORTRAIT_MOODS, PORTRAIT_MOUTHS, SKINS, SKIN_REV, type PortraitMood } from '../data/skins';
 import { parseSprite } from '../logic/skinFrames';
 import { paintDetails } from './skinDetails';
 
@@ -14,12 +14,16 @@ export const PORTRAIT_SIZE = 64;
 export const portraitKey = (id: string): string => `portrait:skin:${id}`;
 export const expressionKey = (id: string): string => `portrait:expr:${id}`;
 
+const FOE_PORTRAIT_REV = 1;
+export const foePortraitKey = (id: string): string => `portrait:foe:${id}`;
+
 /** À appeler dans `preload()`. */
 export function preloadPortraits(scene: Phaser.Scene): void {
   for (const skin of SKINS) {
     scene.load.image(portraitKey(skin.id), assetUrl(`assets/portraits/${skin.id}.png?v=${SKIN_REV}`));
     scene.load.spritesheet(expressionKey(skin.id), assetUrl(`assets/portraits/expressions/${skin.id}.png?v=${SKIN_REV}`), { frameWidth: PORTRAIT_SIZE, frameHeight: PORTRAIT_SIZE });
   }
+  for (const id of FOE_PORTRAITS) scene.load.image(foePortraitKey(id), assetUrl(`assets/portraits/ennemis/${id}.png?v=${FOE_PORTRAIT_REV}`));
 }
 
 export function hasPortrait(scene: Phaser.Scene, id: string): boolean {
@@ -68,6 +72,20 @@ function moodFrame(scene: Phaser.Scene, id: string, mood: PortraitMood, mouth = 
  */
 export function portraitInBox(scene: Phaser.Scene, id: string, x: number, y: number, w: number, h: number, scale: number, depth: number, mood: PortraitMood = 'neutral'): Phaser.GameObjects.Image | null {
   if (!hasPortrait(scene, id)) return null;
+  const { key, frame } = moodFrame(scene, id, mood);
+  return imageInBox(scene, key, frame, x, y, w, h, scale, depth);
+}
+
+/** Portrait d'un boss ou d'un ennemi nommé dans une case (voir `portraitInBox`), ou null s'il n'en a pas. */
+export function foePortraitInBox(scene: Phaser.Scene, id: string, x: number, y: number, w: number, h: number, scale: number, depth: number, dark = false): Phaser.GameObjects.Image | null {
+  if (!scene.textures.exists(foePortraitKey(id))) return null;
+  const image = imageInBox(scene, foePortraitKey(id), undefined, x, y, w, h, scale, depth);
+  // Phase 2 : le visage s'assombrit et se teinte de Brume.
+  if (dark) image.setTint(0x8f7fa8);
+  return image;
+}
+
+function imageInBox(scene: Phaser.Scene, key: string, frame: number | undefined, x: number, y: number, w: number, h: number, scale: number, depth: number): Phaser.GameObjects.Image {
   const cw = Math.min(PORTRAIT_SIZE, Math.floor(w / scale));
   const ch = Math.min(PORTRAIT_SIZE, Math.floor(h / scale));
   const cx = Math.floor((PORTRAIT_SIZE - cw) / 2);
@@ -75,7 +93,6 @@ export function portraitInBox(scene: Phaser.Scene, id: string, x: number, y: num
   const cy = Math.floor(((PORTRAIT_SIZE - ch) * 2) / 5);
   const ox = x + Math.round((w - cw * scale) / 2);
   const oy = y + Math.round((h - ch * scale) / 2);
-  const { key, frame } = moodFrame(scene, id, mood);
   return scene.add
     .image(ox - cx * scale, oy - cy * scale, key, frame)
     .setOrigin(0, 0)

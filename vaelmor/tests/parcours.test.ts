@@ -129,6 +129,21 @@ describe('parcours principal Z1 → Z5 (n°202)', () => {
     expect(settleEnding(ctx, { victoryFlags: finale.victoryFlags, aliveDeployed: [] })).toBeNull();
   });
 
+  it('à côté : l’Arène des Cendres (Dax) rend Gérard recrutable (n°200)', () => {
+    const dax = visibleOptions(ctx, npc('dax'));
+    const quest = dax.find((o) => o.option.kind === 'quest');
+    expect(quest).toBeDefined();
+    const asked = selectOption(ctx, npc('dax'), quest?.index ?? 0);
+    if (asked.type === 'ask') answer(ctx, npc('dax'), quest?.index ?? 0, 0);
+    expect(questStatus(ctx, 'arene_des_cendres')).toBe('active');
+    const fight = selectOption(ctx, npc('dax'), visibleOptions(ctx, npc('dax')).find((o) => o.label.includes('première'))?.index ?? -1);
+    expect(fight.type).toBe('battle');
+    win(ctx, findEncounter(data, 'arene_serie_1'), null);
+    completeQuest(ctx, 'arene_des_cendres');
+    talk(ctx, 'gerard', 'rejoindre');
+    expect(p.company.some((m) => m.id === 'gerard')).toBe(true);
+  });
+
   it('toutes les quêtes principales sont faites et aucun drapeau de boss ne manque', () => {
     for (const q of data.quests.filter((q) => q.principal)) expect(questStatus(ctx, q.id), q.id).toBe('done');
     for (const flag of ['boss_brakk', 'boss_roi_cerf', 'boss_merrow', 'boss_aiguille', 'boss_gardien_cendre', 'boss_orvane']) expect(ctx.flags).toContain(flag);

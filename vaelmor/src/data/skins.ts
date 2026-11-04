@@ -73,3 +73,14 @@ export const SKIN_REV = 7;
 export const PORTRAIT_MOODS = ['happy', 'angry', 'sad', 'surprised'] as const;
 export type PortraitMood = (typeof PORTRAIT_MOODS)[number] | 'neutral';
 export const PORTRAIT_MOUTHS = ['rest', 'open', 'round'] as const;
+
+/**
+ * Portraits des boss et des ennemis nommés (jalon M7, n°198) : `assets/portraits/ennemis/<id>.png`,
+ * 64×64, Pixellab (Pro Flash, style calé sur les portraits de la compagnie). Un seul portrait par
+ * personnage, sans expressions ; la scène de phase 2 l'assombrit (`render/portraits.ts › foePortraitInBox`, `dark`).
+ * Ids : ceux des scènes de combat (`battleQuotes.json › enemy`).
+ */
+export const FOE_PORTRAITS = [
+  'brakk', 'roi_cerf', 'soeur_merrow', 'mere_harpie', 'gardien_de_cendre', 'orvane',
+  'rik', 'gorm', 'hakon', 'oswin', 'aldo', 'hobb', 'ilse', 'orsen', 'alderic', 'drak', 'veilleur_de_pierre', 'maelis',
+] as const;

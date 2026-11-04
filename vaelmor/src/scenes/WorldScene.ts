@@ -577,7 +577,7 @@ export class WorldScene extends Phaser.Scene {
   /* ---------- Villages : PNJ, dialogues, réputation (jalon M2) ---------- */
 
   /**
-   * Outils de debug : `?debug&rep=haut_gue:-70,racines:20&gold=999&flags=boss_brakk&fate=hobb:recruited`
+   * Outils de debug : `?debug&rep=haut_gue:-70,racines:20&gold=999&flags=boss_brakk&fate=hobb:recruited&seen=all`
    * règlent réputations, or et drapeaux au lancement d'une partie (une seule fois).
    */
   private applyTownDebug(newGame: boolean): void {
@@ -602,6 +602,9 @@ export class WorldScene extends Phaser.Scene {
       const [id, status] = entry.split(':');
       if (id && (status === 'recruited' || status === 'defeated' || status === 'lost') && this.data_.named.some((n) => n.id === id)) progress.named[id] = status;
     }
+    // `seen=all` ou `seen=brakk_phase,…` : scènes de combat tenues pour vues, à relire dans le journal des rencontres (M7).
+    const seen = params.get('seen');
+    if (seen) for (const scene of this.data_.scenes) if (seen === 'all' || seen.split(',').includes(scene.id)) addUnique(progress.scenesSeen, scene.id);
   }
 
   /** Cases où un PNJ peut marcher : libres, hors portes et devant-de-porte. */

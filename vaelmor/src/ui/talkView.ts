@@ -15,7 +15,7 @@ export type FaceLookup = (charId: string) => Omit<TalkFace, 'key'> | null;
 export function talkFace(data: GameData, scene: SceneDef, charId: string, lookup: FaceLookup): TalkFace {
   if (charId === scene.enemy) {
     const def = data.enemies.find((e) => e.id === charId);
-    return { key: charId, name: def?.name ?? charId, title: def?.title && def.title !== def.name ? def.title : null, sprite: def?.sprite ?? null, team: 'enemy' };
+    return { key: charId, name: def?.name ?? charId, title: def?.title && def.title !== def.name ? def.title : null, sprite: def?.sprite ?? null, team: 'enemy', foe: charId, ...(scene.kind === 'phase' ? { dark: true } : {}) };
   }
   const known = lookup(charId);
   if (known) return { key: charId, ...known };
@@ -25,7 +25,7 @@ export function talkFace(data: GameData, scene: SceneDef, charId: string, lookup
     return { key: charId, name: template.name, title: null, sprite: template.sprite, team: 'ally', ...(npc ? { npc } : {}) };
   }
   const named = data.named.find((n) => n.id === charId);
-  if (named) return { key: charId, name: named.name, title: null, sprite: named.recruit?.asClass ?? null, team: 'player' };
+  if (named) return { key: charId, name: named.name, title: null, sprite: named.recruit?.asClass ?? null, team: 'player', foe: charId };
   for (const loc of data.locations) {
     for (const npc of loc.npcs) {
       for (const o of npc.options) if (o.kind === 'recruit' && o.unit.id === charId) return { key: charId, name: o.unit.name, title: null, sprite: o.unit.class, team: 'player' };
