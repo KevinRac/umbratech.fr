@@ -173,7 +173,8 @@ export function stepAt(steps: readonly Step[], ms: number): Step | null {
 export function frameAt(steps: readonly Step[], ms: number, frames: number, impact: number): number {
   if (frames <= 1) return 0;
   // Une chorégraphie (tourbillon, bond) garde l'image d'impact pour l'atterrissage : ses images la précèdent.
-  const hitStep = steps.find((s) => s.name === 'strike' || s.name === 'cut' || s.name === 'spell' || s.name === 'impact');
+  // Un tir lâche sa flèche quand le projectile part (`fly`).
+  const hitStep = steps.find((s) => s.name === 'strike' || s.name === 'cut' || s.name === 'spell' || s.name === 'fly' || s.name === 'impact');
   const start = steps.find((s) => s.name === 'prep' || s.name === 'dash' || s.name === 'draw' || s.name === 'rune' || s.name === 'choreo');
   const pose = steps.find((s) => s.name === 'pose');
   if (!hitStep || !start || !pose) return 0;
