@@ -900,6 +900,8 @@ function checkBattleAnims(data: GameData, issues: string[]): void {
     if (f.feet[0] >= f.frame[0] || f.feet[1] >= f.frame[1]) issues.push(`${at}.feet : en dehors de l'image`);
     for (const [name, anim] of Object.entries(f.anims)) {
       if (anim.impact !== undefined && anim.impact >= anim.frames) issues.push(`${at}.anims.${name}.impact : au-delà de la dernière image`);
+      if (anim.peak !== undefined && (anim.impact === undefined || anim.peak >= anim.impact)) issues.push(`${at}.anims.${name}.peak : l'armé doit précéder l'impact`);
+      if (anim.hold !== undefined && (anim.impact === undefined || anim.hold < anim.impact || anim.hold >= anim.frames)) issues.push(`${at}.anims.${name}.hold : la pose de contact suit l'impact, dans l'animation`);
       if (anim.loop && (anim.loop[0] > anim.loop[1] || anim.loop[1] >= anim.frames || (anim.impact !== undefined && anim.impact <= anim.loop[1]))) issues.push(`${at}.anims.${name}.loop : boucle hors de l'animation ou après l'impact`);
     }
     if (!f.anims.garde) issues.push(`${at}.anims : la garde est obligatoire`);

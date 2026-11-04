@@ -19,6 +19,7 @@ import {
   frameAt,
   isThrown,
   planSegments,
+  rhythmFrameAt,
   projectileFor,
   stepAt,
   strikeDuration,
@@ -41,12 +42,12 @@ const shape = (kind: StrikeShape['kind'], over: Partial<StrikeShape> = {}): Stri
 const strike = (attackerId: string, targetId: string, over: Partial<Strike> = {}): Strike => ({ attackerId, targetId, counter: false, hit: true, crit: false, damage: 5, targetHp: 10, ...over });
 
 describe('chronologie d’un coup (GDD §11.2, §11.3)', () => {
-  it('le coup de mêlée suit les huit phases du GDD, environ 1,25 s avec l’entrée', () => {
+  it('le coup de mêlée suit les phases du GDD et l’armé GBA, environ 1,5 s avec l’entrée (n°225)', () => {
     const steps = strikeSteps(shape('melee'), t);
-    expect(steps.map((s) => s.name)).toEqual(['prep', 'dash', 'strike', 'impact', 'recoil', 'pose', 'back']);
+    expect(steps.map((s) => s.name)).toEqual(['prep', 'dash', 'arme', 'strike', 'impact', 'recoil', 'pose', 'back']);
     const total = t.entry + strikeDuration(shape('melee'), t);
-    expect(total).toBeGreaterThanOrEqual(1150);
-    expect(total).toBeLessThanOrEqual(1350);
+    expect(total).toBeGreaterThanOrEqual(1350);
+    expect(total).toBeLessThanOrEqual(1600);
   });
 
   it('les étapes s’enchaînent sans trou ni chevauchement', () => {
@@ -70,7 +71,7 @@ describe('chronologie d’un coup (GDD §11.2, §11.3)', () => {
 
   it('un critique raté n’a ni écran assombri ni coupes', () => {
     const steps = strikeSteps(shape('melee', { crit: true, hit: false }), t);
-    expect(steps.map((s) => s.name)).toEqual(['prep', 'dash', 'strike', 'impact', 'recoil', 'pose', 'back']);
+    expect(steps.map((s) => s.name)).toEqual(['prep', 'dash', 'arme', 'strike', 'impact', 'recoil', 'pose', 'back']);
   });
 
   it('un sort passe par le cercle runique puis se joue à la cible ; environ 1,6 à 1,9 s avec les transitions', () => {
@@ -96,17 +97,17 @@ describe('chronologie d’un coup (GDD §11.2, §11.3)', () => {
       expect(t.entry + strikeDuration(shape('melee', { crit: true, style }), t) + t.exit).toBeLessThanOrEqual(3000);
     }
     // Un coup ordinaire ne change pas avec le style.
-    expect(strikeSteps(shape('melee', { style: 'bond' }), t).map((s) => s.name)).toEqual(['prep', 'dash', 'strike', 'impact', 'recoil', 'pose', 'back']);
+    expect(strikeSteps(shape('melee', { style: 'bond' }), t).map((s) => s.name)).toEqual(['prep', 'dash', 'arme', 'strike', 'impact', 'recoil', 'pose', 'back']);
   });
 
   it('un tir lève l’arme puis lance le projectile, sans dash', () => {
-    expect(strikeSteps(shape('ranged'), t).map((s) => s.name)).toEqual(['prep', 'draw', 'fly', 'impact', 'recoil', 'pose', 'settle']);
+    expect(strikeSteps(shape('ranged'), t).map((s) => s.name)).toEqual(['prep', 'draw', 'arme', 'fly', 'impact', 'recoil', 'pose', 'settle']);
   });
 
-  it('la double attaque ajoute environ 0,9 s (pas de préparation)', () => {
+  it('la double attaque ajoute environ 1,1 s (pas de préparation)', () => {
     const repeat = strikeDuration(shape('melee', { repeat: true }), t);
-    expect(repeat).toBeGreaterThanOrEqual(800);
-    expect(repeat).toBeLessThanOrEqual(1000);
+    expect(repeat).toBeGreaterThanOrEqual(900);
+    expect(repeat).toBeLessThanOrEqual(1250);
     expect(strikeSteps(shape('melee', { repeat: true }), t)[0]?.name).toBe('dash');
   });
 
@@ -190,6 +191,71 @@ describe('images d’une animation peinte', () => {
 
   it('une seule image : toujours la même', () => {
     expect(frameAt(steps, 500, 1, 0)).toBe(0);
+  });
+});
+
+describe('rythme GBA des images peintes (n°225)', () => {
+  const steps = strikeSteps(shape('melee'), t);
+  const at = (name: string): { at: number; ms: number } => {
+    const s = steps.find((st) => st.name === name);
+    if (!s) throw new Error(name);
+    return s;
+  };
+
+  it('mêlée et tir tiennent un armé avant la frappe ; pas le sort ni le critique chorégraphié', () => {
+    expect(steps.map((s) => s.name)).toEqual(['prep', 'dash', 'arme', 'strike', 'impact', 'recoil', 'pose', 'back']);
+    expect(strikeSteps(shape('ranged'), t).map((s) => s.name)).toEqual(['prep', 'draw', 'arme', 'fly', 'impact', 'recoil', 'pose', 'settle']);
+    expect(strikeSteps(shape('magic'), t).some((s) => s.name === 'arme')).toBe(false);
+    expect(strikeSteps({ ...shape('melee'), crit: true, style: 'bond' }, t).some((s) => s.name === 'arme')).toBe(false);
+    expect(t.arme.melee).toBeGreaterThanOrEqual(167);
+  });
+
+  it('élan, armé tenu, impact d’un coup, contact tenu jusqu’à la pose, récupération rapide', () => {
+    const f = (ms: number): number => rhythmFrameAt(steps, ms, 9, 4, undefined, t.recover);
+    expect(f(0)).toBe(0);
+    for (let ms = at('arme').at; ms < at('strike').at; ms += 10) expect(f(ms)).toBe(3);
+    expect(f(at('strike').at)).toBe(4);
+    expect(f(at('pose').at - 1)).toBe(4);
+    expect(f(at('pose').at)).toBe(5);
+    expect(f(at('pose').at + t.recover)).toBe(6);
+    expect(f(99999)).toBe(8);
+  });
+
+  it('les images entre l’armé et l’impact passent en un éclair juste avant le contact', () => {
+    const f = (ms: number): number => rhythmFrameAt(steps, ms, 11, 6, 3, t.recover);
+    const hit = at('strike').at;
+    expect(f(at('arme').at + 10)).toBe(3);
+    expect(f(hit - 1)).toBe(5);
+    expect(f(hit - 2 * 34)).toBe(4);
+    expect(f(hit)).toBe(6);
+  });
+
+  it('les images de traînée passent en un éclair, puis la pose de contact est tenue jusqu’à la pose', () => {
+    const f = (ms: number): number => rhythmFrameAt(steps, ms, 9, 4, 2, t.recover, 6);
+    const hit = at('strike').at;
+    expect(f(hit)).toBe(4);
+    expect(f(hit + 34)).toBe(5);
+    expect(f(hit + 68)).toBe(6);
+    expect(f(at('pose').at - 1)).toBe(6);
+    expect(f(at('pose').at)).toBe(7);
+  });
+
+  it('les annotations des feuilles peintes sont cohérentes (armé < impact ≤ contact)', () => {
+    for (const def of Object.values(anims.fighters)) {
+      for (const a of Object.values(def.anims)) {
+        if (a.peak !== undefined) expect(a.peak).toBeLessThan(a.impact ?? 0);
+        if (a.hold !== undefined) expect(a.hold).toBeGreaterThanOrEqual(a.impact ?? 0);
+      }
+    }
+  });
+
+  it('les images avancent sans jamais reculer', () => {
+    let last = 0;
+    for (let ms = 0; ms < strikeDuration(shape('melee'), t); ms += 5) {
+      const f = rhythmFrameAt(steps, ms, 13, 8, 5, t.recover, 10);
+      expect(f).toBeGreaterThanOrEqual(last);
+      last = f;
+    }
   });
 });
 

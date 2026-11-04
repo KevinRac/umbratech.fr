@@ -71,7 +71,7 @@ export function critSlashes(first: SlashId, count: number): SlashId[] {
 
 /* ---------- Chronologie ---------- */
 
-export type StepName = 'dark' | 'prep' | 'dash' | 'draw' | 'rune' | 'fly' | 'spell' | 'choreo' | 'strike' | 'cut' | 'impact' | 'recoil' | 'pose' | 'back' | 'settle';
+export type StepName = 'dark' | 'prep' | 'dash' | 'arme' | 'draw' | 'rune' | 'fly' | 'spell' | 'choreo' | 'strike' | 'cut' | 'impact' | 'recoil' | 'pose' | 'back' | 'settle';
 
 /** Une étape d'un coup : début (ms depuis le début du coup) et durée, à la vitesse « Normales ». */
 export interface Step {
@@ -99,7 +99,8 @@ export function choreoDuration(style: CritStyle, t: CloseupTimings): number {
 
 /**
  * Étapes d'un coup (GDD §11.2) : préparation, approche (dash, arme levée ou
- * cercle runique), vol du projectile, frappe, impact, recul, pose, retour.
+ * cercle runique), armé tenu (mêlée et tir, façon GBA), vol du projectile,
+ * frappe, impact, recul, pose, retour.
  * Critique (§11.3) : écran assombri d'abord, plusieurs coupes au lieu de la
  * frappe (mêlée) ou un projectile plus appuyé, pose tenue plus longtemps.
  * Un coup raté garde la même chronologie (l'impact devient l'esquive).
@@ -120,6 +121,8 @@ export function strikeSteps(shape: StrikeShape, t: CloseupTimings): Step[] {
     push('choreo', choreoDuration(style, t));
   } else if (shape.kind === 'melee') {
     push('dash', t.dash);
+    // Armé tenu au contact (GBA) : la tension avant la frappe sèche.
+    push('arme', t.arme.melee);
     if (crit) for (let i = 0; i < t.critCuts; i++) push('cut', t.critCut);
     else push('strike', t.strike);
   } else if (shape.kind === 'magic') {
@@ -128,6 +131,7 @@ export function strikeSteps(shape: StrikeShape, t: CloseupTimings): Step[] {
     push('spell', crit ? t.spell.crit : t.spell.cast);
   } else {
     push('draw', t.draw);
+    push('arme', t.arme.ranged);
     push('fly', t.fly);
   }
   push('impact', t.impact);
@@ -200,6 +204,44 @@ export function frameAt(steps: readonly Step[], ms: number, frames: number, impa
   if (after <= 0 || ms >= end) return frames - 1;
   const span = Math.max(1, end - hitStep.at);
   return Math.min(frames - 1, i + Math.floor(((ms - hitStep.at) / span) * (after + 1)));
+}
+
+/**
+ * Image d'une animation peinte au rythme des animations GBA (n°225) : les
+ * durées des images ne sont pas égales. L'élan (images jusqu'à `peak`) se joue
+ * pendant la préparation et l'approche, l'armé (`peak`) est tenu, les images
+ * entre l'armé et l'impact passent en un éclair (`snapMs` chacune), l'image
+ * d'impact tombe d'un coup sur la frappe (ou le départ du trait), les images
+ * de traînée jusqu'à la pose de contact (`hold`) passent en un éclair, puis
+ * celle-ci reste tenue pendant le gel, le recul et la descente des PV ; la
+ * récupération vient ensuite, vite (`recoverMs` par image), et la dernière
+ * image est tenue.
+ * Sans armé dans la chronologie (critique chorégraphié), retombe sur `frameAt`.
+ */
+export function rhythmFrameAt(steps: readonly Step[], ms: number, frames: number, impact: number, peak: number | undefined, recoverMs: number, hold?: number, snapMs = 34): number {
+  if (frames <= 1) return 0;
+  const arme = steps.find((s) => s.name === 'arme');
+  const hit = steps.find((s) => s.name === 'strike' || s.name === 'cut' || s.name === 'fly');
+  const start = steps.find((s) => s.name === 'prep' || s.name === 'dash' || s.name === 'draw');
+  const pose = steps.find((s) => s.name === 'pose');
+  if (!arme || !hit || !start || !pose) return frameAt(steps, ms, frames, impact);
+  const i = Math.max(0, Math.min(frames - 1, impact));
+  const p = Math.max(0, Math.min(i, peak ?? i - 1));
+  if (ms < hit.at) {
+    // Images de la frappe (entre l'armé et l'impact) : en un éclair juste avant le contact.
+    const snap = i - 1 - p;
+    const snapAt = hit.at - snap * snapMs;
+    if (snap > 0 && ms >= snapAt) return Math.min(i - 1, p + 1 + Math.floor((ms - snapAt) / snapMs));
+    if (ms >= arme.at) return p;
+    const span = Math.max(1, arme.at - start.at);
+    return Math.max(0, Math.min(p, Math.floor(((ms - start.at) / span) * (p + 1))));
+  }
+  const h = Math.max(i, Math.min(frames - 1, hold ?? i));
+  // Traînée de la frappe, puis pose de contact tenue.
+  const smear = i + Math.floor((ms - hit.at) / snapMs);
+  if (smear < h) return smear;
+  if (ms < pose.at) return h;
+  return Math.min(frames - 1, h + 1 + Math.floor((ms - pose.at) / Math.max(1, recoverMs)));
 }
 
 /**

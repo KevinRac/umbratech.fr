@@ -26,11 +26,12 @@
  */
 import Phaser from 'phaser';
 import type { BackdropId, CloseupTimings, CritStyle, FighterAnim, FighterDef, ProjectileId, SlashId, SpellId } from '../data/schemas';
-import { castFrameAt, critSlashes, exchangeShapes, frameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
+import { castFrameAt, critSlashes, exchangeShapes, rhythmFrameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
+import { playSfx, type SfxTone } from '../audio/sfx';
 import type { Strike, Team } from '../logic/tactics/types';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
 import { fighterFrame, fighterKey, hasFighterSheet } from '../render/closeupFighters';
-import { FX_TEX, ensureCloseupFx } from '../render/closeupFx';
+import { FX_TEX, SPARK_TICKS, ensureCloseupFx } from '../render/closeupFx';
 import { BACKDROP_H, BACKDROP_W, HORIZON, PLATFORM_TOP, PLATFORM_W, paintBackdrop, paintPlatform, type PaintedImage } from '../render/closeupBackdrop';
 import { PALETTE, mixColor } from '../render/palette';
 import { drawPanel } from '../ui/panel';
@@ -131,6 +132,8 @@ interface HpBar {
   readonly label: PixelText;
   shown: number;
   readonly max: number;
+  /** PV dessinés en ce moment (le tic sonne à chaque cran). */
+  painted?: number;
 }
 
 /** Mouvement des particules d'un impact selon l'élément de l'arme (GDD §11.5). */
@@ -156,6 +159,11 @@ const BURSTS: Readonly<Record<string, Burst>> = {
   /** Poussière qui retombe. */
   pierre: { speed: { min: 80, max: 190 }, gravityY: 320, lifespan: 600, scale: { start: 3, end: 1.5 }, angle: { min: 190, max: 350 } },
 };
+
+/** Couleur du bruitage d'un sort selon l'élément. */
+function toneOf(element: string | null): SfxTone {
+  return element === 'cendre' || element === 'maree' || element === 'racine' || element === 'lanterne' || element === 'pierre' ? element : null;
+}
 
 const BACKDROP_KEY = (id: BackdropId): string => `closeup:bg:${id}`;
 const PLATFORM_KEY = (id: BackdropId): string => `closeup:platform:${id}`;
@@ -369,12 +377,13 @@ export class BattleCloseupScene extends Phaser.Scene {
   private paintBar(bar: HpBar, hp: number): void {
     const ratio = hp / bar.max;
     const on = ratio > 0.5 ? PALETTE.vertDore : ratio > 0.25 ? PALETTE.jauneBle : PALETTE.rougeCendre;
+    bar.painted = hp;
     bar.ticks.forEach((t, i) => t.setFillStyle(i < hp ? on : PALETTE.ombreProfonde, 1));
     setText(bar.label, `${Math.max(0, Math.round(hp))}`);
   }
 
   private teardown(): void {
-    this.stage.removeAll(true);
+    this.stage.removeAll(true).setPosition(0, 0);
     this.ui.removeAll(true);
     this.dim = null;
     this.lines = null;
@@ -422,158 +431,206 @@ export class BattleCloseupScene extends Phaser.Scene {
     let cut = 0;
     const anim = this.strikeAnim(a, strike);
     const multi = (a.painted?.anims[anim]?.frames ?? 1) > 1;
-    // Animation peinte de plusieurs images : elle suit la chronologie du coup (image d'impact à la frappe).
-    if (multi) this.drive(a, anim, steps);
-    for (const step of steps) {
-      if (!this.busy) return;
-      // Poses d'une feuille d'une image par animation (le héros) : garde, geste, coup reçu.
-      if (!multi) {
-        if (step.name === 'dash' || step.name === 'draw' || step.name === 'rune' || step.name === 'strike' || step.name === 'cut') this.pose(a, anim);
-        if (step.name === 'back' || step.name === 'settle') this.pose(a, 'garde');
-      }
-      switch (step.name) {
-        case 'dark':
-          await this.critIntro(a, step.ms);
-          break;
-        case 'prep':
-          // Il se ramasse (anticipation) ; un éclat court sur son arme.
-          if (a.spec.kind !== 'magic' && !crit) this.time.delayedCall(this.scaled(step.ms * 0.4), () => this.busy && !this.skipping && this.glint(this.weaponTip(a), 0.7));
-          await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 14, scaleX: a.scale * 1.04, scaleY: a.scale * 0.92, duration: step.ms, ease: 'Quad.easeOut' });
-          break;
-        case 'dash': {
-          const contact = d.home.x - a.dir * 96;
-          this.ghosts(a, step.ms, crit ? 0xffffff : (a.spec.elementColor ?? 0xffffff));
-          if (crit) this.speedLines(a.dir, step.ms + t.critCut * t.critCuts);
-          // Il s'arrache du sol (poussière) et s'étire dans sa course.
-          this.dust(a.sprite.x, a.home.y, -a.dir, crit);
-          await this.tween({ targets: a.sprite, x: contact, scaleX: a.scale * 1.08, scaleY: a.scale * 0.97, duration: step.ms, ease: 'Quad.easeIn' });
-          a.sprite.setScale(a.scale);
-          break;
+    // Animation peinte de plusieurs images : elle suit les étapes au rythme GBA (n°225), gelée si une étape s'attarde.
+    const film = multi ? this.drive(a, anim, steps) : null;
+    // Les coups portés sans frappe au contact (tir, sort, critique chorégraphié) ont leur impact à l'arrivée.
+    const contact = steps.some((st) => st.name === 'strike' || st.name === 'cut');
+    try {
+      for (const step of steps) {
+        if (!this.busy) return;
+        film?.sync(step);
+        // Poses d'une feuille d'une image par animation (le héros) : garde, geste, coup reçu.
+        if (!multi) {
+          if (step.name === 'dash' || step.name === 'draw' || step.name === 'rune' || step.name === 'strike' || step.name === 'cut') this.pose(a, anim);
+          if (step.name === 'back' || step.name === 'settle') this.pose(a, 'garde');
         }
-        case 'draw':
-          // Il bande son arme en se penchant en arrière.
-          await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 8, y: a.home.y - 6, scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
-          break;
-        case 'rune':
-          this.rune(a, step.ms);
-          if (a.spec.kind === 'magic') this.channel(a, step.ms + (steps.find((st) => st.name === 'spell')?.ms ?? 0), crit);
-          // Le mage s'élève un peu au-dessus de son cercle.
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - (a.spec.kind === 'magic' ? 14 : 4), scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Sine.easeOut' });
-          break;
-        case 'choreo':
-          if (a.spec.critStyle === 'tourbillon') await this.tourbillon(a, d, strike, t);
-          else await this.bond(a, d, t);
-          break;
-        case 'spell':
-          await this.spell(a, d, crit, step.ms);
-          break;
-        case 'fly':
-          // Arme lancée (lanciers GBA) : le lanceur s'efface avec elle.
-          if (a.spec.thrown) {
-            this.ghosts(a, 90, 0xffffff, 2, 0.3);
-            void this.tween({ targets: [a.sprite, a.shadow], alpha: 0, duration: Math.min(90, step.ms * 0.4), ease: 'Quad.easeIn' });
-          } else {
-            // Tir : éclat au départ du trait, recul du tireur, poussière sous ses pieds.
-            this.glint(this.weaponTip(a), 0.9);
-            this.dust(a.sprite.x, a.home.y, -a.dir, false);
-            this.tweens.add({ targets: a.sprite, x: a.home.x - a.dir * 22, duration: this.scaled(90), yoyo: true, hold: this.scaled(60), ease: 'Quad.easeOut' });
+        switch (step.name) {
+          case 'dark':
+            playSfx('crit');
+            await this.critIntro(a, step.ms);
+            break;
+          case 'prep':
+            // Il se ramasse (anticipation).
+            await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 14, scaleX: a.scale * 1.04, scaleY: a.scale * 0.92, duration: step.ms, ease: 'Quad.easeOut' });
+            break;
+          case 'dash': {
+            const to = d.home.x - a.dir * 96;
+            this.ghosts(a, step.ms, crit ? 0xffffff : (a.spec.elementColor ?? 0xffffff), 3, 0.3);
+            if (crit) this.speedLines(a.dir, step.ms + t.arme.melee + t.critCut * t.critCuts);
+            // Il s'arrache du sol (poussière) et s'étire dans sa course.
+            this.dust(a.sprite.x, a.home.y, -a.dir, crit);
+            playSfx('dash');
+            await this.tween({ targets: a.sprite, x: to, scaleX: a.scale * 1.08, scaleY: a.scale * 0.97, duration: step.ms, ease: 'Quad.easeIn' });
+            a.sprite.setScale(a.scale);
+            // Il freine au contact : la poussière gicle devant lui.
+            this.dust(to + a.dir * 20, a.home.y, a.dir, false);
+            break;
           }
-          await this.projectile(a, d, step.ms);
-          break;
-        case 'strike':
-        case 'cut':
-          if (strike.hit) {
-            // Silhouette blanche et flash d'écran sur deux ou trois images (GDD §11.2, §11.5).
-            this.whiteFlash(d.sprite, true);
-            this.time.delayedCall(34, () => this.whiteFlash(d.sprite, false));
-            this.screenFlash(step.name === 'cut' ? 0.85 : 0.45, step.name === 'cut' ? 50 : 34);
-            if (a.spec.kind === 'melee') this.slash(d, step.name === 'cut' ? (cuts[cut++] ?? a.spec.slash) : a.spec.slash, a, step.name === 'cut');
+          case 'arme':
+            // Armé tenu (GBA) : l'arme levée brille, il se tend en arrière ; puis la frappe part d'un coup.
+            this.glint(this.weaponTip(a), crit ? 1.3 : 0.95, Math.min(320, step.ms + 80));
+            playSfx(a.spec.kind === 'melee' ? 'arme' : 'bow');
+            await this.tween({ targets: a.sprite, x: a.sprite.x - a.dir * 6, scaleY: a.scale * 1.02, duration: step.ms, ease: 'Sine.easeOut' });
+            break;
+          case 'draw':
+            // Il bande son arme en se penchant en arrière.
+            await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 8, y: a.home.y - 6, scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
+            break;
+          case 'rune':
+            this.rune(a, step.ms);
+            playSfx('charge');
+            if (a.spec.kind === 'magic') {
+              this.channel(a, step.ms + (steps.find((st) => st.name === 'spell')?.ms ?? 0), crit);
+              // Le décor s'assombrit dans la couleur du sort (sorts GBA) ; le critique l'a déjà plongé dans le noir.
+              if (!crit && this.dim) {
+                this.dim.setFillStyle(mixColor(a.spec.elementColor ?? PALETTE.violetBrume, PALETTE.encre, 0.78), 1);
+                void this.tween({ targets: this.dim, alpha: 0.55, duration: step.ms });
+              }
+            }
+            // Le mage s'élève un peu au-dessus de son cercle.
+            await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - (a.spec.kind === 'magic' ? 14 : 4), scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Sine.easeOut' });
+            break;
+          case 'choreo':
+            if (a.spec.critStyle === 'tourbillon') await this.tourbillon(a, d, strike, t);
+            else await this.bond(a, d, t);
+            break;
+          case 'spell':
+            playSfx('spell', toneOf(a.spec.element));
+            await this.spell(a, d, crit, step.ms);
+            break;
+          case 'fly':
+            if (a.spec.thrown) {
+              // Arme lancée (lanciers GBA) : le lanceur s'efface avec elle.
+              this.ghosts(a, 90, 0xffffff, 2, 0.3);
+              playSfx('throw');
+              void this.tween({ targets: [a.sprite, a.shadow], alpha: 0, duration: Math.min(90, step.ms * 0.4), ease: 'Quad.easeIn' });
+            } else {
+              // Tir : éclat au départ du trait, recul sec du tireur, poussière sous ses pieds.
+              this.glint(this.weaponTip(a), 0.9);
+              this.dust(a.sprite.x, a.home.y, -a.dir, false);
+              playSfx('release');
+              a.sprite.x = a.home.x - a.dir * 22;
+              this.tweens.add({ targets: a.sprite, x: a.home.x - a.dir * 8, delay: this.scaled(70), duration: this.scaled(140), ease: 'Quad.easeOut' });
+            }
+            await this.projectile(a, d, step.ms);
+            break;
+          case 'strike':
+          case 'cut': {
+            // La frappe part d'un coup (GBA : une ou deux images) : il se jette dans la cible.
+            playSfx('swing');
+            a.sprite.x += a.dir * (step.name === 'cut' ? 10 : 22);
+            a.sprite.setScale(a.scale * 1.06, a.scale * 0.96);
+            this.time.delayedCall(this.scaled(50), () => a.sprite.setScale(a.scale));
+            if (strike.hit) {
+              const last = step.name !== 'cut' || cut === t.critCuts - 1;
+              if (a.spec.kind === 'melee') this.slash(d, step.name === 'cut' ? (cuts[cut] ?? a.spec.slash) : a.spec.slash, a, step.name === 'cut');
+              this.hitFx(a, d, crit && last, step.name === 'cut');
+            }
+            if (step.name === 'cut') cut++;
+            await this.wait(step.ms);
+            break;
           }
-          // Le coup porte à travers la cible : l'attaquant pousse encore un peu.
-          if (a.spec.kind === 'melee') void this.tween({ targets: a.sprite, x: a.sprite.x + a.dir * (step.name === 'cut' ? 8 : 16), duration: step.ms, ease: 'Quad.easeOut' });
-          await this.wait(step.ms);
-          break;
-        case 'impact':
-          await this.impact(strike, a, d, step.ms, t);
-          break;
-        case 'recoil':
-          if (strike.hit) {
-            this.pose(d, 'coup');
-            // Recul fort en mêlée, léger à distance (GDD §11.4).
-            const push = crit ? 34 : a.spec.kind === 'melee' ? 20 : 10;
-            this.dust(d.home.x, d.home.y, a.dir, crit);
-            await this.tween({ targets: d.sprite, x: d.home.x + a.dir * push, y: d.home.y - (crit ? 16 : 4), duration: step.ms / 2, yoyo: true, ease: 'Quad.easeOut' });
-          } else await this.wait(step.ms);
-          break;
-        case 'pose':
-          await this.wait(step.ms);
-          break;
-        case 'back':
-        case 'settle':
-          if (this.dim && this.dim.alpha > 0) void this.tween({ targets: this.dim, alpha: 0, duration: step.ms });
-          if (crit) this.zoomTo(1, null, step.ms);
-          if (a.spec.thrown && a.sprite.alpha < 1) {
-            // Il réapparaît en garde à sa place, son arme en main.
-            a.sprite.setPosition(a.home.x, a.home.y);
+          case 'impact':
+            if (strike.hit && !contact) this.hitFx(a, d, crit, false);
+            await this.impact(strike, a, d, step.ms, t);
+            break;
+          case 'recoil':
+            if (strike.hit) {
+              this.pose(d, 'coup');
+              this.dust(d.home.x, d.home.y, a.dir, crit);
+            }
+            await this.wait(step.ms);
+            break;
+          case 'pose':
+            await this.wait(step.ms);
+            break;
+          case 'back':
+          case 'settle':
+            if (this.dim && this.dim.alpha > 0) void this.tween({ targets: this.dim, alpha: 0, duration: step.ms });
+            if (crit) this.zoomTo(1, null, step.ms);
+            if (a.spec.thrown && a.sprite.alpha < 1) {
+              // Il réapparaît en garde à sa place, son arme en main.
+              a.sprite.setPosition(a.home.x, a.home.y);
+              film?.stop();
+              if (multi) this.pose(a, 'garde');
+              await this.tween({ targets: [a.sprite, a.shadow], alpha: 1, duration: step.ms, ease: 'Quad.easeOut' });
+            } else if (step.name === 'back') {
+              // Retour en garde d'un bond en arrière (GBA), réception dans la poussière.
+              const x0 = a.sprite.x;
+              const y0 = a.sprite.y;
+              const hop = { t: 0 };
+              await this.tween({
+                targets: hop,
+                t: 1,
+                duration: step.ms,
+                ease: 'Sine.easeInOut',
+                onUpdate: () => a.sprite.setPosition(x0 + (a.home.x - x0) * hop.t, y0 + (a.home.y - y0) * hop.t - Math.sin(hop.t * Math.PI) * 34),
+              });
+              a.sprite.setScale(a.scale * 1.05, a.scale * 0.92);
+              this.dust(a.home.x, a.home.y, a.dir, false);
+              void this.tween({ targets: a.sprite, scaleX: a.scale, scaleY: a.scale, duration: 110, ease: 'Back.easeOut' });
+            } else await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
+            d.sprite.setPosition(d.home.x, d.home.y);
+            if (strike.targetHp > 0 || !this.spec?.falls.includes(d.spec.id)) this.pose(d, 'garde');
+            film?.stop();
             if (multi) this.pose(a, 'garde');
-            await this.tween({ targets: [a.sprite, a.shadow], alpha: 1, duration: step.ms, ease: 'Quad.easeOut' });
-          } else if (step.name === 'back') {
-            // Retour en garde d'un bond en arrière (GBA), réception dans la poussière.
-            const x0 = a.sprite.x;
-            const y0 = a.sprite.y;
-            const hop = { t: 0 };
-            await this.tween({
-              targets: hop,
-              t: 1,
-              duration: step.ms,
-              ease: 'Sine.easeInOut',
-              onUpdate: () => a.sprite.setPosition(x0 + (a.home.x - x0) * hop.t, y0 + (a.home.y - y0) * hop.t - Math.sin(hop.t * Math.PI) * 34),
-            });
-            a.sprite.setScale(a.scale, a.scale * 0.94);
-            this.dust(a.home.x, a.home.y, a.dir, false);
-            void this.tween({ targets: a.sprite, scaleY: a.scale, duration: 90, ease: 'Quad.easeOut' });
-          } else await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
-          d.sprite.setPosition(d.home.x, d.home.y);
-          if (strike.targetHp > 0 || !this.spec?.falls.includes(d.spec.id)) this.pose(d, 'garde');
-          if (multi) this.pose(a, 'garde');
-          break;
+            break;
+        }
       }
+    } finally {
+      film?.stop();
     }
   }
 
   /**
-   * Fait défiler une animation peinte de plusieurs images au rythme des étapes
-   * d'un coup : élan, frappe (ou incantation entretenue, `loop`), lancement,
-   * puis pose tenue animée (`after`) jusqu'au retour en garde.
+   * Fait défiler une animation peinte au rythme des étapes d'un coup (n°225) :
+   * élan, armé tenu, frappe sèche, contact tenu, récupération (ou incantation
+   * entretenue, `loop`), puis pose tenue animée (`after`) jusqu'au retour en
+   * garde. L'horloge se recale au début de chaque étape et s'arrête à sa fin
+   * prévue : si l'étape s'attarde (gel, sort), l'image ne bouge plus.
    */
-  private drive(a: FighterView, anim: FighterAnim, steps: readonly Step[]): void {
+  private drive(a: FighterView, anim: FighterAnim, steps: readonly Step[]): { sync: (step: Step) => void; stop: () => void } | null {
     const def = a.painted;
-    if (!def) return;
-    const info = def.anims[anim];
-    const last = steps[steps.length - 1];
-    const total = last ? last.at + last.ms : 0;
-    const clock = { ms: 0 };
+    const info = def?.anims[anim];
+    if (!def || !info) return null;
+    const recover = this.spec?.timings.recover ?? 50;
+    const cast = info.loop && steps.some((st) => st.name === 'spell');
+    let base = 0;
+    let since = this.time.now;
+    let cap = 0;
     let heldFrom: number | undefined;
-    void this.tween({
-      targets: clock,
-      ms: total,
-      duration: total,
-      onUpdate: () => {
-        // Incantation entretenue : la boucle tourne tant que le sort se déroule.
-        const f = info?.loop && steps.some((st) => st.name === 'spell') ? castFrameAt(steps, clock.ms, info.frames, info.loop, info.impact ?? info.loop[1] + 1, 60) : frameAt(steps, clock.ms, info?.frames ?? 1, info?.impact ?? 0);
-        const tenue = info?.after ? def.anims[info.after] : undefined;
-        if (tenue && info?.after && f === (info.frames ?? 1) - 1 && clock.ms > (heldFrom ??= clock.ms) + 60) {
-          // Pose tenue après la dernière image : une fois en entier, puis aller-retour sur sa boucle (cheveux, étoffes au vent).
-          const [lo, hi] = tenue.loop ?? [0, tenue.frames - 1];
-          const step = Math.floor((clock.ms - heldFrom) / 80);
-          const n = hi - lo;
-          const k = step <= hi ? step : n > 0 ? lo + (((step - hi) % (2 * n)) <= n ? n - ((step - hi) % (2 * n)) : ((step - hi) % (2 * n)) - n) : hi;
-          a.sprite.setFrame(fighterFrame(this, def, info.after, Math.min(tenue.frames - 1, k)) ?? 0);
-          return;
-        }
-        a.sprite.setFrame(fighterFrame(this, def, anim, f) ?? 0);
+    let stopped = false;
+    const show = (): void => {
+      if (stopped) return;
+      const factor = Math.max(0.05, this.spec?.factor() ?? 1);
+      const ms = this.skipping ? cap : Math.min(cap, base + (this.time.now - since) / factor);
+      // Incantation entretenue : la boucle tourne tant que le sort se déroule.
+      const f = cast && info.loop ? castFrameAt(steps, ms, info.frames, info.loop, info.impact ?? info.loop[1] + 1, 60) : rhythmFrameAt(steps, ms, info.frames, info.impact ?? 0, info.peak, recover, info.hold);
+      const tenue = info.after ? def.anims[info.after] : undefined;
+      if (tenue && info.after && f === info.frames - 1 && ms > (heldFrom ??= ms) + 60) {
+        // Pose tenue après la dernière image : une fois en entier, puis aller-retour sur sa boucle (cheveux, étoffes au vent).
+        const [lo, hi] = tenue.loop ?? [0, tenue.frames - 1];
+        const k0 = Math.floor((ms - heldFrom) / 80);
+        const n = hi - lo;
+        const k = k0 <= hi ? k0 : n > 0 ? lo + (((k0 - hi) % (2 * n)) <= n ? n - ((k0 - hi) % (2 * n)) : ((k0 - hi) % (2 * n)) - n) : hi;
+        a.sprite.setFrame(fighterFrame(this, def, info.after, Math.min(tenue.frames - 1, k)) ?? 0);
+        return;
+      }
+      a.sprite.setFrame(fighterFrame(this, def, anim, f) ?? 0);
+    };
+    const clock = this.time.addEvent({ delay: 16, loop: true, callback: show });
+    return {
+      sync: (step) => {
+        base = step.at;
+        since = this.time.now;
+        cap = step.at + step.ms;
+        show();
       },
-    });
+      stop: () => {
+        stopped = true;
+        clock.remove();
+      },
+    };
   }
 
   /** Animation du coup : critique (s'il touche), tir ou sort (`ranged`), sinon attaque. */
@@ -594,24 +651,102 @@ export class BattleCloseupScene extends Phaser.Scene {
 
   private async impact(strike: Strike, a: FighterView, d: FighterView, ms: number, t: CloseupTimings): Promise<void> {
     if (!strike.hit) {
-      // Esquive : la cible glisse en arrière (une traînée la suit), « Raté » en gris.
+      // Esquive : la cible bondit en arrière (traînée), « Raté » en gris.
+      playSfx('miss');
       this.number(d, 'Raté', PALETTE.metalClair);
       this.ghosts(d, ms, PALETTE.metalClair, 3);
       this.dust(d.home.x, d.home.y, a.dir, false);
       await this.tween({ targets: d.sprite, x: d.home.x + a.dir * 56, y: d.home.y - 22, duration: ms, yoyo: true, ease: 'Quad.easeOut' });
       return;
     }
-    this.burst(d.home.x - a.dir * 12, d.home.y - CHEST, a.spec.kind === 'melee' ? null : a.spec.element, a.spec.elementColor, strike.crit ? 26 : 12);
-    if (a.spec.kind === 'magic') this.ring(d.home.x, d.home.y - CHEST, a.spec.elementColor ?? PALETTE.cyanEclat);
-    const px = (strike.crit ? t.shake.crit : t.shake.hit) / (this.spec?.reduced ? 3 : 1);
-    this.cameras.main.shake(this.scaled(strike.crit ? t.shake.critMs : 140), px / this.scale.width);
     if (strike.crit) this.number(d, 'CRITIQUE !', PALETTE.jauneBle, -40, 2.5);
     this.number(d, `${strike.damage}`, strike.crit ? PALETTE.jauneBle : PALETTE.parchemin, 0, strike.crit ? 3 : 2);
-    // Arrêt sur image (hit-stop), plus long sur le coup fatal, puis la barre de PV descend cran par cran.
-    if (strike.targetHp <= 0) this.screenFlash(0.6, 90);
-    await this.wait(strike.targetHp <= 0 ? t.hitStop * 3 : t.hitStop);
-    this.drain(d.bar, strike.targetHp, Math.max(120, ms + t.recoil));
+    // Gel (hit-stop) : tout se fige sur le contact, plus longtemps sur le coup fatal ; puis la barre de PV descend cran par cran.
+    const fatal = strike.targetHp <= 0;
+    if (fatal) {
+      this.screenFlash(0.7, 110);
+      this.quake(t.shake.crit, t.shake.critMs, true);
+    }
+    await this.wait(fatal ? t.hitStop * 2.5 : t.hitStop);
+    this.drain(d.bar, strike.targetHp, Math.max(160, ms + t.recoil));
     await this.wait(Math.max(0, ms - t.hitStop));
+  }
+
+  /**
+   * Le coup porte (GBA) : grande étincelle animée au point de contact,
+   * particules de l'élément, la cible clignote en blanc et tressaute sèchement,
+   * l'écran tremble par à-coups ; au critique, étincelle géante, stroboscope
+   * et coup de cymbale.
+   */
+  private hitFx(a: FighterView, d: FighterView, crit: boolean, cut: boolean): void {
+    const t = this.spec?.timings;
+    if (!t) return;
+    // Sur le corps de la cible, du côté du coup.
+    const x = d.home.x - a.dir * 6;
+    const y = d.home.y - CHEST + (cut ? Phaser.Math.Between(-14, 14) : 2);
+    this.spark(x, y, crit, a.spec.kind === 'magic' ? a.spec.elementColor : null);
+    this.burst(x, y, a.spec.kind === 'melee' ? null : a.spec.element, a.spec.elementColor, crit ? 26 : 12);
+    if (a.spec.kind === 'magic') this.ring(d.home.x, d.home.y - CHEST, a.spec.elementColor ?? PALETTE.cyanEclat);
+    this.blink(d.sprite, crit ? 3 : 2);
+    this.jolt(d, a.dir, crit ? 18 : a.spec.kind === 'melee' ? 11 : 7, crit);
+    this.quake(crit ? t.shake.crit : t.shake.hit + (cut ? 1 : 0), crit ? t.shake.critMs : 170, crit);
+    this.screenFlash(crit ? 0.75 : cut ? 0.4 : 0.22, crit ? 60 : 40);
+    if (crit) this.strobe();
+    playSfx(crit ? 'critHit' : 'hit');
+  }
+
+  /** Étincelle d'impact peinte, image par image (durées en 60ᵉ de seconde, comme sur GBA). */
+  private spark(x: number, y: number, big: boolean, tint: number | null): void {
+    const img = this.add.image(x, y, FX_TEX.spark(0, big)).setScale(ART).setFlipX(Math.random() < 0.5);
+    if (tint !== null) img.setTint(mixColor(tint, 0xffffff, 0.45));
+    this.stage.add(img);
+    let at = 0;
+    SPARK_TICKS.forEach((ticks, f) => {
+      if (f > 0) this.time.delayedCall(this.scaled(at), () => img.active && img.setTexture(FX_TEX.spark(f, big)));
+      at += (ticks * 1000) / 60;
+    });
+    this.time.delayedCall(this.scaled(at), () => img.destroy());
+    if (this.skipping) img.destroy();
+  }
+
+  /** La cible clignote en blanc (deux ou trois fois, 2 images allumée, 2 éteinte). */
+  private blink(sprite: Phaser.GameObjects.Sprite, times: number): void {
+    for (let i = 0; i < times; i++) {
+      this.time.delayedCall(this.scaled(i * 67), () => this.whiteFlash(sprite, true));
+      this.time.delayedCall(this.scaled(i * 67 + 34), () => this.whiteFlash(sprite, false));
+    }
+    if (this.skipping) this.whiteFlash(sprite, false);
+  }
+
+  /** La cible est projetée d'un coup puis tressaute en revenant (positions par paliers, pas d'interpolation). */
+  private jolt(v: FighterView, dir: number, px: number, lift: boolean): void {
+    const steps = [1, 0.55, 0.85, 0.4, 0.6, 0.22, 0.32, 0.08, 0];
+    steps.forEach((k, i) => {
+      this.time.delayedCall(this.scaled(i * 33), () => {
+        if (!this.busy) return;
+        v.sprite.setPosition(v.home.x + dir * px * k, v.home.y - (lift ? px * 0.6 * k : 0));
+      });
+    });
+    if (this.skipping) v.sprite.setPosition(v.home.x, v.home.y);
+  }
+
+  /** Secousse de l'écran par à-coups qui s'amortissent (horizontale, ou verticale pour un choc lourd). */
+  private quake(px: number, ms: number, vertical = false): void {
+    const amp = px / (this.spec?.reduced ? 3 : 1);
+    const n = Math.max(2, Math.round(ms / 33));
+    for (let i = 0; i <= n; i++) {
+      this.time.delayedCall(this.scaled(i * 33), () => {
+        const k = i === n ? 0 : (1 - i / n) * (i % 2 === 0 ? 1 : -1) * amp;
+        this.stage.setPosition(vertical ? 0 : Math.round(k), vertical ? Math.round(k) : Math.round(k * 0.3));
+      });
+    }
+    if (this.skipping) this.stage.setPosition(0, 0);
+  }
+
+  /** Stroboscope du critique : trois éclairs blancs (un seul en « Effets réduits »). */
+  private strobe(): void {
+    const count = this.spec?.reduced ? 1 : 3;
+    for (let i = 1; i < count; i++) this.time.delayedCall(this.scaled(i * 100), () => this.busy && !this.skipping && this.screenFlash(0.75, 45));
   }
 
   /** La barre de PV descend (ou monte) cran par cran (GBA). */
@@ -623,7 +758,11 @@ export class BattleCloseupScene extends Phaser.Scene {
       targets: counter,
       hp: to,
       duration: ms,
-      onUpdate: () => this.paintBar(bar, Math.round(counter.hp)),
+      onUpdate: () => {
+        const hp = Math.round(counter.hp);
+        if (hp !== bar.painted) playSfx('tick');
+        this.paintBar(bar, hp);
+      },
       onComplete: () => this.paintBar(bar, to),
     });
     if (this.skipping) this.paintBar(bar, to);
@@ -648,7 +787,8 @@ export class BattleCloseupScene extends Phaser.Scene {
     } else {
       this.dim?.setFillStyle(PALETTE.ombreProfonde, 1);
       // Le bond se voit en entier : le zoom vient à l'atterrissage.
-      if (a.spec.critStyle !== 'bond') this.zoomTo(CRIT_ZOOM, a, ms);
+      // Zoom sur la zone du contact (l'attaquant et sa cible) ; le bond se voit en entier, le tir aussi.
+      if (a.spec.critStyle !== 'bond' && a.spec.kind === 'melee') this.zoomTo(CRIT_ZOOM, a, ms, 130);
       if (this.dim) await this.tween({ targets: this.dim, alpha: 0.7, duration: ms });
       else await this.wait(ms);
     }
@@ -692,7 +832,8 @@ export class BattleCloseupScene extends Phaser.Scene {
       this.whiteFlash(d.sprite, true);
       this.time.delayedCall(34, () => this.whiteFlash(d.sprite, false));
       this.burst(cx, cy, null, color, 6);
-      this.cameras.main.shake(this.scaled(70), (this.spec?.reduced ? 1 : 3) / this.scale.width);
+      this.quake(4, 66);
+      playSfx('swing');
       if (strike.hit && i === tb.passes - 1) this.screenFlash(0.9, 60);
       await this.tween({ targets: ghost, x: ex, y: ey + CHEST, duration: tb.pass, ease: 'Linear' });
       ghost.destroy();
@@ -734,7 +875,8 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.shockwave(d.home.x - a.dir * 30, d.home.y);
     // Coup de zoom à l'impact (le retour en garde dézoome).
     this.zoomTo(1.3, d, 70);
-    this.cameras.main.shake(this.scaled(320), (this.spec?.reduced ? 4 : 13) / this.scale.width);
+    this.quake(13, 320, true);
+    playSfx('land');
     this.screenFlash(0.7, 60);
   }
 
@@ -935,7 +1077,7 @@ export class BattleCloseupScene extends Phaser.Scene {
       this.stage.add(p);
       this.tweens.add({ targets: p, scale: crit ? 11 : 8, alpha: 0, y: p.y - 30, delay: this.scaled(i * 18), duration: this.scaled(420), ease: 'Quad.easeOut', onComplete: () => p.destroy() });
     }
-    this.cameras.main.shake(this.scaled(crit ? 240 : 140), (this.spec?.reduced ? 1 : crit ? 8 : 5) / this.scale.width);
+    this.quake(crit ? 8 : 5, crit ? 240 : 140, true);
   }
 
   /** Boule de feu (Brandon de poix) : elle grossit dans la main, file en cloche vers la cible et explose. */
@@ -1216,16 +1358,17 @@ export class BattleCloseupScene extends Phaser.Scene {
       ease: 'Quad.easeIn',
       onComplete: () => {
         this.burst(x, ground - 20, 'pierre', PALETTE.terreSeche, 12);
-        this.cameras.main.shake(this.scaled(120), (this.spec?.reduced ? 1 : 4) / this.scale.width);
+        this.quake(4, 120, true);
+        playSfx('land');
         this.tweens.add({ targets: g, alpha: 0, duration: this.scaled(160), onComplete: () => g.destroy() });
       },
     });
   }
 
-  private zoomTo(zoom: number, on: FighterView | null, ms: number): void {
+  private zoomTo(zoom: number, on: FighterView | null, ms: number, ahead = 60): void {
     if (this.spec?.reduced) return;
     const cam = this.cameras.main;
-    const cx = on ? on.home.x + on.dir * 60 : this.scale.width / 2;
+    const cx = on ? on.home.x + on.dir * ahead : this.scale.width / 2;
     const cy = on ? on.home.y - 80 : this.scale.height / 2;
     void this.tween({ targets: cam, zoom, scrollX: cx - this.scale.width / 2, scrollY: cy - this.scale.height / 2, duration: ms, ease: 'Quad.easeOut' });
   }
@@ -1394,6 +1537,7 @@ export class BattleCloseupScene extends Phaser.Scene {
     a.sprite.setScale(a.scale);
     // Le soigneur joue son incantation : élan pendant le cercle, boucle pendant que la lumière enveloppe l'allié, puis lancement et pose tenue.
     const healAnim: FighterAnim = a.painted?.ranged ?? 'attaque';
+    let film: { sync: (step: Step) => void; stop: () => void } | null = null;
     if ((a.painted?.anims[healAnim]?.frames ?? 1) > 1) {
       const healSteps: Step[] = [];
       let at = 0;
@@ -1401,11 +1545,14 @@ export class BattleCloseupScene extends Phaser.Scene {
         healSteps.push({ name, at, ms });
         at += ms;
       }
-      this.drive(a, healAnim, healSteps);
+      film = this.drive(a, healAnim, healSteps);
+      // Une seule horloge pour tout le soin.
+      film?.sync({ name: 'prep', at: 0, ms: at });
     } else this.pose(a, healAnim);
     this.rune(a, t.rune);
     this.channel({ ...a, spec: { ...a.spec, elementColor: HEAL_COLOR } }, t.prep + t.rune + t.fly, false);
     await this.tween({ targets: a.sprite, y: a.home.y - 14, duration: t.prep + t.rune, ease: 'Sine.easeOut' });
+    playSfx('heal');
     const glow = this.add.ellipse(d.home.x, d.home.y - CHEST, 90, 150, HEAL_COLOR, 0).setBlendMode(Phaser.BlendModes.ADD);
     this.stage.add(glow);
     void this.tween({ targets: glow, fillAlpha: 0.35, duration: t.fly, yoyo: true, hold: t.impact });
@@ -1427,6 +1574,7 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.number(d, `+${amount}`, HEAL_COLOR);
     this.drain(d.bar, hpAfter, t.recoil + t.pose);
     await this.wait(t.impact + t.recoil + t.pose);
+    film?.stop();
     this.pose(a, 'garde');
     await this.tween({ targets: a.sprite, y: a.home.y, duration: t.settle });
     this.breathe(a);
@@ -1437,6 +1585,7 @@ export class BattleCloseupScene extends Phaser.Scene {
     const v = this.views.get(id);
     if (!v) return;
     this.pose(v, 'ko');
+    playSfx('ko');
     for (let i = 0; i < 3; i++) {
       this.whiteFlash(v.sprite, true);
       await this.wait(70);

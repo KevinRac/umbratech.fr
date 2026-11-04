@@ -101,7 +101,7 @@
       "critStyle": "bond",
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 9, "impact": 5 },
+        "attaque": { "row": 1, "frames": 9, "impact": 4, "peak": 3, "hold": 6 },
         "critique": { "row": 2, "frames": 13, "impact": 11 },
         "competence": { "row": 3, "frames": 1, "impact": 0 },
         "coup": { "row": 4, "frames": 1 },
@@ -115,7 +115,7 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 9, "impact": 4 },
+        "attaque": { "row": 1, "frames": 9, "impact": 4, "peak": 2, "hold": 6 },
         "critique": { "row": 2, "frames": 13, "impact": 8 }
       }
     },
@@ -137,8 +137,8 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 12 }
+        "attaque": { "row": 1, "frames": 11, "impact": 4, "peak": 2, "hold": 6 },
+        "critique": { "row": 2, "frames": 13, "impact": 11, "peak": 9, "hold": 12 }
       }
     },
     "veilleur_des_falaises": {
@@ -148,8 +148,8 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 5 },
-        "critique": { "row": 2, "frames": 13, "impact": 10 }
+        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 4 },
+        "critique": { "row": 2, "frames": 13, "impact": 10, "peak": 9 }
       }
     },
     "danseur_des_courants": {
@@ -159,7 +159,7 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 7 },
+        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 8 },
         "critique": { "row": 2, "frames": 13, "impact": 4 }
       }
     },
@@ -170,8 +170,8 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3 },
-        "critique": { "row": 2, "frames": 13, "impact": 12 }
+        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
+        "critique": { "row": 2, "frames": 13, "impact": 12, "peak": 11 }
       }
     },
     "chasseur_de_serpents_de_mer": {
@@ -181,7 +181,7 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 9 },
+        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 9 },
         "critique": { "row": 2, "frames": 13, "impact": 11 }
       }
     },
@@ -236,7 +236,7 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3 },
+        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
         "critique": { "row": 2, "frames": 13, "impact": 11 }
       }
     }

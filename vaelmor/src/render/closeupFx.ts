@@ -1,8 +1,9 @@
 /**
  * Textures d'effets de l'écran de combat rapproché (jalon M8, lot 3, GDD §11.5),
  * peintes par code en pixels d'art (affichées ×3) : trois coupures (diagonale,
- * croix, arc), un cercle runique, une étincelle carrée. Blanches au cœur,
- * liseré chaud ; le rendu les teinte à la couleur de l'élément.
+ * croix, arc), un cercle runique, une étincelle carrée, et l'étincelle
+ * d'impact animée façon GBA (cinq images, deux tailles : coup et critique).
+ * Blanches au cœur, liseré chaud ; le rendu les teinte à la couleur de l'élément.
  */
 import type Phaser from 'phaser';
 import { PixelCanvas } from './pixelCanvas';
@@ -18,7 +19,15 @@ export const FX_TEX = {
   dot: 'closeup:fx:dot',
   /** Boule douce (flamme, bulle, poussière) : cœur blanc, deux anneaux plus sombres, pixels nets. */
   puff: 'closeup:fx:puff',
+  /** Étincelle d'impact (GBA) : image `frame` (0 à SPARK_FRAMES - 1), grande au critique. */
+  spark: (frame: number, big: boolean): string => `closeup:fx:spark:${big ? 'crit' : 'coup'}:${frame}`,
 } as const;
+
+/** Images de l'étincelle d'impact et leur durée (en 60ᵉ de seconde, comme les scripts GBA). */
+export const SPARK_FRAMES = 5;
+export const SPARK_TICKS = [2, 3, 3, 3, 4] as const;
+
+const HOT = PALETTE.braise;
 
 const EDGE = PALETTE.lumiereDoree;
 
@@ -56,6 +65,70 @@ function stroke(c: PixelCanvas, size: number, angle: number): void {
       c.set(x, y, Math.abs(s) > w - 0.8 ? EDGE : 0xffffff);
     }
   }
+}
+
+/** Pointe effilée de r0 (demi-largeur w) à r1 (pointe), tournée de `angle` autour de (cx, cy). */
+function spike(c: PixelCanvas, cx: number, cy: number, angle: number, r0: number, r1: number, w: number, core: number, edge: number): void {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const inside = (x: number, y: number): boolean => {
+    const u = (x - cx) * cos + (y - cy) * sin;
+    const v = -(x - cx) * sin + (y - cy) * cos;
+    if (u < r0 || u > r1) return false;
+    return Math.abs(v) <= w * (1 - (u - r0) / (r1 - r0)) + 0.35;
+  };
+  const x0 = Math.floor(cx - r1 - 1);
+  const y0 = Math.floor(cy - r1 - 1);
+  for (let y = y0; y <= cy + r1 + 1; y++) {
+    for (let x = x0; x <= cx + r1 + 1; x++) {
+      if (!inside(x + 0.5, y + 0.5)) continue;
+      const border = !inside(x - 0.5, y + 0.5) || !inside(x + 1.5, y + 0.5) || !inside(x + 0.5, y - 0.5) || !inside(x + 0.5, y + 1.5);
+      c.set(x, y, border ? edge : core);
+    }
+  }
+}
+
+/** Disque plein (ou anneau si `hole` > 0) avec liseré. */
+function disk(c: PixelCanvas, cx: number, cy: number, r: number, hole: number, core: number, edge: number): void {
+  for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) {
+    for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      if (d > r || d < hole) continue;
+      c.set(x, y, d > r - 1.2 || (hole > 0 && d < hole + 1.2) ? edge : core);
+    }
+  }
+}
+
+/**
+ * Étincelle d'impact façon GBA, image par image : un éclat blanc, la grande
+ * étoile à huit branches, l'anneau qui s'ouvre et les branches qui se
+ * détachent, les éclats qui s'envolent, les dernières braises.
+ */
+function sparkFrame(frame: number, big: boolean): PixelCanvas {
+  const k = big ? 1.4 : 1;
+  const size = Math.round(52 * k);
+  const c = new PixelCanvas(size, size);
+  const m = size / 2;
+  const rays = Array.from({ length: 8 }, (_, i) => ({ a: (i * Math.PI) / 4, long: i % 2 === 0 }));
+  if (frame === 0) {
+    disk(c, m, m, 6 * k, 0, 0xffffff, EDGE);
+    for (const r of rays) if (r.long) spike(c, m, m, r.a, 4 * k, 12 * k, 2.2 * k, 0xffffff, EDGE);
+  } else if (frame === 1) {
+    for (const r of rays) spike(c, m, m, r.a, 3 * k, (r.long ? 25 : 16) * k, (r.long ? 3.6 : 2.6) * k, 0xffffff, EDGE);
+    disk(c, m, m, 9 * k, 0, 0xffffff, EDGE);
+  } else if (frame === 2) {
+    disk(c, m, m, 12 * k, 8 * k, 0xffffff, EDGE);
+    for (const r of rays) spike(c, m, m, r.a, (r.long ? 13 : 12) * k, (r.long ? 25 : 19) * k, (r.long ? 2.6 : 1.8) * k, 0xffffff, EDGE);
+  } else if (frame === 3) {
+    disk(c, m, m, 15 * k, 13 * k, EDGE, HOT);
+    for (const r of rays) spike(c, m, m, r.a, (r.long ? 18 : 16) * k, (r.long ? 25 : 21) * k, 1.6 * k, EDGE, HOT);
+  } else {
+    for (const r of rays) {
+      const d = (r.long ? 23 : 20) * k;
+      c.fillRect(Math.round(m + Math.cos(r.a) * d), Math.round(m + Math.sin(r.a) * d), 2, 2, HOT);
+    }
+  }
+  return c;
 }
 
 /** Crée (une fois) les textures d'effets. */
@@ -104,4 +177,5 @@ export function ensureCloseupFx(scene: Phaser.Scene): void {
   const dot = new PixelCanvas(3, 3);
   dot.fillRect(0, 0, 3, 3, 0xffffff);
   dot.toTexture(scene, FX_TEX.dot);
+  for (const big of [false, true]) for (let f = 0; f < SPARK_FRAMES; f++) sparkFrame(f, big).toTexture(scene, FX_TEX.spark(f, big));
 }

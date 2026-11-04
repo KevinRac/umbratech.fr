@@ -17,6 +17,7 @@
  * Phase ennemie : chaque ennemi joue le plan de son IA.
  * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
+import { setSoundOn, soundOn } from '../audio/sfx';
 import Phaser from 'phaser';
 import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, BATTLE_VIEW_LABEL, loadAnimSpeed, loadBattleView, loadReducedEffects, nextAnimSpeed, nextBattleView, saveAnimSpeed, saveBattleView, saveReducedEffects, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
@@ -1948,6 +1949,14 @@ export class BattleScene extends Phaser.Scene {
           this.reducedFx = !this.reducedFx;
           saveReducedEffects(this.reducedFx);
           this.hud.toast(this.reducedFx ? 'Effets réduits : flashs atténués, secousses légères' : 'Effets complets');
+          close();
+        },
+      },
+      {
+        label: `Sons : ${soundOn() ? 'oui' : 'non'}`,
+        onSelect: () => {
+          setSoundOn(!soundOn());
+          this.hud.toast(soundOn() ? 'Bruitages de combat activés' : 'Bruitages coupés');
           close();
         },
       },

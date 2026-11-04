@@ -183,6 +183,11 @@ export const closeupBalanceSchema = z.strictObject({
   between: ms,
   prep: ms,
   dash: ms,
+  /**
+   * Pose d'armé (GBA : l'arme levée est tenue 10 à 30 images avant la frappe) :
+   * au contact pour la mêlée, arc bandé pour un tir.
+   */
+  arme: z.strictObject({ melee: ms, ranged: ms }),
   strike: ms,
   impact: ms,
   hitStop: ms,
@@ -197,6 +202,8 @@ export const closeupBalanceSchema = z.strictObject({
   critCut: ms,
   critCuts: z.number().int().min(1).max(5),
   critPose: ms,
+  /** Récupération après la pose de contact : durée de chaque image peinte qui suit l'impact. */
+  recover: ms,
   /** Secousse de l'écran, en pixels d'écran : coup ordinaire, critique (et sa durée). */
   shake: z.strictObject({ hit: z.number().int().min(0).max(24), crit: z.number().int().min(0).max(24), critMs: ms }),
   /** Critère « vitesse acceptable » (n°209) : durée maximale d'un échange coup + riposte, transitions comprises. */
@@ -983,6 +990,13 @@ const fighterAnimSchema = z.strictObject({
   frames: z.number().int().min(1).max(24),
   /** Image où l'arme touche (attaque, critique, compétence). */
   impact: z.number().int().min(0).max(23).optional(),
+  /** Image d'armé, tenue avant la frappe (par défaut celle qui précède l'impact). */
+  peak: z.number().int().min(0).max(23).optional(),
+  /**
+   * Pose de contact tenue pendant le gel et la descente des PV (par défaut
+   * l'impact) : les images de traînée entre l'impact et elle passent en un éclair.
+   */
+  hold: z.number().int().min(0).max(23).optional(),
   /**
    * Incantation entretenue (sorts) : images `[début, fin]` jouées en aller-retour
    * tant que le sort se déroule ; avant elles, l'élan ; après, le lancement

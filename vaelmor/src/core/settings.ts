@@ -85,3 +85,14 @@ export function loadReducedEffects(): boolean {
 export function saveReducedEffects(reduced: boolean): void {
   writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), reducedFx: reduced }));
 }
+
+/* ---------- Sons (jalon M8, n°227 ; les options complètes du son viennent en M10) ---------- */
+
+/** Bruitages de combat : activés si rien n'est enregistré. */
+export function loadSoundOn(): boolean {
+  return readSettings()['sound'] !== false;
+}
+
+export function saveSoundOn(on: boolean): void {
+  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), sound: on }));
+}
