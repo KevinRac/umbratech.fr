@@ -102,6 +102,116 @@
         "attaque": { "row": 1, "frames": 17, "impact": 15, "loop": [10, 14], "after": "tenue" },
         "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
       }
+    },
+    "gardien_des_marees": {
+      "sheet": "gardien_des_marees",
+      "frame": [68, 68],
+      "feet": [35, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 6 },
+        "critique": { "row": 2, "frames": 13, "impact": 12 }
+      }
+    },
+    "veilleur_des_falaises": {
+      "sheet": "veilleur_des_falaises",
+      "frame": [68, 68],
+      "feet": [32, 55],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 4 },
+        "critique": { "row": 2, "frames": 13, "impact": 8 }
+      }
+    },
+    "danseur_des_courants": {
+      "sheet": "danseur_des_courants",
+      "frame": [64, 64],
+      "feet": [33, 53],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 7 },
+        "critique": { "row": 2, "frames": 13, "impact": 4 }
+      }
+    },
+    "ingenieur_des_ruines": {
+      "sheet": "ingenieur_des_ruines",
+      "frame": [68, 68],
+      "feet": [34, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 3 },
+        "critique": { "row": 2, "frames": 13, "impact": 12 }
+      }
+    },
+    "chasseur_de_serpents_de_mer": {
+      "sheet": "chasseur_de_serpents_de_mer",
+      "frame": [68, 68],
+      "feet": [27, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 9 },
+        "critique": { "row": 2, "frames": 13, "impact": 11 }
+      }
+    },
+    "porte_lanterne": {
+      "sheet": "porte_lanterne",
+      "frame": [76, 68],
+      "feet": [34, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 17, "impact": 15, "loop": [11, 14], "after": "tenue" },
+        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+      }
+    },
+    "alchimiste_des_saisons": {
+      "sheet": "alchimiste_des_saisons",
+      "frame": [68, 68],
+      "feet": [32, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 17, "impact": 13, "loop": [9, 12], "after": "tenue" },
+        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+      }
+    },
+    "invocateur_de_pierres_anciennes": {
+      "sheet": "invocateur_de_pierres_anciennes",
+      "frame": [76, 68],
+      "feet": [33, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 17, "impact": 13, "loop": [9, 12], "after": "tenue" },
+        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+      }
+    },
+    "faconneur_de_racines": {
+      "sheet": "faconneur_de_racines",
+      "frame": [96, 68],
+      "feet": [45, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 17, "impact": 12, "loop": [7, 11], "after": "tenue" },
+        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+      }
+    },
+    "heraut_des_bannieres": {
+      "sheet": "heraut_des_bannieres",
+      "frame": [68, 68],
+      "feet": [33, 54],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 3 },
+        "critique": { "row": 2, "frames": 13, "impact": 11 }
+      }
     }
   }
 }

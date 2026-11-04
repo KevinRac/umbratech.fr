@@ -418,35 +418,7 @@ export class BattleCloseupScene extends Phaser.Scene {
     const anim = this.strikeAnim(a, strike);
     const multi = (a.painted?.anims[anim]?.frames ?? 1) > 1;
     // Animation peinte de plusieurs images : elle suit la chronologie du coup (image d'impact à la frappe).
-    if (multi && a.painted) {
-      const def = a.painted;
-      const info = def.anims[anim];
-      const last = steps[steps.length - 1];
-      const total = last ? last.at + last.ms : 0;
-      const clock = { ms: 0 };
-      let heldFrom: number | undefined;
-      void this.tween({
-        targets: clock,
-        ms: total,
-        duration: total,
-        onUpdate: () => {
-          // Incantation entretenue : la boucle tourne tant que le sort se déroule.
-          const f = info?.loop && steps.some((st) => st.name === 'spell') ? castFrameAt(steps, clock.ms, info.frames, info.loop, info.impact ?? info.loop[1] + 1, 60) : frameAt(steps, clock.ms, info?.frames ?? 1, info?.impact ?? 0);
-          const tenue = info?.after ? def.anims[info.after] : undefined;
-          if (tenue && info?.after && f === (info.frames ?? 1) - 1 && clock.ms > (heldFrom ??= clock.ms) + 60) {
-            // Pose tenue après la dernière image : boucle en aller-retour (cheveux, étoffes au vent).
-            // Une fois en entier, puis aller-retour sur sa boucle (`loop`, toute l'animation sinon).
-            const [lo, hi] = tenue.loop ?? [0, tenue.frames - 1];
-            const step = Math.floor((clock.ms - heldFrom) / 80);
-            const n = hi - lo;
-            const k = step <= hi ? step : n > 0 ? lo + (((step - hi) % (2 * n)) <= n ? n - ((step - hi) % (2 * n)) : ((step - hi) % (2 * n)) - n) : hi;
-            a.sprite.setFrame(fighterFrame(this, def, info.after, Math.min(tenue.frames - 1, k)) ?? 0);
-            return;
-          }
-          a.sprite.setFrame(fighterFrame(this, def, anim, f) ?? 0);
-        },
-      });
-    }
+    if (multi) this.drive(a, anim, steps);
     for (const step of steps) {
       if (!this.busy) return;
       // Poses d'une feuille d'une image par animation (le héros) : garde, geste, coup reçu.
@@ -523,6 +495,41 @@ export class BattleCloseupScene extends Phaser.Scene {
           break;
       }
     }
+  }
+
+  /**
+   * Fait défiler une animation peinte de plusieurs images au rythme des étapes
+   * d'un coup : élan, frappe (ou incantation entretenue, `loop`), lancement,
+   * puis pose tenue animée (`after`) jusqu'au retour en garde.
+   */
+  private drive(a: FighterView, anim: FighterAnim, steps: readonly Step[]): void {
+    const def = a.painted;
+    if (!def) return;
+    const info = def.anims[anim];
+    const last = steps[steps.length - 1];
+    const total = last ? last.at + last.ms : 0;
+    const clock = { ms: 0 };
+    let heldFrom: number | undefined;
+    void this.tween({
+      targets: clock,
+      ms: total,
+      duration: total,
+      onUpdate: () => {
+        // Incantation entretenue : la boucle tourne tant que le sort se déroule.
+        const f = info?.loop && steps.some((st) => st.name === 'spell') ? castFrameAt(steps, clock.ms, info.frames, info.loop, info.impact ?? info.loop[1] + 1, 60) : frameAt(steps, clock.ms, info?.frames ?? 1, info?.impact ?? 0);
+        const tenue = info?.after ? def.anims[info.after] : undefined;
+        if (tenue && info?.after && f === (info.frames ?? 1) - 1 && clock.ms > (heldFrom ??= clock.ms) + 60) {
+          // Pose tenue après la dernière image : une fois en entier, puis aller-retour sur sa boucle (cheveux, étoffes au vent).
+          const [lo, hi] = tenue.loop ?? [0, tenue.frames - 1];
+          const step = Math.floor((clock.ms - heldFrom) / 80);
+          const n = hi - lo;
+          const k = step <= hi ? step : n > 0 ? lo + (((step - hi) % (2 * n)) <= n ? n - ((step - hi) % (2 * n)) : ((step - hi) % (2 * n)) - n) : hi;
+          a.sprite.setFrame(fighterFrame(this, def, info.after, Math.min(tenue.frames - 1, k)) ?? 0);
+          return;
+        }
+        a.sprite.setFrame(fighterFrame(this, def, anim, f) ?? 0);
+      },
+    });
   }
 
   /** Animation du coup : critique (s'il touche), tir ou sort (`ranged`), sinon attaque. */
@@ -1058,9 +1065,20 @@ export class BattleCloseupScene extends Phaser.Scene {
     const d = this.views.get(spec.right.id);
     if (!a || !d) return;
     const t = spec.timings;
-    this.pose(a, a.painted?.ranged ?? 'attaque');
     a.breath?.remove();
     a.breath = null;
+    a.sprite.setScale(a.scale);
+    // Le soigneur joue son incantation : élan pendant le cercle, boucle pendant que la lumière enveloppe l'allié, puis lancement et pose tenue.
+    const healAnim: FighterAnim = a.painted?.ranged ?? 'attaque';
+    if ((a.painted?.anims[healAnim]?.frames ?? 1) > 1) {
+      const healSteps: Step[] = [];
+      let at = 0;
+      for (const [name, ms] of [['prep', t.prep], ['rune', t.rune], ['spell', t.fly + t.impact], ['impact', t.impact], ['recoil', t.recoil], ['pose', t.pose], ['settle', t.settle]] as const) {
+        healSteps.push({ name, at, ms });
+        at += ms;
+      }
+      this.drive(a, healAnim, healSteps);
+    } else this.pose(a, healAnim);
     this.rune(a, t.rune);
     this.channel({ ...a, spec: { ...a.spec, elementColor: HEAL_COLOR } }, t.prep + t.rune + t.fly, false);
     await this.tween({ targets: a.sprite, y: a.home.y - 14, duration: t.prep + t.rune, ease: 'Sine.easeOut' });
