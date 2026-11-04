@@ -631,6 +631,12 @@ a.ut-feature:hover .ut-feature__go svg { transform: translateX(4px); }
   /* Sur petit écran, les commandes passent sous l'image pour ne rien cacher de la scène */
   .ut-carousel__ctrl { position: static; translate: none; width: auto; margin-top: var(--ut-s-3); padding: 0; border: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
   .ut-scene { aspect-ratio: 16 / 9; --ly: 82%; }
+  /* Description des diapositives centrée quand tout tient sur une colonne */
+  .ut-slide { justify-items: center; text-align: center; }
+  .ut-slide .ut-hero__actions { justify-content: center; }
+  .ut-slide .ut-facts { justify-self: stretch; justify-content: center; }
+  .ut-slide .ut-facts div { justify-items: center; }
+  .ut-slide .ut-facts dt { text-align: center; }
   .ut-facts, .ut-facts--words { grid-template-columns: repeat(2, auto); }
   .ut-dest { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ut-dest a:nth-child(3) { border-left: 0; }
