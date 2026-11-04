@@ -13,10 +13,11 @@
  * Entrée, Espace, Échap ou un clic passent l'échange : tout se pose aussitôt.
  */
 import Phaser from 'phaser';
-import type { BackdropId, CloseupTimings, ProjectileId } from '../data/schemas';
-import { exchangeShapes, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
+import type { BackdropId, CloseupTimings, FighterAnim, FighterDef, ProjectileId } from '../data/schemas';
+import { exchangeShapes, frameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
 import type { Strike, Team } from '../logic/tactics/types';
 import { BATTLE_TEX } from '../render/battleTextures';
+import { fighterFrame, fighterKey, hasFighterSheet } from '../render/closeupFighters';
 import { BACKDROP_H, BACKDROP_W, HORIZON, PLATFORM_TOP, PLATFORM_W, paintBackdrop, paintPlatform, type PaintedImage } from '../render/closeupBackdrop';
 import { PALETTE, mixColor } from '../render/palette';
 import { drawPanel } from '../ui/panel';
@@ -58,6 +59,8 @@ export interface CloseupFighter {
   readonly projectile: ProjectileId | null;
   /** Fond du socle (terrain de sa case). */
   readonly platform: BackdropId;
+  /** Feuille peinte de l'écran rapproché (`battleAnims.json › fighters`), ou null : sprite de carte agrandi. */
+  readonly painted: FighterDef | null;
 }
 
 export interface CloseupSpec {
@@ -84,6 +87,10 @@ interface FighterView {
   /** Sens vers l'adversaire : +1 vers la droite. */
   readonly dir: 1 | -1;
   readonly bar: HpBar;
+  /** Agrandissement à l'écran (feuille peinte : celui de ses données ; repli : ×4). */
+  readonly scale: number;
+  /** Feuille peinte chargée, ou null. */
+  readonly painted: FighterDef | null;
 }
 
 interface HpBar {
@@ -218,11 +225,22 @@ export class BattleCloseupScene extends Phaser.Scene {
       ensureImageTexture(this, PLATFORM_KEY(fighter.platform), () => paintPlatform(fighter.platform));
       platforms.push(this.add.image(x, PLATFORM_Y, PLATFORM_KEY(fighter.platform)).setOrigin(0.5, 0).setScale(ART));
       const shadow = this.add.ellipse(x, FEET_Y, 54, 12, PALETTE.ombreProfonde, 0.35);
-      const sprite = this.add.sprite(x, FEET_Y + 2, BATTLE_TEX.ms(fighter.sprite, fighter.team), BATTLE_TEX.msFrame('side', 0)).setOrigin(0.5, 1).setScale(MAP_SPRITE_SCALE);
+      const painted = fighter.painted && hasFighterSheet(this, fighter.painted) ? fighter.painted : null;
+      let sprite: Phaser.GameObjects.Sprite;
+      let scale = MAP_SPRITE_SCALE;
+      if (painted) {
+        scale = painted.scale;
+        sprite = this.add.sprite(x, FEET_Y + 2, fighterKey(painted.sheet), fighterFrame(this, painted, 'garde') ?? 0);
+        // Les pieds (`feet`) se posent sur le socle, quel que soit le côté.
+        const fx = painted.feet[0] / painted.frame[0];
+        sprite.setOrigin(side === 'right' ? 1 - fx : fx, (painted.feet[1] + 1) / painted.frame[1]).setScale(scale);
+      } else {
+        sprite = this.add.sprite(x, FEET_Y + 2, BATTLE_TEX.ms(fighter.sprite, fighter.team), BATTLE_TEX.msFrame('side', 0)).setOrigin(0.5, 1).setScale(scale);
+      }
       sprite.setFlipX(side === 'right');
       bodies.push(shadow, sprite);
       const bar = this.buildPanels(fighter, side);
-      this.views.set(fighter.id, { spec: fighter, side, sprite, shadow, home: { x, y: FEET_Y + 2 }, dir: side === 'left' ? 1 : -1, bar });
+      this.views.set(fighter.id, { spec: fighter, side, sprite, shadow, home: { x, y: FEET_Y + 2 }, dir: side === 'left' ? 1 : -1, bar, scale, painted });
     }
     this.dim = this.add.rectangle(0, 0, this.scale.width, this.scale.height, PALETTE.ombreProfonde, 1).setOrigin(0, 0).setAlpha(0);
     // Ordre : décor, socles, voile du critique, combattants, puis les bandeaux (déjà ajoutés, ramenés devant).
@@ -316,26 +334,50 @@ export class BattleCloseupScene extends Phaser.Scene {
     const spec = this.spec;
     if (!a || !d || !spec) return;
     const t = spec.timings;
+    const anim = this.strikeAnim(a, strike);
+    const multi = (a.painted?.anims[anim]?.frames ?? 1) > 1;
+    // Animation peinte de plusieurs images : elle suit la chronologie du coup (image d'impact à la frappe).
+    if (multi && a.painted) {
+      const def = a.painted;
+      const info = def.anims[anim];
+      const last = steps[steps.length - 1];
+      const total = last ? last.at + last.ms : 0;
+      const clock = { ms: 0 };
+      void this.tween({
+        targets: clock,
+        ms: total,
+        duration: total,
+        onUpdate: () => {
+          const f = frameAt(steps, clock.ms, info?.frames ?? 1, info?.impact ?? 0);
+          a.sprite.setFrame(fighterFrame(this, def, anim, f) ?? 0);
+        },
+      });
+    }
     for (const step of steps) {
       if (!this.busy) return;
+      // Poses d'une feuille d'une image par animation (le héros) : garde, geste, coup reçu.
+      if (!multi) {
+        if (step.name === 'dash' || step.name === 'draw' || step.name === 'rune' || step.name === 'strike' || step.name === 'cut') this.pose(a, anim);
+        if (step.name === 'back' || step.name === 'settle') this.pose(a, 'garde');
+      }
       switch (step.name) {
         case 'dark':
           if (this.dim) await this.tween({ targets: this.dim, alpha: 0.65, duration: step.ms });
           break;
         case 'prep':
-          await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 10, scaleY: MAP_SPRITE_SCALE * 0.94, duration: step.ms, ease: 'Quad.easeOut' });
+          await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 10, scaleY: a.scale * 0.94, duration: step.ms, ease: 'Quad.easeOut' });
           break;
         case 'dash': {
           const contact = d.home.x - a.dir * 96;
-          await this.tween({ targets: a.sprite, x: contact, scaleY: MAP_SPRITE_SCALE, duration: step.ms, ease: 'Quad.easeIn' });
+          await this.tween({ targets: a.sprite, x: contact, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeIn' });
           break;
         }
         case 'draw':
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - 6, scaleY: MAP_SPRITE_SCALE, duration: step.ms, ease: 'Quad.easeOut' });
+          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - 6, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
           break;
         case 'rune':
           this.rune(a);
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - 4, scaleY: MAP_SPRITE_SCALE, duration: step.ms });
+          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - 4, scaleY: a.scale, duration: step.ms });
           break;
         case 'fly':
           await this.projectile(a, d, step.ms);
@@ -355,6 +397,7 @@ export class BattleCloseupScene extends Phaser.Scene {
           await this.impact(strike, a, d, step.ms, t);
           break;
         case 'recoil':
+          if (strike.hit) this.pose(d, 'coup');
           if (strike.hit) await this.tween({ targets: d.sprite, x: d.home.x + a.dir * 14, duration: step.ms / 2, yoyo: true, ease: 'Quad.easeOut' });
           else await this.wait(step.ms);
           break;
@@ -364,11 +407,29 @@ export class BattleCloseupScene extends Phaser.Scene {
         case 'back':
         case 'settle':
           if (this.dim && this.dim.alpha > 0) void this.tween({ targets: this.dim, alpha: 0, duration: step.ms });
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleY: MAP_SPRITE_SCALE, duration: step.ms, ease: 'Quad.easeOut' });
+          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
           d.sprite.setPosition(d.home.x, d.home.y);
+          if (strike.targetHp > 0 || !this.spec?.falls.includes(d.spec.id)) this.pose(d, 'garde');
+          if (multi) this.pose(a, 'garde');
           break;
       }
     }
+  }
+
+  /** Animation du coup : critique (s'il touche), tir ou sort (`ranged`), sinon attaque. */
+  private strikeAnim(a: FighterView, strike: Strike): FighterAnim {
+    const def = a.painted;
+    if (!def) return 'attaque';
+    if (strike.crit && strike.hit && def.anims.critique) return 'critique';
+    if (a.spec.kind !== 'melee' && def.ranged && def.anims[def.ranged]) return def.ranged;
+    return 'attaque';
+  }
+
+  /** Pose une image fixe d'une animation (feuilles peintes seulement). */
+  private pose(v: FighterView, anim: FighterAnim, frame = 0): void {
+    if (!v.painted) return;
+    const f = fighterFrame(this, v.painted, anim, frame);
+    if (f !== null) v.sprite.setFrame(f);
   }
 
   private async impact(strike: Strike, a: FighterView, d: FighterView, ms: number, t: CloseupTimings): Promise<void> {
@@ -465,6 +526,7 @@ export class BattleCloseupScene extends Phaser.Scene {
   private async dissolve(id: string): Promise<void> {
     const v = this.views.get(id);
     if (!v) return;
+    this.pose(v, 'ko');
     for (let i = 0; i < 3; i++) {
       this.whiteFlash(v.sprite, true);
       await this.wait(70);

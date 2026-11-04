@@ -969,6 +969,8 @@ export const fighterSchema = z.strictObject({
   /** Agrandissement entier à l'écran. */
   scale: z.number().int().min(1).max(6),
   anims: z.partialRecord(z.enum(FIGHTER_ANIMS), fighterAnimSchema),
+  /** Animation d'un coup à distance ou d'un sort, si ce n'est pas l'attaque (le héros tend la main : `competence`). */
+  ranged: z.enum(FIGHTER_ANIMS).optional(),
 });
 export type FighterDef = z.infer<typeof fighterSchema>;
 

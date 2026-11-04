@@ -894,5 +894,7 @@ function checkBattleAnims(data: GameData, issues: string[]): void {
       if (anim.impact !== undefined && anim.impact >= anim.frames) issues.push(`${at}.anims.${name}.impact : au-delà de la dernière image`);
     }
     if (!f.anims.garde) issues.push(`${at}.anims : la garde est obligatoire`);
+    if (!f.anims.attaque) issues.push(`${at}.anims : l'attaque est obligatoire`);
+    if (f.ranged && !f.anims[f.ranged]) issues.push(`${at}.ranged : animation « ${f.ranged} » absente`);
   }
 }

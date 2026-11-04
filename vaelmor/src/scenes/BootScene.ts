@@ -14,6 +14,7 @@ import { PIXEL_FONTS, buildPixelFont, loadPixelFontFaces, type FontKey } from '.
 import { registerFigureSprites } from '../render/npcSprites';
 import { preloadPortraits } from '../render/portraits';
 import { preloadSkins } from '../render/skins';
+import { preloadCloseupFighters } from '../render/closeupFighters';
 import { WORLD_MAP_KEY, WORLD_TILESET_KEY } from '../render/worldTextures';
 import { SCENES } from './keys';
 
@@ -32,6 +33,7 @@ export class BootScene extends Phaser.Scene {
     this.load.tilemapTiledJSON(WORLD_MAP_KEY, assetUrl('assets/maps/world.json'));
     this.load.image(WORLD_TILESET_KEY, assetUrl('assets/tilesets/world_tiles.png'));
     preloadSkins(this);
+    preloadCloseupFighters(this);
     preloadPortraits(this);
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
       showFatalError('Un fichier du jeu est introuvable.', [`${file.key} : ${file.url as string}`]);

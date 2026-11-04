@@ -2616,6 +2616,7 @@ export class BattleScene extends Phaser.Scene {
         kind,
         projectile: projectileFor(u.weapon, kind, anims),
         platform: backdropFor(terrainAt(this.state.map, u.x, u.y).id, this.state.zone, anims),
+        painted: anims.fighters[u.sprite.split('#')[0] ?? u.sprite] ?? null,
       };
     };
     const playerFirst = attacker.team !== 'enemy';
