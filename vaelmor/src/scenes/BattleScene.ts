@@ -2763,6 +2763,8 @@ export class BattleScene extends Phaser.Scene {
     };
     Object.assign(window, { vaelmorCloseupPlay: play });
     this.input.keyboard?.on('keydown-R', () => void play());
+    // `&noauto` : l'échange attend R (ou `vaelmorCloseupPlay()`), pour les captures.
+    if (url.has('noauto')) return;
     await this.wait(700);
     await play();
   }

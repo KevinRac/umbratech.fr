@@ -8,6 +8,7 @@ import { loadGameData } from '../src/data';
 import {
   attackKind,
   backdropFor,
+  castFrameAt,
   choreoDuration,
   critStyleFor,
   critSlashes,
@@ -162,6 +163,20 @@ describe('images d’une animation peinte', () => {
       expect(f).toBeGreaterThanOrEqual(last);
       last = f;
     }
+  });
+
+  it('incantation : élan, boucle en aller-retour pendant le sort, puis lancement', () => {
+    const cast = strikeSteps(shape('magic'), t);
+    const spell = cast.find((s) => s.name === 'spell');
+    if (!spell) throw new Error('pas de sort');
+    const loop: [number, number] = [5, 9];
+    expect(castFrameAt(cast, 0, 16, loop, 11)).toBe(0);
+    expect(castFrameAt(cast, spell.at - 1, 16, loop, 11)).toBeLessThanOrEqual(5);
+    const during = Array.from({ length: Math.floor(spell.ms / 20) }, (_, i) => castFrameAt(cast, spell.at + i * 20, 16, loop, 11));
+    expect(Math.min(...during)).toBe(5);
+    expect(Math.max(...during)).toBe(9);
+    expect(castFrameAt(cast, spell.at + spell.ms, 16, loop, 11)).toBe(11);
+    expect(castFrameAt(cast, 99999, 16, loop, 11)).toBe(15);
   });
 
   it('une seule image : toujours la même', () => {

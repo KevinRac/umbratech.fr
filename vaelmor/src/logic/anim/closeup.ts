@@ -190,6 +190,36 @@ export function frameAt(steps: readonly Step[], ms: number, frames: number, impa
   return Math.min(frames - 1, i + Math.floor(((ms - hitStep.at) / span) * (after + 1)));
 }
 
+/**
+ * Image d'une incantation entretenue à l'instant `ms` du coup (sorts) :
+ * l'élan (images avant `loop[0]`) se joue de la préparation jusqu'au début du
+ * sort, la boucle `[loop[0], loop[1]]` en aller-retour (`loopMs` par image)
+ * tant que le sort dure, puis le lancement (de `impact` à la fin) sur
+ * l'impact, le recul et la pose.
+ */
+export function castFrameAt(steps: readonly Step[], ms: number, frames: number, loop: readonly [number, number], impact: number, loopMs = 90): number {
+  const spell = steps.find((s) => s.name === 'spell');
+  const start = steps.find((s) => s.name === 'prep' || s.name === 'rune');
+  const pose = steps.find((s) => s.name === 'pose');
+  if (!spell || !start || !pose) return frameAt(steps, ms, frames, impact);
+  const [a, b] = loop;
+  if (ms < spell.at) {
+    const span = Math.max(1, spell.at - start.at);
+    return Math.max(0, Math.min(a, Math.floor(((ms - start.at) / span) * (a + 1))));
+  }
+  const releaseAt = spell.at + spell.ms;
+  if (ms < releaseAt) {
+    const n = b - a;
+    if (n <= 0) return a;
+    const k = Math.floor((ms - spell.at) / loopMs) % (2 * n);
+    return a + (k <= n ? k : 2 * n - k);
+  }
+  const end = pose.at + pose.ms;
+  const rest = frames - 1 - impact;
+  if (rest <= 0 || ms >= end) return frames - 1;
+  return Math.min(frames - 1, impact + Math.floor(((ms - releaseAt) / Math.max(1, end - releaseAt)) * (rest + 1)));
+}
+
 /* ---------- Découpage des événements ---------- */
 
 export type CombatEvent = Extract<BattleEvent, { type: 'combat' }>;

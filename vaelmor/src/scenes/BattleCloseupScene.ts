@@ -26,7 +26,7 @@
  */
 import Phaser from 'phaser';
 import type { BackdropId, CloseupTimings, CritStyle, FighterAnim, FighterDef, ProjectileId, SlashId } from '../data/schemas';
-import { critSlashes, exchangeShapes, frameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
+import { castFrameAt, critSlashes, exchangeShapes, frameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
 import type { Strike, Team } from '../logic/tactics/types';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
 import { fighterFrame, fighterKey, hasFighterSheet } from '../render/closeupFighters';
@@ -118,6 +118,8 @@ interface FighterView {
   readonly scale: number;
   /** Feuille peinte chargée, ou null. */
   readonly painted: FighterDef | null;
+  /** Respiration en garde (arrêtée pendant un coup). */
+  breath?: Phaser.Tweens.Tween | null;
 }
 
 interface HpBar {
@@ -299,7 +301,9 @@ export class BattleCloseupScene extends Phaser.Scene {
       sprite.setFlipX(side === 'right');
       bodies.push(shadow, sprite);
       const bar = this.buildPanels(fighter, side);
-      this.views.set(fighter.id, { spec: fighter, side, sprite, shadow, home: { x, y: FEET_Y + 2 }, dir: side === 'left' ? 1 : -1, bar, scale, painted });
+      const view: FighterView = { spec: fighter, side, sprite, shadow, home: { x, y: FEET_Y + 2 }, dir: side === 'left' ? 1 : -1, bar, scale, painted };
+      this.views.set(fighter.id, view);
+      this.breathe(view);
     }
     this.dim = this.add.rectangle(-40, -40, this.scale.width + 80, this.scale.height + 80, PALETTE.ombreProfonde, 1).setOrigin(0, 0).setAlpha(0);
     this.lines = this.add.graphics();
@@ -392,6 +396,19 @@ export class BattleCloseupScene extends Phaser.Scene {
     const d = this.views.get(strike.targetId);
     const spec = this.spec;
     if (!a || !d || !spec) return;
+    for (const v of [a, d]) {
+      v.breath?.remove();
+      v.breath = null;
+      v.sprite.setScale(v.scale);
+    }
+    try {
+      await this.playStrikeSteps(strike, steps, a, d, spec);
+    } finally {
+      for (const v of [a, d]) if (this.busy && v.sprite.alpha > 0) this.breathe(v);
+    }
+  }
+
+  private async playStrikeSteps(strike: Strike, steps: readonly Step[], a: FighterView, d: FighterView, spec: CloseupSpec): Promise<void> {
     const t = spec.timings;
     const crit = strike.crit && strike.hit;
     const cuts = critSlashes(a.spec.slash, t.critCuts);
@@ -410,7 +427,8 @@ export class BattleCloseupScene extends Phaser.Scene {
         ms: total,
         duration: total,
         onUpdate: () => {
-          const f = frameAt(steps, clock.ms, info?.frames ?? 1, info?.impact ?? 0);
+          // Incantation entretenue : la boucle tourne tant que le sort se déroule.
+          const f = info?.loop && steps.some((st) => st.name === 'spell') ? castFrameAt(steps, clock.ms, info.frames, info.loop, info.impact ?? info.loop[1] + 1, 60) : frameAt(steps, clock.ms, info?.frames ?? 1, info?.impact ?? 0);
           a.sprite.setFrame(fighterFrame(this, def, anim, f) ?? 0);
         },
       });
@@ -441,7 +459,9 @@ export class BattleCloseupScene extends Phaser.Scene {
           break;
         case 'rune':
           this.rune(a, step.ms);
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - 4, scaleY: a.scale, duration: step.ms });
+          if (a.spec.kind === 'magic') this.channel(a, step.ms + (steps.find((st) => st.name === 'spell')?.ms ?? 0), crit);
+          // Le mage s'élève un peu au-dessus de son cercle.
+          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - (a.spec.kind === 'magic' ? 14 : 4), scaleY: a.scale, duration: step.ms, ease: 'Sine.easeOut' });
           break;
         case 'choreo':
           if (a.spec.critStyle === 'tourbillon') await this.tourbillon(a, d, strike, t);
@@ -670,6 +690,71 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.tweens.add({ targets: cracks, alpha: 0, delay: this.scaled(700), duration: this.scaled(400), onComplete: () => cracks.destroy() });
     this.burst(x - 40, y - 6, 'pierre', PALETTE.terreSeche, 14);
     this.burst(x + 40, y - 6, 'pierre', PALETTE.terreSeche, 14);
+  }
+
+  /**
+   * Incantation entretenue (façon sages GBA) : le lanceur ondule en lévitation,
+   * une aura de l'élément pulse sur sa silhouette, des particules tournent
+   * autour de lui puis se concentrent dans sa main ; au lancement, éclat et recul.
+   */
+  private channel(a: FighterView, ms: number, crit: boolean): void {
+    const color = a.spec.elementColor ?? PALETTE.cyanEclat;
+    const total = this.scaled(ms);
+    if (total <= 0) return;
+    // Aura : copie de la silhouette, remplie de la couleur de l'élément, qui pulse.
+    const aura = this.add.sprite(a.sprite.x, a.sprite.y, a.sprite.texture.key, a.sprite.frame.name);
+    aura.setOrigin(a.sprite.originX, a.sprite.originY).setFlipX(a.sprite.flipX).setScale(a.scale * 1.08, a.scale * 1.04);
+    aura.setTint(color).setTintMode(Phaser.TintModes.FILL).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+    this.stage.addAt(aura, this.stage.getIndex(a.sprite));
+    const follow = this.time.addEvent({
+      delay: 16,
+      loop: true,
+      callback: () => {
+        aura.setPosition(a.sprite.x, a.sprite.y).setFrame(a.sprite.frame.name);
+      },
+    });
+    this.tweens.add({ targets: aura, alpha: crit ? 0.55 : 0.4, duration: Math.max(60, total * 0.2), yoyo: true, repeat: Math.max(0, Math.round(total / 260) - 1), ease: 'Sine.easeInOut' });
+    // Ondulation en lévitation (après l'élévation du cercle runique).
+    this.tweens.add({ targets: a.sprite, y: `-=${crit ? 10 : 6}`, delay: this.scaled(140), duration: Math.max(80, total * 0.22), yoyo: true, repeat: 1, ease: 'Sine.easeInOut' });
+    // Particules en orbite qui se resserrent vers la main.
+    const hx = (): number => a.sprite.x + a.dir * 42;
+    const hy = (): number => a.sprite.y - CHEST - 6;
+    const count = crit ? 16 : 10;
+    const motes = Array.from({ length: count }, (_, i) => {
+      const m = this.add.image(hx(), hy(), FX_TEX.puff).setTint(i % 3 === 0 ? 0xffffff : color).setBlendMode(Phaser.BlendModes.ADD).setScale(1.6);
+      this.stage.add(m);
+      return { m, phase: (i / count) * Math.PI * 2, r0: 70 + (i % 4) * 14 };
+    });
+    const clock = { t: 0 };
+    this.tweens.add({
+      targets: clock,
+      t: 1,
+      duration: total,
+      onUpdate: () => {
+        const r = (1 - clock.t) ** 1.4;
+        for (const { m, phase, r0 } of motes) {
+          const ang = phase + clock.t * Math.PI * 5 * a.dir;
+          m.setPosition(hx() + Math.cos(ang) * r0 * r, hy() + Math.sin(ang) * r0 * 0.45 * r).setAlpha(0.35 + 0.65 * clock.t);
+        }
+      },
+      onComplete: () => {
+        for (const { m } of motes) m.destroy();
+        follow.remove();
+        aura.destroy();
+        if (!this.busy || this.skipping) return;
+        // Lancement : éclat dans la main, recul du lanceur.
+        const flare = this.add.image(hx(), hy(), FX_TEX.puff).setTint(0xffffff).setBlendMode(Phaser.BlendModes.ADD).setScale(2);
+        this.stage.add(flare);
+        this.tweens.add({ targets: flare, scale: crit ? 9 : 6, alpha: 0, duration: this.scaled(220), onComplete: () => flare.destroy() });
+        this.tweens.add({ targets: a.sprite, x: a.home.x - a.dir * 18, duration: this.scaled(90), yoyo: true, ease: 'Quad.easeOut' });
+      },
+    });
+  }
+
+  /** Respiration en garde : le combattant qui attend ne reste jamais figé. */
+  private breathe(v: FighterView): void {
+    v.breath?.remove();
+    v.breath = this.tweens.add({ targets: v.sprite, scaleY: v.scale * 1.025, duration: 520 + (v.side === 'left' ? 0 : 90), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   /* ---------- Sorts ---------- */
@@ -960,8 +1045,11 @@ export class BattleCloseupScene extends Phaser.Scene {
     if (!a || !d) return;
     const t = spec.timings;
     this.pose(a, a.painted?.ranged ?? 'attaque');
+    a.breath?.remove();
+    a.breath = null;
     this.rune(a, t.rune);
-    await this.tween({ targets: a.sprite, y: a.home.y - 6, duration: t.prep + t.rune });
+    this.channel({ ...a, spec: { ...a.spec, elementColor: HEAL_COLOR } }, t.prep + t.rune + t.fly, false);
+    await this.tween({ targets: a.sprite, y: a.home.y - 14, duration: t.prep + t.rune, ease: 'Sine.easeOut' });
     const glow = this.add.ellipse(d.home.x, d.home.y - CHEST, 90, 150, HEAL_COLOR, 0).setBlendMode(Phaser.BlendModes.ADD);
     this.stage.add(glow);
     void this.tween({ targets: glow, fillAlpha: 0.35, duration: t.fly, yoyo: true, hold: t.impact });
@@ -985,6 +1073,7 @@ export class BattleCloseupScene extends Phaser.Scene {
     await this.wait(t.impact + t.recoil + t.pose);
     this.pose(a, 'garde');
     await this.tween({ targets: a.sprite, y: a.home.y, duration: t.settle });
+    this.breathe(a);
   }
 
   /** Chute d'une unité (GDD §11.4) : sa pose de KO, elle clignote en blanc, puis s'efface par paliers. */

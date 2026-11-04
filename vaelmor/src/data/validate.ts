@@ -894,6 +894,7 @@ function checkBattleAnims(data: GameData, issues: string[]): void {
     if (f.feet[0] >= f.frame[0] || f.feet[1] >= f.frame[1]) issues.push(`${at}.feet : en dehors de l'image`);
     for (const [name, anim] of Object.entries(f.anims)) {
       if (anim.impact !== undefined && anim.impact >= anim.frames) issues.push(`${at}.anims.${name}.impact : au-delà de la dernière image`);
+      if (anim.loop && (anim.loop[0] > anim.loop[1] || anim.loop[1] >= anim.frames || (anim.impact !== undefined && anim.impact <= anim.loop[1]))) issues.push(`${at}.anims.${name}.loop : boucle hors de l'animation ou après l'impact`);
     }
     if (!f.anims.garde) issues.push(`${at}.anims : la garde est obligatoire`);
     if (!f.anims.attaque) issues.push(`${at}.anims : l'attaque est obligatoire`);

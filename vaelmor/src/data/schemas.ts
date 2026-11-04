@@ -972,6 +972,12 @@ const fighterAnimSchema = z.strictObject({
   frames: z.number().int().min(1).max(24),
   /** Image où l'arme touche (attaque, critique, compétence). */
   impact: z.number().int().min(0).max(23).optional(),
+  /**
+   * Incantation entretenue (sorts) : images `[début, fin]` jouées en aller-retour
+   * tant que le sort se déroule ; avant elles, l'élan ; après, le lancement
+   * (à partir de l'image d'impact).
+   */
+  loop: z.tuple([z.number().int().min(0).max(23), z.number().int().min(0).max(23)]).optional(),
 });
 
 export const fighterSchema = z.strictObject({
