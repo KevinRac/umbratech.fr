@@ -406,6 +406,7 @@ export class BattleCloseupScene extends Phaser.Scene {
       v.breath?.remove();
       v.breath = null;
       v.sprite.setScale(v.scale);
+      if (Math.abs(v.sprite.y - v.home.y) <= 4) v.sprite.y = v.home.y;
     }
     try {
       await this.playStrikeSteps(strike, steps, a, d, spec);
@@ -435,23 +436,29 @@ export class BattleCloseupScene extends Phaser.Scene {
           await this.critIntro(a, step.ms);
           break;
         case 'prep':
-          await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 10, scaleY: a.scale * 0.94, duration: step.ms, ease: 'Quad.easeOut' });
+          // Il se ramasse (anticipation) ; un éclat court sur son arme.
+          if (a.spec.kind !== 'magic' && !crit) this.time.delayedCall(this.scaled(step.ms * 0.4), () => this.busy && !this.skipping && this.glint(this.weaponTip(a), 0.7));
+          await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 14, scaleX: a.scale * 1.04, scaleY: a.scale * 0.92, duration: step.ms, ease: 'Quad.easeOut' });
           break;
         case 'dash': {
           const contact = d.home.x - a.dir * 96;
           this.ghosts(a, step.ms, crit ? 0xffffff : (a.spec.elementColor ?? 0xffffff));
           if (crit) this.speedLines(a.dir, step.ms + t.critCut * t.critCuts);
-          await this.tween({ targets: a.sprite, x: contact, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeIn' });
+          // Il s'arrache du sol (poussière) et s'étire dans sa course.
+          this.dust(a.sprite.x, a.home.y, -a.dir, crit);
+          await this.tween({ targets: a.sprite, x: contact, scaleX: a.scale * 1.08, scaleY: a.scale * 0.97, duration: step.ms, ease: 'Quad.easeIn' });
+          a.sprite.setScale(a.scale);
           break;
         }
         case 'draw':
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - 6, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
+          // Il bande son arme en se penchant en arrière.
+          await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 8, y: a.home.y - 6, scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
           break;
         case 'rune':
           this.rune(a, step.ms);
           if (a.spec.kind === 'magic') this.channel(a, step.ms + (steps.find((st) => st.name === 'spell')?.ms ?? 0), crit);
           // Le mage s'élève un peu au-dessus de son cercle.
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - (a.spec.kind === 'magic' ? 14 : 4), scaleY: a.scale, duration: step.ms, ease: 'Sine.easeOut' });
+          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - (a.spec.kind === 'magic' ? 14 : 4), scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Sine.easeOut' });
           break;
         case 'choreo':
           if (a.spec.critStyle === 'tourbillon') await this.tourbillon(a, d, strike, t);
@@ -465,6 +472,11 @@ export class BattleCloseupScene extends Phaser.Scene {
           if (a.spec.thrown) {
             this.ghosts(a, 90, 0xffffff, 2, 0.3);
             void this.tween({ targets: [a.sprite, a.shadow], alpha: 0, duration: Math.min(90, step.ms * 0.4), ease: 'Quad.easeIn' });
+          } else {
+            // Tir : éclat au départ du trait, recul du tireur, poussière sous ses pieds.
+            this.glint(this.weaponTip(a), 0.9);
+            this.dust(a.sprite.x, a.home.y, -a.dir, false);
+            this.tweens.add({ targets: a.sprite, x: a.home.x - a.dir * 22, duration: this.scaled(90), yoyo: true, hold: this.scaled(60), ease: 'Quad.easeOut' });
           }
           await this.projectile(a, d, step.ms);
           break;
@@ -477,6 +489,8 @@ export class BattleCloseupScene extends Phaser.Scene {
             this.screenFlash(step.name === 'cut' ? 0.85 : 0.45, step.name === 'cut' ? 50 : 34);
             if (a.spec.kind === 'melee') this.slash(d, step.name === 'cut' ? (cuts[cut++] ?? a.spec.slash) : a.spec.slash, a, step.name === 'cut');
           }
+          // Le coup porte à travers la cible : l'attaquant pousse encore un peu.
+          if (a.spec.kind === 'melee') void this.tween({ targets: a.sprite, x: a.sprite.x + a.dir * (step.name === 'cut' ? 8 : 16), duration: step.ms, ease: 'Quad.easeOut' });
           await this.wait(step.ms);
           break;
         case 'impact':
@@ -486,8 +500,9 @@ export class BattleCloseupScene extends Phaser.Scene {
           if (strike.hit) {
             this.pose(d, 'coup');
             // Recul fort en mêlée, léger à distance (GDD §11.4).
-            const push = crit ? 26 : a.spec.kind === 'melee' ? 16 : 8;
-            await this.tween({ targets: d.sprite, x: d.home.x + a.dir * push, duration: step.ms / 2, yoyo: true, ease: 'Quad.easeOut' });
+            const push = crit ? 34 : a.spec.kind === 'melee' ? 20 : 10;
+            this.dust(d.home.x, d.home.y, a.dir, crit);
+            await this.tween({ targets: d.sprite, x: d.home.x + a.dir * push, y: d.home.y - (crit ? 16 : 4), duration: step.ms / 2, yoyo: true, ease: 'Quad.easeOut' });
           } else await this.wait(step.ms);
           break;
         case 'pose':
@@ -502,7 +517,22 @@ export class BattleCloseupScene extends Phaser.Scene {
             a.sprite.setPosition(a.home.x, a.home.y);
             if (multi) this.pose(a, 'garde');
             await this.tween({ targets: [a.sprite, a.shadow], alpha: 1, duration: step.ms, ease: 'Quad.easeOut' });
-          } else await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
+          } else if (step.name === 'back') {
+            // Retour en garde d'un bond en arrière (GBA), réception dans la poussière.
+            const x0 = a.sprite.x;
+            const y0 = a.sprite.y;
+            const hop = { t: 0 };
+            await this.tween({
+              targets: hop,
+              t: 1,
+              duration: step.ms,
+              ease: 'Sine.easeInOut',
+              onUpdate: () => a.sprite.setPosition(x0 + (a.home.x - x0) * hop.t, y0 + (a.home.y - y0) * hop.t - Math.sin(hop.t * Math.PI) * 34),
+            });
+            a.sprite.setScale(a.scale, a.scale * 0.94);
+            this.dust(a.home.x, a.home.y, a.dir, false);
+            void this.tween({ targets: a.sprite, scaleY: a.scale, duration: 90, ease: 'Quad.easeOut' });
+          } else await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
           d.sprite.setPosition(d.home.x, d.home.y);
           if (strike.targetHp > 0 || !this.spec?.falls.includes(d.spec.id)) this.pose(d, 'garde');
           if (multi) this.pose(a, 'garde');
@@ -566,8 +596,9 @@ export class BattleCloseupScene extends Phaser.Scene {
     if (!strike.hit) {
       // Esquive : la cible glisse en arrière (une traînée la suit), « Raté » en gris.
       this.number(d, 'Raté', PALETTE.metalClair);
-      this.ghosts(d, ms, PALETTE.metalClair, 2);
-      await this.tween({ targets: d.sprite, x: d.home.x + a.dir * 40, y: d.home.y - 10, duration: ms, yoyo: true, ease: 'Quad.easeOut' });
+      this.ghosts(d, ms, PALETTE.metalClair, 3);
+      this.dust(d.home.x, d.home.y, a.dir, false);
+      await this.tween({ targets: d.sprite, x: d.home.x + a.dir * 56, y: d.home.y - 22, duration: ms, yoyo: true, ease: 'Quad.easeOut' });
       return;
     }
     this.burst(d.home.x - a.dir * 12, d.home.y - CHEST, a.spec.kind === 'melee' ? null : a.spec.element, a.spec.elementColor, strike.crit ? 26 : 12);
@@ -576,8 +607,9 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.cameras.main.shake(this.scaled(strike.crit ? t.shake.critMs : 140), px / this.scale.width);
     if (strike.crit) this.number(d, 'CRITIQUE !', PALETTE.jauneBle, -40, 2.5);
     this.number(d, `${strike.damage}`, strike.crit ? PALETTE.jauneBle : PALETTE.parchemin, 0, strike.crit ? 3 : 2);
-    // Arrêt sur image (hit-stop), puis la barre de PV descend cran par cran.
-    await this.wait(t.hitStop);
+    // Arrêt sur image (hit-stop), plus long sur le coup fatal, puis la barre de PV descend cran par cran.
+    if (strike.targetHp <= 0) this.screenFlash(0.6, 90);
+    await this.wait(strike.targetHp <= 0 ? t.hitStop * 3 : t.hitStop);
     this.drain(d.bar, strike.targetHp, Math.max(120, ms + t.recoil));
     await this.wait(Math.max(0, ms - t.hitStop));
   }
@@ -605,6 +637,8 @@ export class BattleCloseupScene extends Phaser.Scene {
    */
   private async critIntro(a: FighterView, ms: number): Promise<void> {
     a.sprite.setTint(PALETTE.ombreProfonde).setTintMode(Phaser.TintModes.FILL);
+    // Un grand éclat brille sur l'arme de la silhouette (GBA).
+    this.time.delayedCall(this.scaled(ms * 0.45), () => this.busy && !this.skipping && this.glint(this.weaponTip(a), 1.8, 320));
     if (a.spec.kind === 'magic') {
       // Sort critique (façon sage) : le décor plonge dans la couleur du sort, sans zoom.
       const color = a.spec.elementColor ?? PALETTE.violetBrume;
@@ -619,6 +653,11 @@ export class BattleCloseupScene extends Phaser.Scene {
       else await this.wait(ms);
     }
     a.sprite.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();
+    // La silhouette s'éclaire d'un coup avant de s'élancer (GBA).
+    if (!this.skipping) {
+      this.whiteFlash(a.sprite, true);
+      this.time.delayedCall(50, () => this.whiteFlash(a.sprite, false));
+    }
   }
 
   /* ---------- Chorégraphies ---------- */
@@ -688,11 +727,7 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.ghosts(a, b.rise, 0xffffff, 4);
     await this.tween({ targets: a.sprite, x: (a.home.x + contact) / 2, y: 150, scaleY: a.scale * 1.06, duration: b.rise, ease: 'Quad.easeOut' });
     // Éclat au sommet, au-dessus de la cible : le personnage y tient un instant, arme levée.
-    const star = this.add.graphics({ x: (a.home.x + contact) / 2 + a.dir * 40, y: 48 });
-    star.fillStyle(0xffffff, 1).fillTriangle(0, -26, 5, 0, -5, 0).fillTriangle(0, 26, 5, 0, -5, 0).fillTriangle(-26, 0, 0, 5, 0, -5).fillTriangle(26, 0, 0, 5, 0, -5);
-    star.setBlendMode(Phaser.BlendModes.ADD).setScale(0.2);
-    this.stage.add(star);
-    this.tweens.add({ targets: star, scale: 1.4, angle: 45, alpha: 0, duration: this.scaled(b.apex + 80), onComplete: () => star.destroy() });
+    this.glint({ x: (a.home.x + contact) / 2 + a.dir * 40, y: 48 }, 1.4, b.apex + 80);
     await this.tween({ targets: a.sprite, y: 130, duration: b.apex, ease: 'Sine.easeInOut' });
     this.ghosts(a, b.fall, 0xffffff, 3);
     await this.tween({ targets: a.sprite, x: contact, y: a.home.y, scaleY: a.scale, duration: b.fall, ease: 'Quad.easeIn' });
@@ -701,6 +736,34 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.zoomTo(1.3, d, 70);
     this.cameras.main.shake(this.scaled(320), (this.spec?.reduced ? 4 : 13) / this.scale.width);
     this.screenFlash(0.7, 60);
+  }
+
+  /** Pointe de l'arme (à peu près) : devant le torse, côté adversaire. */
+  private weaponTip(a: FighterView): { x: number; y: number } {
+    return { x: a.sprite.x + a.dir * 46, y: a.sprite.y - CHEST - 8 };
+  }
+
+  /** Éclat en étoile à quatre branches qui tourne et s'éteint (lame qui brille, tir, critique). */
+  private glint(at: { x: number; y: number }, size: number, ms = 260): void {
+    const star = this.add.graphics({ x: at.x, y: at.y });
+    star.fillStyle(0xffffff, 1).fillTriangle(0, -26, 5, 0, -5, 0).fillTriangle(0, 26, 5, 0, -5, 0).fillTriangle(-26, 0, 0, 5, 0, -5).fillTriangle(26, 0, 0, 5, 0, -5);
+    star.fillStyle(PALETTE.lumiereDoree, 0.8).fillCircle(0, 0, 6);
+    star.setBlendMode(Phaser.BlendModes.ADD).setScale(0.2);
+    this.stage.add(star);
+    this.tweens.add({ targets: star, scale: size, angle: 45, duration: this.scaled(ms * 0.45), ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: star, alpha: 0, scale: size * 0.3, angle: 90, delay: this.scaled(ms * 0.45), duration: this.scaled(ms * 0.55), onComplete: () => star.destroy() });
+  }
+
+  /** Poussière soulevée aux pieds (départ, réception, recul), chassée vers `dir`. */
+  private dust(x: number, y: number, dir: number, big: boolean): void {
+    if (this.skipping) return;
+    const n = big ? 6 : 4;
+    for (let i = 0; i < n; i++) {
+      const p = this.add.image(x + dir * (i * 6 - 8), y - 4, FX_TEX.puff).setTint(i % 2 ? PALETTE.terreSeche : mixColor(PALETTE.parchemin, PALETTE.terreSeche, 0.5)).setAlpha(0.75).setScale(1.6);
+      if (this.dim) this.stage.addAt(p, this.stage.getIndex(this.dim) + 1);
+      else this.stage.add(p);
+      this.tweens.add({ targets: p, x: p.x + dir * (24 + i * 12), y: p.y - 10 - (i % 3) * 7, scale: big ? 5 : 3.6, alpha: 0, duration: this.scaled(360 + i * 40), ease: 'Quad.easeOut', onComplete: () => p.destroy() });
+    }
   }
 
   /** Onde de choc au sol, fissures et poussière (atterrissage, coup de poing de golem). */
@@ -789,7 +852,20 @@ export class BattleCloseupScene extends Phaser.Scene {
   /** Respiration en garde : le combattant qui attend ne reste jamais figé. */
   private breathe(v: FighterView): void {
     v.breath?.remove();
-    v.breath = this.tweens.add({ targets: v.sprite, scaleY: v.scale * 1.025, duration: 520 + (v.side === 'left' ? 0 : 90), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // Souffle (le torse se gonfle) et léger balancement : le combattant qui attend ne reste jamais figé.
+    const clock = { p: 0 };
+    v.sprite.setPosition(v.home.x, v.home.y);
+    v.breath = this.tweens.add({
+      targets: clock,
+      p: Math.PI * 2,
+      duration: 1100 + (v.side === 'left' ? 0 : 170),
+      repeat: -1,
+      onUpdate: () => {
+        const k = (1 - Math.cos(clock.p)) / 2;
+        v.sprite.setScale(v.scale, v.scale * (1 + 0.03 * k));
+        v.sprite.y = v.home.y - 3 * k;
+      },
+    });
   }
 
   /* ---------- Sorts ---------- */
