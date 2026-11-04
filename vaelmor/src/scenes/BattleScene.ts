@@ -64,7 +64,7 @@ import {
   type RosterSort,
 } from '../logic/tactics/prep';
 import { areaOf, costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
-import { attackKind, backdropFor, critStyleFor, planSegments, projectileFor, slashFor, type CombatEvent, type HealEvent, type Segment } from '../logic/anim/closeup';
+import { attackKind, backdropFor, critStyleFor, isThrown, planSegments, projectileFor, slashFor, spellFor, type CombatEvent, type HealEvent, type Segment } from '../logic/anim/closeup';
 import { gradeMatrix } from '../render/grade';
 import type { BattleCloseupScene, CloseupFighter, CloseupSpec } from './BattleCloseupScene';
 import { isStunned } from '../logic/tactics/status';
@@ -2646,6 +2646,8 @@ export class BattleScene extends Phaser.Scene {
         odds: side.canStrike ? { hit: side.odds.hit, damage: side.odds.damage, crit: side.odds.crit, doubles: side.doubles } : null,
         kind,
         projectile: projectileFor(u.weapon, kind, anims),
+        thrown: isThrown(projectileFor(u.weapon, kind, anims), kind, anims),
+        spell: spellFor(u.weapon, kind, anims),
         slash: slashFor(u.weapon, anims),
         platform: backdropFor(terrainAt(this.state.map, u.x, u.y).id, this.state.zone, anims),
         painted: anims.fighters[u.sprite.split('#')[0] ?? u.sprite] ?? null,

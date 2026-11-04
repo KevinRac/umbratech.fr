@@ -25,7 +25,7 @@
  * Entrée, Espace, Échap ou un clic passent l'échange : tout se pose aussitôt.
  */
 import Phaser from 'phaser';
-import type { BackdropId, CloseupTimings, CritStyle, FighterAnim, FighterDef, ProjectileId, SlashId } from '../data/schemas';
+import type { BackdropId, CloseupTimings, CritStyle, FighterAnim, FighterDef, ProjectileId, SlashId, SpellId } from '../data/schemas';
 import { castFrameAt, critSlashes, exchangeShapes, frameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
 import type { Strike, Team } from '../logic/tactics/types';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
@@ -76,6 +76,10 @@ export interface CloseupFighter {
   readonly odds: { readonly hit: number; readonly damage: number; readonly crit: number; readonly doubles: boolean } | null;
   readonly kind: AttackKind;
   readonly projectile: ProjectileId | null;
+  /** Arme lancée : le lanceur disparaît avec elle et réapparaît en garde à la fin du coup. */
+  readonly thrown: boolean;
+  /** Sort de son arme magique (n°223), ou null. */
+  readonly spell: SpellId | null;
   /** Coupure dessinée à l'impact d'un coup de mêlée. */
   readonly slash: SlashId;
   /** Chorégraphie de son critique au corps à corps (assaut, tourbillon, bond). */
@@ -457,6 +461,11 @@ export class BattleCloseupScene extends Phaser.Scene {
           await this.spell(a, d, crit, step.ms);
           break;
         case 'fly':
+          // Arme lancée (lanciers GBA) : le lanceur s'efface avec elle.
+          if (a.spec.thrown) {
+            this.ghosts(a, 90, 0xffffff, 2, 0.3);
+            void this.tween({ targets: [a.sprite, a.shadow], alpha: 0, duration: Math.min(90, step.ms * 0.4), ease: 'Quad.easeIn' });
+          }
           await this.projectile(a, d, step.ms);
           break;
         case 'strike':
@@ -488,7 +497,12 @@ export class BattleCloseupScene extends Phaser.Scene {
         case 'settle':
           if (this.dim && this.dim.alpha > 0) void this.tween({ targets: this.dim, alpha: 0, duration: step.ms });
           if (crit) this.zoomTo(1, null, step.ms);
-          await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
+          if (a.spec.thrown && a.sprite.alpha < 1) {
+            // Il réapparaît en garde à sa place, son arme en main.
+            a.sprite.setPosition(a.home.x, a.home.y);
+            if (multi) this.pose(a, 'garde');
+            await this.tween({ targets: [a.sprite, a.shadow], alpha: 1, duration: step.ms, ease: 'Quad.easeOut' });
+          } else await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y, scaleY: a.scale, duration: step.ms, ease: 'Quad.easeOut' });
           d.sprite.setPosition(d.home.x, d.home.y);
           if (strike.targetHp > 0 || !this.spec?.falls.includes(d.spec.id)) this.pose(d, 'garde');
           if (multi) this.pose(a, 'garde');
@@ -781,44 +795,278 @@ export class BattleCloseupScene extends Phaser.Scene {
   /* ---------- Sorts ---------- */
 
   /**
-   * Sort mis en scène à la cible (façon sages GBA) selon l'élément : colonnes
-   * de feu (Cendre), geysers (Marée), épines (Racine), rayons tombés du ciel
-   * (Lanterne), rochers (Pierre) ; sans élément, l'orbe vole jusqu'à la cible.
-   * Au critique, plus de colonnes, plus hautes, et une explosion finale.
+   * Sort mis en scène à la cible (façon sages GBA), choisi par l'arme ou le
+   * tome équipé (`battleAnims.json › spells`, n°223) : colonnes de flammes,
+   * boule de feu, geysers, vague, brume, lances d'eau, rayons tombés du ciel,
+   * rochers, épines, ronces, fiole qui éclate, orbe. Au critique, plus de
+   * colonnes (ou de lances), plus hautes, et une explosion finale.
    */
   private async spell(a: FighterView, d: FighterView, crit: boolean, ms: number): Promise<void> {
-    const element = a.spec.element;
+    const kind = a.spec.spell ?? 'orbe';
     const color = a.spec.elementColor ?? PALETTE.cyanEclat;
-    if (!element || !['cendre', 'maree', 'racine', 'lanterne', 'pierre'].includes(element)) {
-      await this.projectile(a, d, ms);
-      this.ring(d.home.x, d.home.y - CHEST, color);
-      return;
-    }
     const x = d.home.x;
     const ground = d.home.y;
-    const offsets = crit ? [0, -70, 70, -135, 135] : [0, -55, 55];
-    const step = (ms * 0.45) / offsets.length;
+    if (kind === 'orbe') {
+      await this.projectile(a, d, ms);
+      this.ring(x, ground - CHEST, color);
+      return;
+    }
+    if (kind === 'boule_de_feu') return this.fireball(a, d, crit, ms);
+    if (kind === 'fiole') return this.flask(a, d, crit, ms);
     // Lueur de la couleur du sort sur toute la scène.
-    const wash = this.add.rectangle(-40, -40, this.scale.width + 80, this.scale.height + 80, color, 0).setOrigin(0, 0).setBlendMode(Phaser.BlendModes.ADD);
+    const wash = this.add.rectangle(-40, -40, this.scale.width + 80, this.scale.height + 80, kind === 'brume' ? PALETTE.ecume : color, 0).setOrigin(0, 0).setBlendMode(Phaser.BlendModes.ADD);
     this.stage.add(wash);
     this.tweens.add({ targets: wash, fillAlpha: crit ? 0.22 : 0.12, duration: this.scaled(ms * 0.4), yoyo: true, hold: this.scaled(ms * 0.2), onComplete: () => wash.destroy() });
-    offsets.forEach((dx, i) => {
-      this.time.delayedCall(this.scaled(i * step), () => {
-        if (!this.busy || this.skipping) return;
-        if (element === 'cendre' || element === 'maree') this.column(x + dx, ground, element, color, crit, ms);
-        else if (element === 'racine') this.thorn(x + dx, ground, crit);
-        else if (element === 'lanterne') this.beam(x + dx, ground, color, crit, ms);
-        else this.rock(x + dx, ground, crit, ms);
+    if (kind === 'vague') this.wave(a, d, color, crit, ms);
+    else if (kind === 'brume') this.mist(d, color, crit, ms);
+    else if (kind === 'lances') this.spears(a, d, color, crit, ms);
+    else {
+      const ronces = kind === 'ronces';
+      const offsets = ronces ? (crit ? [-80, 80, -40, 40] : [-80, 80]) : crit ? [0, -70, 70, -135, 135] : [0, -55, 55];
+      const step = (ms * 0.45) / offsets.length;
+      offsets.forEach((dx, i) => {
+        this.time.delayedCall(this.scaled(i * step), () => {
+          if (!this.busy || this.skipping) return;
+          if (kind === 'colonnes' || kind === 'geysers') this.column(x + dx, ground, kind === 'colonnes' ? 'cendre' : 'maree', color, crit, ms);
+          else if (kind === 'epines') this.thorn(x + dx, ground, crit);
+          // Ronces : les épines jaillissent de part et d'autre et se croisent sur la cible, comme des griffes.
+          else if (ronces) this.thorn(x + dx, ground, crit, dx < 0 ? 34 - i * 6 : -34 + i * 6);
+          else if (kind === 'rayons') this.beam(x + dx, ground, color, crit, ms);
+          else this.rock(x + dx, ground, crit, ms);
+        });
       });
-    });
+    }
     await this.wait(ms * 0.75);
     this.ring(x, ground - CHEST, color);
     if (crit) {
       this.ring(x, ground - CHEST, 0xffffff);
       this.screenFlash(0.8, 70);
     }
-    this.burst(x, ground - CHEST, element, color, crit ? 30 : 16);
+    this.burst(x, ground - CHEST, a.spec.element, color, crit ? 30 : 16);
     await this.wait(ms * 0.25);
+  }
+
+  /** Point de lancement d'un sort : la main tendue du lanceur. */
+  private hand(a: FighterView): { x: number; y: number } {
+    return { x: a.sprite.x + a.dir * 42, y: a.sprite.y - CHEST - 6 };
+  }
+
+  /** Explosion de flammes : boules qui gonflent et s'éteignent, braises, onde, secousse. */
+  private blast(x: number, y: number, crit: boolean, tints: readonly number[]): void {
+    const n = crit ? 11 : 7;
+    for (let i = 0; i < n; i++) {
+      const p = this.add.image(x + Phaser.Math.Between(-40, 40), y + Phaser.Math.Between(-46, 30), FX_TEX.puff).setTint(tints[i % tints.length] as number).setBlendMode(Phaser.BlendModes.ADD).setScale(2);
+      this.stage.add(p);
+      this.tweens.add({ targets: p, scale: crit ? 11 : 8, alpha: 0, y: p.y - 30, delay: this.scaled(i * 18), duration: this.scaled(420), ease: 'Quad.easeOut', onComplete: () => p.destroy() });
+    }
+    this.cameras.main.shake(this.scaled(crit ? 240 : 140), (this.spec?.reduced ? 1 : crit ? 8 : 5) / this.scale.width);
+  }
+
+  /** Boule de feu (Brandon de poix) : elle grossit dans la main, file en cloche vers la cible et explose. */
+  private async fireball(a: FighterView, d: FighterView, crit: boolean, ms: number): Promise<void> {
+    const fire = [0xfff2a0, PALETTE.braise, PALETTE.orangeForge, PALETTE.rougeCendre];
+    const from = this.hand(a);
+    const to = { x: d.home.x - a.dir * 10, y: d.home.y - CHEST };
+    const k = crit ? 1.8 : 1.35;
+    const layers = [
+      { tint: PALETTE.rougeCendre, scale: 10 * k, alpha: 0.45 },
+      { tint: PALETTE.orangeForge, scale: 7 * k, alpha: 0.75 },
+      { tint: PALETTE.braise, scale: 5 * k, alpha: 0.9 },
+      { tint: 0xfff2a0, scale: 3 * k, alpha: 1 },
+    ].map((l) => {
+      const img = this.add.image(from.x, from.y, FX_TEX.puff).setTint(l.tint).setAlpha(l.alpha).setBlendMode(Phaser.BlendModes.ADD).setScale(0.5);
+      this.stage.add(img);
+      return { img, scale: l.scale };
+    });
+    const ball = { x: from.x, y: from.y, t: 0 };
+    const trail = this.add.particles(0, 0, FX_TEX.puff, {
+      follow: ball,
+      frequency: 14,
+      quantity: 2,
+      lifespan: 360,
+      speed: { min: 10, max: 50 },
+      scale: { start: 3.4 * k, end: 0.3 },
+      alpha: { start: 0.9, end: 0 },
+      tint: fire,
+      blendMode: Phaser.BlendModes.ADD,
+    });
+    this.stage.add(trail);
+    const place = (): void => {
+      const pulse = 1 + Math.sin(ball.t * 40) * 0.08;
+      for (const { img, scale } of layers) img.setPosition(ball.x, ball.y).setScale(scale * pulse * Math.min(1, 0.35 + ball.t * 3));
+    };
+    await this.tween({
+      targets: ball,
+      t: 1,
+      duration: ms * 0.6,
+      ease: 'Quad.easeIn',
+      onUpdate: () => {
+        ball.x = from.x + (to.x - from.x) * ball.t;
+        ball.y = from.y + (to.y - from.y) * ball.t - Math.sin(ball.t * Math.PI) * 50;
+        place();
+      },
+    });
+    trail.stop();
+    this.time.delayedCall(500, () => trail.destroy());
+    for (const { img } of layers) img.destroy();
+    this.blast(to.x, to.y, crit, fire);
+    this.screenFlash(crit ? 0.8 : 0.4, 60);
+    this.ring(to.x, to.y, PALETTE.braise);
+    if (crit) this.ring(to.x, to.y, 0xffffff);
+    this.burst(to.x, to.y, 'cendre', PALETTE.braise, crit ? 30 : 18);
+    await this.wait(ms * 0.4);
+  }
+
+  /** Fiole (Fioles d'automne) : lancée en cloche en tournoyant, elle éclate en nuage de couleurs d'automne. */
+  private async flask(a: FighterView, d: FighterView, crit: boolean, ms: number): Promise<void> {
+    const autumn = [PALETTE.ocre, PALETTE.braise, PALETTE.rougeCendre, PALETTE.jauneBle, PALETTE.vertDore];
+    const from = this.hand(a);
+    const to = { x: d.home.x - a.dir * 8, y: d.home.y - CHEST + 4 };
+    const vial = this.add.graphics({ x: from.x, y: from.y });
+    vial.fillStyle(PALETTE.ombreProfonde, 1).fillRect(-6, -5, 12, 12);
+    vial.fillStyle(a.spec.elementColor ?? PALETTE.braise, 1).fillRect(-5, -3, 10, 9);
+    vial.fillStyle(0xffffff, 0.8).fillRect(-3, -2, 2, 4);
+    vial.fillStyle(PALETTE.parchemin, 1).fillRect(-2, -10, 4, 5);
+    vial.setScale(2);
+    this.stage.add(vial);
+    const p = { t: 0 };
+    await this.tween({
+      targets: p,
+      t: 1,
+      duration: ms * 0.5,
+      ease: 'Linear',
+      onUpdate: () => {
+        vial.setPosition(from.x + (to.x - from.x) * p.t, from.y + (to.y - from.y) * p.t - Math.sin(p.t * Math.PI) * 110).setAngle(p.t * 720 * a.dir);
+      },
+    });
+    vial.destroy();
+    // Éclats de verre, puis le nuage qui gonfle et dérive.
+    const glass = this.add.particles(to.x, to.y, FX_TEX.dot, { emitting: false, speed: { min: 160, max: 340 }, gravityY: 500, lifespan: 380, scale: { start: 1.6, end: 0.6 }, tint: [0xffffff, PALETTE.ecume] });
+    this.stage.add(glass);
+    glass.explode(crit ? 20 : 12);
+    this.time.delayedCall(600, () => glass.destroy());
+    this.screenFlash(crit ? 0.7 : 0.3, 50);
+    const n = crit ? 14 : 9;
+    for (let i = 0; i < n; i++) {
+      const c = this.add.image(to.x, to.y, FX_TEX.puff).setTint(autumn[i % autumn.length] as number).setAlpha(0.85).setScale(2);
+      this.stage.add(c);
+      const ang = (i / n) * Math.PI * 2;
+      this.tweens.add({ targets: c, x: to.x + Math.cos(ang) * (crit ? 90 : 60), y: to.y + Math.sin(ang) * 40 - 20, scale: crit ? 9 : 7, alpha: 0, duration: this.scaled(ms * 0.95 + i * 12), ease: 'Quad.easeOut', onComplete: () => c.destroy() });
+    }
+    this.burst(to.x, to.y, 'racine', PALETTE.ocre, crit ? 24 : 14);
+    if (crit) this.ring(to.x, to.y, 0xffffff);
+    await this.wait(ms * 0.5);
+  }
+
+  /** Vague (Crosse de Sœur Mérrow) : l'eau déferle au ras du sol depuis le lanceur, enfle et s'abat sur la cible. */
+  private wave(a: FighterView, d: FighterView, color: number, crit: boolean, ms: number): void {
+    const ground = d.home.y;
+    const front = { x: a.home.x + a.dir * 70, y: ground, t: 0 };
+    const endX = d.home.x + a.dir * 40;
+    const spray = this.add.particles(0, 0, FX_TEX.puff, {
+      follow: front,
+      x: { min: -26, max: 10 },
+      speedY: { min: -380, max: -160 },
+      speedX: { min: a.dir * 40, max: a.dir * 170 },
+      gravityY: 640,
+      lifespan: 620,
+      scale: { start: crit ? 3.8 : 3.2, end: 0.6 },
+      alpha: { start: 0.95, end: 0.1 },
+      tint: [0xffffff, PALETTE.ecume, PALETTE.ciel, color],
+      frequency: 8,
+      quantity: crit ? 4 : 3,
+      blendMode: Phaser.BlendModes.ADD,
+    });
+    this.stage.add(spray);
+    const foam = this.add.graphics();
+    this.stage.add(foam);
+    const fromX = front.x;
+    this.tweens.add({
+      targets: front,
+      t: 1,
+      duration: this.scaled(ms * 0.55),
+      ease: 'Quad.easeIn',
+      onUpdate: () => {
+        front.x = fromX + (endX - fromX) * front.t;
+        const h = 30 + 110 * front.t * (crit ? 1.4 : 1);
+        foam.clear();
+        foam.fillStyle(color, 0.45).fillRect(Math.min(fromX, front.x), ground - 8, Math.abs(front.x - fromX), 14);
+        foam.fillStyle(PALETTE.ecume, 0.7).fillRect(Math.min(fromX, front.x), ground - 10, Math.abs(front.x - fromX), 4);
+        foam.fillStyle(color, 0.6).fillEllipse(front.x - a.dir * 20, ground - h / 2, 80, h);
+        foam.fillStyle(0xffffff, 0.75).fillEllipse(front.x - a.dir * 8, ground - h + 8, 50, 16);
+      },
+      onComplete: () => {
+        spray.stop();
+        if (this.busy && !this.skipping) this.column(d.home.x, ground, 'maree', color, crit, ms * 0.7);
+        this.tweens.add({ targets: foam, alpha: 0, duration: this.scaled(260), onComplete: () => foam.destroy() });
+        this.time.delayedCall(800, () => spray.destroy());
+      },
+    });
+  }
+
+  /** Brume (Chant de brume) : un brouillard tournoie autour de la cible, se resserre sur elle et la saisit d'un éclat froid. */
+  private mist(d: FighterView, color: number, crit: boolean, ms: number): void {
+    const cx = d.home.x;
+    const cy = d.home.y - CHEST + 10;
+    const n = crit ? 22 : 15;
+    const tints = [PALETTE.ecume, PALETTE.ciel, PALETTE.violetPale, color];
+    const puffs = Array.from({ length: n }, (_, i) => {
+      const img = this.add.image(cx, cy, FX_TEX.puff).setTint(tints[i % tints.length] as number).setAlpha(0).setScale(5 + (i % 3) * 1.5).setBlendMode(Phaser.BlendModes.ADD);
+      this.stage.add(img);
+      return { img, phase: (i / n) * Math.PI * 2, r0: 120 + (i % 4) * 22, dy: (i % 5) * 14 - 28 };
+    });
+    const clock = { t: 0 };
+    this.tweens.add({
+      targets: clock,
+      t: 1,
+      duration: this.scaled(ms * 0.7),
+      ease: 'Sine.easeIn',
+      onUpdate: () => {
+        const r = 1 - clock.t * 0.85;
+        for (const { img, phase, r0, dy } of puffs) {
+          const ang = phase + clock.t * Math.PI * 3;
+          img.setPosition(cx + Math.cos(ang) * r0 * r, cy + dy * r + Math.sin(ang) * r0 * 0.3 * r).setAlpha(Math.min(0.2, clock.t * 0.8));
+        }
+      },
+      onComplete: () => {
+        for (const { img } of puffs) this.tweens.add({ targets: img, alpha: 0, scale: img.scale * 1.6, duration: this.scaled(300), onComplete: () => img.destroy() });
+        if (this.busy && !this.skipping) this.burst(cx, cy, 'lanterne', PALETTE.ecume, crit ? 24 : 14);
+      },
+    });
+  }
+
+  /** Lances d'eau (Trident de marée) : elles tombent en oblique du ciel, du côté du lanceur, et se fichent dans la cible. */
+  private spears(a: FighterView, d: FighterView, color: number, crit: boolean, ms: number): void {
+    const offs = crit ? [0, -46, 46, -22, 22] : [0, -40, 40];
+    offs.forEach((dx, i) => {
+      this.time.delayedCall(this.scaled(i * ms * 0.11), () => {
+        if (!this.busy || this.skipping) return;
+        const ex = d.home.x + dx * 0.6;
+        const ey = d.home.y - CHEST + 20 + Math.abs(dx) * 0.3;
+        const sx = ex - a.dir * 300 + dx;
+        const sy = -60;
+        const g = this.add.graphics({ x: sx, y: sy });
+        g.fillStyle(color, 1).fillPoints([new Phaser.Math.Vector2(-40, -4), new Phaser.Math.Vector2(16, -4), new Phaser.Math.Vector2(36, 0), new Phaser.Math.Vector2(16, 4), new Phaser.Math.Vector2(-40, 4)], true);
+        g.fillStyle(0xffffff, 0.9).fillRect(-34, -1, 54, 2);
+        g.setRotation(Math.atan2(ey - sy, ex - sx)).setScale(crit ? 2.4 : 1.9).setBlendMode(Phaser.BlendModes.ADD);
+        this.stage.add(g);
+        const trail = this.add.particles(0, 0, FX_TEX.dot, { follow: g, frequency: 16, lifespan: 220, scale: { start: 2, end: 0 }, alpha: { start: 0.8, end: 0 }, tint: [PALETTE.ecume, color], blendMode: Phaser.BlendModes.ADD });
+        this.stage.add(trail);
+        this.tweens.add({
+          targets: g,
+          x: ex,
+          y: ey,
+          duration: this.scaled(ms * 0.24),
+          ease: 'Quad.easeIn',
+          onComplete: () => {
+            trail.stop();
+            this.time.delayedCall(300, () => trail.destroy());
+            this.burst(ex, ey, 'maree', color, 8);
+            this.tweens.add({ targets: g, alpha: 0, duration: this.scaled(200), delay: this.scaled(80), onComplete: () => g.destroy() });
+          },
+        });
+      });
+    });
   }
 
   /** Colonne de flammes (Cendre) ou geyser (Marée) qui jaillit du sol : langues de boules douces, lueur au pied. */
@@ -848,10 +1096,10 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.time.delayedCall(this.scaled(ms * 0.55) + life + 100, () => emitter.destroy());
   }
 
-  /** Épine de racine qui perce le sol (Racine). */
-  private thorn(x: number, ground: number, crit: boolean): void {
+  /** Épine de racine qui perce le sol (Racine), droite ou penchée de `angle` degrés (ronces). */
+  private thorn(x: number, ground: number, crit: boolean, angle = 0): void {
     const h = crit ? 190 : 140;
-    const g = this.add.graphics({ x, y: ground });
+    const g = this.add.graphics({ x, y: ground }).setAngle(angle);
     g.fillStyle(PALETTE.terreSombre, 1).fillTriangle(-16, 0, 16, 0, 2, -h);
     g.fillStyle(PALETTE.mousse, 1).fillTriangle(-10, 0, 4, 0, 0, -h * 0.92);
     g.fillStyle(PALETTE.oliveClair, 1).fillTriangle(-6, -8, -2, -8, 0, -h * 0.8);

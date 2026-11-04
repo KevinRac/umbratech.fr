@@ -13,9 +13,11 @@ import {
   critStyleFor,
   critSlashes,
   slashFor,
+  spellFor,
   exchangeDuration,
   exchangeShapes,
   frameAt,
+  isThrown,
   planSegments,
   projectileFor,
   stepAt,
@@ -230,6 +232,30 @@ describe('gestes, projectiles et fonds', () => {
     expect(projectileFor(weapon('harpon_lourd'), 'ranged', anims)).toBe('harpon');
     expect(projectileFor(weapon('tome_des_cendres'), 'magic', anims)).toBe('orbe');
     expect(projectileFor(weapon('fioles_d_automne'), 'magic', anims)).toBe('fiole');
+  });
+
+  it('une javeline lancée part avec son lanceur ; pas une flèche, ni un harpon tenu par sa chaîne (n°224)', () => {
+    expect(isThrown(projectileFor(weapon('javeline'), 'ranged', anims), 'ranged', anims)).toBe(true);
+    expect(isThrown(projectileFor(weapon('lance_d_estoc'), 'ranged', anims), 'ranged', anims)).toBe(true);
+    expect(isThrown(projectileFor(weapon('javeline'), 'melee', anims), 'melee', anims)).toBe(false);
+    expect(isThrown(projectileFor(weapon('arc_long'), 'ranged', anims), 'ranged', anims)).toBe(false);
+    expect(isThrown(projectileFor(weapon('harpon_lourd'), 'ranged', anims), 'ranged', anims)).toBe(false);
+  });
+
+  it('le sort suit l’arme ou le tome équipé, sinon son élément (n°223)', () => {
+    expect(spellFor(weapon('tome_des_cendres'), 'magic', anims)).toBe('colonnes');
+    expect(spellFor(weapon('brandon_de_poix'), 'magic', anims)).toBe('boule_de_feu');
+    expect(spellFor(weapon('chant_de_brume'), 'magic', anims)).toBe('brume');
+    expect(spellFor(weapon('baton_noueux'), 'magic', anims)).toBe('orbe');
+    expect(spellFor(weapon('arc_long'), 'ranged', anims)).toBeNull();
+    // Une arme magique sans sort propre prend celui de son élément.
+    expect(spellFor({ ...weapon('tome_des_cendres'), id: 'tome_inconnu' }, 'magic', anims)).toBe('colonnes');
+    expect(spellFor({ ...weapon('baton_noueux'), id: 'baton_inconnu' }, 'magic', anims)).toBe('orbe');
+    // Toutes les armes magiques du jeu ont un sort, et deux armes de même élément peuvent différer.
+    const magic = data.weapons.filter((w) => w.damage === 'magique');
+    for (const w of magic) expect(spellFor(w, 'magic', anims)).toBeTruthy();
+    const maree = new Set(magic.filter((w) => w.element === 'maree').map((w) => spellFor(w, 'magic', anims)));
+    expect(maree.size).toBeGreaterThanOrEqual(3);
   });
 
   it('chaque terrain a un fond ; la Citadelle impose le sien', () => {

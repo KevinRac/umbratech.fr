@@ -10,7 +10,7 @@
  * - `attackKind`, `projectileFor`, `backdropFor` : ce que l'écran montre,
  *   d'après l'arme, la distance, le terrain et la zone (`battleAnims.json`).
  */
-import type { BackdropId, BattleAnimsFile, CloseupTimings, CritStyle, FighterDef, ProjectileId, SlashId } from '../../data/schemas';
+import type { BackdropId, BattleAnimsFile, CloseupTimings, CritStyle, FighterDef, ProjectileId, SlashId, SpellId } from '../../data/schemas';
 import type { BattleEvent, Strike } from '../tactics/types';
 
 /* ---------- Ce que l'écran montre ---------- */
@@ -34,6 +34,17 @@ export function projectileFor(weapon: WeaponLike, kind: AttackKind, anims: Battl
   if (kind === 'melee') return null;
   if (kind === 'magic') return anims.projectiles.byWeaponType[weapon.type] === 'fiole' ? 'fiole' : anims.projectiles.magic;
   return anims.projectiles.byWeaponType[weapon.type] ?? anims.projectiles.physical;
+}
+
+/** Arme lancée (javeline) : le lanceur disparaît avec elle et réapparaît à la fin du coup. */
+export function isThrown(projectile: ProjectileId | null, kind: AttackKind, anims: BattleAnimsFile): boolean {
+  return kind === 'ranged' && projectile !== null && anims.projectiles.thrown.includes(projectile);
+}
+
+/** Sort d'une arme magique : celui de l'arme, sinon celui de son élément, sinon le sort par défaut (null hors magie). */
+export function spellFor(weapon: WeaponLike & { readonly id: string; readonly element: string | null }, kind: AttackKind, anims: BattleAnimsFile): SpellId | null {
+  if (kind !== 'magic') return null;
+  return anims.spells.byWeapon[weapon.id] ?? (weapon.element ? anims.spells.byElement[weapon.element] : undefined) ?? anims.spells.default;
 }
 
 /** Fond de l'écran : celui de la zone s'il en impose un, sinon celui du terrain du défenseur (n°208). */

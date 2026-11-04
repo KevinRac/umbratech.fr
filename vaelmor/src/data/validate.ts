@@ -887,6 +887,12 @@ function checkBattleAnims(data: GameData, issues: string[]): void {
   for (const id of Object.keys(projectiles.byWeaponType)) if (!weaponTypes.has(id)) issues.push(`${file} › projectiles.byWeaponType : type d'arme inconnu « ${id} »`);
   for (const id of Object.keys(data.battleAnims.slashes.byWeaponType)) if (!weaponTypes.has(id)) issues.push(`${file} › slashes.byWeaponType : type d'arme inconnu « ${id} »`);
   for (const id of Object.keys(data.battleAnims.critStyles.byWeaponType)) if (!weaponTypes.has(id)) issues.push(`${file} › critStyles.byWeaponType : type d'arme inconnu « ${id} »`);
+  const weaponIds = new Set(data.weapons.map((w) => w.id));
+  const { spells } = data.battleAnims;
+  for (const id of Object.keys(spells.byWeapon)) if (!weaponIds.has(id)) issues.push(`${file} › spells.byWeapon : arme inconnue « ${id} »`);
+  for (const w of data.weapons) if (w.damage !== 'magique' && w.id in spells.byWeapon) issues.push(`${file} › spells.byWeapon : « ${w.id} » n'est pas une arme magique`);
+  const elements = new Set(data.elements.map((e) => e.id));
+  for (const id of Object.keys(spells.byElement)) if (!elements.has(id)) issues.push(`${file} › spells.byElement : élément inconnu « ${id} »`);
   const looks = new Set<string>(['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite.split('#')[0] ?? e.sprite)]);
   for (const [id, f] of Object.entries(fighters)) {
     const at = `${file} › fighters « ${id} »`;

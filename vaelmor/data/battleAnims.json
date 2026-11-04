@@ -1,5 +1,5 @@
 {
-  "$comment": "Écran de combat rapproché (jalon M8, GDD §11, décisions n°204 à n°222). `backdrops` : fond peint par code selon le terrain du défenseur (`terrains`), remplacé par celui de la zone quand elle en impose un (`zones`), sinon `default`. `projectiles` : ce qui part d'une arme qui frappe à distance (par type d'arme) ; une arme magique lance `magic` (teinté par son élément). `slashes` : coupure dessinée à l'impact d'un coup de mêlée, selon le type d'arme. `critStyles` : chorégraphie du critique au corps à corps (`assaut` : dash et coupes ; `tourbillon` : assauts fantômes façon Bretteur ; `bond` : saut et chute), par type d'arme ; `critStyle` d'une feuille l'emporte. `fighters` : feuilles peintes de l'écran rapproché, par apparence (`sprite` sans détail) ; une apparence absente garde son sprite de carte agrandi (repli, n°215). Une feuille (`assets/combat/<sheet>.png`) a une rangée par animation, tournée vers l'est ; `feet` = point posé sur le socle ; `impact` = image où l'arme touche ; `ranged` = animation d'un tir ou d'un sort. Le héros (lot 2) : ses six poses peintes d'une image chacune, animées par le code. Durées : `balance.json › closeup`.",
+  "$comment": "Écran de combat rapproché (jalon M8, GDD §11, décisions n°204 à n°222). `backdrops` : fond peint par code selon le terrain du défenseur (`terrains`), remplacé par celui de la zone quand elle en impose un (`zones`), sinon `default`. `projectiles` : ce qui part d'une arme qui frappe à distance (par type d'arme) ; une arme magique lance `magic` (teinté par son élément) ; une arme de `thrown` part avec son lanceur, qui réapparaît en garde à la fin du coup (lanciers GBA). `spells` : sort d'une arme magique, par arme (comme Feu ou Tonnerre sur GBA), sinon par élément, sinon `default`. `slashes` : coupure dessinée à l'impact d'un coup de mêlée, selon le type d'arme. `critStyles` : chorégraphie du critique au corps à corps (`assaut` : dash et coupes ; `tourbillon` : assauts fantômes façon Bretteur ; `bond` : saut et chute), par type d'arme ; `critStyle` d'une feuille l'emporte. `fighters` : feuilles peintes de l'écran rapproché, par apparence (`sprite` sans détail) ; une apparence absente garde son sprite de carte agrandi (repli, n°215). Une feuille (`assets/combat/<sheet>.png`) a une rangée par animation, tournée vers l'est ; `feet` = point posé sur le socle ; `impact` = image où l'arme touche ; `ranged` = animation d'un tir ou d'un sort. Le héros (lot 2) : ses six poses peintes d'une image chacune, animées par le code. Durées : `balance.json › closeup`.",
   "backdrops": {
     "default": "plaine",
     "terrains": {
@@ -34,7 +34,34 @@
       "fioles": "fiole"
     },
     "physical": "fleche",
-    "magic": "orbe"
+    "magic": "orbe",
+    "thrown": [
+      "javeline"
+    ]
+  },
+  "spells": {
+    "byWeapon": {
+      "tome_des_cendres": "colonnes",
+      "brandon_de_poix": "boule_de_feu",
+      "chant_de_brume": "brume",
+      "crosse_de_merrow": "vague",
+      "murmure_des_abysses": "geysers",
+      "trident_de_maree": "lances",
+      "baton_lanterne": "rayons",
+      "baton_menhir": "rochers",
+      "baton_branche": "epines",
+      "griffes_de_ronce": "ronces",
+      "fioles_d_automne": "fiole",
+      "baton_noueux": "orbe"
+    },
+    "byElement": {
+      "cendre": "colonnes",
+      "maree": "geysers",
+      "racine": "epines",
+      "lanterne": "rayons",
+      "pierre": "rochers"
+    },
+    "default": "orbe"
   },
   "slashes": {
     "byWeaponType": {
@@ -121,8 +148,8 @@
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 8 }
+        "attaque": { "row": 1, "frames": 11, "impact": 5 },
+        "critique": { "row": 2, "frames": 13, "impact": 10 }
       }
     },
     "danseur_des_courants": {

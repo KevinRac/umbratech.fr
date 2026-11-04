@@ -957,6 +957,15 @@ export type BackdropId = (typeof BACKDROP_IDS)[number];
 export const PROJECTILE_IDS = ['fleche', 'carreau', 'javeline', 'harpon', 'eclat', 'fiole', 'orbe'] as const;
 export type ProjectileId = (typeof PROJECTILE_IDS)[number];
 
+/**
+ * Sorts mis en scène à la cible (peints par code), choisis par l'arme ou le
+ * tome équipé, comme sur GBA (Feu, Tonnerre…) : colonnes de flammes, boule de
+ * feu, geysers, vague, brume, lances d'eau, rayons, rochers, épines, ronces,
+ * fiole qui éclate, orbe.
+ */
+export const SPELL_IDS = ['colonnes', 'boule_de_feu', 'geysers', 'vague', 'brume', 'lances', 'rayons', 'rochers', 'epines', 'ronces', 'fiole', 'orbe'] as const;
+export type SpellId = (typeof SPELL_IDS)[number];
+
 /** Coupures dessinées à l'impact d'un coup de mêlée (GDD §11.5 : diagonale, croix, arc). */
 export const SLASH_IDS = ['diagonale', 'croix', 'arc'] as const;
 export type SlashId = (typeof SLASH_IDS)[number];
@@ -1015,6 +1024,14 @@ export const battleAnimsFileSchema = z.strictObject({
     physical: z.enum(PROJECTILE_IDS),
     /** Arme magique (teintée par son élément). */
     magic: z.enum(PROJECTILE_IDS),
+    /** Armes lancées : le lanceur disparaît avec son arme et réapparaît en garde à la fin du coup (lanciers GBA). */
+    thrown: z.array(z.enum(PROJECTILE_IDS)),
+  }),
+  /** Sort d'une arme magique : celui de l'arme (`byWeapon`, id d'arme), sinon celui de son élément, sinon `default`. */
+  spells: z.strictObject({
+    byWeapon: z.record(idSchema, z.enum(SPELL_IDS)),
+    byElement: z.record(idSchema, z.enum(SPELL_IDS)),
+    default: z.enum(SPELL_IDS),
   }),
   /** Coupure d'un coup de mêlée, par type d'arme (`default` sinon) ; un critique enchaîne la coupure puis les deux autres. */
   slashes: z.strictObject({
