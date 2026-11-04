@@ -76,3 +76,12 @@ export function loadBattleView(): BattleView {
 export function saveBattleView(view: BattleView): void {
   writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), battleView: view }));
 }
+
+/** « Effets réduits » (GDD §13.8, n°221) : flashs atténués, secousses divisées par trois, pas de zoom du critique. */
+export function loadReducedEffects(): boolean {
+  return readSettings()['reducedFx'] === true;
+}
+
+export function saveReducedEffects(reduced: boolean): void {
+  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), reducedFx: reduced }));
+}

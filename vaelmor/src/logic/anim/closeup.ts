@@ -10,7 +10,7 @@
  * - `attackKind`, `projectileFor`, `backdropFor` : ce que l'écran montre,
  *   d'après l'arme, la distance, le terrain et la zone (`battleAnims.json`).
  */
-import type { BackdropId, BattleAnimsFile, CloseupTimings, ProjectileId } from '../../data/schemas';
+import type { BackdropId, BattleAnimsFile, CloseupTimings, ProjectileId, SlashId } from '../../data/schemas';
 import type { BattleEvent, Strike } from '../tactics/types';
 
 /* ---------- Ce que l'écran montre ---------- */
@@ -39,6 +39,18 @@ export function projectileFor(weapon: WeaponLike, kind: AttackKind, anims: Battl
 /** Fond de l'écran : celui de la zone s'il en impose un, sinon celui du terrain du défenseur (n°208). */
 export function backdropFor(terrainId: string, zoneId: string, anims: BattleAnimsFile): BackdropId {
   return anims.backdrops.zones[zoneId] ?? anims.backdrops.terrains[terrainId] ?? anims.backdrops.default;
+}
+
+/** Coupure d'un coup de mêlée (type d'arme). */
+export function slashFor(weapon: WeaponLike, anims: BattleAnimsFile): SlashId {
+  return anims.slashes.byWeaponType[weapon.type] ?? anims.slashes.default;
+}
+
+/** Coupures d'un critique : celle de l'arme, puis les autres dans l'ordre diagonale, croix, arc (GDD §11.3 : 2 à 3 coupes). */
+export function critSlashes(first: SlashId, count: number): SlashId[] {
+  const order: SlashId[] = ['diagonale', 'croix', 'arc'];
+  const rest = order.filter((s) => s !== first);
+  return Array.from({ length: count }, (_, i) => (i === 0 ? first : (rest[(i - 1) % rest.length] as SlashId)));
 }
 
 /* ---------- Chronologie ---------- */
@@ -158,14 +170,19 @@ export function frameAt(steps: readonly Step[], ms: number, frames: number, impa
 
 export type CombatEvent = Extract<BattleEvent, { type: 'combat' }>;
 
+export type HealEvent = Extract<BattleEvent, { type: 'heal' }>;
+
 export type Segment =
   | { readonly kind: 'event'; readonly event: BattleEvent }
+  /** Soin au bâton (n°205) : le soigneur et l'allié soigné face à face. */
+  | { readonly kind: 'heal'; readonly heal: HealEvent }
   /** Un échange dans l'écran rapproché, et la chute (KO) des unités de l'échange qui la suit aussitôt. */
   | { readonly kind: 'closeup'; readonly combat: CombatEvent; readonly falls: readonly string[] };
 
 /**
  * Découpe les événements d'une commande (n°205) : un échange que `inCloseup`
- * accepte (pas une compétence de zone) ouvre l'écran rapproché ; les KO des
+ * accepte (pas une compétence de zone) ouvre l'écran rapproché, comme un soin
+ * au bâton (`heal` donné par une autre unité) ; les KO des
  * deux unités de l'échange qui le suivent directement s'y jouent aussi.
  * Une citation de mort entre l'échange et la chute garde son ordre : l'écran
  * se ferme avant elle et la chute se joue sur la carte (cut-ins : lot 6).
@@ -174,6 +191,11 @@ export function planSegments(events: readonly BattleEvent[], inCloseup: (combat:
   const out: Segment[] = [];
   for (let i = 0; i < events.length; i++) {
     const event = events[i] as BattleEvent;
+    // Un soin donné par une autre unité (bâton) ; les soins de terrain ou de statut restent sur la carte.
+    if (event.type === 'heal' && event.sourceId !== undefined && event.sourceId !== event.unitId) {
+      out.push({ kind: 'heal', heal: event });
+      continue;
+    }
     if (event.type !== 'combat' || !inCloseup(event)) {
       out.push({ kind: 'event', event });
       continue;

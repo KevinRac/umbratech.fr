@@ -18,7 +18,7 @@
  * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
 import Phaser from 'phaser';
-import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, BATTLE_VIEW_LABEL, loadAnimSpeed, loadBattleView, nextAnimSpeed, nextBattleView, saveAnimSpeed, saveBattleView, type AnimSpeed, type BattleView } from '../core/settings';
+import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, BATTLE_VIEW_LABEL, loadAnimSpeed, loadBattleView, loadReducedEffects, nextAnimSpeed, nextBattleView, saveAnimSpeed, saveBattleView, saveReducedEffects, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
@@ -64,7 +64,7 @@ import {
   type RosterSort,
 } from '../logic/tactics/prep';
 import { areaOf, costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
-import { attackKind, backdropFor, planSegments, projectileFor, type CombatEvent, type Segment } from '../logic/anim/closeup';
+import { attackKind, backdropFor, planSegments, projectileFor, slashFor, type CombatEvent, type HealEvent, type Segment } from '../logic/anim/closeup';
 import { gradeMatrix } from '../render/grade';
 import type { BattleCloseupScene, CloseupFighter, CloseupSpec } from './BattleCloseupScene';
 import { isStunned } from '../logic/tactics/status';
@@ -254,6 +254,7 @@ export class BattleScene extends Phaser.Scene {
   /** Écran de combat rapproché (jalon M8) et son réglage (n°221). */
   private closeup: BattleCloseupScene | null = null;
   private view: BattleView = 'closeup';
+  private reducedFx = false;
   /** `?debug&slow=N` : l'écran rapproché N fois plus lent (captures image par image). */
   private slow = 1;
 
@@ -318,6 +319,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.speed = loadAnimSpeed();
     this.view = loadBattleView();
+    this.reducedFx = loadReducedEffects();
     this.slow = debug ? Math.max(1, Number(url.get('slow')) || 1) : 1;
     this.actions = new ActionInput(this);
     this.scene.launch(SCENES.battleHud);
@@ -1940,6 +1942,15 @@ export class BattleScene extends Phaser.Scene {
           close();
         },
       },
+      {
+        label: `Effets : ${this.reducedFx ? 'réduits' : 'complets'}`,
+        onSelect: () => {
+          this.reducedFx = !this.reducedFx;
+          saveReducedEffects(this.reducedFx);
+          this.hud.toast(this.reducedFx ? 'Effets réduits : flashs atténués, secousses légères' : 'Effets complets');
+          close();
+        },
+      },
       { label: 'Retraite', onSelect: () => this.retreat() },
     ];
     this.hud.openMenu({ title: 'Menu', items, onCancel: close, centered: true });
@@ -2059,6 +2070,7 @@ export class BattleScene extends Phaser.Scene {
     for (const segment of segments) {
       if (!this.alive) return;
       if (segment.kind === 'closeup') await this.playCloseup(segment.combat, segment.falls);
+      else if (segment.kind === 'heal') await this.playHealCloseup(segment.heal);
       else await this.playEvent(segment.event);
     }
   }
@@ -2573,6 +2585,24 @@ export class BattleScene extends Phaser.Scene {
    * logique les a déjà retirés), prévision, geste, projectile, fonds.
    * `before` : PV de départ imposés (banc d'essai).
    */
+  /** Soin au bâton dans l'écran rapproché (n°205) : le soigneur à gauche, l'allié soigné à droite. */
+  private async playHealCloseup(heal: HealEvent): Promise<void> {
+    const target = this.state.units.find((u) => u.id === heal.unitId);
+    const source = heal.sourceId ? this.state.units.find((u) => u.id === heal.sourceId) : undefined;
+    if (!this.closeup || !target || !source) {
+      await this.playEvent(heal);
+      return;
+    }
+    const combat: CombatEvent = { type: 'combat', attackerId: source.id, defenderId: target.id, strikes: [] };
+    const base = this.closeupSpec(combat, [], new Map([[target.id, Math.max(0, target.hp - heal.amount)]]));
+    // Le soigneur est à gauche ; l'allié soigné à droite, sans prévision de coup.
+    const healer = base.left.id === source.id ? base.left : base.right;
+    const patient = base.left.id === source.id ? base.right : base.left;
+    await this.showCloseup({ ...base, left: { ...healer, odds: null }, right: { ...patient, odds: null }, heal: { amount: heal.amount, hpAfter: target.hp } });
+    this.updateHpBar(target.id, target.hp);
+    this.syncUnit(target);
+  }
+
   /**
    * Joue l'écran rapproché ; la carte et l'interface du combat, cachées dessous,
    * ne sont plus dessinées pendant l'échange (l'écran est opaque).
@@ -2611,10 +2641,12 @@ export class BattleScene extends Phaser.Scene {
         hp: startHp(u),
         maxHp: u.stats.pv,
         weaponName: u.weapon.name,
+        element: u.weapon.element,
         elementColor: this.weaponElementColor(u.weapon.element),
         odds: side.canStrike ? { hit: side.odds.hit, damage: side.odds.damage, crit: side.odds.crit, doubles: side.doubles } : null,
         kind,
         projectile: projectileFor(u.weapon, kind, anims),
+        slash: slashFor(u.weapon, anims),
         platform: backdropFor(terrainAt(this.state.map, u.x, u.y).id, this.state.zone, anims),
         painted: anims.fighters[u.sprite.split('#')[0] ?? u.sprite] ?? null,
       };
@@ -2633,6 +2665,7 @@ export class BattleScene extends Phaser.Scene {
       falls,
       timings: this.gameData.balance.closeup,
       factor: () => ANIM_SPEED_FACTOR[this.speed] * (this.actions?.isDown('sprint') ? 0.5 : 1) * this.slow,
+      reduced: this.reducedFx,
       grade: quality === 'off' || !zone ? null : { matrix: gradeMatrix(zone.grade), vignette: visuals.vignette },
     };
   }
@@ -2682,6 +2715,23 @@ export class BattleScene extends Phaser.Scene {
     const left = this.state.units.find(mineMatch) ?? this.state.units.find((u) => u.team === 'player');
     const right = this.state.units.find((u) => u.team === 'enemy' && u.kindId === foe) ?? this.state.units.find((u) => u.team === 'enemy');
     if (!left || !right) return;
+    if (url.has('heal')) {
+      // `&heal=1` : la classe de gauche soigne l'unité de la compagnie nommée à droite (« heros » ou une classe).
+      const patient = this.state.units.find((u) => u.team === 'player' && u !== left && (foe === 'heros' ? u.isHero : u.kindId === foe)) ?? this.state.units.find((u) => u.team === 'player' && u !== left);
+      if (!patient) return;
+      const amount = Math.max(1, Math.round(patient.stats.pv * 0.4));
+      const playHeal = async (): Promise<void> => {
+        if (!this.closeup || this.closeup.playing) return;
+        const combat: CombatEvent = { type: 'combat', attackerId: left.id, defenderId: patient.id, strikes: [] };
+        const base = this.closeupSpec(combat, [], new Map([[patient.id, patient.stats.pv - amount]]), 1);
+        await this.showCloseup({ ...base, left: { ...base.left, odds: null }, right: { ...base.right, odds: null }, heal: { amount, hpAfter: patient.stats.pv } });
+      };
+      Object.assign(window, { vaelmorCloseupPlay: playHeal });
+      this.input.keyboard?.on('keydown-R', () => void playHeal());
+      await this.wait(700);
+      await playHeal();
+      return;
+    }
     const fromRight = url.get('from') === 'right';
     const [a, b] = fromRight ? [right, left] : [left, right];
     const range = Number(url.get('range')) || 1;
@@ -2697,7 +2747,7 @@ export class BattleScene extends Phaser.Scene {
     };
     const kill = url.has('kill');
     blow(a, b, f.attacker.odds, url.has('crit'), !url.has('miss'), false);
-    if (!url.has('nocounter') && !kill) blow(b, a, f.defender.odds, false, true, true);
+    if (!url.has('nocounter') && !kill && f.defender.canStrike) blow(b, a, f.defender.odds, false, true, true);
     if (url.has('double') && !kill) blow(a, b, f.attacker.odds, false, true, false);
     if (kill) {
       const last = strikes[strikes.length - 1] as Strike;

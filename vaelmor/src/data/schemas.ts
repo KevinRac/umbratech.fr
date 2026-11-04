@@ -949,6 +949,10 @@ export type BackdropId = (typeof BACKDROP_IDS)[number];
 export const PROJECTILE_IDS = ['fleche', 'carreau', 'javeline', 'harpon', 'eclat', 'fiole', 'orbe'] as const;
 export type ProjectileId = (typeof PROJECTILE_IDS)[number];
 
+/** Coupures dessinées à l'impact d'un coup de mêlée (GDD §11.5 : diagonale, croix, arc). */
+export const SLASH_IDS = ['diagonale', 'croix', 'arc'] as const;
+export type SlashId = (typeof SLASH_IDS)[number];
+
 /** Animations d'une feuille peinte (rangée de la feuille, nombre d'images, image d'impact). */
 export const FIGHTER_ANIMS = ['garde', 'attaque', 'critique', 'competence', 'coup', 'ko'] as const;
 export type FighterAnim = (typeof FIGHTER_ANIMS)[number];
@@ -989,6 +993,11 @@ export const battleAnimsFileSchema = z.strictObject({
     physical: z.enum(PROJECTILE_IDS),
     /** Arme magique (teintée par son élément). */
     magic: z.enum(PROJECTILE_IDS),
+  }),
+  /** Coupure d'un coup de mêlée, par type d'arme (`default` sinon) ; un critique enchaîne la coupure puis les deux autres. */
+  slashes: z.strictObject({
+    byWeaponType: z.record(idSchema, z.enum(SLASH_IDS)),
+    default: z.enum(SLASH_IDS),
   }),
   /** Feuilles peintes, par apparence (`sprite` sans détail `#n`). */
   fighters: z.record(z.string().regex(/^[a-z][a-z0-9_]*$/), fighterSchema),

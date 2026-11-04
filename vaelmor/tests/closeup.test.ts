@@ -8,6 +8,8 @@ import { loadGameData } from '../src/data';
 import {
   attackKind,
   backdropFor,
+  critSlashes,
+  slashFor,
   exchangeDuration,
   exchangeShapes,
   frameAt,
@@ -147,6 +149,20 @@ describe('images d’une animation peinte', () => {
   });
 });
 
+describe('coupures (GDD §11.5)', () => {
+  it('la coupure suit le type d’arme', () => {
+    expect(slashFor(weapon('epee_de_fer'), anims)).toBe('diagonale');
+    expect(slashFor(weapon('dagues_jumelles'), anims)).toBe('croix');
+    expect(slashFor(weapon('hache_de_brakk'), anims)).toBe('arc');
+  });
+
+  it('un critique enchaîne la coupure de l’arme puis les deux autres', () => {
+    expect(critSlashes('arc', 3)).toEqual(['arc', 'diagonale', 'croix']);
+    expect(critSlashes('diagonale', 2)).toEqual(['diagonale', 'croix']);
+    expect(new Set(critSlashes('croix', 3)).size).toBe(3);
+  });
+});
+
 describe('gestes, projectiles et fonds', () => {
   it('l’arme et la distance décident du geste', () => {
     expect(attackKind(weapon('epee_de_fer'), 1)).toBe('melee');
@@ -185,6 +201,12 @@ describe('découpage des événements (n°205)', () => {
     expect(close?.kind === 'closeup' && close.falls).toEqual(['b']);
   });
 
+  it('un soin au bâton passe dans l’écran rapproché ; un soin de terrain reste sur la carte', () => {
+    const staff: BattleEvent = { type: 'heal', unitId: 'b', amount: 8, sourceId: 'a' };
+    const village: BattleEvent = { type: 'heal', unitId: 'b', amount: 4 };
+    expect(planSegments([staff, village], all).map((s) => s.kind)).toEqual(['heal', 'event']);
+  });
+
   it('une compétence de zone reste sur la carte', () => {
     const segs = planSegments([combat('a', 'b', 'nuee_de_braises')], (c) => c.skillId !== 'nuee_de_braises');
     expect(segs[0]?.kind).toBe('event');
@@ -211,7 +233,7 @@ describe('découpage des événements (n°205)', () => {
   it('rien n’est perdu ni réordonné', () => {
     const events: BattleEvent[] = [combat('a', 'b'), { type: 'ko', unitId: 'b' }, { type: 'xp', unitId: 'a', amount: 30, bonus: 0, before: { level: 1, xp: 0 }, after: { level: 1, xp: 30 }, levelUps: [] }];
     const segs = planSegments(events, all);
-    const replay = segs.flatMap((s) => (s.kind === 'event' ? [s.event] : [s.combat, ...s.falls.map((unitId) => ({ type: 'ko', unitId }) as BattleEvent)]));
+    const replay = segs.flatMap((s): BattleEvent[] => (s.kind === 'event' ? [s.event] : s.kind === 'heal' ? [s.heal] : [s.combat, ...s.falls.map((unitId): BattleEvent => ({ type: 'ko', unitId }))]));
     expect(replay).toEqual(events);
   });
 });

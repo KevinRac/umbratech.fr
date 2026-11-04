@@ -1,5 +1,5 @@
 {
-  "$comment": "Écran de combat rapproché (jalon M8, GDD §11, décisions n°204 à n°222). `backdrops` : fond peint par code selon le terrain du défenseur (`terrains`), remplacé par celui de la zone quand elle en impose un (`zones`), sinon `default`. `projectiles` : ce qui part d'une arme qui frappe à distance (par type d'arme) ; une arme magique lance `magic` (teinté par son élément). `fighters` : feuilles peintes de l'écran rapproché, par apparence (`sprite` sans détail) ; une apparence absente garde son sprite de carte agrandi (repli, n°215). Une feuille (`assets/combat/<sheet>.png`) a une rangée par animation, tournée vers l'est ; `feet` = point posé sur le socle ; `impact` = image où l'arme touche ; `ranged` = animation d'un tir ou d'un sort. Le héros (lot 2) : ses six poses peintes d'une image chacune, animées par le code. Durées : `balance.json › closeup`.",
+  "$comment": "Écran de combat rapproché (jalon M8, GDD §11, décisions n°204 à n°222). `backdrops` : fond peint par code selon le terrain du défenseur (`terrains`), remplacé par celui de la zone quand elle en impose un (`zones`), sinon `default`. `projectiles` : ce qui part d'une arme qui frappe à distance (par type d'arme) ; une arme magique lance `magic` (teinté par son élément). `slashes` : coupure dessinée à l'impact d'un coup de mêlée, selon le type d'arme. `fighters` : feuilles peintes de l'écran rapproché, par apparence (`sprite` sans détail) ; une apparence absente garde son sprite de carte agrandi (repli, n°215). Une feuille (`assets/combat/<sheet>.png`) a une rangée par animation, tournée vers l'est ; `feet` = point posé sur le socle ; `impact` = image où l'arme touche ; `ranged` = animation d'un tir ou d'un sort. Le héros (lot 2) : ses six poses peintes d'une image chacune, animées par le code. Durées : `balance.json › closeup`.",
   "backdrops": {
     "default": "plaine",
     "terrains": {
@@ -35,6 +35,20 @@
     },
     "physical": "fleche",
     "magic": "orbe"
+  },
+  "slashes": {
+    "byWeaponType": {
+      "epee": "diagonale",
+      "dagues": "croix",
+      "griffes": "croix",
+      "hache": "arc",
+      "poings": "arc",
+      "harpon": "arc",
+      "ramure": "arc",
+      "banniere": "diagonale",
+      "lance_courte": "diagonale"
+    },
+    "default": "diagonale"
   },
   "fighters": {
     "heros": {
