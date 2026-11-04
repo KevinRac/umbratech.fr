@@ -898,6 +898,7 @@ function checkBattleAnims(data: GameData, issues: string[]): void {
     }
     if (!f.anims.garde) issues.push(`${at}.anims : la garde est obligatoire`);
     if (!f.anims.attaque) issues.push(`${at}.anims : l'attaque est obligatoire`);
+    for (const [name, anim] of Object.entries(f.anims)) if (anim.after && !f.anims[anim.after]) issues.push(`${at}.anims.${name}.after : animation « ${anim.after} » absente`);
     if (f.ranged && !f.anims[f.ranged]) issues.push(`${at}.ranged : animation « ${f.ranged} » absente`);
   }
 }

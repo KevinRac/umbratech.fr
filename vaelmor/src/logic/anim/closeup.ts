@@ -148,13 +148,13 @@ export function exchangeShapes(strikes: readonly Strike[], kindOf: (unitId: stri
 
 /**
  * Durée d'un échange dans l'écran rapproché, transitions comprises (n°209) :
- * entrée, coups séparés par `between`, sortie ; `factor` = vitesse
+ * entrée, temps d'arrêt d'ouverture, coups séparés par `between`, sortie ; `factor` = vitesse
  * (1 « Normales », 0,5 « Rapides », ×0,5 de plus avec Maj maintenue).
  */
 export function exchangeDuration(shapes: readonly StrikeShape[], t: CloseupTimings, factor = 1): number {
   if (shapes.length === 0) return 0;
   const strikes = shapes.reduce((n, s) => n + strikeDuration(s, t), 0);
-  return Math.round((t.entry + strikes + t.between * (shapes.length - 1) + t.exit) * factor);
+  return Math.round((t.entry + t.opening + strikes + t.between * (shapes.length - 1) + t.exit) * factor);
 }
 
 /** Étape en cours à l'instant `ms` d'un coup (la dernière une fois le coup fini). */
@@ -194,8 +194,8 @@ export function frameAt(steps: readonly Step[], ms: number, frames: number, impa
  * Image d'une incantation entretenue à l'instant `ms` du coup (sorts) :
  * l'élan (images avant `loop[0]`) se joue de la préparation jusqu'au début du
  * sort, la boucle `[loop[0], loop[1]]` en aller-retour (`loopMs` par image)
- * tant que le sort dure, puis le lancement (de `impact` à la fin) sur
- * l'impact, le recul et la pose.
+ * tant que le sort dure, puis le lancement (de `impact` à la dernière image,
+ * une image toutes les `loopMs`), dont la dernière image est tenue.
  */
 export function castFrameAt(steps: readonly Step[], ms: number, frames: number, loop: readonly [number, number], impact: number, loopMs = 90): number {
   const spell = steps.find((s) => s.name === 'spell');
@@ -214,10 +214,8 @@ export function castFrameAt(steps: readonly Step[], ms: number, frames: number, 
     const k = Math.floor((ms - spell.at) / loopMs) % (2 * n);
     return a + (k <= n ? k : 2 * n - k);
   }
-  const end = pose.at + pose.ms;
-  const rest = frames - 1 - impact;
-  if (rest <= 0 || ms >= end) return frames - 1;
-  return Math.min(frames - 1, impact + Math.floor(((ms - releaseAt) / Math.max(1, end - releaseAt)) * (rest + 1)));
+  // Lancement : une image toutes les `loopMs`, puis la dernière est tenue (relayée par `tenue` s'il y en a une).
+  return Math.min(frames - 1, impact + Math.floor((ms - releaseAt) / loopMs));
 }
 
 /* ---------- Découpage des événements ---------- */

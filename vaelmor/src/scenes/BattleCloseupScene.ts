@@ -231,6 +231,8 @@ export class BattleCloseupScene extends Phaser.Scene {
     try {
       this.build(spec);
       await this.entry(spec);
+      // Temps d'arrêt : les deux combattants face à face, en garde, avant le premier geste.
+      await this.wait(spec.timings.opening);
       if (spec.heal) await this.playHeal(spec.heal.amount, spec.heal.hpAfter);
       const kindOf = (id: string): AttackKind => (id === spec.left.id ? spec.left.kind : spec.right.kind);
       const styleOf = (id: string): CritStyle => (id === spec.left.id ? spec.left.critStyle : spec.right.critStyle);
@@ -422,6 +424,7 @@ export class BattleCloseupScene extends Phaser.Scene {
       const last = steps[steps.length - 1];
       const total = last ? last.at + last.ms : 0;
       const clock = { ms: 0 };
+      let heldFrom: number | undefined;
       void this.tween({
         targets: clock,
         ms: total,
@@ -429,6 +432,17 @@ export class BattleCloseupScene extends Phaser.Scene {
         onUpdate: () => {
           // Incantation entretenue : la boucle tourne tant que le sort se déroule.
           const f = info?.loop && steps.some((st) => st.name === 'spell') ? castFrameAt(steps, clock.ms, info.frames, info.loop, info.impact ?? info.loop[1] + 1, 60) : frameAt(steps, clock.ms, info?.frames ?? 1, info?.impact ?? 0);
+          const tenue = info?.after ? def.anims[info.after] : undefined;
+          if (tenue && info?.after && f === (info.frames ?? 1) - 1 && clock.ms > (heldFrom ??= clock.ms) + 60) {
+            // Pose tenue après la dernière image : boucle en aller-retour (cheveux, étoffes au vent).
+            // Une fois en entier, puis aller-retour sur sa boucle (`loop`, toute l'animation sinon).
+            const [lo, hi] = tenue.loop ?? [0, tenue.frames - 1];
+            const step = Math.floor((clock.ms - heldFrom) / 80);
+            const n = hi - lo;
+            const k = step <= hi ? step : n > 0 ? lo + (((step - hi) % (2 * n)) <= n ? n - ((step - hi) % (2 * n)) : ((step - hi) % (2 * n)) - n) : hi;
+            a.sprite.setFrame(fighterFrame(this, def, info.after, Math.min(tenue.frames - 1, k)) ?? 0);
+            return;
+          }
           a.sprite.setFrame(fighterFrame(this, def, anim, f) ?? 0);
         },
       });

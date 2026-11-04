@@ -134,6 +134,13 @@ describe('critère « vitesse acceptable » (n°209)', () => {
     }
   });
 
+  it('l’échange commence par un temps d’arrêt (environ une seconde avec l’entrée)', () => {
+    const one = exchangeShapes([strike('a', 'b')], () => 'melee');
+    expect(exchangeDuration(one, t, 1)).toBe(t.entry + t.opening + strikeDuration(one[0] as StrikeShape, t) + t.exit);
+    expect(t.entry + t.opening).toBeGreaterThanOrEqual(850);
+    expect(t.entry + t.opening).toBeLessThanOrEqual(1200);
+  });
+
   it('Rapides divise la durée par deux ; rien à jouer sans coup', () => {
     expect(exchangeDuration(ordinary, t, 0.5)).toBe(Math.round(exchangeDuration(ordinary, t, 1) / 2));
     expect(exchangeDuration([], t, 1)).toBe(0);

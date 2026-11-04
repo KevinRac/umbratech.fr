@@ -163,6 +163,7 @@
   },
   "closeup": {
     "entry": 220,
+    "opening": 750,
     "exit": 260,
     "between": 120,
     "prep": 150,
@@ -182,7 +183,7 @@
     "critCuts": 3,
     "critPose": 320,
     "shake": { "hit": 4, "crit": 10, "critMs": 300 },
-    "budget": { "normal": 3500, "fast": 1800 },
+    "budget": { "normal": 4300, "fast": 2200 },
     "tourbillon": { "vanish": 120, "passes": 6, "pass": 85, "reappear": 160 },
     "bond": { "rise": 280, "apex": 200, "fall": 170 },
     "spell": { "cast": 420, "crit": 780 }

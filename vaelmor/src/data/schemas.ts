@@ -177,6 +177,8 @@ const ms = z.number().int().min(0).max(5000);
  */
 export const closeupBalanceSchema = z.strictObject({
   entry: ms,
+  /** Temps d'arrêt après l'entrée, avant le premier geste : on voit les deux combattants face à face. */
+  opening: ms,
   exit: ms,
   between: ms,
   prep: ms,
@@ -964,7 +966,7 @@ export const CRIT_STYLES = ['assaut', 'tourbillon', 'bond'] as const;
 export type CritStyle = (typeof CRIT_STYLES)[number];
 
 /** Animations d'une feuille peinte (rangée de la feuille, nombre d'images, image d'impact). */
-export const FIGHTER_ANIMS = ['garde', 'attaque', 'critique', 'competence', 'coup', 'ko'] as const;
+export const FIGHTER_ANIMS = ['garde', 'attaque', 'critique', 'competence', 'coup', 'ko', 'tenue'] as const;
 export type FighterAnim = (typeof FIGHTER_ANIMS)[number];
 
 const fighterAnimSchema = z.strictObject({
@@ -978,6 +980,8 @@ const fighterAnimSchema = z.strictObject({
    * (à partir de l'image d'impact).
    */
   loop: z.tuple([z.number().int().min(0).max(23), z.number().int().min(0).max(23)]).optional(),
+  /** Animation jouée en boucle (aller-retour) quand celle-ci a fini, tant que la pose est tenue : cheveux et étoffes au vent (`tenue`). */
+  after: z.enum(['tenue']).optional(),
 });
 
 export const fighterSchema = z.strictObject({
