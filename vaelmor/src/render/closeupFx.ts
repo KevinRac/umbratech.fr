@@ -16,6 +16,8 @@ export const FX_TEX = {
   slash: (shape: SlashShape): string => `closeup:fx:slash:${shape}`,
   rune: 'closeup:fx:rune',
   dot: 'closeup:fx:dot',
+  /** Boule douce (flamme, bulle, poussière) : cœur blanc, deux anneaux plus sombres, pixels nets. */
+  puff: 'closeup:fx:puff',
 } as const;
 
 const EDGE = PALETTE.lumiereDoree;
@@ -87,6 +89,18 @@ export function ensureCloseupFx(scene: Phaser.Scene): void {
     rune.set(gx + 1, rh / 2 - 1, EDGE);
   }
   rune.toTexture(scene, FX_TEX.rune);
+  const r = 6;
+  const puff = new PixelCanvas(r * 2 + 1, r * 2 + 1);
+  for (let y = -r; y <= r; y++) {
+    for (let x = -r; x <= r; x++) {
+      const d = Math.sqrt(x * x + y * y);
+      if (d > r + 0.3) continue;
+      // Tons qui seront multipliés par la teinte : cœur blanc, anneaux gris clair (jamais noir).
+      const c = d < r * 0.4 ? 0xffffff : d < r * 0.75 ? 0xdcdcdc : 0xa8a8a8;
+      puff.set(x + r, y + r, c, d > r - 0.7 ? 170 : 255);
+    }
+  }
+  puff.toTexture(scene, FX_TEX.puff);
   const dot = new PixelCanvas(3, 3);
   dot.fillRect(0, 0, 3, 3, 0xffffff);
   dot.toTexture(scene, FX_TEX.dot);

@@ -64,7 +64,7 @@ import {
   type RosterSort,
 } from '../logic/tactics/prep';
 import { areaOf, costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
-import { attackKind, backdropFor, planSegments, projectileFor, slashFor, type CombatEvent, type HealEvent, type Segment } from '../logic/anim/closeup';
+import { attackKind, backdropFor, critStyleFor, planSegments, projectileFor, slashFor, type CombatEvent, type HealEvent, type Segment } from '../logic/anim/closeup';
 import { gradeMatrix } from '../render/grade';
 import type { BattleCloseupScene, CloseupFighter, CloseupSpec } from './BattleCloseupScene';
 import { isStunned } from '../logic/tactics/status';
@@ -2649,6 +2649,7 @@ export class BattleScene extends Phaser.Scene {
         slash: slashFor(u.weapon, anims),
         platform: backdropFor(terrainAt(this.state.map, u.x, u.y).id, this.state.zone, anims),
         painted: anims.fighters[u.sprite.split('#')[0] ?? u.sprite] ?? null,
+        critStyle: critStyleFor(u.weapon, anims.fighters[u.sprite.split('#')[0] ?? u.sprite] ?? null, anims),
       };
     };
     const playerFirst = attacker.team !== 'enemy';
@@ -2708,9 +2709,10 @@ export class BattleScene extends Phaser.Scene {
     // La classe demandée n'est pas déployée (5 places) : le membre de la compagnie d'essai rejoint le banc.
     if (!this.state.units.some(mineMatch)) {
       const index = this.party.findIndex((m) => m.class === mine && !m.hero);
-      const member = this.party[index];
       const hero = this.state.units.find((u) => u.isHero);
-      if (member && hero) this.state.units.push(memberUnit(this.gameData, this.rules, member, emptyLoadout(), `banc_${mine}`, index, hero.x, hero.y));
+      // Pas de membre de cette classe (c'est celle du héros) : une recrue d'essai la remplace.
+      const member = this.party[index] ?? (this.gameData.classes.some((c) => c.id === mine) ? { name: 'Recrue', class: mine ?? '', level: 3, hero: false } : null);
+      if (member && hero) this.state.units.push(memberUnit(this.gameData, this.rules, member, emptyLoadout(), `banc_${mine}`, Math.max(0, index), hero.x, hero.y));
     }
     const left = this.state.units.find(mineMatch) ?? this.state.units.find((u) => u.team === 'player');
     const right = this.state.units.find((u) => u.team === 'enemy' && u.kindId === foe) ?? this.state.units.find((u) => u.team === 'enemy');

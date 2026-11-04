@@ -10,7 +10,7 @@
  * - `attackKind`, `projectileFor`, `backdropFor` : ce que l'écran montre,
  *   d'après l'arme, la distance, le terrain et la zone (`battleAnims.json`).
  */
-import type { BackdropId, BattleAnimsFile, CloseupTimings, ProjectileId, SlashId } from '../../data/schemas';
+import type { BackdropId, BattleAnimsFile, CloseupTimings, CritStyle, FighterDef, ProjectileId, SlashId } from '../../data/schemas';
 import type { BattleEvent, Strike } from '../tactics/types';
 
 /* ---------- Ce que l'écran montre ---------- */
@@ -46,6 +46,11 @@ export function slashFor(weapon: WeaponLike, anims: BattleAnimsFile): SlashId {
   return anims.slashes.byWeaponType[weapon.type] ?? anims.slashes.default;
 }
 
+/** Chorégraphie du critique au corps à corps : celle de la feuille peinte, sinon celle de l'arme. */
+export function critStyleFor(weapon: WeaponLike, painted: Pick<FighterDef, 'critStyle'> | null, anims: BattleAnimsFile): CritStyle {
+  return painted?.critStyle ?? anims.critStyles.byWeaponType[weapon.type] ?? anims.critStyles.default;
+}
+
 /** Coupures d'un critique : celle de l'arme, puis les autres dans l'ordre diagonale, croix, arc (GDD §11.3 : 2 à 3 coupes). */
 export function critSlashes(first: SlashId, count: number): SlashId[] {
   const order: SlashId[] = ['diagonale', 'croix', 'arc'];
@@ -55,7 +60,7 @@ export function critSlashes(first: SlashId, count: number): SlashId[] {
 
 /* ---------- Chronologie ---------- */
 
-export type StepName = 'dark' | 'prep' | 'dash' | 'draw' | 'rune' | 'fly' | 'strike' | 'cut' | 'impact' | 'recoil' | 'pose' | 'back' | 'settle';
+export type StepName = 'dark' | 'prep' | 'dash' | 'draw' | 'rune' | 'fly' | 'spell' | 'choreo' | 'strike' | 'cut' | 'impact' | 'recoil' | 'pose' | 'back' | 'settle';
 
 /** Une étape d'un coup : début (ms depuis le début du coup) et durée, à la vitesse « Normales ». */
 export interface Step {
@@ -70,6 +75,15 @@ export interface StrikeShape {
   readonly hit: boolean;
   /** Deuxième coup de la même unité (double attaque) : pas de préparation. */
   readonly repeat: boolean;
+  /** Chorégraphie du critique au corps à corps (`assaut` par défaut). */
+  readonly style?: CritStyle;
+}
+
+/** Durée de la chorégraphie d'un critique (`choreo`) : tourbillon ou bond. */
+export function choreoDuration(style: CritStyle, t: CloseupTimings): number {
+  if (style === 'tourbillon') return t.tourbillon.vanish + t.tourbillon.passes * t.tourbillon.pass + t.tourbillon.reappear;
+  if (style === 'bond') return t.bond.rise + t.bond.apex + t.bond.fall;
+  return 0;
 }
 
 /**
@@ -88,12 +102,21 @@ export function strikeSteps(shape: StrikeShape, t: CloseupTimings): Step[] {
   };
   if (shape.crit && shape.hit) push('dark', t.critDark);
   if (!shape.repeat) push('prep', t.prep);
-  if (shape.kind === 'melee') {
+  const crit = shape.crit && shape.hit;
+  const style = shape.style ?? 'assaut';
+  if (shape.kind === 'melee' && crit && style !== 'assaut') {
+    // Tourbillon ou bond : la chorégraphie remplace le dash et les coupes.
+    push('choreo', choreoDuration(style, t));
+  } else if (shape.kind === 'melee') {
     push('dash', t.dash);
-    if (shape.crit && shape.hit) for (let i = 0; i < t.critCuts; i++) push('cut', t.critCut);
+    if (crit) for (let i = 0; i < t.critCuts; i++) push('cut', t.critCut);
     else push('strike', t.strike);
+  } else if (shape.kind === 'magic') {
+    // Le sort se joue à la cible (colonnes, rayons…), plus grand au critique.
+    push('rune', t.rune);
+    push('spell', crit ? t.spell.crit : t.spell.cast);
   } else {
-    push(shape.kind === 'magic' ? 'rune' : 'draw', shape.kind === 'magic' ? t.rune : t.draw);
+    push('draw', t.draw);
     push('fly', t.fly);
   }
   push('impact', t.impact);
@@ -114,12 +137,12 @@ export function strikeDuration(shape: StrikeShape, t: CloseupTimings): number {
  * Forme des coups d'un échange : chaque coup prend le geste de son auteur ;
  * le second coup d'une même unité (double attaque) est un coup répété.
  */
-export function exchangeShapes(strikes: readonly Strike[], kindOf: (unitId: string) => AttackKind): StrikeShape[] {
+export function exchangeShapes(strikes: readonly Strike[], kindOf: (unitId: string) => AttackKind, styleOf: (unitId: string) => CritStyle = () => 'assaut'): StrikeShape[] {
   const struck = new Set<string>();
   return strikes.map((s) => {
     const repeat = struck.has(s.attackerId);
     struck.add(s.attackerId);
-    return { kind: kindOf(s.attackerId), crit: s.crit, hit: s.hit, repeat };
+    return { kind: kindOf(s.attackerId), crit: s.crit, hit: s.hit, repeat, style: styleOf(s.attackerId) };
   });
 }
 
@@ -149,8 +172,9 @@ export function stepAt(steps: readonly Step[], ms: number): Step | null {
  */
 export function frameAt(steps: readonly Step[], ms: number, frames: number, impact: number): number {
   if (frames <= 1) return 0;
-  const hitStep = steps.find((s) => s.name === 'strike' || s.name === 'cut' || s.name === 'impact');
-  const start = steps.find((s) => s.name === 'prep' || s.name === 'dash' || s.name === 'draw' || s.name === 'rune');
+  // Une chorégraphie (tourbillon, bond) garde l'image d'impact pour l'atterrissage : ses images la précèdent.
+  const hitStep = steps.find((s) => s.name === 'strike' || s.name === 'cut' || s.name === 'spell' || s.name === 'impact');
+  const start = steps.find((s) => s.name === 'prep' || s.name === 'dash' || s.name === 'draw' || s.name === 'rune' || s.name === 'choreo');
   const pose = steps.find((s) => s.name === 'pose');
   if (!hitStep || !start || !pose) return 0;
   const i = Math.max(0, Math.min(frames - 1, impact));

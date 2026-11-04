@@ -25,7 +25,7 @@
  * Entrée, Espace, Échap ou un clic passent l'échange : tout se pose aussitôt.
  */
 import Phaser from 'phaser';
-import type { BackdropId, CloseupTimings, FighterAnim, FighterDef, ProjectileId, SlashId } from '../data/schemas';
+import type { BackdropId, CloseupTimings, CritStyle, FighterAnim, FighterDef, ProjectileId, SlashId } from '../data/schemas';
 import { critSlashes, exchangeShapes, frameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
 import type { Strike, Team } from '../logic/tactics/types';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
@@ -78,6 +78,8 @@ export interface CloseupFighter {
   readonly projectile: ProjectileId | null;
   /** Coupure dessinée à l'impact d'un coup de mêlée. */
   readonly slash: SlashId;
+  /** Chorégraphie de son critique au corps à corps (assaut, tourbillon, bond). */
+  readonly critStyle: CritStyle;
   /** Fond du socle (terrain de sa case). */
   readonly platform: BackdropId;
   /** Feuille peinte de l'écran rapproché (`battleAnims.json › fighters`), ou null : sprite de carte agrandi. */
@@ -229,7 +231,8 @@ export class BattleCloseupScene extends Phaser.Scene {
       await this.entry(spec);
       if (spec.heal) await this.playHeal(spec.heal.amount, spec.heal.hpAfter);
       const kindOf = (id: string): AttackKind => (id === spec.left.id ? spec.left.kind : spec.right.kind);
-      const shapes = exchangeShapes(spec.strikes, kindOf);
+      const styleOf = (id: string): CritStyle => (id === spec.left.id ? spec.left.critStyle : spec.right.critStyle);
+      const shapes = exchangeShapes(spec.strikes, kindOf, styleOf);
       for (let i = 0; i < spec.strikes.length; i++) {
         const strike = spec.strikes[i] as Strike;
         const shape = shapes[i];
@@ -440,6 +443,13 @@ export class BattleCloseupScene extends Phaser.Scene {
           this.rune(a, step.ms);
           await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - 4, scaleY: a.scale, duration: step.ms });
           break;
+        case 'choreo':
+          if (a.spec.critStyle === 'tourbillon') await this.tourbillon(a, d, strike, t);
+          else await this.bond(a, d, t);
+          break;
+        case 'spell':
+          await this.spell(a, d, crit, step.ms);
+          break;
         case 'fly':
           await this.projectile(a, d, step.ms);
           break;
@@ -540,10 +550,246 @@ export class BattleCloseupScene extends Phaser.Scene {
    */
   private async critIntro(a: FighterView, ms: number): Promise<void> {
     a.sprite.setTint(PALETTE.ombreProfonde).setTintMode(Phaser.TintModes.FILL);
-    this.zoomTo(CRIT_ZOOM, a, ms);
-    if (this.dim) await this.tween({ targets: this.dim, alpha: 0.7, duration: ms });
-    else await this.wait(ms);
+    if (a.spec.kind === 'magic') {
+      // Sort critique (façon sage) : le décor plonge dans la couleur du sort, sans zoom.
+      const color = a.spec.elementColor ?? PALETTE.violetBrume;
+      this.dim?.setFillStyle(mixColor(color, PALETTE.encre, 0.72), 1);
+      if (this.dim) await this.tween({ targets: this.dim, alpha: 0.88, duration: ms });
+      else await this.wait(ms);
+    } else {
+      this.dim?.setFillStyle(PALETTE.ombreProfonde, 1);
+      // Le bond se voit en entier : le zoom vient à l'atterrissage.
+      if (a.spec.critStyle !== 'bond') this.zoomTo(CRIT_ZOOM, a, ms);
+      if (this.dim) await this.tween({ targets: this.dim, alpha: 0.7, duration: ms });
+      else await this.wait(ms);
+    }
     a.sprite.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();
+  }
+
+  /* ---------- Chorégraphies ---------- */
+
+  /**
+   * Critique « tourbillon » (façon Bretteur, Lyn) : l'attaquant s'efface dans un
+   * éclair, ses doubles traversent la cible de tous les côtés en laissant de
+   * grandes entailles, puis il réapparaît au contact dans sa pose finale.
+   */
+  private async tourbillon(a: FighterView, d: FighterView, strike: Strike, t: CloseupTimings): Promise<void> {
+    const tb = t.tourbillon;
+    this.burst(a.sprite.x, a.sprite.y - CHEST, 'lanterne', 0xffffff, 14);
+    await this.tween({ targets: a.sprite, alpha: 0, duration: tb.vanish });
+    const cx = d.home.x;
+    const cy = d.home.y - CHEST;
+    const angles = [195, 15, 135, -40, 250, 75, 160, -15, 225, 40];
+    const color = a.spec.elementColor ?? 0xffffff;
+    for (let i = 0; i < tb.passes; i++) {
+      if (!this.busy) return;
+      const ang = ((angles[i % angles.length] ?? 0) * Math.PI) / 180;
+      const r = 230;
+      const sx = cx + Math.cos(ang) * r;
+      const sy = cy + Math.sin(ang) * r * 0.55;
+      const ex = cx - Math.cos(ang) * r;
+      const ey = cy - Math.sin(ang) * r * 0.55;
+      const ghost = this.add.sprite(sx, sy + CHEST, a.sprite.texture.key, a.sprite.frame.name);
+      ghost.setOrigin(a.sprite.originX, a.sprite.originY).setScale(a.scale).setFlipX(ex < sx);
+      this.stage.addAt(ghost, this.stage.getIndex(d.sprite) + 1);
+      ghost.setTint(mixColor(color, PALETTE.ciel, 0.4)).setAlpha(0.9);
+      this.ghosts({ ...a, sprite: ghost }, tb.pass, mixColor(color, PALETTE.ciel, 0.5), 2, 0.22);
+      this.cutLine(cx, cy, Math.atan2(ey - sy, ex - sx), color);
+      this.whiteFlash(d.sprite, true);
+      this.time.delayedCall(34, () => this.whiteFlash(d.sprite, false));
+      this.burst(cx, cy, null, color, 6);
+      this.cameras.main.shake(this.scaled(70), (this.spec?.reduced ? 1 : 3) / this.scale.width);
+      if (strike.hit && i === tb.passes - 1) this.screenFlash(0.9, 60);
+      await this.tween({ targets: ghost, x: ex, y: ey + CHEST, duration: tb.pass, ease: 'Linear' });
+      ghost.destroy();
+    }
+    // Réapparition au contact, pose finale.
+    a.sprite.setPosition(d.home.x - a.dir * 96, a.home.y).setAlpha(1);
+    this.screenFlash(0.6, 50);
+    const last = a.painted?.anims.critique;
+    if (a.painted && last) this.pose(a, 'critique', last.frames - 1);
+    await this.wait(tb.reappear);
+  }
+
+  /** Grande entaille qui traverse l'écran (blanche au cœur, liseré de l'élément). */
+  private cutLine(x: number, y: number, angle: number, color: number): void {
+    const glow = this.add.rectangle(x, y, 620, 16, color, 0.45).setRotation(angle).setBlendMode(Phaser.BlendModes.ADD);
+    const core = this.add.rectangle(x, y, 620, 5, 0xffffff, 1).setRotation(angle).setBlendMode(Phaser.BlendModes.ADD);
+    this.stage.add([glow, core]);
+    glow.setScale(0.2, 1);
+    core.setScale(0.2, 1);
+    this.tweens.add({ targets: [glow, core], scaleX: 1, duration: this.scaled(60), ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: [glow, core], alpha: 0, scaleY: 0.2, delay: this.scaled(80), duration: this.scaled(200), onComplete: () => { glow.destroy(); core.destroy(); } });
+  }
+
+  /**
+   * Critique « bond » (façon héros, Hector) : l'attaquant s'envole hors de
+   * l'écran, un éclat brille au sommet, il s'abat sur la cible : onde de choc,
+   * fissures, poussière et grosse secousse.
+   */
+  private async bond(a: FighterView, d: FighterView, t: CloseupTimings): Promise<void> {
+    const b = t.bond;
+    const contact = d.home.x - a.dir * 96;
+    this.ghosts(a, b.rise, 0xffffff, 4);
+    await this.tween({ targets: a.sprite, x: (a.home.x + contact) / 2, y: 150, scaleY: a.scale * 1.06, duration: b.rise, ease: 'Quad.easeOut' });
+    // Éclat au sommet, au-dessus de la cible : le personnage y tient un instant, arme levée.
+    const star = this.add.graphics({ x: (a.home.x + contact) / 2 + a.dir * 40, y: 48 });
+    star.fillStyle(0xffffff, 1).fillTriangle(0, -26, 5, 0, -5, 0).fillTriangle(0, 26, 5, 0, -5, 0).fillTriangle(-26, 0, 0, 5, 0, -5).fillTriangle(26, 0, 0, 5, 0, -5);
+    star.setBlendMode(Phaser.BlendModes.ADD).setScale(0.2);
+    this.stage.add(star);
+    this.tweens.add({ targets: star, scale: 1.4, angle: 45, alpha: 0, duration: this.scaled(b.apex + 80), onComplete: () => star.destroy() });
+    await this.tween({ targets: a.sprite, y: 130, duration: b.apex, ease: 'Sine.easeInOut' });
+    this.ghosts(a, b.fall, 0xffffff, 3);
+    await this.tween({ targets: a.sprite, x: contact, y: a.home.y, scaleY: a.scale, duration: b.fall, ease: 'Quad.easeIn' });
+    this.shockwave(d.home.x - a.dir * 30, d.home.y);
+    // Coup de zoom à l'impact (le retour en garde dézoome).
+    this.zoomTo(1.3, d, 70);
+    this.cameras.main.shake(this.scaled(320), (this.spec?.reduced ? 4 : 13) / this.scale.width);
+    this.screenFlash(0.7, 60);
+  }
+
+  /** Onde de choc au sol, fissures et poussière (atterrissage, coup de poing de golem). */
+  private shockwave(x: number, y: number): void {
+    const ring = this.add.ellipse(x, y, 60, 16, 0xffffff, 0).setStrokeStyle(5, PALETTE.lumiereDoree, 1).setBlendMode(Phaser.BlendModes.ADD);
+    this.stage.add(ring);
+    this.tweens.add({ targets: ring, scaleX: 6, scaleY: 4, alpha: 0, duration: this.scaled(420), ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+    const cracks = this.add.graphics();
+    cracks.lineStyle(4, mixColor(PALETTE.terreSombre, PALETTE.ombreProfonde, 0.5), 1);
+    for (const dir of [-1, 1]) {
+      let cx = x;
+      let cy = y;
+      cracks.beginPath().moveTo(cx, cy);
+      for (let i = 0; i < 4; i++) {
+        cx += dir * (26 + i * 8);
+        cy += (i % 2 === 0 ? 3 : -2);
+        cracks.lineTo(cx, cy);
+      }
+      cracks.strokePath();
+    }
+    this.stage.addAt(cracks, this.stage.getIndex(this.dim ?? ring) + 1);
+    this.tweens.add({ targets: cracks, alpha: 0, delay: this.scaled(700), duration: this.scaled(400), onComplete: () => cracks.destroy() });
+    this.burst(x - 40, y - 6, 'pierre', PALETTE.terreSeche, 14);
+    this.burst(x + 40, y - 6, 'pierre', PALETTE.terreSeche, 14);
+  }
+
+  /* ---------- Sorts ---------- */
+
+  /**
+   * Sort mis en scène à la cible (façon sages GBA) selon l'élément : colonnes
+   * de feu (Cendre), geysers (Marée), épines (Racine), rayons tombés du ciel
+   * (Lanterne), rochers (Pierre) ; sans élément, l'orbe vole jusqu'à la cible.
+   * Au critique, plus de colonnes, plus hautes, et une explosion finale.
+   */
+  private async spell(a: FighterView, d: FighterView, crit: boolean, ms: number): Promise<void> {
+    const element = a.spec.element;
+    const color = a.spec.elementColor ?? PALETTE.cyanEclat;
+    if (!element || !['cendre', 'maree', 'racine', 'lanterne', 'pierre'].includes(element)) {
+      await this.projectile(a, d, ms);
+      this.ring(d.home.x, d.home.y - CHEST, color);
+      return;
+    }
+    const x = d.home.x;
+    const ground = d.home.y;
+    const offsets = crit ? [0, -70, 70, -135, 135] : [0, -55, 55];
+    const step = (ms * 0.45) / offsets.length;
+    // Lueur de la couleur du sort sur toute la scène.
+    const wash = this.add.rectangle(-40, -40, this.scale.width + 80, this.scale.height + 80, color, 0).setOrigin(0, 0).setBlendMode(Phaser.BlendModes.ADD);
+    this.stage.add(wash);
+    this.tweens.add({ targets: wash, fillAlpha: crit ? 0.22 : 0.12, duration: this.scaled(ms * 0.4), yoyo: true, hold: this.scaled(ms * 0.2), onComplete: () => wash.destroy() });
+    offsets.forEach((dx, i) => {
+      this.time.delayedCall(this.scaled(i * step), () => {
+        if (!this.busy || this.skipping) return;
+        if (element === 'cendre' || element === 'maree') this.column(x + dx, ground, element, color, crit, ms);
+        else if (element === 'racine') this.thorn(x + dx, ground, crit);
+        else if (element === 'lanterne') this.beam(x + dx, ground, color, crit, ms);
+        else this.rock(x + dx, ground, crit, ms);
+      });
+    });
+    await this.wait(ms * 0.75);
+    this.ring(x, ground - CHEST, color);
+    if (crit) {
+      this.ring(x, ground - CHEST, 0xffffff);
+      this.screenFlash(0.8, 70);
+    }
+    this.burst(x, ground - CHEST, element, color, crit ? 30 : 16);
+    await this.wait(ms * 0.25);
+  }
+
+  /** Colonne de flammes (Cendre) ou geyser (Marée) qui jaillit du sol : langues de boules douces, lueur au pied. */
+  private column(x: number, ground: number, element: string, color: number, crit: boolean, ms: number): void {
+    const fire = element === 'cendre';
+    const height = crit ? 340 : 250;
+    const tints = fire ? [0xfff2a0, PALETTE.braise, PALETTE.orangeForge, PALETTE.rougeCendre] : [0xffffff, PALETTE.ecume, PALETTE.ciel, color];
+    const base = this.add.ellipse(x, ground, crit ? 110 : 80, 22, fire ? PALETTE.braise : PALETTE.ciel, 0).setBlendMode(Phaser.BlendModes.ADD);
+    this.stage.add(base);
+    this.tweens.add({ targets: base, fillAlpha: 0.6, duration: this.scaled(100) });
+    this.tweens.add({ targets: base, alpha: 0, delay: this.scaled(ms * 0.55), duration: this.scaled(240), onComplete: () => base.destroy() });
+    const life = 420;
+    const emitter = this.add.particles(x, ground, FX_TEX.puff, {
+      x: { min: -18, max: 18 },
+      speedY: { min: -(height / life) * 1000 * 1.15, max: -(height / life) * 1000 * 0.75 },
+      speedX: { min: -24, max: 24 },
+      lifespan: { min: life * 0.7, max: life },
+      scale: { start: crit ? 3.6 : 3, end: 0.4 },
+      alpha: { start: 1, end: 0.2 },
+      tint: tints,
+      frequency: 12,
+      quantity: 2,
+      blendMode: Phaser.BlendModes.ADD,
+    });
+    this.stage.add(emitter);
+    this.time.delayedCall(this.scaled(ms * 0.55), () => emitter.stop());
+    this.time.delayedCall(this.scaled(ms * 0.55) + life + 100, () => emitter.destroy());
+  }
+
+  /** Épine de racine qui perce le sol (Racine). */
+  private thorn(x: number, ground: number, crit: boolean): void {
+    const h = crit ? 190 : 140;
+    const g = this.add.graphics({ x, y: ground });
+    g.fillStyle(PALETTE.terreSombre, 1).fillTriangle(-16, 0, 16, 0, 2, -h);
+    g.fillStyle(PALETTE.mousse, 1).fillTriangle(-10, 0, 4, 0, 0, -h * 0.92);
+    g.fillStyle(PALETTE.oliveClair, 1).fillTriangle(-6, -8, -2, -8, 0, -h * 0.8);
+    g.setScale(1, 0);
+    this.stage.add(g);
+    this.tweens.add({ targets: g, scaleY: 1, duration: this.scaled(110), ease: 'Back.easeOut' });
+    this.tweens.add({ targets: g, alpha: 0, scaleY: 0, delay: this.scaled(520), duration: this.scaled(220), onComplete: () => g.destroy() });
+    this.burst(x, ground - 20, 'racine', PALETTE.oliveClair, 8);
+  }
+
+  /** Rayon de lumière qui tombe du ciel (Lanterne). */
+  private beam(x: number, ground: number, color: number, crit: boolean, ms: number): void {
+    const w = crit ? 46 : 32;
+    const outer = this.add.rectangle(x, ground, w, ground + 40, color, 0.4).setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD);
+    const core = this.add.rectangle(x, ground, w * 0.35, ground + 40, 0xffffff, 0.9).setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD);
+    this.stage.add([outer, core]);
+    for (const r of [outer, core]) {
+      r.setScale(0, 1);
+      this.tweens.add({ targets: r, scaleX: 1, duration: this.scaled(90), ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: r, scaleX: 0, alpha: 0, delay: this.scaled(ms * 0.45), duration: this.scaled(220), onComplete: () => r.destroy() });
+    }
+    this.burst(x, ground - 12, 'lanterne', color, 10);
+  }
+
+  /** Rocher qui tombe sur la cible (Pierre). */
+  private rock(x: number, ground: number, crit: boolean, ms: number): void {
+    const s = crit ? 1.4 : 1;
+    const g = this.add.graphics({ x, y: -60 });
+    g.fillStyle(mixColor(PALETTE.grisRoux, PALETTE.ombreProfonde, 0.3), 1).fillCircle(0, 0, 24 * s);
+    g.fillStyle(PALETTE.grisRoux, 1).fillCircle(-4 * s, -4 * s, 19 * s);
+    g.fillStyle(PALETTE.pierre, 1).fillCircle(-9 * s, -9 * s, 7 * s);
+    this.stage.add(g);
+    this.tweens.add({
+      targets: g,
+      y: ground - CHEST + 20,
+      angle: 160,
+      duration: this.scaled(ms * 0.35),
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        this.burst(x, ground - 20, 'pierre', PALETTE.terreSeche, 12);
+        this.cameras.main.shake(this.scaled(120), (this.spec?.reduced ? 1 : 4) / this.scale.width);
+        this.tweens.add({ targets: g, alpha: 0, duration: this.scaled(160), onComplete: () => g.destroy() });
+      },
+    });
   }
 
   private zoomTo(zoom: number, on: FighterView | null, ms: number): void {
@@ -578,13 +824,13 @@ export class BattleCloseupScene extends Phaser.Scene {
   /* ---------- Effets ---------- */
 
   /** Copies fantômes qui suivent un mouvement et s'effacent (GDD §11.5 : 3 à 4). */
-  private ghosts(v: FighterView, ms: number, tint: number, count = 4): void {
+  private ghosts(v: FighterView, ms: number, tint: number, count = 4, alpha = 0.45): void {
     for (let i = 1; i <= count; i++) {
       this.time.delayedCall(this.scaled((ms * i) / (count + 1)), () => {
         if (!this.busy || this.skipping) return;
         const g = this.add.sprite(v.sprite.x, v.sprite.y, v.sprite.texture.key, v.sprite.frame.name);
         g.setOrigin(v.sprite.originX, v.sprite.originY).setScale(v.sprite.scaleX, v.sprite.scaleY).setFlipX(v.sprite.flipX);
-        g.setTint(tint).setTintMode(Phaser.TintModes.FILL).setAlpha(0.45).setBlendMode(Phaser.BlendModes.ADD);
+        g.setTint(tint).setTintMode(Phaser.TintModes.FILL).setAlpha(alpha).setBlendMode(Phaser.BlendModes.ADD);
         this.stage.addAt(g, this.stage.getIndex(v.sprite));
         this.tweens.add({ targets: g, alpha: 0, duration: this.scaled(240), onComplete: () => g.destroy() });
       });
@@ -611,7 +857,7 @@ export class BattleCloseupScene extends Phaser.Scene {
   /** Particules d'impact selon l'élément de l'arme (étincelles sans élément). */
   private burst(x: number, y: number, element: string | null, color: number | null, count: number): void {
     const b = BURSTS[element ?? 'aucun'] ?? (BURSTS['aucun'] as Burst);
-    const emitter = this.add.particles(x, y, FX_TEX.dot, {
+    const emitter = this.add.particles(x, y, element === 'cendre' || element === 'maree' ? FX_TEX.puff : FX_TEX.dot, {
       emitting: false,
       speed: b.speed,
       angle: b.angle,

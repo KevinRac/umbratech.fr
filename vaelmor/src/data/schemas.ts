@@ -199,6 +199,12 @@ export const closeupBalanceSchema = z.strictObject({
   shake: z.strictObject({ hit: z.number().int().min(0).max(24), crit: z.number().int().min(0).max(24), critMs: ms }),
   /** Critère « vitesse acceptable » (n°209) : durée maximale d'un échange coup + riposte, transitions comprises. */
   budget: z.strictObject({ normal: ms, fast: ms }),
+  /** Critique « tourbillon » (façon Bretteur) : disparition, assauts fantômes à travers la cible, réapparition. */
+  tourbillon: z.strictObject({ vanish: ms, passes: z.number().int().min(2).max(10), pass: ms, reappear: ms }),
+  /** Critique « bond » : envol hors de l'écran, éclat au sommet, chute sur la cible. */
+  bond: z.strictObject({ rise: ms, apex: ms, fall: ms }),
+  /** Sort mis en scène à la cible (colonnes, rayons, épines…) : durée ordinaire et au critique. */
+  spell: z.strictObject({ cast: ms, crit: ms }),
 });
 export type CloseupTimings = z.infer<typeof closeupBalanceSchema>;
 
@@ -953,6 +959,10 @@ export type ProjectileId = (typeof PROJECTILE_IDS)[number];
 export const SLASH_IDS = ['diagonale', 'croix', 'arc'] as const;
 export type SlashId = (typeof SLASH_IDS)[number];
 
+/** Style de critique au corps à corps (chorégraphie de l'écran rapproché). */
+export const CRIT_STYLES = ['assaut', 'tourbillon', 'bond'] as const;
+export type CritStyle = (typeof CRIT_STYLES)[number];
+
 /** Animations d'une feuille peinte (rangée de la feuille, nombre d'images, image d'impact). */
 export const FIGHTER_ANIMS = ['garde', 'attaque', 'critique', 'competence', 'coup', 'ko'] as const;
 export type FighterAnim = (typeof FIGHTER_ANIMS)[number];
@@ -975,6 +985,8 @@ export const fighterSchema = z.strictObject({
   anims: z.partialRecord(z.enum(FIGHTER_ANIMS), fighterAnimSchema),
   /** Animation d'un coup à distance ou d'un sort, si ce n'est pas l'attaque (le héros tend la main : `competence`). */
   ranged: z.enum(FIGHTER_ANIMS).optional(),
+  /** Style de critique propre à ce combattant (sinon celui de son arme). */
+  critStyle: z.enum(CRIT_STYLES).optional(),
 });
 export type FighterDef = z.infer<typeof fighterSchema>;
 
@@ -998,6 +1010,11 @@ export const battleAnimsFileSchema = z.strictObject({
   slashes: z.strictObject({
     byWeaponType: z.record(idSchema, z.enum(SLASH_IDS)),
     default: z.enum(SLASH_IDS),
+  }),
+  /** Style de critique au corps à corps, par type d'arme (`default` sinon) ; une feuille peut imposer le sien. */
+  critStyles: z.strictObject({
+    byWeaponType: z.record(idSchema, z.enum(CRIT_STYLES)),
+    default: z.enum(CRIT_STYLES),
   }),
   /** Feuilles peintes, par apparence (`sprite` sans détail `#n`). */
   fighters: z.record(z.string().regex(/^[a-z][a-z0-9_]*$/), fighterSchema),

@@ -8,6 +8,8 @@ import { loadGameData } from '../src/data';
 import {
   attackKind,
   backdropFor,
+  choreoDuration,
+  critStyleFor,
   critSlashes,
   slashFor,
   exchangeDuration,
@@ -68,12 +70,30 @@ describe('chronologie d’un coup (GDD §11.2, §11.3)', () => {
     expect(steps.map((s) => s.name)).toEqual(['prep', 'dash', 'strike', 'impact', 'recoil', 'pose', 'back']);
   });
 
-  it('un sort passe par le cercle runique et dure environ 1,6 s avec les transitions', () => {
+  it('un sort passe par le cercle runique puis se joue à la cible ; environ 1,6 à 1,9 s avec les transitions', () => {
     const steps = strikeSteps(shape('magic'), t);
-    expect(steps.map((s) => s.name)).toEqual(['prep', 'rune', 'fly', 'impact', 'recoil', 'pose', 'settle']);
+    expect(steps.map((s) => s.name)).toEqual(['prep', 'rune', 'spell', 'impact', 'recoil', 'pose', 'settle']);
     const total = t.entry + strikeDuration(shape('magic'), t) + t.exit;
     expect(total).toBeGreaterThanOrEqual(1400);
-    expect(total).toBeLessThanOrEqual(1800);
+    expect(total).toBeLessThanOrEqual(1900);
+  });
+
+  it('un sort critique est plus grand et commence par l’écran assombri', () => {
+    const steps = strikeSteps(shape('magic', { crit: true }), t);
+    expect(steps[0]?.name).toBe('dark');
+    expect(steps.find((s) => s.name === 'spell')?.ms).toBe(t.spell.crit);
+    expect(t.spell.crit).toBeGreaterThan(t.spell.cast);
+  });
+
+  it('les critiques « tourbillon » et « bond » remplacent dash et coupes par leur chorégraphie, sans dépasser 3 s', () => {
+    for (const style of ['tourbillon', 'bond'] as const) {
+      const steps = strikeSteps(shape('melee', { crit: true, style }), t);
+      expect(steps.map((s) => s.name)).toEqual(['dark', 'prep', 'choreo', 'impact', 'recoil', 'pose', 'back']);
+      expect(steps.find((s) => s.name === 'choreo')?.ms).toBe(choreoDuration(style, t));
+      expect(t.entry + strikeDuration(shape('melee', { crit: true, style }), t) + t.exit).toBeLessThanOrEqual(3000);
+    }
+    // Un coup ordinaire ne change pas avec le style.
+    expect(strikeSteps(shape('melee', { style: 'bond' }), t).map((s) => s.name)).toEqual(['prep', 'dash', 'strike', 'impact', 'recoil', 'pose', 'back']);
   });
 
   it('un tir lève l’arme puis lance le projectile, sans dash', () => {
@@ -146,6 +166,15 @@ describe('images d’une animation peinte', () => {
 
   it('une seule image : toujours la même', () => {
     expect(frameAt(steps, 500, 1, 0)).toBe(0);
+  });
+});
+
+describe('styles de critique', () => {
+  it('l’arme décide, une feuille peinte peut imposer le sien', () => {
+    expect(critStyleFor(weapon('epee_de_fer'), null, anims)).toBe('tourbillon');
+    expect(critStyleFor(weapon('hache_de_brakk'), null, anims)).toBe('bond');
+    expect(critStyleFor(weapon('lance_d_estoc'), null, anims)).toBe('assaut');
+    expect(critStyleFor(weapon('epee_de_fer'), anims.fighters['heros'] ?? null, anims)).toBe('bond');
   });
 });
 

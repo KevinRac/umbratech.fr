@@ -182,6 +182,9 @@
     "critCuts": 3,
     "critPose": 320,
     "shake": { "hit": 4, "crit": 10, "critMs": 300 },
-    "budget": { "normal": 3500, "fast": 1800 }
+    "budget": { "normal": 3500, "fast": 1800 },
+    "tourbillon": { "vanish": 120, "passes": 6, "pass": 85, "reappear": 160 },
+    "bond": { "rise": 280, "apex": 200, "fall": 170 },
+    "spell": { "cast": 420, "crit": 780 }
   }
 }

@@ -1,5 +1,5 @@
 {
-  "$comment": "Écran de combat rapproché (jalon M8, GDD §11, décisions n°204 à n°222). `backdrops` : fond peint par code selon le terrain du défenseur (`terrains`), remplacé par celui de la zone quand elle en impose un (`zones`), sinon `default`. `projectiles` : ce qui part d'une arme qui frappe à distance (par type d'arme) ; une arme magique lance `magic` (teinté par son élément). `slashes` : coupure dessinée à l'impact d'un coup de mêlée, selon le type d'arme. `fighters` : feuilles peintes de l'écran rapproché, par apparence (`sprite` sans détail) ; une apparence absente garde son sprite de carte agrandi (repli, n°215). Une feuille (`assets/combat/<sheet>.png`) a une rangée par animation, tournée vers l'est ; `feet` = point posé sur le socle ; `impact` = image où l'arme touche ; `ranged` = animation d'un tir ou d'un sort. Le héros (lot 2) : ses six poses peintes d'une image chacune, animées par le code. Durées : `balance.json › closeup`.",
+  "$comment": "Écran de combat rapproché (jalon M8, GDD §11, décisions n°204 à n°222). `backdrops` : fond peint par code selon le terrain du défenseur (`terrains`), remplacé par celui de la zone quand elle en impose un (`zones`), sinon `default`. `projectiles` : ce qui part d'une arme qui frappe à distance (par type d'arme) ; une arme magique lance `magic` (teinté par son élément). `slashes` : coupure dessinée à l'impact d'un coup de mêlée, selon le type d'arme. `critStyles` : chorégraphie du critique au corps à corps (`assaut` : dash et coupes ; `tourbillon` : assauts fantômes façon Bretteur ; `bond` : saut et chute), par type d'arme ; `critStyle` d'une feuille l'emporte. `fighters` : feuilles peintes de l'écran rapproché, par apparence (`sprite` sans détail) ; une apparence absente garde son sprite de carte agrandi (repli, n°215). Une feuille (`assets/combat/<sheet>.png`) a une rangée par animation, tournée vers l'est ; `feet` = point posé sur le socle ; `impact` = image où l'arme touche ; `ranged` = animation d'un tir ou d'un sort. Le héros (lot 2) : ses six poses peintes d'une image chacune, animées par le code. Durées : `balance.json › closeup`.",
   "backdrops": {
     "default": "plaine",
     "terrains": {
@@ -50,20 +50,56 @@
     },
     "default": "diagonale"
   },
+  "critStyles": {
+    "byWeaponType": {
+      "epee": "tourbillon",
+      "dagues": "tourbillon",
+      "hache": "bond",
+      "harpon": "bond",
+      "poings": "bond",
+      "banniere": "bond",
+      "lance_courte": "assaut",
+      "griffes": "tourbillon",
+      "ramure": "bond"
+    },
+    "default": "assaut"
+  },
   "fighters": {
     "heros": {
       "sheet": "heros",
-      "frame": [48, 48],
-      "feet": [18, 46],
+      "frame": [68, 68],
+      "feet": [29, 56],
       "scale": 3,
       "ranged": "competence",
+      "critStyle": "bond",
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 1, "impact": 0 },
-        "critique": { "row": 2, "frames": 1, "impact": 0 },
+        "attaque": { "row": 1, "frames": 9, "impact": 5 },
+        "critique": { "row": 2, "frames": 13, "impact": 11 },
         "competence": { "row": 3, "frames": 1, "impact": 0 },
         "coup": { "row": 4, "frames": 1 },
         "ko": { "row": 5, "frames": 1 }
+      }
+    },
+    "lame_du_serment": {
+      "sheet": "lame_du_serment",
+      "frame": [68, 68],
+      "feet": [29, 56],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 9, "impact": 4 },
+        "critique": { "row": 2, "frames": 13, "impact": 8 }
+      }
+    },
+    "heritier_des_cendres": {
+      "sheet": "heritier_des_cendres",
+      "frame": [68, 68],
+      "feet": [27, 55],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 9 }
       }
     }
   }

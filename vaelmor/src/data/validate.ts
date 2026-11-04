@@ -886,6 +886,7 @@ function checkBattleAnims(data: GameData, issues: string[]): void {
   const weaponTypes = new Set(data.weapons.map((w) => w.type));
   for (const id of Object.keys(projectiles.byWeaponType)) if (!weaponTypes.has(id)) issues.push(`${file} › projectiles.byWeaponType : type d'arme inconnu « ${id} »`);
   for (const id of Object.keys(data.battleAnims.slashes.byWeaponType)) if (!weaponTypes.has(id)) issues.push(`${file} › slashes.byWeaponType : type d'arme inconnu « ${id} »`);
+  for (const id of Object.keys(data.battleAnims.critStyles.byWeaponType)) if (!weaponTypes.has(id)) issues.push(`${file} › critStyles.byWeaponType : type d'arme inconnu « ${id} »`);
   const looks = new Set<string>(['heros', ...data.classes.map((c) => c.id), ...data.enemies.map((e) => e.sprite.split('#')[0] ?? e.sprite)]);
   for (const [id, f] of Object.entries(fighters)) {
     const at = `${file} › fighters « ${id} »`;
