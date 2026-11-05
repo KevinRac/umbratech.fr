@@ -7,6 +7,7 @@
  * actions (Sauvegarder ici, Charger, Exporter, Supprimer). Toute action qui
  * détruit quelque chose passe par une confirmation en deux étapes (n°163).
  */
+import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
 import { exportSave, freshSlot, pickImportFile, readImportFile, saveCurrentGame, storeImported } from '../core/gameSave';
 import { ActionInput } from '../core/input';
@@ -297,6 +298,7 @@ export class SaveScene extends Phaser.Scene {
       const result = saveCurrentGame(key, this.params.place ?? '?');
       this.closeActions();
       this.refresh();
+      playSfx(result.ok ? 'save' : 'refuse');
       this.toasts.push(result.ok ? `Partie sauvegardée dans ${theSlot(key)}.` : result.message);
     };
     if (entry.state === 'empty') {

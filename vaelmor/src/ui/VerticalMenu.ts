@@ -4,6 +4,7 @@
  * restent visibles mais sont sautées.
  */
 import Phaser from 'phaser';
+import { playSfx, type SfxId } from '../audio/sfx';
 import type { ActionInput } from '../core/input';
 import { PALETTE } from '../render/palette';
 import { addText, setText, type PixelText } from './text';
@@ -12,6 +13,8 @@ export interface MenuItem {
   readonly label: string;
   readonly enabled?: boolean;
   readonly onSelect: () => void;
+  /** Bruitage à la validation (« valider » par défaut ; null : celui que joue l'action elle-même). */
+  readonly sound?: SfxId | null;
 }
 
 export interface VerticalMenuOptions {
@@ -169,6 +172,7 @@ export class VerticalMenu {
     for (let k = 1; k <= n; k++) {
       const next = (this.index + step * k + n * k) % n;
       if (this.isEnabled(next)) {
+        if (next !== this.index) playSfx('cursor');
         this.select(next);
         return;
       }
@@ -183,7 +187,13 @@ export class VerticalMenu {
   }
 
   private activate(): void {
-    if (this.locked || !this.isEnabled(this.index)) return;
+    if (this.locked) return;
+    if (!this.isEnabled(this.index)) {
+      playSfx('refuse');
+      return;
+    }
+    const item = this.items[this.index];
+    playSfx(item?.sound === undefined ? 'confirm' : item.sound);
     // Petit « coup » visuel sur l'entrée validée.
     const label = this.labels[this.index];
     if (label) this.scene.tweens.add({ targets: label, x: label.x + 2, duration: 60, yoyo: true });

@@ -3,6 +3,7 @@
  * l'objet à droite, or du joueur. Les prix viennent de `logic/game/shop`
  * (multiplicateur du palier de réputation, revente à 40 %).
  */
+import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
 import type { ActionInput } from '../core/input';
 import { buy, itemKindLabel, sell, sellable, shopGreeting, shopLockedCount, shopStock, shopTier, type GameCtx, type Notice } from '../logic/game';
@@ -79,6 +80,7 @@ export class ShopView {
       scale: S,
       onCursor: () => this.refreshDetail(),
       onActivate: () => this.trade(),
+      activateSound: null,
     });
     this.detailX = listX + listW + 24 * S;
     this.detailY = listY;
@@ -99,11 +101,18 @@ export class ShopView {
   update(): void {
     if (this.closed) return;
     if (this.input.consume('cancel')) {
+      playSfx('menuClose');
       this.close();
       return;
     }
-    if (this.input.justPressed('left')) this.setTab('buy');
-    if (this.input.justPressed('right')) this.setTab('sell');
+    if (this.input.justPressed('left') && this.tab !== 'buy') {
+      playSfx('cursor');
+      this.setTab('buy');
+    }
+    if (this.input.justPressed('right') && this.tab !== 'sell') {
+      playSfx('cursor');
+      this.setTab('sell');
+    }
     this.list.update();
   }
 
@@ -200,6 +209,7 @@ export class ShopView {
       result = sell(this.ctx, this.shopId, e.info.id);
       if (result.ok) setText(this.status, `${e.info.name} vendu pour ${e.price} or.`);
     }
+    playSfx(result.ok ? 'buy' : 'refuse');
     if (!result.ok) setText(this.status, REFUSALS[result.reason] ?? 'Impossible.');
     else this.options.onNotices(result.notices.filter((n) => n.kind === 'item' && n.lost > 0));
     this.refreshRows(true);

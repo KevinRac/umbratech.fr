@@ -14,6 +14,8 @@ import {
   endingsFileSchema,
   battleAnimsFileSchema,
   musicFileSchema,
+  soundsFileSchema,
+  type SoundsFile,
   itemsFileSchema,
   classesFileSchema,
   elementsFileSchema,
@@ -78,6 +80,7 @@ export const DATA_SCHEMAS = {
   endings: endingsFileSchema,
   battleAnims: battleAnimsFileSchema,
   music: musicFileSchema,
+  sounds: soundsFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -131,6 +134,8 @@ export interface GameData {
   readonly battleAnims: BattleAnimsFile;
   /** Musiques : pistes encodées et règles (`music.json`, jalon M10). */
   readonly music: MusicFile;
+  /** Bruitages et ambiances : règles (`sounds.json`, jalon M10, lot D). */
+  readonly sounds: SoundsFile;
 }
 
 export type ValidationResult =
@@ -277,6 +282,7 @@ function crossCheck(data: GameData): string[] {
   checkEndings(data, issues);
   checkBattleAnims(data, issues);
   checkMusic(data, issues);
+  checkSounds(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -465,6 +471,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     endings: z.infer<typeof endingsFileSchema>;
     battleAnims: z.infer<typeof battleAnimsFileSchema>;
     music: z.infer<typeof musicFileSchema>;
+    sounds: z.infer<typeof soundsFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -495,6 +502,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     endings: files.endings,
     battleAnims: files.battleAnims,
     music: files.music,
+    sounds: files.sounds,
   };
 
   const crossIssues = crossCheck(data);
@@ -943,4 +951,16 @@ function checkMusic(data: GameData, issues: string[]): void {
   for (const [id, t] of Object.entries(tracks)) {
     if (t.loop && (t.loopStart === undefined || t.loopEnd === undefined || t.loopEnd <= t.loopStart || t.loopEnd > t.duration)) issues.push(`${file} › tracks.${id} : points de boucle invalides`);
   }
+}
+
+/** Bruitages (`sounds.json`, n°239) : zones, lieux et terrains cités existent ; chaque zone a son ambiance. */
+function checkSounds(data: GameData, issues: string[]): void {
+  const file = 'sounds.json';
+  const { ambience, steps } = data.sounds;
+  const terrain = (id: string): boolean => data.terrains.some((t) => t.id === id);
+  for (const zone of Object.keys(ambience.zones)) if (!data.zones.some((z) => z.id === zone)) issues.push(`${file} › ambience.zones : zone inconnue « ${zone} »`);
+  for (const z of data.zones) if (!ambience.zones[z.id]) issues.push(`${file} › ambience.zones : la zone « ${z.id} » n'a pas d'ambiance`);
+  for (const place of Object.keys(ambience.places)) if (!data.locations.some((l) => l.id === place)) issues.push(`${file} › ambience.places : lieu inconnu « ${place} »`);
+  for (const t of Object.keys(ambience.terrains)) if (!terrain(t)) issues.push(`${file} › ambience.terrains : terrain inconnu « ${t} »`);
+  for (const t of Object.keys(steps.terrains)) if (!terrain(t)) issues.push(`${file} › steps.terrains : terrain inconnu « ${t} »`);
 }

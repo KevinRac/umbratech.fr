@@ -5,6 +5,7 @@
  * continue (retour au monde, où la compagnie se tient).
  */
 import Phaser from 'phaser';
+import { setAmbience } from '../audio/ambience';
 import { playMusic } from '../audio/music';
 import { ActionInput } from '../core/input';
 import { uiScaleFor } from '../core/viewport';
@@ -37,6 +38,7 @@ export class EndingScene extends Phaser.Scene {
   }
 
   create(data: EndingSceneData): void {
+    setAmbience(null, 800);
     this.data_ = data;
     this.actions = new ActionInput(this);
     this.revealed = 0;

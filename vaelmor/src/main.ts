@@ -3,7 +3,9 @@
  * agrandi par le zoom des caméras) et enregistre les scènes.
  */
 import Phaser from 'phaser';
+import { ambienceState } from './audio/ambience';
 import { initAudio } from './audio/engine';
+import { sfxLog } from './audio/sfx';
 import * as music from './audio/music';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, GAME_TITLE, GAME_VERSION } from './core/config';
 import { showFatalError } from './core/fatal';
@@ -58,7 +60,7 @@ function start(): void {
   // Compte en ligne (lot M9b) : les écritures d'emplacements partent aussi sur le serveur quand on est connecté.
   cloud.startCloudSync();
   // Outil de debug : `?debug` expose le jeu à la console (`window.vaelmor`) pour inspecter les scènes.
-  if (new URLSearchParams(window.location.search).has('debug')) Object.assign(window, { vaelmor: game, vaelmorCloud: cloud, vaelmorMusic: music });
+  if (new URLSearchParams(window.location.search).has('debug')) Object.assign(window, { vaelmor: game, vaelmorCloud: cloud, vaelmorMusic: music, vaelmorAmbience: ambienceState, vaelmorSfx: sfxLog });
 }
 
 try {

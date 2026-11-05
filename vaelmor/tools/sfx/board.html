@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vaelmor — planche d'écoute</title>
+    <style>
+      body { margin: 0; padding: 24px; background: #1d1a24; color: #f1e6cf; font: 15px/1.4 system-ui, sans-serif; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      h2 { font-size: 15px; margin: 24px 0 8px; color: #e3c36b; }
+      .grid { display: flex; flex-wrap: wrap; gap: 8px; }
+      button { background: #2c2838; color: inherit; border: 1px solid #56677a; border-radius: 6px; padding: 8px 12px; font: inherit; cursor: pointer; }
+      button:hover { border-color: #e3c36b; }
+      button.on { background: #4b5634; border-color: #a9b061; }
+    </style>
+  </head>
+  <body>
+    <h1>Vaelmor — planche d'écoute (lot D)</h1>
+    <p>Volumes par défaut du jeu : effets 80, ambiance 50.</p>
+    <div id="board"></div>
+    <script type="module" src="./board.ts"></script>
+  </body>
+</html>
