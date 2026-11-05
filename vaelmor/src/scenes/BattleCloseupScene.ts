@@ -519,7 +519,9 @@ export class BattleCloseupScene extends Phaser.Scene {
             await this.tween({ targets: a.sprite, x: a.home.x - a.dir * 14, scaleX: a.scale * 1.04, scaleY: a.scale * 0.92, duration: step.ms, ease: 'Quad.easeOut' });
             break;
           case 'dash': {
-            const to = d.home.x - a.dir * 96;
+            // Une fente peinte (`reach`) avance d'elle-même : la course s'arrête d'autant plus tôt.
+            const reach = a.painted?.anims[this.strikeAnim(a, strike)]?.reach ?? 0;
+            const to = d.home.x - a.dir * (96 + reach * a.scale);
             this.ghosts(a, step.ms, crit ? 0xffffff : (a.spec.elementColor ?? 0xffffff), 3, 0.3);
             if (crit) this.speedLines(a.dir, step.ms + t.arme.melee + t.critCut * t.critCuts);
             // Il s'arrache du sol (poussière) et s'étire dans sa course.

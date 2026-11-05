@@ -992,23 +992,30 @@ export const FIGHTER_ANIMS = ['garde', 'attaque', 'critique', 'competence', 'cou
 export type FighterAnim = (typeof FIGHTER_ANIMS)[number];
 
 const fighterAnimSchema = z.strictObject({
+  /** Rangée de la première image ; une animation plus longue que la rangée continue sur les suivantes. */
   row: z.number().int().min(0).max(15),
-  frames: z.number().int().min(1).max(24),
+  frames: z.number().int().min(1).max(40),
   /** Image où l'arme touche (attaque, critique, compétence). */
-  impact: z.number().int().min(0).max(23).optional(),
+  impact: z.number().int().min(0).max(39).optional(),
   /** Image d'armé, tenue avant la frappe (par défaut celle qui précède l'impact). */
-  peak: z.number().int().min(0).max(23).optional(),
+  peak: z.number().int().min(0).max(39).optional(),
   /**
    * Pose de contact tenue pendant le gel et la descente des PV (par défaut
    * l'impact) : les images de traînée entre l'impact et elle passent en un éclair.
    */
-  hold: z.number().int().min(0).max(23).optional(),
+  hold: z.number().int().min(0).max(39).optional(),
+  /**
+   * Fente peinte (images vidéo, n°229) : de combien de pixels (de la feuille) le
+   * corps avance de lui-même jusqu'à l'impact ; la course du code s'arrête
+   * d'autant plus tôt, pour que la frappe arrive au contact.
+   */
+  reach: z.number().int().min(0).max(80).optional(),
   /**
    * Incantation entretenue (sorts) : images `[début, fin]` jouées en aller-retour
    * tant que le sort se déroule ; avant elles, l'élan ; après, le lancement
    * (à partir de l'image d'impact).
    */
-  loop: z.tuple([z.number().int().min(0).max(23), z.number().int().min(0).max(23)]).optional(),
+  loop: z.tuple([z.number().int().min(0).max(39), z.number().int().min(0).max(39)]).optional(),
   /** Animation jouée en boucle (aller-retour) quand celle-ci a fini, tant que la pose est tenue : cheveux et étoffes au vent (`tenue`). */
   after: z.enum(['tenue']).optional(),
 });
