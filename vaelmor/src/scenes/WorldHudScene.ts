@@ -14,9 +14,9 @@ import { uiScaleFor, worldZoomFor } from '../core/viewport';
 import { ActionInput } from '../core/input';
 import type { AmbienceKind } from '../data/schemas';
 import { createAmbience } from '../render/ambience';
-import { QUALITY_LABEL, nextQuality, type Quality } from '../render/atmosphere';
 import { PALETTE } from '../render/palette';
 import { drawPanel } from '../ui/panel';
+import { portraitInBox } from '../render/portraits';
 import { Toasts } from '../ui/Toasts';
 import { addText } from '../ui/text';
 import { VerticalMenu } from '../ui/VerticalMenu';
@@ -29,9 +29,18 @@ const HINT_DURATION_MS = 9000;
 export interface PauseHandlers {
   readonly onResume: () => void;
   readonly onTitle: () => void;
-  /** Qualité des effets HD-2D en cours, et changement demandé (décision n°47). */
-  readonly quality: () => Quality;
-  readonly onQuality: (quality: Quality) => void;
+  /** Ouvre l'écran Options (n°232) ; la pause revient à sa fermeture. */
+  readonly onOptions: () => void;
+}
+
+/** Fiche du héros en haut à gauche (GDD §13.1). */
+export interface HeroBadge {
+  readonly name: string;
+  /** Classe ou évolution. */
+  readonly title: string;
+  readonly level: number;
+  /** Membres blessés jusqu'au prochain repos (n°138). */
+  readonly wounded: number;
 }
 
 /** Ce que la jauge de réputation affiche pour le lieu où se trouve le joueur. */
@@ -67,6 +76,8 @@ export class WorldHudScene extends Phaser.Scene {
   private pauseHandlers: PauseHandlers | null = null;
   private gold: number | null = null;
   private goldParts: Phaser.GameObjects.GameObject[] = [];
+  private hero: HeroBadge | null = null;
+  private heroParts: Phaser.GameObjects.GameObject[] = [];
   private reputation: ReputationView | null = null;
   private gaugeExpandedUntil = 0;
   private gaugeParts: Phaser.GameObjects.GameObject[] = [];
@@ -98,8 +109,10 @@ export class WorldHudScene extends Phaser.Scene {
       this.zoneText = null;
       this.ambienceKind = null;
       this.pauseHandlers = null;
-      this.gold = null;
+      // L'or et la fiche du héros sont gardés : quand le monde redémarre (voyage, chargement en partie),
+      // il les envoie avant que cette scène ne redémarre à son tour (audit M10, A-15) ; `layout` les redessine.
       this.goldParts = [];
+      this.heroParts = [];
       this.reputation = null;
       this.gaugeParts = [];
       this.promptText = null;
@@ -192,6 +205,14 @@ export class WorldHudScene extends Phaser.Scene {
     this.run(() => {
       this.gold = amount;
       this.buildGold();
+    });
+  }
+
+  /** Fiche du héros (portrait, classe, niveau, blessés). */
+  setHero(badge: HeroBadge): void {
+    this.run(() => {
+      this.hero = badge;
+      this.buildHero();
     });
   }
 
@@ -304,6 +325,7 @@ export class WorldHudScene extends Phaser.Scene {
     this.buildGauge();
     this.buildPrompt();
     if (this.zoneText !== null) this.buildZone();
+    this.buildHero();
     if (this.ambienceKind !== null) this.buildAmbience();
     if (this.pauseHandlers) this.buildPause();
   }
@@ -315,6 +337,25 @@ export class WorldHudScene extends Phaser.Scene {
     const label = addText(this, 22 * S, 14 * S, this.zoneText ?? '', { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud + 1);
     const panel = drawPanel(this, 8 * S, 8 * S, Math.ceil(label.width) + 28 * S, 40 * S, { scale: 2 * S, depth: DEPTH.hud }).setAlpha(0.9);
     this.zoneParts = [panel, label];
+  }
+
+  private buildHero(): void {
+    for (const part of this.heroParts) part.destroy();
+    this.heroParts = [];
+    const hero = this.hero;
+    if (!hero) return;
+    const S = this.S;
+    const x = 8 * S;
+    const y = 52 * S;
+    const name = addText(this, x + 56 * S, y + 8 * S, hero.name, { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.hud + 1);
+    const title = addText(this, x + 56 * S, y + 24 * S, `${hero.title} · niv. ${hero.level}`, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud + 1);
+    const wounded = hero.wounded > 0 ? addText(this, x + 56 * S, y + 40 * S, hero.wounded === 1 ? '1 blessé jusqu’au repos' : `${hero.wounded} blessés jusqu’au repos`, { scale: S, color: PALETTE.braise }).setDepth(DEPTH.hud + 1) : null;
+    const width = Math.ceil(Math.max(name.width, title.width, wounded?.width ?? 0)) + 70 * S;
+    const height = (wounded ? 62 : 46) * S;
+    const panel = drawPanel(this, x, y, width, height, { scale: 2 * S, depth: DEPTH.hud }).setAlpha(0.9);
+    const frame = this.add.rectangle(x + 8 * S, y + 6 * S, 40 * S, height - 12 * S, PALETTE.violetBrume, 0.5).setOrigin(0, 0).setDepth(DEPTH.hud + 1);
+    const face = portraitInBox(this, 'heros', x + 8 * S, y + 6 * S, 40 * S, height - 12 * S, S, DEPTH.hud + 2);
+    this.heroParts = [panel, frame, name, title, ...(wounded ? [wounded] : []), ...(face ? [face] : [])];
   }
 
   private buildGold(): void {
@@ -402,7 +443,7 @@ export class WorldHudScene extends Phaser.Scene {
     const S = this.S;
     const { width, height } = this.scale;
     const bar = this.add.rectangle(0, height - 32 * S, width, 32 * S, PALETTE.nuit, 0.6).setOrigin(0, 0).setDepth(DEPTH.hud);
-    const hint = addText(this, 16 * S, height - 26 * S, 'ZQSD / flèches : marcher   Maj : courir   Échap : pause', { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH.hud);
+    const hint = addText(this, 16 * S, height - 26 * S, 'ZQSD / flèches : marcher   Maj : courir   E : parler   Tab : menu   N : carte   Échap : pause', { font: 'body', scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud);
     this.hintParts = [bar, hint];
     this.tweens.add({
       targets: [hint, bar],
@@ -430,16 +471,9 @@ export class WorldHudScene extends Phaser.Scene {
     if (!handlers) return;
     const S = this.S;
     const lineHeight = 34 * S;
-    const qualityLabel = (): string => `Qualité : ${QUALITY_LABEL[handlers.quality()]}`;
     const items = [
       { label: 'Reprendre', onSelect: handlers.onResume },
-      {
-        label: qualityLabel(),
-        onSelect: () => {
-          handlers.onQuality(nextQuality(handlers.quality()));
-          this.pauseMenu?.setItemLabel(1, qualityLabel());
-        },
-      },
+      { label: 'Options', onSelect: handlers.onOptions },
       { label: 'Retour au titre', onSelect: handlers.onTitle },
     ];
     const { width: W, height: H } = this.scale;

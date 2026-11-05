@@ -1,11 +1,37 @@
 /**
- * Réglages du joueur (clé `vaelmor:settings`, GDD §14.2). Pour l'instant :
- * la qualité des effets HD-2D (décision n°47). Les options complètes arrivent
- * au jalon M10 ; ce fichier garde les champs qu'il ne connaît pas.
+ * Réglages du joueur (clé `vaelmor:settings`, GDD §14.2) : un objet JSON
+ * versionné (`version`, décision n°232). Chaque champ se lit avec une valeur par
+ * défaut : un champ absent ou illisible ne casse rien, et les champs inconnus
+ * (d'une version plus récente) sont gardés tels quels. L'écran Options
+ * (`scenes/OptionsScene.ts`) les modifie ; les scènes ouvertes écoutent
+ * `onSettingsChange` pour appliquer un changement aussitôt.
  */
 import { SAVE_KEYS } from '../logic/save/keys';
 import { parseQuality, type Quality } from '../render/atmosphere';
 import { readRaw, writeRaw } from './storage';
+
+/** Version du format des réglages (décision n°232). */
+export const SETTINGS_VERSION = 1;
+
+type SettingsListener = (key: string) => void;
+const listeners = new Set<SettingsListener>();
+
+/** Appelé après chaque réglage enregistré, avec son nom (`quality`, `battleAnim`…). Renvoie de quoi se désabonner. */
+export function onSettingsChange(listener: SettingsListener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Enregistre un réglage (les autres sont gardés) et prévient les scènes ouvertes. */
+export function writeSetting(key: string, value: unknown): void {
+  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), version: SETTINGS_VERSION, [key]: value }));
+  for (const listener of [...listeners]) listener(key);
+}
+
+/** Valeur brute d'un réglage (lecture par les modules qui ont leur propre analyse). */
+export function readSetting(key: string): unknown {
+  return readSettings()[key];
+}
 
 function readSettings(): Record<string, unknown> {
   const raw = readRaw(SAVE_KEYS.settings);
@@ -25,7 +51,7 @@ export function loadQuality(): Quality {
 
 /** Enregistre la qualité ; sans stockage disponible, le réglage vaut pour la session seulement. */
 export function saveQuality(quality: Quality): void {
-  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), quality }));
+  writeSetting('quality', quality);
 }
 
 /* ---------- Vitesse des animations de combat (GDD §11.1, décision n°19) ---------- */
@@ -50,7 +76,7 @@ export function loadAnimSpeed(): AnimSpeed {
 }
 
 export function saveAnimSpeed(speed: AnimSpeed): void {
-  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), battleAnim: speed }));
+  writeSetting('battleAnim', speed);
 }
 
 /* ---------- Écran de combat rapproché (jalon M8, décision n°221) ---------- */
@@ -74,7 +100,7 @@ export function loadBattleView(): BattleView {
 }
 
 export function saveBattleView(view: BattleView): void {
-  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), battleView: view }));
+  writeSetting('battleView', view);
 }
 
 /** « Effets réduits » (GDD §13.8, n°221) : flashs atténués, secousses divisées par trois, pas de zoom du critique. */
@@ -83,10 +109,10 @@ export function loadReducedEffects(): boolean {
 }
 
 export function saveReducedEffects(reduced: boolean): void {
-  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), reducedFx: reduced }));
+  writeSetting('reducedFx', reduced);
 }
 
-/* ---------- Sons (jalon M8, n°227 ; les options complètes du son viennent en M10) ---------- */
+/* ---------- Sons (jalon M8, n°227) ---------- */
 
 /** Bruitages de combat : activés si rien n'est enregistré. */
 export function loadSoundOn(): boolean {
@@ -94,5 +120,5 @@ export function loadSoundOn(): boolean {
 }
 
 export function saveSoundOn(on: boolean): void {
-  writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), sound: on }));
+  writeSetting('sound', on);
 }

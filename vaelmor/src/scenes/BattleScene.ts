@@ -17,9 +17,8 @@
  * Phase ennemie : chaque ennemi joue le plan de son IA.
  * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
-import { setSoundOn, soundOn } from '../audio/sfx';
 import Phaser from 'phaser';
-import { ANIM_SPEED_FACTOR, ANIM_SPEED_LABEL, BATTLE_VIEW_LABEL, loadAnimSpeed, loadBattleView, loadReducedEffects, nextAnimSpeed, nextBattleView, saveAnimSpeed, saveBattleView, saveReducedEffects, type AnimSpeed, type BattleView } from '../core/settings';
+import { ANIM_SPEED_FACTOR, loadAnimSpeed, loadBattleView, loadReducedEffects, onSettingsChange, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
 import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
@@ -145,8 +144,6 @@ interface UnitView {
 }
 
 const T = BF_TILE;
-/** Libellé court de la vitesse des animations (la colonne du menu est étroite). */
-const ANIM_SPEED_SHORT: Readonly<Record<AnimSpeed, string>> = { normal: '×1', fast: '×2', off: 'max' };
 /** Teinte de rage d'un boss en seconde phase (pulsée sur le sprite). */
 const RAGE_TINT = 0xff5a3c;
 /** Profondeurs : l'art du monde (sol, décors, cimes), la grille, les cases colorées, puis les unités au-dessus de tout le décor (lisibilité tactique). Halos, rayons et poussière de l'atmosphère se placent vers 10,6–10,9. */
@@ -369,6 +366,8 @@ export class BattleScene extends Phaser.Scene {
       const cell = this.cellAtPointer(pointer);
       if (cell) this.pendingClick = { cell, right: false, up: true };
     });
+    const offSettings = onSettingsChange((key) => this.onSetting(key));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offSettings());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
 
     const boss = this.state.units.find((u) => u.isBoss);
@@ -1912,7 +1911,6 @@ export class BattleScene extends Phaser.Scene {
   private openMapMenu(): void {
     this.setMode('menu');
     const threatLabel = (): string => `Menaces : ${this.showAllThreat ? 'oui' : 'non'}`;
-    const animLabel = (): string => `Vitesse : ${ANIM_SPEED_SHORT[this.speed]}`;
     const close = (): void => {
       this.hud.closeMenu();
       this.setMode('browse');
@@ -1934,44 +1932,29 @@ export class BattleScene extends Phaser.Scene {
           close();
         },
       },
-      {
-        label: animLabel(),
-        onSelect: () => {
-          this.speed = nextAnimSpeed(this.speed);
-          saveAnimSpeed(this.speed);
-          this.hud.toast(`Animations : ${ANIM_SPEED_LABEL[this.speed]}`);
-          close();
-        },
-      },
-      {
-        label: `Écran : ${BATTLE_VIEW_LABEL[this.view]}`,
-        onSelect: () => {
-          this.view = nextBattleView(this.view);
-          saveBattleView(this.view);
-          this.hud.toast(`Échanges : écran ${BATTLE_VIEW_LABEL[this.view].toLowerCase()}`);
-          close();
-        },
-      },
-      {
-        label: `Effets : ${this.reducedFx ? 'réduits' : 'complets'}`,
-        onSelect: () => {
-          this.reducedFx = !this.reducedFx;
-          saveReducedEffects(this.reducedFx);
-          this.hud.toast(this.reducedFx ? 'Effets réduits : flashs atténués, secousses légères' : 'Effets complets');
-          close();
-        },
-      },
-      {
-        label: `Sons : ${soundOn() ? 'oui' : 'non'}`,
-        onSelect: () => {
-          setSoundOn(!soundOn());
-          this.hud.toast(soundOn() ? 'Bruitages de combat activés' : 'Bruitages coupés');
-          close();
-        },
-      },
+      { label: 'Options', onSelect: () => this.openOptions() },
       { label: 'Retraite', onSelect: () => this.retreat() },
     ];
     this.hud.openMenu({ title: 'Menu', items, onCancel: close, centered: true });
+  }
+
+  /** Options (n°232) : le combat attend (mode « menu ») jusqu'à la fermeture. */
+  private openOptions(): void {
+    this.hud.closeMenu();
+    this.setMode('menu');
+    this.scene.launch(SCENES.options, {
+      onClose: () => {
+        this.actions.consume('cancel');
+        this.setMode('browse');
+      },
+    });
+  }
+
+  /** Un réglage changé dans l'écran Options s'applique aussitôt. */
+  private onSetting(key: string): void {
+    if (key === 'battleAnim') this.speed = loadAnimSpeed();
+    else if (key === 'battleView') this.view = loadBattleView();
+    else if (key === 'reducedFx') this.reducedFx = loadReducedEffects();
   }
 
   private retreat(): void {

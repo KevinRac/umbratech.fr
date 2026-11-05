@@ -24,6 +24,9 @@ import { CollisionGrid, gateRequirements, isGateOpen } from '../logic/world/coll
 import { buildSafeGrid, createFoe, detectionScale, feetCell, surpriseTarget, updateFoe, type FoeEvent, type FoeSim, type SafeGrid } from '../logic/world/foes';
 import { createBody, placeBodyAt, spritePose, stepBody, type BodyState } from '../logic/world/movement';
 import { nearestFreeCell } from '../logic/world/pathfinding';
+import { canTravel, travelPoints, type TravelPoint } from '../logic/world/travel';
+import type { MarkerContext } from '../logic/world/islandMarkers';
+import { markerContext } from '../ui/islandMapView';
 import { ZoneTracker, terrainAtCell } from '../logic/world/zones';
 import { DEFAULT_WANDER, Wanderer } from '../logic/game/wander';
 import { Rng } from '../logic/rng';
@@ -72,11 +75,12 @@ import { facingPose, facingToward } from '../render/npcSprites';
 import { TOWN_TEX, ensureMarkerTextures, ensureNpcTexture } from '../render/townTextures';
 import type { MenuTab } from './MenuScene';
 import { addUnique, newWorldState, objectCenter, type WorldState } from '../logic/world/worldState';
-import { createMember } from '../logic/units/company';
+import { createMember, isWounded } from '../logic/units/company';
+import { findEvolution } from '../logic/progression/evolutions';
 import { worldView, type WorldView } from '../render/viewport';
-import { parseQuality, type Quality } from '../render/atmosphere';
+import { parseQuality } from '../render/atmosphere';
 import { WorldAtmosphere } from '../render/worldAtmosphere';
-import { loadQuality, saveQuality } from '../core/settings';
+import { loadQuality, onSettingsChange } from '../core/settings';
 import { PALETTE } from '../render/palette';
 import { ensureSkinAnimations, skinIdleFrame, skinKey, skinWalkKey } from '../render/skins';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
@@ -162,6 +166,8 @@ export interface WorldSceneData {
   readonly battleReturn?: BattleReturn;
   /** Partie chargée depuis une sauvegarde (jalon M9). */
   readonly loaded?: boolean;
+  /** Arrivée d'un voyage rapide (n°234) : nom du lieu atteint. */
+  readonly travelled?: string;
 }
 
 /** Délai minimal entre deux sauvegardes automatiques d'entrée ou de sortie de village (n°160). */
@@ -229,6 +235,7 @@ export class WorldScene extends Phaser.Scene {
   /** Vrai pendant un dialogue ou un menu : le héros ne bouge plus. */
   private modal = false;
   private modalCooldownUntil = 0;
+  private modalFrame = -10;
   private announced = new Set<string>();
   private village: string | null = null;
   private lastGold = -1;
@@ -354,8 +361,11 @@ export class WorldScene extends Phaser.Scene {
     // Juste après la première image, pour que le lieu et la zone du résumé soient connus.
     if (fresh || data.battleReturn) this.time.delayedCall(600, () => this.autoSaveNow());
     if (data.loaded) this.time.delayedCall(700, () => this.hud.toast('Partie chargée.'));
+    if (data.travelled) this.time.delayedCall(500, () => this.hud.toast(`Voyage : ${data.travelled}.`));
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    const offSettings = onSettingsChange((key) => this.onSetting(key));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offSettings());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
   }
 
@@ -504,7 +514,8 @@ export class WorldScene extends Phaser.Scene {
       this.atmosphere?.update(dtModal);
       return;
     }
-    if (this.actions.justPressed('cancel')) {
+    // Audit M10 (A-14) : l'Échap qui ferme un menu, un dialogue ou la carte n'ouvre pas aussi la pause.
+    if (this.actions.justPressed('cancel') && this.inputReady(time)) {
       this.togglePause();
     }
     if (this.paused) return;
@@ -761,14 +772,15 @@ export class WorldScene extends Phaser.Scene {
       this.nearFoe = surprise;
       this.nearWanderer = wanderer;
       this.nearAltar = altar;
-      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : wanderer ? `Parler à ${wanderer.sim.def.name} (allié)` : surprise ? 'Attaquer par surprise' : altar ? 'Se recueillir (sauvegarder)' : null);
+      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : wanderer ? `Parler à ${wanderer.sim.def.name} (allié)` : surprise ? 'Attaquer par surprise' : altar ? 'Se recueillir (sauvegarder)    N : voyager' : null);
     }
-    if (near && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startDialogue(near);
-    else if (wanderer && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.startWandererDialogue(wanderer);
-    else if (surprise && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.engageFoe(surprise, { initiative: true });
-    else if (altar && time > this.modalCooldownUntil && this.actions.justPressed('confirm')) this.openAltar(altar.name);
-    if (time > this.modalCooldownUntil && this.actions.justPressed('menu')) this.openMenu('compagnie');
-    else if (time > this.modalCooldownUntil && this.actions.justPressed('journal')) this.openMenu('quetes');
+    if (near && this.inputReady(time) && this.actions.justPressed('confirm')) this.startDialogue(near);
+    else if (wanderer && this.inputReady(time) && this.actions.justPressed('confirm')) this.startWandererDialogue(wanderer);
+    else if (surprise && this.inputReady(time) && this.actions.justPressed('confirm')) this.engageFoe(surprise, { initiative: true });
+    else if (altar && this.inputReady(time) && this.actions.justPressed('confirm')) this.openAltar(altar.name);
+    if (this.inputReady(time) && this.actions.justPressed('map')) this.openIslandMap();
+    else if (this.inputReady(time) && this.actions.justPressed('menu')) this.openMenu('compagnie');
+    else if (this.inputReady(time) && this.actions.justPressed('journal')) this.openMenu('quetes');
   }
 
   private enterModal(): void {
@@ -786,8 +798,19 @@ export class WorldScene extends Phaser.Scene {
     this.syncHero();
   }
 
+  /**
+   * Vrai quand le monde peut de nouveau lire les touches après une fenêtre (dialogue, menu, carte…) :
+   * 250 ms ET deux images (audit M10, A-14 : sur une machine lente, une image dure plus de 250 ms et la
+   * touche qui fermait la fenêtre rouvrait aussitôt la pause ou la carte).
+   */
+  private inputReady(time: number): boolean {
+    return time > this.modalCooldownUntil && this.game.loop.frame > this.modalFrame + 2;
+  }
+
   private leaveModal(): void {
     this.modal = false;
+    this.modalFrame = this.game.loop.frame;
+    this.syncHeroBadge();
     this.modalCooldownUntil = this.time.now + 250;
     this.grid.setOpenFlags(this.state.openFlags);
     this.refreshGates();
@@ -994,11 +1017,53 @@ export class WorldScene extends Phaser.Scene {
     this.refreshNpcSolids();
   }
 
+  /** Repères de la carte de l'île : lieux visités, drapeaux, quêtes en cours et lieu de leur donneur (n°233). */
+  islandMarkerContext(): MarkerContext {
+    const index = this.gameCtx.index;
+    return markerContext(this.state.discoveredLocations, this.state.openFlags, this.state.progress.quests, (id) => {
+      const giver = index.quests.get(id)?.giver;
+      return giver ? (index.npcs.get(giver)?.location.id ?? null) : null;
+    });
+  }
+
+  /** Carte de l'île (N) ; à un autel ou dans un lieu habité, elle propose le voyage rapide (n°233, n°234). */
+  private openIslandMap(): void {
+    const check = canTravel(this.map, this.body_.x, this.body_.y, this.saveBlocker() !== null);
+    const destinations = check.ok ? travelPoints(this.map, this.state.discoveredLocations, String(check.from.props['id'])) : [];
+    const note = check.ok ? 'Découvre d’autres autels ou lieux habités pour y voyager.' : check.reason;
+    const zone = this.tracker.currentZone;
+    const place = this.tracker.currentLocation;
+    this.enterModal();
+    this.scene.launch(SCENES.islandMap, {
+      map: this.map,
+      zones: this.data_.zones,
+      discoveredZones: this.state.discoveredZones,
+      markers: this.islandMarkerContext(),
+      hero: { x: this.body_.x, y: this.body_.y },
+      here: [place?.name, zone ? `${zone.name} · niv. ${zone.levelMin}–${zone.levelMax}` : null].filter(Boolean).join('\n'),
+      destinations,
+      travelNote: note,
+      onTravel: (point: TravelPoint) => this.travelTo(point),
+      onClose: () => this.leaveModal(),
+    });
+  }
+
+  /** Voyage rapide : le héros est posé à l'arrivée, puis le monde repart comme après un chargement (ennemis à leur poste, délai de grâce). */
+  private travelTo(point: TravelPoint): void {
+    this.leaving = true;
+    this.state.player.x = point.x;
+    this.state.player.y = point.y;
+    this.state.player.facing = 's';
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.world, { travelled: point.name }));
+  }
+
   private openMenu(tab: MenuTab): void {
     this.enterModal();
     this.scene.launch(SCENES.menu, {
       tab,
       onClose: () => this.leaveModal(),
+      island: { map: this.map, zones: this.data_.zones, discoveredZones: this.state.discoveredZones, markers: this.islandMarkerContext(), hero: { x: this.body_.x, y: this.body_.y } },
       saves: { place: this.placeName(), blocked: this.saveBlocker(), onLoad: (save: SaveEnvelope) => this.loadSavedGame(save) },
     });
   }
@@ -1025,6 +1090,16 @@ export class WorldScene extends Phaser.Scene {
   private syncTownHud(): void {
     this.lastGold = this.gameCtx.progress.gold;
     this.hud.setGold(this.lastGold);
+    this.syncHeroBadge();
+  }
+
+  /** Fiche du héros du HUD (GDD §13.1) : nom, classe ou évolution, niveau, blessés. */
+  private syncHeroBadge(): void {
+    const progress = this.state.progress;
+    const hero = progress.company.find((m) => m.hero);
+    if (!hero) return;
+    const title = hero.evolution ? (findEvolution(this.data_, hero.evolution)?.evo.name ?? hero.class) : (this.data_.classes.find((c) => c.id === hero.class)?.name ?? hero.class);
+    this.hud.setHero({ name: hero.name, title, level: hero.level, wounded: progress.company.filter((m) => isWounded(m, progress.day)).length });
   }
 
   /** Suit l'or et la réputation du lieu : le HUD se met à jour quand ils changent (dialogue, menu, récompense). */
@@ -1492,15 +1567,30 @@ export class WorldScene extends Phaser.Scene {
     this.hud.showPause({
       onResume: () => this.closePause(),
       onTitle: () => this.backToTitle(),
-      quality: () => this.atmosphere?.getQuality() ?? 'high',
-      onQuality: (quality: Quality) => {
-        this.atmosphere?.setQuality(quality);
-        saveQuality(quality);
-      },
+      onOptions: () => this.openOptions(),
     });
     this.tweens.pauseAll();
     this.time.paused = true;
     setPlayClock(false);
+  }
+
+  /** Options (n°232) depuis la pause : la pause se cache, le monde ne lit plus les touches, puis la pause revient. */
+  private openOptions(): void {
+    this.hud.hidePause();
+    this.modal = true;
+    this.scene.launch(SCENES.options, {
+      onClose: () => {
+        this.modal = false;
+        this.modalCooldownUntil = this.time.now + 250;
+        this.modalFrame = this.game.loop.frame;
+        if (this.paused) this.hud.showPause({ onResume: () => this.closePause(), onTitle: () => this.backToTitle(), onOptions: () => this.openOptions() });
+      },
+    });
+  }
+
+  /** Un réglage changé dans l'écran Options s'applique aussitôt. */
+  private onSetting(key: string): void {
+    if (key === 'quality') this.atmosphere?.setQuality(loadQuality());
   }
 
   private closePause(): void {

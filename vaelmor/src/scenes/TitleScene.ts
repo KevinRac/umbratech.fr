@@ -356,9 +356,22 @@ export class TitleScene extends Phaser.Scene {
       { label: 'Nouvelle partie', onSelect: () => this.startNewGame() },
       { label: 'Charger', enabled: hasSave, onSelect: () => this.openLoad() },
       { label: 'Compte', onSelect: () => this.openAccount() },
-      { label: 'Combat d’essai', onSelect: () => this.showBattleMenu() },
-      { label: 'Options', onSelect: () => this.toasts.push('Les options arrivent au jalon M10.') },
+      // Outil de développement : caché aux joueurs (n°235), toujours là avec `?debug`.
+      ...(new URLSearchParams(window.location.search).has('debug') ? [{ label: 'Combat d’essai', onSelect: () => this.showBattleMenu() }] : []),
+      { label: 'Options', onSelect: () => this.openOptions() },
     ]);
+  }
+
+  /** Écran Options (n°232), par-dessus le titre. */
+  private openOptions(): void {
+    if (this.starting) return;
+    this.menu?.setLocked(true);
+    this.scene.launch(SCENES.options, {
+      onClose: () => {
+        this.menu?.setLocked(false);
+        this.actions.consume('cancel');
+      },
+    });
   }
 
   /**
