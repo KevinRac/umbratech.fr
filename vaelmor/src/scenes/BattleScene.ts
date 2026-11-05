@@ -65,9 +65,11 @@ import {
   type RosterSort,
 } from '../logic/tactics/prep';
 import { areaOf, costLabel, previewSkill, skillArea, skillBlocker, skillDef, skillForecast, skillTargets } from '../logic/tactics/skills';
-import { attackKind, backdropFor, critStyleFor, isThrown, planSegments, projectileFor, slashFor, spellFor, type CombatEvent, type HealEvent, type Segment } from '../logic/anim/closeup';
+import { attackKind, backdropFor, critStyleFor, isThrown, planSegments, projectileFor, slashFor, spellFor, type CombatEvent, type HealEvent, type SceneEvent, type Segment } from '../logic/anim/closeup';
 import { gradeMatrix } from '../render/grade';
-import type { BattleCloseupScene, CloseupFighter, CloseupSpec } from './BattleCloseupScene';
+import type { BattleCloseupScene, CloseupCutins, CloseupFighter, CloseupSpec } from './BattleCloseupScene';
+import { FOE_PORTRAITS } from '../data/skins';
+import type { TalkView } from '../ui/TalkBox';
 import { isStunned } from '../logic/tactics/status';
 import { hostile, type BattleEvent, type BattleRules, type BattleState, type BattleUnit, type Cell, type EffectResult, type GrowthKey, type ItemStack, type Strike, type Team } from '../logic/tactics/types';
 import { GROWTH_KEYS } from '../data/schemas';
@@ -258,6 +260,10 @@ export class BattleScene extends Phaser.Scene {
   private reducedFx = false;
   /** `?debug&slow=N` : l'écran rapproché N fois plus lent (captures image par image). */
   private slow = 1;
+  /** Boss déjà présentés par leur bandeau dans l'écran rapproché pendant ce combat (lot 6, GDD §11.4). */
+  private introduced = new Set<string>();
+  /** Boss dont le passage en seconde phase vient d'être joué en cut-in (la carte n'en rejoue que la réplique). */
+  private phaseCut = new Set<string>();
 
   constructor() {
     super(SCENES.battle);
@@ -329,6 +335,8 @@ export class BattleScene extends Phaser.Scene {
     this.scene.launch(SCENES.battleCloseup);
     this.scene.bringToTop(SCENES.battleCloseup);
     this.closeup = this.scene.get(SCENES.battleCloseup) as BattleCloseupScene;
+    this.introduced.clear();
+    this.phaseCut.clear();
 
     ensureBattleFxTextures(this);
     for (const unit of this.state.units) ensureMapSprite(this, unit.sprite, unit.team);
@@ -2078,7 +2086,7 @@ export class BattleScene extends Phaser.Scene {
     const segments: Segment[] = this.useCloseup() ? planSegments(events, (c) => this.closeupEligible(c)) : events.map((event) => ({ kind: 'event', event }));
     for (const segment of segments) {
       if (!this.alive) return;
-      if (segment.kind === 'closeup') await this.playCloseup(segment.combat, segment.falls);
+      if (segment.kind === 'closeup') await this.playCloseup(segment.combat, segment.falls, segment.quotes, segment.phase);
       else if (segment.kind === 'heal') await this.playHealCloseup(segment.heal);
       else await this.playEvent(segment.event);
     }
@@ -2329,8 +2337,11 @@ export class BattleScene extends Phaser.Scene {
   private async animateBossPhase(unitId: string, line: string): Promise<void> {
     const unit = getUnit(this.state, unitId);
     this.setCursorQuiet(unit);
-    this.cameras.main.shake(this.dur(500, 200), 0.008);
-    this.cameras.main.flash(this.dur(260, 100), 180, 40, 40);
+    // Déjà vu en cut-in dans l'écran rapproché (n°219) : la carte ne rejoue ni la secousse ni le flash.
+    if (!this.phaseCut.delete(unitId)) {
+      this.cameras.main.shake(this.dur(500, 200), 0.008);
+      this.cameras.main.flash(this.dur(260, 100), 180, 40, 40);
+    }
     this.syncUnit(unit);
     this.flashUnit(unit, PALETTE.rougeCendre);
     // Réplique remplacée par une scène de phase (GDD §7.9) : la scène suit.
@@ -2572,14 +2583,19 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Joue un échange dans l'écran rapproché, puis met la carte à jour (PV, chutes). */
-  private async playCloseup(combat: CombatEvent, falls: readonly string[]): Promise<void> {
+  private async playCloseup(combat: CombatEvent, falls: readonly string[], quotes: readonly SceneEvent[] = [], phase: string | null = null): Promise<void> {
     const closeup = this.closeup;
     if (!closeup) {
       await this.animateCombat(combat.attackerId, combat.defenderId, combat.strikes);
-      for (const id of falls) await this.animateKo(id);
+      for (const id of falls) {
+        for (const quote of quotes) if (quote.enemyId === id) await this.playScene(quote);
+        await this.animateKo(id);
+      }
       return;
     }
-    await this.showCloseup(this.closeupSpec(combat, falls));
+    const spec = this.closeupSpec(combat, falls, undefined, undefined, undefined, phase);
+    await this.showCloseup({ ...spec, cutins: this.cutinsFor(spec, quotes, phase) });
+    if (phase) this.phaseCut.add(phase);
     for (const id of [combat.attackerId, combat.defenderId]) {
       const unit = this.state.units.find((u) => u.id === id);
       if (!unit) continue;
@@ -2594,6 +2610,24 @@ export class BattleScene extends Phaser.Scene {
    * logique les a déjà retirés), prévision, geste, projectile, fonds.
    * `before` : PV de départ imposés (banc d'essai).
    */
+  /**
+   * Cut-ins d'un échange (lot 6) : bandeau d'un boss à son premier échange du
+   * combat, passage en seconde phase (n°219), citations de mort lues dans
+   * l'écran avant la chute (n°220).
+   */
+  private cutinsFor(spec: CloseupSpec, quotes: readonly SceneEvent[], phase: string | null, intro?: boolean): CloseupCutins {
+    const boss = [spec.right, spec.left].find((f) => f.isBoss && f.team === 'enemy' && (intro ?? !this.introduced.has(f.id)));
+    if (boss) this.introduced.add(boss.id);
+    const talks = new Map<string, TalkView>();
+    for (const quote of quotes) {
+      const scene = this.gameData.scenes.find((s) => s.id === quote.sceneId);
+      if (!scene) continue;
+      const linked = this.state.units.find((u) => u.id === quote.unitId)?.charId ?? null;
+      talks.set(quote.enemyId, buildTalkView(this.gameData, scene, quote.failed, this.faceLookup(), linked));
+    }
+    return { intro: boss?.id ?? null, phase, quotes: talks, typing: this.gameData.balance.dialogue };
+  }
+
   /** Soin au bâton dans l'écran rapproché (n°205) : le soigneur à gauche, l'allié soigné à droite. */
   private async playHealCloseup(heal: HealEvent): Promise<void> {
     const target = this.state.units.find((u) => u.id === heal.unitId);
@@ -2629,7 +2663,7 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private closeupSpec(combat: CombatEvent, falls: readonly string[], before?: ReadonlyMap<string, number>, distance?: number, from?: Cell): CloseupSpec {
+  private closeupSpec(combat: CombatEvent, falls: readonly string[], before?: ReadonlyMap<string, number>, distance?: number, from?: Cell, phase: string | null = null): CloseupSpec {
     const attacker = getUnit(this.state, combat.attackerId);
     const defender = getUnit(this.state, combat.defenderId);
     const lost = (u: BattleUnit): number => combat.strikes.filter((s) => s.targetId === u.id).reduce((n, s) => n + s.damage, 0);
@@ -2661,6 +2695,10 @@ export class BattleScene extends Phaser.Scene {
         platform: backdropFor(terrainAt(this.state.map, u.x, u.y).id, this.state.zone, anims),
         painted: anims.fighters[u.sprite.split('#')[0] ?? u.sprite] ?? null,
         critStyle: critStyleFor(u.weapon, anims.fighters[u.sprite.split('#')[0] ?? u.sprite] ?? null, anims),
+        portrait: u.charId !== null && (FOE_PORTRAITS as readonly string[]).includes(u.charId) ? u.charId : null,
+        important: u.team === 'enemy' && (u.isBoss || u.charId !== null),
+        // L'aura du boss qui entre en seconde phase pendant cet échange n'apparaît qu'après son cut-in.
+        aura: u.boss?.phase === 2 && u.id !== phase,
       };
     };
     const playerFirst = attacker.team !== 'enemy';
@@ -2710,7 +2748,8 @@ export class BattleScene extends Phaser.Scene {
 
   /**
    * Banc d'essai de l'écran rapproché (n°222) :
-   * `?debug&closeup=<classe ou heros>:<ennemi>[&crit=1][&miss=1][&kill=1][&double=1][&nocounter=1][&range=2][&from=right][&slow=N]`.
+   * `?debug&closeup=<classe ou heros>:<ennemi>[&crit=1][&miss=1][&kill=1][&double=1][&nocounter=1][&range=2][&from=right][&slow=N]`
+   * `[&intro=1][&phase=1][&quote=1]` (cut-ins du lot 6 : bandeau du boss, seconde phase, citation de mort).
    * Rejoue l'échange en boucle (R) ; `window.vaelmorCloseupPlay()` le relance et se résout à la fin.
    */
   private async closeupBench(url: URLSearchParams): Promise<void> {
@@ -2768,9 +2807,20 @@ export class BattleScene extends Phaser.Scene {
     }
     const combat: CombatEvent = { type: 'combat', attackerId: a.id, defenderId: b.id, strikes };
     const before = new Map<string, number>([[a.id, a.hp], [b.id, b.hp]]);
+    // Cut-ins (lot 6) : `&intro=1` (bandeau du boss), `&phase=1` (seconde phase du boss), `&quote=1` (citation de mort, avec `&kill=1`).
+    // L'ennemi du banc n'est ni boss ni nommé (pas de fiche de rencontre) : il le devient pour les cut-ins demandés.
+    const foeUnit = a.team === 'enemy' ? a : b;
+    const cast = url.has('intro') || url.has('phase') || url.has('quote');
+    const charId = foeUnit.charId ?? foeUnit.kindId;
+    const phase = url.has('phase') ? foeUnit.id : null;
+    const deathScene = kill && url.has('quote') ? [...this.gameData.scenes].sort((x, y) => x.units.length - y.units.length).find((sc) => sc.kind === 'death' && sc.enemy === charId) : undefined;
+    const quotes: SceneEvent[] = deathScene && b === foeUnit ? [{ type: 'scene', sceneId: deathScene.id, kind: 'death', enemyId: b.id, unitId: a.id, failed: false }] : [];
+    const asBoss = (f: CloseupFighter): CloseupFighter => (cast && f.id === foeUnit.id ? { ...f, isBoss: true, important: true, portrait: f.portrait ?? ((FOE_PORTRAITS as readonly string[]).includes(charId) ? charId : null) } : f);
     const play = async (): Promise<void> => {
       if (!this.closeup || this.closeup.playing) return;
-      await this.showCloseup(this.closeupSpec(combat, kill ? [b.id] : [], before, range, { x: b.x - range, y: b.y }));
+      const base = this.closeupSpec(combat, kill ? [b.id] : [], before, range, { x: b.x - range, y: b.y }, phase);
+      const spec = { ...base, left: asBoss(base.left), right: asBoss(base.right) };
+      await this.showCloseup({ ...spec, cutins: this.cutinsFor(spec, quotes, phase, url.has('intro')) });
     };
     Object.assign(window, { vaelmorCloseupPlay: play });
     this.input.keyboard?.on('keydown-R', () => void play());

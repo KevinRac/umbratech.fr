@@ -239,6 +239,28 @@
         "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
         "critique": { "row": 2, "frames": 13, "impact": 11 }
       }
+    },
+    "ecumeur_sabreur": {
+      "sheet": "ecumeur_sabreur",
+      "frame": [68, 68],
+      "feet": [30, 57],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 4, "hold": 6 },
+        "critique": { "row": 2, "frames": 13, "impact": 10, "peak": 9, "hold": 11 }
+      }
+    },
+    "ecumeur_archer": {
+      "sheet": "ecumeur_archer",
+      "frame": [64, 64],
+      "feet": [31, 53],
+      "scale": 3,
+      "anims": {
+        "garde": { "row": 0, "frames": 1 },
+        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 9 },
+        "critique": { "row": 2, "frames": 13, "impact": 6, "peak": 5, "hold": 8 }
+      }
     }
   }
 }

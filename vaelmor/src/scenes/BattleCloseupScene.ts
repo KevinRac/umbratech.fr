@@ -22,18 +22,28 @@
  * runique, orbe à traînée, explosion ; soin : lueur douce et particules montantes.
  * « Effets réduits » (n°221) : flashs atténués, secousses divisées par trois, pas de zoom.
  *
- * Entrée, Espace, Échap ou un clic passent l'échange : tout se pose aussitôt.
+ * Cut-ins (lot 6) : un boss est présenté par un bandeau à son nom au premier
+ * échange du combat, et un autre bandeau marque son passage en seconde phase,
+ * après quoi une aura rouge l'entoure (n°219, GDD §11.4) ; un boss ou un ennemi
+ * nommé qui tombe vacille, dit sa citation de mort dans l'écran, puis se défait
+ * en cendres (n°220).
+ *
+ * Entrée, Espace, Échap ou un clic passent l'échange : tout se pose aussitôt
+ * (sauf une citation de mort, qui se lit réplique par réplique).
  */
 import Phaser from 'phaser';
 import type { BackdropId, CloseupTimings, CritStyle, FighterAnim, FighterDef, ProjectileId, SlashId, SpellId } from '../data/schemas';
 import { castFrameAt, critSlashes, exchangeShapes, rhythmFrameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
 import { playSfx, type SfxTone } from '../audio/sfx';
+import { ActionInput } from '../core/input';
 import type { Strike, Team } from '../logic/tactics/types';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
 import { fighterFrame, fighterKey, hasFighterSheet } from '../render/closeupFighters';
 import { FX_TEX, SPARK_TICKS, ensureCloseupFx } from '../render/closeupFx';
 import { BACKDROP_H, BACKDROP_W, HORIZON, PLATFORM_TOP, PLATFORM_W, paintBackdrop, paintPlatform, type PaintedImage } from '../render/closeupBackdrop';
 import { PALETTE, mixColor } from '../render/palette';
+import { foePortraitInBox } from '../render/portraits';
+import { TalkBox, type TalkView } from '../ui/TalkBox';
 import { drawPanel } from '../ui/panel';
 import { addText, fitText, setText, type PixelText } from '../ui/text';
 import { TEAM_COLOR } from './BattleHudScene';
@@ -89,6 +99,24 @@ export interface CloseupFighter {
   readonly platform: BackdropId;
   /** Feuille peinte de l'écran rapproché (`battleAnims.json › fighters`), ou null : sprite de carte agrandi. */
   readonly painted: FighterDef | null;
+  /** Portrait peint d'un boss ou d'un ennemi nommé (`assets/portraits/ennemis/`), pour ses bandeaux ; ou null. */
+  readonly portrait: string | null;
+  /** Boss ou ennemi nommé : sa chute se joue en « dernier souffle » (n°220). */
+  readonly important: boolean;
+  /** Boss en seconde phase : une aura rouge l'entoure (GDD §11.4). */
+  readonly aura: boolean;
+}
+
+/** Cut-ins d'un échange (lot 6, n°219, n°220). */
+export interface CloseupCutins {
+  /** Boss présenté par un bandeau à son nom à l'ouverture (son premier échange du combat). */
+  readonly intro: string | null;
+  /** Boss qui passe en seconde phase à la fin de l'échange. */
+  readonly phase: string | null;
+  /** Citations de mort, par unité qui tombe : boîte de scène dans l'écran, avant la dissolution. */
+  readonly quotes: ReadonlyMap<string, TalkView>;
+  /** Machine à écrire des répliques (`balance.dialogue`). */
+  readonly typing: { readonly charsPerSecond: number; readonly fastMultiplier: number };
 }
 
 export interface CloseupSpec {
@@ -106,6 +134,8 @@ export interface CloseupSpec {
   readonly factor: () => number;
   /** « Effets réduits » (n°221). */
   readonly reduced: boolean;
+  /** Bandeaux de boss et citations de mort (lot 6) ; absent : aucun. */
+  readonly cutins?: CloseupCutins;
   /** Étalonnage de la zone (matrice 5×4) et vignettage, selon la qualité ; null : aucun filtre. */
   readonly grade: { readonly matrix: readonly number[]; readonly vignette: { readonly radius: number; readonly strength: number } | null } | null;
 }
@@ -125,6 +155,8 @@ interface FighterView {
   readonly painted: FighterDef | null;
   /** Respiration en garde (arrêtée pendant un coup). */
   breath?: Phaser.Tweens.Tween | null;
+  /** Aura de la seconde phase (lueur qui suit le corps). */
+  aura?: Phaser.GameObjects.Image | null;
 }
 
 interface HpBar {
@@ -206,6 +238,9 @@ export class BattleCloseupScene extends Phaser.Scene {
   private skipping = false;
   private pending = new Set<() => void>();
   private busy = false;
+  private actions: ActionInput | null = null;
+  /** Citation de mort en cours : Entrée et le clic font avancer ses répliques au lieu de passer l'échange. */
+  private talkBox: TalkBox | null = null;
 
   constructor() {
     super(SCENES.battleCloseup);
@@ -223,11 +258,21 @@ export class BattleCloseupScene extends Phaser.Scene {
     this.uiCam.ignore(this.stage);
     this.cameras.main.setVisible(false);
     this.uiCam.setVisible(false);
+    this.actions = new ActionInput(this);
     const skip = (): void => this.skip();
     this.input.keyboard?.on('keydown-ENTER', skip);
     this.input.keyboard?.on('keydown-SPACE', skip);
     this.input.keyboard?.on('keydown-ESC', skip);
     this.input.on(Phaser.Input.Events.POINTER_DOWN, skip);
+  }
+
+  override update(_time: number, delta: number): void {
+    this.talkBox?.update(delta);
+    // L'aura suit le corps (dash, bond, recul) et s'efface avec lui.
+    for (const v of this.views.values()) {
+      if (!v.aura) continue;
+      v.aura.setPosition(v.sprite.x, v.sprite.y - this.bodyHeight(v) * 0.45).setVisible(v.sprite.visible && v.sprite.alpha > 0.05);
+    }
   }
 
   /** Vrai pendant qu'un échange se joue. */
@@ -243,8 +288,11 @@ export class BattleCloseupScene extends Phaser.Scene {
     try {
       this.build(spec);
       await this.entry(spec);
-      // Temps d'arrêt : les deux combattants face à face, en garde, avant le premier geste.
-      await this.wait(spec.timings.opening);
+      // Temps d'arrêt : les deux combattants face à face, en garde, avant le premier geste ;
+      // au premier échange contre un boss, son bandeau occupe ce temps (GDD §11.4 : cut-in 400 ms).
+      const intro = spec.cutins?.intro ? this.views.get(spec.cutins.intro) : undefined;
+      if (intro) await this.band(intro, 'intro');
+      else await this.wait(spec.timings.opening);
       if (spec.heal) await this.playHeal(spec.heal.amount, spec.heal.hpAfter);
       const kindOf = (id: string): AttackKind => (id === spec.left.id ? spec.left.kind : spec.right.kind);
       const styleOf = (id: string): CritStyle => (id === spec.left.id ? spec.left.critStyle : spec.right.critStyle);
@@ -256,7 +304,13 @@ export class BattleCloseupScene extends Phaser.Scene {
         await this.playStrike(strike, strikeSteps(shape, spec.timings));
         if (i < spec.strikes.length - 1) await this.wait(spec.timings.between);
       }
-      for (const id of spec.falls) await this.dissolve(id);
+      const phase = spec.cutins?.phase ? this.views.get(spec.cutins.phase) : undefined;
+      if (phase) await this.phaseCutIn(phase);
+      for (const id of spec.falls) {
+        const v = this.views.get(id);
+        if (v?.spec.important) await this.lastBreath(v, spec.cutins?.quotes.get(id) ?? null);
+        else await this.dissolve(id);
+      }
       await this.wait(spec.timings.pose);
       await this.exit(spec);
     } finally {
@@ -267,7 +321,7 @@ export class BattleCloseupScene extends Phaser.Scene {
 
   /** Passe l'échange : les attentes en cours se terminent, les suivantes sont immédiates. */
   skip(): void {
-    if (!this.busy || this.skipping) return;
+    if (!this.busy || this.skipping || this.talkBox) return;
     this.skipping = true;
     for (const tween of this.tweens.getTweens()) tween.complete();
     for (const resolve of [...this.pending]) resolve();
@@ -318,6 +372,7 @@ export class BattleCloseupScene extends Phaser.Scene {
       const view: FighterView = { spec: fighter, side, sprite, shadow, home: { x, y: FEET_Y + 2 }, dir: side === 'left' ? 1 : -1, bar, scale, painted };
       this.views.set(fighter.id, view);
       this.breathe(view);
+      if (fighter.aura) bodies.splice(bodies.indexOf(sprite), 0, this.makeAura(view));
     }
     this.dim = this.add.rectangle(-40, -40, this.scale.width + 80, this.scale.height + 80, PALETTE.ombreProfonde, 1).setOrigin(0, 0).setAlpha(0);
     this.lines = this.add.graphics();
@@ -383,6 +438,8 @@ export class BattleCloseupScene extends Phaser.Scene {
   }
 
   private teardown(): void {
+    this.talkBox?.close();
+    this.talkBox = null;
     this.stage.removeAll(true).setPosition(0, 0);
     this.ui.removeAll(true);
     this.dim = null;
@@ -1368,8 +1425,12 @@ export class BattleCloseupScene extends Phaser.Scene {
   private zoomTo(zoom: number, on: FighterView | null, ms: number, ahead = 60): void {
     if (this.spec?.reduced) return;
     const cam = this.cameras.main;
-    const cx = on ? on.home.x + on.dir * ahead : this.scale.width / 2;
-    const cy = on ? on.home.y - 80 : this.scale.height / 2;
+    const { width: W, height: H } = this.scale;
+    // Le cadre zoomé reste dans le fond peint (il déborde de 24 px de chaque côté).
+    const hw = W / (2 * zoom);
+    const hh = H / (2 * zoom);
+    const cx = Phaser.Math.Clamp(on ? on.home.x + on.dir * ahead : W / 2, -24 + hw, W + 24 - hw);
+    const cy = Phaser.Math.Clamp(on ? on.home.y - 80 : H / 2, -24 + hh, H + 24 - hh);
     void this.tween({ targets: cam, zoom, scrollX: cx - this.scale.width / 2, scrollY: cy - this.scale.height / 2, duration: ms, ease: 'Quad.easeOut' });
   }
 
@@ -1609,6 +1670,212 @@ export class BattleCloseupScene extends Phaser.Scene {
   private whiteFlash(sprite: Phaser.GameObjects.Sprite, on: boolean): void {
     if (on) sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     else sprite.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();
+  }
+
+  /* ---------- Cut-ins (lot 6, n°219, n°220) ---------- */
+
+  /** Hauteur du corps à l'écran (feuille peinte ou sprite de carte agrandi). */
+  private bodyHeight(v: FighterView): number {
+    return v.painted ? Math.min(150, v.painted.frame[1] * v.scale * 0.62) : 120;
+  }
+
+  /** Lueur douce (dégradé radial) : une texture pour l'aura de la seconde phase. */
+  private auraTexture(): string {
+    const key = 'closeup:fx:aura';
+    if (this.textures.exists(key)) return key;
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const g = ctx.createRadialGradient(size / 2, size / 2, 4, size / 2, size / 2, size / 2);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+    }
+    this.textures.addCanvas(key, canvas);
+    return key;
+  }
+
+  /** Aura rouge d'un boss en seconde phase : elle bat, et des braises montent de lui. */
+  private makeAura(v: FighterView): Phaser.GameObjects.Image {
+    const h = this.bodyHeight(v);
+    const glow = this.add.image(v.home.x, v.home.y - h * 0.45, this.auraTexture()).setBlendMode(Phaser.BlendModes.ADD).setTint(PALETTE.rougeCendre);
+    glow.setDisplaySize(h * 1.15, h * 1.45).setAlpha(0.5);
+    v.aura = glow;
+    if (!this.spec?.reduced) this.tweens.add({ targets: glow, alpha: 0.85, scaleX: glow.scaleX * 1.08, scaleY: glow.scaleY * 1.05, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const ember = (): void => {
+      if (!this.busy || !v.aura || v.sprite.alpha <= 0.05) return;
+      const x = v.sprite.x + Phaser.Math.Between(-28, 28);
+      const y = v.sprite.y - Phaser.Math.Between(10, Math.round(h * 0.8));
+      const dot = this.add.image(x, y, FX_TEX.dot).setScale(Phaser.Math.Between(2, 3)).setTint(Phaser.Math.RND.pick([PALETTE.braise, PALETTE.orangeForge, PALETTE.rougeCendre])).setBlendMode(Phaser.BlendModes.ADD);
+      this.stage.add(dot);
+      this.tweens.add({ targets: dot, y: y - Phaser.Math.Between(40, 90), x: x + Phaser.Math.Between(-10, 10), alpha: 0, duration: 700, ease: 'Quad.easeOut', onComplete: () => dot.destroy() });
+      this.time.delayedCall(110, ember);
+    };
+    this.time.delayedCall(60, ember);
+    return glow;
+  }
+
+  /**
+   * Bandeau en biais (cut-in) : il traverse l'écran depuis le côté du boss,
+   * avec son portrait peint, son nom et une ligne (titre à l'ouverture,
+   * « Seconde phase » au changement de phase), sur des lignes de vitesse.
+   */
+  private async band(v: FighterView, mode: 'intro' | 'phase'): Promise<void> {
+    const spec = this.spec;
+    if (!spec) return;
+    const cut = spec.timings.cutin;
+    const { width: W } = this.scale;
+    const phase = mode === 'phase';
+    const h = phase ? 150 : 118;
+    const cy = phase ? 236 : 220;
+    const slant = 28;
+    const fill = phase ? 0x2a0b12 : 0x14121f;
+    const edge = phase ? PALETTE.braise : PALETTE.lumiereDoree;
+    const c = this.add.container(0, 0).setDepth(55);
+    this.cameras.main.ignore(c);
+    const g = this.add.graphics();
+    const y0 = cy - h / 2;
+    const y1 = cy + h / 2;
+    g.fillStyle(fill, 0.94);
+    g.fillPoints([new Phaser.Math.Vector2(-60, y0 + slant), new Phaser.Math.Vector2(W + 60, y0 - slant), new Phaser.Math.Vector2(W + 60, y1 - slant), new Phaser.Math.Vector2(-60, y1 + slant)], true);
+    g.lineStyle(4, edge, 1);
+    g.lineBetween(-60, y0 + slant, W + 60, y0 - slant);
+    g.lineBetween(-60, y1 + slant, W + 60, y1 - slant);
+    g.lineStyle(2, edge, 0.45);
+    g.lineBetween(-60, y0 + slant + 8, W + 60, y0 - slant + 8);
+    g.lineBetween(-60, y1 + slant - 8, W + 60, y1 - slant - 8);
+    c.add(g);
+    // Lignes de vitesse dans le bandeau, qui filent vers le côté opposé au boss.
+    const from = v.side === 'right' ? 1 : -1;
+    for (let i = 0; i < 9; i++) {
+      const ly = y0 + 14 + ((h - 28) * i) / 8;
+      const tilt = ((cy - ly) / h) * slant * 2;
+      const len = Phaser.Math.Between(60, 180);
+      const line = this.add.rectangle(Phaser.Math.Between(0, W), ly - tilt * 0, len, 2, edge, phase ? 0.35 : 0.22).setOrigin(0.5, 0.5);
+      line.setRotation(Math.atan2(-slant * 2, W + 120));
+      c.add(line);
+      if (!this.skipping) this.tweens.add({ targets: line, x: line.x - from * (W + 200), duration: Phaser.Math.Between(260, 420), repeat: -1, onRepeat: () => line.setX(from > 0 ? W + 100 : -100) });
+    }
+    // Portrait du côté du boss, tourné vers le centre ; le texte de l'autre côté.
+    const pw = 150;
+    const ph = h - 30;
+    const px = v.side === 'right' ? W - pw - 110 : 110;
+    // Milieu du bandeau à l'abscisse x (il monte vers la droite).
+    const mid = (x: number): number => cy + slant * (1 - (2 * (x + 60)) / (W + 120));
+    const portrait = v.spec.portrait ? foePortraitInBox(this, v.spec.portrait, px, Math.round(mid(px + pw / 2) - ph / 2), pw, ph, 3, 0, phase) : null;
+    if (portrait) {
+      if (v.side === 'left') portrait.setFlipX(true);
+      this.cameras.main.ignore(portrait);
+      c.add(portrait);
+    }
+    const tx = v.side === 'right' ? px - 26 : px + pw + 26;
+    const align = v.side === 'right' ? 'right' : 'left';
+    const ty = mid(tx);
+    const name = addText(this, tx, ty - (phase ? 36 : 28), v.spec.name, { scale: 3, color: PALETTE.parchemin, align, shadow: PALETTE.encre });
+    const sub = addText(this, tx, ty + (phase ? 16 : 12), phase ? 'Seconde phase' : v.spec.title, { scale: phase ? 2 : 1, color: phase ? PALETTE.braise : PALETTE.lumiereDoree, align, shadow: PALETTE.encre });
+    c.add([name, sub]);
+    c.setX(from * W);
+    playSfx(phase ? 'critHit' : 'dash');
+    await this.tween({ targets: c, x: 0, duration: cut.slide, ease: 'Cubic.easeOut' });
+    await this.wait(phase ? cut.phase : cut.intro);
+    await this.tween({ targets: c, x: -from * W, duration: cut.slide, ease: 'Cubic.easeIn' });
+    c.destroy(true);
+  }
+
+  /** Passage en seconde phase (n°219) : le boss s'embrase, le bandeau passe, l'aura reste. */
+  private async phaseCutIn(v: FighterView): Promise<void> {
+    if (v.sprite.alpha <= 0) return;
+    playSfx('charge');
+    if (this.dim) this.tweens.add({ targets: this.dim, alpha: 0.55, duration: this.scaled(160) });
+    for (let i = 0; i < 3; i++) {
+      v.sprite.setTint(PALETTE.braise).setTintMode(Phaser.TintModes.FILL);
+      await this.wait(70);
+      this.whiteFlash(v.sprite, false);
+      await this.wait(60);
+    }
+    this.quake(9, 420, true);
+    this.screenFlash(0.5, 120);
+    await this.band(v, 'phase');
+    if (!v.aura) {
+      const glow = this.makeAura(v);
+      this.stage.addAt(glow, this.stage.getIndex(v.sprite));
+      glow.setAlpha(0);
+      this.tweens.add({ targets: glow, alpha: 0.6, duration: this.scaled(300) });
+    }
+    this.burst(v.home.x, v.home.y - this.bodyHeight(v) * 0.5, 'cendre', PALETTE.braise, 22);
+    if (this.dim) await this.tween({ targets: this.dim, alpha: 0, duration: 220 });
+  }
+
+  /**
+   * Dernier souffle d'un boss ou d'un ennemi nommé (n°220) : il vacille et se
+   * fige, le décor s'assombrit, il dit sa citation de mort dans l'écran, puis
+   * se défait en cendres qui montent.
+   */
+  private async lastBreath(v: FighterView, quote: TalkView | null): Promise<void> {
+    const cut = this.spec?.timings.cutin;
+    if (!cut) return this.dissolve(v.spec.id);
+    v.breath?.remove();
+    v.breath = null;
+    this.pose(v, 'ko');
+    if (this.dim) this.tweens.add({ targets: this.dim, alpha: 0.5, duration: this.scaled(320) });
+    if (!this.spec?.reduced) this.zoomTo(1.18, v, cut.kneel + 200, 0);
+    v.sprite.setTint(0xb8b0c8);
+    await this.tween({ targets: v.sprite, y: v.home.y + 6, scaleY: v.scale * 0.94, x: v.home.x - v.dir * 8, duration: cut.kneel, ease: 'Quad.easeOut' });
+    if (quote && quote.lines.length > 0) await this.talk(quote);
+    else await this.wait(cut.kneel);
+    playSfx('ko');
+    for (let i = 0; i < 3; i++) {
+      this.whiteFlash(v.sprite, true);
+      await this.wait(60);
+      this.whiteFlash(v.sprite, false);
+      v.sprite.setTint(0xb8b0c8);
+      await this.wait(70);
+    }
+    this.whiteFlash(v.sprite, true);
+    this.quake(5, 260);
+    this.ashes(v, cut.fade);
+    await this.tween({ targets: [v.sprite, v.shadow, ...(v.aura ? [v.aura] : [])], alpha: 0, duration: cut.fade, ease: 'Stepped', easeParams: [8] });
+    if (!this.spec?.reduced) this.zoomTo(1, null, 260);
+    if (this.dim) await this.tween({ targets: this.dim, alpha: 0, duration: 260 });
+  }
+
+  /** Cendres qui se détachent du corps et montent pendant la dissolution. */
+  private ashes(v: FighterView, ms: number): void {
+    if (this.skipping) return;
+    const h = this.bodyHeight(v);
+    const tints = v.spec.team === 'enemy' ? [PALETTE.violetPale, PALETTE.metalClair, PALETTE.braise] : [PALETTE.lumiereDoree, PALETTE.parchemin, PALETTE.ciel];
+    const count = this.spec?.reduced ? 14 : 34;
+    for (let i = 0; i < count; i++) {
+      this.time.delayedCall(this.scaled((ms * 0.8 * i) / count), () => {
+        if (!this.busy) return;
+        // Du bas vers le haut : le corps se défait par les pieds.
+        const y = v.sprite.y - (h * i) / count - Phaser.Math.Between(0, 12);
+        const x = v.sprite.x + Phaser.Math.Between(-26, 26);
+        const bit = this.add.rectangle(x, y, Phaser.Math.Between(3, 6), Phaser.Math.Between(3, 6), Phaser.Math.RND.pick(tints), 1);
+        this.stage.add(bit);
+        this.tweens.add({ targets: bit, y: y - Phaser.Math.Between(50, 120), x: x + Phaser.Math.Between(-6, 22) * -v.dir, alpha: 0, angle: Phaser.Math.Between(-90, 90), duration: this.scaled(Phaser.Math.Between(600, 1000)), ease: 'Quad.easeOut', onComplete: () => bit.destroy() });
+      });
+    }
+  }
+
+  /** Citation de mort dans l'écran : la boîte de scène des dialogues, les bandeaux s'effacent le temps de la lire. */
+  private async talk(view: TalkView): Promise<void> {
+    const typing = this.spec?.cutins?.typing ?? { charsPerSecond: 30, fastMultiplier: 4 };
+    if (!this.actions) return;
+    this.tweens.add({ targets: this.ui, alpha: 0, duration: 140 });
+    const before = new Set(this.children.list);
+    const box = new TalkBox(this, this.actions, view, { scale: 1, depth: 58, bottom: this.scale.height - 8, ...typing });
+    // La boîte appartient à l'interface : la caméra de la scène (zoom, secousse) ne la voit pas.
+    for (const o of this.children.list) if (!before.has(o)) this.cameras.main.ignore(o);
+    this.talkBox = box;
+    await box.done;
+    this.talkBox = null;
+    this.tweens.add({ targets: this.ui, alpha: 1, duration: 160 });
   }
 
   /* ---------- Temps ---------- */

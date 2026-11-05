@@ -188,6 +188,7 @@
     "budget": { "normal": 4300, "fast": 2200 },
     "tourbillon": { "vanish": 120, "passes": 6, "pass": 85, "reappear": 160 },
     "bond": { "rise": 280, "apex": 200, "fall": 170 },
-    "spell": { "cast": 420, "crit": 780 }
+    "spell": { "cast": 420, "crit": 780 },
+    "cutin": { "slide": 170, "intro": 400, "phase": 1100, "kneel": 420, "fade": 900 }
   }
 }

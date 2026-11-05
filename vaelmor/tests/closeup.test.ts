@@ -355,11 +355,31 @@ describe('découpage des événements (n°205)', () => {
     expect(segs[0]?.kind).toBe('event');
   });
 
-  it('une citation de mort entre l’échange et la chute garde son ordre', () => {
+  it('la citation de mort d’un ennemi de l’échange se joue dans l’écran, avant sa chute (n°220)', () => {
+    const scene: BattleEvent = { type: 'scene', sceneId: 's', kind: 'death', enemyId: 'b', unitId: 'a', failed: false };
+    const segs = planSegments([combat('a', 'b'), scene, { type: 'ko', unitId: 'b' }, { type: 'outcome', outcome: 'victory' }], all);
+    expect(segs.map((s) => s.kind)).toEqual(['closeup', 'event']);
+    const close = segs[0];
+    expect(close?.kind === 'closeup' && close.falls).toEqual(['b']);
+    expect(close?.kind === 'closeup' && close.quotes.map((q) => q.enemyId)).toEqual(['b']);
+  });
+
+  it('une citation qui ne précède pas la chute de son ennemi reste sur la carte', () => {
     const scene: BattleEvent = { type: 'scene', sceneId: 's', kind: 'death', enemyId: 'gorm', unitId: null, failed: false };
     const segs = planSegments([combat('a', 'b'), scene, { type: 'ko', unitId: 'b' }], all);
     expect(segs.map((s) => s.kind)).toEqual(['closeup', 'event', 'event']);
     expect(segs[0]?.kind === 'closeup' && segs[0].falls).toEqual([]);
+    const lone: BattleEvent = { type: 'scene', sceneId: 's', kind: 'death', enemyId: 'b', unitId: null, failed: false };
+    expect(planSegments([combat('a', 'b'), lone, { type: 'ko', unitId: 'c' }], all).map((s) => s.kind)).toEqual(['closeup', 'event', 'event']);
+  });
+
+  it('un boss de l’échange qui change de phase aussitôt après est signalé (n°219)', () => {
+    const phase: BattleEvent = { type: 'bossPhase', unitId: 'b', line: '' };
+    const segs = planSegments([combat('a', 'b'), phase], all);
+    expect(segs.map((s) => s.kind)).toEqual(['closeup', 'event']);
+    expect(segs[0]?.kind === 'closeup' && segs[0].phase).toBe('b');
+    const other = planSegments([combat('a', 'b'), { type: 'bossPhase', unitId: 'c', line: '' }], all);
+    expect(other[0]?.kind === 'closeup' && other[0].phase).toBeNull();
   });
 
   it('le KO d’une autre unité n’entre pas dans l’écran', () => {
@@ -374,9 +394,10 @@ describe('découpage des événements (n°205)', () => {
   });
 
   it('rien n’est perdu ni réordonné', () => {
-    const events: BattleEvent[] = [combat('a', 'b'), { type: 'ko', unitId: 'b' }, { type: 'xp', unitId: 'a', amount: 30, bonus: 0, before: { level: 1, xp: 0 }, after: { level: 1, xp: 30 }, levelUps: [] }];
+    const quote: BattleEvent = { type: 'scene', sceneId: 's', kind: 'death', enemyId: 'b', unitId: 'a', failed: false };
+    const events: BattleEvent[] = [combat('a', 'b'), quote, { type: 'ko', unitId: 'b' }, { type: 'bossPhase', unitId: 'a', line: '' }, { type: 'xp', unitId: 'a', amount: 30, bonus: 0, before: { level: 1, xp: 0 }, after: { level: 1, xp: 30 }, levelUps: [] }];
     const segs = planSegments(events, all);
-    const replay = segs.flatMap((s): BattleEvent[] => (s.kind === 'event' ? [s.event] : s.kind === 'heal' ? [s.heal] : [s.combat, ...s.falls.map((unitId): BattleEvent => ({ type: 'ko', unitId }))]));
+    const replay = segs.flatMap((s): BattleEvent[] => (s.kind === 'event' ? [s.event] : s.kind === 'heal' ? [s.heal] : [s.combat, ...s.falls.flatMap((unitId): BattleEvent[] => [...s.quotes.filter((q) => q.enemyId === unitId), { type: 'ko', unitId }])]));
     expect(replay).toEqual(events);
   });
 });

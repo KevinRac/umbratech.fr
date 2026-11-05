@@ -278,20 +278,28 @@ export type CombatEvent = Extract<BattleEvent, { type: 'combat' }>;
 
 export type HealEvent = Extract<BattleEvent, { type: 'heal' }>;
 
+export type SceneEvent = Extract<BattleEvent, { type: 'scene' }>;
+
 export type Segment =
   | { readonly kind: 'event'; readonly event: BattleEvent }
   /** Soin au bâton (n°205) : le soigneur et l'allié soigné face à face. */
   | { readonly kind: 'heal'; readonly heal: HealEvent }
-  /** Un échange dans l'écran rapproché, et la chute (KO) des unités de l'échange qui la suit aussitôt. */
-  | { readonly kind: 'closeup'; readonly combat: CombatEvent; readonly falls: readonly string[] };
+  /**
+   * Un échange dans l'écran rapproché, et la chute (KO) des unités de l'échange
+   * qui la suit aussitôt. `quotes` : citations de mort jouées dans l'écran, juste
+   * avant la chute de leur ennemi (n°220). `phase` : boss de l'échange qui passe
+   * en seconde phase juste après (cut-in de phase, n°219 ; l'événement reste joué
+   * sur la carte, avec sa réplique ou sa scène).
+   */
+  | { readonly kind: 'closeup'; readonly combat: CombatEvent; readonly falls: readonly string[]; readonly quotes: readonly SceneEvent[]; readonly phase: string | null };
 
 /**
  * Découpe les événements d'une commande (n°205) : un échange que `inCloseup`
  * accepte (pas une compétence de zone) ouvre l'écran rapproché, comme un soin
  * au bâton (`heal` donné par une autre unité) ; les KO des
- * deux unités de l'échange qui le suivent directement s'y jouent aussi.
- * Une citation de mort entre l'échange et la chute garde son ordre : l'écran
- * se ferme avant elle et la chute se joue sur la carte (cut-ins : lot 6).
+ * deux unités de l'échange qui le suivent directement s'y jouent aussi, avec
+ * la citation de mort qui précède la chute (n°220). Un boss de l'échange qui
+ * change de phase aussitôt après est signalé (`phase`, n°219).
  */
 export function planSegments(events: readonly BattleEvent[], inCloseup: (combat: CombatEvent) => boolean): Segment[] {
   const out: Segment[] = [];
@@ -308,13 +316,24 @@ export function planSegments(events: readonly BattleEvent[], inCloseup: (combat:
     }
     const pair = new Set([event.attackerId, event.defenderId]);
     const falls: string[] = [];
+    const quotes: SceneEvent[] = [];
     while (i + 1 < events.length) {
       const next = events[i + 1] as BattleEvent;
+      const after = events[i + 2];
+      // Citation de mort d'un ennemi de l'échange, suivie de sa chute : les deux se jouent dans l'écran.
+      if (next.type === 'scene' && next.kind === 'death' && pair.has(next.enemyId) && !falls.includes(next.enemyId) && after?.type === 'ko' && after.unitId === next.enemyId) {
+        quotes.push(next);
+        falls.push(after.unitId);
+        i += 2;
+        continue;
+      }
       if (next.type !== 'ko' || !pair.has(next.unitId) || falls.includes(next.unitId)) break;
       falls.push(next.unitId);
       i++;
     }
-    out.push({ kind: 'closeup', combat: event, falls });
+    const next = events[i + 1];
+    const phase = next?.type === 'bossPhase' && pair.has(next.unitId) && !falls.includes(next.unitId) ? next.unitId : null;
+    out.push({ kind: 'closeup', combat: event, falls, quotes, phase });
   }
   return out;
 }

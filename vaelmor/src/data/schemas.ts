@@ -214,6 +214,12 @@ export const closeupBalanceSchema = z.strictObject({
   bond: z.strictObject({ rise: ms, apex: ms, fall: ms }),
   /** Sort mis en scène à la cible (colonnes, rayons, épines…) : durée ordinaire et au critique. */
   spell: z.strictObject({ cast: ms, crit: ms }),
+  /**
+   * Cut-ins (lot 6, n°219, n°220) : bandeau d'un boss (glissade, tenue à l'ouverture
+   * — GDD §11.4 : 400 ms — et au passage en seconde phase), dernier souffle d'un
+   * boss ou d'un nommé (il vacille, puis se défait en cendres).
+   */
+  cutin: z.strictObject({ slide: ms, intro: ms, phase: ms, kneel: ms, fade: ms }),
 });
 export type CloseupTimings = z.infer<typeof closeupBalanceSchema>;
 
