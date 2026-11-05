@@ -6,10 +6,10 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md`, `docs/STORY_BIBLE.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M8 (animations de combat)**, puis M10 (ordre du GDD §17). M7 (contenu du monde) est livré le 04/11/2026 : voir « Livré en M7 ». Pour M8, la bible §10 prévoit les cut-ins de phase et de mort ; les poses d'attaque, de compétence, de coup reçu et de KO sont gardées pour les animations rapprochées.
+**M10 (finitions)** : dernier jalon du GDD §17 (interface, sons et musique, équilibrage, performance, accessibilité ; critère : session de 60 min sans bug majeur, 3 testeurs externes). M8 (animations de combat) est livré le 05/11/2026 : voir « Livré en M8 ». Les bruitages de M8 (`audio/sfx.ts`, synthétisés) sont provisoires et attendent les sons de M10.
 Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2026** (schéma importé, secrets créés, connexion et sauvegarde OK).
 
-**Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (poses d'attaque, de compétence, de coup reçu et de KO du héros déjà rangées dans `assets/personnages/poses/heros/`).
+**Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (faites en M8).
 
 ## Spécification narrative : ennemis nommés et dialogues de combat (21/10/2026)
 
@@ -68,7 +68,8 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **M9b : compte et sauvegarde en ligne** (03/11/2026) — voir « Livré en M9b » ; décisions n°170 à n°173 validées le 03/11/2026 ; en service depuis le 03/11/2026
 - [x] **Lot « dialogues de combat » (moteur)** (03/11/2026) — voir « Livré : dialogues de combat » ; décisions n°174 à n°191 validées le 03/11/2026
 - [x] **M7 : contenu du monde** (04/11/2026) — voir « Livré en M7 » ; décisions n°192 à n°203 validées le 03/11/2026
-- [ ] M8, M10 (ordre du GDD §17)
+- [x] **M8 : animations de combat** (05/11/2026) — voir « Livré en M8 » ; décisions n°204 à n°228
+- [ ] M10 (ordre du GDD §17)
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -518,3 +519,40 @@ Règles et réglages : GDD §7.9.2. Critère du GDD (« parcours complet de Z1 �
 - **n°201 — Saluts de village** conditionnés par quête, drapeau et sort des nommés.
 - **n°202 — Parcours Z1 → Z5** : test automatisé de la chaîne principale.
 - **n°203 — Écriture** : toutes les scènes dans le ton de la bible (2 à 5 répliques, ≤ 140 caractères).
+
+## Livré en M8 (animations de combat, 05/11/2026)
+Écran de combat rapproché façon *Fire Emblem* GBA (GDD §11). Critère du GDD (« toutes les classes avec attaque + critique, vitesse acceptable ») : les 12 classes, le héros et les 26 apparences d'ennemis ont une feuille peinte ; un échange coup + riposte tient sous 4,3 s (2,2 s en « Rapides »), vérifié par `tests/closeup.test.ts`. Modèle conseillé pour M10 : Opus, effort moyen (finitions variées) ; Sonnet suffit pour des retouches.
+
+- **Moteur (lot 1)** : scène `BattleCloseupScene` superposée au combat, chronologie pure `logic/anim/closeup.ts` (`planSegments`, `strikeSteps`, `exchangeDuration`, `rhythmFrameAt`, `castFrameAt`), données `data/battleAnims.json` (fonds, projectiles, sorts, coupures, styles de critique, feuilles), durées `balance.json › closeup`. Fonds et socles peints par code selon le terrain du défenseur ou la zone (`render/closeupBackdrop.ts`), bandeaux GBA (nom, classe, niveau ; arme, Préc / Dég / Crit, PV à crans). Réglage « Rapproché / Carte » et « Effets réduits » dans le menu de carte ; Entrée, Espace, Échap ou un clic passent l'échange. Soin au bâton dans l'écran rapproché.
+- **Héros (lot 2)** : ses poses peintes (garde, estoc, taille, compétence, coup reçu, KO) animées par le code, puis attaque et critique en plusieurs images.
+- **Effets et critiques (lot 3)** : deux caméras (scène qui zoome et tremble, interface fixe), traînées, coupures selon l'arme, particules selon l'élément, cercle runique, projectiles ; critique : contre-jour, zoom ×1,5, lignes de vitesse, coupes enchaînées, flash ; chorégraphies `assaut`, `tourbillon` (façon Bretteur) et `bond` ; sorts mis en scène à la cible.
+- **Les 12 classes (lot 4)** : animations Pixellab (attaque et critique au corps à corps et à distance ; incantation en 16 images et pose tenue pour les mages), feuilles `assets/combat/<classe>.png` alignées sur la garde ; incantation entretenue tant que le sort dure ; respiration en garde ; temps d'arrêt de 750 ms à l'ouverture.
+- **Sorts selon l'arme et armes lancées (n°223, n°224)** : boule de feu, brume, vague, geysers, lances d'eau, rayons, rochers, épines, ronces, fiole, orbe ; le javelot part avec son lanceur.
+- **Rythme et impact façon GBA (n°225, n°226)** : étape d'armé tenue, frappe sèche, traînée en un éclair, pose de contact tenue pendant le gel et la descente des PV ; poses clés `peak` / `impact` / `hold` annotées à la main par feuille ; étincelle d'impact en pixel art, cible qui clignote et tressaute, secousse par paliers, stroboscope au critique, gel allongé et flash sur le coup fatal. Un coup de mêlée dure environ 1,5 s (GDD §11.2 : 1,25 s).
+- **Bruitages (n°227)** : `src/audio/sfx.ts`, synthétisés en Web Audio (aucun fichier) ; réglage « Sons : oui / non ». Provisoires jusqu'à M10.
+- **Ennemis peints (lot 5, n°228)** : 26 apparences (`assets/combat/<sprite>.png`) — les 6 boss et le Golem de cendre plus grands (personnage de 64 px au lieu de 48) ; les lanceurs de sorts (Incendiaire, Esprit des ronces, Voilée de Brume, Sœur Mérrow, Abyssal, Orvane) ont une incantation et une pose tenue. La Rebouteuse garde la feuille de la Porte-Lanterne, le Golem de pierre et le Menhir-tour celle du Golem de cendre. Couleurs du camp ennemi (rouge) sur chaque fiche. Coût : 136 générations Pixellab (essai sur les deux Écumeurs 18, série 118 avec les reprises : Harponneur recréé, attaque de Brakk, pose tenue de l’Esprit et critique du Pillard régénérés) ; solde après la série : 789 / 2 000. Le Golem de pierre (invocation de la compagnie) garde la feuille du Golem de cendre, magma compris.
+- **Cut-ins (lot 6, n°219, n°220)** : bandeau en biais d'un boss à son premier échange du combat (portrait peint, nom, titre) ; au passage en seconde phase, il s'embrase, un bandeau « Seconde phase » traverse l'écran, puis une aura rouge l'entoure dans ses échanges suivants (la carte ne rejoue que sa réplique) ; un boss ou un ennemi nommé qui tombe vacille, dit sa citation de mort dans l'écran rapproché (boîte de scène), puis se défait en cendres. `planSegments` garde la citation et la chute dans l'échange ; durées `balance.json › closeup.cutin`.
+- **Banc d'essai (n°222)** : `game.html?debug&closeup=<classe ou heros>:<ennemi>[&crit=1][&miss=1][&kill=1][&double=1][&nocounter=1][&range=2][&from=right][&heal=1][&slow=N][&noauto][&intro=1][&phase=1][&quote=1]` ; `window.vaelmorCloseupPlay()`.
+- **Tests** : 823 au vert.
+
+### Décisions n°204 à n°228 (jalon M8)
+Les décisions n°204 à n°222 ont été validées par l'auteur au début du jalon (04/11/2026), n°223 à n°228 au fil des lots (04 et 05/11/2026). Ce qu'elles ont donné (le texte d'origine des n°211 à n°214 et n°216 à n°218 n'a pas été recopié : ces deux lignes résument ce qui a été livré) :
+- **n°204 — Découpage** : moteur, héros, effets et critiques, classes, ennemis et boss, cut-ins, réglages ; une validation par lot visible, en captures et séquences image par image.
+- **n°205 — Ce qui passe dans l'écran rapproché** : chaque échange (pas une compétence de zone), le soin au bâton, et la chute des unités de l'échange qui le suit.
+- **n°206 et n°207 — Mise en page** : compagnie et alliés à gauche, ennemis à droite, un socle chacun ; bandeaux du haut (nom, classe, niveau) et du bas (arme, Préc / Dég / Crit, PV à crans) aux couleurs du camp.
+- **n°208 — Fonds et socles peints par code** selon le terrain du défenseur, ou la zone qui impose le sien (Citadelle).
+- **n°209 — Vitesse acceptable** : un échange coup + riposte, transitions comprises, sous `closeup.budget` (4,3 s ; 2,2 s en « Rapides »), testé.
+- **n°210 — Données** : `battleAnims.json` (fonds, projectiles, coupures, styles de critique, feuilles peintes), validé au chargement.
+- **n°211 à n°214 — Héros, effets et critiques** : poses peintes du héros animées par le code ; effets du GDD §11.3 à §11.5 ; chorégraphies de critique par type d'arme.
+- **n°215 — Repli** : une apparence sans feuille peinte garde son sprite de carte agrandi.
+- **n°216 à n°218 — Pixellab** : un essai validé avant chaque série, coût annoncé ; feuilles tournées vers l'est, alignées sur la garde.
+- **n°219 — Cut-in de phase et bandeau de boss** (lot 6, GDD §11.4).
+- **n°220 — Dernier souffle** d'un boss ou d'un nommé, citation de mort dans l'écran (lot 6).
+- **n°221 — Réglages** : « Rapproché / Carte », « Effets réduits » (flashs atténués, secousses ÷ 3, pas de zoom) ; animations désactivées = pas d'écran rapproché.
+- **n°222 — Banc d'essai** `?debug&closeup=`.
+- **n°223 — Sort selon l'arme** (puis l'élément, puis l'orbe), comme Feu ou Tonnerre sur GBA.
+- **n°224 — Armes lancées** : le javelot part avec son lanceur, qui réapparaît en garde.
+- **n°225 — Rythme GBA** des images peintes : armé tenu, frappe sèche, traînée en un éclair, pose de contact tenue, récupération rapide.
+- **n°226 — Impact** : étincelle peinte, clignotement et tressautement de la cible, secousse par paliers, stroboscope, gel du coup fatal.
+- **n°227 — Bruitages** synthétisés, réglage « Sons ».
+- **n°228 — Ennemis peints** : la pose de garde est écrite dans la description du personnage (4 générations par ennemi au lieu de 14 avec un état séparé) ; boss et Golem à 64 px ; lanceurs de sorts avec incantation et pose tenue.
