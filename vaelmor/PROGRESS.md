@@ -6,7 +6,7 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md`, `docs/STORY_BIBLE.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M10 (finitions)** : dernier jalon du GDD §17 (interface, sons et musique, équilibrage, performance, accessibilité ; critère : session de 60 min sans bug majeur, 3 testeurs externes). M8 (animations de combat) est livré le 05/11/2026 : voir « Livré en M8 ». Les bruitages de M8 (`audio/sfx.ts`, synthétisés) sont provisoires et attendent les sons de M10.
+**M10 (finitions) — en cours.** Lots A, B et C livrés le 05/11/2026 (voir « M10 en cours ») ; reprendre au **lot D (bruitages et mixage)**. Bugs, barème et protocole des tests : `docs/TESTS_M10.md`. Décisions n°229 à n°249 validées le 05/11/2026 (liste ci-dessous).
 Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2026** (schéma importé, secrets créés, connexion et sauvegarde OK).
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (faites en M8).
@@ -69,7 +69,7 @@ Accords de l'auteur (17/10/2026) : bâtiments et arbres peuvent changer de taill
 - [x] **Lot « dialogues de combat » (moteur)** (03/11/2026) — voir « Livré : dialogues de combat » ; décisions n°174 à n°191 validées le 03/11/2026
 - [x] **M7 : contenu du monde** (04/11/2026) — voir « Livré en M7 » ; décisions n°192 à n°203 validées le 03/11/2026
 - [x] **M8 : animations de combat** (05/11/2026) — voir « Livré en M8 » ; décisions n°204 à n°228
-- [ ] M10 (ordre du GDD §17)
+- [ ] **M10 : finitions** (en cours) — lots A, B, C livrés le 05/11/2026 ; voir « M10 en cours »
 
 ## Livré en M0
 - Projet npm dans `vaelmor/` : Phaser 4.2.1, TypeScript 7, Vite 8, Vitest 5, Zod 4 (versions exactes figées). Commandes : voir `README.md`.
@@ -519,6 +519,42 @@ Règles et réglages : GDD §7.9.2. Critère du GDD (« parcours complet de Z1 �
 - **n°201 — Saluts de village** conditionnés par quête, drapeau et sort des nommés.
 - **n°202 — Parcours Z1 → Z5** : test automatisé de la chaîne principale.
 - **n°203 — Écriture** : toutes les scènes dans le ton de la bible (2 à 5 répliques, ≤ 140 caractères).
+
+## M10 en cours (finitions, depuis le 05/11/2026)
+Méthode : un lot à la fois ; captures (et séquence image par image, ou fichier d'écoute pour le son) montrées à l'auteur **avant** tout push d'un changement visible ou audible ; tant qu'un lot n'est pas validé, il est poussé sur une branche `vaelmor-m10-lot-x` (jamais sur `main`). Lot validé : tests, build de `play/`, commit et push sur `main`. Bancs Chrome sans interface utilisés : scripts puppeteer-core (`/opt/npm-tools/node_modules/puppeteer-core`, Chrome `/usr/bin/google-chrome`, SwiftShader ~4 ips : une image dure ~250 ms, piège pour les délais) sur `npx vite` ; `?debug` expose `window.vaelmor` (jeu) et `window.vaelmorMusic`.
+
+- [x] **Lot A — audit** : `docs/TESTS_M10.md` (barème n°230, liste A-01 à A-15). Fuite corrigée : Phaser 4.2.1 ne rend pas les textures de données des couches GPU (`releaseGpuTilemapOnShutdown`, `render/tileAnimations.ts`, garde-fou dans `tests/architecture.test.ts`). 34 rencontres × 20 graines IA contre IA sans erreur ni blocage ; taux de victoire à reprendre au lot F (A-10).
+- [x] **Lot B — interface** : écran Options (`scenes/OptionsScene.ts`, `ui/OptionsPanel.ts`, `ui/optionsModel.ts` ; réglages versionnés et écoutés : `core/settings.ts › writeSetting`, `onSettingsChange`) ouvert du titre, de la pause, de l'onglet Options du menu et du menu de carte du combat ; carte de l'île (`scenes/IslandMapScene.ts`, `ui/islandMapView.ts`, peintre pur `render/islandMap.ts`, repères `logic/world/islandMarkers.ts`) par N et l'onglet Carte ; voyage rapide (`logic/world/travel.ts`, `WorldScene.travelTo`) ; fiche du héros du HUD (`WorldHudScene.setHero`) ; « Combat d'essai » seulement avec `?debug` ; `MILESTONE` = M10. Bugs corrigés : Échap qui rouvrait la pause après une fenêtre (`WorldScene.inputReady` : 250 ms et deux images), or et fiche perdus après un chargement en partie.
+- [x] **Lot C — musique** : `audio/engine.ts` (contexte Web Audio créé au premier geste, bus musique / effets / ambiance, volumes `musicVolume`, `sfxVolume`, `ambienceVolume` de 0 à 100, `duckMusic`), `audio/music.ts` (`playMusic`, `prefetchMusic`, fondus, reprise de la boucle d'exploration, cache de 420 s décodées), règles pures `logic/audio/musicRules.ts`, `data/music.json` (règles, remplaçants, `tracks` écrit par l'outil). `npm run encode-music [-- ids] [--preview dossier]` (`tools/encode-music.ts`, `tools/music/loop.ts`) : boucles trouvées seules, raccord de 50 ms cuit, volume commun, `music/web/<id>.webm` (Opus 96) et `.m4a` (AAC 96). Les bruitages de M8 passent déjà par le bus « effets ». **Pistes à générer par l'auteur** : `mus_prep`, `mus_ending` (facultatives : `mus_recruit`, `mus_arena`, `mus_ending_nuit`) ; invites dans `music/README.md`. Tests : 842.
+- [ ] **Lot D — bruitages et mixage** (n°239, n°240) : refaire les 17 sons de `audio/sfx.ts` (synthèse plus riche, en couches, réverbération courte), ajouter ~25 sons d'interface et du monde (curseur, valider, annuler, ouvrir un menu, refus, achat, notification, niveau gagné, réputation +/−, sauvegarde, pas selon le sol, coffre, « ! » de détection, transition de combat, entrée de village, voyage) et 5 ambiances en boucle (plaine, forêt, ressac, marais, braises) sur le bus ambiance ; ligne « Ambiance » dans les Options ; planche d'écoute avant le push.
+- [ ] **Lot E — accessibilité** (n°241 à n°244) : remappage des touches (`core/input.ts`), taille du texte ×1 / ×1,25, mode daltonien (motifs sur les cases, formes de camp), effets réduits étendus au monde et `prefers-reduced-motion`, vitesse du texte.
+- [ ] **Lot F — équilibrage** (n°245) : `npm run simulate`, IA « prudente » pour la compagnie, rapport `docs/EQUILIBRAGE_M10.md`, retouches dans `data/` seulement.
+- [ ] **Lot G — performance** (n°246) : découpage du code (Phaser à part), tas stable, qualité automatique.
+- [ ] **Lot H — kit de test** (n°247, n°248) : F10 « Signaler un problème », journal de session, carnet du testeur et questionnaire dans `docs/TESTS_M10.md`.
+- [ ] **Sessions** avec 3 testeurs, corrections, puis **lot I — clôture** : « Livré en M10 », GDD §17 et décisions, version 1.0.0 (n°249), diapositive Vaelmor de l'accueil.
+
+### Décisions n°229 à n°249 (jalon M10) — validées par l'auteur le 05/11/2026
+- **n°229 — Lots** A à I dans cet ordre, validation sur captures / écoute, push à chaque lot validé.
+- **n°230 — Gravité** : bloquant, majeur, mineur ; M10 tenu sans bloquant ni majeur ouvert après les 3 sessions.
+- **n°231 — Suivi** dans `docs/TESTS_M10.md`.
+- **n°232 — Écran Options unique** (titre, menu, pause, combat), `vaelmor:settings` versionné.
+- **n°233 — Carte de l'île** (N et onglet Carte), parchemin peint par code, brouillard, pas de mini-carte.
+- **n°234 — Voyage rapide** (n°7) : d'un autel ou d'un lieu habité vers un autel découvert ou un lieu habité visité ; gratuit ; pas pendant une poursuite ; ennemis errants renouvelés.
+- **n°235 — Retouches** : version sur le titre, combat d'essai caché hors debug, aide des touches.
+- **n°236 — Choix de la piste** par règle pure, fondu de 1,2 s, reprise de l'exploration après un combat.
+- **n°237 — Format** Opus 96 (.webm) + AAC (.m4a), chargés à la demande ; originaux gardés (dépôt : +37 Mo, ~18 Mo par joueur).
+- **n°238 — Boucles** trouvées par l'outil, raccord de 50 ms (l'auteur n'a pas à nettoyer dans Audacity).
+- **n°239 — Bruitages synthétisés** (pas de fichiers tiers) : 17 sons de combat refaits, ~25 sons d'interface et du monde, 5 ambiances.
+- **n°240 — Mixage** : musique 70, effets 80, ambiance 50 ; musique −6 dB pendant critiques et cut-ins ; silence onglet caché.
+- **n°241 — Remappage clavier** (conflit refusé, réinitialiser) ; manette toujours différée (n°20).
+- **n°242 — Taille du texte** ×1 / ×1,25 (dialogues, scènes, menus).
+- **n°243 — Mode daltonien** : motifs sur les cases, formes sous les unités, couleurs de camp inchangées.
+- **n°244 — Effets réduits** étendus au monde, `prefers-reduced-motion` ; vitesse du texte.
+- **n°245 — Simulateur** et cibles : ordinaires 70–90 %, ≤ 8 tours ; boss 45–70 % ; aucune classe de héros sous 50 % ; 2 à 4 combats par niveau ; retouches dans les données seulement.
+- **n°246 — Performance** : Phaser à part, tas stable ±10 % après 30 combats, qualité automatique ; 60 ips vérifiés par l'auteur (F3).
+- **n°247 — Kit testeur** : F10, journal de session, rien d'envoyé automatiquement.
+- **n°248 — Protocole** : 60 min depuis « Nouvelle partie », sans debug, carnet et questionnaire ; l'auteur recrute les testeurs.
+- **n°249 — Pixellab** : aucune génération prévue (un seul essai chiffré si un manque apparaît) ; version 1.0.0 quand le critère est tenu, diapositive de l'accueil mise à jour.
 
 ## Livré en M8 (animations de combat, 05/11/2026)
 Écran de combat rapproché façon *Fire Emblem* GBA (GDD §11). Critère du GDD (« toutes les classes avec attaque + critique, vitesse acceptable ») : les 12 classes, le héros et les 26 apparences d'ennemis ont une feuille peinte ; un échange coup + riposte tient sous 4,3 s (2,2 s en « Rapides »), vérifié par `tests/closeup.test.ts`. Modèle conseillé pour M10 : Opus, effort moyen (finitions variées) ; Sonnet suffit pour des retouches.
