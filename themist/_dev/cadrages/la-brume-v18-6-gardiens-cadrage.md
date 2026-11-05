@@ -1,6 +1,6 @@
 # La Brume · v18 « La grande descente » · cadrage de l'action 6 (gardiens des actes IV à IX, miniboss de l'acte X) · A. la méthode commune · B. le gardien de l'acte IV
 
-Statut : **à valider par l'auteur** (rédigé le 6 novembre 2026, à la v18.13, avec Opus 5.5). Rien du jeu n'a changé pour l'écrire : ni `index.html`, ni `data/`, ni le wiki.
+Statut : **à valider par l'auteur** (rédigé le 6 novembre 2026, à la v18.13, avec Opus 5.5 ; révisé le même jour à la demande de l'auteur : la difficulté monte d'acte en acte par des habiletés neuves, pas par les PV ni les dégâts : Q9 et Q10 révisées, Q25 ajoutée). Rien du jeu n'a changé pour l'écrire : ni `index.html`, ni `data/`, ni le wiki.
 
 Lu pour l'écrire : `CLAUDE.md` ; `_dev/REPRISE.md` ; le cadrage de la descente (V1 à V8, et le point 6 du plan) ; le cadrage des paliers (Q4 : le « temps de plus » que chaque gardien déclare) ; `memoire.md` § 29 et § 30 (gardiens redessinés), § 31 à § 33 (descente, paliers, mutations), § 35 et § 41 à § 43 (socle du Brumeux, bot qui frappe, build de référence, PV au bot, relecture) ; `data/descente.js`, `data/gardiens.js`, `data/histoire.js` ; dans `index.html`, `createBoss`, `updateBoss`, le bloc des gardiens II et III (v13), l'Accoutumance, les blocs v17.22 (Glas), v17.27 (gardiens redessinés), v18 (descente) et v18.5 (Brumeux) ; `outils/wiki.mjs` (sections « Les gardiens » et « La descente »).
 
@@ -10,7 +10,7 @@ Hors champ : l'équilibrage des formes contre les boss, les emblèmes par palier
 
 Les actes IV à IX finissent aujourd'hui sur un **Masqué renforcé** (porte « garde », `data/descente.js`, `provisoire.fin`, PV ×1,3 à ×2,05). L'action 6 les remplace, un par un, par six gardiens qui ont **chacun une idée de jeu**, lisible au premier coup d'œil, et une **histoire** prise dans Valsonne ; puis elle fait de même pour les deux miniboss de l'acte X. La descente reste jouable à chaque livraison : un gardien allumé remplace sa place provisoire, un gardien éteint la rend.
 
-Ce cadrage fait deux choses : il fixe **la méthode commune** (partie A, Q1 à Q15), pour que les gardiens suivants n'aient besoin que d'une fiche courte ; et il propose **le premier gardien**, celui de l'acte IV, « Les Bas-Fonds » (partie B, Q16 à Q24).
+Ce cadrage fait deux choses : il fixe **la méthode commune** (partie A, Q1 à Q15, et Q25 : l'échelle de difficulté d'un acte à l'autre), pour que les gardiens suivants n'aient besoin que d'une fiche courte ; et il propose **le premier gardien**, celui de l'acte IV, « Les Bas-Fonds » (partie B, Q16 à Q24).
 
 ## Principes (rappel, ils s'appliquent à chaque question)
 
@@ -19,6 +19,7 @@ Ce cadrage fait deux choses : il fixe **la méthode commune** (partie A, Q1 à Q
 - **Toujours une sortie** : une zone qui ne laisse aucune sortie atteignable à temps **saute** (règle du Brumeux).
 - **Image d'abord**, aucune bulle ni fenêtre qui arrête le joueur ; **mouvements réduits** tenus (pas de secousse, pas de pulsation, chutes en fondu).
 - **Chaque palier ajoute des mécaniques lisibles, jamais un mur de PV.**
+- **Chaque acte ajoute des habiletés, pas seulement des PV ou des dégâts** (demande de l'auteur, 6 novembre 2026) : d'un gardien à l'autre, la difficulté monte par des capacités neuves et par leur combinaison ; les PV et les dégâts restent **neutres**, rapportés au build de référence de l'acte (Q9, Q10, Q25).
 - **Secrets** : le Brumeux, la némésis et l'origine des capacités du Masqué ne sont jamais expliqués ; un gardien n'en parle pas.
 
 ---
@@ -39,7 +40,7 @@ Trois constats tirés du code orientent toute la méthode.
 
 - **A. Dans `data/gardiens.js`**, à côté des gardiens I à III (index 4 à 9). Le wiki le lit déjà. Mais ce fichier est indexé 1 à 3 partout (`pv`, `pvMul`, `dessin.actif`, `failles`, `attaques`), et le simulateur de la descente compare les gardiens I à III à partir de lui : chaque ajout frôle la règle d'or.
 - **B. Dans `data/descente.js`**, sous chaque acte. Il mélangerait la structure de la descente (actes, paliers, mutations, vérifiée au bit par `sim-descente`) et le contenu des combats.
-- **C. Un fichier neuf, `data/gardiens-descente.js`** (`BRUME_DATA.gardiensD`), une entrée par adversaire, clé `4` à `9` pour les gardiens, `mini1` et `mini2` pour les miniboss. Chaque entrée : `actif`, `nom`, `acte`, `histoire` (lien vers `histoire.js`), `rayon`, `pv` (Normal), `degats`, `temps` (titres, seuils, vitesse), `tempsEnPlus` (ce qu'il est, son seuil), `attaques` (nom, ligne du wiki, forme parmi les neuf, préavis, dégâts ×, réglages), `file` par temps, `faible`, `dessin` (même grammaire que `gardiens.js` : `version`, `matiere`, `lueur`, `echelle`, `glyphe`, `lecture`, `entree`, `mort`), `decor`, `bot` (mesures). Le jeu et le wiki le lisent tous les deux ; `descente.js` garde seulement le nom de l'acte.
+- **C. Un fichier neuf, `data/gardiens-descente.js`** (`BRUME_DATA.gardiensD`), une entrée par adversaire, clé `4` à `9` pour les gardiens, `mini1` et `mini2` pour les miniboss. Chaque entrée : `actif`, `nom`, `acte`, `histoire` (lien vers `histoire.js`), `rayon`, `pv` (Normal), `degats` (parts, Q10), `echelon` et `habiletes` (Q25), `temps` (titres, seuils, vitesse), `tempsEnPlus` (ce qu'il est, son seuil), `attaques` (nom, ligne du wiki, forme parmi les neuf, préavis, dégâts ×, réglages), `file` par temps, `faible`, `dessin` (même grammaire que `gardiens.js` : `version`, `matiere`, `lueur`, `echelle`, `glyphe`, `lecture`, `entree`, `mort`), `decor`, `bot` (mesures). Le jeu et le wiki le lisent tous les deux ; `descente.js` garde seulement le nom de l'acte.
 
 **Recommandation : C.** `gardiens.js` et `descente.js` ne bougent pas (règle d'or des gardiens I à III prouvée au fichier près), et un gardien vit en un seul endroit.
 
@@ -101,7 +102,7 @@ Les gardiens I à III ont trois temps (seuils 0,66 / 0,33, `bossPhase`), un verr
 - **B. Trois temps en Normal ; en Difficile et en Extrême, un quatrième temps**, sous un seuil propre au gardien (par défaut 0,18), avec **une mécanique neuve** qui le signe (pas de PV en plus, pas d'accélération seule). Seuils Normal 0,66 / 0,33 ; Difficile et Extrême 0,66 / 0,33 / 0,18 : les trois premiers temps restent ceux du Normal. Les seuils passent par `e.seuils18` (la retouche v18.5 de `hitEnemy` les lit déjà ; ses gardes de seuil aussi). Le changement de temps a son signal (verrou, son `phase`, titre du temps dans le HUD), et le quatrième, en plus, un **signe visible sur le gardien** (Q7).
 - **C. Un temps de plus = le troisième temps qui commence plus tôt.** Lisible, mais ce n'est pas une mécanique neuve.
 
-**Recommandation : B.** Durées visées : chaque temps assez long pour être appris (Q9). L'Extrême n'ajoute rien de plus au combat d'un gardien (il hérite de Difficile ; ses propres règles jouent autour : soins nuls après un gardien, aucune mutation dans sa salle).
+**Recommandation : B**, avec le nombre de temps en Normal fixé par l'échelle (Q25 : trois aux actes IV à VI, quatre aux actes VII à IX ; toujours un de plus en Difficile et en Extrême). Durées visées : chaque temps assez long pour être appris (Q9). L'Extrême n'ajoute rien de plus au combat d'un gardien (il hérite de Difficile ; ses propres règles jouent autour : soins nuls après un gardien, aucune mutation dans sa salle).
 
 ## Q7 · Le dessin (grammaire v17.27)
 
@@ -130,28 +131,30 @@ Chaque gardien suit la grammaire des gardiens redessinés, sans exception :
 
 **Recommandation : héritage tel quel pour l'Accoutumance et le Dernier Souvenir ; B pour la Mémoire.** Le bloc v17.22 (`glasInit`) n'est jamais appelé pour un gardien marqué.
 
-## Q9 · Les PV, mesurés au bot
+## Q9 · Les PV, mesurés au bot (révisée le 6 novembre 2026 : PV neutres)
 
 Méthode de l'action 5g-1 (§ 41), étendue aux actes IV à IX :
 
 - **Build de référence de l'acte** (`gardiens-descente.js`, `bot.reference`) : niveau = la médiane du niveau atteint **à l'entrée de la salle du gardien** par une descente purgée (outil `mesure-brumeux.mjs niveau` généralisé : `mesure-gardiens.mjs niveau <acte>`) ; talents : **la règle du Brumeux tronquée** (sous-classe principale dans l'ordre de l'arbre, puis la branche voisine, rangs donnés dans cet ordre selon les points du niveau ; à l'acte X, la règle redonne exactement la liste de `brumeux.js`, le simulateur le vérifie) ; un objet commun par emplacement ; ni gravure, ni relique, ni pacte.
 - **Mannequin** (essai `mannequin=1`) : le gardien garde sa présence, ne lance rien, sans seuil : le DPS de chaque forme contre lui.
 - **Bot qui frappe** (`bot=2`) : aujourd'hui dans le bloc du Brumeux (`pilote2`, lit `X`). **Écart proposé** : l'extraire en un pilote commun qui lit une liste de zones et d'obstacles fournie par un crochet (le Brumeux et les gardiens), sans changer son jeu contre le Brumeux (`banc-brumeux` F et N le prouvent) ; une seule retouche prévue pour les gardiens : passer par une ouverture quand sa sortie est derrière un obstacle (Q5).
-- **Combats** (`?gardien=<acte>&ref=1&bot=2&dieu=1`) : quatre formes × cinq graines en Normal pour calibrer (`PV ← PV × cible ÷ médiane`, arrondi à 100, deux tours au plus), puis validation dans les trois paliers. **Mêmes PV pour les quatre formes et les trois paliers.** Pas d'enrage, pas de chronomètre.
-- **Cibles** (médiane des quatre formes, Normal, combat entier) :
-  - **A. 90 s pour chacun des six.**
-  - **B. Une montée douce : acte IV 80 s (70 à 90), puis +8 s par acte, acte IX 120 s (105 à 135)** ; tolérance par forme × 0,6 à × 1,6 ; le quatrième temps de Difficile ajoute ce que sa mécanique coûte, sans PV de plus.
-  - Avant de calibrer, le même protocole mesure **une fois** les gardiens I à III (Mère-Brume, Héraut, Glas), au build de référence de leur acte, pour situer l'instrument (mesure seulement, rien ne change pour eux).
+- **Combats** (`?gardien=<acte>&ref=1&bot=2&dieu=1`) : quatre formes × cinq graines en Normal, puis validation dans les trois paliers. **Mêmes PV pour les quatre formes et les trois paliers.** Pas d'enrage, pas de chronomètre.
+- **Ce qui fixe les PV** :
+  - **A. Une durée cible qui monte avec l'acte** (80 s à l'acte IV, +8 s par acte), PV calés dessus. La difficulté monterait surtout par la durée, donc par les PV : **écarté** (demande de l'auteur).
+  - **B. PV neutres : un temps de frappe constant.** PV = DPS médian des quatre formes contre le mannequin (au build de référence de l'acte) × **50 s**, le même temps de frappe pour les six gardiens, arrondi à 100. Un gardien de l'acte IX n'est donc pas « plus épais » qu'un gardien de l'acte IV au regard de ta puissance du moment. Ce qui allonge et durcit le combat, c'est sa **friction** (durée réelle ÷ 50 s) : esquiver, se placer, franchir, couper, mémoriser, c'est-à-dire **ses habiletés** (Q25).
+  - **La friction doit monter d'un acte à l'autre** (médiane des quatre formes, Normal) : visée ≈ 1,5 à l'acte IV (≈ 75 s), ≈ 2,3 à l'acte IX (≈ 115 s), jamais moins que celle du gardien précédent. Un gardien sous sa fourchette se corrige **par sa partition** (enchaînements, contraintes à la fois, préavis jusqu'au plancher de 0,8 s), **jamais par ses PV**.
+  - Avant de calibrer, le même protocole mesure **une fois** les gardiens I à III (Mère-Brume, Héraut, Glas), au build de référence de leur acte : leur friction situe l'instrument et le bas de l'échelle (mesure seulement, rien ne change pour eux).
 - **Règle des formes hors des cibles** : celle de 5g (friction = durée × DPS au mannequin ÷ PV ; friction dans la bande × 0,75 à × 1,33 → l'écart vient du kit, accepté et noté pour l'action 7 ; hors de la bande → une seule passe de correction **pour toutes les formes**, puis on présente le cas à l'auteur). Interdits : PV, dégâts ou règle lus sur la forme.
 
-**Recommandation : B pour les cibles, et toute la méthode ci-dessus.** Six gardiens à 80–120 s font 10 min sur les 40 visées de la descente : la descente reste rapide (le tryhard repose dessus).
+**Recommandation : B, et toute la méthode ci-dessus.** Six gardiens de 75 à 115 s font environ 10 min sur les 40 visées de la descente : elle reste rapide (le tryhard repose dessus), et chaque seconde de plus vient d'une mécanique de plus.
 
-## Q10 · Les dégâts
+## Q10 · Les dégâts (révisée le 6 novembre 2026 : dégâts neutres)
 
 - **A. Au jugé, par gardien.**
-- **B. Une règle** : `degats` = 26 (le Glas) × la montée des dégâts de la salle du gardien ÷ celle de la salle du Glas (`desMontee`, `descente.js` : +1,5 % par salle après l'acte III) ; chaque attaque a son multiplicateur (× 0,8 à × 1,5, comme les gardiens II et III). Pour l'acte IV (salle 24 contre 20) : ≈ 27. Le simulateur recalcule la règle.
+- **B. La montée** : 26 (le Glas) × la montée des dégâts de la salle du gardien ÷ celle de la salle du Glas (≈ 27 à l'acte IV). C'est encore du scaling, qui grossit d'acte en acte.
+- **C. Une part des PV du build de référence de l'acte**, la même d'un acte à l'autre : chaque attaque déclare la part qu'elle retire (zone principale ≈ 15 à 18 %, au plus 30 % pour un coup, 12 % pour un tir isolé). Un coup du gardien de l'acte IX pèse ce que pèse un coup du gardien de l'acte IV ; la difficulté vient de ce qu'il en enchaîne et de ce qu'il faut savoir faire pour les éviter.
 
-**Recommandation : B.** Une attaque ne retire jamais plus d'un tiers des PV du build de référence de l'acte (vérifié au simulateur).
+**Recommandation : C.** Le simulateur recalcule les parts sur le build de chaque acte et refuse un coup au-delà de 30 %.
 
 ## Q11 · Le soin après la victoire
 
@@ -181,7 +184,7 @@ Chaque gardien a **une histoire prise dans `data/histoire.js`** (Valsonne, le Ma
 
 ## Q14 · Le banc type et le simulateur
 
-**Simulateur** `outils/sim-gardiens.mjs` (Node seul), une section par gardien plus le commun : données (formes parmi les neuf, préavis ≥ 0,8 s, ΔE, glyphe XML valide et lisible, dégâts par la règle Q10) ; files (jamais deux fois de suite, chaque attaque jouable à son temps) ; seuils (Normal 0,66 / 0,33 ; quatrième temps seulement en Difficile et en Extrême, jamais sous l'acte IV, même avec une règle mal écrite) ; **10 000 combats abstraits** (chaque zone rendue a une sortie atteinte à temps, en ligne droite ou au détour ; aucune zone sans sortie) ; obstacles (connexité ≥ 85 %, jamais sur toi) ; interrupteur (éteint : `ACTD[n].boss` absent, `desPorte` rend `garde`) ; branchements (chaque ligne de l'aiguillage Q3 lue dans `index.html`). Contre-épreuves à chaque fois : une erreur introduite exprès est attrapée.
+**Simulateur** `outils/sim-gardiens.mjs` (Node seul), une section par gardien plus le commun : données (formes parmi les neuf, préavis ≥ 0,8 s, ΔE, glyphe XML valide et lisible, parts de dégâts Q10) ; **échelle** (Q25 : chaque gardien apporte au moins une habileté absente de tous les gardiens d'avant, I à III compris ; aucun cran de l'échelon ne baisse, au moins un monte ; ses contraintes à la fois ne dépassent pas son échelon) ; files (jamais deux fois de suite, chaque attaque jouable à son temps) ; seuils (Normal 0,66 / 0,33 ; quatrième temps seulement en Difficile et en Extrême, jamais sous l'acte IV, même avec une règle mal écrite) ; **10 000 combats abstraits** (chaque zone rendue a une sortie atteinte à temps, en ligne droite ou au détour ; aucune zone sans sortie) ; obstacles (connexité ≥ 85 %, jamais sur toi) ; interrupteur (éteint : `ACTD[n].boss` absent, `desPorte` rend `garde`) ; branchements (chaque ligne de l'aiguillage Q3 lue dans `index.html`). Contre-épreuves à chaque fois : une erreur introduite exprès est attrapée.
 
 **Banc Chromium** `_dev/bancs/banc-gardiens18.mjs <port> [sections] [dossier]`, sections par gardien :
 
@@ -191,7 +194,7 @@ Chaque gardien a **une histoire prise dans `data/histoire.js`** (Valsonne, le Ma
 | B · temps | seuils et verrou ; quatrième temps en Difficile et en Extrême seulement ; Accoutumance (fenêtre, anneau ivoire sur le point faible) ; Dernier Souvenir sous plafond |
 | C · aucun coup sans signe | **journal des coups du gardien** (nouveau, hors arène, dans le bloc des gardiens : chaque coup reçu rattaché à sa source et à l'âge de son signe) ; quatre formes × trois paliers au bot : 0 coup sans signe, 0 zone sans sortie |
 | D · attaques | chacune jouée seule (essai `attaque=`), sortie atteinte, sautes comptées, règles propres (obstacles, tirs, invocations) |
-| E · PV au bot | niveau, mannequin, combats (Q9) ; durées par temps |
+| E · PV au bot | niveau, mannequin, combats (Q9) ; durées par temps ; **friction médiane au-dessus de celle du gardien précédent** (Q25) |
 | F · dessin | planche (trois temps, quatrième, six états : repos, attaque, à nu, sonné, fondu, mort) ; corps plein ≤ 1,15 × r ; ΔE relevés ; contraste contre son sol ; mouvements réduits (12 instants, rien ne bouge) ; coût ≤ 1 ms |
 | G · règle d'or | méthode de `banc-arene` G (copie instrumentée, graine, horloge à la main, polices chargées, 180 images par salle, 19 salles, trois paliers) contre l'`index.html` d'avant : allumé, **seule sa salle** diffère ; éteint, **aucune** image ne diffère |
 | H · repli et wiki | éteint : porte `garde`, Masqué renforcé, wiki d'avant ; allumé : `wiki.mjs --check`, portraits |
@@ -199,6 +202,39 @@ Chaque gardien a **une histoire prise dans `data/histoire.js`** (Valsonne, le Ma
 Captures relues à l'œil (planche, porte, barre, wiki). Régression complète à chaque livraison (méthode du § 3 de `REPRISE.md`), `banc-gardiens-final` seul à la fin.
 
 **Recommandation : ainsi**, un seul banc qui grandit d'un gardien à l'autre (sections A à H paramétrées par l'acte), plutôt que six bancs.
+
+## Q25 · L'échelle des gardiens : des habiletés neuves d'un acte à l'autre (ajoutée le 6 novembre 2026)
+
+Demande de l'auteur : plus on descend, plus les boss doivent être difficiles, **et pas seulement par les PV et les dégâts : par des habiletés nouvelles**. Q9 et Q10 rendent les PV et les dégâts neutres ; il faut donc que la montée vienne d'ailleurs, et qu'elle se vérifie.
+
+- **A. Libre** : chaque fiche choisit, l'auteur juge à l'œil. Risque : six gardiens différents mais de même niveau, ou un gardien de l'acte VIII plus simple que celui de l'acte V.
+- **B. Une échelle écrite dans les données et vérifiée** : chaque gardien déclare son **échelon** (les crans ci-dessous) et les **habiletés** qu'il demande au joueur. Deux règles : (1) chaque gardien apporte **au moins une habileté qu'aucun gardien d'avant ne demandait** (I à III compris) ; (2) **aucun cran ne baisse** d'un acte au suivant, et **au moins un monte**. Le simulateur vérifie les deux ; le banc E vérifie que la friction mesurée monte (Q9).
+
+**Les crans de l'échelon** (aucun ne touche aux PV ni aux dégâts) :
+- **Temps en Normal** : trois, puis quatre (et toujours un de plus en Difficile et en Extrême, Q6).
+- **Contraintes à la fois** : ce que le gardien fait peser en même temps (une zone, un obstacle qui dure, une cible à couper, un courant, un écho…).
+- **Enchaînements** : le nombre de coups d'un geste composé (deux coups : la Rafle ; trois coups ; quatre).
+- **Préavis** : il descend vers le plancher de 0,8 s, jamais en dessous (aucune mort sans signe).
+- **Ce qui l'entoure** : invoqués simples, puis invoqués qui ont un rôle (ils protègent, ils relaient ses zones), puis un terrain qui agit.
+
+**L'échelle proposée** (l'habileté neuve est une **direction** : la fiche de chaque gardien la confirme ou la remplace, dans le respect des deux règles) :
+
+| Acte | Temps (Normal) | Contraintes à la fois | Enchaînements | Préavis | Habileté neuve |
+|---|---|---|---|---|---|
+| III · Glas (repère) | 3 | 1 à 2 | — | 0,8 à 1,1 s | traverser au bon moment, lire des motifs de tirs |
+| **IV · Bas-Fonds** | 3 | 1 (+ des obstacles brefs) | 2 coups | 1,0 à 1,2 s | **l'espace** : lire et franchir des obstacles, être au bon endroit avant que la porte se ferme (le Guet) |
+| V · Eaux Mortes | 3 | 2 | 2 coups | 0,9 à 1,1 s | **le déplacement subi** : courants et sol qui t'emportent, à compenser pendant l'esquive |
+| VI · Nef Muette | 3 | 2 | 3 coups | 0,9 à 1,0 s | **la mémoire d'une séquence** : il montre une suite de gestes en entier, puis la rejoue plus vite (toujours télégraphiée, au préavis plancher) |
+| VII · Racines du Cœur | 4 | 2 | 3 coups | 0,8 à 1,0 s | **la priorité** : des cibles à couper (racines qui le protègent ou le nourrissent) pendant qu'il attaque |
+| VIII · Puits des Échos | 4 | 3 | 3 coups | 0,8 à 1,0 s | **la double lecture** : chaque geste revient en écho, décalé, d'une autre origine |
+| IX · Cloches Englouties | 4 | 3 | 4 coups | 0,8 s | **la synthèse et le rythme** : deux habiletés des gardiens IV à VIII jouées ensemble, sur une cadence à suivre |
+
+- **Chaque gardien garde son idée propre** : l'échelle dit ce qu'il doit ajouter, pas ce qu'il est. À partir de l'acte VI, un gardien peut **reprendre une habileté d'un gardien d'avant**, mais seulement combinée à la sienne (jamais seule).
+- **Le temps de plus de Difficile** est, lui aussi, une habileté (ou une contrainte de plus) propre au gardien, pas une hausse de chiffres.
+- **Les deux miniboss de l'acte X** se placent au-dessus du gardien de l'acte IX sur au moins un cran (cadrage 6.7).
+- **Le Guet est le premier barreau** : une contrainte à la fois (plus ses herses), deux coups au plus (Croix, Rafle), les préavis les plus longs de l'échelle ; son Couvre-feu de Difficile ajoute la seconde contrainte (des obstacles qui restent).
+
+**Recommandation : B, avec cette échelle.** Elle rend la demande vérifiable : un gardien plus profond qui ne demande rien de neuf, ou qui se joue plus vite que le précédent, échoue au simulateur ou au banc.
 
 ## Q15 · Le découpage, l'ordre, le modèle et l'effort
 
@@ -210,7 +246,7 @@ Captures relues à l'œil (planche, porte, barre, wiki). Régression complète �
 | **6.1a** | **Socle commun** (v18.14, gardien **éteint**) : `gardiens-descente.js` (entrée de l'acte IV, `actif:false`), interrupteur, aiguillage complet (Q3), bloc `/*gar:pur*/` et `sim-gardiens`, sortie au détour (`garSortieGrille`), pilote commun du bot (extrait sans changer le Brumeux), build de référence par acte et mannequin, journal des coups hors arène, thème et sol de la salle (Q4), essai `?gardien=<acte>[&temps=n][&attaque=…][&palier=…][&ref=1][&bot=2][&mannequin=1][&dieu=1][&classe=…]` (dans `ESSAI18` et `ESSAI_URL`), console `__gardiens18`, banc A, B, C, G, H sur un **gardien d'essai** (silhouette simple, deux gestes connus), mesure des gardiens I à III (Q9) | **Opus 5.5, élevé** |
 | **6.1b** | **Le gardien de l'acte IV** (v18.15, **allumé**) : fiche B validée, attaques, temps, temps de plus, obstacles, dessin, entrée et mort, glyphe, portraits, PV au bot, wiki, codex, journal ; banc D, E, F et toutes les sections | **Opus 5.5, élevé** |
 | **6.1c** | Relecture indépendante (un agent qui n'a écrit ni 6.1a ni 6.1b), corrections | **Opus 5.5, élevé** (elle valide la méthode) |
-| 6.2 à 6.6 | Gardiens V à IX, un par un : **fiche courte** (identité, histoire, silhouette, temps, attaques, temps de plus, point faible, distinctions), puis implémentation, puis relecture courte | fiche : **Opus 5.5, moyen** ; implémentation : **Sonnet 5.5, élevé** (dessin et combat dans un fichier de 15 000 lignes) ; relecture : **Opus 5.5, moyen** |
+| 6.2 à 6.6 | Gardiens V à IX, un par un : **fiche courte** (identité, histoire, silhouette, **son échelon et son habileté neuve (Q25)**, temps, attaques, temps de plus, point faible, distinctions), puis implémentation, puis relecture courte | fiche : **Opus 5.5, moyen** ; implémentation : **Sonnet 5.5, élevé** (dessin et combat dans un fichier de 15 000 lignes) ; relecture : **Opus 5.5, moyen** |
 | 6.7 | **Cadrage des miniboss** (salle d'élite et mutations, deux temps, temps de plus, durée 45–60 s, ce qui les distingue des gardiens) et fiche du premier | **Opus 5.5, élevé** |
 | 6.8 | Premier miniboss | **Opus 5.5, élevé** |
 | 6.9 | Second miniboss, relecture des deux | **Sonnet 5.5, élevé** ; relecture **Opus 5.5, moyen** |
@@ -313,6 +349,7 @@ Formes employées : couloir, croix, case (damier), cône, disque, projectile ; l
 | Sa fenêtre | Accoutumance | sonné contre un mur | épuisé après les faisceaux | **la Relève, après chaque Fermeture** |
 | Point faible | cœur-cloche | battant | œil | **registre** |
 | Ta réserve | non (copie) | non (copie au temps 2) | oui (le Reflet) | **non, et pas de copie** |
+| Habileté demandée (Q25) | lire ce qu'elle copie | traverser au bon moment | traverser, lire des motifs de tirs | **l'espace : être au bon endroit** |
 
 ## Q23 · Sa lecture au wiki
 
@@ -325,8 +362,9 @@ Formes employées : couloir, croix, case (damier), cône, disque, projectile ; l
 
 ## Q24 · PV, durées, dégâts du Guet
 
-- **PV** : point de départ ≈ 9 500 (le Glas, 9 000, × la montée des PV de la salle 24 ÷ celle de la salle 20), puis **mesurés au bot** (Q9) vers une médiane de **80 s** en Normal (70 à 90), soit environ 30 s / 28 s / 22 s par temps ; en Difficile, le Couvre-feu prend les 18 derniers pour cent.
-- **Dégâts** : 27 par la règle Q10 ; Herse × 1,2, Contrôle × 1,4, Rafle × 1,4 par coup, Vouge × 1,3, Garde ! × 1,0, Feuillets × 0,6 par page.
+- **PV** : par la règle Q9, DPS médian des quatre formes contre le mannequin au build de l'acte IV × 50 s ; durée visée ≈ 75 s en Normal (friction ≈ 1,5, le bas de l'échelle), soit environ 28 s / 26 s / 21 s par temps ; en Difficile, le Couvre-feu prend les 18 derniers pour cent.
+- **Dégâts** (parts des PV du build de l'acte IV, Q10 ; elles remplacent les multiplicateurs de Q18) : Herse 15 %, Contrôle 18 %, Rafle 15 % par coup, Vouge 16 %, Garde ! 12 %, Feuillets 5 % par page.
+- **Échelon** (Q25) : 3 temps, une contrainte à la fois plus ses herses, deux coups au plus, préavis de 1,0 à 1,2 s ; habileté neuve : l'espace.
 - **Rayon de touche** 50 ; vitesse 58 (comme les gardiens I à III), × 1,3 au temps 3.
 
 **Recommandation : ainsi**, les chiffres finaux sortant de la mesure (6.1b), rapportés à l'auteur.
@@ -342,15 +380,16 @@ Formes employées : couloir, croix, case (damier), cône, disque, projectile ; l
 | Q3 | Salle | vraie salle `boss`, aiguillage `room.g18` / `e.g18` sur la liste des points d'entrée ; miniboss en salle d'élite |
 | Q4 | Décor | la salle du gardien seule prend le décor de son acte ; musique du registre ; le reste plus tard |
 | Q5 | Moteur | `/*gar:pur*/` commun, géométrie du Brumeux réutilisée, sortie au détour ajoutée |
-| Q6 | Temps | trois temps ; quatrième temps à 18 % en Difficile et Extrême, mécanique neuve et signe sur le corps |
+| Q6 | Temps | trois temps (quatre à partir de l'acte VII) ; un temps de plus à 18 % en Difficile et Extrême, mécanique neuve et signe sur le corps |
 | Q7 | Dessin | grammaire v17.27 telle quelle, contraste contre son sol ≥ 4,5 |
 | Q8 | Accoutumance, Dernier Souvenir, Mémoire | hérités tels quels ; aucun gardien neuf ne lit ta réserve ni ne copie |
-| Q9 | PV | build de référence par acte, mannequin, médiane des quatre formes ; 80 s à l'acte IV, +8 s par acte |
-| Q10 | Dégâts | règle de la montée (≈ 27 à l'acte IV) |
+| Q9 | PV | neutres : DPS médian au mannequin (build de l'acte) × 50 s pour tous ; la friction mesurée doit monter d'acte en acte (≈ 75 s à l'acte IV, ≈ 115 s à l'acte IX) |
+| Q10 | Dégâts | neutres : une part des PV du build de l'acte, la même d'un acte à l'autre (≤ 30 % par coup) |
 | Q11 | Soin | comme les gardiens I à III, modulé par les paliers |
 | Q12 | Wiki | carte, sous-section, temps de plus dit ; éteint = wiki d'avant |
 | Q13 | Histoire | une entrée de codex par gardien |
-| Q14 | Bancs | `sim-gardiens`, `banc-gardiens18` (A à H), règle d'or allumé et éteint |
+| Q14 | Bancs | `sim-gardiens` (échelle comprise), `banc-gardiens18` (A à H, friction qui monte), règle d'or allumé et éteint |
+| Q25 | Échelle | chaque gardien apporte une habileté neuve ; crans (temps, contraintes à la fois, enchaînements, préavis, entourage) qui ne baissent jamais ; vérifiée au simulateur et au banc |
 | Q15 | Découpage | 6.1a socle (Opus élevé), 6.1b Guet (Opus élevé), 6.1c relecture (Opus élevé), puis V à IX et miniboss |
 | Q16 | Identité | le Guet Sans-Nom, garde de la Porte Basse, « Qui va là ? » |
 | Q17 | Idée de jeu | la herse : couper la salle, contrôler une section, rouvrir |
@@ -360,7 +399,7 @@ Formes employées : couloir, croix, case (damier), cône, disque, projectile ; l
 | Q21 | Dessin | herse au dos, visage d'étain effacé, registre enchaîné ; étain, ciré, rouille, lueur des égouts |
 | Q22 | Distinctions | une question d'espace, pas de temps ; ni copie ni réserve |
 | Q23 | Wiki | lecture, lignes d'attaque, temps de plus, journal (à relire) |
-| Q24 | Chiffres | ≈ 9 500 PV au départ puis bot (80 s) ; dégâts 27 ; r 50 |
+| Q24 | Chiffres | PV par la règle Q9 (≈ 75 s) ; dégâts en parts des PV du build (12 à 18 %) ; r 50 ; premier barreau de l'échelle |
 
 ## Risques
 
@@ -369,6 +408,7 @@ Formes employées : couloir, croix, case (damier), cône, disque, projectile ; l
 - **Le bot passe mal les guichets** et la mesure des PV dérive : la retouche du pilote est la seule prévue, capture à l'appui, et le Gouffre et le Tisse-Destin suivent la règle des formes hors des cibles.
 - **Le Contrôle punit l'imprévu** : la section visée est la tienne au moment de l'annonce, la sortie est calculée à ta vitesse à pied, et la Rafle annonce ses deux coups ensemble.
 - **Coût** : les herses sont des disques d'obstacle, dessinés depuis une image cuite ; ≤ 1 ms.
+- **Une échelle qui plafonne** : six habiletés neuves à trouver, chacune lisible ; si une fiche n'en trouve pas une qui tienne, elle le dit et l'auteur tranche (plutôt que de compenser par des chiffres).
 - **Volume** : huit adversaires. La méthode posée ici, et une fiche courte par adversaire, le contiennent.
 
 ## Ce que ce cadrage ne décide pas
