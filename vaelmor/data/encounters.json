@@ -269,10 +269,10 @@
       "sampled": { "width": 32, "height": 24, "site": [55, 100], "anchor": "player" },
       "maxDeploy": 5,
       "enemies": [
+        { "enemy": "pillard_des_epaves", "level": 8 },
+        { "enemy": "pillard_des_epaves", "level": 8 },
         { "enemy": "pillard_des_epaves", "level": 7 },
-        { "enemy": "pillard_des_epaves", "level": 7 },
-        { "enemy": "pillard_des_epaves", "level": 6 },
-        { "enemy": "harponneur", "level": 7 }
+        { "enemy": "harponneur", "level": 8 }
       ],
       "victoryFlags": []
     },
