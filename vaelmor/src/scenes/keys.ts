@@ -11,6 +11,8 @@ export const SCENES = {
   battleHud: 'BattleHud',
   battleCloseup: 'BattleCloseup',
   saves: 'Saves',
+  options: 'Options',
+  islandMap: 'IslandMap',
   account: 'Account',
   ending: 'Ending',
   debug: 'Debug',

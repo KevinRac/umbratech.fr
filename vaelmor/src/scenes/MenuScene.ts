@@ -33,14 +33,18 @@ import { isLoadable, listSlots, SLOT_LABEL } from '../core/saves';
 import { GAME_SAVE_KEYS } from '../logic/save/keys';
 import type { SaveEnvelope } from '../logic/save/schema';
 import { formatSavedAt } from './SaveScene';
+import { OptionsPanel } from '../ui/OptionsPanel';
+import { IslandMapView, type IslandMapViewOptions } from '../ui/islandMapView';
 
-export type MenuTab = 'compagnie' | 'inventaire' | 'reputation' | 'quetes' | 'sauvegarde';
+export type MenuTab = 'compagnie' | 'inventaire' | 'reputation' | 'quetes' | 'carte' | 'sauvegarde' | 'options';
 const TABS: readonly { id: MenuTab; label: string }[] = [
   { id: 'compagnie', label: 'Compagnie' },
   { id: 'inventaire', label: 'Inventaire' },
   { id: 'reputation', label: 'Réputation' },
   { id: 'quetes', label: 'Quêtes' },
+  { id: 'carte', label: 'Carte' },
   { id: 'sauvegarde', label: 'Sauvegarde' },
+  { id: 'options', label: 'Options' },
 ];
 
 export interface MenuSceneData {
@@ -48,6 +52,8 @@ export interface MenuSceneData {
   readonly onClose: () => void;
   /** Sauvegarde depuis le menu (n°161) : lieu du héros, empêchement éventuel, chargement d'une partie. */
   readonly saves?: { readonly place: string; readonly blocked: string | null; readonly onLoad: (save: SaveEnvelope) => void };
+  /** Onglet Carte (n°233) : la carte du monde et ce qu'il faut pour ses repères. */
+  readonly island?: Omit<IslandMapViewOptions, 'x' | 'y' | 'cell' | 'depth' | 'labels' | 'scale'>;
 }
 
 const DEPTH = 500;
@@ -64,6 +70,8 @@ export class MenuScene extends Phaser.Scene {
   private tabTexts: ReturnType<typeof addText>[] = [];
   private list: ScrollList | null = null;
   private box = { x: 0, y: 0, w: 0, h: 0 };
+  private options: OptionsPanel | null = null;
+  private island: IslandMapView | null = null;
   private closing = false;
   /** L'écran des emplacements est ouvert par-dessus : le menu attend. */
   private covered = false;
@@ -115,6 +123,7 @@ export class MenuScene extends Phaser.Scene {
     if (this.actions.justPressed('left')) this.setTab(TABS[(this.tabIndex() + TABS.length - 1) % TABS.length]?.id ?? this.tab);
     if (this.actions.justPressed('right')) this.setTab(TABS[(this.tabIndex() + 1) % TABS.length]?.id ?? this.tab);
     this.list?.update();
+    this.options?.update();
   }
 
   private tabIndex(): number {
@@ -141,11 +150,12 @@ export class MenuScene extends Phaser.Scene {
     this.box = { x, y, w, h };
     const dim = this.add.rectangle(0, 0, W, H, PALETTE.nuit, 0.7).setOrigin(0, 0).setDepth(DEPTH).setInteractive();
     const panel = drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH + 1, fillAlpha: 0.97 });
-    const gold = addText(this, x + w - 18 * S, y + 18 * S, `Or : ${this.ctx.progress.gold}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH + 2);
+    const gold = addText(this, x + w - 18 * S, y + h - 22 * S, `Or : ${this.ctx.progress.gold}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH + 2);
     const hints = addText(this, x + 18 * S, y + h - 22 * S, 'Gauche/Droite : onglet   Haut/Bas : choisir   Échap ou Tab : fermer', { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH + 2);
     this.frame.push(dim, panel, gold, hints);
     this.tabTexts = TABS.map((t, i) => {
-      const text = addText(this, x + 22 * S + i * 150 * S, y + 16 * S, t.label, { scale: S }).setDepth(DEPTH + 2);
+      const step = Math.floor((w - 44 * S) / TABS.length);
+      const text = addText(this, x + 22 * S + i * step, y + 16 * S, t.label, { scale: S }).setDepth(DEPTH + 2);
       text.setInteractive({ useHandCursor: true }).on('pointerdown', () => !this.covered && this.setTab(t.id));
       this.frame.push(text);
       return text;
@@ -158,9 +168,15 @@ export class MenuScene extends Phaser.Scene {
     this.tabTexts.forEach((t, i) => t.setTint(TABS[i]?.id === tab ? PALETTE.jauneBle : PALETTE.metal));
     this.list?.destroy();
     this.list = null;
+    this.options?.destroy();
+    this.options = null;
+    this.island?.destroy();
+    this.island = null;
     for (const p of this.content) p.destroy();
     this.content = [];
     if (tab === 'compagnie') this.buildCompany();
+    else if (tab === 'options') this.buildOptions();
+    else if (tab === 'carte') this.buildIsland();
     else if (tab === 'inventaire') this.buildInventory();
     else if (tab === 'reputation') this.buildReputation();
     else if (tab === 'sauvegarde') this.buildSaves();
@@ -170,6 +186,41 @@ export class MenuScene extends Phaser.Scene {
   private keep<T extends Phaser.GameObjects.GameObject>(o: T): T {
     this.content.push(o);
     return o;
+  }
+
+  /* ---------- Options (n°232) et carte (n°233) ---------- */
+
+  private buildOptions(): void {
+    const S = this.S;
+    const a = this.area();
+    this.options = new OptionsPanel(this, this.actions, { x: a.x, y: a.y, width: a.w, height: a.h, scale: S, depth: DEPTH + 2, horizontal: false });
+    this.keep(addText(this, a.x + a.w, a.y - 2 * S, 'Entrée : changer', { scale: S, color: PALETTE.metalClair, align: 'right' }).setDepth(DEPTH + 3));
+  }
+
+  private buildIsland(): void {
+    const S = this.S;
+    const a = this.area();
+    const island = this.data_.island;
+    if (!island) {
+      this.keep(addText(this, a.x, a.y, 'La carte s’ouvre dans le monde (N).', { scale: S, color: PALETTE.metalClair }).setDepth(DEPTH + 2));
+      return;
+    }
+    const cell = 3 * S;
+    const y = a.y - 4 * S;
+    this.island = new IslandMapView(this, { ...island, x: a.x, y, cell, depth: DEPTH + 2, labels: true, scale: S });
+    const tx = a.x + island.map.width * cell + 16 * S;
+    let ty = a.y;
+    const lines = [
+      'N : carte en grand.',
+      '',
+      'Voyage rapide : depuis un autel des Lanternes ou un lieu habité, ouvre la carte (N) et choisis une destination.',
+      '',
+      'Les zones jamais visitées restent dans le brouillard.',
+    ];
+    for (const line of lines) {
+      const t = this.keep(addText(this, tx, ty, line, { scale: S, color: PALETTE.metalClair, maxWidth: a.x + a.w - tx }).setDepth(DEPTH + 2));
+      ty += Math.max(16 * S, t.height + 4 * S);
+    }
   }
 
   /** Zone de contenu : sous les onglets, au-dessus des raccourcis. */

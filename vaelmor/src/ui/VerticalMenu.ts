@@ -69,6 +69,7 @@ export class VerticalMenu {
   private index: number;
   private flickerTimer: Phaser.Time.TimerEvent;
   private locked = false;
+  private changeListener: ((index: number) => void) | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -144,6 +145,11 @@ export class VerticalMenu {
     if (i >= 0 && i < this.items.length && this.isEnabled(i)) this.select(i);
   }
 
+  /** Appelé quand le curseur change d'entrée (clavier ou survol). */
+  onChange(listener: (index: number) => void): void {
+    this.changeListener = listener;
+  }
+
   /** Bloque les entrées (pendant une transition). */
   setLocked(locked: boolean): void {
     this.locked = locked;
@@ -173,6 +179,7 @@ export class VerticalMenu {
     if (i === this.index) return;
     this.index = i;
     this.refresh();
+    this.changeListener?.(i);
   }
 
   private activate(): void {
