@@ -139,7 +139,7 @@ export function skillScore(state: BattleState, unit: BattleUnit, skillId: string
 }
 
 /** Carte des coûts de déplacement depuis une case, pour une unité, sans limite de mobilité. */
-function distanceField(state: BattleState, unit: BattleUnit, from: Cell): ReadonlyMap<number, number> {
+export function distanceField(state: BattleState, unit: BattleUnit, from: Cell): ReadonlyMap<number, number> {
   return reachable(state, unit, Infinity, from).cost;
 }
 

@@ -28,7 +28,7 @@
 import { doubles, strikeOdds } from '../combat/combat';
 import { itemHeal } from '../progression/traits';
 import { executePlan } from './enemyAi';
-import { attackScore, healScore, profileOf, skillScore, type AiPlan } from './enemyAi';
+import { attackScore, distanceField, healScore, profileOf, skillScore, type AiPlan } from './enemyAi';
 import { moveUnit, readyUnits, waitUnit } from '../tactics/battle';
 import { itemAction } from '../tactics/battle';
 import { cellIndex, cellsInRange, distance, foesOf, friendsOf, getUnit, inBounds, reachable, targetsFrom, terrainAt, threatCells } from '../tactics/grid';
@@ -59,7 +59,7 @@ export const PRUDENT = {
   patience: 1,
   /** Au-delà de ce tour, le combat s'éternise : le danger compte `rushRisk` fois moins (on force la décision). */
   rushTurn: 6,
-  rushRisk: 0.1,
+  rushRisk: 0.03,
   /** Poids de l'avance (par case de distance à l'ennemi le plus proche) quand elle avance. */
   advance: 0.6,
   /** Poids de l'abri du terrain quand elle attend. */
@@ -141,11 +141,18 @@ function cohesion(state: BattleState, unit: BattleUnit, cell: Cell): number {
   return -PRUDENT.cohesion * Math.max(0, nearest - PRUDENT.cohesionRange);
 }
 
-/** Distance (en cases d'arme) à l'ennemi le plus proche : ce qu'il reste à parcourir pour le frapper. */
-function gapToFoe(state: BattleState, unit: BattleUnit, cell: Cell): number {
-  const foes = foesOf(state, unit);
-  if (foes.length === 0) return 0;
-  return Math.max(0, Math.min(...foes.map((f) => distance(f, cell))) - unit.weapon.range[1]);
+/**
+ * Ce qu'il reste à parcourir (par le chemin réel : l'eau et les murs comptent) pour frapper
+ * l'ennemi le plus proche, depuis chaque case. Calculé une fois par unité et par pas.
+ */
+function gapField(state: BattleState, unit: BattleUnit): (cell: Cell) => number {
+  const fields = foesOf(state, unit).map((f) => distanceField(state, unit, f));
+  const reach = unit.weapon.range[1];
+  return (cell) => {
+    if (fields.length === 0) return 0;
+    const i = cellIndex(state.map, cell.x, cell.y);
+    return Math.max(0, Math.min(...fields.map((f) => f.get(i) ?? 99)) - reach);
+  };
 }
 
 /** Meilleure action prudente d'une unité (ne modifie pas l'état), avec son score. */
@@ -159,13 +166,14 @@ export function planPrudentAction(state: BattleState, unitId: string, rules: Bat
   };
   const usable = unit.skills.filter((id) => skillBlocker(state, unit, skillDef(rules, id)) === null);
   const foes = foesOf(state, unit);
+  const gap = ctx.advance ? gapField(state, unit) : null;
 
   for (const stop of stops) {
     const base = -riskPenalty(unit, dangerAt(state, unit, stop, ctx, rules)) * (ctx.rush ? PRUDENT.rushRisk : 1) + cohesion(state, unit, stop);
     const ground = terrainAt(state.map, stop.x, stop.y);
 
     // Attendre (ou s'avancer / reculer) : abri du terrain, et avance si la compagnie avance.
-    const hold = PRUDENT.cover * (ground.defense + ground.avoid / 10) - (ctx.advance ? PRUDENT.advance * gapToFoe(state, unit, stop) : 0);
+    const hold = PRUDENT.cover * (ground.defense + ground.avoid / 10) - (gap ? PRUDENT.advance * (ctx.rush ? 4 : 1) * gap(stop) : 0);
     consider({ unitId, to: stop, targetId: null }, base + hold);
 
     for (const target of targetsFrom(state, unit, stop)) consider({ unitId, to: stop, targetId: target.id }, base + attackScore(state, unit, target, stop, rules));
