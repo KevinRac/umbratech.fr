@@ -88,6 +88,8 @@ export interface StrikeShape {
   readonly repeat: boolean;
   /** Chorégraphie du critique au corps à corps (`assaut` par défaut). */
   readonly style?: CritStyle;
+  /** Critique `film` : durée des images peintes jusqu'à l'impact (ms). */
+  readonly filmMs?: number;
 }
 
 /** Durée de la chorégraphie d'un critique (`choreo`) : tourbillon ou bond. */
@@ -117,8 +119,8 @@ export function strikeSteps(shape: StrikeShape, t: CloseupTimings): Step[] {
   const crit = shape.crit && shape.hit;
   const style = shape.style ?? 'assaut';
   if (shape.kind === 'melee' && crit && style !== 'assaut') {
-    // Tourbillon ou bond : la chorégraphie remplace le dash et les coupes.
-    push('choreo', choreoDuration(style, t));
+    // Tourbillon, bond ou film peint : la chorégraphie remplace le dash et les coupes.
+    push('choreo', style === 'film' ? (shape.filmMs ?? 0) : choreoDuration(style, t));
   } else if (shape.kind === 'melee') {
     push('dash', t.dash);
     // Armé tenu au contact (GBA) : la tension avant la frappe sèche.
@@ -152,12 +154,13 @@ export function strikeDuration(shape: StrikeShape, t: CloseupTimings): number {
  * Forme des coups d'un échange : chaque coup prend le geste de son auteur ;
  * le second coup d'une même unité (double attaque) est un coup répété.
  */
-export function exchangeShapes(strikes: readonly Strike[], kindOf: (unitId: string) => AttackKind, styleOf: (unitId: string) => CritStyle = () => 'assaut'): StrikeShape[] {
+export function exchangeShapes(strikes: readonly Strike[], kindOf: (unitId: string) => AttackKind, styleOf: (unitId: string) => CritStyle = () => 'assaut', filmOf: (unitId: string) => number | undefined = () => undefined): StrikeShape[] {
   const struck = new Set<string>();
   return strikes.map((s) => {
     const repeat = struck.has(s.attackerId);
     struck.add(s.attackerId);
-    return { kind: kindOf(s.attackerId), crit: s.crit, hit: s.hit, repeat, style: styleOf(s.attackerId) };
+    const filmMs = filmOf(s.attackerId);
+    return { kind: kindOf(s.attackerId), crit: s.crit, hit: s.hit, repeat, style: styleOf(s.attackerId), ...(filmMs !== undefined ? { filmMs } : {}) };
   });
 }
 

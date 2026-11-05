@@ -984,7 +984,7 @@ export const SLASH_IDS = ['diagonale', 'croix', 'arc'] as const;
 export type SlashId = (typeof SLASH_IDS)[number];
 
 /** Style de critique au corps à corps (chorégraphie de l'écran rapproché). */
-export const CRIT_STYLES = ['assaut', 'tourbillon', 'bond'] as const;
+export const CRIT_STYLES = ['assaut', 'tourbillon', 'bond', 'film'] as const;
 export type CritStyle = (typeof CRIT_STYLES)[number];
 
 /** Animations d'une feuille peinte (rangée de la feuille, nombre d'images, image d'impact). */
@@ -994,16 +994,16 @@ export type FighterAnim = (typeof FIGHTER_ANIMS)[number];
 const fighterAnimSchema = z.strictObject({
   /** Rangée de la première image ; une animation plus longue que la rangée continue sur les suivantes. */
   row: z.number().int().min(0).max(15),
-  frames: z.number().int().min(1).max(40),
+  frames: z.number().int().min(1).max(48),
   /** Image où l'arme touche (attaque, critique, compétence). */
-  impact: z.number().int().min(0).max(39).optional(),
+  impact: z.number().int().min(0).max(47).optional(),
   /** Image d'armé, tenue avant la frappe (par défaut celle qui précède l'impact). */
-  peak: z.number().int().min(0).max(39).optional(),
+  peak: z.number().int().min(0).max(47).optional(),
   /**
    * Pose de contact tenue pendant le gel et la descente des PV (par défaut
    * l'impact) : les images de traînée entre l'impact et elle passent en un éclair.
    */
-  hold: z.number().int().min(0).max(39).optional(),
+  hold: z.number().int().min(0).max(47).optional(),
   /**
    * Fente peinte (images vidéo, n°229) : de combien de pixels (de la feuille) le
    * corps avance de lui-même jusqu'à l'impact ; la course du code s'arrête
@@ -1011,11 +1011,17 @@ const fighterAnimSchema = z.strictObject({
    */
   reach: z.number().int().min(0).max(80).optional(),
   /**
+   * Critique « film » (images vidéo qui portent toute la chorégraphie, acrobaties
+   * comprises) : durée de chaque image, jouée à vitesse constante de la première à
+   * la dernière ; l'impact tombe à l'image `impact`.
+   */
+  ms: z.number().int().min(20).max(200).optional(),
+  /**
    * Incantation entretenue (sorts) : images `[début, fin]` jouées en aller-retour
    * tant que le sort se déroule ; avant elles, l'élan ; après, le lancement
    * (à partir de l'image d'impact).
    */
-  loop: z.tuple([z.number().int().min(0).max(39), z.number().int().min(0).max(39)]).optional(),
+  loop: z.tuple([z.number().int().min(0).max(47), z.number().int().min(0).max(47)]).optional(),
   /** Animation jouée en boucle (aller-retour) quand celle-ci a fini, tant que la pose est tenue : cheveux et étoffes au vent (`tenue`). */
   after: z.enum(['tenue']).optional(),
 });
@@ -1023,7 +1029,7 @@ const fighterAnimSchema = z.strictObject({
 export const fighterSchema = z.strictObject({
   /** Fichier `assets/combat/<sheet>.png` : une rangée par animation, images de `frame` pixels, tournées vers l'est. */
   sheet: idSchema,
-  frame: z.tuple([z.number().int().min(16).max(160), z.number().int().min(16).max(160)]),
+  frame: z.tuple([z.number().int().min(16).max(256), z.number().int().min(16).max(256)]),
   /** Pieds du personnage dans une image (pixels) : le point posé sur le socle. */
   feet: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
   /** Agrandissement entier à l'écran. */

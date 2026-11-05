@@ -100,6 +100,19 @@ describe('chronologie d’un coup (GDD §11.2, §11.3)', () => {
     expect(strikeSteps(shape('melee', { style: 'bond' }), t).map((s) => s.name)).toEqual(['prep', 'dash', 'arme', 'strike', 'impact', 'recoil', 'pose', 'back']);
   });
 
+  it('un critique « film » joue ses images peintes jusqu’à l’impact à la place du dash et des coupes', () => {
+    const steps = strikeSteps(shape('melee', { crit: true, style: 'film', filmMs: 1485 }), t);
+    expect(steps.map((s) => s.name)).toEqual(['dark', 'prep', 'choreo', 'impact', 'recoil', 'pose', 'back']);
+    expect(steps.find((s) => s.name === 'choreo')?.ms).toBe(1485);
+    // La feuille de la Lame : le critique seul, transitions comprises, tient sous le budget d'un échange
+    // (avec une riposte, il le dépasse d'environ 1 s : un critique reste rare, comme sur GBA).
+    const lame = anims.fighters.lame_du_serment?.anims.critique;
+    const filmMs = (lame?.ms ?? 0) * (lame?.impact ?? 0);
+    const crit = shape('melee', { crit: true, style: 'film', filmMs });
+    expect(t.entry + t.opening + strikeDuration(crit, t) + t.exit).toBeLessThanOrEqual(t.budget.normal);
+    expect(t.entry + t.opening + strikeDuration(crit, t) + t.between + strikeDuration(shape('melee'), t) + t.exit).toBeLessThanOrEqual(t.budget.normal + 1000);
+  });
+
   it('un tir lève l’arme puis lance le projectile, sans dash', () => {
     expect(strikeSteps(shape('ranged'), t).map((s) => s.name)).toEqual(['prep', 'draw', 'arme', 'fly', 'impact', 'recoil', 'pose', 'settle']);
   });

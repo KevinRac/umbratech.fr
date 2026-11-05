@@ -300,7 +300,13 @@ export class BattleCloseupScene extends Phaser.Scene {
       if (spec.heal) await this.playHeal(spec.heal.amount, spec.heal.hpAfter);
       const kindOf = (id: string): AttackKind => (id === spec.left.id ? spec.left.kind : spec.right.kind);
       const styleOf = (id: string): CritStyle => (id === spec.left.id ? spec.left.critStyle : spec.right.critStyle);
-      const shapes = exchangeShapes(spec.strikes, kindOf, styleOf);
+      // Critique « film » : ses images peintes jusqu'à l'impact fixent la durée de la chorégraphie.
+      const filmOf = (id: string): number | undefined => {
+        const f = id === spec.left.id ? spec.left : spec.right;
+        const c = f.painted?.anims.critique;
+        return f.critStyle === 'film' && c?.ms !== undefined ? c.ms * (c.impact ?? c.frames - 1) : undefined;
+      };
+      const shapes = exchangeShapes(spec.strikes, kindOf, styleOf, filmOf);
       for (let i = 0; i < spec.strikes.length; i++) {
         const strike = spec.strikes[i] as Strike;
         const shape = shapes[i];
@@ -495,8 +501,10 @@ export class BattleCloseupScene extends Phaser.Scene {
     let cut = 0;
     const anim = this.strikeAnim(a, strike);
     const multi = (a.painted?.anims[anim]?.frames ?? 1) > 1;
+    // Critique « film » : les images peintes portent toute la chorégraphie, à vitesse constante.
+    const movie = crit && a.spec.critStyle === 'film' && a.spec.kind === 'melee' ? a.painted?.anims.critique : undefined;
     // Animation peinte de plusieurs images : elle suit les étapes au rythme GBA (n°225), gelée si une étape s'attarde.
-    const film = multi ? this.drive(a, anim, steps) : null;
+    const film = multi && !movie ? this.drive(a, anim, steps) : null;
     // Les coups portés sans frappe au contact (tir, sort, critique chorégraphié) ont leur impact à l'arrivée.
     const contact = steps.some((st) => st.name === 'strike' || st.name === 'cut');
     try {
@@ -558,7 +566,8 @@ export class BattleCloseupScene extends Phaser.Scene {
             await this.tween({ targets: a.sprite, x: a.home.x, y: a.home.y - (a.spec.kind === 'magic' ? 14 : 4), scaleX: a.scale, scaleY: a.scale, duration: step.ms, ease: 'Sine.easeOut' });
             break;
           case 'choreo':
-            if (a.spec.critStyle === 'tourbillon') await this.tourbillon(a, d, strike, t);
+            if (movie) await this.movie(a, movie, 0, movie.impact ?? movie.frames - 1, step.ms);
+            else if (a.spec.critStyle === 'tourbillon') await this.tourbillon(a, d, strike, t);
             else await this.bond(a, d, t);
             break;
           case 'spell':
@@ -598,6 +607,8 @@ export class BattleCloseupScene extends Phaser.Scene {
             break;
           }
           case 'impact':
+            // La fin du film (pose finale, retour) se joue pendant l'impact, le recul et la pose.
+            if (movie) void this.movie(a, movie, (movie.impact ?? 0) + 1, movie.frames - 1);
             if (strike.hit && !contact) this.hitFx(a, d, crit, false);
             await this.impact(strike, a, d, step.ms, t);
             break;
@@ -621,7 +632,7 @@ export class BattleCloseupScene extends Phaser.Scene {
               film?.stop();
               if (multi) this.pose(a, 'garde');
               await this.tween({ targets: [a.sprite, a.shadow], alpha: 1, duration: step.ms, ease: 'Quad.easeOut' });
-            } else if (step.name === 'back') {
+            } else if (step.name === 'back' && !movie) {
               // Retour en garde d'un bond en arrière (GBA), réception dans la poussière.
               const x0 = a.sprite.x;
               const y0 = a.sprite.y;
@@ -698,6 +709,21 @@ export class BattleCloseupScene extends Phaser.Scene {
         clock.remove();
       },
     };
+  }
+
+  /**
+   * Joue les images `from` à `to` d'un critique « film » à vitesse constante
+   * (`ms` par image) ; `total` : durée imposée (l'étape de chorégraphie), sinon
+   * `ms` par image. Des traînées suivent le corps dans les images rapides.
+   */
+  private async movie(a: FighterView, def: NonNullable<FighterDef['anims']['critique']>, from: number, to: number, total?: number): Promise<void> {
+    const n = Math.max(1, to - from + 1);
+    const per = total !== undefined ? total / n : (def.ms ?? 50);
+    for (let i = from; i <= to; i++) {
+      if (!this.busy) return;
+      this.pose(a, 'critique', i);
+      await this.wait(per);
+    }
   }
 
   /** Animation du coup : critique (s'il touche), tir ou sort (`ranged`), sinon attaque. */
@@ -855,7 +881,7 @@ export class BattleCloseupScene extends Phaser.Scene {
       this.dim?.setFillStyle(PALETTE.ombreProfonde, 1);
       // Le bond se voit en entier : le zoom vient à l'atterrissage.
       // Zoom sur la zone du contact (l'attaquant et sa cible) ; le bond se voit en entier, le tir aussi.
-      if (a.spec.critStyle !== 'bond' && a.spec.kind === 'melee') this.zoomTo(CRIT_ZOOM, a, ms, 130);
+      if (a.spec.critStyle !== 'bond' && a.spec.critStyle !== 'film' && a.spec.kind === 'melee') this.zoomTo(CRIT_ZOOM, a, ms, 130);
       if (this.dim) await this.tween({ targets: this.dim, alpha: 0.7, duration: ms });
       else await this.wait(ms);
     }

@@ -110,15 +110,15 @@
     },
     "lame_du_serment": {
       "sheet": "lame_du_serment",
-      "frame": [140, 84],
-      "feet": [34, 70],
+      "frame": [172, 128],
+      "feet": [38, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
         "attaque": { "row": 1, "frames": 25, "impact": 12, "peak": 10, "hold": 20, "reach": 24 },
-        "critique": { "row": 3, "frames": 33, "impact": 14, "peak": 11, "hold": 22, "reach": 55 }
+        "critique": { "row": 3, "frames": 41, "impact": 27, "ms": 45 }
       },
-      "critStyle": "assaut"
+      "critStyle": "film"
     },
     "heritier_des_cendres": {
       "sheet": "heritier_des_cendres",
