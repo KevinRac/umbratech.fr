@@ -82,7 +82,7 @@ import { ensureSkinAnimations, skinIdleFrame, skinKey, skinWalkKey } from '../re
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
 import { WHEAT_FRONT_BELOW, WHEAT_FRONT_FRAMES, WHEAT_FRONT_H, WHEAT_FRONT_MS } from '../render/wheatFront';
-import { fixGpuTileAnimations } from '../render/tileAnimations';
+import { fixGpuTileAnimations, releaseGpuTilemapOnShutdown } from '../render/tileAnimations';
 import { SCENES } from './keys';
 import type { ReputationView, WorldHudScene } from './WorldHudScene';
 
@@ -396,6 +396,7 @@ export class WorldScene extends Phaser.Scene {
       if (!layer) throw new Error(`Couche « ${name} » impossible à créer.`);
       layer.setDepth(depth);
     }
+    releaseGpuTilemapOnShutdown(this, tilemap);
   }
 
   /**

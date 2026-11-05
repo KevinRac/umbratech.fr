@@ -78,7 +78,7 @@ import { BF_TILE, BF_TOP, BF_WATER_FRAMES } from '../render/battlefield';
 import { BATTLE_TEX, ensureBattleFxTextures, ensureBattlefield, ensureMapSprite } from '../render/battleTextures';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureWorldTextures } from '../render/worldTextures';
 import { WATER_FRAMES } from '../render/waterTile';
-import { fixGpuTileAnimations } from '../render/tileAnimations';
+import { fixGpuTileAnimations, releaseGpuTilemapOnShutdown } from '../render/tileAnimations';
 import { WorldAtmosphere } from '../render/worldAtmosphere';
 import { ALLY_OUTLINE, UNIT_IDLE_FRAMES } from '../render/unitSprites';
 import { loadQuality } from '../core/settings';
@@ -523,6 +523,7 @@ export class BattleScene extends Phaser.Scene {
       if (!layer) throw new Error(`Couche « ${name} » impossible à créer.`);
       layer.setDepth(depth);
     }
+    releaseGpuTilemapOnShutdown(this, tilemap);
   }
 
   private buildPaintedField(): void {

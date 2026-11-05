@@ -51,3 +51,20 @@ describe('architecture en couches', () => {
     expect(offenders.map((f) => relative(SRC, f))).toEqual([]);
   });
 });
+
+describe('ressources du moteur (audit M10)', () => {
+  it('chaque scène qui crée une carte à couches GPU la libère à son arrêt', () => {
+    // Phaser 4.2.1 ne rend pas les textures de données des couches GPU : sans
+    // `releaseGpuTilemapOnShutdown`, chaque aller-retour monde ↔ combat gardait ~0,6 Mo.
+    const offenders = tsFiles(join(SRC, 'scenes')).filter((file) => {
+      const source = readFileSync(file, 'utf8');
+      return source.includes('.createLayer(') && !source.includes('releaseGpuTilemapOnShutdown(this, ');
+    });
+    expect(offenders.map((f) => relative(SRC, f))).toEqual([]);
+  });
+
+  it('une texture du moteur se rend par deleteTexture (destroy seul la laisse dans la liste du moteur)', () => {
+    const offenders = tsFiles(SRC).filter((file) => /_animationDataTexture\?\.destroy\(|layerDataTexture\?\.destroy\(/.test(readFileSync(file, 'utf8')));
+    expect(offenders.map((f) => relative(SRC, f))).toEqual([]);
+  });
+});
