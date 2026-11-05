@@ -7,7 +7,8 @@ import Phaser from 'phaser';
 import { playSfx, type SfxId } from '../audio/sfx';
 import type { ActionInput } from '../core/input';
 import { PALETTE } from '../render/palette';
-import { addText, setText, type PixelText } from './text';
+import { PIXEL_FONTS } from '../render/pixelFont';
+import { addText, isLargeText, setText, type PixelText } from './text';
 
 export interface MenuItem {
   readonly label: string;
@@ -90,11 +91,15 @@ export class VerticalMenu {
     this.highlight = scene.add.rectangle(x, y, options.width, this.lineHeight - 2 * k, PALETTE.violetBrume, 0.55).setOrigin(0, 0).setDepth(depth);
     this.cursor = scene.add.image(x + 4 * k, y, `${CURSOR_KEY}0`).setOrigin(0, 0).setScale(k).setDepth(depth + 1);
 
+    // Taille du texte ×1,25 (n°242) : seulement si la ligne est assez haute pour la police agrandie.
+    const ts = options.textScale ?? 1;
+    const large = isLargeText() && this.lineHeight >= (PIXEL_FONTS.bodyLarge.lineHeight + 3) * ts;
     items.forEach((item, i) => {
       const rowY = y + i * this.lineHeight;
-      const label = addText(scene, x + 14 * k, rowY + k, item.label, { scale: options.textScale ?? 1, ...(options.shadowOffset ? { shadowOffset: options.shadowOffset } : {}) }).setDepth(depth + 1) as PixelText;
+      const label = addText(scene, x + 14 * k, rowY + k, item.label, { scale: ts, sizable: large, ...(options.shadowOffset ? { shadowOffset: options.shadowOffset } : {}) }).setDepth(depth + 1) as PixelText;
       // Grand texte : centré dans la hauteur de la ligne (sinon il colle au bas de la barre de sélection).
-      if (options.centerLabels) label.y = Math.round(rowY + (this.lineHeight - label.height) / 2);
+      if (large) label.y = Math.round(rowY + (this.lineHeight - PIXEL_FONTS.bodyLarge.lineHeight * ts) / 2 - k);
+      else if (options.centerLabels) label.y = Math.round(rowY + (this.lineHeight - label.height) / 2);
       this.labels.push(label);
       const zone = scene.add.zone(x, rowY, options.width, this.lineHeight).setOrigin(0, 0).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => this.isEnabled(i) && this.select(i));

@@ -6,6 +6,7 @@
  */
 import Phaser from 'phaser';
 import { ActionInput } from '../core/input';
+import { onSettingsChange } from '../core/settings';
 import { uiScaleFor } from '../core/viewport';
 import { PALETTE } from '../render/palette';
 import { OptionsPanel } from '../ui/OptionsPanel';
@@ -24,6 +25,11 @@ export class OptionsScene extends Phaser.Scene {
   private panel: OptionsPanel | null = null;
   private params!: OptionsSceneData;
   private closed = false;
+  /** Écran des touches ouvert par-dessus : la liste attend son retour. */
+  private sub = false;
+  /** Image à partir de laquelle la liste réécoute le clavier (la touche qui a fermé l'écran des touches ne compte pas). */
+  private listenFrom = 0;
+  private panelArea!: { x: number; y: number; w: number; h: number; S: number };
 
   constructor() {
     super(SCENES.options);
@@ -44,13 +50,38 @@ export class OptionsScene extends Phaser.Scene {
     const panelH = height - top - 36 * S;
     const x = Math.round((width - panelW) / 2);
     drawPanel(this, x, top, panelW, panelH, { scale: 2 * S }).setDepth(DEPTH + 1);
-    this.panel = new OptionsPanel(this, this.actions, { x: x + 14 * S, y: top + 12 * S, width: panelW - 28 * S, height: panelH - 20 * S, scale: S, depth: DEPTH + 2, horizontal: true });
+    this.panelArea = { x: x + 14 * S, y: top + 12 * S, w: panelW - 28 * S, h: panelH - 20 * S, S };
+    this.buildPanel(null);
+    this.sub = false;
+    // La taille du texte change la hauteur des lignes : le panneau se reconstruit sur la même ligne.
+    const off = onSettingsChange((key) => {
+      if (key === 'textSize' && this.panel) this.buildPanel(this.panel.selectedId);
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, off);
     this.actions.consume('confirm');
     this.cameras.main.fadeIn(150, 0, 0, 0);
   }
 
+  private buildPanel(selected: string | null): void {
+    this.panel?.destroy();
+    const a = this.panelArea;
+    this.panel = new OptionsPanel(this, this.actions, { x: a.x, y: a.y, width: a.w, height: a.h, scale: a.S, depth: DEPTH + 2, horizontal: true, onOpen: () => this.openKeys() });
+    this.panel.selectId(selected);
+  }
+
+  private openKeys(): void {
+    this.sub = true;
+    this.scene.launch(SCENES.keyBind, {
+      onClose: () => {
+        this.sub = false;
+        this.listenFrom = this.game.loop.frame + 2;
+      },
+    });
+    this.scene.bringToTop(SCENES.keyBind);
+  }
+
   override update(): void {
-    if (this.closed) return;
+    if (this.closed || this.sub || this.game.loop.frame < this.listenFrom) return;
     if (this.actions.consume('cancel')) {
       this.close();
       return;

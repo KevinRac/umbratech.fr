@@ -11,7 +11,7 @@
  */
 import Phaser from 'phaser';
 import { uiScaleFor, worldZoomFor } from '../core/viewport';
-import { ActionInput } from '../core/input';
+import { ActionInput, keyLabel } from '../core/input';
 import type { AmbienceKind } from '../data/schemas';
 import { createAmbience } from '../render/ambience';
 import { PALETTE } from '../render/palette';
@@ -52,6 +52,13 @@ export interface ReputationView {
   readonly tierName: string;
   readonly tierColor: number;
   readonly tiers: readonly { readonly min: number; readonly max: number; readonly color: number }[];
+}
+
+/** Aide des touches du monde, d'après les touches du joueur (n°241). */
+function worldHelpLine(): string {
+  const dirs = (['up', 'left', 'down', 'right'] as const).map((a) => keyLabel(a, 'free'));
+  const walk = dirs.every((d) => d.length === 1) ? `${dirs.join('')} / flèches` : 'Flèches';
+  return `${walk} : marcher   ${keyLabel('sprint')} : courir   ${keyLabel('confirm', 'last')} : parler   ${keyLabel('menu')} : menu   ${keyLabel('map')} : carte   Échap : pause`;
 }
 
 export class WorldHudScene extends Phaser.Scene {
@@ -423,15 +430,16 @@ export class WorldHudScene extends Phaser.Scene {
     if (this.promptText === null) return;
     const S = this.S;
     const { width, height } = this.scale;
-    const key = addText(this, 0, 0, 'E', { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.hud + 2);
+    const key = addText(this, 0, 0, keyLabel('confirm', 'last'), { scale: S, color: PALETTE.jauneBle }).setDepth(DEPTH.hud + 2);
     const label = addText(this, 0, 0, this.promptText, { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud + 2);
-    const total = Math.ceil(key.width) + Math.ceil(label.width) + 52 * S;
+    const keyW = Math.max(22 * S, Math.ceil(key.width) + 10 * S);
+    const total = keyW + Math.ceil(label.width) + 30 * S;
     const x = Math.round((width - total) / 2);
     const y = height - 92 * S;
     const panel = drawPanel(this, x, y, total, 32 * S, { scale: S, depth: DEPTH.hud + 1 }).setAlpha(0.92);
-    const keyBox = this.add.rectangle(x + 10 * S, y + 6 * S, 22 * S, 20 * S, PALETTE.violetBrume, 0.9).setOrigin(0, 0).setDepth(DEPTH.hud + 1).setStrokeStyle(S, PALETTE.ambre);
-    key.setPosition(Math.round(x + 21 * S - key.width / 2), y + 8 * S);
-    label.setPosition(x + 40 * S, y + 8 * S);
+    const keyBox = this.add.rectangle(x + 10 * S, y + 6 * S, Math.max(22 * S, Math.ceil(key.width) + 10 * S), 20 * S, PALETTE.violetBrume, 0.9).setOrigin(0, 0).setDepth(DEPTH.hud + 1).setStrokeStyle(S, PALETTE.ambre);
+    key.setPosition(Math.round(x + 10 * S + keyW / 2 - key.width / 2), y + 8 * S);
+    label.setPosition(x + 18 * S + keyW, y + 8 * S);
     this.promptParts = [panel, keyBox, key, label];
   }
 
@@ -443,7 +451,7 @@ export class WorldHudScene extends Phaser.Scene {
     const S = this.S;
     const { width, height } = this.scale;
     const bar = this.add.rectangle(0, height - 32 * S, width, 32 * S, PALETTE.nuit, 0.6).setOrigin(0, 0).setDepth(DEPTH.hud);
-    const hint = addText(this, 16 * S, height - 26 * S, 'ZQSD / flèches : marcher   Maj : courir   E : parler   Tab : menu   N : carte   Échap : pause', { font: 'body', scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud);
+    const hint = addText(this, 16 * S, height - 26 * S, worldHelpLine(), { font: 'body', scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.hud);
     this.hintParts = [bar, hint];
     this.tweens.add({
       targets: [hint, bar],

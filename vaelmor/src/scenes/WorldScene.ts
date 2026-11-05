@@ -8,12 +8,14 @@
  * ces fonctions et dessiner le résultat.
  */
 import Phaser from 'phaser';
+import { flashCamera, shakeCamera } from '../render/cameraFx';
+import { difficultyPips, worldMotion } from '../logic/settings/accessibility';
 import { setAmbience, setAmbienceFade } from '../audio/ambience';
 import { playSfx, playStep } from '../audio/sfx';
 import { ambienceFor, noticeSound, stepInterval, stepMaterial } from '../logic/audio/soundRules';
 import { worldZoomFor } from '../core/viewport';
 import { showFatalError } from '../core/fatal';
-import { ActionInput } from '../core/input';
+import { ActionInput, keyLabel } from '../core/input';
 import { getLastDeployed, getWorldState, setSessionState, setWorldState } from '../core/session';
 import { rollNamedPop } from '../logic/game/namedRules';
 import { autoSave, loadIntoSession, newGameId, setPlayClock } from '../core/gameSave';
@@ -84,7 +86,7 @@ import { findEvolution } from '../logic/progression/evolutions';
 import { worldView, type WorldView } from '../render/viewport';
 import { parseQuality } from '../render/atmosphere';
 import { WorldAtmosphere } from '../render/worldAtmosphere';
-import { loadQuality, onSettingsChange } from '../core/settings';
+import { loadColorBlind, loadQuality, loadReducedEffects, onSettingsChange } from '../core/settings';
 import { PALETTE } from '../render/palette';
 import { ensureSkinAnimations, skinIdleFrame, skinKey, skinWalkKey } from '../render/skins';
 import { WORLD_MAP_KEY, WORLD_TEX, WORLD_TILESET_KEY, ensureHeroAnimations, ensureWorldTextures } from '../render/worldTextures';
@@ -247,6 +249,8 @@ export class WorldScene extends Phaser.Scene {
 
   /* Ennemis du monde (jalon M3) */
   private foeActors = new Map<string, FoeActor>();
+  /** Rang de difficulté de chaque ennemi présent (crans du mode daltonien, n°243). */
+  private foePips = new Map<string, number>();
   private foeRng!: Rng;
   private safeGrid: SafeGrid | null = null;
   private gateReq: ReadonlyMap<string, readonly string[]> = new Map();
@@ -359,6 +363,7 @@ export class WorldScene extends Phaser.Scene {
     const params = new URLSearchParams(window.location.search);
     const debug = params.has('debug');
     this.atmosphere.setQuality(debug && params.has('quality') ? parseQuality(params.get('quality')) : loadQuality(), debug ? (params.get('fxoff') ?? '').split(',') : []);
+    this.atmosphere.setReducedMotion(loadReducedEffects());
     if (debug && params.has('evening')) this.atmosphere.setEvening(Math.max(0, Math.min(1, Number(params.get('evening')) || 0)));
 
     this.camera_ = centerOn({ x: this.body_.x, y: this.body_.y - 10 }, this.cameraConfig);
@@ -785,7 +790,7 @@ export class WorldScene extends Phaser.Scene {
       this.nearFoe = surprise;
       this.nearWanderer = wanderer;
       this.nearAltar = altar;
-      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : wanderer ? `Parler à ${wanderer.sim.def.name} (allié)` : surprise ? 'Attaquer par surprise' : altar ? 'Se recueillir (sauvegarder)    N : voyager' : null);
+      this.hud.setPrompt(near ? `Parler à ${near.def.name}` : wanderer ? `Parler à ${wanderer.sim.def.name} (allié)` : surprise ? 'Attaquer par surprise' : altar ? `Se recueillir (sauvegarder)    ${keyLabel('map')} : voyager` : null);
     }
     if (near && this.inputReady(time) && this.actions.justPressed('confirm')) this.startDialogue(near);
     else if (wanderer && this.inputReady(time) && this.actions.justPressed('confirm')) this.startWandererDialogue(wanderer);
@@ -1414,9 +1419,13 @@ export class WorldScene extends Phaser.Scene {
     playSfx('battleStart');
     setAmbience(null, 400);
     const camera = this.cameras.main;
-    camera.flash(150, 255, 255, 255);
-    this.tweens.add({ targets: camera, zoom: camera.zoom * 1.5, duration: 400, ease: 'Cubic.easeIn' });
-    camera.fadeOut(400, 255, 255, 255);
+    // Effets réduits (n°244) : fondu au noir, sans flash blanc ni zoom radial.
+    const motion = worldMotion(loadReducedEffects());
+    if (motion.battleZoom) {
+      flashCamera(camera, 150, 255, 255, 255, false);
+      this.tweens.add({ targets: camera, zoom: camera.zoom * 1.5, duration: 400, ease: 'Cubic.easeIn' });
+      camera.fadeOut(400, 255, 255, 255);
+    } else camera.fadeOut(400, 18, 18, 31);
     const tile = this.map.tileSize;
     const where = site ?? { x: Math.floor(this.body_.x / tile), y: Math.floor((this.body_.y - 1) / tile) };
     // Un ennemi nommé peut surgir dans un combat ordinaire (GDD §7.9, n°115), sauf si un nommé y est déjà (poste, n°193).
@@ -1458,6 +1467,11 @@ export class WorldScene extends Phaser.Scene {
     this.syncFoePresence();
   }
 
+  /** Crans de difficulté (mode daltonien) et crâne immobile (effets réduits) d'un ennemi du monde. */
+  private applyFoeAccessibility(id: string, actor: FoeActor): void {
+    actor.setAccessibility(loadColorBlind() ? (this.foePips.get(id) ?? 0) : 0, !worldMotion(loadReducedEffects()).bob);
+  }
+
   /** Crée les ennemis présents et retire les absents (repos, changement de zone, réputation, boss vaincu). */
   private syncFoePresence(): void {
     if (this.foesDebugOff) return;
@@ -1472,10 +1486,14 @@ export class WorldScene extends Phaser.Scene {
         const level = meanEnemyLevel(encounter);
         const boss = def.kind === 'boss';
         const sim = createFoe(def, { encounterId: encounter.id, level, weak: foeFlees(foesCfg, def, level, this.partyLvl) }, tile);
-        const color = Phaser.Display.Color.HexStringToColor(difficultyOf(foesCfg, level, this.partyLvl, boss).color).color;
+        const difficulty = difficultyOf(foesCfg, level, this.partyLvl, boss);
+        const color = Phaser.Display.Color.HexStringToColor(difficulty.color).color;
         const det = foesCfg.detection[def.kind];
         const vision = det.radius > 0 || det.coneRange > 0 ? { circle: det.radius * tile, cone: det.coneRange * tile, coneAngle: det.coneAngle } : null;
-        this.foeActors.set(def.id, new FoeActor(this, sim, foeSpriteOf(this.data_, def), { color, boss, vision: boss || def.kind === 'embuscade' ? null : vision }, { entities: DEPTH.entities, marker: DEPTH.marker, shadow: DEPTH.shadow }));
+        const created = new FoeActor(this, sim, foeSpriteOf(this.data_, def), { color, boss, vision: boss || def.kind === 'embuscade' ? null : vision }, { entities: DEPTH.entities, marker: DEPTH.marker, shadow: DEPTH.shadow });
+        this.foePips.set(def.id, difficultyPips(foesCfg.difficulty.map((b) => b.id), difficulty.id));
+        this.applyFoeAccessibility(def.id, created);
+        this.foeActors.set(def.id, created);
       } else if (!present && actor) {
         actor.destroy();
         this.foeActors.delete(def.id);
@@ -1576,13 +1594,13 @@ export class WorldScene extends Phaser.Scene {
     const mark = (x: number, y: number, scale: number): void => {
       const img = this.add.image(x, y, TOWN_TEX.markerAmbush).setDepth(5000).setScale(0.4);
       this.tweens.add({ targets: img, scale, duration: 160, ease: 'Back.easeOut' });
-      this.tweens.add({ targets: img, y: y - 3, duration: 140, yoyo: true, repeat: 3, delay: 200 });
+      if (worldMotion(loadReducedEffects()).bob) this.tweens.add({ targets: img, y: y - 3, duration: 140, yoyo: true, repeat: 3, delay: 200 });
     };
     playSfx('alert');
     mark(this.body_.x, this.body_.y - 42, 2);
     mark(sim.x, sim.y - 46, 2);
-    this.cameras.main.shake(260, 0.004);
-    this.cameras.main.flash(120, 255, 60, 40);
+    shakeCamera(this.cameras.main, 260, 0.004);
+    flashCamera(this.cameras.main, 120, 255, 60, 40);
     const dark = sim.def.kind === 'garde' ? 'La milice vous tombe dessus.' : 'Des ennemis surgissent : vous êtes pris au dépourvu.';
     this.hud.showAmbush('EMBUSCADE !', `${dark} Positions imposées, l'ennemi joue en premier.`);
     this.time.delayedCall(1100, () => {
@@ -1679,6 +1697,8 @@ export class WorldScene extends Phaser.Scene {
   /** Un réglage changé dans l'écran Options s'applique aussitôt. */
   private onSetting(key: string): void {
     if (key === 'quality') this.atmosphere?.setQuality(loadQuality());
+    if (key === 'reducedFx') this.atmosphere?.setReducedMotion(loadReducedEffects());
+    if (key === 'reducedFx' || key === 'colorBlind') for (const [id, actor] of this.foeActors) this.applyFoeAccessibility(id, actor);
   }
 
   private closePause(): void {

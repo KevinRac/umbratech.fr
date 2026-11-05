@@ -14,6 +14,8 @@ export const FOE_TEX = {
   question: 'foe:question',
   /** Zone d'ombre sous les pieds d'un ennemi plus large que celle du héros (boss). */
   shadowBig: 'foe:shadowBig',
+  /** Mode daltonien (n°243) : crans de difficulté sous le crâne, de 1 (Facile) à 5 (Mortel). */
+  pips: (n: number) => `foe:pips${n}`,
 } as const;
 
 /** `#` plein (teinté), `o` détail sombre (yeux, trait), `.` vide ; le contour est ajouté autour. */
@@ -72,7 +74,16 @@ function paintPattern(scene: Phaser.Scene, key: string, rows: readonly string[],
   canvas.toTexture(scene, key);
 }
 
+/** Rangée de `n` points 2×2, contour sombre : la difficulté se lit sans la couleur. */
+function paintPips(scene: Phaser.Scene, n: number): void {
+  const key = FOE_TEX.pips(n);
+  if (scene.textures.exists(key)) return;
+  const row = Array.from({ length: n }, () => '##').join('.');
+  paintPattern(scene, key, [row, row], 0xffffff, P.ombreProfonde);
+}
+
 export function ensureFoeTextures(scene: Phaser.Scene): void {
+  for (let n = 1; n <= 6; n++) paintPips(scene, n);
   paintPattern(scene, FOE_TEX.skull, SKULL, 0xffffff, P.ombreProfonde);
   paintPattern(scene, FOE_TEX.bang, BANG, P.jauneBle, P.rougeCendre);
   paintPattern(scene, FOE_TEX.question, QUESTION, P.ecume, P.bleuNuit);

@@ -8,6 +8,19 @@
  */
 import { SAVE_KEYS } from '../logic/save/keys';
 import { parseQuality, type Quality } from '../render/atmosphere';
+import { resolveBindings, storedBindings, type KeyBindings } from '../logic/input/keymap';
+import {
+  parseColorBlind,
+  parseReducedMotion,
+  parseTextSize,
+  parseTextSpeed,
+  reducedActive,
+  typingFor,
+  type ReducedMotion,
+  type TextSize,
+  type TextSpeed,
+  type Typing,
+} from '../logic/settings/accessibility';
 import { readRaw, writeRaw } from './storage';
 
 /** Version du format des réglages (décision n°232). */
@@ -103,13 +116,79 @@ export function saveBattleView(view: BattleView): void {
   writeSetting('battleView', view);
 }
 
-/** « Effets réduits » (GDD §13.8, n°221) : flashs atténués, secousses divisées par trois, pas de zoom du critique. */
-export function loadReducedEffects(): boolean {
-  return readSettings()['reducedFx'] === true;
+/* ---------- Effets réduits (n°221, étendus au monde par n°244) ---------- */
+
+let systemReduced: boolean | null = null;
+
+/** `prefers-reduced-motion` du système (faux hors navigateur) ; un changement du système prévient les scènes comme un réglage. */
+export function systemPrefersReducedMotion(): boolean {
+  if (systemReduced !== null) return systemReduced;
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return (systemReduced = false);
+  const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+  systemReduced = query.matches;
+  query.addEventListener?.('change', (event) => {
+    systemReduced = event.matches;
+    for (const listener of [...listeners]) listener('reducedFx');
+  });
+  return systemReduced;
 }
 
-export function saveReducedEffects(reduced: boolean): void {
-  writeSetting('reducedFx', reduced);
+/** Réglage tel qu'enregistré : « Selon le système » si rien n'est enregistré. */
+export function loadReducedMotion(): ReducedMotion {
+  return parseReducedMotion(readSettings()['reducedFx']);
+}
+
+export function saveReducedMotion(mode: ReducedMotion): void {
+  writeSetting('reducedFx', mode);
+}
+
+/** « Effets réduits » en vigueur (réglage, ou système en « Auto ») : flashs atténués, secousses ÷ 3, pas de zoom. */
+export function loadReducedEffects(): boolean {
+  return reducedActive(loadReducedMotion(), systemPrefersReducedMotion());
+}
+
+/* ---------- Texte (n°242, n°244) ---------- */
+
+export function loadTextSize(): TextSize {
+  return parseTextSize(readSettings()['textSize']);
+}
+
+export function saveTextSize(size: TextSize): void {
+  writeSetting('textSize', size);
+}
+
+export function loadTextSpeed(): TextSpeed {
+  return parseTextSpeed(readSettings()['textSpeed']);
+}
+
+export function saveTextSpeed(speed: TextSpeed): void {
+  writeSetting('textSpeed', speed);
+}
+
+/** Machine à écrire des répliques, réglée par la vitesse du texte (`balance.dialogue` en base). */
+export function loadTyping(base: Typing): Typing {
+  return typingFor(base, loadTextSpeed());
+}
+
+/* ---------- Mode daltonien (n°243) ---------- */
+
+export function loadColorBlind(): boolean {
+  return parseColorBlind(readSettings()['colorBlind']);
+}
+
+export function saveColorBlind(on: boolean): void {
+  writeSetting('colorBlind', on);
+}
+
+/* ---------- Touches (n°241) ---------- */
+
+export function loadKeyBindings(): KeyBindings {
+  return resolveBindings(readSettings()['keys']);
+}
+
+/** Enregistre les liaisons (seules les actions modifiées sont écrites). */
+export function saveKeyBindings(bindings: KeyBindings): void {
+  writeSetting('keys', storedBindings(bindings));
 }
 
 /* ---------- Sons (jalon M8, n°227) ---------- */

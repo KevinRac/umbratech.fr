@@ -10,6 +10,7 @@
 import { noticeSound } from '../logic/audio/soundRules';
 import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
+import { loadTyping } from '../core/settings';
 import { getGameCtx } from '../core/townContext';
 import { uiScaleFor } from '../core/viewport';
 import { ActionInput } from '../core/input';
@@ -20,7 +21,7 @@ import { ensurePortrait } from '../render/townTextures';
 import { drawPanel } from '../ui/panel';
 import { formatNotices } from '../ui/notices';
 import { ShopView } from '../ui/ShopView';
-import { addText, setText, type PixelText } from '../ui/text';
+import { addText, setText, sizableLineHeight, type PixelText } from '../ui/text';
 import { VerticalMenu, type MenuItem } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
 import type { SaveEnvelope } from '../logic/save/schema';
@@ -35,6 +36,8 @@ export interface DialogueSceneData {
 }
 
 const DEPTH = { box: 400, menu: 410, shop: 420 } as const;
+/** Lignes de texte par page de dialogue. */
+const DIALOGUE_LINES = 4;
 type Mode = 'typing' | 'waiting' | 'menu' | 'shop' | 'saves' | 'closed';
 
 export class DialogueScene extends Phaser.Scene {
@@ -125,7 +128,8 @@ export class DialogueScene extends Phaser.Scene {
     const S = this.S;
     const { width: W, height: H } = this.scale;
     const bw = Math.min(W - 32 * S, 820 * S);
-    const bh = 112 * S;
+    // Quatre lignes de texte, quelle que soit sa taille (n°242) : la boîte grandit avec la police.
+    const bh = (44 + DIALOGUE_LINES * sizableLineHeight()) * S;
     const x = Math.round((W - bw) / 2);
     const y = H - bh - 16 * S;
 
@@ -146,8 +150,8 @@ export class DialogueScene extends Phaser.Scene {
     titleText.setDepth(DEPTH.box + 4);
 
     this.textMaxWidth = bw - 144 * S - 28 * S;
-    this.body = addText(this, x + 144 * S, y + 32 * S, '', { scale: S, color: PALETTE.parchemin }).setDepth(DEPTH.box + 3);
-    this.measure = addText(this, 0, 0, '', { scale: S }).setVisible(false);
+    this.body = addText(this, x + 144 * S, y + 32 * S, '', { scale: S, color: PALETTE.parchemin, sizable: true }).setDepth(DEPTH.box + 3);
+    this.measure = addText(this, 0, 0, '', { scale: S, sizable: true }).setVisible(false);
     this.arrow = this.add
       .triangle(x + bw - 22 * S, y + bh - 20 * S, 0, 0, 10 * S, 0, 5 * S, 7 * S, PALETTE.ambre)
       .setOrigin(0.5, 0.5)
@@ -187,16 +191,29 @@ export class DialogueScene extends Phaser.Scene {
     return lines.join('\n');
   }
 
+  /** Une page trop longue pour la boîte (texte agrandi) est coupée en plusieurs pages de quatre lignes. */
+  private paginate(text: string): string[] {
+    const lines = this.wrap(text).split('\n');
+    if (lines.length <= DIALOGUE_LINES) return [text];
+    const out: string[] = [];
+    for (let i = 0; i < lines.length; i += DIALOGUE_LINES) out.push(lines.slice(i, i + DIALOGUE_LINES).join(' '));
+    return out;
+  }
+
   private say(pages: string[], expression: Expression, notices: Notice[], then: () => void): void {
     this.setExpression(expression);
     this.notify(notices);
-    this.pages = pages.length > 0 ? pages : [''];
+    this.pages = pages.length > 0 ? pages.flatMap((p) => this.paginate(p)) : [''];
     this.pageIndex = 0;
     this.afterPages = then;
     this.showPage(this.pages[0] as string, 0);
   }
 
+  /** Machine à écrire de la page en cours (vitesse du texte, n°244). */
+  private typing = { charsPerSecond: 30, fastMultiplier: 4 };
+
   private showPage(text: string, revealed: number): void {
+    this.typing = loadTyping(this.ctx.data.balance.dialogue);
     this.lines = this.wrap(text);
     this.revealed = Math.min(revealed, this.lines.length);
     this.charClock = 0;
@@ -251,7 +268,7 @@ export class DialogueScene extends Phaser.Scene {
       return;
     }
     if (this.mode === 'typing') {
-      const balance = this.ctx.data.balance.dialogue;
+      const balance = this.typing;
       const speed = balance.charsPerSecond * (this.actions.isDown('confirm') ? balance.fastMultiplier : 1);
       this.charClock += (delta / 1000) * speed;
       const whole = Math.floor(this.charClock);
@@ -286,7 +303,7 @@ export class DialogueScene extends Phaser.Scene {
   private showChoices(items: MenuItem[]): void {
     this.destroyMenu();
     const S = this.S;
-    const lineHeight = 30 * S;
+    const lineHeight = Math.max(30, sizableLineHeight() + 10) * S;
     const width = Math.min(this.boxW, 470 * S);
     const height = items.length * lineHeight + 20 * S;
     const x = this.boxX + this.boxW - width;

@@ -25,7 +25,7 @@ describe('réglages et écran Options (n°232)', () => {
     for (const row of rows) {
       expect(OPTION_SECTIONS.map((s) => s.id)).toContain(row.section);
       expect(row.help.length, row.id).toBeGreaterThan(10);
-      expect(row.values.length, row.id).toBeGreaterThanOrEqual(2);
+      expect(row.values.length, row.id).toBeGreaterThanOrEqual(row.opens ? 1 : 2);
       expect(row.values.map((v) => v.id), row.id).toContain(row.get());
       expect(valueLabel(row).length).toBeGreaterThan(0);
     }

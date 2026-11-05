@@ -21,6 +21,11 @@ export class FoeActor {
   readonly sprite: Phaser.GameObjects.Sprite;
   private readonly shadow: Phaser.GameObjects.Image;
   private readonly skull: Phaser.GameObjects.Image;
+  private readonly pips: Phaser.GameObjects.Image;
+  /** Mode daltonien (n°243) : crans sous le crâne (0 : aucun). */
+  private pipCount = 0;
+  /** Effets réduits (n°244) : le crâne ne flotte plus, la bulle ne pulse plus. */
+  private still = false;
   private readonly bubble: Phaser.GameObjects.Image;
   private readonly zone: Phaser.GameObjects.Graphics;
   private bubbleUntil = 0;
@@ -42,8 +47,16 @@ export class FoeActor {
     this.sprite = scene.add.sprite(sim.x, sim.y + 2, BATTLE_TEX.ms(spriteId, 'enemy'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1);
     if (boss) this.sprite.setScale(1.15);
     this.skull = scene.add.image(sim.x, sim.y - 36, FOE_TEX.skull).setDepth(depth.marker).setTint(look.color).setVisible(false);
+    this.pips = scene.add.image(sim.x, sim.y - 28, FOE_TEX.pips(1)).setDepth(depth.marker).setTint(look.color).setVisible(false);
     this.bubble = scene.add.image(sim.x, sim.y - 42, FOE_TEX.bang).setDepth(depth.marker + 0.01).setVisible(false);
     this.zone = scene.add.graphics().setDepth(depth.shadow + 0.05).setVisible(false);
+  }
+
+  /** Réglages d'accessibilité : crans de difficulté (mode daltonien) et mouvements réduits. */
+  setAccessibility(pips: number, still: boolean): void {
+    this.pipCount = Math.max(0, Math.min(6, pips));
+    if (this.pipCount > 0) this.pips.setTexture(FOE_TEX.pips(this.pipCount));
+    this.still = still;
   }
 
   /** Bulle au-dessus de la tête : « ! » (repéré) ou « ? » (piste perdue). */
@@ -63,6 +76,7 @@ export class FoeActor {
     if (hidden) {
       this.zone.setVisible(false);
       this.skull.setVisible(false);
+      this.pips.setVisible(false);
       this.bubble.setVisible(false);
       return;
     }
@@ -80,15 +94,17 @@ export class FoeActor {
     }
     this.sprite.setFlipX(flipX).setPosition(x, y + 2).setDepth(this.depth.entities + sim.y / 100000);
     this.shadow.setPosition(x, y - 1);
-    const bob = Math.round(Math.sin((time + this.phase) / 300) * 1);
+    const bob = this.still ? 0 : Math.round(Math.sin((time + this.phase) / 300) * 1);
     const top = y - 38 - (this.look.boss ? 5 : 0);
-    this.skull.setVisible(indicator && sim.mode !== 'flee').setPosition(x, top + bob);
+    const skullOn = indicator && sim.mode !== 'flee';
+    this.skull.setVisible(skullOn).setPosition(x, top + bob);
+    this.pips.setVisible(skullOn && this.pipCount > 0).setPosition(x, top + bob + 8);
     // Le « ! » reste affiché tant que l'ennemi donne l'alerte ou poursuit : on voit qu'on est repéré.
     const hunting = sim.mode === 'alert' || sim.mode === 'chase';
     if (hunting && time >= this.bubbleUntil) this.bubbleUntil = time + 1;
     const bubbleOn = time < this.bubbleUntil;
     if (hunting) this.bubble.setTexture(FOE_TEX.bang);
-    const pulse = hunting ? 1 + 0.15 * Math.sin(time / 90) : 1;
+    const pulse = hunting && !this.still ? 1 + 0.15 * Math.sin(time / 90) : 1;
     this.bubble.setVisible(bubbleOn).setPosition(x, top - (indicator ? 12 : 0)).setScale(pulse);
     this.drawVision(x, y, indicator, hunting);
     // La vigie alertée ou le poursuivant se tient « sur ses gardes » : léger sursaut.
@@ -133,6 +149,7 @@ export class FoeActor {
     this.sprite.destroy();
     this.shadow.destroy();
     this.skull.destroy();
+    this.pips.destroy();
     this.bubble.destroy();
   }
 }

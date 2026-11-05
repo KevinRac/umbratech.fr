@@ -12,6 +12,7 @@ export const SCENES = {
   battleCloseup: 'BattleCloseup',
   saves: 'Saves',
   options: 'Options',
+  keyBind: 'KeyBind',
   islandMap: 'IslandMap',
   account: 'Account',
   ending: 'Ending',

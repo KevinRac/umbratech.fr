@@ -16,12 +16,26 @@ import {
   loadAnimSpeed,
   loadBattleView,
   loadQuality,
-  loadReducedEffects,
+  loadColorBlind,
+  loadReducedMotion,
+  loadTextSize,
+  loadTextSpeed,
   saveAnimSpeed,
   saveBattleView,
+  saveColorBlind,
   saveQuality,
-  saveReducedEffects,
+  saveReducedMotion,
+  saveTextSize,
+  saveTextSpeed,
 } from '../core/settings';
+import {
+  REDUCED_MOTION_LABEL,
+  REDUCED_MOTIONS,
+  TEXT_SIZE_LABEL,
+  TEXT_SIZES,
+  TEXT_SPEED_LABEL,
+  TEXT_SPEEDS,
+} from '../logic/settings/accessibility';
 import { QUALITIES, QUALITY_LABEL } from '../render/atmosphere';
 
 export type OptionSection = 'affichage' | 'combat' | 'son' | 'texte' | 'commandes' | 'accessibilite';
@@ -50,6 +64,11 @@ export interface OptionRow {
   readonly values: readonly OptionValue[];
   /** Faux : Gauche/Droite s'arrêtent aux extrémités (volumes) au lieu de boucler. */
   readonly wrap?: boolean;
+  /**
+   * Ligne qui ouvre un écran au lieu de changer une valeur (« Touches »,
+   * n°241) : Entrée ou clic l'ouvre ; son unique valeur sert de libellé.
+   */
+  readonly opens?: 'keys';
   get(): string;
   set(id: string): void;
 }
@@ -109,13 +128,50 @@ export function optionRows(): OptionRow[] {
     volumeRow('sfxVolume', 'sfx', 'Effets sonores', 'Volume des bruitages : combats, interface, pas du héros.'),
     volumeRow('ambienceVolume', 'ambience', 'Ambiance', 'Volume des bruits de la nature : vent, oiseaux, ressac, braises.'),
     {
+      id: 'textSize',
+      section: 'texte',
+      label: 'Taille du texte',
+      help: 'Agrandit le texte des dialogues, des scènes et des menus. Les fiches et la carte de combat gardent leur taille.',
+      values: TEXT_SIZES.map((v) => ({ id: v, label: TEXT_SIZE_LABEL[v] })),
+      get: () => loadTextSize(),
+      set: (id) => saveTextSize(TEXT_SIZES.find((v) => v === id) ?? 'normal'),
+    },
+    {
+      id: 'textSpeed',
+      section: 'texte',
+      label: 'Vitesse du texte',
+      help: 'Vitesse d’écriture des répliques. Valider pendant l’écriture affiche toute la réplique.',
+      values: TEXT_SPEEDS.map((v) => ({ id: v, label: TEXT_SPEED_LABEL[v] })),
+      get: () => loadTextSpeed(),
+      set: (id) => saveTextSpeed(TEXT_SPEEDS.find((v) => v === id) ?? 'normal'),
+    },
+    {
+      id: 'keys',
+      section: 'commandes',
+      label: 'Touches',
+      help: 'Change les touches du clavier : jusqu’à trois par action. Flèches, Entrée et Échap restent toujours actives.',
+      values: [{ id: 'open', label: 'Modifier…' }],
+      opens: 'keys',
+      get: () => 'open',
+      set: () => undefined,
+    },
+    {
       id: 'reducedFx',
       section: 'accessibilite',
       label: 'Effets réduits',
-      help: 'Flashs atténués, secousses légères, pas de zoom sur les coups critiques.',
+      help: 'Flashs atténués, secousses légères, ni zoom ni poussière, feux plus calmes. « Selon le système » suit le réglage d’animations de l’ordinateur.',
+      values: REDUCED_MOTIONS.map((v) => ({ id: v, label: REDUCED_MOTION_LABEL[v] })),
+      get: () => loadReducedMotion(),
+      set: (id) => saveReducedMotion(REDUCED_MOTIONS.find((v) => v === id) ?? 'auto'),
+    },
+    {
+      id: 'colorBlind',
+      section: 'accessibilite',
+      label: 'Mode daltonien',
+      help: 'Motifs sur les cases de combat, forme sous chaque unité (rond : compagnie, losange : alliés, carré : ennemis), crans sous le crâne de difficulté.',
       values: onOff('Oui', 'Non'),
-      get: () => (loadReducedEffects() ? 'on' : 'off'),
-      set: (id) => saveReducedEffects(id === 'on'),
+      get: () => (loadColorBlind() ? 'on' : 'off'),
+      set: (id) => saveColorBlind(id === 'on'),
     },
   ];
 }

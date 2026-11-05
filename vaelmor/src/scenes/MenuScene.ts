@@ -8,9 +8,10 @@
  */
 import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
+import { flashCamera } from '../render/cameraFx';
 import { getGameCtx } from '../core/townContext';
 import { uiScaleFor } from '../core/viewport';
-import { ActionInput } from '../core/input';
+import { ActionInput, keyLabel } from '../core/input';
 import type { QuestDef } from '../data/townSchemas';
 import { itemKindLabel, questStatus, questSteps, tierIdOf, type GameCtx } from '../logic/game';
 import { PALETTE } from '../render/palette';
@@ -27,6 +28,7 @@ import { isWounded, type Member } from '../logic/units/company';
 import { portraitInBox } from '../render/portraits';
 import { STAT_SHORT } from '../ui/labels';
 import { SCENES } from './keys';
+import { loadTyping, onSettingsChange } from '../core/settings';
 import { TalkBox } from '../ui/TalkBox';
 import { buildTalkView, sceneTitle, type FaceLookup } from '../ui/talkView';
 import type { SceneDef } from '../data/talkSchemas';
@@ -102,7 +104,16 @@ export class MenuScene extends Phaser.Scene {
     this.S = uiScaleFor(this.scale.height);
     this.build();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this));
+    // Taille du texte changée dans l'onglet Options : il se reconstruit sur la même ligne.
+    const offSettings = onSettingsChange((key) => {
+      if (key !== 'textSize' || this.tab !== 'options') return;
+      this.optionsSelected = this.options?.selectedId ?? null;
+      this.build();
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      offSettings();
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    });
   }
 
   private onResize(): void {
@@ -111,7 +122,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number): void {
-    if (this.closing || this.covered) return;
+    if (this.closing || this.covered || this.game.loop.frame < this.listenFrom) return;
     // Journal des rencontres : une scène relue occupe toutes les touches (Échap la passe).
     if (this.talkBox) {
       this.talkBox.update(delta);
@@ -153,7 +164,7 @@ export class MenuScene extends Phaser.Scene {
     const dim = this.add.rectangle(0, 0, W, H, PALETTE.nuit, 0.7).setOrigin(0, 0).setDepth(DEPTH).setInteractive();
     const panel = drawPanel(this, x, y, w, h, { scale: 2 * S, depth: DEPTH + 1, fillAlpha: 0.97 });
     const gold = addText(this, x + w - 18 * S, y + h - 22 * S, `Or : ${this.ctx.progress.gold}`, { scale: S, color: PALETTE.jauneBle, align: 'right' }).setDepth(DEPTH + 2);
-    const hints = addText(this, x + 18 * S, y + h - 22 * S, 'Gauche/Droite : onglet   Haut/Bas : choisir   Échap ou Tab : fermer', { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH + 2);
+    const hints = addText(this, x + 18 * S, y + h - 22 * S, `Gauche/Droite : onglet   Haut/Bas : choisir   Échap ou ${keyLabel('menu')} : fermer`, { font: 'body', scale: S, color: PALETTE.metalClair }).setDepth(DEPTH + 2);
     this.frame.push(dim, panel, gold, hints);
     this.tabTexts = TABS.map((t, i) => {
       const step = Math.floor((w - 44 * S) / TABS.length);
@@ -195,9 +206,27 @@ export class MenuScene extends Phaser.Scene {
   private buildOptions(): void {
     const S = this.S;
     const a = this.area();
-    this.options = new OptionsPanel(this, this.actions, { x: a.x, y: a.y, width: a.w, height: a.h, scale: S, depth: DEPTH + 2, horizontal: false });
+    this.options = new OptionsPanel(this, this.actions, { x: a.x, y: a.y, width: a.w, height: a.h, scale: S, depth: DEPTH + 2, horizontal: false, onOpen: () => this.openKeys() });
+    this.options.selectId(this.optionsSelected);
     this.keep(addText(this, a.x + a.w, a.y - 2 * S, 'Entrée : changer', { scale: S, color: PALETTE.metalClair, align: 'right' }).setDepth(DEPTH + 3));
   }
+
+  /** Ligne choisie dans l'onglet Options, gardée quand l'onglet se reconstruit (taille du texte). */
+  private optionsSelected: string | null = null;
+
+  /** Écran des touches (n°241) par-dessus le menu ; la touche qui le ferme ne ferme pas le menu. */
+  private openKeys(): void {
+    this.covered = true;
+    this.scene.launch(SCENES.keyBind, {
+      onClose: () => {
+        this.covered = false;
+        this.listenFrom = this.game.loop.frame + 2;
+      },
+    });
+    this.scene.bringToTop(SCENES.keyBind);
+  }
+
+  private listenFrom = 0;
 
   private buildIsland(): void {
     const S = this.S;
@@ -347,7 +376,7 @@ export class MenuScene extends Phaser.Scene {
     const evo = findEvolution(this.ctx.data, evoId)?.evo;
     this.notice = error ?? `${m.name} devient ${evo?.name ?? evoId} !`;
     this.companyCursor = index;
-    this.cameras.main.flash(300, 255, 223, 154);
+    flashCamera(this.cameras.main, 300, 255, 223, 154);
     this.setTab('compagnie');
     this.notice = null;
   }
@@ -511,7 +540,7 @@ export class MenuScene extends Phaser.Scene {
       scale: this.S,
       depth: DEPTH + 20,
       bottom: this.scale.height - 12 * this.S,
-      ...this.ctx.data.balance.dialogue,
+      ...loadTyping(this.ctx.data.balance.dialogue),
     });
     this.talkBox = box;
     this.list?.setLocked(true);

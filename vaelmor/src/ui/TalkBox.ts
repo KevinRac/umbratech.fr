@@ -24,7 +24,7 @@ import type { Expression, NpcDef } from '../data/townSchemas';
 const moodExpression = (mood: PortraitMood): Expression => (mood === 'angry' ? 'fache' : mood === 'sad' ? 'triste' : mood === 'happy' ? 'content' : 'neutre');
 import { ALLY_OUTLINE } from '../render/unitSprites';
 import { drawPanel } from './panel';
-import { addText, fitText, setText, type PixelText } from './text';
+import { addText, fitText, setText, sizableLineHeight, type PixelText } from './text';
 
 export type TalkTeam = 'player' | 'ally' | 'enemy';
 
@@ -72,6 +72,8 @@ export interface TalkBoxOptions {
   readonly top?: number;
 }
 
+/** Lignes de texte visibles dans la boîte. */
+const TALK_LINES = 3;
 const TEAM_TINT: Readonly<Record<TalkTeam, number>> = { player: 0x6fa8dc, ally: ALLY_OUTLINE, enemy: 0xd9654b };
 const FACE = 116;
 
@@ -117,7 +119,8 @@ export class TalkBox {
     this.root = scene.add.container(0, 0).setDepth(options.depth);
     this.root.add(scene.add.rectangle(0, 0, width, height, PALETTE.nuit, 0.32).setOrigin(0, 0));
     const w = Math.min(width - 32 * S, 660 * S);
-    const h = 86 * S;
+    // Trois lignes de texte, quelle que soit sa taille (n°242) : la boîte grandit avec la police.
+    const h = (35 + TALK_LINES * sizableLineHeight()) * S;
     const x = Math.round((width - w) / 2);
     const y = options.top !== undefined ? Math.round(options.top + 6 * S) : Math.round(options.bottom - h - 6 * S);
     this.box = { x, y, w, h };
@@ -137,8 +140,8 @@ export class TalkBox {
     }
     this.name = addText(scene, x + 14 * S, y + 8 * S, '', { scale: S, color: PALETTE.lumiereDoree });
     this.title = addText(scene, x + 14 * S, y + 8 * S, '', { scale: S, color: PALETTE.metalClair });
-    this.body = addText(scene, x + 14 * S, y + 28 * S, '', { scale: S, color: PALETTE.parchemin });
-    this.measure = addText(scene, 0, 0, '', { scale: S }).setVisible(false);
+    this.body = addText(scene, x + 14 * S, y + 28 * S, '', { scale: S, color: PALETTE.parchemin, sizable: true });
+    this.measure = addText(scene, 0, 0, '', { scale: S, sizable: true }).setVisible(false);
     this.arrow = scene.add.triangle(x + w - 18 * S, y + h - 14 * S, 0, 0, 10 * S, 0, 5 * S, 7 * S, PALETTE.lumiereDoree).setOrigin(0, 0).setVisible(false);
     scene.tweens.add({ targets: this.arrow, y: this.arrow.y + 3 * S, duration: 380, yoyo: true, repeat: -1 });
     this.root.add([this.name, this.title, this.body, this.measure, this.arrow]);
@@ -185,6 +188,11 @@ export class TalkBox {
   }
 
   private next(): void {
+    // Suite d'une réplique trop longue pour la boîte (texte agrandi) : même visage, mêmes poses.
+    if (this.rest.length > 0) {
+      this.show(this.rest);
+      return;
+    }
     this.index += 1;
     const line = this.view.lines[this.index];
     if (!line) {
@@ -204,7 +212,16 @@ export class TalkBox {
     this.name.setTint(TEAM_TINT[line.face.team]);
     setText(this.title, line.face.title ? `· ${line.face.title}` : '');
     this.title.x = this.name.x + this.name.width + 6 * this.options.scale;
-    this.text = this.wrap(line.text);
+    this.show(this.wrap(line.text).split('\n'));
+  }
+
+  /** Lignes restantes de la réplique en cours (au-delà de `TALK_LINES`). */
+  private rest: string[] = [];
+
+  /** Affiche au plus `TALK_LINES` lignes, garde le reste pour l'appui suivant. */
+  private show(lines: readonly string[]): void {
+    this.rest = lines.slice(TALK_LINES);
+    this.text = lines.slice(0, TALK_LINES).join('\n');
     this.revealed = 0;
     this.clock = 0;
     setText(this.body, '');

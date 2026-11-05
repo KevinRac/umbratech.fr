@@ -13,6 +13,7 @@
  */
 import Phaser from 'phaser';
 import { assetUrl } from '../core/config';
+import { TEXT_SIZE_FACTOR } from '../logic/settings/accessibility';
 
 export interface PixelFontDef {
   /** Nom de famille CSS interne (préfixé pour éviter les collisions). */
@@ -28,6 +29,12 @@ export interface PixelFontDef {
 export const PIXEL_FONTS = {
   /** Texte courant, dialogues, menus — Jersey 10 (majuscules de 10 px). */
   body: { family: 'Vaelmor Jersey 10', file: 'assets/fonts/jersey-10.woff2', size: 1400 / 75, lineHeight: 17 },
+  /**
+   * Texte agrandi ×1,25 (accessibilité, n°242) : la même police rastérisée à
+   * 1,25 fois sa grille, puis seuillée. Quelques traits font 2 pixels au lieu
+   * d'un (n°258) ; aucun pixel gris, le texte reste net.
+   */
+  bodyLarge: { family: 'Vaelmor Jersey 10', file: 'assets/fonts/jersey-10.woff2', size: (1400 / 75) * TEXT_SIZE_FACTOR.large, lineHeight: 21 },
   /** Petites étiquettes, chiffres d'interface — Tiny5 (majuscules de 5 px). */
   small: { family: 'Vaelmor Tiny5', file: 'assets/fonts/tiny5.woff2', size: 8, lineHeight: 9 },
   /** Titres, gothique pixel — Jacquarda Bastarda 9 (majuscules de 9 px), souvent affichée ×2. */
@@ -50,8 +57,9 @@ export const fontKey = (key: FontKey): string => `font:${key}`;
 
 /** Charge les fichiers de police via l'API FontFace. */
 export async function loadPixelFontFaces(): Promise<void> {
+  const byFamily = new Map<string, PixelFontDef>(Object.values(PIXEL_FONTS).map((def) => [def.family, def]));
   await Promise.all(
-    Object.values(PIXEL_FONTS).map(async (def) => {
+    [...byFamily.values()].map(async (def) => {
       const face = new FontFace(def.family, `url(${assetUrl(def.file)}) format("woff2")`);
       await face.load();
       document.fonts.add(face);

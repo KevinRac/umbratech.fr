@@ -19,7 +19,8 @@
 import Phaser from 'phaser';
 import type { BalanceConfig, ZoneDef } from '../data/schemas';
 import type { MapObject } from '../data/worldMap';
-import { effectsFor, gradeMatrixAt, type EffectPlan, flicker, haloStrength, parseLightKind, tiltMaskAlpha, type LightKind, type Quality } from './atmosphere';
+import { worldMotion, type WorldMotion } from '../logic/settings/accessibility';
+import { FLICKER_MEAN, effectsFor, gradeMatrixAt, type EffectPlan, flicker, haloStrength, parseLightKind, tiltMaskAlpha, type LightKind, type Quality } from './atmosphere';
 import { lerpMatrix } from './grade';
 import { PALETTE } from './palette';
 
@@ -176,6 +177,13 @@ export class WorldAtmosphere {
   }
 
   private without: readonly string[] = [];
+  private motion: WorldMotion = worldMotion(false);
+
+  /** « Effets réduits » (n°244) : pas de poussière, scintillement des feux atténué. */
+  setReducedMotion(reduced: boolean): void {
+    this.motion = worldMotion(reduced);
+    if (!this.motion.dust) this.dust.killAll();
+  }
 
   private plan(): EffectPlan {
     const plan = { ...effectsFor(this.quality) };
@@ -291,7 +299,8 @@ export class WorldAtmosphere {
         if (halo.image.visible) halo.image.setVisible(false);
         continue;
       }
-      const f = flicker(this.clock, halo.seed, halo.kind);
+      const mean = FLICKER_MEAN[halo.kind];
+      const f = mean + (flicker(this.clock, halo.seed, halo.kind) - mean) * this.motion.flicker;
       halo.image.setVisible(true).setAlpha(Math.min(1, v[halo.kind].alpha * strength * f * (1 + this.visuals.eveningDarkness * 1.6 * this.evening)));
       if (halo.kind === 'fire') halo.image.setScale(((v.fire.radius * 2) / 64) * (0.94 + 0.08 * f));
     }
@@ -299,7 +308,7 @@ export class WorldAtmosphere {
 
   /** Une poussière naît dans un rayon visible, au hasard le long de son axe. */
   private emitDust(): void {
-    if (!this.plan().dust || this.rays.length === 0) return;
+    if (!this.plan().dust || !this.motion.dust || this.rays.length === 0) return;
     if (Math.random() > this.light.dust * (1 - 0.5 * this.evening)) return;
     const ray = this.rays[Math.floor(Math.random() * this.rays.length)];
     if (!ray || !ray.image.visible) return;

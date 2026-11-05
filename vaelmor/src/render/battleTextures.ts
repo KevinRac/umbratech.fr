@@ -13,6 +13,7 @@ import { hasSkin, skinCombatKey } from './skins';
 import { DETAIL_PAD, paintDetails } from './skinDetails';
 import { parseSprite } from '../logic/skinFrames';
 import { UNIT_H, UNIT_IDLE_FRAMES, UNIT_READY_FRAMES, UNIT_W, UNIT_WALK_FRAMES, paintUnitSprite, type UnitFrameKind, type UnitTeam } from './unitSprites';
+import { TILE_PATTERNS, patternAt, type CampShape, type TilePattern } from '../logic/settings/accessibility';
 
 export const BATTLE_TEX = {
   field: (key: string, frame: number): string => `battle:field:${key}:${frame}`,
@@ -27,6 +28,10 @@ export const BATTLE_TEX = {
   msWalk: (sprite: string, team: UnitTeam, view: CharPose): string => `battle:unit:${sprite}:${team}:walk:${view}`,
   cursor: (frame: number): string => `battle:cursor:${frame}`,
   tile: 'battle:tile',
+  /** Mode daltonien (n°243) : la même case, avec un motif selon ce qu'elle indique. */
+  tilePattern: (pattern: TilePattern): string => (pattern === 'plain' ? 'battle:tile' : `battle:tile:${pattern}`),
+  /** Mode daltonien : forme de camp sous l'unité (rond, losange, carré). */
+  campShape: (shape: CampShape): string => `battle:camp:${shape}`,
   crown: 'battle:crown',
   heroMark: 'battle:heroMark',
   /** Phylactère au-dessus d'un ennemi nommé à qui l'unité choisie peut parler (GDD §7.9, n°187). */
@@ -170,9 +175,59 @@ function ensureSkinMapSprite(scene: Phaser.Scene, id: string, key: string): void
   for (const view of CHAR_POSES) make(BATTLE_TEX.msWalk(id, 'player', view), frames(view), SKIN_FRAME_MS);
 }
 
+
+/** Case colorée (teintée par le moteur) : fond translucide, liseré plus franc, coins arrondis ; motif plein en mode daltonien. */
+function paintTile(scene: Phaser.Scene, pattern: TilePattern): void {
+  const key = BATTLE_TEX.tilePattern(pattern);
+  if (scene.textures.exists(key)) return;
+  const tile = new PixelCanvas(16, 16);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || y === 0 || x === 15 || y === 15;
+      const corner = (x === 0 || x === 15) && (y === 0 || y === 15);
+      if (corner) continue;
+      const inner = x === 1 || y === 1 || x === 14 || y === 14;
+      // Motif en encre sombre (la teinte ne l'éclaircit pas) : il se lit par le contraste, sans la couleur.
+      if (patternAt(pattern, x, y)) tile.set(x, y, P.encre, 235);
+      else tile.set(x, y, 0xffffff, edge ? 200 : inner ? 120 : 90);
+    }
+  }
+  tile.toTexture(scene, key);
+}
+
+/** Formes de camp, 16 × 9 : contour clair épais (teinté) et liseré sombre, à plat sous les pieds. */
+function paintCampShapes(scene: Phaser.Scene): void {
+  const shapes: Record<CampShape, (x: number, y: number) => boolean> = {
+    circle: (x, y) => {
+      const d = ((x - 7.5) / 7.5) ** 2 + ((y - 4) / 4) ** 2;
+      return d <= 1 && d >= 0.45;
+    },
+    diamond: (x, y) => {
+      const d = Math.abs(x - 7.5) / 7.5 + Math.abs(y - 4) / 4;
+      return d <= 1.02 && d >= 0.62;
+    },
+    square: (x, y) => x >= 1 && x <= 14 && y >= 0 && y <= 8 && (x <= 2 || x >= 13 || y <= 1 || y >= 7),
+  };
+  for (const [shape, inside] of Object.entries(shapes) as [CampShape, (x: number, y: number) => boolean][]) {
+    const key = BATTLE_TEX.campShape(shape);
+    if (scene.textures.exists(key)) continue;
+    const c = new PixelCanvas(16, 9);
+    for (let y = 0; y < 9; y++) for (let x = 0; x < 16; x++) if (inside(x, y)) c.set(x, y, 0xffffff, 235);
+    // Liseré sombre autour du trait clair : la forme se détache du sol.
+    for (let y = 0; y < 9; y++)
+      for (let x = 0; x < 16; x++) {
+        if (inside(x, y)) continue;
+        if ([[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].some(([nx, ny]) => nx !== undefined && ny !== undefined && nx >= 0 && ny >= 0 && nx < 16 && ny < 9 && inside(nx, ny))) c.set(x, y, P.encre, 200);
+      }
+    c.toTexture(scene, key);
+  }
+}
+
 /** Curseur, cases colorées, couronne du boss, étoile du héros, étincelle. */
 export function ensureBattleFxTextures(scene: Phaser.Scene): void {
-  if (scene.textures.exists(BATTLE_TEX.tile)) return;
+  for (const pattern of TILE_PATTERNS) paintTile(scene, pattern);
+  paintCampShapes(scene);
+  if (scene.textures.exists(BATTLE_TEX.crown)) return;
 
   // Curseur : quatre coins dorés qui « respirent » (2 images, 20 × 20).
   for (const frame of [0, 1]) {
@@ -195,19 +250,6 @@ export function ensureBattleFxTextures(scene: Phaser.Scene): void {
     corner(size - 1 - inset, size - 1 - inset, -1, -1);
     c.toTexture(scene, BATTLE_TEX.cursor(frame));
   }
-
-  // Case colorée (teintée par le moteur) : fond translucide, liseré plus franc, coins arrondis.
-  const tile = new PixelCanvas(16, 16);
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 16; x++) {
-      const edge = x === 0 || y === 0 || x === 15 || y === 15;
-      const corner = (x === 0 || x === 15) && (y === 0 || y === 15);
-      if (corner) continue;
-      const inner = x === 1 || y === 1 || x === 14 || y === 14;
-      tile.set(x, y, 0xffffff, edge ? 200 : inner ? 120 : 90);
-    }
-  }
-  tile.toTexture(scene, BATTLE_TEX.tile);
 
   // Couronne du boss (7 × 5).
   const crown = new PixelCanvas(7, 5);

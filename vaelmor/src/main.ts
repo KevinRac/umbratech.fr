@@ -21,6 +21,7 @@ import { DebugScene } from './scenes/DebugScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { MenuScene } from './scenes/MenuScene';
 import { OptionsScene } from './scenes/OptionsScene';
+import { KeyBindScene } from './scenes/KeyBindScene';
 import { IslandMapScene } from './scenes/IslandMapScene';
 import { ClassSelectScene } from './scenes/ClassSelectScene';
 import { SaveScene } from './scenes/SaveScene';
@@ -52,7 +53,7 @@ function start(): void {
       zoom: initial.cssZoom,
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, BattleCloseupScene, SaveScene, OptionsScene, IslandMapScene, AccountScene, EndingScene, DebugScene],
+    scene: [BootScene, TitleScene, ClassSelectScene, WorldScene, WorldHudScene, DialogueScene, MenuScene, BattleScene, BattleHudScene, BattleCloseupScene, SaveScene, OptionsScene, KeyBindScene, IslandMapScene, AccountScene, EndingScene, DebugScene],
   });
   bindDisplaySize(game);
   // Temps de jeu de la partie (n°155) : compté à chaque image, hors titre et hors pause.

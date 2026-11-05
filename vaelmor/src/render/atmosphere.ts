@@ -114,6 +114,9 @@ export function parseLightKind(raw: unknown): LightKind | null {
  * décalée par lumière, pour qu'aucune ne batte au même rythme. Les feux
  * dansent vite, les lanternes frémissent, les fenêtres respirent, les runes pulsent.
  */
+/** Valeur moyenne du scintillement de chaque lumière (ce que garde « Effets réduits » quand il l'atténue). */
+export const FLICKER_MEAN: Readonly<Record<LightKind, number>> = { fire: 0.8, lamp: 0.9, window: 0.94, rune: 0.82 };
+
 export function flicker(t: number, seed: number, kind: LightKind): number {
   const s = seed * 12.9898;
   switch (kind) {

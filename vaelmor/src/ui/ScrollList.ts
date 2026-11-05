@@ -8,7 +8,8 @@ import { playSfx, type SfxId } from '../audio/sfx';
 import Phaser from 'phaser';
 import type { ActionInput } from '../core/input';
 import { PALETTE } from '../render/palette';
-import { addText, setText, type PixelText } from './text';
+import { PIXEL_FONTS } from '../render/pixelFont';
+import { addText, isLargeText, setText, type PixelText } from './text';
 
 export interface ListRow {
   readonly label: string;
@@ -59,10 +60,13 @@ export class ScrollList {
     const { width, rowHeight, visibleRows, depth } = options;
     const ts = options.textScale ?? S;
     this.highlight = scene.add.rectangle(x, y, width, rowHeight - 2 * S, PALETTE.violetBrume, 0.6).setOrigin(0, 0).setDepth(depth);
+    // Taille du texte ×1,25 (n°242) : seulement si la ligne est assez haute pour la police agrandie.
+    const large = isLargeText() && rowHeight >= (PIXEL_FONTS.bodyLarge.lineHeight + 3) * ts;
+    const dy = large ? Math.max(S, Math.round((rowHeight - PIXEL_FONTS.bodyLarge.lineHeight * ts) / 2) - S) : S;
     for (let i = 0; i < visibleRows; i++) {
       const rowY = y + i * rowHeight;
-      const label = addText(scene, x + 8 * S, rowY + S, '', { scale: ts }).setDepth(depth + 1);
-      const right = addText(scene, x + width - 8 * S, rowY + S, '', { scale: ts, align: 'right' }).setDepth(depth + 1);
+      const label = addText(scene, x + 8 * S, rowY + dy, '', { scale: ts, sizable: large }).setDepth(depth + 1);
+      const right = addText(scene, x + width - 8 * S, rowY + dy, '', { scale: ts, align: 'right', sizable: large }).setDepth(depth + 1);
       this.labels.push(label);
       this.rights.push(right);
       const zone = scene.add.zone(x, rowY, width, rowHeight).setOrigin(0, 0).setInteractive({ useHandCursor: true });

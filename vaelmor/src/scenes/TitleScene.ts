@@ -6,6 +6,7 @@
  * Options.
  */
 import Phaser from 'phaser';
+import { flashCamera } from '../render/cameraFx';
 import { setAmbience } from '../audio/ambience';
 import { playMusic } from '../audio/music';
 import { GAME_SUBTITLE, GAME_VERSION, MILESTONE, TITLE_HEIGHT as GAME_HEIGHT, TITLE_WIDTH as GAME_WIDTH } from '../core/config';
@@ -396,7 +397,7 @@ export class TitleScene extends Phaser.Scene {
     if (this.starting) return;
     this.starting = true;
     this.menu?.setLocked(true);
-    this.cameras.main.flash(150, 255, 255, 255);
+    flashCamera(this.cameras.main, 150, 255, 255, 255);
     this.cameras.main.fadeOut(450, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.battle, { encounterId, returnTo: 'title' }));
   }

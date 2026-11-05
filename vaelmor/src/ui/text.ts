@@ -4,6 +4,7 @@
  */
 import Phaser from 'phaser';
 import { PALETTE } from '../render/palette';
+import { loadTextSize, onSettingsChange } from '../core/settings';
 import { PIXEL_FONTS, fontKey, type FontKey } from '../render/pixelFont';
 
 export type TextAlign = 'left' | 'center' | 'right';
@@ -21,6 +22,32 @@ export interface TextOptions {
   readonly shadowOffset?: number;
   /** Largeur maximale avant retour à la ligne, en pixels de jeu. */
   readonly maxWidth?: number;
+  /**
+   * Texte des dialogues, scènes et menus : suit le réglage « Taille du texte »
+   * (n°242) — la police `body` devient `bodyLarge` en ×1,25.
+   */
+  readonly sizable?: boolean;
+}
+
+let largeText: boolean | null = null;
+onSettingsChange((key) => {
+  if (key === 'textSize') largeText = null;
+});
+
+/** « Taille du texte » sur ×1,25 ? (lu une fois, relu quand le réglage change). */
+export function isLargeText(): boolean {
+  if (largeText === null) largeText = loadTextSize() === 'large';
+  return largeText;
+}
+
+/** Police réellement employée pour un texte. */
+export function resolveFont(font: FontKey = 'body', sizable = false): FontKey {
+  return sizable && font === 'body' && isLargeText() ? 'bodyLarge' : font;
+}
+
+/** Hauteur de ligne (pixels de jeu, avant l'échelle) d'un texte des dialogues, scènes et menus. */
+export function sizableLineHeight(font: FontKey = 'body'): number {
+  return PIXEL_FONTS[resolveFont(font, true)].lineHeight;
 }
 
 export type PixelText = Phaser.GameObjects.BitmapText & { readonly anchorX: number; readonly anchorAlign: TextAlign };
@@ -29,7 +56,7 @@ const ALIGN_CODE: Record<TextAlign, number> = { left: 0, center: 1, right: 2 };
 
 /** Ajoute un texte pixel net. */
 export function addText(scene: Phaser.Scene, x: number, y: number, text: string, options: TextOptions = {}): PixelText {
-  const font = options.font ?? 'body';
+  const font = resolveFont(options.font, options.sizable);
   const scale = options.scale ?? 1;
   const obj = scene.add.bitmapText(0, Math.round(y), fontKey(font), text, PIXEL_FONTS[font].size * scale, ALIGN_CODE[options.align ?? 'left']);
   obj.setOrigin(0, 0);

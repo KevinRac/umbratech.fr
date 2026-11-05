@@ -18,12 +18,14 @@
  * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
 import Phaser from 'phaser';
+import { flashCamera, shakeCamera } from '../render/cameraFx';
+import { CAMP_SHAPE, TILE_PATTERN, type TileKind } from '../logic/settings/accessibility';
 import { setAmbience } from '../audio/ambience';
 import { playMusic } from '../audio/music';
 import { playSfx } from '../audio/sfx';
-import { ANIM_SPEED_FACTOR, loadAnimSpeed, loadBattleView, loadReducedEffects, onSettingsChange, type AnimSpeed, type BattleView } from '../core/settings';
+import { ANIM_SPEED_FACTOR, loadAnimSpeed, loadBattleView, loadColorBlind, loadReducedEffects, loadTyping, onSettingsChange, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
-import { ActionInput } from '../core/input';
+import { ActionInput, keyLabel } from '../core/input';
 import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
 import { getGameCtx } from '../core/townContext';
 import { applyClassicLosses, applyTalkResults, ensureCompany, settleBattle, settleEnding, talkContextOf, testCompany, type BattleEnd, type Settlement } from '../logic/game';
@@ -168,6 +170,10 @@ const COLORS = {
   /** Parler : or doux, ni rouge d'attaque ni vert de soin. */
   talk: 0xe8c06a,
 } as const;
+/** Couleur → sens de la case (mode daltonien) ; le bleu des emplacements de déploiement est donné à part. */
+const COLOR_KIND: ReadonlyMap<number, TileKind> = new Map(
+  (['move', 'attack', 'threat', 'marked', 'heal', 'skill', 'area', 'pick', 'talk'] as const).map((k) => [COLORS[k], k]),
+);
 const SHADOW_TINT: Readonly<Record<Team, number>> = { player: 0x9cc0ff, ally: 0xb0f0c8, enemy: 0xffb0a0 };
 const WATER_FRAME_MS = 420;
 /** Durées de base (ms) des animations sur la carte, avant le réglage de vitesse. */
@@ -258,6 +264,8 @@ export class BattleScene extends Phaser.Scene {
   private closeup: BattleCloseupScene | null = null;
   private view: BattleView = 'closeup';
   private reducedFx = false;
+  /** Mode daltonien (n°243) : motifs sur les cases, formes de camp sous les unités. */
+  private colorBlind = false;
   /** `?debug&slow=N` : l'écran rapproché N fois plus lent (captures image par image). */
   private slow = 1;
   /** Boss déjà présentés par leur bandeau dans l'écran rapproché pendant ce combat (lot 6, GDD §11.4). */
@@ -328,6 +336,7 @@ export class BattleScene extends Phaser.Scene {
     this.speed = loadAnimSpeed();
     this.view = loadBattleView();
     this.reducedFx = loadReducedEffects();
+    this.colorBlind = loadColorBlind();
     this.slow = debug ? Math.max(1, Number(url.get('slow')) || 1) : 1;
     this.actions = new ActionInput(this);
     this.scene.launch(SCENES.battleHud);
@@ -678,7 +687,7 @@ export class BattleScene extends Phaser.Scene {
     ensureMapSprite(this, unit.sprite, unit.team);
     const sprite = this.add.sprite(0, 0, BATTLE_TEX.ms(unit.sprite, unit.team), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1);
     // Ombre au sol du monde ouvert, légèrement teintée par le camp.
-    const shadow = this.add.image(0, -2, WORLD_TEX.shadow).setTint(SHADOW_TINT[unit.team]);
+    const shadow = this.add.image(0, -2, this.shadowTexture(unit.team)).setTint(SHADOW_TINT[unit.team]);
     const hpBg = this.add.rectangle(-6, -2, 12, 2, PALETTE.encre, 0.9).setOrigin(0, 0);
     const hpFill = this.add.rectangle(-6, -2, 12, 2, COLORS.heal, 1).setOrigin(0, 0);
     const mark = this.add.image(8, -30, BATTLE_TEX.status('buff')).setVisible(false);
@@ -832,11 +841,21 @@ export class BattleScene extends Phaser.Scene {
     this.setCursor(cell);
   }
 
+  /** Ombre sous l'unité, ou forme de son camp en mode daltonien (rond, losange, carré). */
+  private shadowTexture(team: Team): string {
+    return this.colorBlind ? BATTLE_TEX.campShape(CAMP_SHAPE[team]) : WORLD_TEX.shadow;
+  }
+
   /* ---------- Cases colorées ---------- */
 
-  private paintTiles(pool: Phaser.GameObjects.Image[], cells: Iterable<Cell>, color: number, alpha: number, depth: number): void {
+  /**
+   * Cases colorées. En mode daltonien (n°243), chaque sens a aussi son motif
+   * (`TILE_PATTERN`) : `kind` le dit, sinon il se déduit de la couleur.
+   */
+  private paintTiles(pool: Phaser.GameObjects.Image[], cells: Iterable<Cell>, color: number, alpha: number, depth: number, kind: TileKind | null = COLOR_KIND.get(color) ?? null): void {
+    const texture = this.colorBlind && kind ? BATTLE_TEX.tilePattern(TILE_PATTERN[kind]) : BATTLE_TEX.tile;
     for (const c of cells) {
-      pool.push(this.add.image(this.px(c.x), this.py(c.y), BATTLE_TEX.tile).setOrigin(0, 0).setTint(color).setAlpha(alpha).setDepth(depth));
+      pool.push(this.add.image(this.px(c.x), this.py(c.y), texture).setOrigin(0, 0).setTint(color).setAlpha(alpha).setDepth(depth));
     }
   }
 
@@ -938,8 +957,8 @@ export class BattleScene extends Phaser.Scene {
       ],
       browse: [
         ['Entrée', 'choisir'],
-        ['R', 'menaces'],
-        ['F', 'unité suiv.'],
+        [keyLabel('threat'), 'menaces'],
+        [keyLabel('nextUnit'), 'unité suiv.'],
         ['Échap', 'menu'],
       ],
       move: this.canto
@@ -960,8 +979,8 @@ export class BattleScene extends Phaser.Scene {
         ['Entrée', 'valider'],
         ['Échap', 'retour'],
       ],
-      enemy: [['Maj', 'accélérer']],
-      busy: [['Maj', 'accélérer']],
+      enemy: [[keyLabel('sprint'), 'accélérer']],
+      busy: [[keyLabel('sprint'), 'accélérer']],
       end: [],
     };
     const actionMenu: readonly (readonly [string, string])[] = [
@@ -1061,10 +1080,10 @@ export class BattleScene extends Phaser.Scene {
   private paintSlots(): void {
     this.clearTiles(this.slotTiles);
     if (!this.plan) return;
-    this.paintTiles(this.slotTiles, this.plan.cells, COLORS.slot, 0.6, DEPTH.highlight);
+    this.paintTiles(this.slotTiles, this.plan.cells, COLORS.slot, 0.6, DEPTH.highlight, 'slot');
     if (this.prepPick !== null) {
       const c = this.plan.cells[this.prepPick];
-      if (c) this.paintTiles(this.slotTiles, [c], COLORS.pick, 0.6, DEPTH.highlight + 0.1);
+      if (c) this.paintTiles(this.slotTiles, [c], COLORS.pick, 0.6, DEPTH.highlight + 0.1, 'pick');
     }
     const at = this.plan.slots.indexOf(this.prepCursor);
     if (at >= 0 && this.mode !== 'place') {
@@ -1972,6 +1991,13 @@ export class BattleScene extends Phaser.Scene {
     if (key === 'battleAnim') this.speed = loadAnimSpeed();
     else if (key === 'battleView') this.view = loadBattleView();
     else if (key === 'reducedFx') this.reducedFx = loadReducedEffects();
+    else if (key === 'colorBlind') {
+      this.colorBlind = loadColorBlind();
+      for (const [id, view] of this.views) {
+        const team = this.state.units.find((u) => u.id === id)?.team;
+        if (team) view.shadow.setTexture(this.shadowTexture(team));
+      }
+    }
   }
 
   private retreat(): void {
@@ -2175,7 +2201,7 @@ export class BattleScene extends Phaser.Scene {
           view.container.setAlpha(0);
           this.sparks.setParticleTint(PALETTE.pierre);
           this.sparks.explode(18, this.px(unit.x) + T / 2, this.py(unit.y) + T - 4);
-          this.cameras.main.shake(this.dur(220, 80), 0.004);
+          shakeCamera(this.cameras.main, this.dur(220, 80), 0.004, this.reducedFx);
           await this.tween({ targets: view.container, alpha: 1, duration: this.dur(320, 80) });
           this.floatText(unit, 'Éveil !', PALETTE.pierre);
           break;
@@ -2278,12 +2304,12 @@ export class BattleScene extends Phaser.Scene {
     const rune = this.add.circle(sx, sy, 8, color, 0).setStrokeStyle(1, color, 0.9).setDepth(DEPTH.fx - 1).setScale(0.3);
     void this.tween({ targets: rune, scale: 1.4, alpha: 0, duration: this.dur(380, 120) }).then(() => rune.destroy());
     const flash: Phaser.GameObjects.Image[] = [];
-    this.paintTiles(flash, cells, color, 0.55, DEPTH.area);
+    this.paintTiles(flash, cells, color, 0.55, DEPTH.area, 'area');
     for (const c of cells) {
       this.sparks.setParticleTint(color);
       this.sparks.explode(3, this.px(c.x) + T / 2, this.py(c.y) + T / 2);
     }
-    if (unit.isBoss) this.cameras.main.shake(this.dur(260, 100), 0.005);
+    if (unit.isBoss) shakeCamera(this.cameras.main, this.dur(260, 100), 0.005, this.reducedFx);
     await this.tween({ targets: flash, alpha: 0, duration: this.dur(420, 120) });
     for (const f of flash) f.destroy();
   }
@@ -2341,8 +2367,8 @@ export class BattleScene extends Phaser.Scene {
     this.setCursorQuiet(unit);
     // Déjà vu en cut-in dans l'écran rapproché (n°219) : la carte ne rejoue ni la secousse ni le flash.
     if (!this.phaseCut.delete(unitId)) {
-      this.cameras.main.shake(this.dur(500, 200), 0.008);
-      this.cameras.main.flash(this.dur(260, 100), 180, 40, 40);
+      shakeCamera(this.cameras.main, this.dur(500, 200), 0.008, this.reducedFx);
+      flashCamera(this.cameras.main, this.dur(260, 100), 180, 40, 40, this.reducedFx);
     }
     this.syncUnit(unit);
     this.flashUnit(unit, PALETTE.rougeCendre);
@@ -2383,7 +2409,7 @@ export class BattleScene extends Phaser.Scene {
     const lowest = Math.max(...cast.map((u) => u.y), 0);
     const screenY = ((lowest + 0.5) * T - this.camTarget.y) * this.zoom;
     const atTop = cast.length > 0 && screenY > this.scale.height * 0.5;
-    await this.hud.talk(buildTalkView(this.gameData, scene, event.failed, this.faceLookup(), linked), this.gameData.balance.dialogue, atTop);
+    await this.hud.talk(buildTalkView(this.gameData, scene, event.failed, this.faceLookup(), linked), loadTyping(this.gameData.balance.dialogue), atTop);
     if (event.failed) {
       const enemy = this.state.units.find((u) => u.id === event.enemyId);
       if (enemy) this.floatText(enemy, 'Refus', PALETTE.metalClair, -6);
@@ -2529,11 +2555,11 @@ export class BattleScene extends Phaser.Scene {
       this.sparks.setParticleTint(Phaser.Display.Color.HexStringToColor(color).color);
       this.sparks.explode(strike.crit ? 22 : 10, tx, ty - 10);
       if (strike.crit) {
-        this.cameras.main.flash(this.dur(140, 60), 255, 255, 255);
-        this.cameras.main.shake(this.dur(260, 120), 0.006);
+        flashCamera(this.cameras.main, this.dur(140, 60), 255, 255, 255, this.reducedFx);
+        shakeCamera(this.cameras.main, this.dur(260, 120), 0.006, this.reducedFx);
         this.floatText(target, 'CRITIQUE !', PALETTE.jauneBle, -10);
       } else {
-        this.cameras.main.shake(this.dur(110, 60), 0.0015);
+        shakeCamera(this.cameras.main, this.dur(110, 60), 0.0015, this.reducedFx);
       }
       this.floatText(target, `${strike.damage}`, strike.crit ? PALETTE.jauneBle : PALETTE.parchemin);
       await this.wait(this.dur(MS.hitStop, 40));
@@ -2627,7 +2653,7 @@ export class BattleScene extends Phaser.Scene {
       const linked = this.state.units.find((u) => u.id === quote.unitId)?.charId ?? null;
       talks.set(quote.enemyId, buildTalkView(this.gameData, scene, quote.failed, this.faceLookup(), linked));
     }
-    return { intro: boss?.id ?? null, phase, quotes: talks, typing: this.gameData.balance.dialogue };
+    return { intro: boss?.id ?? null, phase, quotes: talks, typing: loadTyping(this.gameData.balance.dialogue) };
   }
 
   /** Soin au bâton dans l'écran rapproché (n°205) : le soigneur à gauche, l'allié soigné à droite. */
