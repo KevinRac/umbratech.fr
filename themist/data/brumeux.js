@@ -2,7 +2,8 @@
 // Action 5a : le socle technique. Action 5b (v18.6) : la phase I, « le Rappel » (partition.rappel, gestes signature, tableaux). Action 5c (v18.7) :
 // la phase II, « L'Ouvrage » (partition.ouvrage, gestes signature, constructions comme système). Action 5d (v18.8) : la phase III, « La Couture »
 // (partition.couture, gestes signature, couture : montages, nœuds, Masqués cousus). Action 5e (v18.9) : la phase IV, « L'Emprunt » (partition.emprunt,
-// gestes signature au corps, emprunt : il joue l'arme de la Brume d'un de tes talents portés). La phase V (5f) joue encore la partition d'ESSAI (formes de zone déjà connues, comme le boss d'essai de l'arène). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
+// gestes signature au corps, emprunt : il joue l'arme de la Brume d'un de tes talents portés). Action 5f (v18.10) : la phase V, « L'Effacement »
+// (partition.effacement, courte et entière ; effacement : un examen de ce que le combat a montré, l'arène qui se resserre, sa mort). Lu par le jeu (index.html, bloc « v18.5 · Le Brumeux » ; logique
 // pure /*brx:pur*/), par outils/sim-brumeux.mjs et par _dev/bancs/banc-brumeux.mjs. Le wiki ne lit de ce fichier rien d'autre que ce que
 // l'action 5g y branchera (sa carte, Q16) : ni les phases, ni la partition, ni la lecture, ni les tirages (secret).
 // En jeu, rien n'est allumé : l'arène (arene.js, actif:false) reste fermée et le boss final provisoire tient sa place jusqu'à l'action 5g.
@@ -12,7 +13,8 @@
  // ── Les cinq phases (Q1). id : nom de travail, jamais affiché ; presence : au-dessus de l'arène (mains, croix, fils ; haut) ou au sol (sol) ;
  // faible : ce que l'anneau ivoire entoure (G27.anneau) ; arene : l'état d'arène (data/arene.js, salles.final.etats : 0 pleine, 1 resserrée,
  // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; 4 la phase II réelle, « L'Ouvrage », action 5c ; 5 la phase III réelle, « La Couture »,
- // action 5d ; 6 la phase IV réelle, « L'Emprunt », action 5e ; la phase V vient avec 5f) ; libre : part improvisée visée (indicative, Q8) ;
+ // action 5d ; 6 la phase IV réelle, « L'Emprunt », action 5e ; la phase V, « L'Effacement » (5f), garde l'état 6 : elle se resserre ensuite en 7 et 8, voir
+// effacement.resserrements) ; libre : part improvisée visée (indicative, Q8) ;
  // pv : PV de la phase (placeholders, à calibrer au bot à l'action 5g : 50 à 70 s par phase, Q11). Pas de PV ni de dégâts en plus par palier (Q12).
  // exclut : les sortes d'éléments que cette phase ne tire jamais (I : bâtir, c'est la phase II ; V : l'arène se défait, rien n'y est bâti).
  phases:[
@@ -20,7 +22,7 @@
   {id:'ouvrage',presence:'haut',faible:'mains',arene:4,libre:0.40,pv:2400},
   {id:'couture',presence:'haut',faible:'croix',arene:5,libre:0.50,pv:2400,exclut:['construction']},
   {id:'emprunt',presence:'sol',faible:'coeur',arene:6,libre:0.50,pv:2400},
-  {id:'effacement',presence:'sol',faible:'coeur',arene:2,libre:0.60,pv:2400,exclut:['construction']}],
+  {id:'effacement',presence:'sol',faible:'coeur',arene:6,libre:0.60,pv:2400,exclut:['construction']}],
  // Les dégâts au-delà d'un seuil de phase ne passent pas à la phase suivante (même règle que les gardiens) ; le verrou de phase est celui
  // de data/gardiens.js (verrouPhase : 1,2 s à 15 %). dureeS : la transition entière (verrou, cri, transformation de l'arène, relecture).
  transition:{dureeS:3,cri:true,relecture:true},
@@ -45,7 +47,16 @@
   // pas de fenêtre après la boucle (nuS 0) : chaque emprunt a la sienne (épuisé, emprunt.nuS). Une mesure {k:'emprunt'} joue l'arme de la Brume d'un de tes
   // talents portés (emprunt, plus bas) ; un emprunt sans empruntable, une Révérence qui renonce, un geste sans sortie sautent (entracte réduit à sauteS).
   // Entracte 1,2 s (1,4 en I à III) : le duel se joue plus serré, dans une arène quatre fois plus petite.
-  emprunt:{entracteS:1.2,nuS:0,sauteS:0.6,mesures:[{k:'emprunt'},{k:'fixe',g:'passe'},{k:'libre'},{k:'emprunt'},{k:'fixe',g:'feinte'},{k:'fixe',g:'reverence'},{k:'emprunt'},{k:'fixe',g:'volte'},{k:'libre'}]}},
+  emprunt:{entracteS:1.2,nuS:0,sauteS:0.6,mesures:[{k:'emprunt'},{k:'fixe',g:'passe'},{k:'libre'},{k:'emprunt'},{k:'fixe',g:'feinte'},{k:'fixe',g:'reverence'},{k:'emprunt'},{k:'fixe',g:'volte'},{k:'libre'}]},
+  // Phase V, « L'Effacement » (fiche 5f, § 2) : un examen, aucun geste neuf. Son socle rejoue un geste de chaque phase, plus serré : le tableau éclair
+  // ({k:'eclair'}, phase I), l'effondrement ({k:'effondrement'}, phase II : une construction restée debout tombe et devient une fosse, sinon un pan du bord),
+  // le montage court ({k:'montage'}, phase III), l'emprunt ({k:'emprunt'}, phase IV), et la feinte double ({k:'double'} : deux feintes à la suite).
+  // mesures : la phase COURTE (Normal, Difficile : le socle seul, une boucle d'environ 36 s) ; entiere : la phase ENTIÈRE (Extrême : le socle et trois
+  // mesures libres, une boucle d'environ 45 s). Entracte 1,0 s ; pas de fenêtre après la boucle (chaque geste a la sienne, effacement.nuS) ; une mesure
+  // qui saute réduit l'entracte qui suit à sauteS. La boucle commence par ce qui t'a tué en V la dernière fois, si c'est un de ses quatre gestes.
+  effacement:{entracteS:1.0,nuS:0,sauteS:0.6,
+   mesures:[{k:'eclair'},{k:'double'},{k:'effondrement'},{k:'montage'},{k:'double'},{k:'emprunt'}],
+   entiere:[{k:'eclair'},{k:'double'},{k:'libre'},{k:'effondrement'},{k:'montage'},{k:'libre'},{k:'double'},{k:'emprunt'},{k:'libre'}]}},
  // ── Les éléments improvisables (Q8) et leur menace. sorte : zone, tir, saisie, construction (deux éléments de même sorte ne se cumulent
  // pas au-delà de cumul[sorte]). charge : préavis (s, ≥ preavis.boss) ; degats : avant la montée (dmgMul). pond : l'axe du profil qui pèse
  // (sens +1 : plus l'axe est haut, plus l'élément pèse ; −1 : l'inverse) ; sources : les ennemis de la descente dont les dégâts reçus
@@ -217,6 +228,35 @@
  emprunt:{exclus:{ultimes:true,genres:['c'],renforts:true,reliques:true},variantes:{gardees:['double','elargi'],ignorees:['etourdit','repousse','vol','traverse']},
   poids:{base:0.5,gravure:5},parBoucle:3,priseS:0.6,plancherS:0.8,premiereS:0.3,degats:11,nuS:2.0,defaitS:4.0,dissousS:0.3,
   marche:{vitesse:120,distance:[180,280],approche:1.3},chute:{dureeS:0.8,minD:200}},
+ // ── L'Effacement, la phase V (fiche 5f, § 1 à § 8). Il ne puise que dans ce que ce combat a déjà montré (journal X.montre du jeu) : un geste de chaque
+ // phase, plus serré, jamais un préavis plus court que celui du geste d'origine. Une phase d'origine jamais jouée dans ce combat (essai) : le geste est
+ // tiré comme dans sa phase ; jouée sans rien laisser (rien accroché, rien cousu, tout brûlé) : la mesure saute.
+ // nuS : à nu (anneau ivoire sur son cœur) après chacun des quatre gestes (un emprunt défait par le Dernier Souvenir : emprunt.defaitS) ; aucune
+ // fenêtre après une feinte ni une mesure libre.
+ // eclair : le tableau éclair (phase I) : le décor qui t'a fait le plus de dégâts en phase I (sinon le dernier accroché), sans sa règle (vague seule) ; le
+ //   fragment couvre la part (moitié) des bornes la plus loin de toi, à retrait px de leurs bords ; accroche accrocheS, vie au plus vieMaxS, rideau rideauS ;
+ //   budget par palier (la moitié de tableaux.budget, arrondie en bas : une vague, plus une densité en Extrême ; ni règle, ni champion) ; places à minD px.
+ // montage : le montage court (phase III) : fils fil(s), montage dureeS s (4,4 en III), au plus cousus Masqué(s) cousu(s) vivant(s) en V ; le cousu : celui qui t'a
+ //   fait le plus de dégâts en phase III, sinon le dernier cousu, sinon le premier fil ; nœud et PV en part des PV de la phase V (couture.noeud, couture.cousus).
+ // feinte : la feinte double : n feintes v14 à la suite, la suivante ecartS s après la fin de la précédente (jamais deux à la fois).
+ // resserrements : déclenchés par les PV de la phase V (seuils : part des PV de la phase restants), jamais par le temps ; états d'arène (arene.js) ; il attend
+ //   la fin de la mesure en cours, lève les bras brasS s, puis l'arène annonce et recule (transformation, sans dégât) ; ce qui ne tient plus entier dans les
+ //   nouvelles bornes, à marge px de leurs bords (la règle de pose des constructions, placement.bord), ou au-delà de constructions.aire, s'efface en brume.
+ // pan : le pan du bord (effondrement sans construction effondrable debout) : la chute d'une muraille, un couloir de w px, du bord le plus proche de toi,
+ //   perpendiculaire à lui, sur len px ; décalages essayés le long du bord (px) ; sans fosse.
+ // fosse : une construction effondrée en V devient une fosse de mêmes disques (la marche n'y passe pas, les tirs si) ; elle s'enfonce en enfonceS s.
+ // libres (entière seulement) : éléments libres de 5a et gestes signature des phases I à IV déjà montrés ; un geste signature y vaut menace ; poids : la
+ //   lecture × (1 + poids × la part des dégâts de ce combat venue de cet élément) ; un élément jamais montré pèse 0.
+ // mort : la scène (dureeS s ; mouvements réduits : un fondu de rmS s) ; brume : opacité du calque de brume qui couvre le sol.
+ effacement:{nuS:2.0,
+  eclair:{accrocheS:0.8,vieMaxS:8,rideauS:0.6,part:0.5,retrait:30,minD:230,budget:{normal:2,difficile:2,extreme:3}},
+  montage:{dureeS:2.6,fils:1,cousus:1},
+  feinte:{n:2,ecartS:0.3},
+  resserrements:{seuils:[2/3,1/3],etats:[7,8],brasS:0.6,marge:40},
+  pan:{w:150,len:320,decalages:[0,80,-80,160]},
+  fosse:{enfonceS:0.5},
+  libres:{poids:2,menace:3},
+  mort:{dureeS:3,rmS:1,brume:0.6}},
  couture:{fils:3,filsMax:3,decalS:0.5,montage:{dureeS:4.4},noeud:{haut:110,r:20,pvPart:0.025},nuS:3,briseS:2,
   points:{d:[300,650],ecart:420,bord:80,marge:40,vue:200,minD:230,essais:80},
   cousus:{pvPart:0.15,plancherS:0.6},recence:[1,3],budget:{moins:2,plancher:2},attente:{acte:3,salle:3},attenteZoneS:1.5},
@@ -267,7 +307,10 @@
  // version 5 (action 5e) : en phases IV et V, son corps entier au sol (capuchon, manteau, yeux pâles derrière le masque à ta forme et son emblème, croix à
  // la ceinture, fils au sol), le cœur sous le capuchon (point faible), la prise (fil lavande), l'épuisement (masque terni), la copie défaite (fêlure de
  // braise), la chute de la transition III → IV.
- dessin:{version:5,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
+ // version 6 (action 5f) : en phase V, la brume qui monte de son manteau, les fêlures de braise de son masque (une, puis deux, à chaque resserrement), le pan
+ // du bord, la construction qui s'enfonce et la fosse ourlée de sa matière, le fil d'un montage court, sa mort (le masque qui tombe et se brise, la croix, les
+ // fils rompus, le corps qui se défait en brume, l'arène qui redevient brume).
+ dessin:{version:6,r:{haut:30,sol:48},hauteur:200,suit:0.6,echelle:{solide:1.15},
   glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#0a0810" stroke-width="4.4" stroke-linecap="round"/><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#c8c0d8" stroke-width="2.2" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#0a0810" stroke-width="2.6" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#b9b0c8" stroke-width="1.2" stroke-linecap="round"/><path d="M7 8.5Q12 3.4 17 8.5Q12 13.6 7 8.5Z" fill="#eee8da" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="8.5" r="1.9" fill="#0a0810"/></svg>'},
  // ── Le bot qui frappe (Q14, bot=2) : il attaque avec le kit de base de sa forme, sort des zones qui chargent (à sa vitesse de marche, par une
  // esquive s'il le faut), vise le Brumeux (ou l'ennemi le plus proche s'il est plus près que proche px). Il sert aussi à mesurer l'action 6.

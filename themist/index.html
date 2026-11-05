@@ -13118,6 +13118,9 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
   // v18.8 : un tir hérite du signe de son tireur (vu tirer, signalé : son tir l'est aussi, même si le tireur meurt avant qu'il arrive), comme un
   // ennemi né d'un cercle d'apparition signalé ; le journal seulement (rien ne se dessine ni ne change en jeu)
   for(const s of L)if(s.k==='proj'&&s.o.from&&A.sig.debut[s.id]==null){const d=A.sig.debut[id(s.o.from)];if(d!=null&&ids.includes(s.id))A.sig.debut[s.id]=d;}
+  // v18.10 : de même, une onde hérite du signe de l'ennemi qui l'a poussée (A.parent, noté à sa naissance) : vu crier, le Hurleur tué juste après
+  // laisse une onde signalée (le journal seulement)
+  for(const s of L)if(s.k==='tele'&&A.parent.has(s.o)&&A.sig.debut[s.id]==null){const pa=A.parent.get(s.o),d=pa&&A.sig.debut[id(pa)];if(d!=null&&ids.includes(s.id))A.sig.debut[s.id]=d;}
   arSignes(A.sig,RUN.time,ids);}
  // ── la transformation entre deux états
  function vers(n){if(!A.on||!A.etats[n]||A.trans)return false;peindreTard(n,1e9);A.trans=arTransNouveau(A.etat,A.etats[n]);A.ie=n;return true;}   // A.ie0 : le calque en place jusqu'à la fin du fondu
@@ -13331,12 +13334,15 @@ function brxTirer(D,lec,phase,palier,rng,actifs,o){let bud=brxBudget(D,phase,pal
 // ── La partition d'une phase : ses mesures, son entracte et sa fenêtre à nu après la boucle (la partition d'essai pour les phases qui n'ont
 // pas encore la leur ; la phase I a la sienne, 5b). La boucle : mesures libres résolues par un tirage, tableaux tirés (décors distincts tant
 // qu'il y en a ; le premier tableau de la phase rejoue celui qui t'a tué, o.premiere).
-function brxPartition(D,phase){const ph=D.phases[phase],p=ph&&D.partition[ph.id],P0=D.partition;
- if(p&&!Array.isArray(p))return{mesures:p.mesures.map(m=>Object.assign({},m)),entracteS:p.entracteS!=null?p.entracteS:P0.entracteS,nuS:p.nuS!=null?p.nuS:P0.nuS};
+// v18.10 (5f) : o = {palier, essai} (facultatif) : o.essai rejoue la partition d'essai de 5a (les bancs du moteur) ; une partition qui a « entiere » (la phase V)
+// la joue au palier dont la phase V est entière (paliers.*.phaseV), sinon ses mesures (la phase courte). Sans o : exactement comme avant.
+function brxPartition(D,phase,o){const ph=D.phases[phase],p=ph&&!(o&&o.essai)&&D.partition[ph.id],P0=D.partition;
+ if(p&&!Array.isArray(p)){const ent=!!(p.entiere&&o&&o.palier&&D.paliers[brxPalier(D,o.palier)].phaseV==='entiere');
+  return{mesures:(ent?p.entiere:p.mesures).map(m=>Object.assign({},m)),entracteS:p.entracteS!=null?p.entracteS:P0.entracteS,nuS:p.nuS!=null?p.nuS:P0.nuS};}
  return{mesures:(p||P0.essai).map(m=>Object.assign({},m)),entracteS:P0.entracteS,nuS:P0.nuS};}
-function brxMesures(D,phase){return brxPartition(D,phase).mesures;}
+function brxMesures(D,phase,o){return brxPartition(D,phase,o).mesures;}
 function brxBoucle(D,lec,phase,palier,rng,actifs,o){o=o||{};const ex=[];let premier=o.premiere&&lec.tab?lec.tab:null;
- return brxMesures(D,phase).map(m=>{if(m.k==='libre')return Object.assign(m,{elements:brxTirer(D,lec,phase,palier,rng,actifs).elements});
+ return brxMesures(D,phase,{palier,essai:!!o.essai}).map(m=>{if(m.k==='libre')return Object.assign(m,{elements:brxTirer(D,lec,phase,palier,rng,actifs).elements});
   if(m.k==='tableau'){const t=brxTableau(D,lec,palier,rng,{exclus:ex,premier});premier=null;ex.push(t.decor);return Object.assign(m,{tab:t});}return m;});}
 // ── Préavis d'un élément (Q8) : sa charge, jamais sous preavis.boss, plus premiere s si cette sauvegarde ne l'a jamais vu au combat final
 function brxPreavis(D,S,id){const el=D.elements[id],vu=!!(S&&S.vus&&S.vus.includes(id));return Math.max(D.preavis.boss,(el&&el.charge)||0)+(vu?0:D.preavis.premiere);}
@@ -13632,8 +13638,9 @@ function brxNuCouture(coupes,tendus){return(coupes|0)>0&&(tendus|0)===0;}
 function brxBudgetCouture(D,phase,palier,vivants){const B=brxBudget(D,phase,palier),K=D.couture.budget;return Math.max(Math.min(B,K.plancher),B-K.moins*(vivants|0));}
 function brxActifsCouture(actifs,vivants){const a=Object.assign({},actifs||{});if(vivants)a.tir=(a.tir||0)+vivants;return a;}
 // Les PV d'un Masqué cousu (une part des PV de la phase III, × le corps, × le bonus de porteur, × les points d'une némésis) et d'un nœud
-function brxPvCousu(D,palier,corpsPv,bonus,nemPv){return Math.round(D.couture.cousus.pvPart*brxPv(D,palier)[2]*(corpsPv||1)*(bonus||1)*(nemPv||1));}
-function brxPvNoeud(D,palier){return Math.round(D.couture.noeud.pvPart*brxPv(D,palier)[2]);}
+// v18.10 (5f) : ph (facultatif, 2 par défaut) : la phase dont les PV comptent (le montage court de la phase V : 4)
+function brxPvCousu(D,palier,corpsPv,bonus,nemPv,ph){return Math.round(D.couture.cousus.pvPart*brxPv(D,palier)[ph==null?2:ph]*(corpsPv||1)*(bonus||1)*(nemPv||1));}
+function brxPvNoeud(D,palier,ph){return Math.round(D.couture.noeud.pvPart*brxPv(D,palier)[ph==null?2:ph]);}
 // Le chargement d'un Masqué cousu : jamais sous plancherS (le préavis de l'arène) ; rend la charge et le temps restant prolongés (t décompte depuis tot)
 function brxPlancherCharge(D,t,tot){const F=D.couture.cousus.plancherS;if(!(tot>0)||tot>=F-1e-9)return{t,tot};return{t:t+(F-tot),tot:F};}
 // La promotion (Q13) : le Masqué cousu dont le coup t'a tué (le dernier coup reçu venait de lui, il y a moins de 1,5 s), jamais le Brumeux, ni un de ses
@@ -13751,6 +13758,106 @@ function brxNoter(S,o,D,J){if(o.essai)return S;const N=brxLireSauve(brxEcrireSau
  return N;}
 // ── Statistiques : moyenne et pire part (p95 par défaut) d'un échantillon de durées (ms)
 function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((a,b)=>a-b),k=Math.max(0,Math.min(s.length-1,Math.floor(s.length*(1-part))));let m=0;for(let i=k;i<s.length;i++)m+=s[i];return m/(s.length-k);}
+// ── Phase V, « L'Effacement » (fiche 5f). Un examen : aucun geste neuf ; il rejoue ce que le combat a montré (X.montre, le journal du jeu), plus serré.
+// Les gestes signature et leur phase d'origine (0 à 3) ; les éléments libres de 5a (zones et tirs non fixes) n'ont pas de phase : ils sont libres partout.
+const BRX_SIGN={fils:0,cadre:0,toile:0,ruee:1,equerre:1,truelle:1,surjet:2,de:2,aiguilles:2,passe:3,reverence:3,volte:3};
+// les quatre gestes de la phase V (mesures) et l'élément noté dans la sauvegarde quand il t'a tué
+const BRX_V5={eclair:'tableau',effondrement:'effondrement',montage:'couture',emprunt:'emprunt'};
+// Ce que le combat a montré, en copie propre (un champ abîmé est ignoré) : ph {0..3 : la phase a été jouée}, tab [{decor, theme, regle, deg}] (les tableaux
+// accrochés en I, dans l'ordre, et les dégâts que chacun t'a faits), cou [{cle, id, deg, abouti}] (les fils de III, dans l'ordre : clé d'assemblage, talent du
+// souvenir, dégâts faits, cousu ou coupé), emp [{id, fam}] (les talents empruntés en IV), el {id : vrai} (les éléments et gestes signature chargés devant toi).
+function brxMontre(M){const N={ph:{},tab:[],cou:[],emp:[],el:{}};if(!M||typeof M!=='object')return N;
+ for(const k in M.ph||{})if(M.ph[k]&&+k>=0&&+k<=3)N.ph[+k]=true;
+ for(const t of M.tab||[])if(t&&typeof t.decor==='string'&&typeof t.theme==='string')N.tab.push({decor:t.decor,theme:t.theme,regle:t.regle==null?null:t.regle,deg:Math.max(0,+t.deg||0)});
+ for(const c of M.cou||[])if(c&&typeof c.cle==='string')N.cou.push({cle:c.cle,id:typeof c.id==='string'?c.id:null,deg:Math.max(0,+c.deg||0),abouti:!!c.abouti});
+ for(const x of M.emp||[])if(x&&typeof x.id==='string'&&!N.emp.some(y=>y.id===x.id))N.emp.push({id:x.id,fam:x.fam});
+ for(const k in M.el||{})if(M.el[k])N.el[k]=true;return N;}
+// Les candidats des gestes de phase (règle commune) : une phase d'origine jamais jouée → « repli » (tiré comme dans sa phase) ; jouée sans rien laisser → « saute » ;
+// sinon « montre », et le candidat. o = {liste (les empruntables portés, brxEmpruntables), vivants (Masqués cousus vivants), premier {tab, cousu, emp} (le détail de ce
+// qui t'a tué en V, seulement pour le premier geste de la phase : il choisit s'il a été montré)}. L'effondrement se lit sur les constructions debout (brxEffondreV).
+function brxCandidatsV(D,M0,o){o=o||{};const M=brxMontre(M0),pr=o.premier||{},out={},E=D.effacement;
+ // le tableau éclair : le décor qui t'a fait le plus de dégâts en I, sinon le dernier accroché ; celui qui t'a tué en V s'il a été accroché
+ if(!M.ph[0])out.eclair={mode:'repli',tab:pr.tab&&typeof pr.tab.decor==='string'?{decor:pr.tab.decor,theme:pr.tab.theme}:null};
+ else if(!M.tab.length)out.eclair={mode:'saute'};
+ else{let i=M.tab.length-1,bd=0;M.tab.forEach((t,k)=>{if(t.deg>bd+1e-9){bd=t.deg;i=k;}});
+  if(pr.tab){const k=M.tab.findIndex(t=>t.decor===pr.tab.decor&&t.theme===pr.tab.theme);if(k>=0)i=k;}out.eclair={mode:'montre',i,tab:{decor:M.tab[i].decor,theme:M.tab[i].theme}};}
+ // le montage court : au plus effacement.montage.cousus Masqué(s) cousu(s) vivant(s) ; le cousu qui t'a fait le plus de dégâts en III, sinon le dernier cousu, sinon le premier fil
+ if((o.vivants|0)>=E.montage.cousus)out.montage={mode:'saute',raison:'vivant'};
+ else if(!M.ph[2])out.montage={mode:'repli'};
+ else if(!M.cou.length)out.montage={mode:'saute'};
+ else{let i=-1,bd=0;M.cou.forEach((c,k)=>{if(c.deg>bd+1e-9){bd=c.deg;i=k;}});if(i<0)for(let k=M.cou.length-1;k>=0;k--)if(M.cou[k].abouti){i=k;break;}if(i<0)i=0;
+  if(pr.cousu){const k=M.cou.findIndex(c=>c.cle===pr.cousu.cle);if(k>=0)i=k;}out.montage={mode:'montre',i,cou:Object.assign({},M.cou[i])};}
+ // l'emprunt : ce qu'il a emprunté en IV, encore porté et empruntable (brûlé, oublié : exclu) ; jamais joué : comme en IV
+ const L=o.liste||[];
+ if(!M.ph[3])out.emprunt=L.length?{mode:'repli',liste:L.slice()}:{mode:'saute'};
+ else{const ids=new Set(M.emp.map(x=>x.id)),L2=L.filter(x=>ids.has(x.id));out.emprunt=L2.length?{mode:'montre',liste:L2}:{mode:'saute'};}
+ if(pr.emp&&out.emprunt.liste){const x=out.emprunt.liste.find(y=>y.id===pr.emp.id);if(x)out.emprunt.premier={id:x.id,fam:x.fam};}
+ return out;}
+// Le premier de la boucle : ce qui t'a tué en V la dernière fois (mort[5]), si c'est un des quatre gestes, ouvre la boucle (la partition tourne, l'ordre reste le même)
+function brxPremierV(mesures,tue){const k=Object.keys(BRX_V5).find(m=>BRX_V5[m]===tue),i=k?mesures.findIndex(m=>m.k===k):-1;
+ return{mesures:i>0?mesures.slice(i).concat(mesures.slice(0,i)):mesures.slice(),k:i>=0?k:null};}
+// Le tableau éclair : le fragment (la part des bornes R la plus loin de toi, gauche ou droite, à retrait de leurs bords) ; le tableau (o.tab : ce qui a été montré ;
+// sinon tiré comme en I, celui qui t'a tué en V rejoué s'il est possible), toujours sans règle ; budget du palier : une vague, puis des densités tant qu'il reste.
+function brxEclairFrag(D,R,p){const E=D.effacement.eclair,w=(R.x1-R.x0)*E.part,cx=(R.x0+R.x1)/2,g=p[0]>=cx,x0=g?R.x0:R.x1-w,m=E.retrait;
+ return{cote:g?0:1,x0:x0+m,y0:R.y0+m,x1:x0+w-m,y1:R.y1-m};}
+function brxEclair(D,lec,palier,rng,o){o=o||{};const E=D.effacement.eclair,T=D.tableaux,B=E.budget[brxPalier(D,palier)];let decor,theme,rejoue=false;
+ if(o.tab&&T.decors[o.tab.decor]&&T.decors[o.tab.decor].themes.includes(o.tab.theme)){decor=o.tab.decor;theme=o.tab.theme;}
+ else{const t=brxTableau(D,lec,palier,rng,{premier:o.premier||null});decor=t.decor;theme=t.theme;rejoue=t.rejoue;}
+ let bud=B-T.couts.vague,densite=0;while(densite<T.max.densite&&T.couts.densite<=bud+1e-9){densite++;bud-=T.couts.densite;}
+ return{decor,theme,regle:null,densite,champion:false,cout:B-bud,budget:B,rejoue};}
+// L'effondrement de V : la construction effondrable debout (jamais une douve ni un rail) la plus proche de toi dont la chute laisse une sortie (celle de la sorte qui
+// t'a tué, pref, d'abord) ; aucune effondrable debout : un pan du bord ; des effondrables, mais aucune avec une sortie : la mesure saute.
+// Le pan du bord : la chute d'une muraille (couloir de w px), du bord des bornes R le plus proche de toi, perpendiculaire à lui, sur len px (dec : décalage le long du bord).
+function brxPanGeo(D,R,p,dec){const P2=D.effacement.pan,d=[p[0]-R.x0,R.x1-p[0],p[1]-R.y0,R.y1-p[1]],b=d.indexOf(Math.min(...d)),vx=b===0?1:b===1?-1:0,vy=b===2?1:b===3?-1:0,h=P2.w/2;
+ let x0=b===0?R.x0:b===1?R.x1:p[0]+(dec||0),y0=b===2?R.y0:b===3?R.y1:p[1]+(dec||0);if(vx)y0=Math.max(R.y0+h,Math.min(R.y1-h,y0));else x0=Math.max(R.x0+h,Math.min(R.x1-h,x0));
+ return{forme:'couloir',x0,y0,x1:x0+vx*P2.len,y1:y0+vy*P2.len,w:P2.w,bord:b};}
+function brxPanBord(D,R,p,o,autres){const V=D.effacement.pan.decalages.map(dc=>[brxPanGeo(D,R,p,dc)]),k=brxPlacer(D,V.map(z=>z.concat(autres||[])),p,o);return k<0?null:{k,zones:V[k]};}
+function brxEffondreV(D,cons,p,o,autres,R,pref){const eff=cons.filter(c=>c.etat!=='annonce'&&BRX_CHUTE.includes(c.sorte)&&c.disques.some(d=>!d.casse));
+ if(!eff.length){const v=brxPanBord(D,R,p,o,autres);return v?{mode:'pan',zones:v.zones,k:v.k}:{mode:'saute',raison:'pan'};}
+ let r=pref?brxEffondrement(D,eff.filter(c=>c.sorte===pref),p,o,autres):null;if(!r)r=brxEffondrement(D,eff,p,o,autres);
+ return r?{mode:'cons',c:r.c,zones:r.zones}:{mode:'saute',raison:'sortie'};}
+// Une construction tombée en V devient une fosse de mêmes disques (ceux qui tenaient encore) : la marche n'y passe pas, les tirs si (kind fosse18)
+function brxFosse(c){return c.disques.filter(d=>!d.casse).map(d=>({x:d.x,y:d.y,r:d.r,kind:'fosse18',fosse:true}));}
+// Les variantes d'un geste signature lancé en V (depuis son corps b, ou sur toi p) : les mêmes formes et les mêmes variantes que dans sa phase (variantes(), ruee(), toile(),
+// le Dé et les Aiguilles du jeu) ; la Passe, la Révérence et la Volte : brxVariantesIV. La sortie d'une variante : deux coups pour la Toile et le Dé, la charge plus le vol
+// pour les Aiguilles (brxSortieV) ; brxPlacerV garde la première qui en a une (sinon le geste saute).
+function brxVariantesV(D,id,b,p,R,piliers,r,a0){const el=D.elements[id],n=D.sortie.essais,rk=k=>(k%2?1:-1)*Math.ceil(k/2),K=[];for(let k=0;k<n;k++)K.push(k);
+ switch(id){case 'fils':return K.map(k=>({zones:brxFils(el,b,p,rk(k)*0.15)}));case 'cadre':return K.map(k=>({zones:brxCadre(el,b,p,rk(k)*0.6)}));
+  case 'equerre':return K.map(k=>({zones:brxEquerre(el,p,[0,Math.PI/4,Math.PI/8,-Math.PI/8][k]||0)}));case 'truelle':return K.map(k=>({zones:brxTruelle(el,b,p,rk(k)*0.2)}));
+  case 'surjet':return K.map(k=>({zones:brxSurjet(el,b,p,rk(k)*0.12)}));case 'ruee':return[0,0.15,-0.15,0.3].slice(0,n).map(q=>brxRuee(el,b,p,R,piliers,q));
+  case 'aiguilles':return[0,0.12,-0.12,0.24].slice(0,n).map(q=>brxAiguilles(el,b,p,R,piliers,q));
+  case 'toile':return[[0,0],[45,0],[0,45],[45,45]].slice(0,n).map(d=>{const T=brxToile(el,p,d);return{zones:T.noires,toile:T};});
+  case 'de':return[[0,0],[40,0],[0,40],[-40,0]].slice(0,n).map(d=>({zones:brxDe(el,p,d)}));
+  case 'passe':case 'reverence':case 'volte':return brxVariantesIV(D,id,b,p,R,piliers,r,a0);}
+ return[];}
+function brxSortieV(D,id,v,b,p,o,charge){const el=D.elements[id];
+ if(id==='toile')return brxSortieToile(D,el,v.toile,p,o,charge).ok;if(id==='de')return brxSortieDe(D,el,v.zones,p,o,charge).ok;
+ return brxSortie(D,v.zones,p,Object.assign({},o,{charge:id==='aiguilles'?charge+brxVolAiguille(el,b,p)*0.8:charge})).ok;}
+function brxPlacerV(D,id,V,b,p,o,charge){for(let k=0;k<V.length&&k<D.sortie.essais;k++)if(brxSortieV(D,id,V[k],b,p,o,charge))return k;return -1;}
+// Les mesures libres (phase entière seulement) : elles tirent dans ce que le combat a montré, les éléments libres de 5a et les gestes signature des phases I à IV (jamais
+// un tableau, un bâtir, une Couture, un emprunt) ; un élément dont la phase d'origine n'a jamais été jouée se tire comme dans sa phase (repli de l'essai ; un élément libre de
+// 5a : aucune phase I à IV jouée) ; un élément jamais montré pèse 0. Un geste signature vaut libres.menace ; poids : la lecture × (1 + libres.poids × la part des dégâts de
+// ce combat venue de cet élément, parC) ; budget de la phase V (× palier ; o.moins : un cousu vivant, règle de 5d) ; non-cumul ; o.premier (ce qui t'a tué en V), sinon
+// lec.premier, tiré d'abord s'il est permis.
+function brxLibreV(D,id){const el=D.elements[id];return!!el&&!((D.phases[4].exclut||[]).includes(el.sorte))&&(BRX_SIGN[id]!=null||(!el.fixe&&(el.sorte==='zone'||el.sorte==='tir')));}
+function brxLibresV(D,lec,M0,parC,palier,rng,actifs,o){o=o||{};const M=brxMontre(M0),L=D.effacement.libres;let bud=brxBudget(D,4,palier);if(o.moins)bud=Math.max(Math.min(bud,o.plancher||0),bud-o.moins);
+ const B0=bud,cnt=Object.assign({},actifs||{}),out=[],joue=[0,1,2,3].some(k=>M.ph[k]);let tot=0;for(const k in parC||{})tot+=Math.max(0,parC[k]||0);
+ const men=id=>BRX_SIGN[id]!=null?L.menace:D.elements[id].menace,montre=id=>!!M.el[id]||(BRX_SIGN[id]!=null?!M.ph[BRX_SIGN[id]]:!joue);
+ const w=id=>Math.max(D.lecture.min,(lec&&lec.poids&&lec.poids[id])||1)*(1+L.poids*(tot>0?Math.max(0,(parC||{})[id]||0)/tot:0));
+ const peut=id=>brxLibreV(D,id)&&montre(id)&&men(id)<=bud+1e-9&&(cnt[D.elements[id].sorte]||0)<(D.cumul[D.elements[id].sorte]||1);
+ const prend=id=>{out.push(id);bud-=men(id);const s=D.elements[id].sorte;cnt[s]=(cnt[s]||0)+1;};
+ const p0=o.premier&&peut(o.premier)?o.premier:lec&&lec.premier&&peut(lec.premier)?lec.premier:null;if(p0)prend(p0);
+ for(let k=0;k<16;k++){const C=Object.keys(D.elements).filter(peut);if(!C.length)break;let t=0;for(const c of C)t+=w(c);let r=rng()*t,ch=C[C.length-1];for(const c of C){r-=w(c);if(r<=0){ch=c;break;}}prend(ch);}
+ return{elements:out,reste:bud,budget:B0,poids:Object.fromEntries(Object.keys(D.elements).filter(id=>brxLibreV(D,id)&&montre(id)).map(id=>[id,w(id)]))};}
+// Les resserrements : combien sont dus pour hp PV restants sur pvV (les PV de la phase V) ; jamais le temps (aucun « enrage »)
+function brxResserrement(D,hp,pvV){if(!(pvV>0))return 0;const f=hp/pvV;let n=0;for(const s of D.effacement.resserrements.seuils)if(f<=s+1e-9)n++;return n;}
+// prêt : la mesure en cours est finie (entre deux mesures : aucune zone ni tir en charge, ni tableau, ni montage, ni emprunt, ni feinte, ni zone de cousu en cours)
+function brxResserrePret(o){return!!o&&o.ph==='entracte'&&!o.zones&&!o.tirs&&!o.tab&&!o.montage&&!o.emprunt&&!o.feinte&&!o.cousu;}
+// ce qui reste à un resserrement : les constructions et les fosses entières dans les nouvelles bornes B, à marge px de leurs bords (la règle de pose), la connexité
+// revérifiée (brxFiltreBornes), puis au plus constructions.aire de l'aire libre (brxFiltreAire) ; j : toi, ramené dans les bornes (tu y seras poussé)
+function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,dans=k=>brxTous(k).every(d=>d.x-d.r>=B.x0+m&&d.x+d.r<=B.x1-m&&d.y-d.r>=B.y0+m&&d.y+d.r<=B.y1-m);
+ const r=j.r||0,jj={x:Math.max(B.x0+r,Math.min(B.x1-r,j.x)),y:Math.max(B.y0+r,Math.min(B.y1-r,j.y)),r},g0=cons.filter(dans),Fb=brxFiltreBornes(D,M,B,base,g0,jj),Fa=brxFiltreAire(D,M,B,base,Fb.garde);
+ return{garde:Fa.garde,retire:cons.filter(k=>!dans(k)).concat(Fb.retire,Fa.retire),aire:Fa.aire};}
 /*/brx:pur*/
 // ═════════════════════════════════════════════════════════════════════════════
 // v18.5 · Le Brumeux (chantier v18, action 5 ; cadrage Q1–Q17 validé le 1er novembre 2026). Action 5a : le socle technique. Les cinq phases
@@ -13807,8 +13914,10 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   return L;}
  function boucleNeuve(){const actifs={};for(const z of X.zones)if(!z.fait)actifs[DB.elements[z.id].sorte]=(actifs[DB.elements[z.id].sorte]||0)+1;
   // v18.6 : le premier tableau de la phase (première boucle) rejoue celui qui t'a tué ; chaque tiers sert une fois par boucle
-  X.boucle=brxBoucle(DB,X.lec,X.phase,X.palier,X.rng,actifs,{premiere:!X.nb++});X.im=0;X.tiersVus=[];X.batB=null;X.batX=[];X.j.tirages.push(X.boucle.filter(m=>m.k==='libre').map(m=>m.elements.join('+')).join(' | '));}
- const ent=()=>brxPartition(DB,X.phase).entracteS;   // l'entracte de la partition de la phase
+  X.boucle=brxBoucle(DB,X.lec,X.phase,X.palier,X.rng,actifs,{premiere:!X.nb++,essai:partO().essai});X.im=0;X.tiersVus=[];X.batB=null;X.batX=[];X.j.tirages.push(X.boucle.filter(m=>m.k==='libre').map(m=>m.elements.join('+')).join(' | '));}
+ // v18.10 : la partition de la phase au palier du combat (la phase V courte ou entière) ; essai=1 rejoue la partition d'essai de 5a (bancs du moteur)
+ const partO=()=>({palier:X.palier,essai:!!(X.essai&&X.essai.partEssai)});
+ const ent=()=>brxPartition(DB,X.phase,partO()).entracteS;   // l'entracte de la partition de la phase
  // ── créer le Brumeux (un ennemi « boss » : barre de vie, Accoutumance, verrou de phase, plafond du Dernier Souvenir, biais de caméra, signe de bord)
  function creer(phase0){const ph=DB.phases[phase0],haut=ph.presence==='haut',cx=(AR.x0+AR.x1)/2;
   const e=createEnemy('boss',cx,haut?AR.y0+DB.dessin.hauteur:(AR.y0+AR.y1)/2-60);e.brx18=true;e.name=DB.nom;e.spd=0;e.xp=0;e.r=DB.dessin.r[haut?'haut':'sol'];e.fade=1;e.patT=0;e.queue=[];e.state='brx';
@@ -13824,7 +13933,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   else{const d=hyp(P.x-e.x,P.y-e.y);if(d>260)moveTo(e,P.x,P.y,46,dt);else if(d<150)moveTo(e,2*e.x-P.x,2*e.y-P.y,40,dt);e.ang=Math.atan2(P.y-e.y,P.x-e.x);}}
  // ── les gestes d'essai. Un élément est lancé avec son préavis (jamais moins que preavis.boss, +0,3 s à la première rencontre), une zone seulement
  // si une sortie existe (brxPlacer : jusqu'à sortie.essais variantes, sinon elle saute), chaque zone est une source de signe à part entière (arène).
- const bloque=(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+Math.max(SBJ18.joueur.rayon,P.r));
+ // v18.10 : en phase V (X.corpsV, posé par la section v18.10), son corps au sol est un obstacle de plus pour la sortie (comme optIV en IV) ; ailleurs, inchangé
+ const bloque=(x,y)=>room.pillars.some(p=>hyp(x-p.x,y-p.y)<p.r+Math.max(SBJ18.joueur.rayon,P.r))||!!(X.corpsV&&X.corpsV(x,y));
  const optSortie=charge=>({pr:Math.max(SBJ18.joueur.rayon,P.r),v:Math.min(SBJ18.joueur.vitesse,pMarche()),reflexe:SBJ18.reflexeS,charge,arene:AR,bloque});
  function variantes(el,e){const out=[],cx=(AR.x0+AR.x1)/2,cy=(AR.y0+AR.y1)/2,n=DB.sortie.essais;
   for(let k=0;k<n;k++){const s=Math.min(1,k*0.45),rot=(k%2?1:-1)*Math.ceil(k/2)*0.35;let zs=[];
@@ -13882,7 +13992,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   X.tirs=X.tirs.filter(tr=>!tr.fait);}
  // ── la partition : entracte → mesure (fixe ou libre) → … → à nu (anneau ivoire) après la boucle, puis une boucle neuve (nouveaux tirages)
  function mesure(){const m=X.boucle&&X.boucle[X.im];
-  if(!m){const nu=brxPartition(DB,X.phase).nuS;if(nu>0){X.e.vuln=Math.max(X.e.vuln||0,nu);X.ph='nu';X.t=nu;}else{boucleNeuve();X.ph='entracte';X.t=ent()*0.5;}return;}   // v18.6 : la phase I n'a pas de fenêtre après la boucle
+  if(!m){const nu=brxPartition(DB,X.phase,partO()).nuS;if(nu>0){X.e.vuln=Math.max(X.e.vuln||0,nu);X.ph='nu';X.t=nu;}else{boucleNeuve();X.ph='entracte';X.t=ent()*0.5;}return;}   // v18.6 : la phase I n'a pas de fenêtre après la boucle
   if(m.k==='tableau'){X.im++;accrocher(m);return;}   // v18.6 : un tableau convoqué (phase I)
   // v18.7 : bâtir (phase II) ; une mesure qui ne peut pas se jouer (aucune construction possible, rien à effondrer, appel au plafond) saute : comptée,
   // l'entracte qui suit est réduit (partition.ouvrage.sauteS)
@@ -13904,7 +14014,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(X.tab)tabFin();X.nb=0;   // v18.6 : un tableau en cours rentre (ses ennemis disparaissent) ; le premier tableau d'une phase se compte à neuf
   const ph=DB.phases[n],de=DB.phases[X.phase];X.phase=n;e.phase=n+1;X.j.phases[n]=X.j.phases[n]||{t:0,coups:0};X.j.transitions.push({de:X.phase,vers:n,t:+RUN.time.toFixed(2)});
   X.trans={t:0,n,arene:false,cri:false,presence:de.presence!==ph.presence};
-  if(ph.id==='effacement')effacerCons();else versCons(n);   // v18.7 : les constructions de la phase II restent (filtrées en IV)
+  versCons(n);   // v18.7 : les constructions de la phase II restent (filtrées en IV) ; v18.10 : en V aussi (elles y tombent une à une, fiche 5f, § 5)
   if(DB.transition.cri&&window.__brumeAction&&!(X.essai&&X.essai.muet))try{window.__brumeAction();}catch(err){}
   sfx('boss');shake(6,0.3);return true;}
  function transPas(dt){const Tn=X.trans,e=X.e,ph=DB.phases[Tn.n];Tn.t+=dt;
@@ -13961,7 +14071,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   return r;};
  const _st=step;step=function(dt){if(X.on&&X.essai&&X.bot===2&&state==='play'&&!paused&&P)try{pilote2(dt);}catch(err){console.error(err);}
   _st.apply(this,arguments);
-  if(!X.on)return;try{if(P&&P.dead&&!X.note)noter(false);if(X.regard>0)X.regard-=dt;if(X.scene){X.scene.t+=dt;if(X.scene.t>2.2)X.scene=null;}}catch(err){}};
+  if(!X.on)return;try{if(P&&P.dead&&!X.note)noter(false);if(X.regard>0)X.regard-=dt;if(X.scene){X.scene.t+=dt;if(X.scene.t>(X.scene.dureeS||2.2))X.scene=null;}}catch(err){}};
  // la durée des images à l'acte X (moyenne et pire 5 %, échantillon réservoir sans Math.random : rien du jeu ne change), intervalle entre deux images
  const RES=DB.stats.images.echantillon;let rsv=12345;const rr=()=>{rsv=(rsv*1103515245+12345)>>>0;return rsv/4294967296;};
  const reservoir=(a,n,v)=>{if(a.length<RES)a.push(v);else{const k=Math.floor(rr()*n);if(k<RES)a[k]=v;}};
@@ -14043,7 +14153,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   const e=X.e;if(e&&!e.dead)for(const tr of X.tirs){const k=Math.min(1,tr.t/tr.charge);c.save();c.globalAlpha=0.3+0.5*k;c.strokeStyle=`rgba(${TELE.proj},0.9)`;c.lineWidth=2;rond(c,e.x,e.y,e.r*(1.3-0.3*k));c.stroke();c.restore();}
   for(const o of X.cons){if(o.pose)continue;const k=Math.min(1,o.t/o.annonce);c.save();c.strokeStyle=rgba('craie',RM?0.75:0.5+0.3*k);c.lineWidth=2;c.setLineDash([8,6]);rond(c,o.x,o.y,o.r);c.stroke();c.setLineDash([]);c.strokeStyle=rgba('craie',0.9);rond(c,o.x,o.y,o.r*k);c.stroke();c.restore();}
   if(X.regard>0&&e&&!e.dead&&P){const a=Math.min(1,X.regard/1.2),ph=DB.phases[X.phase],sy=ph.presence==='haut'?AR.y0-90:e.y-e.r*0.55;c.save();c.globalAlpha=0.45*a;c.strokeStyle=rgba('yeux',1);c.lineWidth=1.2;c.setLineDash([3,9]);c.beginPath();c.moveTo(e.x,sy);c.lineTo(P.x,P.y);c.stroke();c.setLineDash([]);c.restore();}
-  if(X.scene){const S=X.scene,k=Math.min(1,S.t/1.6),fd=1-k;c.save();c.globalAlpha=fd;
+  if(X.scene&&!X.scene.v5){const S=X.scene,k=Math.min(1,S.t/1.6),fd=1-k;c.save();c.globalAlpha=fd;   // v18.10 : sa mort en V a sa propre scène (section v18.10)
    if(S.haut){const cy=S.y-70+(S.dy||0)+k*160;c.strokeStyle=rgba('croix',0.95);c.lineWidth=5;c.lineCap='round';c.save();c.translate(S.x,cy);c.rotate(RM?0:k*1.2);c.beginPath();c.moveTo(-46,0);c.lineTo(46,0);c.moveTo(0,-22);c.lineTo(0,26);c.stroke();c.restore();
     c.strokeStyle=rgba('fils',0.7);c.lineWidth=1.2;c.beginPath();for(const fx of [-46,46]){c.moveTo(S.x+fx,cy);c.lineTo(S.x+fx*1.3,cy+40+k*120);}c.stroke();}
    else{c.fillStyle=rgba('manteau',0.9);c.beginPath();c.ellipse(S.x,S.y+S.r*0.6,S.r*(1+k),S.r*0.4*(1-k*0.6),0,0,TAU);c.fill();}
@@ -14083,17 +14193,8 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // ── les calques, cuits une fois à l'entrée : un sol par décor (mêmes peintres que renderFloor), le cadre (croix, fils) et le drapé (manteau)
  const PEINTRES={faub:(g,p)=>floorCobbles(g,p),crypt:(g,p,rm)=>floorSlabs(g,p,rm),coeur:(g,p,rm)=>floorHex(g,p,rm)};
  function cuire(){if(!X.tiers)return;const t0=performance.now(),f=X.tiers[0].frag,w=Math.ceil(f.x1-f.x0),h=Math.ceil(f.y1-f.y0),m=TB.cadre.marge,W2=w+2*m,H2=h+2*m,sol={};
-  const sAR={x0:AR.x0,y0:AR.y0,x1:AR.x1,y1:AR.y1},sR=Math.random;
   // un sol opaque (alpha:false), à la taille exacte du fragment : il se pose d'une copie, sans mélange, quand il est plein
-  try{Object.assign(AR,{x0:0,y0:0,x1:w,y1:h});
-   Object.keys(TB.decors).forEach((k,i)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d',{alpha:false}),p=THEMES[k],rm={type:'tableau',candles:[],windows:[]};
-    Math.random=desRng(((X.graine>>>0)^Math.imul(0x9E3779B1,i+1))>>>0);   // la graine du combat : le même combat peint les mêmes fragments
-    g.fillStyle=hsl(p,-11);g.fillRect(0,0,w,h);(PEINTRES[k]||PEINTRES.faub)(g,p,rm);floorDecor(g,rm,k,p);
-    let gr=g.createLinearGradient(0,0,0,60);gr.addColorStop(0,'rgba(0,0,0,.55)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,w,60);
-    gr=g.createLinearGradient(0,h,0,h-40);gr.addColorStop(0,'rgba(0,0,0,.45)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,h-40,w,40);
-    for(const [x0,x1] of [[0,40],[w,w-40]]){gr=g.createLinearGradient(x0,0,x1,0);gr.addColorStop(0,'rgba(0,0,0,.5)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(Math.min(x0,x1),0,40,h);}
-    sol[k]=c;});}
-  finally{Object.assign(AR,sAR);Math.random=sR;}
+  Object.keys(TB.decors).forEach((k,i)=>{sol[k]=solDecor(k,i,w,h);});
   // le cadre : un bord épais dans la matière de sa croix, un fil fin à l'intérieur, des nœuds aux quatre coins (jamais une couleur de la grammaire)
   const cad=document.createElement('canvas');cad.width=W2;cad.height=H2;{const g=cad.getContext('2d'),tr=TB.cadre.trait;
    g.strokeStyle='rgba(6,4,10,.75)';g.lineWidth=tr+4;g.strokeRect(m,m,w,h);g.strokeStyle=rgba('croix',0.95);g.lineWidth=tr;g.strokeRect(m,m,w,h);
@@ -14105,6 +14206,17 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    g.fillStyle=rgba('manteau',1);g.beginPath();g.moveTo(0,H2-18);for(let x=0;x<=W2;x+=23)g.lineTo(x,H2-18+((x/23)%2?14:4));g.lineTo(W2,H2-18);g.closePath();g.fill();
    g.strokeStyle=rgba('croix',0.9);g.lineWidth=4;g.beginPath();g.moveTo(0,3);g.lineTo(W2,3);g.stroke();}
   X.cal={sol,cadre:cad,drape:dr,w,h,m};X.j.peintureMs=+(performance.now()-t0).toFixed(1);}
+ // le sol d'un décor k (son rang i) à la taille w × h, peint par les peintres de renderFloor à la graine du combat (sel : un autre calque du même combat,
+ // le tableau éclair de la phase V, v18.10) ; AR et Math.random sont prêtés le temps de la peinture et rendus (rien du jeu ne change)
+ function solDecor(k,i,w,h,sel){const sAR={x0:AR.x0,y0:AR.y0,x1:AR.x1,y1:AR.y1},sR=Math.random,c=document.createElement('canvas');c.width=w;c.height=h;
+  try{Object.assign(AR,{x0:0,y0:0,x1:w,y1:h});const g=c.getContext('2d',{alpha:false}),p=THEMES[k],rm={type:'tableau',candles:[],windows:[]};
+   Math.random=desRng(((X.graine>>>0)^Math.imul(sel||0x9E3779B1,i+1))>>>0);   // la graine du combat : le même combat peint les mêmes fragments
+   g.fillStyle=hsl(p,-11);g.fillRect(0,0,w,h);(PEINTRES[k]||PEINTRES.faub)(g,p,rm);floorDecor(g,rm,k,p);
+   let gr=g.createLinearGradient(0,0,0,60);gr.addColorStop(0,'rgba(0,0,0,.55)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,w,60);
+   gr=g.createLinearGradient(0,h,0,h-40);gr.addColorStop(0,'rgba(0,0,0,.45)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,h-40,w,40);
+   for(const [x0,x1] of [[0,40],[w,w-40]]){gr=g.createLinearGradient(x0,0,x1,0);gr.addColorStop(0,'rgba(0,0,0,.5)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(Math.min(x0,x1),0,40,h);}}
+  finally{Object.assign(AR,sAR);Math.random=sR;}
+  return c;}
  // ── accrocher un tableau : au tiers le plus loin de toi parmi ceux qui n'ont pas encore servi dans la boucle
  function accrocher(m){if(!X.cal)cuire();const TI=X.tiers,i=brxTiersLoin(TI,P.x,P.y,X.tiersVus),t=m.tab;X.tiersVus.push(i);
   X.tab={i,frag:TI[i].frag,decor:t.decor,theme:t.theme,regle:t.regle||null,densite:t.densite,champion:!!t.champion,rejoue:!!t.rejoue,sub:'accroche',t:0,feinte:false,vide:false,dalles:[],holeT:0,braz:null,n:0,apresS:0};
@@ -14136,7 +14248,10 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // ses ennemis rentrent dans le tableau (fondu : ils disparaissent, sans butin), avec ce qu'ils ont lancé (tirs en vol, ondes) : rien ne
  // frappe plus au nom d'un ennemi qui n'est plus là (son signe est parti avec lui)
  function rentrer(){const S=new Set();for(const o of enemies)if(!o.dead&&!o.brx18&&!o.cons18){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=[];
-  if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(g=>!S.has(g.src));}X.j.rentres+=S.size;return S.size;}
+  if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(garderAnneau(S));}X.j.rentres+=S.size;return S.size;}
+ // v18.10 : une onde sans auteur noté (le cri d'un Hurleur ne porte pas g.src) part avec l'ennemi le plus proche de son centre (à 120 px, comme
+ // le journal de l'arène la rattache), ou avec personne : elle frappait au nom d'un Hurleur rentré, sans signe (banc-brumeux M-D)
+ function garderAnneau(S){return g=>{if(g.src)return!S.has(g.src);let e0=null,ed=120;for(const e of enemies){if(e.dead&&!S.has(e))continue;const d=hyp(e.x-g.x,e.y-g.y);if(d<ed){ed=d;e0=e;}}return!(e0&&S.has(e0));};}
  function rideau(vide){const T=X.tab,J=X.j.tableaux[X.j.tableaux.length-1];T.vide=vide;T.sub='rideau';T.t=0;T.dalles=[];
   if(J){J.fin=+RUN.time.toFixed(2);J.duree=+(J.fin-J.t0).toFixed(2);J.vide=vide;}}
  function tabPas(dt){const T=X.tab;if(!T){X.ph='entracte';X.t=ent();return;}T.t+=dt;
@@ -14589,7 +14704,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
     if(f.noeud){f.noeud.x=f.p[0];f.noeud.y=f.p[1]-CU.noeud.haut;}
     if(f.el.coup>0){const d=f.el.coup;f.el.coup=0;if(f.noeud)addNum(f.noeud.x,f.noeud.y-CU.noeud.r-6,Math.round(d),'n');f.el.pv=Math.max(0,f.el.pv-d);f.el.fiss=brxFissure(DB,f.el.pv,f.el.pvMax);if(f.el.pv<=0){couper(f);continue;}}
     if(!M){f.etat='abouti';XC.j.aboutis++;if(f.noeud){f.noeud.dead=true;f.noeud=null;}continue;}
-    M.t-=dt*k;   // ralenti : ses proportions gardées, montage.dureeS en tout
+    M.t-=dt*(f.dureeS?1-MT/f.dureeS:k);   // ralenti : ses proportions gardées, montage.dureeS en tout (v18.10 : un fil de la phase V a sa durée, f.dureeS : accéléré)
     const peut=brxAboutit(DB,X.palier,vivants());
     if(M.t>=d2-0.02&&!peut){M.t=d2-0.02;if(f.etat!=='suspendu'){f.etat='suspendu';XC.j.suspendus++;}}
     else if(f.etat==='suspendu'&&peut)f.etat='montage';}}
@@ -14658,7 +14773,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  const _ne188=nearestEnemy;nearestEnemy=function(x,y,max,skip){if(!X.on||!X.cou)return _ne188.apply(this,arguments);let best=null,bd=max;for(const e of enemies){if(e.dead||e.cons18||(skip&&skip.has(e)))continue;const d=hyp(e.x-x,e.y-y);if(d<bd){bd=d;best=e;}}return best;};
  // ── les transitions : en entrant en III, ce qui reste des Manœuvres rentre dans la brume (tirs et ondes compris) ; en quittant III, tout se découd
  const _ve188=vers;vers=function(n){const de=X.phase,r=_ve188.apply(this,arguments);if(!r)return r;
-  try{if(n===2){const S=new Set();for(const o of enemies)if(!o.dead&&o.appel18){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=room.spawning.filter(q=>!q.appel18);if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(g=>!S.has(g.src));}X.j.rentres+=S.size;
+  try{if(n===2){const S=new Set();for(const o of enemies)if(!o.dead&&o.appel18){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=room.spawning.filter(q=>!q.appel18);if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(garderAnneau(S));}X.j.rentres+=S.size;
     if(!X.cou)X.cou=couNeuf();}
    if(de===2&&n!==2)decoudre();X.prio=false;X.attZ=0;}catch(err){console.error(err);}return r;};
  const _de188=debut;debut=function(phase0){const r=_de188.apply(this,arguments);X.cou=couNeuf();X.prio=false;X.attZ=0;window.__zoneAutre18=zoneAutre18;return r;};
@@ -14803,7 +14918,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   return _me189.apply(this,arguments);};
  // ── sa marche : 120 px/s, il garde 180 à 280 px de toi ; il s'approche pour la Révérence et pour une étape au contact ; immobile pendant un geste au
  // corps qui charge, une étape posée sur lui, la course de la Passe ; il ne marche jamais dans une fosse (collisions du jeu)
- function marcheIV(e,dt){const c=X.emp&&X.emp.cur,M2=EM.marche;if(X.passe18||X.trans)return;
+ function marcheIV(e,dt){const c=X.emp&&X.emp.cur,M2=EM.marche;if(X.passe18||X.trans||(X.eff&&X.eff.rs))return;   // v18.10 : immobile pendant un resserrement
   if(X.zones.some(z=>!z.fait&&z.corps18))return;
   if(X.rev18){moveTo(e,P.x,P.y,M2.vitesse*DB.elements.reverence.approche,dt);return;}
   if(c&&c.ph==='jeu'){const B=c.p.asm.sb,st=B.st,et=st.etapes[st.i];if(B.dash)return;if(st.ph==='charge'&&et&&et.sur==='lui')return;if(st.ph==='attente'&&st.att>0){moveTo(e,P.x,P.y,M2.vitesse*M2.approche,dt);return;}}
@@ -14817,7 +14932,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  function chutePas(e,dt){const C=X.chute18;C.t+=dt;const k=Math.min(1,C.t/EM.chute.dureeS);
   if(RM){e.x=C.x1;e.y=C.y1;e.fade=k;}else{e.x=C.x0+(C.x1-C.x0)*k;e.y=C.y0+(C.y1-C.y0)*k*k;e.fade=1;}
   if(k>=1){X.chute18=null;e.fade=1;mist(e.x,e.y+e.r*0.6,e.r*1.2,'#2a2440');if(!RM)shake(5,0.2);}}
- const _pr189=presence;presence=function(e,dt){if(X.phase===3&&X.emp){if(X.chute18){chutePas(e,dt);return;}if(X.trans&&X.trans.presence&&!X.trans.deplace)return;return marcheIV(e,dt);}return _pr189.apply(this,arguments);};
+ const _pr189=presence;presence=function(e,dt){if((X.phase===3||enV())&&X.emp){if(X.chute18){chutePas(e,dt);return;}if(X.trans&&X.trans.presence&&!X.trans.deplace)return;return marcheIV(e,dt);}return _pr189.apply(this,arguments);};   // v18.10 : en phase V aussi (enV : la phase V réelle)
  const _tp189=transPas;transPas=function(dt){const Tn=X.trans,e=X.e;if(Tn&&Tn.n===3&&Tn.presence&&!Tn.deplace&&Tn.t+dt>=0.6&&e){Tn.deplace=true;try{chuteIV(e);}catch(err){console.error(err);}}return _tp189.apply(this,arguments);};
  // les constructions qui restent en IV : en plus des bornes et de la connexité (versCons), au plus 30 % de l'aire libre de l'état IV
  const _vc189=versCons;versCons=function(n){const n0=X.bat.filter(c=>c.etat==='debout').length,r=_vc189.apply(this,arguments);
@@ -14828,18 +14943,18 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  const _ve189=vers;vers=function(n){const de=X.phase,r=_ve189.apply(this,arguments);if(!r)return r;
   try{if(de===3)arreterEmprunt();if(n===3){X.emp=X.emp||empNeuf();X.emp.nb=0;}X.rev18=null;X.passe18=null;X.sauteIV=false;if(X.e)X.e.pvPlaf18=X.pv[n]||X.e.maxHp;}catch(err){console.error(err);}return r;};
  const _de189=debut;debut=function(phase0){const r=_de189.apply(this,arguments);X.emp=empNeuf();if(X.e)X.e.pvPlaf18=X.pv[X.phase]||X.e.maxHp;
-  window.__emp18=()=>{const c=X.on&&X.phase===3&&X.emp&&X.emp.cur;return c&&(c.ph==='prise'||c.ph==='jeu')&&!c.defait?c.id:null;};
+  window.__emp18=()=>{const c=X.on&&(X.phase===3||enV())&&X.emp&&X.emp.cur;return c&&(c.ph==='prise'||c.ph==='jeu')&&!c.defait?c.id:null;};
   if(X.phase===3&&X.boucle&&X.emp.nb===0)boucleEmp();   // le combat commence en IV : la boucle a été tirée avant que l'emprunt existe
   return r;};
  const _mt189=mort;mort=function(e){try{arreterEmprunt();X.rev18=null;X.passe18=null;}catch(err){}return _mt189.apply(this,arguments);};
  const _mr189=makeRoom;makeRoom=function(){const vu=!!(window.__emp18&&window.__emp18());window.__emp18=null;const r=_mr189.apply(this,arguments);if(vu)memRedessin();return r;};
  // ── chaque pas de son combat en IV : la Passe (course), la Révérence (approche), l'emprunt ; ton héros ne traverse pas son corps (sans dégât)
- const _pas189=pas;pas=function(e,dt){const r=_pas189.apply(this,arguments);if(X.phase!==3||!X.emp||X.scene)return r;
+ const _pas189=pas;pas=function(e,dt){const r=_pas189.apply(this,arguments);if(!(X.phase===3||enV())||!X.emp||X.scene)return r;   // v18.10 : en phase V aussi
   try{if(!X.trans){passePas(dt);if(X.ph==='mesure'&&X.rev18)revPas(dt);if(X.ph==='emprunt')empPas(dt);}
    if(!X.chute18&&P&&!P.dead){const dx=P.x-e.x,dy=P.y-e.y,d=hyp(dx,dy)||1,m=e.r+P.r;if(d<m){P.x=e.x+dx/d*m;P.y=e.y+dy/d*m;collidePlayer();}}
    for(const D2 of X.emp.dissous)D2.t+=dt;X.emp.dissous=X.emp.dissous.filter(D2=>D2.t<EM.dissousS);if(X.emp.fele>0)X.emp.fele-=dt;if(X.emp.ic){X.emp.ic.t+=dt;if(X.emp.ic.t>0.7)X.emp.ic=null;}}catch(err){console.error(err);}return r;};
  // la cloche d'un rail attend qu'une zone d'emprunt soit finie (une zone à la fois au contact du joueur ; la sortie garantie compte ce qui est en jeu)
- const _cp189=clochePas;clochePas=function(c,dt){const C=X.emp&&X.emp.cur;if(X.phase===3&&C&&C.ph==='jeu'&&!c.cl.z&&c.cl.t<=dt){const B=C.p.asm.sb;if(B.st.ph==='charge'||B.dash||(B.vivants||[]).some(f=>f())){c.cl.t=Math.max(c.cl.t,0.1);return;}}return _cp189.apply(this,arguments);};
+ const _cp189=clochePas;clochePas=function(c,dt){const C=X.emp&&X.emp.cur;if((X.phase===3||enV())&&C&&C.ph==='jeu'&&!c.cl.z&&c.cl.t<=dt){const B=C.p.asm.sb;if(B.st.ph==='charge'||B.dash||(B.vivants||[]).some(f=>f())){c.cl.t=Math.max(c.cl.t,0.1);return;}}return _cp189.apply(this,arguments);};
  // ── ses coups : une étape d'emprunt est jugée au préavis du boss, sur sa propre source de signe (XA.coup) ; « ce qui t'a tué » : l'emprunt (et le talent)
  // ; une copie défaite ne frappe plus
  const _hp189=hurtPlayer;hurtPlayer=function(dmg,src){const c=X.on&&X.emp&&X.emp.cur;if(!c||!c.p||!P)return _hp189.apply(this,arguments);
@@ -14853,7 +14968,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(c&&c.ph==='jeu'&&c.rec){const B=c.p.asm.sb,st=B.st;if(st.ph==='charge'||st.ph==='effet'||B.dash||(B.vivants||[]).some(f=>f()))out.push({o:c.rec,k:'tele',x:c.rec.x,y:c.rec.y,r:c.rec.r,vise:true,rempli:st.ph==='charge'&&st.tot?clamp(1-st.t/st.tot,0,1):1,c:'zone'});}}catch(err){console.error(err);}return out;};
  // la caméra et le signe de bord voient ses zones d'emprunt (bossCharge)
  // ── le bot (bot=2) en phase IV : pendant une étape d'emprunt, il va à la sortie calculée (comme le Reflet du Glas)
- const _pi189=pilote2;pilote2=function(dt){_pi189.apply(this,arguments);const c=X.on&&X.phase===3&&X.emp&&X.emp.cur;if(!c||c.ph!=='jeu'||P.dead)return;
+ const _pi189=pilote2;pilote2=function(dt){_pi189.apply(this,arguments);const c=X.on&&(X.phase===3||enV())&&X.emp&&X.emp.cur;if(!c||c.ph!=='jeu'||P.dead)return;
   const B=c.p.asm.sb,st=B.st;if(!B.fuiteQ||!(st.ph==='charge'||B.dash||(B.vivants||[]).some(f=>f())))return;const [tx,ty]=B.fuiteQ;for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);
   if(P.x<tx-8)keys.add('KeyD');else if(P.x>tx+8)keys.add('KeyA');if(P.y<ty-8)keys.add('KeyS');else if(P.y>ty+8)keys.add('KeyW');};
  // ── le point faible : son cœur, sous le capuchon (0,25 × r au-dessus de son centre) ; l'entité frappable est son corps
@@ -14871,10 +14986,10 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
    o.strokeStyle='rgba(10,8,16,.8)';o.lineWidth=1.6;o.stroke();
    o.fillStyle=rgba('capuche',0.99);o.beginPath();o.moveTo(-0.5*R,-0.05*R);o.quadraticCurveTo(-0.56*R,-0.85*R,0,-1.08*R);o.quadraticCurveTo(0.56*R,-0.85*R,0.5*R,-0.05*R);o.quadraticCurveTo(0,-0.2*R,-0.5*R,-0.05*R);o.closePath();o.fill();o.stroke();
    o.fillStyle='rgba(6,4,10,.92)';o.beginPath();o.ellipse(0,-0.5*R,0.3*R,0.36*R,0,0,TAU);o.fill();   // l'ombre du capuchon
-   // le masque, à ta couleur ; les yeux pâles derrière ; l'emblème de ta forme au front
-   o.fillStyle=`rgb(${mk})`;o.beginPath();o.ellipse(0,-0.5*R,0.22*R,0.28*R,0,0,TAU);o.fill();o.strokeStyle='rgba(10,8,16,.85)';o.lineWidth=1.4;o.stroke();
+   // le masque, à ta couleur ; les yeux pâles derrière ; l'emblème de ta forme au front (v18.10 : état « m », sans masque : sa mort en V, le masque est tombé)
+   if(etat!=='m'){o.fillStyle=`rgb(${mk})`;o.beginPath();o.ellipse(0,-0.5*R,0.22*R,0.28*R,0,0,TAU);o.fill();o.strokeStyle='rgba(10,8,16,.85)';o.lineWidth=1.4;o.stroke();}
    for(const s of [-1,1]){o.fillStyle='#07050b';o.beginPath();o.ellipse(s*0.09*R,-0.52*R,0.055*R,0.04*R,0,0,TAU);o.fill();o.fillStyle=rgba('yeux',etat==='t'?0.4:0.95);o.beginPath();o.arc(s*0.09*R,-0.52*R,0.022*R,0,TAU);o.fill();}
-   const G=window.__gardiens&&window.__gardiens.mere&&window.__gardiens.mere.embleme;if(G){o.save();o.translate(0,-0.68*R);o.globalAlpha=etat==='t'?0.55:1;try{G(o,cls,0.075*R,mk);}catch(err){}o.restore();}
+   const G=window.__gardiens&&window.__gardiens.mere&&window.__gardiens.mere.embleme;if(G&&etat!=='m'){o.save();o.translate(0,-0.68*R);o.globalAlpha=etat==='t'?0.55:1;try{G(o,cls,0.075*R,mk);}catch(err){}o.restore();}
    // le cœur sous le capuchon (point faible), à peine deviné
    o.fillStyle=rgba('yeux',0.18);o.beginPath();o.arc(0,-0.25*R,0.09*R,0,TAU);o.fill();
    // sa croix de manipulation, à la ceinture
@@ -14918,6 +15033,312 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
  // console et bancs : emprunter(id) (le prochain emprunt prend ce talent), defaire() (comme si le talent emprunté brûlait), l'état
  function emprunterId(id){const XE=X.emp;if(!XE||X.phase!==3||XE.cur)return false;const L=brxEmpruntables(DB,empActifs(),T9).liste,x=L.find(y=>y.id===id);if(!x)return false;
   XE.boucle.splice(XE.ib,0,Object.assign({},x));if(!X.boucle)X.boucle=[];X.boucle.splice(X.im,0,{k:'emprunt'});X.ph='entracte';X.t=0.01;return true;}
+ // ═══ v18.10 · Phase V, « L'Effacement » (action 5f, fiche validée le 5 novembre 2026) ════════════════════════════════════════════════════
+ // Un examen, pas une phase neuve : aucun geste neuf ; son socle rejoue un geste de chaque phase, plus serré, dans ce que ce combat a déjà montré (le journal
+ // X.montre, tenu par les sections v18.6 à v18.9, et X.parC, les dégâts reçus par élément) : le tableau éclair (un décor déjà accroché, la moitié des bornes la
+ // plus loin de toi, une vague seule, vie ≤ 8 s), l'effondrement (une construction restée debout tombe, puis devient une fosse ; sinon un pan du bord), le
+ // montage court (un fil, 2,6 s, un Masqué déjà cousu), l'emprunt (un talent déjà emprunté en IV), la feinte double ; en Extrême, trois mesures libres tirées
+ // dans ce qui a été montré, pondérées vers ce qui t'a le plus blessé. Une phase d'origine jamais jouée (essai) : le geste se tire comme dans sa phase ; jouée
+ // sans rien laisser : la mesure saute. À nu 2 s après chacun des quatre gestes. L'arène se défait : à 2/3 puis 1/3 des PV de la phase, il attend la fin de
+ // la mesure, lève les bras, et l'arène recule (états 7 et 8, sans dégât) ; ce qui n'y tient plus s'efface en brume ; son masque se fend. Sa mort : le masque
+ // tombe et se brise, la croix tombe, les fils se rompent, son corps se défait en brume, l'arène redevient brume (3 s, rien n'est retardé). Mouvements
+ // réduits : fondus, rien ne tombe ni ne pulse. Rien n'est tiré au hasard du jeu (graine du combat) ; ni bulle, ni fenêtre, ni texte.
+ const EF=DB.effacement,EFE=EF.eclair,EFR=EF.resserrements,EL5=DB.elements,GESTES5=['eclair','double','effondrement','montage','emprunt'];
+ // la phase V réelle (essai=1 : la partition d'essai de 5a, le moteur seul : rien de cette section ne joue)
+ function enV(){return X.phase===4&&!!X.e&&!X.e.dead&&!(X.essai&&X.essai.partEssai);}
+ const effNeuf=()=>({rng:desRng(((X.graine>>>0)^0x2F6B1D37)>>>0),ress:0,force:0,rs:null,fel:0,g:null,mon:null,dbl:null,prem:null,premFait:false,nE:0,nI:0,calE:null,fos:[],fosN:0,bouts:[],debris:null,brumeM:null,cand:null,
+  j:{eclairs:0,eclairsSautes:0,vides:0,rentres:0,effondrements:0,pans:0,fosses:0,effSautes:0,montages:0,montagesSautes:0,coupes:0,aboutis:0,emprunts:0,empruntsSautes:0,doubles:0,feintes:0,libres:0,libresEl:[],
+   nu:0,mesuresSautees:0,resserrements:[],filtrees:0,premier:null,calMs:0,log:[]}});
+ const montreNeuf=()=>({ph:{},tab:[],cou:[],emp:[],el:{}});
+ const rire5=k=>{if(window.__rire&&!(X.essai&&X.essai.muet))try{window.__rire(k);}catch(err){}};
+ const logV=o=>{const L=X.eff.j.log;L.push(Object.assign({t:+RUN.time.toFixed(2)},o));if(L.length>80)L.shift();};
+ // ── le journal du combat : ce que les phases I à IV ont montré (X.montre) et les dégâts reçus par élément (X.parC)
+ const _ac1810=accrocher;accrocher=function(m){const r=_ac1810.apply(this,arguments);
+  try{const T=X.tab;if(X.montre&&T&&!T.eclair&&X.phase<4){X.montre.ph[0]=true;T.mi=X.montre.tab.length;X.montre.tab.push({decor:T.decor,theme:T.theme,regle:T.regle||null,deg:0});}}catch(err){console.error(err);}return r;};
+ const _lf1810=lancerFil;lancerFil=function(f){const r=_lf1810.apply(this,arguments);
+  try{if(f.v5&&f.e&&!f.e.dead){   // un fil de la phase V : ses PV en part de ceux de la phase V (nœud 2,5 %, cousu 15 %)
+    const x=f.sv&&f.sv.x,bonus=x?1+(AM.souvenir.pv||0)*(Math.max(0,(x.rang||1)-1)+(x.g||0)):1,rob=f.sv&&f.sv.renfort==='pv'&&SVJ.renforts.pv?1+(SVJ.renforts.pv.pv||0):1;
+    f.e.maxHp=f.e.hp=Math.round(brxPvCousu(DB,X.palier,(AM.corps[f.co.corps]||{}).pv||1,bonus,1,4)*rob);const pv=brxPvNoeud(DB,X.palier,4);f.el.pv=f.el.pvMax=pv;}
+   else if(f.e&&!f.e.dead&&X.montre&&X.phase===2){f.mi=X.montre.cou.length;X.montre.ph[2]=true;X.montre.cou.push({cle:f.co.cle,id:f.sv&&f.sv.x?f.sv.x.id:null,deg:0,abouti:false,co:f.co,sv:f.sv,nom:f.R.nom});}}catch(err){console.error(err);}return r;};
+ const _em1810=emprunter;emprunter=function(){const r=_em1810.apply(this,arguments);
+  try{const c=X.emp&&X.emp.cur;if(r&&c&&X.montre&&X.phase===3){X.montre.ph[3]=true;if(!X.montre.emp.some(y=>y.id===c.id))X.montre.emp.push({id:c.id,fam:c.fam});}}catch(err){}return r;};
+ // un coup reçu : son élément (la zone qui frappe, le tir du Brumeux, un cousu, une copie, la feinte, un ennemi de tableau) ; les dégâts de chaque tableau (I) et de
+ // chaque cousu (III) ; rien ne change au coup lui-même
+ const _hp1810=hurtPlayer;hurtPlayer=function(dmg,src){if(!(X.on&&X.e&&P&&X.montre))return _hp1810.apply(this,arguments);
+  const h0=P.hp,z=X.zoneCourante,T=X.tab,fb=X.feinteCoup;let el=z&&z.id?z.id:null,f=src&&src.cou18?src.cou18:null;
+  if(!src&&!el)for(const q of eproj){if(q.dead)continue;if(hyp(q.x-P.x,q.y-P.y)-(q.r||6)-P.r<14){if(q.brx18)el=q.brx18;else if(q.from&&q.from.cou18)f=q.from.cou18;break;}}
+  if(!el&&src&&src.brx18p)el='emprunt';
+  const r=_hp1810.apply(this,arguments);
+  try{const lost=h0-P.hp;if(lost>0&&!X.e.dead){if(!el&&f)el='couture';else if(!el&&fb)el='feinte';
+    if(T&&!T.eclair&&T.mi!=null&&X.montre.tab[T.mi]&&(el==='dalle'||(!el&&!(src&&src.brx18))))X.montre.tab[T.mi].deg+=lost;
+    if(!el&&T)el='tableau';
+    if(f&&f.mi!=null&&X.montre.cou[f.mi])X.montre.cou[f.mi].deg+=lost;
+    if(el)X.parC[el]=(X.parC[el]||0)+lost;}}catch(err){}
+  return r;};
+ function journalPas(){const M=X.montre;if(!M||X.phase>3||!X.e||X.e.dead)return;M.ph[X.phase]=true;
+  for(const z of X.zones)if(!z.fait&&z.id&&z.t>0)M.el[z.id]=true;for(const tr of X.tirs)if(tr.t>0)M.el[tr.id]=true;
+  if(X.cou)for(const f of X.cou.fils)if(f.mi!=null&&f.etat==='abouti'&&M.cou[f.mi])M.cou[f.mi].abouti=true;}
+ // ce que le combat aurait montré (essai : &montre=… ; console : montrer({…})) : tab:<décor>[/<thème>], cou:<talent ou ->, emp:<talent>, el:<élément>, joue:<phase>
+ function lireMontre(s){const o={};for(const t of String(s||'').split(',')){const i=t.indexOf(':');if(i<1)continue;const k=t.slice(0,i),v=t.slice(i+1);(o[k]=o[k]||[]).push(v);}return o;}
+ function couInjecte(id){const F2=AS();if(!F2)return null;const rng=couRng(9000+(++X.eff.nI));let sv=null;
+  if(id&&id!=='-'&&NODES[id]&&FAM[id]&&SVJ.familles[FAM[id]]){RUN.reserveBrume=RUN.reserveBrume||[];let x=RUN.reserveBrume.find(y=>y.id===id&&y.source==='talent');
+   if(!x){x={id,source:'talent',rang:1,g:0,oublie:{acte:RUN.act||3,salle:RUN.roomIdx||1},porte:0};RUN.reserveBrume.push(x);}
+   const fid=FAM[id],E=(SVJ.talents||{})[id]||{},rf=E.renfort&&SVJ.renforts[E.renfort]?E.renfort:null,As=AM.souvenir||{};
+   sv={x,fid,cap:rf?null:'sb:'+fid,vars:rf?[]:(E.v||[]).slice(),renfort:rf,force:1+(As.parRang||0)*Math.max(0,(x.rang||1)-1)+(As.parGravure||0)*(x.g||0)};}
+  let prof=null;try{prof=profile();}catch(err){}const r=brxCoudre(F2,AM,ctxA(),sv,null,rng,prof);return r.co?{co:r.co,sv:r.sv,nom:null}:null;}
+ function montrer(o){if(!X.montre||!X.eff)return null;o=o||{};const M=X.montre,L=k=>[].concat(o[k]==null?[]:o[k]);
+  for(const k of L('joue'))if(+k>=1&&+k<=4)M.ph[+k-1]=true;
+  for(const t of L('tab')){const [d,th]=String(t).split('/');if(!TB.decors[d])continue;M.ph[0]=true;M.tab.push({decor:d,theme:th&&TB.decors[d].themes.includes(th)?th:TB.decors[d].themes[0],regle:null,deg:0});}
+  for(const id of L('cou')){const q=couInjecte(String(id));if(q){M.ph[2]=true;M.cou.push(Object.assign({cle:q.co.cle,id:q.sv&&q.sv.x?q.sv.x.id:null,deg:0,abouti:true},q));}}
+  for(const id of L('emp')){const f=FAM[id];if(!f)continue;M.ph[3]=true;if(!M.emp.some(y=>y.id===id))M.emp.push({id,fam:f});}
+  for(const id of L('el'))if(EL5[id])M.el[id]=true;
+  return brxMontre(M);}
+ // ── les candidats d'une mesure (règle commune) ; le détail de ce qui t'a tué en V, pour le premier geste de la phase seulement
+ function candV(){const L=brxEmpruntables(DB,empActifs(),T9).liste,C=brxCandidatsV(DB,X.montre,{liste:L,vivants:vivants(),premier:X.eff.prem&&!X.eff.prem.fait?X.eff.prem:null});X.eff.cand=C;return C;}
+ function premierPour(k){const p=X.eff.prem;return p&&!p.fait&&p.k===k?p:null;}
+ const _bn1810=boucleNeuve;boucleNeuve=function(){const r=_bn1810.apply(this,arguments);
+  try{if(enV()&&X.nb===1&&X.eff&&!X.eff.premFait){X.eff.premFait=true;const S=X.sauve||{},tue=S.mort&&S.mort[5],P5=brxPremierV(X.boucle,tue);
+    if(P5.k){X.boucle=P5.mesures;X.eff.prem={k:P5.k,tab:(S.tab&&S.tab[5])||null,bati:(S.bati&&S.bati[5])||null,cousu:(S.cousu&&S.cousu[5])||null,emp:(S.emp&&S.emp[5])||null,fait:false};X.eff.j.premier=P5.k;}}}catch(err){console.error(err);}return r;};
+ // ── la mesure : un des quatre gestes, la feinte double, ou une mesure libre (entière) ; un Masqué cousu en train de frapper passe d'abord (non-cumul de 5d)
+ function sauteV(){X.j.mesuresSautees++;X.eff.j.mesuresSautees++;X.ph='entracte';X.t=DB.partition.effacement.sauteS;}
+ function geste(k,o){X.eff.g=Object.assign({k,t:0},o||{});X.ph='v5';X.t=0;}
+ function finGeste(nu){X.eff.g=null;const e=X.e;if(nu>0&&e&&!e.dead){e.vuln=Math.max(e.vuln||0,nu);X.eff.j.nu++;X.ph='v5nu';X.t=nu;}else{X.ph='entracte';X.t=ent();}}
+ const _me1810=mesure;mesure=function(){if(!enV()||!X.eff)return _me1810.apply(this,arguments);
+  const m=X.boucle&&X.boucle[X.im];if(!m)return _me1810.apply(this,arguments);
+  if(enemies.some(zoneCousu)&&X.attZ<CU.attenteZoneS){X.attZ+=0.1;X.t=0.1;return;}
+  if(X.attZ>=CU.attenteZoneS)X.prio=true;X.attZ=0;
+  if(m.k==='libre'){const v=vivants(),actifs={};for(const z of X.zones)if(!z.fait){const so=(EL5[z.id]||{}).sorte||'zone';actifs[so]=(actifs[so]||0)+1;}
+   const tue=X.sauve&&X.sauve.mort&&X.sauve.mort[5],R2=brxLibresV(DB,X.lec,X.montre,X.parC,X.palier,X.rng,brxActifsCouture(actifs,v),{moins:CU.budget.moins*v,plancher:CU.budget.plancher,premier:tue||null});
+   m.elements=R2.elements;X.eff.j.libres++;X.eff.j.libresEl.push(R2.elements.join('+')||'—');if(X.eff.j.libresEl.length>60)X.eff.j.libresEl.shift();
+   if(X.eff.prem)X.eff.prem.fait=true;
+   if(!R2.elements.length){X.im++;sauteV();return;}return _me1810.apply(this,arguments);}
+  if(!GESTES5.includes(m.k))return _me1810.apply(this,arguments);
+  X.im++;X.tmes=0.4;let r=false;
+  try{r=m.k==='eclair'?eclairV():m.k==='double'?doubleV():m.k==='effondrement'?effondreV():m.k==='montage'?montageV():empruntV();}catch(err){console.error(err);r=false;}
+  if(X.eff.prem)X.eff.prem.fait=true;
+  logV({k:m.k,ok:r});if(!r)sauteV();};
+ // ── le tableau éclair (phase I) : la moitié des bornes la plus loin de toi, un décor déjà accroché, une vague seule ; vidé : rideau, puis à nu 2 s
+ const estEclair=o=>!o.dead&&!o.brx18&&!o.cons18&&!o.cou18;
+ // le sol de chaque décor, cuit une fois à la taille du plus grand fragment (l'état 6) par les peintres de la phase I (solDecor), posé recadré
+ function calEclair(k){const C=X.eff.calE||(X.eff.calE={sol:{},w:0,h:0});if(C.sol[k])return C.sol[k];
+  if(!C.w){const A=XA.dbg().A,E=A.etats&&(A.etats[DB.phases[3].arene]||A.etats[A.ie]),B=E?E.bornes:AR;C.w=Math.ceil((B.x1-B.x0)*EFE.part-2*EFE.retrait)+2;C.h=Math.ceil(B.y1-B.y0-2*EFE.retrait)+2;}
+  const t0=performance.now();C.sol[k]=solDecor(k,Object.keys(TB.decors).indexOf(k),C.w,C.h,0x7FEB352D);X.eff.j.calMs=+(X.eff.j.calMs+performance.now()-t0).toFixed(1);return C.sol[k];}
+ function decorsV(){const M=X.montre;return M&&M.ph[0]?[...new Set(M.tab.map(t=>t.decor))]:brxDecors(DB,(X.lec&&X.lec.acte)||ACTE());}
+ function eclairV(){const C=candV(),c=C.eclair;if(c.mode==='saute'){X.eff.j.eclairsSautes++;return false;}
+  const t=brxEclair(DB,X.lec,X.palier,X.eff.rng,c.mode==='montre'?{tab:c.tab}:{premier:c.tab});if(!TB.decors[t.decor]||!WTHEMES[t.theme]){X.eff.j.eclairsSautes++;return false;}
+  const frag=brxEclairFrag(DB,AR,[P.x,P.y]),src=calEclair(t.decor),im=document.createElement('canvas');im.width=Math.min(src.width,Math.ceil(frag.x1-frag.x0));im.height=Math.min(src.height,Math.ceil(frag.y1-frag.y0));
+  im.getContext('2d',{alpha:false}).drawImage(src,0,0);
+  X.tab={eclair:true,i:-1,frag,decor:t.decor,theme:t.theme,regle:null,densite:t.densite,champion:false,rejoue:!!t.rejoue,sub:'accroche',t:0,feinte:true,vide:false,dalles:[],holeT:0,braz:null,n:0,apresS:0,im,mode:c.mode};
+  X.eff.j.eclairs++;logV({eclair:t.decor+'/'+t.theme,mode:c.mode,densite:t.densite,cote:frag.cote});X.ph='eclair';X.t=0;rire5(0.35);return true;}
+ function convoquerV(){const T=X.tab,TH=WTHEMES[T.theme];if(!TH)return;const w=TH.build(budget()*(1+TB.densite*T.densite)).map(sp=>({type:sp.type,key:sp.key,tag:sp.tag,siege:sp.siege,elite:!!sp.elite}));
+  const pl=brxPlaces(T.frag,w.length,[P.x,P.y],X.eff.rng,{marge:30,minD:EFE.minD,bloque:(x,y)=>room.pillars.some(q=>hyp(x-q.x,y-q.y)<q.r+30)}),A0=TB.apparition;
+  w.forEach((sp,k)=>room.spawning.push({x:pl[k][0],y:pl[k][1],type:sp.type,elite:sp.elite,key:sp.key,tag:sp.tag,siege:sp.siege,t:A0[0]+X.eff.rng()*(A0[1]-A0[0]),tab18:1,ecl18:1}));T.n=w.length;}
+ function rentrerV(){const S=new Set();for(const o of enemies)if(estEclair(o)){o.dead=true;mist(o.x,o.y,o.r);S.add(o);}room.spawning=[];if(S.size){eproj=eproj.filter(q=>!S.has(q.from));rings=rings.filter(garderAnneau(S));}X.eff.j.rentres+=S.size;}
+ function eclairPas(dt){const T=X.tab;if(!T||!T.eclair){X.ph='entracte';X.t=ent();return;}T.t+=dt;
+  if(T.sub==='accroche'){if(T.t>=EFE.accrocheS){T.sub='vie';T.t=0;convoquerV();}return;}
+  if(T.sub==='vie'){const viv=room.spawning.length>0||enemies.some(estEclair);
+   if(!viv&&T.t>0.3){T.vide=true;T.sub='rideau';T.t=0;X.eff.j.vides++;}else if(T.t>=EFE.vieMaxS){rentrerV();T.vide=false;T.sub='rideau';T.t=0;}return;}
+  if(T.sub==='rideau'){if(T.t>=EFE.rideauS){T.sub='apres';T.t=0;T.apresS=T.vide?EF.nuS:0.4;if(T.vide&&X.e&&!X.e.dead){X.e.vuln=Math.max(X.e.vuln||0,EF.nuS);X.eff.j.nu++;}}return;}
+  if(T.sub==='apres'&&T.t>=T.apresS){X.tab=null;X.ph='entracte';X.t=ent();}}
+ // le cadre et le drapé de l'éclair, tracés à la taille du fragment (mêmes traits que ceux cuits pour la phase I) ; mouvements réduits : le rideau est un fondu
+ function dessinEclair(c,T){const f=T.frag,m=TB.cadre.marge,tr=TB.cadre.trait,w=f.x1-f.x0,h=f.y1-f.y0;let aC=1,kD=0,aD=0;
+  if(T.sub==='accroche')aC=Math.min(1,T.t/TB.fonduS);else if(T.sub==='rideau'){const k=Math.min(1,T.t/EFE.rideauS);if(RM){kD=1;aD=k;}else{kD=k;aD=1;}}else if(T.sub==='apres'){const k=Math.min(1,T.t/0.4);aC=1-k;kD=1;aD=1-k;}
+  if(aC>0){c.save();c.globalAlpha=aC;c.strokeStyle='rgba(6,4,10,.75)';c.lineWidth=tr+4;c.strokeRect(f.x0,f.y0,w,h);c.strokeStyle=rgba('croix',0.95);c.lineWidth=tr;c.strokeRect(f.x0,f.y0,w,h);
+   c.strokeStyle=rgba('fils',0.7);c.lineWidth=1.2;c.strokeRect(f.x0+tr,f.y0+tr,w-2*tr,h-2*tr);
+   for(const [x,y] of [[f.x0,f.y0],[f.x1,f.y0],[f.x0,f.y1],[f.x1,f.y1]]){c.fillStyle='rgba(6,4,10,.8)';rond(c,x,y,9);c.fill();c.fillStyle=rgba('croix',1);rond(c,x,y,6.5);c.fill();c.fillStyle=rgba('fils',0.9);rond(c,x,y,2.2);c.fill();}c.restore();}
+  if(aD>0&&kD>0){const W2=w+2*m,H2=h+2*m,hh=Math.max(1,Math.round(H2*kD)),x0=f.x0-m,y0=f.y0-m,b=Math.max(0,hh-18);c.save();c.globalAlpha=aD;c.fillStyle=rgba('manteau',1);c.fillRect(x0,y0,W2,b);
+   c.fillStyle='rgba(0,0,0,.22)';for(let x=0;x<W2;x+=46)c.fillRect(x0+x,y0,13,b);c.fillStyle='rgba(255,255,255,.05)';for(let x=21;x<W2;x+=46)c.fillRect(x0+x,y0,8,b);
+   c.fillStyle=rgba('manteau',1);c.beginPath();c.moveTo(x0,y0+b);for(let x=0;x<=W2;x+=23)c.lineTo(x0+x,y0+b+((x/23)%2?14:4));c.lineTo(x0+W2,y0+b);c.closePath();c.fill();
+   c.strokeStyle=rgba('croix',0.9);c.lineWidth=4;c.beginPath();c.moveTo(x0,y0+3);c.lineTo(x0+W2,y0+3);c.stroke();c.restore();}}
+ const _dtb1810=dessinTableau;dessinTableau=function(c){const T=X.tab;if(T&&T.eclair)return dessinEclair(c,T);return _dtb1810.apply(this,arguments);};
+ // ── la feinte double : deux feintes v14 à la suite (vraie ou fausse à la graine du combat), la seconde ecartS s après la fin de la première ; jamais deux à la fois
+ // une feinte ne part que si son disque (r 86, sur toi) laisse une sortie à pied pendant toute sa durée (brxSortie, son corps et les fosses pour obstacles) ; sinon elle saute
+ function feinteV(){X.eff.dbl.n++;if(!brxSortie(DB,[{forme:'disque',x:P.x,y:P.y,r:86}],[P.x,P.y],optIV(1.15)).ok){X.eff.j.feintesSautees=(X.eff.j.feintesSautees||0)+1;return;}
+  lancer('feinte');const B=room.bl;if(B&&!B.second)B.real=X.eff.rng()<0.5;X.eff.j.feintes++;}
+ function doubleV(){if(room.bl)return false;X.eff.dbl={n:0,att:0};X.eff.j.doubles++;geste('double');feinteV();return true;}
+ // ── l'effondrement (phase II) : la construction effondrable la plus proche de toi dont la chute laisse une sortie (la sorte qui t'a tué en V d'abord) ; sa chute,
+ // puis elle s'enfonce et devient une fosse de mêmes disques (la marche n'y passe pas, les tirs si) ; aucune effondrable debout : un pan du bord ; à nu 2 s
+ function effondreV(){const e=X.e,el=EL5.effondrement,charge=brxPreavis(DB,X.sauve,'effondrement'),pr=premierPour('effondrement'),autres=X.zones.filter(z=>!z.fait);
+  const r=brxEffondreV(DB,X.bat.filter(c=>c.etat==='debout'),[P.x,P.y],optIV(charge),autres,AR,pr&&pr.bati);X.vus.add('effondrement');
+  if(r.mode==='saute'){X.eff.j.effSautes++;return false;}
+  const grp=++X.ngrp,base={id:'effondrement',t:0,charge,degats:el.degats*dmgMul(),vise:true,boss:true,src:e,fait:false,flash:0,grp,v5:true};
+  if(r.mode==='cons'){r.c.chute=grp;r.c.chuteT=0;r.c.chuteC=charge;for(const g of r.zones)X.zones.push(Object.assign(g,base,{chuteC:r.c,sorte:r.c.sorte,fin:finChuteV}));X.eff.j.effondrements++;logV({effondre:r.c.sorte});}
+  else{for(const g of r.zones)X.zones.push(Object.assign(g,base,{pan18:true,fin:finPan}));X.eff.j.pans++;logV({pan:r.zones[0].bord});}
+  geste('effondrement',{grp,max:charge+2});rire5(0.2);return true;}
+ function finChuteV(z){const c=z.chuteC,debout=!!(c&&c.etat==='debout');finChute(z);try{if(debout&&c.etat==='tombee')fosser(c);}catch(err){console.error(err);}const g=X.eff.g;if(g&&g.grp===z.grp)finGeste(EF.nuS);}
+ function finPan(z){if(!RM){const n=6;for(let i=0;i<=n;i++)mist(z.x0+(z.x1-z.x0)*i/n,z.y0+(z.y1-z.y0)*i/n,26,'#2a2533');shake(5,0.25);}const g=X.eff.g;if(g&&g.grp===z.grp)finGeste(EF.nuS);}
+ function fosser(c){const L=brxFosse(c);if(!L.length)return;const g={id:++X.eff.fosN,mat:c.mat,c,disques:L,t:0,pil:[]};
+  for(const d of L){const p={x:d.x,y:d.y,r:d.r,kind:'fosse18',brx18:true,fosse5:g,cle:'brx18f:'+g.id+':'+d.x.toFixed(1)+','+d.y.toFixed(1)};g.pil.push(p);room.pillars.push(p);}
+  X.eff.fos.push(g);CAM.ff=1;X.eff.j.fosses++;}
+ function effacerFosse(g,muet){room.pillars=room.pillars.filter(p=>p.fosse5!==g);X.eff.fos=X.eff.fos.filter(q=>q!==g);CAM.ff=1;if(!muet)for(const d of g.disques)mist(d.x,d.y,d.r,'#2a2440');}
+ // ── le montage court (phase III) : un seul fil, montage 2,6 s, le Masqué cousu qui t'a fait le plus de dégâts en III (sinon le dernier cousu, sinon le premier fil) ;
+ // coupé : à nu 2 s ; abouti : il lâche le fil, à nu 2 s pendant que le cousu tombe ; au plus un cousu vivant en V
+ function montageV(){const XC=X.cou,F2=AS();if(!XC||!F2)return false;const C=candV(),c=C.montage;if(c.mode==='saute'){X.eff.j.montagesSautes++;return false;}
+  const nc=++XC.nc,rng=couRng(nc);let q=null;
+  if(c.mode==='montre'){const M=X.montre.cou[c.i];q=M&&M.co?{co:M.co,sv:M.sv||null,nom:M.nom||null}:null;}else q=coudreUn(rng);
+  if(!q||!q.co){X.eff.j.montagesSautes++;return false;}
+  const cons=X.bat.filter(k=>k.etat==='debout'),dv=cons.find(k=>k.sorte==='douves'),worst=room.pillars.filter(p=>!p.cons18).concat(cons.flatMap(k=>brxTous(k))),G=brxGrille(monde(),AR,worst,DB.constructions.grille);G.relie=brxRelie(G,P.x,P.y);
+  const pts=brxPointsCouture(DB,[P.x,P.y],AR,XA.dbg().vue(),room.pillars.filter(p=>!p.cons18),cons,G,rng,{n:EF.montage.fils,ile:dv&&dv.ile});
+  if(!pts.length){X.eff.j.montagesSautes++;return false;}
+  XC.dernier=q.co.base;const seed=Math.floor(rng()*4294967296)>>>0;
+  const R={seed,rnd:F2.asmRng(seed),co:q.co,nom:q.nom||F2.asmNom(AM,q.co,SVJ),e:null,vaincu:false,wi:0,appel:null,sv:q.sv||null,cousu18:true,acte18:CU.attente.acte,salle18:CU.attente.salle};
+  const f={id:++XC.nf,k:0,p:pts[0],R,co:q.co,sv:q.sv||null,nem:false,rej:c.mode==='montre',delai:0,etat:'attente',t:0,e:null,noeud:null,el:{pv:0,pvMax:0,coup:0,fiss:0},n:nc,v5:true,dureeS:EF.montage.dureeS};
+  XC.fils.push(f);XC.cur=null;X.eff.mon={f,t:0};X.eff.j.montages++;logV({montage:q.co.cle,mode:c.mode});geste('montage');rire5(0.4);return true;}
+ // ── l'emprunt (phase IV) : un talent qu'il a déjà emprunté en IV, encore porté et empruntable, au poids de 5e ; jamais deux fois de suite la même famille
+ function empruntV(){const XE=X.emp;if(!XE||!SBX())return false;const C=candV().emprunt;if(C.mode==='saute'){X.eff.j.empruntsSautes++;return false;}
+  const B=brxEmprunts(DB,C.liste,empRng(500+X.eff.nE++),{n:1,dernier:XE.dernier,premier:C.premier||null});if(!B.length){X.eff.j.empruntsSautes++;return false;}
+  XE.boucle=B;XE.ib=0;if(!emprunter()){X.eff.j.empruntsSautes++;return false;}X.eff.j.emprunts++;logV({emprunt:B[0].id,mode:C.mode});return true;}
+ // ── les gestes signature dans une mesure libre (Extrême) : depuis son corps, mêmes formes, mêmes variantes, mêmes sorties (brxVariantesV, brxPlacerV, son corps
+ // pour obstacle) ; la Passe, la Révérence et la Volte passent par la section v18.9
+ const _la1810=lancer;lancer=function(id){if(!enV()||BRX_SIGN[id]==null||IV.includes(id))return _la1810.apply(this,arguments);
+  const el=EL5[id],e=X.e;X.j.lancers++;const charge=brxPreavis(DB,X.sauve,id);X.vus.add(id);
+  const V=brxVariantesV(DB,id,[e.x,e.y],[P.x,P.y],AR,room.pillars,e.r,0),k=brxPlacerV(DB,id,V,[e.x,e.y],[P.x,P.y],optIV(charge),charge);
+  if(k<0){X.j.sautes++;return false;}
+  const v=V[k],dg=el.degats*dmgMul(),base={id,t:0,degats:dg,vise:!!el.vise,boss:true,src:e,fait:false,flash:0,essai:k};
+  if(id==='toile'){const g1=++X.ngrp,g2=++X.ngrp;for(const q of v.toile.noires)X.zones.push(Object.assign(q,base,{charge,grp:g1}));for(const q of v.toile.blanches)X.zones.push(Object.assign(q,base,{charge:charge+el.seconde,grp:g2,blanche:true}));X.tmes=Math.max(X.tmes,charge+el.seconde+0.3);}
+  else if(id==='aiguilles'){X.tirs.push({id,t:0,charge,n:el.n,vitesse:el.vitesse,degats:dg,fait:false,ang:v.angles,h:[e.x,e.y],r:el.r,zs:v.zones});X.tmes=Math.max(X.tmes,charge+0.5);}
+  else{const grp=++X.ngrp,ex=id==='ruee'?{coupe:v.coupe>=0?room.pillars[v.coupe]:null,fin:finRuee}:id==='de'?{fin:deSecond}:{};for(const g of v.zones)X.zones.push(Object.assign(g,base,{charge,grp},ex));
+   X.tmes=Math.max(X.tmes,charge+(id==='ruee'?el.course:id==='de'?el.seconde:0)+0.3);}
+  return true;};
+ // ── les resserrements : par les PV de la phase V (2/3, 1/3), jamais par le temps ; il attend la fin de la mesure en cours, lève les bras, et l'arène recule
+ // (transformation de l'arène : annonce, puis bascule sans dégât) ; ce qui n'y tient plus s'efface en brume ; son masque se fend ; compté comme un entracte
+ function pretV(){return brxResserrePret({ph:X.ph,zones:X.zones.some(z=>!z.fait),tirs:X.tirs.length>0,tab:!!X.tab,montage:!!(X.eff.mon&&tendu(X.eff.mon.f)),emprunt:!!(X.emp&&X.emp.cur),feinte:!!(room&&room.bl),cousu:enemies.some(zoneCousu)});}
+ function resserreDebut(){const e=X.e,n=X.eff.ress;if(X.eff.rs||n>=EFR.etats.length)return;const due=Math.max(brxResserrement(DB,e.hp,X.pv[4]),Math.min(EFR.etats.length,n+X.eff.force));
+  if(due<=n||!pretV())return;X.eff.force=Math.max(0,X.eff.force-1);X.eff.rs={t:0,n,et:EFR.etats[n],ph:'bras',hp:e.hp,t0:RUN.time};X.eff.fel=Math.min(2,X.eff.fel+1);X.ph='resserre';X.t=0;rire5(0.2);}
+ function filtrerV(et){const E=XA.dbg().A.etats[et];if(!E)return 0;const obs=E.obstacles.concat(E.vides),grp=X.eff.fos.map(g=>({sorte:'fosse',disques:g.disques,g}));
+  const R2=brxFiltreV(DB,monde(),E.bornes,obs,X.bat.filter(c=>c.etat==='debout').concat(grp),{x:P.x,y:P.y,r:P.r});
+  for(const k of R2.retire){if(k.g)effacerFosse(k.g);else retirer(k,'cede');}X.eff.j.filtrees+=R2.retire.length;return R2.retire.length;}
+ function resserrePas(e,dt){const S=X.eff.rs;S.t+=dt;e.vx=0;e.vy=0;
+  if(S.ph==='bras'){if(S.t>=EFR.brasS&&XA.vers(S.et)){S.ph='arene';S.ta=S.t;S.filtrees=filtrerV(S.et);}return;}
+  for(const q of room.spawning){q.x=clamp(q.x,AR.x0+20,AR.x1-20);q.y=clamp(q.y,AR.y0+20,AR.y1-20);}collideEnemy(e);
+  const et=XA.etat();if((et.etat===S.et&&!et.trans)||S.t>12){X.eff.ress++;X.eff.j.resserrements.push({n:X.eff.ress,et:S.et,hp:Math.round(S.hp),attente:+(S.t0-(X.eff.dueT||S.t0)).toFixed(2),duree:+S.t.toFixed(2),filtrees:S.filtrees||0,t:+RUN.time.toFixed(2)});
+   X.eff.rs=null;X.eff.dueT=null;X.ph='entracte';X.t=ent()*0.5;}}
+ function resserrer(){if(!enV()||!X.eff)return false;X.eff.force++;return true;}
+ // ── chaque pas de la phase V : le resserrement d'abord (s'il est dû et que la mesure est finie), puis la partition, les gestes, le montage
+ function gestePas(dt){const g=X.eff.g;if(!g){X.ph='entracte';X.t=ent();return;}g.t+=dt;
+  if(g.k==='double'){const D2=X.eff.dbl;if(room.bl){D2.att=0;return;}D2.att+=dt;if(D2.n>=EF.feinte.n){finGeste(0);return;}if(D2.att>=EF.feinte.ecartS)feinteV();return;}
+  if(g.k==='effondrement'){if(g.t>g.max)finGeste(0);return;}
+  if(g.k==='montage'){const M=X.eff.mon,f=M&&M.f;if(!f){finGeste(0);return;}M.t+=dt;
+   if(f.etat==='coupe'){if(f.e){X.eff.j.coupes++;X.eff.bouts.push({t:0});X.eff.mon=null;finGeste(EF.nuS);}else{X.eff.mon=null;X.eff.j.montagesSautes++;X.ph='entracte';X.t=DB.partition.effacement.sauteS;X.eff.g=null;}return;}
+   if(f.etat==='abouti'){X.eff.j.aboutis++;X.eff.mon=null;finGeste(EF.nuS);return;}
+   if(M.t>EF.montage.dureeS+4){X.eff.mon=null;finGeste(0);}return;}
+  finGeste(0);}
+ const _pas1810=pas;pas=function(e,dt){const V=enV()&&!X.scene&&!!X.eff;
+  if(V&&!X.trans)try{if(X.eff.ress<EFR.etats.length&&!X.eff.dueT&&brxResserrement(DB,e.hp,X.pv[4])>X.eff.ress)X.eff.dueT=RUN.time;resserreDebut();}catch(err){console.error(err);}
+  const r=_pas1810.apply(this,arguments);if(!V)return r;
+  try{if(!X.trans){if(X.eff.rs)resserrePas(e,dt);else if(X.ph==='eclair')eclairPas(dt);else if(X.ph==='v5')gestePas(dt);else if(X.ph==='v5nu'){X.t-=dt;if(X.t<=0){X.ph='entracte';X.t=ent();}}}
+   e.x=clamp(e.x,AR.x0+e.r,AR.x1-e.r);e.y=clamp(e.y,AR.y0+e.r,AR.y1-e.r);}catch(err){console.error(err);}return r;};
+ // un Masqué cousu attend dès qu'un resserrement est dû et pendant qu'il dure (il ne lance rien pendant que l'arène recule)
+ const _de1810=debut;debut=function(phase0){X.montre=montreNeuf();X.parC={};X.eff=effNeuf();X.corpsV=null;const r=_de1810.apply(this,arguments);X.eff=X.eff||effNeuf();
+  X.corpsV=(x,y)=>enV()&&!X.e.dead&&hyp(x-X.e.x,y-X.e.y)<X.e.r+Math.max(SBJ18.joueur.rayon,P.r);
+  const zA=window.__zoneAutre18;window.__zoneAutre18=e=>!!(X.eff&&(X.eff.rs||X.eff.dueT)&&e&&e.cou18)||(zA?zA(e):false);return r;};
+ // le bot (bot=2) : le nœud du montage court d'abord, puis comme ailleurs
+ const _c21810=cible2;cible2=function(){const f=enV()&&X.eff&&X.eff.mon&&X.eff.mon.f;if(f&&f.noeud&&!f.noeud.dead&&tendu(f))return{o:f.noeud,force:true,want:Math.min(DIST[P.cls]||220,110)};return _c21810.apply(this,arguments);};
+ // ── sa mort en V (3 s, rien n'est retardé ; mouvements réduits : un fondu de 1 s) : le masque se détache, tombe et se brise ; la croix tombe ; les fils se rompent ;
+ // son corps se défait en brume, du bas vers le haut, le cœur s'éteint en dernier ; l'arène redevient brume. Le masque brisé et la croix restent au sol.
+ const _mt1810=mort;mort=function(e){const v5=X.phase===4&&DB.phases[4].presence==='sol'&&!!X.eff;let snap=null;
+  if(v5){snap={cons:X.bat.filter(c=>c.etat==='debout').slice(),fos:X.eff.fos.slice(),fil:!!(X.eff.mon&&X.eff.mon.f&&X.eff.mon.f.noeud),bouts:X.eff.bouts.length};for(const g of X.eff.fos.slice())effacerFosse(g,true);X.eff.rs=null;X.tab=null;}
+  const r=_mt1810.apply(this,arguments);
+  if(v5&&X.scene){const S=X.scene;S.v5=true;S.dureeS=RM?EF.mort.rmS:EF.mort.dureeS;S.snap=snap;S.cls=P?P.cls:'lum';S.fel=X.eff.fel;S.col=G27.copie();
+   X.eff.debris={x:e.x,y:e.y,r:e.r,fin:false,col:S.col,cls:S.cls};if(!X.eff.brumeM)X.eff.brumeM=brumeMort();}
+  return r;};
+ function mourir(){const e=X.e;if(!e||e.dead||!X.on)return false;e.hp=0;e.dead=true;mort(e);return true;}
+ // le calque de brume de la mort, cuit une fois (une nappe ronde aux bords doux, des volutes à la graine du combat)
+ function brumeMort(){const S=512,c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d'),h=S/2,rn=desRng(((X.graine>>>0)^0x51ED270B)>>>0);
+  let gr=g.createRadialGradient(h,h,0,h,h,h);gr.addColorStop(0,'rgba(150,140,175,1)');gr.addColorStop(0.7,'rgba(150,140,175,.85)');gr.addColorStop(1,'rgba(150,140,175,0)');g.fillStyle=gr;g.fillRect(0,0,S,S);
+  for(let i=0;i<26;i++){const a=rn()*TAU,d=rn()*h*0.75,x=h+Math.cos(a)*d,y=h+Math.sin(a)*d,r=30+rn()*70;gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(190,182,210,.35)');gr.addColorStop(1,'rgba(190,182,210,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,2*r,2*r);}
+  return c;}
+ // ── dessin. Son corps en V (par-dessus celui de la phase IV) : la brume qui monte de son manteau (au-delà de 1,15 × r, sous 35 %, cuite une fois), les fêlures de
+ // braise du masque (une par resserrement), ses bras levés pendant un resserrement ; mouvements réduits : rien ne flotte
+ function imgPlume(R){return G27.image('brx18v:'+R,-1.7*R,-2.9*R,3.4*R,3.0*R,o=>{for(const [x,y,r] of [[0,-1.05,0.95],[-0.45,-1.7,0.8],[0.42,-2.0,0.75],[0.05,-2.35,0.6]]){const gr=o.createRadialGradient(x*R,y*R,0,x*R,y*R,r*R);gr.addColorStop(0,'rgba(150,140,175,.1)');gr.addColorStop(1,'rgba(150,140,175,0)');o.fillStyle=gr;o.beginPath();o.arc(x*R,y*R,r*R,0,TAU);o.fill();}});}
+ function feles(c,e,n){const R=e.r;c.strokeStyle=`rgba(${COL.braise},.95)`;c.lineWidth=1.8;c.lineCap='round';c.beginPath();
+  if(n>=1){c.moveTo(e.x-0.12*R,e.y-0.76*R);c.lineTo(e.x-0.05*R,e.y-0.62*R);c.lineTo(e.x-0.13*R,e.y-0.5*R);c.lineTo(e.x-0.06*R,e.y-0.3*R);}
+  if(n>=2){c.moveTo(e.x+0.13*R,e.y-0.74*R);c.lineTo(e.x+0.06*R,e.y-0.6*R);c.lineTo(e.x+0.15*R,e.y-0.44*R);c.lineTo(e.x+0.08*R,e.y-0.27*R);c.moveTo(e.x+0.06*R,e.y-0.6*R);c.lineTo(e.x-0.02*R,e.y-0.55*R);}c.stroke();}
+ const _cs1810=corpsSol;corpsSol=function(c,e,fd){const V=X.phase===4&&!X.scene&&!(X.trans&&X.trans.n===3);
+  if(V)try{const I=imgPlume(e.r);c.save();c.globalAlpha=fd;c.translate(e.x,e.y+(RM?0:Math.sin(T*0.7)*3));G27.poser(c,I);c.restore();}catch(err){console.error(err);}
+  const r=_cs1810.apply(this,arguments);
+  if(V&&X.eff)try{c.save();c.globalAlpha=fd;if(X.eff.fel)feles(c,e,X.eff.fel);const S=X.eff.rs;
+   if(S){const k=RM?1:Math.min(1,S.t/EFR.brasS),R=e.r;main(c,e.x-0.62*R,e.y-0.55*R-k*0.6*R,R*0.26,-1,k);main(c,e.x+0.62*R,e.y-0.55*R-k*0.6*R,R*0.26,1,k);}c.restore();}catch(err){console.error(err);}
+  return r;};
+ // par-dessus (comme les télégraphes) : le bout arrondi d'un pan du bord et la pierre qui penche ; le fil d'un montage court (de sa croix, à la ceinture, au nœud) ; les
+ // bouts coupés ; la scène de sa mort (le masque et la croix qui tombent, les fils rompus, le corps qui se défait)
+ function dessinV(c){const e=X.e;
+  for(const z of X.zones){if(z.fait||!z.pan18)continue;const k=Math.min(1,z.t/z.charge),a=Math.atan2(z.y1-z.y0,z.x1-z.x0);c.save();c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
+   c.beginPath();c.arc(z.x1,z.y1,z.w/2,a-Math.PI/2,a+Math.PI/2);c.closePath();c.fill();c.stroke();
+   // la pierre du bord qui penche vers l'intérieur pendant le préavis (mouvements réduits : elle s'assombrit sur place)
+   c.translate(z.x0,z.y0);c.rotate(a);c.fillStyle=`rgba(42,37,51,${RM?0.5+0.4*k:0.9})`;c.strokeStyle='rgba(74,66,88,.9)';c.lineWidth=2;const L2=RM?24:24+k*36;c.fillRect(0,-z.w/2,L2,z.w);c.strokeRect(0,-z.w/2,L2,z.w);c.restore();}
+  if(e&&!e.dead&&X.phase===4){const f=X.eff.mon&&X.eff.mon.f,bx=e.x+0.36*e.r,by=e.y+0.4*e.r;
+   if(f&&f.noeud&&!f.noeud.dead){const k=RM?1:Math.min(1,f.t/0.3),nx=bx+(f.noeud.x-bx)*k,ny=by+(f.noeud.y-by)*k;c.save();c.lineCap='round';c.strokeStyle='rgba(8,6,12,.55)';c.lineWidth=4;c.beginPath();c.moveTo(bx,by);c.lineTo(nx,ny);c.stroke();c.strokeStyle=rgba('fils',0.9);c.lineWidth=1.6;c.stroke();c.restore();}
+   if(X.eff.bouts.length){c.save();c.strokeStyle=rgba('fils',0.6);c.lineWidth=1.3;c.beginPath();X.eff.bouts.forEach((b,i)=>{const sw=RM?0:Math.sin(T*1.6+i)*4;c.moveTo(bx,by);c.quadraticCurveTo(bx+8+6*i,by+14,bx+4+5*i+sw,by+26+6*i);});c.stroke();c.restore();}}
+  const S=X.scene;if(S&&S.v5)dessinMortV(c,S);}
+ const _dt1810=drawTelegraphs;drawTelegraphs=function(){_dt1810.apply(this,arguments);if(X.on&&state==='play'&&X.eff)try{dessinV(ctx);}catch(err){console.error(err);}};
+ // le masque (à ta couleur, à l'emblème de ta forme) : entier, ou l'une de ses deux moitiés (h : −1, 1)
+ function masque(c,x,y,R,col,cls,a,h,ecart){c.save();c.translate(x,y);c.rotate(a||0);
+  if(h){c.translate(h*ecart,0);c.beginPath();c.rect(h<0?-R:0,-R,R,2*R);c.clip();}
+  c.fillStyle=`rgb(${col})`;c.beginPath();c.ellipse(0,0,0.22*R,0.28*R,0,0,TAU);c.fill();c.strokeStyle='rgba(10,8,16,.85)';c.lineWidth=1.4;c.stroke();
+  c.fillStyle='#07050b';for(const s of [-1,1]){c.beginPath();c.ellipse(s*0.09*R,-0.02*R,0.055*R,0.04*R,0,0,TAU);c.fill();}
+  const G=window.__gardiens&&window.__gardiens.mere&&window.__gardiens.mere.embleme;if(G){c.save();c.translate(0,-0.18*R);try{G(c,cls,0.075*R,col);}catch(err){}c.restore();}
+  if(h){c.strokeStyle=`rgba(${COL.braise},.9)`;c.lineWidth=1.6;c.beginPath();c.moveTo(0,-0.28*R);c.lineTo(h*0.03*R,-0.1*R);c.lineTo(-h*0.02*R,0.08*R);c.lineTo(h*0.02*R,0.28*R);c.stroke();}c.restore();}
+ function croix5(c,x,y,R,a){c.save();c.translate(x,y);c.rotate(a);c.strokeStyle=rgba('croix',0.95);c.lineWidth=3.2;c.lineCap='round';c.beginPath();c.moveTo(-0.18*R,0);c.lineTo(0.18*R,0);c.moveTo(0,-0.14*R);c.lineTo(0,0.24*R);c.stroke();c.restore();}
+ // où tombent le masque et la croix (au sol, devant lui)
+ const posMasque=D2=>[D2.x-0.18*D2.r,D2.y+0.78*D2.r],posCroix=D2=>[D2.x+0.5*D2.r,D2.y+0.86*D2.r];
+ function dessinMortV(c,S){const t=S.t,R=S.r,x=S.x,y=S.y;c.save();
+  if(RM){const k=Math.min(1,t/S.dureeS);c.globalAlpha=1-k;c.translate(x,y);G27.poser(c,imgCorps(S.cls,'n',R));c.restore();return;}
+  // le corps qui se défait en brume, du bas vers le haut (0,4 → 2,0), sans son masque ; le cœur s'éteint en dernier
+  const kb=clamp((t-0.4)/1.6,0,1),yc=y+0.95*R-kb*2.15*R;
+  if(kb<1){c.save();c.beginPath();c.rect(x-2*R,y-1.6*R,4*R,Math.max(0,yc-(y-1.6*R)));c.clip();c.translate(x,y);G27.poser(c,imgCorps(S.cls,'m',R));c.restore();
+   for(let i=0;i<7;i++){const ax=x+(i-3)*0.24*R,ay=yc-((t*40+i*13)%26),a=0.28*(1-kb);c.fillStyle=`rgba(150,140,175,${a})`;rond(c,ax,ay,0.22*R+((i*7)%5));c.fill();}}
+  const kc=clamp(1-(t-0.4)/1.8,0,1);if(kc>0){c.globalAlpha=kc;glow(c,x,y-0.25*R,0.35*R,COL.yeux,0.8*kc);c.globalAlpha=1;}
+  // le masque : il se détache, tombe (0 → 0,45 s), puis se brise en deux (braise)
+  if(t<0.6){const [mx,my]=posMasque(S),k=Math.min(1,t/0.45),px=x+(mx-x)*k,py=y-0.5*R+(my-(y-0.5*R))*k*k;if(k<1)masque(c,px,py,R,S.col,S.cls,k*0.9,0,0);else{for(const h of [-1,1])masque(c,mx,my,R,S.col,S.cls,0.9,h,2+(t-0.45)*30);}}
+  // la croix de sa ceinture (0,2 → 0,8) ; les fils se rompent et retombent
+  if(t<0.8){const [cx,cy]=posCroix(S),k=clamp((t-0.2)/0.6,0,1),px=x+0.36*R+(cx-x-0.36*R)*k,py=y+0.4*R+(cy-y-0.4*R)*k*k;croix5(c,px,py,R,k*1.2);}
+  if(t<1.2){const k=clamp((t-0.2)/1.0,0,1),bx=x+0.36*R,by=y+0.4*R;c.globalAlpha=1-k;c.strokeStyle=rgba('fils',0.8);c.lineWidth=1.3;c.beginPath();
+   const n=3+(S.snap?S.snap.bouts+(S.snap.fil?1:0):0);for(let i=0;i<n;i++){const a=-1.2+i*2.4/Math.max(1,n-1),L=40+12*i,mx=bx+Math.cos(a)*L*0.5,my=by-20+k*60;c.moveTo(bx,by+k*30);c.lineTo(mx,my);c.moveTo(mx+Math.cos(a)*8,my+10+k*70);c.lineTo(bx+Math.cos(a)*L,by+30+k*90);}c.stroke();c.globalAlpha=1;}
+  c.restore();}
+ // ── au sol (sous la brume) : l'éclair (sa part de sol, posée par la phase I avec un calque recadré), les constructions par-dessus le fragment, les fosses ourlées de
+ // leur matière (une construction tombée s'y enfonce en 0,5 s ; mouvements réduits : un fondu), la brume de sa mort et les débris
+ function dessinFosses(c){for(const g of X.eff.fos){const k=Math.min(1,g.t/EF.fosse.enfonceS),A2=MA[g.mat]?MA[g.mat].arete:'132,118,96',Co=MA[g.mat]?MA[g.mat].corps:'92,84,72';
+   if(k<1&&g.c&&X.mod){c.save();c.globalAlpha=1-k;if(!RM){const cx=g.c.c[0],cy=g.c.c[1],s=1-0.4*k;c.translate(cx,cy);c.scale(s,s);c.translate(-cx,-cy);}peindreFixe(c,g.c);c.restore();}
+   c.save();c.globalAlpha=RM?k:1;for(const d of g.disques){c.fillStyle='#020104';rond(c,d.x,d.y,d.r*(RM?1:Math.max(0.25,k)));c.fill();}
+   c.strokeStyle=`rgba(${fonce(Co,0.6)},.9)`;c.lineWidth=4;for(const d of g.disques){rond(c,d.x,d.y,d.r-1);c.stroke();}c.strokeStyle=`rgba(${A2},.85)`;c.lineWidth=2;for(const d of g.disques){rond(c,d.x,d.y,d.r+1);c.stroke();}c.restore();}}
+ function dessinMortSol(c){const D2=X.eff.debris;if(!D2)return;const S=X.scene&&X.scene.v5?X.scene:null,t=S?S.t:99,R=D2.r;
+  const k=RM?Math.min(1,t/EF.mort.rmS):clamp((t-0.6)/2.4,0,1),v=XA.dbg().vue(),Rm=Math.max(...[[v.x0,v.y0],[v.x1,v.y0],[v.x0,v.y1],[v.x1,v.y1]].map(([a,b])=>hyp(a-D2.x,b-D2.y)))+60;
+  // ce qui restait debout fond (constructions et fosses du moment de sa mort)
+  if(S&&S.snap&&k<1){c.save();c.globalAlpha=1-k;if(X.mod)for(const q of S.snap.cons)peindreFixe(c,q);for(const g of S.snap.fos){c.fillStyle='#020104';for(const d of g.disques){rond(c,d.x,d.y,d.r);c.fill();}}c.restore();}
+  // l'arène redevient brume, depuis sa place ; les bords pâlissent (les bornes ne bougent pas)
+  if(k>0&&X.eff.brumeM){const rr=RM?Rm:Math.max(40,Rm*k),a=EF.mort.brume*(RM?k:Math.min(1,k*1.6));c.save();c.globalAlpha=a;c.drawImage(X.eff.brumeM,D2.x-rr,D2.y-rr,2*rr,2*rr);c.restore();
+   c.save();c.strokeStyle=`rgba(190,182,210,${0.45*k})`;c.lineWidth=8;c.strokeRect(AR.x0+4,AR.y0+4,AR.x1-AR.x0-8,AR.y1-AR.y0-8);c.restore();}
+  // les débris : le masque brisé et la croix, posés au sol (hors e.fade) ; mouvements réduits : ils apparaissent en fondu, sans chute
+  const am=RM?Math.min(1,t/EF.mort.rmS):t>=0.6?1:0,ac=RM?am:t>=0.8?1:0,[mx,my]=posMasque(D2),[cx,cy]=posCroix(D2);
+  if(am>0){c.save();c.globalAlpha=am;for(const h of [-1,1])masque(c,mx,my,R,D2.col,D2.cls,0.9,h,RM?6:Math.min(6,2+(Math.min(t,0.6)-0.45)*30));c.restore();}
+  if(ac>0){c.save();c.globalAlpha=ac;croix5(c,cx,cy,R,1.2);c.restore();}}
+ const _sol1810=CAM.sol;CAM.sol=function(){if(!(X.on&&X.eff))return _sol1810.apply(this,arguments);
+  const T=X.tab,ecl=!!(T&&T.eclair&&T.im),C0=X.cal,all=room.pillars,f5=X.eff.fos.length>0;
+  if(ecl)X.cal={sol:{[T.decor]:T.im},cadre:null,drape:null,w:T.im.width,h:T.im.height,m:0};   // le calque de l'éclair, recadré, à la place de ceux de la phase I (le temps de la pose)
+  if(f5)room.pillars=all.filter(p=>!p.fosse5);   // les fosses de V sont dessinées ici, ourlées de leur matière
+  try{_sol1810.apply(this,arguments);}finally{X.cal=C0;if(f5)room.pillars=all;}
+  try{const c=ctx;
+   if(ecl&&X.mod){const a=fragAlpha(T),f=T.frag;if(a>0){c.save();c.globalAlpha=a;c.beginPath();c.rect(f.x0,f.y0,f.x1-f.x0,f.y1-f.y0);c.clip();for(const k of X.bat){if(k.etat!=='debout'||k.chute)continue;const b=boite(k);if(b.x1>f.x0&&b.x0<f.x1&&b.y1>f.y0&&b.y0<f.y1)peindreFixe(c,k);}c.restore();}}
+   if(f5)dessinFosses(c);dessinMortSol(c);}catch(err){console.error(err);}};
+ // sa mort : une lumière pâle monte de sa place (la brume qui couvre le sol, ses débris se voient dans le noir), sans pulsation
+ const _cl1810=computeLights;computeLights=function(){_cl1810.apply(this,arguments);const D2=X.on&&X.eff&&X.eff.debris;if(!D2)return;
+  const S=X.scene&&X.scene.v5?X.scene:null,t=S?S.t:99,k=RM?Math.min(1,t/EF.mort.rmS):clamp(t/3,0,1);lights.push({x:D2.x,y:D2.y,r:160+360*k,ex:false,c:'brume18'});};
+ // ── chaque pas : le journal (I à IV), les calques des états 7 et 8 (une tuile par image pendant la IV, puis en V s'il en manque), les calques de l'éclair (un décor
+ // par image pendant la transition IV → V, ou à l'entrée d'un essai en V), les fosses qui s'enfoncent, la fin de la scène de sa mort
+ const _st1810=step;step=function(dt){const r=_st1810.apply(this,arguments);if(!X.on||!X.e||!X.eff)return r;
+  try{const A=XA.dbg().A,e=X.e;if(!X.scene&&!e.dead){journalPas();
+    if(X.phase>=3&&A.sol){if(!A.sol[7])XA.peindreTard(7,1);else if(!A.sol[8])XA.peindreTard(8,1);}
+    if(X.phase===4&&enV()&&state==='play'&&(X.trans||X.ph==='entracte')){const k=decorsV().find(d=>!(X.eff.calE&&X.eff.calE.sol[d]));if(k&&TB.decors[k])calEclair(k);}}
+   for(const g of X.eff.fos)g.t+=dt;for(const b of X.eff.bouts)b.t+=dt;
+   if(X.eff.debris&&!X.scene)X.eff.debris.fin=true;}catch(err){console.error(err);}return r;};
+ // ── statistiques et console
+ const _sr1810=statsRun;statsRun=function(){const o=_sr1810.apply(this,arguments);if(o&&X.eff){const J2=X.eff.j;o.effacement={eclairs:J2.eclairs,eclairsSautes:J2.eclairsSautes,vides:J2.vides,effondrements:J2.effondrements,pans:J2.pans,fosses:J2.fosses,effSautes:J2.effSautes,
+   montages:J2.montages,montagesSautes:J2.montagesSautes,coupes:J2.coupes,aboutis:J2.aboutis,emprunts:J2.emprunts,empruntsSautes:J2.empruntsSautes,doubles:J2.doubles,libres:J2.libres,nu:J2.nu,mesuresSautees:J2.mesuresSautees,resserrements:J2.resserrements.length,premier:J2.premier};}return o;};
+ function etatEff(){if(!X.eff)return null;const M=X.montre?brxMontre(X.montre):null,E=X.eff;
+  return{v:enV(),montre:M,parC:Object.assign({},X.parC||{}),cand:E.cand?JSON.parse(JSON.stringify(E.cand,(k,v)=>k==='liste'?v.map(x=>x.id):v)):null,ress:E.ress,rs:E.rs&&{t:+E.rs.t.toFixed(2),n:E.rs.n,et:E.rs.et,ph:E.rs.ph},fel:E.fel,g:E.g&&{k:E.g.k,t:+E.g.t.toFixed(2)},
+   mon:E.mon&&E.mon.f?{etat:E.mon.f.etat,cle:E.mon.f.co.cle,pv:Math.round(E.mon.f.el.pv),pvMax:E.mon.f.el.pvMax,hp:E.mon.f.e?[Math.round(E.mon.f.e.hp),Math.round(E.mon.f.e.maxHp)]:null,t:+E.mon.t.toFixed(2),mont:E.mon.f.e&&E.mon.f.e.asm&&E.mon.f.e.asm.mont?+E.mon.f.e.asm.mont.t.toFixed(2):null,p:E.mon.f.p.map(Math.round)}:null,
+   dbl:E.dbl&&{n:E.dbl.n},fosses:E.fos.map(g=>({id:g.id,mat:g.mat,n:g.disques.length,t:+g.t.toFixed(2)})),prem:E.prem&&{k:E.prem.k,fait:E.prem.fait},debris:!!E.debris,calE:E.calE?Object.keys(E.calE.sol):[],j:JSON.parse(JSON.stringify(E.j))};}
  // ── essai (Q17) : l'arène d'essai (sans boss d'essai, sans tirs, sans foule, sans Masqué), le Brumeux à la phase demandée
  function essai(phase,o){o=o||{};phase=clamp(((+phase||1)-1)|0,0,DB.phases.length-1);
   const r=XA.essai('final',{cls:o.cls,masque:false,foule:0,boss:false,tirs:false,bot:false,dieu:o.dieu!==false,etat:DB.phases[phase].arene});
@@ -14925,7 +15346,7 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(o.palier&&window.__descente&&DB.paliers[o.palier])window.__descente.palier(o.palier);
   X=neuf();X.palier=brxPalier(DB,(RUN&&RUN.palierD)||'normal');X.graine=(o.graine|0)||((Math.random()*4294967296)>>>0);X.rng=desRng(X.graine);
   if(o.reserve)for(const id of String(o.reserve).split(',')){if(!NODES[id])continue;RUN.reserveBrume=RUN.reserveBrume||[];if(!RUN.reserveBrume.some(x=>x.id===id))RUN.reserveBrume.push({id,source:'talent',rang:1,g:0,oublie:{acte:RUN.act||3,salle:RUN.roomIdx||1},porte:0});}
-  X.essai={bot:o.bot|0,dieu:o.dieu!==false,muet:!!o.muet};X.bot=o.bot|0;
+  X.essai={bot:o.bot|0,dieu:o.dieu!==false,muet:!!o.muet,partEssai:!!o.partEssai};X.bot=o.bot|0;   // v18.10 : partEssai (essai=1) : la phase V rejoue la partition d'essai de 5a
   // v18.8 : une némésis construite EN MÉMOIRE (rien d'écrit), cousue en premier fil de la phase III : ?brumeux=3&nem=<talent>[&points=n]
   if(o.nem&&window.__nemesis&&window.__nemesis.fiche)X.essai.nemF=window.__nemesis.fiche(o.nem,{points:o.points,rnd:desRng((X.graine^0x5bd1e995)>>>0)});
   // v18.9 : les talents portés (portes=id[:rang[:g]],… : pris comme __dernier.prendre), le premier emprunt forcé (emp), le lien au Dernier Souvenir (ds=1 :
@@ -14934,20 +15355,22 @@ function brxPire(arr,part){if(!arr.length)return null;const s=arr.slice().sort((
   if(o.emp)X.essai.emp=String(o.emp);
   room.waves=[];room.waveI=0;room.spawning=[];for(const e of enemies)if(!e.dead&&!e.brx18)e.dead=true;
   debut(phase);showBanner(DB.nom,'Au fond de la Brume',true);
+  // v18.10 : ce que le combat aurait montré (montre=tab:<décor>[/<thème>],cou:<talent|->,emp:<talent>,el:<élément>,joue:<phase>) ; sinon les replis de l'essai
+  if(o.montre)montrer(typeof o.montre==='string'?lireMontre(o.montre):o.montre);
   if(o.ds&&window.__dernier){window.__dernier.activer(true);if(o.emp)window.__dernier.designer(String(o.emp));}
   return{phase:phase+1,palier:X.palier,graine:X.graine,pv:X.pv.slice(),seuils:X.seuils.slice(),monde:r.monde,etat:r.etat,bot:X.bot};}
  const QB=/[?&]brumeux=(\d+)/.exec(location.search);
  if(QB&&!/[?&]demo=/.test(location.search)){const q=k=>(new RegExp('[?&]'+k+'=([^&]*)').exec(location.search)||[])[1];
-  addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0',nem:q('nem'),points:q('points'),portes:q('portes')&&decodeURIComponent(q('portes')),emp:q('emp'),ds:q('ds')==='1'});}catch(err){console.error(err);}},400));}
+  addEventListener('load',()=>setTimeout(()=>{try{essai(+QB[1],{cls:q('classe'),palier:q('palier'),graine:+(q('graine')||0),reserve:q('reserve'),bot:+(q('bot')||0),dieu:q('dieu')!=='0',nem:q('nem'),points:q('points'),portes:q('portes')&&decodeURIComponent(q('portes')),emp:q('emp'),ds:q('ds')==='1',partEssai:q('essai')==='1',montre:q('montre')&&decodeURIComponent(q('montre'))});}catch(err){console.error(err);}},400));}
  // ── console et bancs
  window.__brumeux={DB,essai,vers:n=>vers(clamp((n|0)-1,0,DB.phases.length-1)),lire,images,statsRun,
-  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='batir'?'bâtir':m.k==='couture'?'couture':m.k==='emprunt'?'emprunt':m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':'['+m.elements.join('+')+']'),
+  etat:()=>({on:X.on,phase:X.phase+1,palier:X.palier,graine:X.graine,ph:X.ph,im:X.im,pv:X.e?[Math.round(X.e.hp),X.e.maxHp]:null,seuils:X.seuils.slice(),trans:!!X.trans,zones:X.zones.filter(z=>!z.fait).length,tirs:X.tirs.length,cons:X.cons.map(c=>({x:c.x,y:c.y,r:c.r,pose:c.pose,part:+c.part.toFixed(3),aire:+c.aire.toFixed(3),pousse:c.pousse||0})),vuln:X.e?X.e.vuln:0,lockT:X.e?X.e.lockT:0,boucle:X.boucle&&X.boucle.map(m=>m.k==='fixe'?m.g:m.k==='batir'?'bâtir':m.k==='couture'?'couture':m.k==='emprunt'?'emprunt':m.k==='tableau'?'{'+m.tab.decor+'/'+m.tab.theme+'/'+(m.tab.regle||'-')+'}':m.k==='libre'&&m.elements?'['+m.elements.join('+')+']':m.k),   // v18.10 : les gestes de la phase V (éclair, double, effondrement, montage)
    tab:X.tab&&{i:X.tab.i,frag:Object.assign({},X.tab.frag),decor:X.tab.decor,theme:X.tab.theme,regle:X.tab.regle,densite:X.tab.densite,champion:X.tab.champion,rejoue:X.tab.rejoue,sub:X.tab.sub,t:+X.tab.t.toFixed(2),feinte:X.tab.feinte,vide:X.tab.vide,dalles:X.tab.dalles.length,braz:X.tab.braz?X.tab.braz.length:0,n:X.tab.n},
    tiersVus:X.tiersVus.slice(),chute:+X.chute.toFixed(1),ouvre:+X.ouvre.toFixed(2),pench:+X.pench.toFixed(3),cal:!!X.cal,tueTab:X.tueTab,lec:X.lec&&{poids:X.lec.poids,premier:X.lec.premier,bati:X.lec.bati},j:JSON.parse(JSON.stringify(X.j)),scene:!!X.scene,tue:X.tue,
-   bat:etatBat(),cou:etatCou(),emp:etatEmp(),ann:X.ann?X.ann.id:null,mainsC:X.mainsC&&{x:+X.mainsC.x.toFixed(1),y:+X.mainsC.y.toFixed(1)},tueBati:X.tueBati,batB:X.batB,batX:X.batX.slice(),mod:!!X.mod,ruee:!!X.ruee}),   // v18.7 : les constructions
+   bat:etatBat(),cou:etatCou(),emp:etatEmp(),eff:etatEff(),ann:X.ann?X.ann.id:null,mainsC:X.mainsC&&{x:+X.mainsC.x.toFixed(1),y:+X.mainsC.y.toFixed(1)},tueBati:X.tueBati,batB:X.batB,batX:X.batX.slice(),mod:!!X.mod,ruee:!!X.ruee}),   // v18.7 : les constructions
   sauve:()=>({lu:X.sauve,brut:SAVE.brumeux||null}),noter:(o)=>brxNoter(X.sauve||brxNeuf(),o,DB),
-  lancer,batir,poserSorte,emprunter:id=>emprunterId(id),defaire:()=>{const c=X.emp&&X.emp.cur;if(!c||c.defait)return false;defaire(c);return true;},coudre:()=>coudre(),couper:id=>{const f=X.cou&&X.cou.fils.find(y=>y.id===id);if(f&&f.noeud)couper(f);return!!f;},fils:()=>X.cou?X.cou.fils:[],decoudre:()=>decoudre(),poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
-  dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu,brxEmpruntables,brxPoidsEmprunt,brxEmprunts,brxEtapesEmprunt,brxPasse,brxReverence,brxReverenceOk,brxVolte,brxFiltreAire,brxPlafondDs,brxPointChute,brxVariantesIV,brxDefaitable,brxRefusEmprunt},T9,imgCorps:(cls,et)=>imgCorps(cls||P.cls,et||'n',DB.dessin.r.sol),emp:()=>X.emp,glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2:()=>cible2(),zonesCousus:()=>zonesCousus(),zoneAutre18:e=>zoneAutre18(e),faible:()=>X.e?faible(X.e):null,croix:()=>X.e?croixXY(X.e):null,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
+  lancer,batir,poserSorte,resserrer:()=>resserrer(),montrer:o=>montrer(o),mourir:()=>mourir(),emprunter:id=>emprunterId(id),defaire:()=>{const c=X.emp&&X.emp.cur;if(!c||c.defait)return false;defaire(c);return true;},coudre:()=>coudre(),couper:id=>{const f=X.cou&&X.cou.fils.find(y=>y.id===id);if(f&&f.noeud)couper(f);return!!f;},fils:()=>X.cou?X.cou.fils:[],decoudre:()=>decoudre(),poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
+  dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu,brxEmpruntables,brxPoidsEmprunt,brxEmprunts,brxEtapesEmprunt,brxPasse,brxReverence,brxReverenceOk,brxVolte,brxFiltreAire,brxPlafondDs,brxPointChute,brxVariantesIV,brxDefaitable,brxRefusEmprunt,brxMontre,brxCandidatsV,brxPremierV,brxEclairFrag,brxEclair,brxEffondreV,brxFosse,brxVariantesV,brxPlacerV,brxLibresV,brxResserrement,brxResserrePret,brxFiltreV},T9,eff:()=>X.eff,montre:()=>X.montre,parC:()=>X.parC,imgCorps:(cls,et)=>imgCorps(cls||P.cls,et||'n',DB.dessin.r.sol),emp:()=>X.emp,glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2:()=>cible2(),zonesCousus:()=>zonesCousus(),zoneAutre18:e=>zoneAutre18(e),faible:()=>X.e?faible(X.e):null,croix:()=>X.e?croixXY(X.e):null,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

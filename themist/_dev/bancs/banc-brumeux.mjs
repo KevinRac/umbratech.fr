@@ -1,10 +1,10 @@
 // Banc Chromium : v18.5, action 5a (le Brumeux : socle technique) ; v18.6, action 5b (la phase I, « le Rappel » : section I) ; v18.7, action 5c
 // (la phase II, « L'Ouvrage », et les constructions : section J) ; v18.8, action 5d (la phase III, « La Couture » : section K) ; v18.9, action 5e
-// (la phase IV, « L'Emprunt » : section L). Usage :
-//   node banc-brumeux.mjs <port> [sections, ex. ABCDEFGHIJKL] [dossier de captures, hors dépôt]
-// Depuis 5e, les phases I à IV jouent leur partition : A et B éprouvent le moteur sur la phase V (partition d'essai ; B passe encore par la phase IV
-// pour la transition IV → V) ; D pose ses constructions d'essai en III, la partition tue (__brumeux.poser) ; C, F et H conduisent des combats entiers
-// depuis la phase I.
+// (la phase IV, « L'Emprunt » : section L) ; v18.10, action 5f (la phase V, « L'Effacement », et sa mort : section M). Usage :
+//   node banc-brumeux.mjs <port> [sections, ex. ABCDEFGHIJKLM] [dossier de captures, hors dépôt]
+// Depuis 5f, les cinq phases jouent leur partition : A et B éprouvent le moteur sur un essai de la phase V qui rejoue la partition d'essai de 5a
+// (partEssai, l'adresse ?brumeux=5&essai=1 ; B passe encore par la phase IV pour la transition IV → V) ; D pose ses constructions d'essai en III, la
+// partition tue (__brumeux.poser) ; C, F et H conduisent des combats entiers depuis la phase I.
 // A. Lecture et tirages = logique pure : les poids en jeu égalent brxLire sur les mêmes entrées (profil, verdicts, dégâts reçus par source,
 //    ce qui t'a tué) ; même graine, même partition et mêmes zones ; les mesures libres tiennent dans le budget du palier et le non-cumul.
 // B. Partition et transitions : les mesures fixes dans l'ordre, à nu après la boucle (anneau ivoire), un seuil de PV ne se traverse pas d'un coup
@@ -40,6 +40,11 @@
 //    L-C Dernier Souvenir (brûler le talent emprunté pendant la prise et pendant une étape, sous le plafond de la phase ; un autre talent ; gardien et
 //    Masqué inchangés) ; L-D la phase IV au bot dans les quatre formes, deux graines (0 coup sans signe) ; L-E coût apparié et peinture ; L-F
 //    mouvements réduits et captures.
+// M. La phase V, « L'Effacement » (5f) : M-A lecture, candidats, premier et libres en jeu = logique pure (même graine, même X.montre injecté) ; M-B
+//    partitions courte et entière, les quatre gestes (éclair, effondrement → fosse, pan du bord, montage court, emprunt de ce qu'il a emprunté en IV), la
+//    feinte double, deux resserrements (seuils, attente de fin de mesure, poussée sans dégât, constructions filtrées, masque fendu ; jamais au temps), IV → V ;
+//    M-C Dernier Souvenir en V et promotion d'un cousu de V ; M-D la phase V au bot (quatre formes, courte et entière, tenue 90 s) et un combat entier
+//    depuis la phase I ; M-E coût apparié, peinture des états 7 et 8, entrée d'un essai en V ; M-F mouvements réduits et captures (mort en cinq moments).
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -49,7 +54,7 @@ import vm from 'node:vm';
 const require = createRequire('/opt/npm-tools/node_modules/');
 const { chromium } = require('playwright');
 const THEMIST = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGHIJKL').toUpperCase(), DIR = process.argv[4] || null;
+const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGHIJKLM').toUpperCase(), DIR = process.argv[4] || null;
 const BASE = `http://127.0.0.1:${PORT}/index.html`;
 if (DIR) mkdirSync(DIR, { recursive: true });
 let fails = 0, checks = 0;
@@ -89,7 +94,7 @@ if (SEC.includes('A')) {
     B.cls('lum'); B.start(); PAS(3);
     const S = B.SAVE; S.mem.prof = { n: 3, ax: { portee: 0.9, esquive: 0.2, soin: 0.6 }, cms: {}, eff: { traque: { s: 0.7, n: 2 }, petards: { s: -0.4, n: 1 } } };
     S.brumeux = { v: 1, tentatives: 2, victoires: 0, phaseMax: 5, mort: { 1: 'fils', 5: 'anneau' }, vus: ['disque'] };
-    const r = window.__brumeux.essai(5, { muet: true, graine: 101 }); const D = window.__brumeux.dbg(), X = D.X;
+    const r = window.__brumeux.essai(5, { muet: true, graine: 101, partEssai: true }); const D = window.__brumeux.dbg(), X = D.X;
     D.RUN.par18 = { brute: 300, spectre: 100 }; D.RUN.prof.ko = { petards: 2 };
     const L = window.__brumeux.lire(); const e = window.__brumeux.etat();
     const prof = (function () { try { return window.__cm161 ? null : null; } catch (x) { return null; } })();
@@ -114,7 +119,7 @@ if (SEC.includes('A')) {
     ok(men <= bud && Object.entries(cnt).every(([s, n]) => n <= DB.cumul[s]), `A : mesure libre ${m} : menace ${men} ≤ ${bud}, non-cumul tenu`); }
   // même graine, même partition : un second essai à la même graine donne la même boucle et les mêmes premières zones
   const d2 = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); const out = [];
-    for (let k = 0; k < 2; k++) { window.__brumeux.essai(5, { muet: true, graine: 777 }); const D = window.__brumeux.dbg(); D.P.x = D.AR.x0 + 500; D.P.y = D.AR.y0 + 400; const zs = []; PAS(60 * 12, () => { D.P.x = D.AR.x0 + 500; D.P.y = D.AR.y0 + 400; for (const z of D.X.zones) if (!zs.some(q => q.o === z)) zs.push({ o: z, k: z.forme + ':' + z.id + ':' + Math.round(z.x || z.x0) + ',' + Math.round(z.y || z.y0) }); });
+    for (let k = 0; k < 2; k++) { window.__brumeux.essai(5, { muet: true, graine: 777, partEssai: true }); const D = window.__brumeux.dbg(); D.P.x = D.AR.x0 + 500; D.P.y = D.AR.y0 + 400; const zs = []; PAS(60 * 12, () => { D.P.x = D.AR.x0 + 500; D.P.y = D.AR.y0 + 400; for (const z of D.X.zones) if (!zs.some(q => q.o === z)) zs.push({ o: z, k: z.forme + ':' + z.id + ':' + Math.round(z.x || z.x0) + ',' + Math.round(z.y || z.y0) }); });
       out.push({ boucle: window.__brumeux.etat().boucle.join(' '), zones: zs.map(q => q.k) }); } return out; }, [PAS.toString()]);
   ok(d2[0].boucle === d2[1].boucle && d2[0].zones.join('|') === d2[1].zones.join('|') && d2[0].zones.length >= 2, `A : même graine (777), même boucle et mêmes zones (${d2[0].zones.length} zones) : ${d2[0].boucle}`);
   ok(!errs.length, 'A : aucune erreur ' + errs.slice(0, 2).join(' | '));
@@ -125,7 +130,7 @@ if (SEC.includes('A')) {
 if (SEC.includes('B')) {
   console.log('\n══ B · partition et transitions ══');
   const { page, errs, ctx } = await ouvre('');
-  const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); const r0 = ESSAI_({ phase: 5, graine: 5, cls: 'lum' }); const D = window.__brumeux.dbg(), X = D.X, e = X.e, out = { r0 };
+  const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); const r0 = ESSAI_({ phase: 5, graine: 5, cls: 'lum', partEssai: true }); const D = window.__brumeux.dbg(), X = D.X, e = X.e, out = { r0 };
     function ESSAI_(o) { window.__brume.cls(o.cls); const r = window.__brumeux.essai(o.phase, Object.assign({ muet: true }, o)); for (let i = 0; i < 3; i++) window.__brume.step(1 / 60, 1); return r; }
     // 1. les mesures fixes dans l'ordre : on relève l'ordre des gestes lancés (zones et feinte) sur une boucle
     const vu = []; let nuVu = false, vulnMax = 0; D.P.x = D.AR.x0 + 600; D.P.y = D.AR.y0 + 500;
@@ -143,7 +148,7 @@ if (SEC.includes('B')) {
   ok(r.pause, 'B : jamais une pause pendant le combat');
   await capture(page, 'brumeux-phase-5-essai.png');
   // seuils et transitions : les PV sont posés juste au-dessus du seuil, le bot frappe (les coups passent par hitEnemy du jeu)
-  const t = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); window.__brume.cls('lum'); window.__brumeux.essai(4, { muet: true, graine: 5 }); for (let i = 0; i < 3; i++) window.__brume.step(1 / 60, 1);
+  const t = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); window.__brume.cls('lum'); window.__brumeux.essai(4, { muet: true, graine: 5, partEssai: true }); for (let i = 0; i < 3; i++) window.__brume.step(1 / 60, 1);
     const D = window.__brumeux.dbg(), X = D.X, e = X.e, max = e.maxHp, s = X.seuils, out = {};
     // IV (depuis 5e, la phase IV a sa partition : l'essai y commence pour la transition IV → V) : au sol, arène de l'état 6 ; une construction d'essai posée par la console
     out.p4 = { phase: window.__brumeux.etat().phase, r: Math.round(e.r), etat: window.__arene.etat().etat, trans: window.__brumeux.etat().trans, presence: e.y > D.AR.y0 + 200 };
@@ -151,7 +156,7 @@ if (SEC.includes('B')) {
     X.bot = 2; X.essai.bot = 2; e.hp = Math.floor(max * s[3]) + 40; const ph0 = window.__brumeux.etat().phase; let hpAt = null, lockVu = 0, t1 = null, tr = null, etats = [], presence = [];
     PAS(60 * 14, i => { const et = window.__brumeux.etat(); if (et.phase === 5 && t1 == null) { t1 = i; lockVu = e.lockT - D.RUN.time; hpAt = e.hp; } etats.push(window.__arene.etat().etat); if (i % 60 === 0) presence.push([et.phase, Math.round(e.r), Math.round(e.y)]); if (et.trans) tr = et; });
     out.ph0 = ph0; out.phase = window.__brumeux.etat().phase; out.hpMin = hpAt; out.seuil = Math.floor(max * s[3]) - 1; out.lockVu = lockVu; out.lectures = X.j.lectures; out.transitions = X.j.transitions; out.pause = document.querySelector('#overlay').hidden;
-    // V : état 2, constructions effacées
+    // V (5f) : l'état 6 est gardé, les constructions restent
     PAS(60 * 4); out.p5 = { phase: window.__brumeux.etat().phase, etat: window.__arene.etat().etat, cons: window.__brumeux.etat().cons.length, trans: window.__brumeux.etat().trans, lectures: X.j.lectures };
     return out; }, [PAS.toString()]);
   ok(t.ph0 === 4 && t.phase >= 5 && Math.abs(t.hpMin - t.seuil) < 1, `B : le seuil de la phase IV ne se traverse pas d'un coup (PV à l'instant du passage ${Math.round(t.hpMin)} = seuil − 1 : ${t.seuil}), phase V atteinte`);
@@ -159,7 +164,7 @@ if (SEC.includes('B')) {
   ok(t.lectures >= 2 && t.transitions.length >= 1 && t.pause, `B : relecture à la transition (${t.lectures} lectures), jamais de pause`);
   ok(t.p4.phase === 4 && t.p4.r === DB.dessin.r.sol && t.p4.etat === DB.phases[3].arene && !t.p4.trans && t.p4.presence, `B : phase IV : au sol (r ${t.p4.r}), arène à l'état ${t.p4.etat}, transition finie`);
   ok(t.consAvant >= 1 && t.poser.ok, `B : une construction d'essai posée en IV par la console (${t.consAvant} debout ; elle n'est plus tirée : 5c)`);
-  ok(t.p5.phase === 5 && t.p5.etat === DB.phases[4].arene && t.p5.cons === 0 && !t.p5.trans && t.p5.lectures >= 2, `B : phase V : arène à l'état ${t.p5.etat}, constructions effacées, relue`);
+  ok(t.p5.phase === 5 && t.p5.etat === DB.phases[4].arene && t.p5.cons === t.consAvant && !t.p5.trans && t.p5.lectures >= 2, `B : phase V : arène à l'état ${t.p5.etat} (gardé), constructions restées (${t.p5.cons}), relue`);
   await capture(page, 'brumeux-phase-5.png');
   // la mort : croix tombée, salle vidée, scène courte, barre de vie rendue
   const m = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), D = window.__brumeux.dbg(), X = D.X, e = X.e; e.hp = 1; X.bot = 2; let scene = false, t0 = null, hb = [];
@@ -627,12 +632,13 @@ if (SEC.includes('J')) {
       // l'appel : lu sur ce qu'il a bâti (un rail : deux Rampants pour une place), au plus 4 vivants
       MESURE({ k: 'fixe', g: 'manoeuvres' }); PAS(10, T2); out.appel = D.room.spawning.filter(q => q.appel18).map(q => q.type).concat(D.enemies.filter(o => !o.dead && o.appel18).map(o => o.type));
       MESURE({ k: 'fixe', g: 'manoeuvres' }); PAS(10, T2); MESURE({ k: 'fixe', g: 'manoeuvres' }); PAS(10, T2); out.appelMax = D.room.spawning.filter(q => q.appel18).length + D.enemies.filter(o => !o.dead && o.appel18).length;
-      // persistance : III garde tout (les cloches roulent encore), IV garde ce qui tient dans ses bornes, V efface
+      // persistance : III garde tout (les cloches roulent encore), IV garde ce qui tient dans ses bornes, V garde (5f : elles y tombent une à une)
       D.room.spawning = []; for (const o of D.enemies) if (!o.dead && !o.brx18 && !o.cons18) o.dead = true;
       window.__brumeux.poser('echafaudages'); PAS(3, T2); const n2 = X.bat.length; e.hp = Math.floor(e.maxHp * X.seuils[1]) - 2; window.__brumeux.vers(3); PAS(60 * 6, T2);
       out.p3 = { phase: window.__brumeux.etat().phase, avant: n2, apres: X.bat.length, piliers: D.room.pillars.filter(p => p.cons18).length };
-      window.__brumeux.vers(4); PAS(60 * 8, T2); const B4 = D.AR; out.p4 = { phase: window.__brumeux.etat().phase, n: X.bat.length, dans: X.bat.every(c => c.disques.every(d => d.x - d.r >= B4.x0 - 1 && d.x + d.r <= B4.x1 + 1 && d.y - d.r >= B4.y0 - 1 && d.y + d.r <= B4.y1 + 1)), cedees: X.j.cedees };
-      window.__brumeux.vers(5); PAS(60 * 6, T2); out.p5 = { phase: window.__brumeux.etat().phase, n: X.bat.length, piliers: D.room.pillars.filter(p => p.cons18).length, entites: D.enemies.filter(o => !o.dead && o.cons18).length };
+      window.__brumeux.vers(4); PAS(60 * 8, T2); if (!X.bat.length) { const A4 = D.AR, cx = (A4.x0 + A4.x1) / 2, cy = (A4.y0 + A4.y1) / 2; out.pose4 = []; for (const so of ['murailles', 'echafaudages', 'colonnades']) for (const q of [[cx - 260, cy], [cx + 260, cy], [cx, cy + 170], [cx, cy - 170]]) if (!X.bat.length) out.pose4.push(so + ':' + (window.__brumeux.poser(so, { p: q }).raison || 'ok')); PAS(60 * 2, T2); }   // v18.10 : si aucune ne tenait dans les bornes de IV, une muraille posée dedans (la persistance en V se lit sur elle)
+      const B4 = D.AR; out.p4 = { pose4: out.pose4, phase: window.__brumeux.etat().phase, n: X.bat.length, dans: X.bat.every(c => c.disques.every(d => d.x - d.r >= B4.x0 - 1 && d.x + d.r <= B4.x1 + 1 && d.y - d.r >= B4.y0 - 1 && d.y + d.r <= B4.y1 + 1)), cedees: X.j.cedees };
+      TAIRE(); window.__brumeux.vers(5); PAS(60 * 3.5, T2); TAIRE(); out.p5 = { phase: window.__brumeux.etat().phase, n: X.bat.length, piliers: D.room.pillars.filter(p => p.cons18).length, entites: D.enemies.filter(o => !o.dead && o.cons18).length };
       return out; }, [PAS.toString(), TAIRE.toString(), MESURE.toString()]);
     ok(r.annonce.s >= 1.45 && r.annonce.s <= 1.6 && r.annonce.vMin > 0 && r.annonce.posee > 0 && r.annonce.piliers > 0, `J-B : annonce en craie ${r.annonce.s.toFixed(2)} s (${r.annonce.sorte}), ses mains à nu tout du long, rien de posé pendant l'annonce, posée ensuite (${r.annonce.piliers} disques)`);
     ok(r.a119.etat !== 'annulee' && r.a120.etat === 'annulee' && r.a120.vuln >= DB.constructions.annulation.nuS && r.a120.batX.length === 1, `J-B : annulation au seuil : 119 PV perdus pendant l'annonce, non ; 120 (5 %), annulée, à nu ${r.a120.vuln} s de plus, sa sorte écartée de la boucle`);
@@ -649,7 +655,8 @@ if (SEC.includes('J')) {
     ok(r.appel.length >= 2 && r.appel.filter(t => t === 'rampant').length >= 2 && r.appelMax <= DB.manoeuvres.max, `J-B : Manœuvres : ${r.appel.join(', ')} (un rail : deux Rampants), jamais plus de ${DB.manoeuvres.max} vivants (${r.appelMax})`);
     ok(r.p3.phase === 3 && r.p3.apres === r.p3.avant && r.p3.piliers > 0, `J-B : en III, les constructions restent (${r.p3.apres} / ${r.p3.avant}, ${r.p3.piliers} disques)`);
     ok(r.p4.phase === 4 && r.p4.dans, `J-B : en IV, seules restent celles qui tiennent dans les bornes (${r.p4.n} gardées, ${r.p4.cedees} effacées)`);
-    ok(r.p5.phase === 5 && r.p5.n === 0 && r.p5.piliers === 0 && r.p5.entites === 0, 'J-B : en V, toutes effacées (piliers et entités)');
+    ok(r.p5.phase === 5 && r.p5.n === r.p4.n && r.p5.piliers > 0, `J-B : en V (5f), elles restent debout (${r.p5.n} / ${r.p4.n}, ${r.p5.piliers} disques) : elles y tombent une à une`);
+    if (r.p4.pose4) console.log('   IV : aucune ne tenait dans les bornes ; essais de pose : ' + r.p4.pose4.join(' '));
     await capture(page, 'ouvrage-persistance.png');
     ok(!errs.length, 'J-B : aucune erreur ' + errs.slice(0, 2).join(' | '));
     await ctx.close();
@@ -1314,6 +1321,308 @@ if (SEC.includes('L')) {
       const B = window.__brume, keep = D.P.cls; ['lum', 'gou', 'her', 'tis'].forEach((cls, i) => { D.P.cls = cls; ['n', 't'].forEach((et, j) => { const I = D.imgCorps(cls, et); g.save(); g.translate(85 + i * 170, 85 + j * 160); g.drawImage(I.cv, I.x0, I.y0, I.w, I.h); g.restore(); }); }); D.P.cls = keep; return cv.toDataURL(); });
       const { writeFileSync } = await import('node:fs'); writeFileSync(join(DIR, 'emprunt-masques.png'), Buffer.from(url.split(',')[1], 'base64')); console.log('   capture ' + join(DIR, 'emprunt-masques.png')); }
     ok(!errs.length, `L-F${rm ? ' (mouvements réduits)' : ''} : aucune erreur ` + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+}
+// ═══ M. La phase V, « L'Effacement » (5f) ═══════════════════════════════════════════════════════════════════════════════════
+if (SEC.includes('M')) {
+  console.log('\n══ M · la phase V, « L\'Effacement » ══');
+  const EF = DB.effacement;
+  // la partition se tait ; un éclair ou un geste de V en cours est abandonné (la scène est libre pour une mesure choisie)
+  const TAIRE = () => { const X = window.__brumeux.dbg().X; if (X.tab && X.tab.eclair) X.tab = null; if (X.eff) { X.eff.g = null; X.eff.mon = null; } if (X.emp && X.emp.cur) X.emp.cur = null; X.boucle = [{ k: 'fixe', g: 'feinte' }]; X.im = 1; X.ph = 'entracte'; X.t = 1e9; };
+  const MESURE = (m) => { const X = window.__brumeux.dbg().X; X.boucle = [m]; X.im = 0; X.ph = 'entracte'; X.t = 0.01; };
+  const MEMS = { lum: 'ray_n2:3,ray_n4:2:1,pen_n1:3,pen_n2:3,fan_n1:3,pen_n5:3,fan_n2:2,ray_x3a', gou: 'vor_n1:3,vor_n3:2,dif_n1:3,dif_n2:3,dif_n4:2:1,vor_x3a,dif_x2b,reg_n1:2',
+    her: 'car_n1:3,car_n2:3,cad_n1:3,cad_n2:2,req_n1:3,req_n4:2:1,car_x1b,cad_x1a', tis: 'aig_n2:3,aig_n4:2,trm_n2:3,trm_n3:2:1,pnt_n1:3,pnt_n6:2,pnt_x1b,aig_x2a' };
+  const MONTRE = { lum: 'tab:faub/meute,tab:coeur/tir,cou:ray_n1,cou:-,emp:pen_n1,emp:fan_n1,el:fils,el:ruee,el:surjet,el:volte,el:disque,el:tir,joue:2',
+    gou: 'tab:crypt/choeur,cou:vor_n1,emp:dif_n1,emp:vor_n1,el:cadre,el:equerre,el:de,el:passe,el:couloir,el:rafale,joue:2', her: 'tab:coeur/faux,cou:car_n1,emp:car_n1,emp:req_n1,el:toile,el:truelle,el:aiguilles,el:reverence,el:anneau,el:pluie,joue:2',
+    tis: 'tab:faub/tir,cou:aig_n2,emp:aig_n2,emp:pnt_n1,el:fils,el:ruee,el:surjet,el:volte,el:disque,el:rafale,joue:2' };
+  const PURM = (() => { const bloc = n => html.match(new RegExp('/\\*' + n + ':pur\\*/([\\s\\S]*?)/\\*/' + n + ':pur\\*/'))[1];
+    const c = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array }; vm.createContext(c);
+    for (const f of ['brumeux', 'arene']) vm.runInContext(readFileSync(join(THEMIST, 'data', f + '.js'), 'utf8'), c);
+    vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxCandidatsV,brxLibresV,brxPremierV,brxMesures,brxEclairFrag,brxResserrement,brxMontre,brxPv};', c); return c.F; })();
+  // ── M-A · lecture, candidats, premier et libres en jeu = logique pure (même graine, même X.montre injecté)
+  {
+    const { page, errs, ctx } = await ouvre('');
+    const r = await page.evaluate(([PAS_, MEM, MON, TAIRE_, MESURE_]) => { const PAS = eval(PAS_), TAIRE = eval(TAIRE_), MESURE = eval(MESURE_), B = window.__brume, out = {};
+      B.cls('lum'); B.start(); PAS(3);
+      // ce qui t'a tué en V la dernière fois : un Masqué cousu (son détail : la clé d'assemblage du cousu injecté plus bas ; recalée après l'essai)
+      B.SAVE.brumeux = { v: 1, tentatives: 1, victoires: 0, phaseMax: 5, mort: { 5: 'couture' }, vus: [] };
+      window.__brumeux.essai(5, { muet: true, graine: 5300, palier: 'extreme', portes: MEM, montre: MON }); const D = window.__brumeux.dbg(), X = D.X;
+      const M = X.montre; M.tab[0].deg = 12; M.tab[1].deg = 40; M.cou[0].deg = 5; M.cou[1].deg = 30;   // les dégâts faits (le journal du jeu)
+      out.boucle = window.__brumeux.etat().boucle; out.premier = X.eff.j.premier;
+      // le détail : la clé du second cousu, comme si c'était lui ; on rejoue la rotation de la première boucle avec ce détail
+      X.sauve.cousu = { 5: { corps: M.cou[1].co.corps, cle: M.cou[1].co.cle, id: M.cou[1].id } }; X.eff.prem = { k: 'montage', cousu: X.sauve.cousu[5], fait: false };
+      window.__brumeux.dbg().X.eff.cand = null;
+      // les candidats calculés en jeu (candV) contre la logique pure sur la même copie de X.montre
+      const T9 = D.T9, liste = window.__brumeux.dbg().pure.brxEmpruntables(window.__brumeux.DB, D.RUN.memoire.actifs.map(a => ({ id: a.id, src: a.src, rang: a.rang, g: a.g || 0 })), T9).liste;
+      out.montre = window.__brumeux.dbg().pure.brxMontre(M); out.liste = liste.map(x => ({ id: x.id, fam: x.fam, rang: x.rang, max: x.max, g: x.g, vars: x.vars }));
+      // la première mesure (le montage, rotation) : jouée en jeu ; le cousu choisi
+      PAS(60 * 1.5, () => { D.P.iT = 1; D.P.hp = D.P.s.maxHp; }); out.log = X.eff.j.log.slice(); out.candJeu = window.__brumeux.etat().eff.cand; out.vivants = 0;
+      // une mesure libre : X.rng remis à une graine connue juste avant ; ses éléments contre brxLibresV
+      const lec = { poids: X.lec.poids, premier: X.lec.premier }; out.lec = lec; out.parC = Object.assign({}, X.parC);
+      TAIRE(); PAS(60 * 6, () => { D.P.iT = 1; D.P.hp = D.P.s.maxHp; });
+      for (const o of D.enemies) if (!o.dead && !o.brx18 && !o.cons18) o.dead = true; D.room.spawning = []; X.zones = []; X.tirs = []; PAS(2);
+      out.libres = []; for (let k = 0; k < 6; k++) { X.rng = (function (s) { return function () { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })(900 + k);
+        X.parC = k % 2 ? { fils: 200, ruee: 50 } : {}; MESURE({ k: 'libre' }); PAS(1); out.libres.push({ el: (X.boucle[0].elements || []).slice(), parC: Object.assign({}, X.parC) }); TAIRE(); X.zones = []; X.tirs = []; X.rev18 = null; PAS(2); }
+      out.palier = X.palier; return out; }, [PAS.toString(), MEMS.lum, MONTRE.lum, TAIRE.toString(), MESURE.toString()]);
+    const attB = PURM.brxPremierV(PURM.brxMesures(DB, 4, { palier: 'extreme' }), 'couture').mesures.map(m => m.k).join(' ');
+    ok(r.premier === 'montage' && r.boucle.map(k => k.startsWith('[') ? 'libre' : k).join(' ') === attB, `M-A : ce qui t'a tué en V (un cousu) ouvre la boucle (brxPremierV) : ${r.boucle.join(' ')}`);
+    const Cp = PURM.brxCandidatsV(DB, r.montre, { liste: r.liste, vivants: 0, premier: { k: 'montage', cousu: { cle: r.montre.cou[1].cle } } });
+    ok(r.candJeu && r.candJeu.montage.mode === 'montre' && r.candJeu.montage.i === Cp.montage.i && Cp.montage.i === 1, `M-A : le montage en jeu = brxCandidatsV (le cousu de cousu[5] : ${r.candJeu && r.candJeu.montage.cou && r.candJeu.montage.cou.cle})`);
+    ok(r.candJeu && r.candJeu.eclair.mode === 'montre' && r.candJeu.eclair.tab.decor === Cp.eclair.tab.decor && Cp.eclair.tab.decor === 'coeur', `M-A : l'éclair en jeu = la logique pure (le décor qui t'a fait le plus de dégâts : ${Cp.eclair.tab.decor})`);
+    ok(r.candJeu && JSON.stringify(r.candJeu.emprunt.liste) === JSON.stringify(Cp.emprunt.liste.map(x => x.id)) && Cp.emprunt.liste.every(x => ['pen_n1', 'fan_n1'].includes(x.id)), `M-A : l'emprunt en jeu ne prend que ce qu'il a emprunté en IV, encore porté (${r.candJeu && r.candJeu.emprunt.liste.join(', ')})`);
+    let lb = 0; const mk = s => () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    r.libres.forEach((L, k) => { const p = PURM.brxLibresV(DB, r.lec, r.montre, L.parC, r.palier, mk(900 + k), {}, { moins: 0, plancher: DB.couture.budget.plancher, premier: null }); if (p.elements.join('+') !== L.el.join('+')) lb++; });
+    ok(lb === 0 && r.libres.every(L => L.el.length), `M-A : six mesures libres en jeu = brxLibresV (même graine, même X.montre, même X.parC) : ${r.libres.map(L => L.el.join('+')).join(' | ')}`);
+    ok(r.libres.every(L => L.el.every(id => r.montre.el[id] || (['ruee', 'equerre', 'truelle'].includes(id)))), 'M-A : jamais un élément non montré (la phase II, jamais jouée ici, se tire comme dans sa phase)');
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, 'M-A : aucune erreur ' + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  // ── M-B · partitions, les quatre gestes, la feinte double, les resserrements, IV → V
+  {
+    const { page, errs, ctx } = await ouvre('');
+    const r = await page.evaluate(([PAS_, TAIRE_, MESURE_]) => { const PAS = eval(PAS_), TAIRE = eval(TAIRE_), MESURE = eval(MESURE_), out = {};
+      window.__brume.cls('lum'); window.__brumeux.essai(5, { muet: true, graine: 5310, palier: 'normal' }); out.courte = window.__brumeux.etat().boucle;
+      window.__brumeux.essai(5, { muet: true, graine: 5311, palier: 'extreme' }); out.entiere = window.__brumeux.etat().boucle;
+      window.__brumeux.essai(5, { muet: true, graine: 5312, palier: 'normal', montre: 'tab:faub/meute,joue:2,joue:4' }); const D = window.__brumeux.dbg(), X = D.X, P = D.P, AR = D.AR, e = X.e; TAIRE();
+      const cx = (AR.x0 + AR.x1) / 2, cy = (AR.y0 + AR.y1) / 2, tient = (x, y) => () => { P.x = x; P.y = y; P.iT = 1; P.hp = P.s.maxHp; e.hp = Math.max(e.hp, X.pv[4] * 0.9); };
+      PAS(5, tient(cx + 300, cy));
+      // 1. le tableau éclair : la moitié des bornes la plus loin de toi, sa vague dedans ; vidée : rideau puis à nu 2 s
+      MESURE({ k: 'eclair' }); PAS(3, tient(cx + 300, cy)); const T = X.tab; out.eclair = T ? { frag: [T.frag.x0, T.frag.y0, T.frag.x1, T.frag.y1].map(Math.round), AR: [AR.x0, AR.y0, AR.x1, AR.y1], decor: T.decor, regle: T.regle, eclair: T.eclair } : null;
+      PAS(60, tient(cx + 300, cy)); const sp = D.room.spawning.slice(); out.eclair.vague = sp.length; out.eclair.dans = sp.every(o => o.x >= T.frag.x0 - 1 && o.x <= T.frag.x1 + 1 && o.y >= T.frag.y0 - 1 && o.y <= T.frag.y1 + 1);
+      PAS(60 * 1.2, tient(cx + 300, cy)); const vag = D.enemies.filter(o => !o.dead && !o.brx18 && !o.cons18 && !o.cou18);
+      for (const o of vag) { o.hp = 1; D.hit(o, 50, { crit: false }); } let vmax = 0, rideau = null; PAS(60 * 3.5, i => { tient(cx + 300, cy)(); vmax = Math.max(vmax, e.vuln || 0); if (X.tab && X.tab.sub === 'rideau' && rideau == null) rideau = i; });
+      out.eclair.vuln = +vmax.toFixed(2); out.eclair.rideau = rideau; out.eclair.vide = X.eff.j.vides; PAS(30, tient(cx + 300, cy));
+      // non vidée à 8 s : ses ennemis rentrent, le rideau sans fenêtre
+      TAIRE(); e.vuln = 0; MESURE({ k: 'eclair' }); let vm2 = 0, t8 = null; PAS(60 * 10, i => { tient(cx + 300, cy)(); if (X.tab && X.tab.sub === 'rideau' && t8 == null) t8 = i / 60; vm2 = Math.max(vm2, e.vuln || 0); }); out.eclair.non = { t8, vm2: +vm2.toFixed(2), rentres: X.eff.j.rentres };
+      // 2. l'effondrement : une muraille debout tombe et devient une fosse ; un tir la traverse
+      TAIRE(); e.vuln = 0; e.x = cx; e.y = cy - 150; const m = window.__brumeux.poserSorte('murailles', { p: [cx, cy + 200], h: [cx, cy - 150] }); PAS(5, tient(cx - 300, cy + 200));
+      const nd = X.bat.length ? X.bat[0].disques.length : 0; MESURE({ k: 'effondrement' }); PAS(3, tient(cx - 300, cy + 200)); const z = X.zones.find(q => q.id === 'effondrement');
+      out.eff = { m: m.ok, z: !!z, charge: z && z.charge, sorte: z && z.sorte }; let vm3 = 0; PAS(60 * 2.2, () => { tient(cx - 300, cy + 200)(); vm3 = Math.max(vm3, e.vuln || 0); });
+      const fo = D.room.pillars.filter(p => p.fosse5); out.eff.fosses = fo.length; out.eff.nd = nd; out.eff.bat = X.bat.length; out.eff.vuln = +vm3.toFixed(2); out.eff.kind = fo.length && fo[0].kind;
+      if (fo.length) { const f0 = fo[0], q = { x: f0.x - 200, y: f0.y, vx: 400, vy: 0, r: 7, dmg: 1, life: 3, from: null, col: '205,120,255' }; D.ep.push(q); PAS(60, tient(cx - 300, cy + 200)); out.eff.tir = { x: Math.round(q.x - f0.x), dead: !!q.dead }; }
+      PAS(30, tient(cx - 300, cy + 200));
+      // 3. un pan du bord : plus aucune construction effondrable ; le bord le plus proche, 150 × 320
+      TAIRE(); e.vuln = 0; MESURE({ k: 'effondrement' }); PAS(3, tient(AR.x0 + 60, cy)); const pz = X.zones.find(q => q.pan18); out.pan = pz ? { w: pz.w, len: Math.round(Math.hypot(pz.x1 - pz.x0, pz.y1 - pz.y0)), x0: Math.round(pz.x0), AR0: AR.x0, bord: pz.bord } : null;
+      let vm4 = 0, hp0 = P.hp, coups0 = window.__arene.journal().coups; PAS(60 * 2.5, () => { P.x = AR.x0 + 60; P.y = cy; P.iT = 0; P.dashT = 0; e.hp = Math.max(e.hp, X.pv[4] * 0.9); vm4 = Math.max(vm4, e.vuln || 0); });
+      out.pan && Object.assign(out.pan, { vuln: +vm4.toFixed(2), coup: window.__arene.journal().coups - coups0, sans: window.__arene.journal().sansSigne, tue: X.tue });
+      PAS(30, tient(cx, cy + 150));
+      // 4. le montage court : coupé → à nu 2 s ; abouti → cousu, à nu 2 s ; durée du montage ≈ 2,6 s
+      TAIRE(); e.vuln = 0; MESURE({ k: 'montage' }); PAS(30, tient(cx - 200, cy + 150)); const f = X.eff.mon && X.eff.mon.f; out.mon = f ? { pv: f.el.pvMax, hp: f.e && Math.round(f.e.maxHp) } : null;
+      if (f && f.noeud) { D.hit(f.noeud, 1e4, { crit: false }); } let vm5 = 0; PAS(60 * 2.4, () => { tient(cx - 200, cy + 150)(); vm5 = Math.max(vm5, e.vuln || 0); }); out.mon && Object.assign(out.mon, { coupe: f.etat, vuln: +vm5.toFixed(2), coupes: X.eff.j.coupes });
+      TAIRE(); e.vuln = 0; MESURE({ k: 'montage' }); let t0 = null, tAb = null, vm6 = 0; PAS(60 * 6, i => { tient(cx - 200, cy + 150)(); const g = X.eff.mon && X.eff.mon.f; if (g && g.etat === 'montage' && t0 == null) t0 = i / 60; if (X.eff.j.aboutis && tAb == null) tAb = i / 60; if (tAb != null) vm6 = Math.max(vm6, e.vuln || 0); });
+      const c = D.enemies.find(o => !o.dead && o.cou18); out.ab = { t: tAb != null && t0 != null ? +(tAb - t0).toFixed(2) : null, vuln: +vm6.toFixed(2), cousu: !!c, hp: c && Math.round(c.maxHp) };
+      // au plus un cousu vivant en V : un second montage saute
+      const s0 = X.eff.j.montagesSautes; TAIRE(); MESURE({ k: 'montage' }); PAS(5, tient(cx - 200, cy + 150)); out.ab.second = X.eff.j.montagesSautes - s0;
+      if (c) { c.dead = true; } TAIRE(); PAS(30, tient(cx, cy + 150));
+      // 5. la feinte double : deux feintes à la suite, jamais deux à la fois, la seconde 0,3 s après la fin de la première
+      e.vuln = 0; MESURE({ k: 'double' }); const bl = []; let prev = null, n2 = 0; PAS(60 * 4, i => { tient(cx, cy + 150)(); const b = D.room.bl; if (b && b !== prev && !b.second) { bl.push(i / 60); n2++; } if (!b && prev) bl.push(-(i / 60)); prev = b; });
+      out.dbl = { seq: bl.map(v => +v.toFixed(2)), n: X.eff.j.feintes, vuln: +(e.vuln || 0).toFixed(2) };
+      return out; }, [PAS.toString(), TAIRE.toString(), MESURE.toString()]);
+    ok(r.courte.join(' ') === 'eclair double effondrement montage double emprunt' && r.entiere.filter(k => k.startsWith('[')).length === 3 && r.entiere.length === 9, `M-B : partitions : courte (Normal) ${r.courte.join(' ')} ; entière (Extrême) ${r.entiere.join(' ')}`);
+    const E = r.eclair; ok(E && E.eclair && E.regle === null && E.decor === 'faub' && (E.frag[2] <= (E.AR[0] + E.AR[2]) / 2 + 1) && E.frag[0] === E.AR[0] + 30, `M-B : éclair : le décor accroché en I (${E && E.decor}), sans règle, dans la moitié des bornes la plus loin de toi (${E && E.frag.join(', ')})`);
+    ok(E && E.vague > 0 && E.dans, `M-B : éclair : une vague de ${E && E.vague} ennemis, dans le fragment`);
+    ok(E && E.vide >= 1 && E.vuln >= EF.nuS - 0.05 && E.vuln <= EF.nuS + 0.05, `M-B : éclair vidé : rideau, puis à nu ${E && E.vuln} s`);
+    ok(E && E.non.t8 != null && E.non.t8 >= 8.6 && E.non.t8 <= 9.0 && E.non.vm2 < 0.05 && E.non.rentres > 0, `M-B : éclair non vidé : à ${E && E.non.t8} s (accroche 0,8 + vie 8), ses ennemis rentrent, sans fenêtre à nu`);
+    const F2 = r.eff; ok(F2.m && F2.z && Math.abs(F2.charge - 1.7) < 0.01 && F2.sorte === 'murailles' && F2.bat === 0 && F2.fosses === F2.nd && F2.kind === 'fosse18' && F2.vuln >= 1.95, `M-B : effondrement : la muraille tombe (préavis ${F2.charge} s, première rencontre), puis devient ${F2.fosses} fosses de mêmes disques ; à nu ${F2.vuln} s`);
+    ok(F2.tir && !F2.tir.dead && F2.tir.x > 150, `M-B : un tir traverse la fosse (à ${F2.tir && F2.tir.x} px au-delà)`);
+    const Pn = r.pan; ok(Pn && Pn.w === 150 && Pn.len === 320 && Pn.x0 === Pn.AR0 && Pn.bord === 0 && Pn.coup >= 1 && Pn.sans === 0 && Pn.vuln >= 1.95 && Pn.tue === 'effondrement', `M-B : pan du bord : sans construction effondrable, du bord le plus proche (150 × 320), il frappe avec son signe (${Pn && Pn.coup} coup, ${Pn && Pn.sans} sans signe), à nu ${Pn && Pn.vuln} s ; « effondrement » ${JSON.stringify(Pn)}`);
+    ok(r.mon && r.mon.pv === 30 && r.mon.coupe === 'coupe' && r.mon.vuln >= 1.95 && r.mon.vuln <= 2.05 && r.mon.coupes === 1, `M-B : montage court coupé : nœud de ${r.mon && r.mon.pv} PV (2,5 % de 1 200), à nu ${r.mon && r.mon.vuln} s`);
+    ok(r.ab.t != null && Math.abs(r.ab.t - EF.montage.dureeS) < 0.25 && r.ab.cousu && r.ab.hp > 0 && r.ab.vuln >= 1.95 && r.ab.second === 1, `M-B : montage court abouti en ${r.ab.t} s (2,6) : un cousu de ${r.ab.hp} PV, à nu ${r.ab.vuln} s ; un second montage, un cousu vivant : sauté`);
+    const seq = r.dbl.seq, deb = seq.filter(v => v > 0), fin = seq.filter(v => v < 0).map(v => -v);
+    ok(deb.length === 2 && fin.length >= 1 && deb[1] - fin[0] >= 0.29 && deb[1] - fin[0] <= 0.4 && r.dbl.vuln < 0.05, `M-B : feinte double : deux feintes à la suite, jamais à la fois (début ${deb.join(', ')} ; fin de la première ${fin[0]}), aucune fenêtre après`);
+    await capture(page, 'effacement-double.png');
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, 'M-B : aucune erreur ' + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  // M-B, suite : l'emprunt (de ce qu'il a emprunté en IV seulement) ; IV → V (état 6 gardé, constructions gardées) ; les deux resserrements
+  {
+    const { page, errs, ctx } = await ouvre('');
+    await page.evaluate(ESSAI, { phase: 4, cls: 'lum', graine: 5320, portes: MEMS.lum, palier: 'normal' });
+    const r = await page.evaluate(([PAS_, TAIRE_, MESURE_]) => { const PAS = eval(PAS_), TAIRE = eval(TAIRE_), MESURE = eval(MESURE_), D = window.__brumeux.dbg(), X = D.X, P = D.P, AR = D.AR, e = X.e, out = {}; TAIRE();
+      const cx = (AR.x0 + AR.x1) / 2, cy = (AR.y0 + AR.y1) / 2, tient = (x, y) => () => { P.x = x; P.y = y; P.iT = 1; P.hp = P.s.maxHp; };
+      PAS(5, tient(cx, cy + 180));
+      // en IV : il emprunte pen_n1 ; on pose deux constructions (l'une au bord des bornes de l'état 6)
+      window.__brumeux.emprunter('pen_n1'); PAS(60 * 8, () => { tient(cx, cy + 180)(); e.hp = Math.max(e.hp, e.maxHp * X.seuils[3] + 400); });
+      const m1 = window.__brumeux.poserSorte('colonnades', { p: [AR.x0 + 260, cy], h: [AR.x0 + 560, cy] }), m2 = window.__brumeux.poserSorte('murailles', { p: [cx + 150, cy + 150], h: [cx + 150, cy - 200] }); PAS(5, tient(cx + 200, cy + 180));
+      out.av = { etat: window.__arene.etat().etat, bat: X.bat.filter(c => c.etat === 'debout').map(c => c.sorte), joues: X.emp.joues.map(x => x.id), m: [m1.ok, m2.ok] };
+      TAIRE(); e.hp = Math.floor(e.maxHp * X.seuils[3]) - 2; window.__brumeux.vers(5); PAS(60 * 3.6, tient(cx + 200, cy + 180));
+      out.ap = { phase: window.__brumeux.etat().phase, etat: window.__arene.etat().etat, bat: X.bat.filter(c => c.etat === 'debout').map(c => c.sorte), trans: !!X.trans, AR: [AR.x0, AR.y0, AR.x1, AR.y1], r: e.r, pvPlaf: e.pvPlaf18 };
+      // l'emprunt de V : ce qu'il a emprunté en IV (pen_n1), même si tu portes d'autres talents
+      TAIRE(); const L0 = []; for (let k = 0; k < 3; k++) { MESURE({ k: 'emprunt' }); PAS(4, tient(cx + 200, cy + 180)); const c = X.emp.cur; L0.push(c ? c.id : null); PAS(60 * 7, () => { tient(cx + 200, cy + 180)(); e.hp = Math.max(e.hp, X.pv[4] * 0.95); }); TAIRE(); PAS(20, tient(cx + 200, cy + 180)); }
+      out.emp = { ids: L0, j: X.eff.j.emprunts, nu: X.emp.j.nu };
+      // les resserrements : PV à 2/3 de la phase pendant une mesure (il attend sa fin), puis à 1/3 ; bornes, poussée sans dégât, constructions filtrées, masque fendu
+      TAIRE(); const hp0 = P.hp; MESURE({ k: 'double' }); PAS(10, tient(AR.x0 + 30, cy)); e.hp = X.pv[4] * 0.6; const ph = []; let attente = null, debut = null, vlan = 0, zonesPendant = 0, feles = [];
+      PAS(60 * 8, i => { P.iT = 1; P.x = Math.max(P.x, AR.x0 + 20); const et = window.__brumeux.etat(); if (et.eff.rs && debut == null) { debut = i / 60; feles.push(et.eff.fel); } if (!et.eff.rs && debut == null && D.room.bl) attente = i / 60;
+        if (et.eff.rs) { zonesPendant += X.zones.filter(z => !z.fait).length; } ph.push(window.__arene.etat().etat); });
+      const AR1 = [AR.x0, AR.y0, AR.x1, AR.y1]; out.r1 = { attente, debut, etat: window.__arene.etat().etat, AR: AR1, P: [Math.round(P.x), Math.round(P.y)], hp: P.hp === P.s.maxHp, zones: zonesPendant, fel: X.eff.fel, ress: X.eff.ress, bat: X.bat.filter(c => c.etat === 'debout').map(c => c.sorte), filtrees: X.eff.j.filtrees, j: X.eff.j.resserrements };
+      TAIRE(); e.hp = X.pv[4] * 0.3; PAS(60 * 5, () => { P.iT = 1; }); out.r2 = { etat: window.__arene.etat().etat, AR: [AR.x0, AR.y0, AR.x1, AR.y1], fel: X.eff.fel, ress: X.eff.ress, j: X.eff.j.resserrements };
+      // jamais au temps : la phase tenue au-dessus de 2/3 pendant 40 s ne se resserre pas
+      return out; }, [PAS.toString(), TAIRE.toString(), MESURE.toString()]);
+    ok(r.ap.phase === 5 && r.ap.etat === 6 && !r.ap.trans && r.ap.r === 48 && r.ap.AR[2] - r.ap.AR[0] === 1168, `M-B : IV → V : l'état 6 est gardé (pas de transformation), il reste au sol (r ${r.ap.r})`);
+    ok(r.av.bat.length >= 1 && r.ap.bat.join() === r.av.bat.join(), `M-B : IV → V : les constructions restent debout (${r.av.bat.join(', ')} → ${r.ap.bat.join(', ')})`);
+    ok(r.ap.pvPlaf === 1200, `M-B : le plafond du Dernier Souvenir suit les PV de la phase V (e.pvPlaf18 = ${r.ap.pvPlaf})`);
+    ok(r.emp.ids.filter(Boolean).length >= 2 && r.emp.ids.filter(Boolean).every(id => r.av.joues.includes(id)), `M-B : l'emprunt de V ne prend que ce qu'il a emprunté en IV (${r.emp.ids.join(', ')} ; empruntés en IV : ${r.av.joues.join(', ')})`);
+    ok(r.r1.debut != null && r.r1.attente != null && r.r1.debut > r.r1.attente && r.r1.etat === 7 && r.r1.AR[2] - r.r1.AR[0] === 1040 && r.r1.AR[3] - r.r1.AR[1] === 520, `M-B : premier resserrement : il attend la fin de la feinte double (fin ${r.r1.attente} s, début ${r.r1.debut} s), puis l'arène passe à 1 040 × 520 (état ${r.r1.etat})`);
+    ok(r.r1.hp && r.r1.P[0] >= r.r1.AR[0] && r.r1.zones === 0, `M-B : poussé sans dégât (PV intacts, à ${r.r1.P[0]} ≥ ${r.r1.AR[0]}), il ne lance rien pendant le resserrement`);
+    ok(r.r1.fel === 1 && r.r2.fel === 2 && r.r2.ress === 2 && r.r2.etat === 8 && r.r2.AR[2] - r.r2.AR[0] === 920 && r.r2.AR[3] - r.r2.AR[1] === 460, `M-B : second resserrement à 1/3 : 920 × 460 (état ${r.r2.etat}) ; son masque se fend (une fêlure, puis deux)`);
+ ok(r.av.m[0] && r.r1.filtrees >= 1 && !r.r1.bat.includes('colonnades'), `M-B : ce qui ne tient plus dans les nouvelles bornes s'efface (${r.r1.filtrees} : ${r.av.bat.join(', ')} → ${r.r1.bat.join(', ') || 'rien'})`);
+    await capture(page, 'effacement-resserre-2.png');
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, 'M-B (suite) : aucune erreur ' + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  // jamais au temps : la phase tenue au-dessus de 2/3 de ses PV pendant 60 s ne se resserre jamais
+  {
+    const { page, errs, ctx } = await ouvre('');
+    await page.evaluate(ESSAI, { phase: 5, cls: 'gou', graine: 5330, bot: 2 });
+    const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), X = window.__brumeux.dbg().X, e = X.e; PAS(60 * 60, () => { e.hp = Math.max(e.hp, X.pv[4] * 0.9); }); return { ress: X.eff.ress, etat: window.__arene.etat().etat, j: window.__arene.journal() }; }, [PAS.toString()]);
+    ok(r.ress === 0 && r.etat === 6 && r.j.sansSigne === 0, `M-B : 60 s au-dessus de 2/3 de ses PV (tenus à 90 %) : aucun resserrement (jamais au temps), ${r.j.coups} coups, ${r.j.sansSigne} sans signe`);
+    await ctx.close();
+  }
+  // ── M-C · le Dernier Souvenir en V (plafond, défaite de l'emprunt) ; la promotion d'un cousu de V qui te tue (et pas d'une mort par le Brumeux)
+  {
+    const { page, errs, ctx } = await ouvre('');
+    await page.evaluate(ESSAI, { phase: 5, cls: 'lum', graine: 5340, portes: MEMS.lum, emp: 'pen_n1', ds: true, dieu: false, montre: 'emp:pen_n1' });
+    const r = await page.evaluate(([PAS_, TAIRE_, MESURE_]) => { const PAS = eval(PAS_), TAIRE = eval(TAIRE_), MESURE = eval(MESURE_), D = window.__brumeux.dbg(), X = D.X, P = D.P, AR = D.AR, e = X.e, out = {}; TAIRE();
+      const cx = (AR.x0 + AR.x1) / 2, cy = (AR.y0 + AR.y1) / 2, tient = () => { P.x = cx; P.y = cy + 160; P.hp = P.s.maxHp; e.hp = Math.max(e.hp, X.pv[4] * 0.9); };
+      PAS(5, tient); out.pvPlaf = e.pvPlaf18; out.designe = window.__dernier.designe();
+      MESURE({ k: 'emprunt' }); PAS(10, tient); const c0 = X.emp.cur; const h0 = e.hp, rec = window.__dernier.bruler('pen_n1'); PAS(2, tient);
+      out.def = { id: c0 && c0.id, ph: X.emp.cur && X.emp.cur.ph, vuln: +(e.vuln || 0).toFixed(2), surFort: rec && Math.round(rec.surFort || 0), plaf: rec && rec.force ? Math.round(window.__dernier.plafondDe(e, rec.force)) : null };
+      const cj = X.emp.j.coups; PAS(60 * 4.2, tient); out.def.coups = X.emp.j.coups - cj; return out; }, [PAS.toString(), TAIRE.toString(), MESURE.toString()]);
+    ok(r.pvPlaf === 1200 && r.def.id === 'pen_n1' && r.def.ph === 'defait' && r.def.vuln >= 3.95 && r.def.coups === 0, `M-C : brûler le talent emprunté en V défait la copie : à nu ${r.def.vuln} s, aucun coup ensuite`);
+    ok(r.def.plaf != null && r.def.plaf <= 96 && r.def.surFort <= r.def.plaf + 1, `M-C : la brûlure sur lui reste sous le plafond de la phase V (${r.def.surFort} ≤ ${r.def.plaf} PV ; 48 à 96 en courte)`);
+    await ctx.close();
+    const promo = async (cas) => { const { page, errs, ctx } = await ouvre('');
+      await page.evaluate(ESSAI, { phase: 5, cls: 'lum', graine: 5341, dieu: false, montre: 'cou:ray_n1,joue:1,joue:4' });
+      const q = await page.evaluate(([PAS_, TAIRE_, MESURE_, cas]) => { const PAS = eval(PAS_), TAIRE = eval(TAIRE_), MESURE = eval(MESURE_), D = window.__brumeux.dbg(), X = D.X, P = D.P, AR = D.AR, e = X.e; TAIRE();
+        window.__nemesis.activer(true); delete window.__brume.SAVE.nemesis; const tient = () => { P.x = (AR.x0 + AR.x1) / 2; P.y = (AR.y0 + AR.y1) / 2 + 150; P.iT = 1; P.hp = P.s.maxHp; }; PAS(5, tient);
+        MESURE({ k: 'montage' }); PAS(60 * 3.5, tient); const c = D.enemies.find(o => !o.dead && o.cou18 && o.cou18.etat === 'abouti'); if (!c) return { refus: 'pas de cousu' };
+        D.RUN.essai = 0; P.iT = 0; P.dashT = 0; P.shield = 0; D.hurt(P.hp + 999, cas === 'brumeux' ? e : c); const R = D.room.asm;
+        const B = window.__nemesis.promouvoir(), S = window.__nemesis.voir(), f = S && S.liste[0];
+        return { mort: P.dead || P.hp <= 0, cousu: !!(R && R.cousu18), B, attend: f && f.attend, tue: X.tue, v5: c.cou18.v5 }; }, [PAS.toString(), TAIRE.toString(), MESURE.toString(), cas]);
+      await ctx.close(); return { q, errs }; };
+    const A1 = await promo('cousu'), A2 = await promo('brumeux');
+    console.log('   promotion (V) : ' + JSON.stringify({ cousu: A1.q, brumeux: A2.q }).slice(0, 500));
+    ok(A1.q.mort && A1.q.v5 && A1.q.cousu && A1.q.B && !A1.q.B.refus && A1.q.attend && A1.q.attend.acte === 3 && A1.q.attend.salle === 3 && A1.q.tue === 'couture', `M-C : tué par le cousu d'un montage court (hors essai) : il est promu, attend à l'acte III, salle 3 ; « ce qui t'a tué » : la couture`);
+    ok(A2.q.mort && A2.q.B && A2.q.B.refus, `M-C : tué par le Brumeux : personne n'est promu (${A2.q.B && A2.q.B.refus})`);
+    ok(!A1.errs.filter(x => !/Failed to load/.test(x)).length && !A2.errs.filter(x => !/Failed to load/.test(x)).length, 'M-C : aucune erreur');
+  }
+  // ── M-D · la phase V conduite par le bot qui frappe : quatre formes, deux graines, courte et entière ; 0 coup sans signe ; un combat entier depuis la phase I
+  const durees = {};
+  for (const [k, cls] of ['lum', 'gou', 'her', 'tis'].entries()) for (const [gi, pal] of [[0, 'normal'], [1, 'extreme']]) {
+    const { page, errs, ctx } = await ouvre('');
+    await page.evaluate(ESSAI, { phase: 5, bot: 2, cls, graine: 5400 + 10 * k + gi, portes: MEMS[cls], palier: pal, montre: MONTRE[cls] });
+    const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); let fin = null; for (let s = 0; s < 240 && fin == null; s++) PAS(60, i => { if (fin != null) return; const et = window.__brumeux.etat(); if (!et.on || et.scene || (et.pv && et.pv[0] <= 0)) fin = s * 60 + i; });
+      const et = window.__brumeux.etat(); return { j: window.__arene.journal(), st: window.__brumeux.statsRun(), fin, E: et.eff && et.eff.j, pv: et.pv }; }, [PAS.toString()]);
+    const p5 = r.st.phases[5] || { t: 0, coups: 0 }, E = r.E || {}; (durees[cls] = durees[cls] || {})[pal] = r.fin != null ? p5.t : null;
+    console.log(`   ${cls} (${pal}) : phase V ${r.fin != null ? 'finie en ' + p5.t + ' s' : 'non finie en 240 s'}, ${p5.coups} coups ; éclairs ${E.eclairs} (sautés ${E.eclairsSautes}, vidés ${E.vides}), effondrements ${E.effondrements} / pans ${E.pans} (sautés ${E.effSautes}, fosses ${E.fosses}), montages ${E.montages} (sautés ${E.montagesSautes}, coupés ${E.coupes}, aboutis ${E.aboutis}), emprunts ${E.emprunts} (sautés ${E.empruntsSautes}), doubles ${E.doubles}, libres ${E.libres} [${(E.libresEl || []).join(' | ')}], à nu ${E.nu}, resserrements ${(E.resserrements || []).length}`);
+    if (r.j.liste.length) console.log('   coups suspects : ' + JSON.stringify(r.j.liste.slice(0, 6)));
+    ok(r.j.sansSigne === 0, `M-D : ${cls} (${pal}) : aucun coup sans signe (${r.j.coups} coups reçus)`);
+    ok(r.fin != null, `M-D : ${cls} (${pal}) : le bot qui frappe finit la phase V (${p5.t} s ; PV placeholders, recalés en 5g)`);
+    ok(pal !== 'extreme' || E.libres >= 0, `M-D : ${cls} (${pal}) : mesures libres en Extrême seulement (${E.libres})`);
+    ok(r.j.assertions === 0 && !errs.filter(x => !/Failed to load/.test(x)).length, `M-D : ${cls} (${pal}) : aucune erreur ` + errs.slice(0, 2).join(' | '));
+    if (cls === 'tis' && pal === 'extreme') await capture(page, 'effacement-combat.png');
+    await ctx.close();
+  }
+  // la phase V tenue (ses PV gardés au-dessus de 2/3 pendant 90 s, puis lâchés) : le bot affronte une boucle entière et plus, dans les quatre formes
+  for (const [k, cls] of ['lum', 'gou', 'her', 'tis'].entries()) {
+    const { page, errs, ctx } = await ouvre('');
+    await page.evaluate(ESSAI, { phase: 5, bot: 2, cls, graine: 5450 + k, portes: MEMS[cls], palier: k % 2 ? 'extreme' : 'normal', montre: MONTRE[cls] });
+    const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), X = window.__brumeux.dbg().X, e = X.e; PAS(60 * 90, () => { e.hp = Math.max(e.hp, X.pv[4] * 0.7); });
+      return { j: window.__arene.journal(), E: X.eff.j, st: window.__brumeux.statsRun() }; }, [PAS.toString()]);
+    const E = r.E; console.log(`   ${cls} tenue 90 s : ${r.j.coups} coups, ${r.j.sansSigne} sans signe ; éclairs ${E.eclairs} (vidés ${E.vides}), effondrements ${E.effondrements} / pans ${E.pans}, montages ${E.montages} (coupés ${E.coupes}, aboutis ${E.aboutis}), emprunts ${E.emprunts}, doubles ${E.doubles}, libres ${E.libres}, à nu ${E.nu}, sautées ${E.mesuresSautees}`);
+    if (r.j.liste.length) console.log('   coups suspects : ' + JSON.stringify(r.j.liste.slice(0, 6)));
+    ok(r.j.sansSigne === 0 && E.eclairs >= 2 && E.doubles >= 3 && E.pans + E.effondrements >= 2, `M-D : ${cls}, phase V tenue 90 s : aucun coup sans signe ; tous les gestes joués`);
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, `M-D : ${cls} (tenue) : aucune erreur ` + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  console.log('   durées de la phase V au bot : ' + Object.entries(durees).map(([c, v]) => c + ' courte ' + (v.normal == null ? '—' : v.normal + ' s') + ', entière ' + (v.extreme == null ? '—' : v.extreme + ' s')).join(' · '));
+  {
+    const { page, errs, ctx } = await ouvre('');
+    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls: 'gou', graine: 5460, palier: 'extreme', portes: MEMS.gou });
+    const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); let fin = null; PAS(60 * 620, i => { const et = window.__brumeux.etat(); if ((et.scene || !et.on) && fin == null) fin = i; });
+      const et = window.__brumeux.etat(); return { st: window.__brumeux.statsRun(), j: window.__arene.journal(), M: et.eff && et.eff.montre, E: et.eff && et.eff.j }; }, [PAS.toString()]);
+    const ph = r.st.phases; console.log(`   combat entier (gou, Extrême) : ${r.st.fin} ; ${Object.entries(ph).map(([k, p]) => k + ' : ' + p.t + ' s').join(' · ')} ; montré ${JSON.stringify(r.M && { ph: r.M.ph, tab: r.M.tab.length, cou: r.M.cou.length, emp: r.M.emp.length, el: Object.keys(r.M.el).length })} ; V : ${JSON.stringify(r.E && { e: r.E.eclairs, p: r.E.pans, f: r.E.effondrements, m: r.E.montages, ms: r.E.montagesSautes, emp: r.E.emprunts, l: r.E.libresEl })}`);
+    ok(r.st.fin === 'victoire' && ph[5] && r.j.sansSigne === 0 && r.M && [0, 1, 2, 3].every(k => r.M.ph[k]), `M-D : combat entier depuis la phase I (Gouffre, Extrême) : I → V enchaînées, ce que le combat a montré relu en V, ${r.j.coups} coups, ${r.j.sansSigne} sans signe`);
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, 'M-D (combat entier) : aucune erreur ' + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  // ── M-E · coût apparié dans une seule page : son corps en V, un cousu, une vague d'éclair, deux constructions, la brume des resserrements (état 8), contre le
+  // fantôme d'essai à foule égale ; les calques des états 7 et 8 peints une tuile par image en IV ; l'entrée d'un essai en V
+  {
+    const { page, errs, ctx } = await ouvre('');
+    const n = await page.evaluate(([PAS_, TAIRE_, MESURE_, MEM]) => { const PAS = eval(PAS_), TAIRE = eval(TAIRE_), MESURE = eval(MESURE_); window.__brume.cls('lum'); window.__brumeux.essai(5, { muet: true, graine: 7, palier: 'difficile', portes: MEM, montre: 'cou:ray_n1,tab:coeur/meute,joue:4' });
+      const D = window.__brumeux.dbg(), X = D.X, P = D.P, AR = D.AR, e = X.e; TAIRE(); const tient = () => { P.x = (AR.x0 + AR.x1) / 2 + 150; P.y = (AR.y0 + AR.y1) / 2 + 120; P.iT = 1; P.hp = P.s.maxHp; };
+      PAS(3, tient); window.__brumeux.resserrer(); window.__brumeux.resserrer(); PAS(60 * 9, tient);
+      for (const [s, x, y] of [['colonnades', -200, 60], ['puits', 200, -80]]) window.__brumeux.poserSorte(s, { p: [(AR.x0 + AR.x1) / 2 + x, (AR.y0 + AR.y1) / 2 + y], h: [(AR.x0 + AR.x1) / 2 + x, AR.y0 - 100] }); PAS(5, tient);
+      TAIRE(); MESURE({ k: 'montage' }); PAS(60 * 4, tient); TAIRE(); MESURE({ k: 'eclair' }); PAS(60 * 2.2, tient);
+      for (const o of D.enemies) if (!o.cons18 && !o.brx18) { o.spd = 0; o.stun = 1e9; } X.cuGel = true; D.render();
+      const LS = D.lights(), tous = LS.slice(), sans = tous.filter(l => l.c !== 'brume18'), A = window.__arene.dbg().A, fantome = { x: e.x, y: e.y, r: 44, zones: [], t: 9, wp: null };
+      const bat = X.bat.slice(), cpil = D.room.pillars.slice(), bpil = cpil.filter(p => !p.cons18), tab = X.tab, eff = X.eff, fel = eff.fel;
+      window.__LE = v => { X.bat = v ? bat : []; D.room.pillars.length = 0; D.room.pillars.push(...(v ? cpil : bpil)); X.tab = v ? tab : null; eff.fel = v ? fel : 0; e.dead = !v; LS.length = 0; LS.push(...(v ? tous : sans)); A.essai.boss = v ? null : fantome; };
+      return { etat: window.__arene.etat().etat, bat: bat.length, tab: !!tab && tab.sub, cousus: D.enemies.filter(o => !o.dead && o.cou18).length, foule: D.enemies.filter(o => !o.dead && !o.cons18 && !o.brx18).length, fel }; }, [PAS.toString(), TAIRE.toString(), MESURE.toString(), MEMS.lum]);
+    const APP = ([k]) => { const R = window.__arene.dbg().render, c = document.querySelector('#game').getContext('2d'), on = [], off = [];
+      for (let i = 0; i < 10; i++) { window.__LE(i % 2 === 0); R(); }
+      for (let i = 0; i < k; i++) { const v = i % 2 === 0; window.__LE(v); const t0 = performance.now(); R(); c.getImageData(0, 0, 1, 1); (v ? on : off).push(performance.now() - t0); }
+      window.__LE(true); const md = x => x.sort((p, q) => p - q)[x.length >> 1]; return [md(on), md(off)]; };
+    const rr = []; for (let k = 0; k < 5; k++) rr.push(await page.evaluate(APP, [240]));
+    const med = v => v.slice().sort((x, y) => x - y)[v.length >> 1], d = med(rr.map(x => x[0] - x[1]));
+    await capture(page, 'effacement-cout.png');
+    console.log(`   coût (apparié) : phase V (état ${n.etat}, ${n.bat} constructions, éclair ${n.tab}, ${n.cousus} cousu, foule ${n.foule}, masque fendu ${n.fel}) contre le boss d'essai, même foule : ${rr.map(x => (x[0] - x[1] >= 0 ? '+' : '') + (x[0] - x[1]).toFixed(2)).join(' / ')} ms (médiane ${d >= 0 ? '+' : ''}${d.toFixed(2)})`);
+    ok(n.etat === 8 && n.bat >= 1 && n.tab === 'vie' && n.cousus === 1, `M-E : la scène mesurée : état 8, ${n.bat} constructions, une vague d'éclair, un cousu`);
+    ok(d <= DA.budget.rendu, `M-E : coût de rendu de la phase V contre le boss d'essai : ${d >= 0 ? '+' : ''}${d.toFixed(2)} ms (≤ +${DA.budget.rendu})`);
+    const pe = await page.evaluate(() => { window.__brumeux.essai(5, { muet: true, graine: 3 }); const J = window.__brumeux.dbg().X.j, A = window.__arene.dbg().A; return { pe: A.peintureMs, mod: J.modulesMs }; });
+    ok(pe.pe + pe.mod <= DA.budget.peinture, `M-E : entrée d'un essai en V : ${(pe.pe + pe.mod).toFixed(1)} ms (≤ ${DA.budget.peinture})`);
+    const tu = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); window.__brumeux.essai(4, { muet: true, graine: 4 }); const A = window.__arene.dbg().A, N = 12, n = i => A.sol[i] ? N : (A.tard[i] || []).length;
+      const s = [[n(7), n(8)]]; for (let i = 0; i < 30; i++) { PAS(1); s.push([n(7), n(8)]); } return { s, fini: !!A.sol[7] && !!A.sol[8] }; }, [PAS.toString()]);
+    let unParImage = true; for (let i = 1; i < tu.s.length; i++) { const a = tu.s[i - 1], b = tu.s[i], d = (b[0] + b[1]) - (a[0] + a[1]); if (d > 1 || (a[0] < 12 && b[1] > 0) || (a[0] + a[1] < 24 && d < 1)) unParImage = false; }
+    ok(unParImage && tu.fini, `M-E : en IV, les calques des états 7 puis 8 se peignent une tuile par image (${tu.s.slice(0, 5).map(x => x.join('/')).join(' → ')} …, finis à la 24e)`);
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, 'M-E : aucune erreur ' + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  // ── M-F · mouvements réduits et captures : éclair, effondrement et fosse, pan du bord, montage court, emprunt de V, feinte double, deux resserrements et masque
+  // fendu, mort (cinq moments)
+  for (const rm of [false, true]) {
+    const { page, errs, ctx } = await ouvre('', { rm });
+    const sfx = rm ? '-rm' : '';
+    await page.evaluate(ESSAI, { phase: 5, cls: 'lum', graine: 5500, portes: MEMS.lum, montre: MONTRE.lum, palier: 'normal' });
+    await page.evaluate(() => { const b = document.querySelector('#banner'); if (b) b.classList.remove('show'); });   // le bandeau d'entrée (minuterie en temps réel) ne masque pas les captures
+    const pas = async (n, x, y, h = 0.9) => page.evaluate(([PAS_, n, x, y, h]) => { const PAS = eval(PAS_), D = window.__brumeux.dbg(), P = D.P, AR = D.AR, X = D.X, e = X.e; PAS(n, () => { P.x = AR.x0 + (AR.x1 - AR.x0) * x; P.y = AR.y0 + (AR.y1 - AR.y0) * y; P.iT = 1; P.hp = P.s.maxHp; if (!e.dead && h != null) e.hp = Math.max(e.hp, X.pv[4] * h); }); }, [PAS.toString(), n, x, y, h]);
+    const mes = m => page.evaluate(([M, T, m]) => { eval(T)(); eval(M)(m); }, [MESURE.toString(), TAIRE.toString(), m]);
+    await page.evaluate(TAIRE); await pas(5, 0.75, 0.6);
+    await mes({ k: 'eclair' }); await pas(40, 0.75, 0.6); await capture(page, `effacement-eclair-accroche${sfx}.png`); await pas(60 * 2, 0.75, 0.6); await capture(page, `effacement-eclair${sfx}.png`);
+    await pas(60 * 8, 0.75, 0.6); await page.evaluate(TAIRE);
+    await page.evaluate(() => { const D = window.__brumeux.dbg(), AR = D.AR, e = D.X.e, cx = (AR.x0 + AR.x1) / 2, cy = (AR.y0 + AR.y1) / 2; e.x = cx - 250; e.y = cy - 120; window.__brumeux.poserSorte('murailles', { p: [cx, cy + 180], h: [cx, cy - 150] }); });
+    await pas(5, 0.5, 0.8); await mes({ k: 'effondrement' }); await pas(60, 0.5, 0.8); await capture(page, `effacement-effondrement${sfx}.png`); await pas(54, 0.5, 0.8); await capture(page, `effacement-fosse-enfonce${sfx}.png`); await pas(60 * 1.6, 0.5, 0.8); await capture(page, `effacement-fosse${sfx}.png`);
+    await mes({ k: 'effondrement' }); await pas(60, 0.06, 0.5); await capture(page, `effacement-pan${sfx}.png`); await pas(60 * 2.5, 0.5, 0.75);
+    await mes({ k: 'montage' }); await pas(70, 0.35, 0.7); await capture(page, `effacement-montage${sfx}.png`); await pas(60 * 5, 0.35, 0.7);
+    await page.evaluate(() => { for (const o of window.__brumeux.dbg().enemies) if (o.cou18) o.dead = true; });
+    await mes({ k: 'emprunt' }); let k = 0; for (; k < 60; k++) { await pas(4, 0.5, 0.8); const st = await page.evaluate(() => { const c = window.__brumeux.etat().emp.cur; return c && c.st ? c.st.ph : c ? c.ph : 'fini'; }); if (st === 'charge') break; }
+    await pas(12, 0.5, 0.8); await capture(page, `effacement-emprunt${sfx}.png`); await pas(60 * 6, 0.5, 0.8);
+    await mes({ k: 'double' }); await pas(45, 0.5, 0.8); await capture(page, `effacement-feinte-double${sfx}.png`); await pas(60 * 3, 0.5, 0.8);
+    // les deux resserrements : ses bras levés, l'arène qui recule, le masque fendu ; aucune secousse en mouvements réduits
+    await page.evaluate(TAIRE); await page.evaluate(() => { const X = window.__brumeux.dbg().X; X.e.hp = X.pv[4] * 0.6; });
+    for (let i = 0; i < 6; i++) { await pas(i ? 25 : 30, 0.5, 0.8, null); if (i === 0) await capture(page, `effacement-resserre-bras${sfx}.png`); if (i === 3) await capture(page, `effacement-resserre-1${sfx}.png`); }
+    await page.evaluate(() => { const X = window.__brumeux.dbg().X; X.e.hp = X.pv[4] * 0.3; }); await pas(60 * 4, 0.5, 0.8, null); await capture(page, `effacement-resserre-2${sfx}.png`);
+    const st = await page.evaluate(() => { const X = window.__brumeux.dbg().X; return { fel: X.eff.fel, etat: window.__arene.etat().etat, ph: X.ph, g: X.eff.g && X.eff.g.k, tab: !!X.tab, emp: X.emp && X.emp.cur && X.emp.cur.ph, zones: X.zones.length, tirs: X.tirs.length, bl: !!window.__brumeux.dbg().room.bl, hp: Math.round(X.e.hp), pv: X.pv[4], rs: !!X.eff.rs }; });
+    ok(st.fel === 2 && st.etat === 8, `M-F${rm ? ' (mouvements réduits)' : ''} : deux resserrements (état ${st.etat}), masque fendu deux fois ${st.etat === 8 ? '' : JSON.stringify(st)}`);
+    // la mort : cinq moments
+    await page.evaluate(TAIRE); await pas(30, 0.5, 0.85, null); const mort0 = await page.evaluate(() => { const D = window.__brumeux.dbg(); return { ok: window.__brumeux.mourir(), t: D.RUN.time }; });
+    const tsM = [0.1, 0.5, 0.9, 1.8, 3.2]; let tPrev = 0; const fins = [];
+    for (const t of tsM) { await pas(Math.round((t - tPrev) * 60), 0.5, 0.85, null); tPrev = t; await capture(page, `effacement-mort-${String(t).replace('.', '_')}${sfx}.png`); fins.push(await page.evaluate(() => ({ scene: !!window.__brumeux.dbg().X.scene, debris: !!(window.__brumeux.dbg().X.eff.debris), on: window.__brumeux.etat().on }))); }
+    const sc = fins.map(f => f.scene);
+    ok(mort0.ok && sc[0] && (rm ? sc[2] && !sc[3] : sc[3] && !sc[4]) && fins.every(f => f.debris), `M-F${rm ? ' (mouvements réduits)' : ''} : sa mort : une scène de ${rm ? '1' : '3'} s (${sc.join(' ')}), les débris restent au sol`);
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, `M-F${rm ? ' (mouvements réduits)' : ''} : aucune erreur ` + errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+  // mouvements réduits : aucune secousse (shakeT) pendant un resserrement ni à sa mort
+  {
+    const { page, errs, ctx } = await ouvre('', { rm: true });
+    await page.evaluate(ESSAI, { phase: 5, cls: 'gou', graine: 5510 });
+    const r = await page.evaluate(([PAS_, TAIRE_]) => { const PAS = eval(PAS_), D = window.__brumeux.dbg(), X = D.X; eval(TAIRE_)();
+      X.e.hp = X.pv[4] * 0.3; PAS(60 * 8, () => { D.P.iT = 1; }); const r1 = X.eff.ress; window.__brumeux.mourir(); PAS(60 * 1.2); return { r1, fel: X.eff.fel, scene: !!X.scene, debris: !!X.eff.debris }; }, [PAS.toString(), TAIRE.toString()]);
+    ok(r.r1 === 2 && r.fel === 2 && !r.scene && r.debris, `M-F (mouvements réduits) : deux resserrements de suite (${r.r1}), puis sa mort en fondu d'1 s, débris au sol`);
+    ok(!errs.filter(x => !/Failed to load/.test(x)).length, 'M-F (mouvements réduits, suite) : aucune erreur ' + errs.slice(0, 2).join(' | '));
     await ctx.close();
   }
 }

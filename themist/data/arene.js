@@ -8,7 +8,8 @@
  actif:false,
  // Salles qui reçoivent l'arène (Q1 : le boss final seulement). w × h : taille du monde en écrans (1 280 × 720) ; entree : point d'entrée
  // du joueur, en fractions du monde. etats : états d'arène (Q5) : 0 à 2 d'ESSAI (banc-arene A et C comptent sur eux, à leurs places) ; les états
-// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c ; 5 : phase III, action 5d ; 6 : phase IV, action 5e).
+// réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c ; 5 : phase III, action 5d ; 6 : phase IV, action 5e ;
+// 7 et 8 : les deux resserrements de la phase V, action 5f).
  // Un état : bornes jouables (fractions des bornes dures), obstacles (piliers, disques), vides (fosses : on n'y marche pas, rien n'y apparaît),
  // sol (calque peint à l'entrée), brume de décor (ne cache jamais un télégraphe ni un signe de bord). fx, fy : fractions des bornes dures ; r en px.
  salles:{
@@ -42,7 +43,15 @@
     // 6 · phase IV réelle du Brumeux, « L'Emprunt » (fiche 5e, § 5) : les bornes d'une salle ordinaire d'un écran (1 168 × 584, celle de la justice des
     // armes de la Brume) au centre du monde : la caméra se fixe ; ni obstacle ni fosse (l'abri, c'est ce qui reste de ses constructions) ; sol pierre (on est
     // ailleurs) ; brume de décor sur les côtés, hors des bornes. tard : peint une tuile par image pendant la phase III.
-    {id:'emprunt',tard:true,bornes:{fx0:0.2614,fy0:0.1907,fx1:0.7386,fy1:0.8093},sol:'pierre',obstacles:[],vides:[],brume:[{fx:0.13,fy:0.5,r:300,a:0.2},{fx:0.87,fy:0.5,r:300,a:0.2}]}]}},
+    {id:'emprunt',tard:true,bornes:{fx0:0.2614,fy0:0.1907,fx1:0.7386,fy1:0.8093},sol:'pierre',obstacles:[],vides:[],brume:[{fx:0.13,fy:0.5,r:300,a:0.2},{fx:0.87,fy:0.5,r:300,a:0.2}]},
+    // 7 et 8 · la phase V, « L'Effacement » (fiche 5f, § 4) : elle commence dans l'état 6 (le duel continue dans la même salle) ; à 2/3 puis à 1/3 des PV de
+    // la phase, l'arène se resserre : 1 040 × 520 (79 % de l'aire), puis 920 × 460 (62 %), toujours au centre du monde (la caméra reste fixe). Sol pierre ;
+    // la brume de décor grossit et s'épaissit à chaque resserrement, toujours hors des bornes : c'est elle qui « mange » l'arène. tard : peints une tuile par
+    // image pendant la phase IV.
+    {id:'effacement',tard:true,bornes:{fx0:0.2876,fy0:0.2246,fx1:0.7124,fy1:0.7754},sol:'pierre',obstacles:[],vides:[],
+     brume:[{fx:0.16,fy:0.5,r:380,a:0.28},{fx:0.84,fy:0.5,r:380,a:0.28},{fx:0.5,fy:0.12,r:300,a:0.2},{fx:0.5,fy:0.88,r:300,a:0.2}]},
+    {id:'effacement-2',tard:true,bornes:{fx0:0.3121,fy0:0.2564,fx1:0.6879,fy1:0.7436},sol:'pierre',obstacles:[],vides:[],
+     brume:[{fx:0.18,fy:0.5,r:420,a:0.36},{fx:0.82,fy:0.5,r:420,a:0.36},{fx:0.5,fy:0.15,r:340,a:0.28},{fx:0.5,fy:0.85,r:340,a:0.28}]}]}},
  // Bornes dures dans le monde : à la même distance des bords que l'arène d'un écran (AR : 56, 92, 56, 44).
  mur:{g:56,h:92,d:56,b:44},
  // La caméra (Q3). zone : zone morte (rectangle centré) ; tau : lissage exponentiel (s), jamais de dépassement ; avance : jusqu'à px dans le sens

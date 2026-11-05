@@ -68,7 +68,7 @@ for (let i = 0; i < dist.length; i++) for (let j = i + 1; j < dist.length; j++) 
 // secret du wiki (Q9) : rien sur l'arène hors du journal ; la ligne du journal ne dit ni phase chiffrée, ni « invente », ni le nom des états
 const vers = (() => { const c = { window: {} }; vm.createContext(c); vm.runInContext(readFileSync(join(ROOT, 'data', 'versions.js'), 'utf8'), c); return c.window.BRUME_DATA.versions; })();
 const j184 = vers.journal.filter(x => x.h === 'v18.4');
-ok(/^v18\.[4-9]/.test(vers.actuelle) && j184.length === 1, 'journal : une ligne v18.4, version actuelle v18.4 ou plus (v18.5 : le Brumeux)');
+ok(/^v18\.([4-9]|1\d)$/.test(vers.actuelle) && j184.length === 1, 'journal : une ligne v18.4, version actuelle v18.4 ou plus (v18.5 : le Brumeux)');
 const sols = [...new Set(S.etats.map(e => e.sol))];
 for (const x of j184) {
   ok(!/phase\s*\d|\d\s*phases?|invent/i.test(x.t), 'journal v18.4 : ni phase chiffrée, ni invention');
