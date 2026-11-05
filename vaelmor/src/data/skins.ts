@@ -63,7 +63,7 @@ export const SKIN_POSES: Readonly<Record<string, readonly string[]>> = {
  * Elle est ajoutée à l'adresse des fichiers (`?v=`) pour que le navigateur ne garde pas une ancienne
  * feuille avec un nouveau code (cellules décalées, unité invisible).
  */
-export const SKIN_REV = 17;
+export const SKIN_REV = 18;
 
 /**
  * Expressions des portraits (générées avec Pixellab, `vocal-animation`, 3 positions de bouche) :

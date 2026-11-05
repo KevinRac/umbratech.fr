@@ -252,289 +252,312 @@
     },
     "ecumeur_sabreur": {
       "sheet": "ecumeur_sabreur",
-      "frame": [68, 68],
-      "feet": [30, 57],
+      "frame": [168, 128],
+      "feet": [34, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 4, "hold": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 10, "peak": 9, "hold": 11 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 5, "peak": 4, "hold": 8, "reach": 14 },
+        "critique": { "row": 3, "frames": 41, "impact": 16, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "ecumeur_archer": {
       "sheet": "ecumeur_archer",
-      "frame": [64, 64],
-      "feet": [31, 53],
+      "frame": [112, 96],
+      "feet": [44, 80],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 9 },
-        "critique": { "row": 2, "frames": 13, "impact": 6, "peak": 5, "hold": 8 }
+        "attaque": { "row": 1, "frames": 25, "impact": 19, "peak": 18, "hold": 21 },
+        "critique": { "row": 3, "frames": 33, "impact": 25, "peak": 24, "hold": 27 }
       }
     },
     "milicien": {
       "sheet": "milicien",
-      "frame": [68, 68],
-      "feet": [34, 57],
+      "frame": [184, 128],
+      "feet": [42, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 7, "peak": 6, "hold": 8 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 7, "peak": 6, "hold": 10, "reach": 12 },
+        "critique": { "row": 3, "frames": 41, "impact": 27, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "chasseur_de_ronces": {
       "sheet": "chasseur_de_ronces",
-      "frame": [68, 68],
-      "feet": [33, 57],
+      "frame": [112, 96],
+      "feet": [44, 80],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 9, "peak": 8 },
-        "critique": { "row": 2, "frames": 13, "impact": 10, "peak": 9, "hold": 11 }
+        "attaque": { "row": 1, "frames": 25, "impact": 19, "peak": 18, "hold": 20 },
+        "critique": { "row": 3, "frames": 33, "impact": 22, "peak": 21, "hold": 24 }
       }
     },
     "rodeur_timide": {
       "sheet": "rodeur_timide",
-      "frame": [68, 68],
-      "feet": [33, 56],
+      "frame": [180, 128],
+      "feet": [40, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 3, "hold": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 10, "peak": 9, "hold": 11 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 11, "peak": 10, "hold": 13, "reach": 14 },
+        "critique": { "row": 3, "frames": 41, "impact": 7, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "bucheron_corrompu": {
       "sheet": "bucheron_corrompu",
-      "frame": [68, 68],
-      "feet": [34, 56],
+      "frame": [188, 128],
+      "feet": [44, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 2, "hold": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 10, "peak": 9, "hold": 11 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 17, "peak": 16, "hold": 19, "reach": 10 },
+        "critique": { "row": 3, "frames": 41, "impact": 13, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "ecumeur_lancier": {
       "sheet": "ecumeur_lancier",
-      "frame": [68, 68],
-      "feet": [35, 55],
+      "frame": [192, 128],
+      "feet": [46, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 4, "peak": 3, "hold": 5 },
-        "critique": { "row": 2, "frames": 13, "impact": 12, "peak": 11 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 12, "peak": 11, "hold": 15, "reach": 16 },
+        "critique": { "row": 3, "frames": 41, "impact": 24, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "roi_cerf": {
       "sheet": "roi_cerf",
-      "frame": [88, 88],
-      "feet": [40, 74],
+      "frame": [208, 180],
+      "feet": [44, 152],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 5 },
-        "critique": { "row": 2, "frames": 13, "impact": 9, "peak": 8, "hold": 10 }
-      }
+        "attaque": { "row": 1, "frames": 10, "impact": 2, "peak": 1, "hold": 6 },
+        "critique": { "row": 2, "frames": 32, "impact": 20, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "golem_de_cendre": {
       "sheet": "golem_de_cendre",
-      "frame": [88, 88],
-      "feet": [41, 74],
+      "frame": [208, 180],
+      "feet": [44, 152],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 9, "peak": 8, "hold": 10 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 6, "peak": 5, "hold": 9 },
+        "critique": { "row": 3, "frames": 41, "impact": 16, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "harpie": {
       "sheet": "harpie",
-      "frame": [68, 68],
-      "feet": [33, 56],
+      "frame": [184, 128],
+      "feet": [42, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 4, "hold": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 5, "peak": 4, "hold": 6 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 6, "peak": 5, "hold": 8, "reach": 14 },
+        "critique": { "row": 3, "frames": 41, "impact": 16, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "noye": {
       "sheet": "noye",
-      "frame": [68, 68],
-      "feet": [33, 56],
+      "frame": [168, 128],
+      "feet": [34, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 4, "hold": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 6, "peak": 5, "hold": 7 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 3, "peak": 2, "hold": 7, "reach": 14 },
+        "critique": { "row": 3, "frames": 41, "impact": 18, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "mercenaire_de_cendre": {
       "sheet": "mercenaire_de_cendre",
-      "frame": [64, 64],
-      "feet": [30, 53],
+      "frame": [168, 128],
+      "feet": [34, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 6, "peak": 5, "hold": 7 },
-        "critique": { "row": 2, "frames": 13, "impact": 8, "peak": 6, "hold": 9 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 6, "peak": 5, "hold": 8, "reach": 10 },
+        "critique": { "row": 3, "frames": 41, "impact": 21, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "arbaletrier_de_cendre": {
       "sheet": "arbaletrier_de_cendre",
-      "frame": [68, 68],
-      "feet": [33, 55],
+      "frame": [112, 96],
+      "feet": [44, 80],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 11, "peak": 10, "hold": 12 }
+        "attaque": { "row": 1, "frames": 25, "impact": 11, "peak": 10, "hold": 12 },
+        "critique": { "row": 3, "frames": 33, "impact": 29, "peak": 28, "hold": 30 }
       }
     },
     "mere_harpie": {
       "sheet": "mere_harpie",
-      "frame": [76, 76],
-      "feet": [38, 64],
+      "frame": [216, 180],
+      "feet": [48, 152],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 2, "peak": 1, "hold": 3 },
-        "critique": { "row": 2, "frames": 13, "impact": 8, "peak": 6, "hold": 9 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 12, "peak": 11, "hold": 13 },
+        "critique": { "row": 3, "frames": 41, "impact": 17, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "garde_englouti": {
       "sheet": "garde_englouti",
-      "frame": [68, 68],
-      "feet": [32, 56],
+      "frame": [168, 128],
+      "feet": [34, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 4, "peak": 3, "hold": 5 },
-        "critique": { "row": 2, "frames": 13, "impact": 7, "peak": 5, "hold": 8 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 7, "peak": 6, "hold": 12, "reach": 12 },
+        "critique": { "row": 3, "frames": 41, "impact": 15, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "gardien_de_cendre": {
       "sheet": "gardien_de_cendre",
-      "frame": [92, 92],
-      "feet": [43, 76],
+      "frame": [224, 180],
+      "feet": [52, 152],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 8 },
-        "critique": { "row": 2, "frames": 13, "impact": 8, "peak": 7, "hold": 9 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 12, "peak": 11, "hold": 14 },
+        "critique": { "row": 3, "frames": 41, "impact": 15, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "ecumeur_incendiaire": {
       "sheet": "ecumeur_incendiaire",
-      "frame": [96, 68],
-      "feet": [45, 56],
+      "frame": [208, 156],
+      "feet": [40, 132],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 16, "loop": [10, 14], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [5, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [7, 12], "impact": 14 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [13, 24], "impact": 26 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "soeur_merrow": {
       "sheet": "soeur_merrow",
-      "frame": [88, 96],
-      "feet": [41, 77],
+      "frame": [258, 180],
+      "feet": [46, 152],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 13, "loop": [8, 12], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [10, 14], "impact": 16 },
+        "critique": { "row": 3, "frames": 27, "after": "tenue", "loop": [8, 12], "impact": 15 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "revenant": {
       "sheet": "revenant",
-      "frame": [64, 64],
-      "feet": [31, 53],
+      "frame": [176, 128],
+      "feet": [38, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 6, "peak": 5, "hold": 7 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 8, "peak": 7, "hold": 10, "reach": 14 },
+        "critique": { "row": 3, "frames": 41, "impact": 21, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "brakk": {
       "sheet": "brakk",
-      "frame": [92, 92],
-      "feet": [41, 77],
+      "frame": [232, 180],
+      "feet": [56, 152],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 9 },
-        "critique": { "row": 2, "frames": 13, "impact": 9, "peak": 8, "hold": 10 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 12, "peak": 11, "hold": 17 },
+        "critique": { "row": 3, "frames": 41, "impact": 16, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "pillard_des_epaves": {
       "sheet": "pillard_des_epaves",
-      "frame": [64, 64],
-      "feet": [30, 53],
+      "frame": [172, 128],
+      "feet": [36, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 4, "peak": 3, "hold": 5 },
-        "critique": { "row": 2, "frames": 13, "impact": 4, "peak": 3, "hold": 5 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 8, "peak": 7, "hold": 10, "reach": 16 },
+        "critique": { "row": 3, "frames": 41, "impact": 9, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "voilee_de_brume": {
       "sheet": "voilee_de_brume",
-      "frame": [64, 64],
-      "feet": [28, 53],
+      "frame": [232, 156],
+      "feet": [52, 132],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 16, "loop": [11, 14], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [9, 14], "impact": 16 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [8, 13], "impact": 21 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "orvane": {
       "sheet": "orvane",
-      "frame": [100, 88],
-      "feet": [52, 74],
+      "frame": [274, 180],
+      "feet": [62, 152],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 11, "loop": [1, 3], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [6, 9], "impact": 14 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [5, 9], "impact": 19 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "abyssal": {
       "sheet": "abyssal",
-      "frame": [68, 68],
-      "feet": [31, 56],
+      "frame": [208, 156],
+      "feet": [40, 132],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 16, "loop": [10, 14], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [7, 11], "impact": 14 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [5, 14], "impact": 17 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "esprit_des_ronces": {
       "sheet": "esprit_des_ronces",
-      "frame": [68, 68],
-      "feet": [33, 56],
+      "frame": [240, 156],
+      "feet": [56, 132],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 16, "loop": [11, 15], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [6, 14], "impact": 17 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [9, 15], "impact": 17 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "harponneur": {
       "sheet": "harponneur",
-      "frame": [68, 68],
-      "feet": [32, 56],
+      "frame": [192, 128],
+      "feet": [46, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 8, "peak": 7, "hold": 9 },
-        "critique": { "row": 2, "frames": 13, "impact": 8, "peak": 6, "hold": 9 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 9, "peak": 8, "hold": 14, "reach": 16 },
+        "critique": { "row": 3, "frames": 41, "impact": 19, "ms": 45 }
+      },
+      "critStyle": "film"
     }
   }
 }

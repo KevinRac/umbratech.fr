@@ -1029,7 +1029,7 @@ const fighterAnimSchema = z.strictObject({
 export const fighterSchema = z.strictObject({
   /** Fichier `assets/combat/<sheet>.png` : une rangée par animation, images de `frame` pixels, tournées vers l'est. */
   sheet: idSchema,
-  frame: z.tuple([z.number().int().min(16).max(256), z.number().int().min(16).max(256)]),
+  frame: z.tuple([z.number().int().min(16).max(320), z.number().int().min(16).max(320)]),
   /** Pieds du personnage dans une image (pixels) : le point posé sur le socle. */
   feet: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
   /** Agrandissement entier à l'écran. */
