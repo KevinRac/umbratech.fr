@@ -1,0 +1,128 @@
+{
+  "$comment": "Musiques (jalon M10, décisions n°236 à n°238). `tracks` est écrit par `npm run encode-music` (boucle en secondes, durée, similarité du raccord) : ne pas le modifier à la main. `rules` dit quelle piste joue où : `zones` (identifiant de zone → piste), `places` (lieu habité → piste, sinon `village`), `battle` (rencontre ordinaire), `boss` (rencontre de boss), `encounters` (rencontre précise → piste), `prep` (écran de préparation), `victory` et `defeat` (jingles), `ending` (fins), `title`. `fallback` : piste qui remplace une piste pas encore livrée (null : la musique en cours continue). `fadeMs` : fondu enchaîné ; `volume` : volume de base de la musique (0 à 1) avant le réglage du joueur.",
+  "fadeMs": 1200,
+  "volume": 0.8,
+  "rules": {
+    "title": "mus_title",
+    "zones": {
+      "z1": "mus_z1_aubemer",
+      "z2": "mus_z2_foret",
+      "z3": "mus_z3_cote",
+      "z4": "mus_z4_monts",
+      "z5": "mus_z5_citadelle"
+    },
+    "village": "mus_village",
+    "places": {
+      "valcendre": "mus_valcendre"
+    },
+    "prep": "mus_prep",
+    "battle": "mus_battle",
+    "boss": "mus_boss",
+    "encounters": {
+      "roi_maree_brise": "mus_final_boss",
+      "arene_serie_1": "mus_arena",
+      "arene_serie_2": "mus_arena",
+      "arene_serie_3": "mus_arena"
+    },
+    "victory": "mus_victory",
+    "defeat": "mus_defeat",
+    "ending": "mus_ending",
+    "endings": {
+      "nuit_basse": "mus_ending_nuit"
+    }
+  },
+  "fallback": {
+    "mus_prep": null,
+    "mus_ending": "mus_title",
+    "mus_ending_nuit": "mus_ending",
+    "mus_arena": "mus_battle",
+    "mus_recruit": null
+  },
+  "tracks": {
+    "mus_battle": {
+      "loop": true,
+      "loopStart": 13.6,
+      "loopEnd": 83.937,
+      "duration": 84.187,
+      "seamScore": 0.854
+    },
+    "mus_boss": {
+      "loop": true,
+      "loopStart": 37.9,
+      "loopEnd": 85.884,
+      "duration": 86.134,
+      "seamScore": 0.907
+    },
+    "mus_defeat": {
+      "loop": false,
+      "duration": 9.669
+    },
+    "mus_final_boss": {
+      "loop": true,
+      "loopStart": 56.1,
+      "loopEnd": 136.975,
+      "duration": 137.225,
+      "seamScore": 0.922
+    },
+    "mus_title": {
+      "loop": true,
+      "loopStart": 25.7,
+      "loopEnd": 185.491,
+      "duration": 185.741,
+      "seamScore": 0.905
+    },
+    "mus_valcendre": {
+      "loop": true,
+      "loopStart": 13.3,
+      "loopEnd": 105.985,
+      "duration": 106.235,
+      "seamScore": 0.923
+    },
+    "mus_victory": {
+      "loop": false,
+      "duration": 8.724
+    },
+    "mus_village": {
+      "loop": true,
+      "loopStart": 30.1,
+      "loopEnd": 152.641,
+      "duration": 152.891,
+      "seamScore": 0.861
+    },
+    "mus_z1_aubemer": {
+      "loop": true,
+      "loopStart": 39.4,
+      "loopEnd": 152.474,
+      "duration": 152.724,
+      "seamScore": 0.855
+    },
+    "mus_z2_foret": {
+      "loop": true,
+      "loopStart": 29.8,
+      "loopEnd": 126.448,
+      "duration": 126.698,
+      "seamScore": 0.956
+    },
+    "mus_z3_cote": {
+      "loop": true,
+      "loopStart": 35.5,
+      "loopEnd": 169.753,
+      "duration": 170.003,
+      "seamScore": 0.969
+    },
+    "mus_z4_monts": {
+      "loop": true,
+      "loopStart": 22.9,
+      "loopEnd": 130.589,
+      "duration": 130.839,
+      "seamScore": 0.928
+    },
+    "mus_z5_citadelle": {
+      "loop": true,
+      "loopStart": 39,
+      "loopEnd": 167.99,
+      "duration": 168.24,
+      "seamScore": 0.985
+    }
+  }
+}

@@ -18,6 +18,7 @@
  * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
 import Phaser from 'phaser';
+import { playMusic } from '../audio/music';
 import { ANIM_SPEED_FACTOR, loadAnimSpeed, loadBattleView, loadReducedEffects, onSettingsChange, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
@@ -977,6 +978,7 @@ export class BattleScene extends Phaser.Scene {
   /* ---------- Préparation (GDD §9.3, §13.4) ---------- */
 
   private startPrep(): void {
+    playMusic({ kind: 'prep' });
     const locked = this.state.ambush;
     const plan = planFromState(this.state, locked);
     // Le dernier choix de déploiement de la session, s'il tient encore.
@@ -1969,6 +1971,7 @@ export class BattleScene extends Phaser.Scene {
 
   private async openingSequence(): Promise<void> {
     this.setMode('busy');
+    playMusic({ kind: 'battle', encounter: this.params.encounterId, boss: this.state.objective === 'boss' });
     await this.wait(350);
     if (this.state.ambush) {
       // Embuscade subie (GDD §7.4) : les ennemis frappent les premiers.
@@ -2845,6 +2848,7 @@ export class BattleScene extends Phaser.Scene {
     const summary = summarize(this.state);
     const opensWorld = this.params.returnTo === 'world' && getWorldState() !== null;
     const settlement = this.settle(summary.outcome === 'victory' ? 'victory' : 'defeat');
+    playMusic({ kind: summary.outcome === 'victory' ? 'victory' : 'defeat' });
     const ctx = getGameCtx();
     const rewards = [...(ctx && settlement ? formatNotices(ctx, settlement.notices) : []), ...this.talkLines(), ...this.classicLossLines()];
     this.hud.showResult(

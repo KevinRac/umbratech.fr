@@ -5,6 +5,7 @@
  * continue (retour au monde, où la compagnie se tient).
  */
 import Phaser from 'phaser';
+import { playMusic } from '../audio/music';
 import { ActionInput } from '../core/input';
 import { uiScaleFor } from '../core/viewport';
 import type { EndingDef } from '../data/schemas';
@@ -47,6 +48,7 @@ export class EndingScene extends Phaser.Scene {
     const S = uiScaleFor(this.scale.height);
     const { width, height } = this.scale;
     const ending = data.ending;
+    playMusic({ kind: 'ending', ending: ending.id });
     const warm = ending.id === 'lanterne';
     const bg = warm ? mixColor(PALETTE.nuit, PALETTE.ombreViolette, 0.35) : PALETTE.nuit;
     this.cameras.main.setBackgroundColor(bg);

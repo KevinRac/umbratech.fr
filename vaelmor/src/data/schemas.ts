@@ -1067,3 +1067,40 @@ export const battleAnimsFileSchema = z.strictObject({
   fighters: z.record(z.string().regex(/^[a-z][a-z0-9_]*$/), fighterSchema),
 });
 export type BattleAnimsFile = z.infer<typeof battleAnimsFileSchema>;
+
+/* ---------- Musique (jalon M10, n°236 à n°238) ---------- */
+
+const trackId = z.string().regex(/^mus_[a-z0-9_]+$/);
+
+export const musicTrackSchema = z.strictObject({
+  loop: z.boolean(),
+  loopStart: z.number().nonnegative().optional(),
+  loopEnd: z.number().positive().optional(),
+  duration: z.number().positive(),
+  seamScore: z.number().optional(),
+});
+export type MusicTrack = z.infer<typeof musicTrackSchema>;
+
+export const musicFileSchema = z.strictObject({
+  $comment: comment,
+  fadeMs: z.number().int().nonnegative(),
+  volume: z.number().min(0).max(1),
+  rules: z.strictObject({
+    title: trackId,
+    zones: z.record(z.string(), trackId),
+    village: trackId,
+    places: z.record(z.string(), trackId),
+    prep: trackId,
+    battle: trackId,
+    boss: trackId,
+    encounters: z.record(z.string(), trackId),
+    victory: trackId,
+    defeat: trackId,
+    ending: trackId,
+    endings: z.record(z.string(), trackId),
+  }),
+  /** Piste qui remplace une piste pas encore livrée (null : la musique en cours continue). */
+  fallback: z.record(trackId, trackId.nullable()),
+  tracks: z.record(trackId, musicTrackSchema),
+});
+export type MusicFile = z.infer<typeof musicFileSchema>;

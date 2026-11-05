@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "validate-data": "tsx tools/validate-data.ts",
-    "generate-world": "tsx tools/generate-world.ts"
+    "generate-world": "tsx tools/generate-world.ts",
+    "encode-music": "tsx tools/encode-music.ts"
   },
   "dependencies": {
     "phaser": "4.2.1",

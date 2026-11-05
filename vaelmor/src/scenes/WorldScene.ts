@@ -27,6 +27,7 @@ import { nearestFreeCell } from '../logic/world/pathfinding';
 import { canTravel, travelPoints, type TravelPoint } from '../logic/world/travel';
 import type { MarkerContext } from '../logic/world/islandMarkers';
 import { markerContext } from '../ui/islandMapView';
+import { playMusic, prefetchMusic } from '../audio/music';
 import { ZoneTracker, terrainAtCell } from '../logic/world/zones';
 import { DEFAULT_WANDER, Wanderer } from '../logic/game/wander';
 import { Rng } from '../logic/rng';
@@ -363,6 +364,8 @@ export class WorldScene extends Phaser.Scene {
     if (data.loaded) this.time.delayedCall(700, () => this.hud.toast('Partie chargée.'));
     if (data.travelled) this.time.delayedCall(500, () => this.hud.toast(`Voyage : ${data.travelled}.`));
 
+    // Pistes probables d'un combat : chargées d'avance pour que la musique parte avec lui.
+    prefetchMusic([{ kind: 'battle', encounter: '', boss: false }, { kind: 'victory' }]);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     const offSettings = onSettingsChange((key) => this.onSetting(key));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offSettings());
@@ -1172,6 +1175,13 @@ export class WorldScene extends Phaser.Scene {
     } else if (update.locationChanged) {
       this.onLocationLeft();
     }
+    if (update.zoneChanged || update.locationChanged) this.syncMusic();
+  }
+
+  /** Musique de la zone, ou du lieu habité (n°236). */
+  private syncMusic(): void {
+    const place = this.tracker.currentLocation;
+    playMusic({ kind: 'world', zone: this.tracker.currentZone?.id ?? null, place: place ? { id: String(place.props['id']), kind: place.kind } : null });
   }
 
   private onZoneEntered(zone: ZoneDef, announce: boolean): void {

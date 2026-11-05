@@ -7,7 +7,7 @@
  * puis, si une scène ouverte doit l'appliquer aussitôt, l'écouter avec
  * `onSettingsChange` dans cette scène.
  */
-import { setSoundOn, soundOn } from '../audio/sfx';
+import { loadVolume, saveVolume, type Bus } from '../audio/engine';
 import {
   ANIM_SPEED_LABEL,
   ANIM_SPEEDS,
@@ -48,6 +48,8 @@ export interface OptionRow {
   /** Une ou deux phrases sous la liste quand la ligne est choisie. */
   readonly help: string;
   readonly values: readonly OptionValue[];
+  /** Faux : Gauche/Droite s'arrêtent aux extrémités (volumes) au lieu de boucler. */
+  readonly wrap?: boolean;
   get(): string;
   set(id: string): void;
 }
@@ -56,6 +58,22 @@ const onOff = (on: string, off: string): readonly OptionValue[] => [
   { id: 'on', label: on },
   { id: 'off', label: off },
 ];
+
+/** Volumes de 0 à 100 par pas de 10 (0 : coupé). */
+export const VOLUME_STEPS: readonly OptionValue[] = Array.from({ length: 11 }, (_, i) => ({ id: String(i * 10), label: i === 0 ? 'Coupé' : `${i * 10} %` }));
+
+function volumeRow(id: string, bus: Bus, label: string, help: string): OptionRow {
+  return {
+    id,
+    section: 'son',
+    label,
+    help,
+    values: VOLUME_STEPS,
+    wrap: false,
+    get: () => String(Math.round(loadVolume(bus) / 10) * 10),
+    set: (v) => saveVolume(bus, Number(v)),
+  };
+}
 
 /** Les réglages, dans l'ordre d'affichage. */
 export function optionRows(): OptionRow[] {
@@ -87,15 +105,8 @@ export function optionRows(): OptionRow[] {
       get: () => loadAnimSpeed(),
       set: (id) => saveAnimSpeed(ANIM_SPEEDS.find((v) => v === id) ?? 'normal'),
     },
-    {
-      id: 'sound',
-      section: 'son',
-      label: 'Bruitages',
-      help: 'Les sons des combats.',
-      values: onOff('Oui', 'Non'),
-      get: () => (soundOn() ? 'on' : 'off'),
-      set: (id) => setSoundOn(id === 'on'),
-    },
+    volumeRow('musicVolume', 'music', 'Musique', 'Volume de la musique.'),
+    volumeRow('sfxVolume', 'sfx', 'Effets sonores', 'Volume des bruitages des combats et de l’interface.'),
     {
       id: 'reducedFx',
       section: 'accessibilite',
@@ -108,11 +119,12 @@ export function optionRows(): OptionRow[] {
   ];
 }
 
-/** Valeur voisine (`step` = +1 ou −1, en boucle). */
-export function stepValue(row: OptionRow, step: number): string {
+/** Valeur voisine (`step` = +1 ou −1) : en boucle, sauf pour une ligne `wrap: false` quand `wrap` n'est pas forcé. */
+export function stepValue(row: OptionRow, step: number, wrap = row.wrap !== false): string {
   const values = row.values;
   const i = Math.max(0, values.findIndex((v) => v.id === row.get()));
-  return (values[(i + step + values.length) % values.length] as OptionValue).id;
+  const j = wrap ? (i + step + values.length) % values.length : Math.max(0, Math.min(values.length - 1, i + step));
+  return (values[j] as OptionValue).id;
 }
 
 /** Libellé de la valeur actuelle. */

@@ -18,6 +18,7 @@ import encounters from '../../data/encounters.json';
 import endings from '../../data/endings.json';
 import items from '../../data/items.json';
 import locations from '../../data/locations.json';
+import music from '../../data/music.json';
 import quests from '../../data/quests.json';
 import reputation from '../../data/reputation.json';
 import skills from '../../data/skills.json';
@@ -26,7 +27,7 @@ import worldEnemies from '../../data/worldEnemies.json';
 import zones from '../../data/zones.json';
 import { GameDataError, validateGameData, type GameData, type RawGameData } from './validate';
 
-export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies, skills, allies, company, battleQuotes, endings, battleAnims };
+export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies, skills, allies, company, battleQuotes, endings, battleAnims, music };
 
 let cache: GameData | null = null;
 
