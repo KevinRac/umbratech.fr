@@ -94,18 +94,18 @@
   "fighters": {
     "heros": {
       "sheet": "heros",
-      "frame": [68, 68],
-      "feet": [29, 56],
+      "frame": [184, 128],
+      "feet": [42, 108],
       "scale": 3,
       "ranged": "competence",
-      "critStyle": "bond",
+      "critStyle": "film",
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 9, "impact": 4, "peak": 3, "hold": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 11 },
-        "competence": { "row": 3, "frames": 1, "impact": 0 },
-        "coup": { "row": 4, "frames": 1 },
-        "ko": { "row": 5, "frames": 1 }
+        "attaque": { "row": 1, "frames": 25, "impact": 12, "peak": 10, "hold": 16, "reach": 8 },
+        "critique": { "row": 3, "frames": 41, "impact": 12, "ms": 45 },
+        "competence": { "row": 6, "frames": 1, "impact": 0 },
+        "coup": { "row": 7, "frames": 1 },
+        "ko": { "row": 8, "frames": 1 }
       }
     },
     "lame_du_serment": {
@@ -122,124 +122,133 @@
     },
     "heritier_des_cendres": {
       "sheet": "heritier_des_cendres",
-      "frame": [68, 68],
-      "feet": [27, 55],
+      "frame": [128, 124],
+      "feet": [40, 104],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 15, "loop": [10, 14], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [10, 17], "impact": 19 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [19, 26], "impact": 28 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "gardien_des_marees": {
       "sheet": "gardien_des_marees",
-      "frame": [68, 68],
-      "feet": [35, 56],
+      "frame": [192, 128],
+      "feet": [46, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 4, "peak": 2, "hold": 6 },
-        "critique": { "row": 2, "frames": 13, "impact": 11, "peak": 9, "hold": 12 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 7, "peak": 6, "hold": 15, "reach": 12 },
+        "critique": { "row": 3, "frames": 41, "impact": 19, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "veilleur_des_falaises": {
       "sheet": "veilleur_des_falaises",
-      "frame": [68, 68],
-      "feet": [32, 55],
+      "frame": [112, 96],
+      "feet": [44, 80],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 5, "peak": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 10, "peak": 9 }
+        "attaque": { "row": 1, "frames": 25, "impact": 17, "peak": 16, "hold": 19 },
+        "critique": { "row": 3, "frames": 33, "impact": 26, "peak": 24, "hold": 28 }
       }
     },
     "danseur_des_courants": {
       "sheet": "danseur_des_courants",
-      "frame": [64, 64],
-      "feet": [33, 53],
+      "frame": [196, 128],
+      "feet": [48, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 8 },
-        "critique": { "row": 2, "frames": 13, "impact": 4 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 9, "peak": 8, "hold": 13, "reach": 18 },
+        "critique": { "row": 3, "frames": 41, "impact": 20, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "ingenieur_des_ruines": {
       "sheet": "ingenieur_des_ruines",
-      "frame": [68, 68],
-      "feet": [34, 56],
+      "frame": [112, 96],
+      "feet": [44, 80],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 12, "peak": 11 }
+        "attaque": { "row": 1, "frames": 25, "impact": 7, "peak": 6, "hold": 9 },
+        "critique": { "row": 3, "frames": 33, "impact": 24, "peak": 23, "hold": 26 }
       }
     },
     "chasseur_de_serpents_de_mer": {
       "sheet": "chasseur_de_serpents_de_mer",
-      "frame": [68, 68],
-      "feet": [27, 56],
+      "frame": [176, 128],
+      "feet": [38, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 7, "peak": 6, "hold": 9 },
-        "critique": { "row": 2, "frames": 13, "impact": 11 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 8, "peak": 7, "hold": 12, "reach": 15 },
+        "critique": { "row": 3, "frames": 41, "impact": 20, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "porte_lanterne": {
       "sheet": "porte_lanterne",
-      "frame": [76, 68],
-      "feet": [34, 56],
+      "frame": [128, 124],
+      "feet": [40, 104],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 15, "loop": [11, 14], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [6, 10], "impact": 16 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [10, 15], "impact": 20 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "alchimiste_des_saisons": {
       "sheet": "alchimiste_des_saisons",
-      "frame": [68, 68],
-      "feet": [32, 56],
+      "frame": [128, 124],
+      "feet": [40, 104],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 13, "loop": [9, 12], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [9, 13], "impact": 18 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [8, 13], "impact": 28 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "invocateur_de_pierres_anciennes": {
       "sheet": "invocateur_de_pierres_anciennes",
-      "frame": [76, 68],
-      "feet": [33, 56],
+      "frame": [128, 124],
+      "feet": [40, 104],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 13, "loop": [9, 12], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [5, 10], "impact": 21 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [11, 21], "impact": 26 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "faconneur_de_racines": {
       "sheet": "faconneur_de_racines",
-      "frame": [96, 68],
-      "feet": [45, 56],
+      "frame": [128, 124],
+      "feet": [40, 104],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 17, "impact": 12, "loop": [7, 11], "after": "tenue" },
-        "tenue": { "row": 2, "frames": 7, "loop": [4, 6] }
+        "attaque": { "row": 1, "frames": 25, "after": "tenue", "loop": [3, 8], "impact": 16 },
+        "critique": { "row": 3, "frames": 33, "after": "tenue", "loop": [10, 15], "impact": 26 },
+        "tenue": { "row": 5, "frames": 2 }
       }
     },
     "heraut_des_bannieres": {
       "sheet": "heraut_des_bannieres",
-      "frame": [68, 68],
-      "feet": [33, 54],
+      "frame": [172, 128],
+      "feet": [36, 108],
       "scale": 3,
       "anims": {
         "garde": { "row": 0, "frames": 1 },
-        "attaque": { "row": 1, "frames": 11, "impact": 3, "peak": 2, "hold": 4 },
-        "critique": { "row": 2, "frames": 13, "impact": 11 }
-      }
+        "attaque": { "row": 1, "frames": 25, "impact": 8, "peak": 7, "hold": 15, "reach": 20 },
+        "critique": { "row": 3, "frames": 41, "impact": 23, "ms": 45 }
+      },
+      "critStyle": "film"
     },
     "ecumeur_sabreur": {
       "sheet": "ecumeur_sabreur",

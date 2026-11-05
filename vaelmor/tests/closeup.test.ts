@@ -277,7 +277,7 @@ describe('styles de critique', () => {
     expect(critStyleFor(weapon('epee_de_fer'), null, anims)).toBe('tourbillon');
     expect(critStyleFor(weapon('hache_de_brakk'), null, anims)).toBe('bond');
     expect(critStyleFor(weapon('lance_d_estoc'), null, anims)).toBe('assaut');
-    expect(critStyleFor(weapon('epee_de_fer'), anims.fighters['heros'] ?? null, anims)).toBe('bond');
+    expect(critStyleFor(weapon('epee_de_fer'), anims.fighters['heros'] ?? null, anims)).toBe('film');
   });
 });
 
