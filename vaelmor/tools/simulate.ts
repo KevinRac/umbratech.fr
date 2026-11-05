@@ -30,12 +30,55 @@ const kitZone = (zone: string, level: number): string => {
   return Number(byLevel.slice(1)) > Number(zone.slice(1)) ? byLevel : zone;
 };
 
+/**
+ * Niveau de la compagnie devant chaque rencontre (hypothèse n°263) : le niveau moyen
+ * des soldats de la conception d'origine (v1.0 des données), figé ici pour que retoucher
+ * les ennemis ne déplace pas la compagnie avec eux. Une rencontre nouvelle retombe sur
+ * la moyenne de ses soldats.
+ */
+const PARTY_LEVEL: Readonly<Record<string, number>> = {
+  embuscade_du_gue: 3,
+  brigands_foret_racine: 4,
+  camp_des_ecumeurs: 3,
+  rodeurs_aubemer: 2,
+  patrouille_ecumeurs: 3,
+  sentinelles_ecumeurs: 3,
+  embuscade_roseaux: 2,
+  milice_aubemer: 3,
+  chasseurs_de_ronces: 5,
+  betes_de_la_foret: 5,
+  sentinelles_de_ronces: 5,
+  embuscade_sous_bois: 5,
+  milice_racine: 6,
+  roi_cerf_corrompu: 6,
+  pillards_de_greve: 9,
+  marees_mortes: 9,
+  sentinelles_du_noye: 10,
+  embuscade_noyes: 10,
+  milice_brume: 10,
+  soeur_merrow: 10,
+  mercenaires_de_cendre: 13,
+  eboulis_vivants: 13,
+  sentinelles_de_cendre: 14,
+  embuscade_harpies: 14,
+  milice_cendre: 14,
+  mere_harpie: 14,
+  gardien_de_cendre: 15,
+  revenants_de_la_citadelle: 17,
+  gardes_engloutis: 18,
+  embuscade_abysses: 18,
+  arene_serie_1: 7,
+  arene_serie_2: 12,
+  arene_serie_3: 17,
+  roi_maree_brise: 18
+};
+
 const rows: { id: string; zone: string; boss: boolean; level: number; agg: ReturnType<typeof aggregate>; byClass: Map<string, ReturnType<typeof aggregate>>; xp: number }[] = [];
 const classAll = new Map<string, BattleResult[]>();
 
 for (const enc of data.encounters.encounters) {
   if (only && !only.includes(enc.id)) continue;
-  const level = Math.max(1, Math.round(meanEnemyLevel(enc)) + DELTA);
+  const level = Math.max(1, (PARTY_LEVEL[enc.id] ?? Math.round(meanEnemyLevel({ ...enc, enemies: enc.enemies.filter((m) => m.boss !== true) }))) + DELTA);
   const all: BattleResult[] = [];
   const byClass = new Map<string, BattleResult[]>();
   for (const hero of heroes) {

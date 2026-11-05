@@ -56,7 +56,10 @@ export const PRUDENT = {
   summon: 10,
   summonNear: 3,
   /** Tours qu'elle attend l'ennemi avant d'avancer. */
-  patience: 3,
+  patience: 1,
+  /** Au-delà de ce tour, le combat s'éternise : le danger compte `rushRisk` fois moins (on force la décision). */
+  rushTurn: 6,
+  rushRisk: 0.1,
   /** Poids de l'avance (par case de distance à l'ennemi le plus proche) quand elle avance. */
   advance: 0.6,
   /** Poids de l'abri du terrain quand elle attend. */
@@ -79,6 +82,8 @@ export interface PrudentContext {
   readonly threats: readonly Threat[];
   /** Tout le monde avance (ennemis passifs ou patience épuisée) plutôt que de tenir sa position. */
   readonly advance: boolean;
+  /** Le combat s'éternise : on prend des risques. */
+  readonly rush: boolean;
 }
 
 /** Un ennemi qui ne vient pas à la compagnie (boss immobile, sentinelle endormie). */
@@ -94,7 +99,7 @@ function threatOf(state: BattleState, enemy: BattleUnit): Threat {
 export function prudentContext(state: BattleState): PrudentContext {
   const foes = state.units.filter((u) => u.hp > 0 && u.team === 'enemy');
   const advance = state.turn >= PRUDENT.patience || foes.every(isPassive);
-  return { threats: foes.map((e) => threatOf(state, e)), advance };
+  return { threats: foes.map((e) => threatOf(state, e)), advance, rush: state.turn >= PRUDENT.rushTurn };
 }
 
 /** Dégâts attendus d'un ennemi sur l'unité posée sur `cell` (touche, double attaque, critique), part répartie entre ses cibles. */
@@ -156,7 +161,7 @@ export function planPrudentAction(state: BattleState, unitId: string, rules: Bat
   const foes = foesOf(state, unit);
 
   for (const stop of stops) {
-    const base = -riskPenalty(unit, dangerAt(state, unit, stop, ctx, rules)) + cohesion(state, unit, stop);
+    const base = -riskPenalty(unit, dangerAt(state, unit, stop, ctx, rules)) * (ctx.rush ? PRUDENT.rushRisk : 1) + cohesion(state, unit, stop);
     const ground = terrainAt(state.map, stop.x, stop.y);
 
     // Attendre (ou s'avancer / reculer) : abri du terrain, et avance si la compagnie avance.
