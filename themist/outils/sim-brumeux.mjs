@@ -313,7 +313,7 @@ has(/const TH=e\.seuils18\|\|\[0\.66,0\.33\],hp0=e\.hp,guard=hp0>e\.maxHp\*\(e\.
 has(/for\(const t of TH\)\{const th=e\.maxHp\*t;if\(hp0>th&&e\.hp<th-1\)\{e\.hp=th-1;e\.lockT=RUN\.time\+BAL\.phaseLock;break;\}\}/, 'seuils de phase : les dégâts ne passent pas le seuil, verrou de phase posé');
 has("ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/", 'garde d\'essai de la némésis : brumeux');
 has("ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/", 'garde d\'essai de la descente : brumeux');
-has(/updateBoss=function\(e,dt\)\{if\(e&&e\.brx18&&X\.on\)\{try\{pas\(e,dt\);\}/, 'updateBoss enveloppé : le Brumeux joue sa partition, jamais l\'IA du Glas');
+has(/updateBoss=function\(e,dt\)\{if\(e&&e\.brx18&&X\.on\)\{try\{if\(X\.mannequin\)\{presence\(e,dt\);return;\}pas\(e,dt\);\}/, 'updateBoss enveloppé : le Brumeux joue sa partition, jamais l\'IA du Glas (le mannequin de mesure de 5g-1 ne joue rien)');
 has(/hitEnemy=function\(e,base,o\)\{if\(!\(e&&e\.brx18&&X\.on\)\)return _he\.apply/, 'hitEnemy enveloppé : changement de phase au seuil');
 has(/bossDefeated=function\(e\)\{if\(e&&e\.brx18\)\{try\{mort\(e\);\}/, 'bossDefeated enveloppé : sa mort, pas celle d\'un gardien');
 has(/drawEnemyBody=function\(e\)\{if\(!\(e&&e\.brx18\)\)return _deb\.apply/, 'drawEnemyBody enveloppé');
@@ -325,7 +325,7 @@ has(/const reservoir=\(a,n,v\)=>\{if\(a\.length<RES\)a\.push\(v\);else\{const k=
 has(/images:window\.__brumeux&&window\.__brumeux\.images\?window\.__brumeux\.images\(\):null,brumeux:window\.__brumeux&&window\.__brumeux\.statsRun/, 'statistiques de fin de run : images et combat final');
 has(/const Pa=RUN\.par18\|\|\(RUN\.par18=\{\}\);Pa\[k\]=\(Pa\[k\]\|\|0\)\+\(h0-P\.hp\);/, 'RUN.par18 : les dégâts reçus par source');
 has(/if\(A\.sourcesPlus\)for\(const s of A\.sourcesPlus\(\)\)L\.push/, 'arène : les zones du Brumeux sont des sources de signe');
-has(/if\(A\.zoneCourante\)\{ch\.push\(id\(A\.zoneCourante\)\);sorte='zone';boss=!!A\.zoneCourante\.boss;\}/, 'arène : une zone du Brumeux se juge au préavis du boss');
+has(/if\(A\.zoneCourante\)\{ch\.push\(id\(A\.zoneCourante\)\);sorte='zone';boss=!!A\.zoneCourante\.boss;/, 'arène : une zone du Brumeux se juge au préavis du boss');
 has(/,b=essaiBoss\(\)\|\|\(A\.bossCam&&A\.bossCam\(\)\),/, 'arène : la caméra glisse vers le Brumeux');
 has(/if\(A\.glypheBoss\)A\.glypheBoss\(c,0,0,t\*0\.5\);else oeil\(c,0,0,t\*0\.45\);/, 'arène : son glyphe dans le signe de bord à la place de l\'œil d\'essai');
 has(/XA\.coup\(z,\(\)=>hurtPlayer\(z\.degats,e\)\)/, 'un coup de zone passe par la zone courante de l\'arène (jugé)');
@@ -342,7 +342,7 @@ ok((html.match(/\bcreer\(/g) || []).length === 2 && /function debut\(phase0\)\{X
 ok((html.match(/\bdebut\(phase\)/g) || []).length === 1 && /debut\(phase\);showBanner\(DB\.nom/.test(html), 'debut() n\'est appelé que par l\'essai (rien en jeu avant 5g)');
 ok(!/actif:true/.test(readFileSync(join(ROOT, 'data', 'arene.js'), 'utf8')), 'arene.js : actif:false (règle d\'or)');
 has(/const QB=\/\[\?&\]brumeux=\(\\d\+\)\/\.exec\(location\.search\);/, 'essai par l\'adresse : ?brumeux=<phase>');
-has(/window\.__brumeux=\{DB,essai,vers/, 'console __brumeux');
+has(/window\.__brumeux=\{DB,essai,reference:c=>reference\(c\|\|P\.cls\),vers/, 'console __brumeux');
 // v18.6 (5b) : la phase I en jeu
 const B186 = (html.match(/═══ v18\.6 · Phase I[\s\S]*?(?=═══ v18\.7 · Phase II)/) || [''])[0];   // jusqu'à la section suivante (5c)
 ok(B186.length > 4000, 'branchement (5b) : la section « v18.6 · Phase I » existe dans le bloc du Brumeux');
@@ -538,9 +538,11 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
   for (const k of F.BRX_SORTES) { const s = SO[k], cm = CMS[s.jumelle];
     ok(s.jumelle === JUM[k] && cm && cm.ax === s.axe && !!cm.hi === (s.sens > 0), `phase II : ${k} lue sur ${s.axe} ${s.sens > 0 ? 'haute' : 'basse'}, jumelle de la contre-mesure ${s.jumelle} (${cm && cm.n})`);
     ok(s.max === MAX[k], `phase II : ${k} : au plus ${MAX[k]} debout`); }
-  ok(F.brxPvPart(D, SO.murailles.pvPart, 'normal') === 192 && F.brxPvPart(D, SO.colonnades.pvPart, 'normal') === 48 && F.brxPvPart(D, SO.rails.butoir.pvPart, 'normal') === 120 && F.brxPvPart(D, SO.puits.pvPart, 'normal') === 144 && F.brxPvPart(D, SO.echafaudages.pvPart, 'normal') === 240 && SO.douves.incassable,
-    'phase II : PV en parts des PV de la phase (muraille 192, fût 48, butoir 120, puits 144, échafaudage 240 ; douve incassable)');
-  ok(F.brxPvPart(D, SO.echafaudages.pvPart, 'extreme') === 240 && F.brxPvPart(D, SO.murailles.pvPart, 'difficile') === 192, 'phase II : jamais de PV en plus selon le palier');
+  // v18.11 (5g-1) : les PV des phases sont calibrés ; les parts restent (8 %, 2 %, 5 %, 6 %, 10 % des PV de la phase II)
+  { const pv2 = D.phases[1].pv, R = x => Math.round(x * pv2);
+    ok(SO.murailles.pvPart === 0.08 && SO.colonnades.pvPart === 0.02 && SO.rails.butoir.pvPart === 0.05 && SO.puits.pvPart === 0.06 && SO.echafaudages.pvPart === 0.10 && F.brxPvPart(D, SO.murailles.pvPart, 'normal') === R(0.08) && F.brxPvPart(D, SO.colonnades.pvPart, 'normal') === R(0.02) && F.brxPvPart(D, SO.rails.butoir.pvPart, 'normal') === R(0.05) && F.brxPvPart(D, SO.puits.pvPart, 'normal') === R(0.06) && F.brxPvPart(D, SO.echafaudages.pvPart, 'normal') === R(0.10) && SO.douves.incassable,
+      `phase II : PV en parts des PV de la phase (muraille ${R(0.08)}, fût ${R(0.02)}, butoir ${R(0.05)}, puits ${R(0.06)}, échafaudage ${R(0.10)} ; douve incassable)`);
+    ok(F.brxPvPart(D, SO.echafaudages.pvPart, 'extreme') === R(0.10) && F.brxPvPart(D, SO.murailles.pvPart, 'difficile') === R(0.08), 'phase II : jamais de PV en plus selon le palier'); }
   ok(C.lecture.seuil === 0.35 && C.annulation.part === 0.05 && C.annulation.nuS === 1.5 && C.placement.variantes === 4 && C.placement.bord === 40 && C.placement.voie === 96, 'phase II : seuil 0,35, annulation 5 % (+1,5 s), quatre variantes, bord 40 px, voie 96 px');
   ok(D.manoeuvres.n.normal === 2 && D.manoeuvres.n.difficile === 2 && D.manoeuvres.n.extreme === 3 && D.manoeuvres.max === 4, 'phase II : Manœuvres 2 / 2 / 3, au plus 4 vivants');
   ok(D.dessin.version >= 3, 'phase II : dessin.version 3 ou plus');
@@ -772,9 +774,10 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
   ok(EL.de.seconde >= D.preavis.boss, 'phase III : le second coup du Dé a son propre préavis (0,9 s ≥ 0,8 s)');
   ok(EL.aiguilles.fixe && EL.aiguilles.sorte === 'tir' && EL.aiguilles.n === 3 && EL.aiguilles.ouverture === 36 && EL.aiguilles.vitesse === 420 && EL.aiguilles.charge === 0.9 && EL.aiguilles.degats === 10 && EL.aiguilles.charge >= D.preavis.boss, 'phase III : les Aiguilles : trois tirs en éventail de 36°, 420 px/s, charge 0,9 s, 10 (grammaire des tirs)');
   ok(EL.couture.fixe && EL.couture.menace === 0 && D.cumul.couture === 1, 'phase III : l\'élément « couture » (noté quand un Masqué cousu t\'a tué), fixe');
-  ok(K.fils === 3 && K.filsMax === 3 && K.decalS === 0.5 && K.montage.dureeS === 4.4 && K.noeud.haut === 110 && K.noeud.r === 20 && K.noeud.pvPart === 0.025 && K.nuS === 3 && K.briseS === 2, 'phase III : trois fils (0,5 s d\'écart), montage de 4,4 s, nœud 110 px au-dessus (r 20, 2,5 % des PV), à nu 3 s, cousu brisé 2 s');
+  ok(K.fils === 3 && K.filsMax === 3 && K.decalS === 0.5 && K.montage.dureeS === 4.4 && K.noeud.haut === 110 && K.noeud.r === 20 && K.noeud.pvPart === 0.01 && K.cousus.pvPart === 0.10 && K.nuS === 3 && K.briseS === 2, 'phase III : trois fils (0,5 s d\'écart), montage de 4,4 s, nœud 110 px au-dessus (r 20, 1 % des PV depuis 5g-1), cousus 10 %, à nu 3 s, cousu brisé 2 s');
   { const mo = BE.assemble.montage, tot = mo.descenteS + mo.masqueS + mo.coutureS + mo.coupeS; ok(K.montage.dureeS > tot && K.montage.dureeS / tot < 1.3, `phase III : le montage de la Couture (${K.montage.dureeS} s) est celui des salles (${tot.toFixed(2)} s), ralenti`); }
-  ok(F.brxPvNoeud(D, 'normal') === 60 && F.brxPvCousu(D, 'normal', 1, 1, 1) === 360 && F.brxPvCousu(D, 'extreme', 1, 1, 1) === 360 && F.brxPvCousu(D, 'normal', 1.1, 1.2, 1.08) === Math.round(360 * 1.1 * 1.2 * 1.08), 'phase III : PV en parts des PV de la phase (nœud 60, cousu 360 × corps × porteur × points), jamais de PV en plus selon le palier');
+  { const pv3 = D.phases[2].pv, n3 = Math.round(0.01 * pv3), c3 = Math.round(0.10 * pv3);
+    ok(F.brxPvNoeud(D, 'normal') === n3 && F.brxPvCousu(D, 'normal', 1, 1, 1) === c3 && F.brxPvCousu(D, 'extreme', 1, 1, 1) === c3 && F.brxPvCousu(D, 'normal', 1.1, 1.2, 1.08) === Math.round(0.10 * pv3 * 1.1 * 1.2 * 1.08), `phase III : PV en parts des PV de la phase (nœud ${n3}, cousu ${c3} × corps × porteur × points), jamais de PV en plus selon le palier`); }
   ok(K.cousus.plancherS === DA.preavis.coup, `phase III : plancher des chargements des cousus = préavis de l'arène (${DA.preavis.coup} s)`);
   ok(JSON.stringify(K.recence) === JSON.stringify(GA.attaques[3].souvenirs.recence), 'phase III : souvenirs pondérés à la récence du Glas (1 → 3)');
   ok(K.budget.moins === 2 && K.budget.plancher === 2 && K.attente.acte === 3 && K.attente.salle === BE.assemble.premiereSalle && K.attenteZoneS === 1.5, 'phase III : budget −2 par cousu (plancher 2), attente à l\'acte III salle 3, non-cumul 1,5 s');
@@ -1056,7 +1059,8 @@ tic('// ── 13. La phase IV');
     ok(F.brxReverenceOk(el.reverence, b, [b[0], b[1] + 150]) && !F.brxReverenceOk(el.reverence, b, [b[0], b[1] + 160]), 'gestes (5e) : la Révérence ne part qu\'à 0,8 × 190 = 152 px (sinon il s\'approche, 2 s au plus, puis renonce)'); }
   // ── Dernier Souvenir : plafond calculé sur la phase pour le Brumeux (crochet pvPlaf18), inchangé pour tout autre fort ; la défaite
   { const L = DSd.plafonds, pv = F.brxPv(D, 'normal'), tot = pv.reduce((a, b) => a + b, 0); const brx = { maxHp: tot, pvPlaf18: pv[3] }, glas = { maxHp: 3600 }, masque = { maxHp: 900 };
-    const vals = [1, 1.5, 2, 3].map(f => F.brxPlafondDs(L, f, brx)); ok(Math.abs(vals[0] - 96) < 1e-9 && Math.abs(vals[2] - 192) < 1e-9 && Math.abs(vals[3] - 192) < 1e-9, `Dernier Souvenir : contre le Brumeux, le plafond se calcule sur la phase en cours : ${vals.map(v => v.toFixed(0)).join(' / ')} PV (96 à 192 en Normal)`);
+    const vals = [1, 1.5, 2, 3].map(f => F.brxPlafondDs(L, f, brx)); const a4 = L.gardienPv * pv[3], b4 = L.gardienPvMax * pv[3];   // v18.11 : sur les PV calibrés de la phase IV (4 % à 8 %)
+    ok(Math.abs(vals[0] - a4) < 1e-9 && Math.abs(vals[2] - b4) < 1e-9 && Math.abs(vals[3] - b4) < 1e-9, `Dernier Souvenir : contre le Brumeux, le plafond se calcule sur la phase en cours : ${vals.map(v => v.toFixed(0)).join(' / ')} PV (${a4.toFixed(0)} à ${b4.toFixed(0)} en Normal)`);
     ok([1, 2, 3].every(f => Math.abs(F.brxPlafondDs(L, f, glas) - SF.dsPlafond(DSd, f, 3600)) < 1e-9 && Math.abs(F.brxPlafondDs(L, f, masque) - SF.dsPlafond(DSd, f, 900)) < 1e-9), 'Dernier Souvenir : tout autre fort (gardien, Masqué) garde le plafond d\'avant (e.maxHp)');
     ok(SF.dsPlafond(DSd, 2, brx.maxHp) > 4 * F.brxPlafondDs(L, 2, brx), `contre-épreuve : un plafond sur e.maxHp pour le Brumeux (${SF.dsPlafond(DSd, 2, brx.maxHp).toFixed(0)} PV) serait attrapé`);
     has(/function reste\(rec,e\)\{if\(!fortE\(e\)\)return Infinity;let B=BUD\.get\(rec\);if\(!B\)BUD\.set\(rec,B=new Map\(\)\);if\(!B\.has\(e\)\)B\.set\(e,dsPlafond\(DS,rec\.force,e\.pvPlaf18\|\|e\.maxHp\|\|0\)\);return B\.get\(e\);\}/, '(5e) Dernier Souvenir : reste() lit e.pvPlaf18 (crochet du Brumeux), sinon e.maxHp (inerte pour tout autre fort)');
@@ -1354,9 +1358,11 @@ tic('// ── les resserrements :');
 tic('// ── le Dernier Souvenir en V');
   // ── le Dernier Souvenir en V : plafond sur les PV de la phase V ; l'emprunt défait : à nu 4,0 s
   { const L = DSd.plafonds, tot = F.brxPv(D, 'normal').reduce((a, b) => a + b, 0); const c = [1, 2].map(f => F.brxPlafondDs(L, f, { maxHp: tot, pvPlaf18: F.brxPv(D, 'normal')[4] })), e = [1, 2].map(f => F.brxPlafondDs(L, f, { maxHp: F.brxPv(D, 'extreme').reduce((a, b) => a + b, 0), pvPlaf18: F.brxPv(D, 'extreme')[4] }));
-    ok(Math.abs(c[0] - 48) < 1e-9 && Math.abs(c[1] - 96) < 1e-9 && Math.abs(e[0] - 96) < 1e-9 && Math.abs(e[1] - 192) < 1e-9, `Dernier Souvenir (5f) : plafond sur les PV de la phase V : ${c.map(v => v.toFixed(0)).join(' à ')} PV en courte, ${e.map(v => v.toFixed(0)).join(' à ')} en entière`); }
+    const v5c = F.brxPv(D, 'normal')[4], v5e = F.brxPv(D, 'extreme')[4];   // v18.11 : sur les PV calibrés de la phase V (courte, entière)
+    ok(Math.abs(c[0] - L.gardienPv * v5c) < 1e-9 && Math.abs(c[1] - Math.min(2 * L.gardienPv, L.gardienPvMax) * v5c) < 1e-9 && Math.abs(e[0] - L.gardienPv * v5e) < 1e-9 && Math.abs(e[1] - Math.min(2 * L.gardienPv, L.gardienPvMax) * v5e) < 1e-9, `Dernier Souvenir (5f) : plafond sur les PV de la phase V : ${c.map(v => v.toFixed(0)).join(' à ')} PV en courte, ${e.map(v => v.toFixed(0)).join(' à ')} en entière`); }
   // ── PV du montage court : nœud et cousu en part des PV de la phase V
-  ok(F.brxPvNoeud(D, 'normal', 4) === 30 && F.brxPvNoeud(D, 'extreme', 4) === 60 && F.brxPvCousu(D, 'normal', 1, 1, 1, 4) === 180 && F.brxPvCousu(D, 'extreme', 1, 1, 1, 4) === 360 && F.brxPvNoeud(D, 'normal') === F.brxPvNoeud(D, 'normal', 2), 'montage court : nœud 30 / 60 PV, cousu 180 / 360 PV (2,5 % et 15 % de la phase V) ; la phase III inchangée');
+  { const v5c = F.brxPv(D, 'normal')[4], v5e = F.brxPv(D, 'extreme')[4], R = Math.round;
+    ok(F.brxPvNoeud(D, 'normal', 4) === R(0.01 * v5c) && F.brxPvNoeud(D, 'extreme', 4) === R(0.01 * v5e) && F.brxPvCousu(D, 'normal', 1, 1, 1, 4) === R(0.10 * v5c) && F.brxPvCousu(D, 'extreme', 1, 1, 1, 4) === R(0.10 * v5e) && F.brxPvNoeud(D, 'normal') === F.brxPvNoeud(D, 'normal', 2), `montage court : nœud ${R(0.01 * v5c)} / ${R(0.01 * v5e)} PV, cousu ${R(0.10 * v5c)} / ${R(0.10 * v5e)} PV (1 % et 10 % de la phase V) ; la phase III inchangée`); }
   // ── la sauvegarde : aucun champ neuf (v:1) ; tab[5], bati[5], cousu[5], emp[5] ; un pan du bord : effondrement sans bati ; essai muet
   { const N = F.brxNeuf(); ok(Object.keys(N).sort().join() === 'bati,cousu,emp,mort,phaseMax,tab,tentatives,v,victoires,vus' && N.v === 1, 'sauvegarde (5f) : aucun champ neuf (v:1)');
     const S1 = F.brxNoter(N, { essai: false, phase: 5, par: 'tableau', tab: { decor: 'coeur', theme: 'faux', regle: null }, win: false }, D, J), S2 = F.brxNoter(N, { essai: false, phase: 5, par: 'effondrement', bati: 'murailles', win: false }, D, J);
@@ -1379,7 +1385,45 @@ tic('// ── le Dernier Souvenir en V');
   ok(/if\(X\.scene\.t>\(X\.scene\.dureeS\|\|2\.2\)\)X\.scene=null;/.test(html), 'branchement (5f) : la scène de sa mort en V dure 3 s (celle des phases I à IV inchangée)');
   // le journal v18.10 : ni phase, ni effacement, ni resserrement, ni masque
   for (const x of VERS.journal.filter(y => y.h === 'v18.10')) ok(!/phase|effac|resserr|masqu|arène|examen|tableau|empru|cous|fosse|copi|mort/i.test(x.t), `journal v18.10 : ni phase, ni effacement, ni resserrement, ni masque (secret) : « ${x.t} »`);
-  ok(VERS.actuelle === 'v18.10' && VERS.journal[0].h === 'v18.10', 'journal (5f) : la ligne v18.10 est en tête, version actuelle');
+  ok(VERS.journal.some(y => y.h === 'v18.10'), 'journal (5f) : la ligne v18.10 existe');
+}
+
+// ── 15. L'enchaînement, les PV au bot, les paliers (action 5g-1, v18.11)
+tic('§ 15');
+{ const TA = (() => { const c = { window: {} }; vm.createContext(c); vm.runInContext(readFileSync(join(ROOT, 'data', 'talents.js'), 'utf8'), c); return c.window.BRUME_DATA.talents; })();
+  const EQ = (() => { const c = { window: {} }; vm.createContext(c); vm.runInContext(readFileSync(join(ROOT, 'data', 'equipements.js'), 'utf8'), c); return c.window.BRUME_DATA.equipements; })();
+  // PV calibrés : multiples de 100, mêmes dans les trois paliers (sauf la phase V courte ou entière), aucun PV lu sur la forme
+  ok(D.phases.every(p => Number.isInteger(p.pv) && p.pv % 100 === 0 && p.pv >= 5000 && p.pv <= 40000), `PV (5g-1) : calibrés, multiples de 100 (${D.phases.map(p => p.pv).join(' / ')})`);
+  ok(D.phases.every(p => Object.keys(p).every(k => !/lum|gou|her|tis|forme|cls/.test(k))), 'PV (5g-1) : aucun PV par forme dans les phases');
+  ok(D.phaseV.courte.pv >= 0.4 && D.phaseV.courte.pv <= 0.6, `PV (5g-1) : la phase V courte prend ${D.phaseV.courte.pv} de l'entière (0,4 à 0,6)`);
+  { const n = F.brxPv(D, 'normal'), d = F.brxPv(D, 'difficile'), x = F.brxPv(D, 'extreme');
+    ok(n.slice(0, 4).join() === x.slice(0, 4).join() && d.join() === n.join() && x[4] === D.phases[4].pv && n[4] === Math.round(D.phases[4].pv * D.phaseV.courte.pv), `PV (5g-1) : I à IV identiques dans les trois paliers ; V courte ${n[4]}, entière ${x[4]}`); }
+  ok(!/brumeux\.phases\[[^\]]*\]\.pv\s*\*|pvForme|pvPar(Forme|Cls)/.test(html), 'PV (5g-1) : aucun multiplicateur de PV lu sur la forme dans le jeu');
+  // le build de référence
+  const R = D.bot.reference, SUBS = cls => TA.formes[cls].subs[0];
+  ok(R && Number.isInteger(R.niveau) && R.niveau >= 20 && R.niveau <= 80, `référence (5g-1) : niveau ${R && R.niveau} (mesuré à l'entrée de l'acte X)`);
+  for (const cls of ['lum', 'gou', 'her', 'tis']) {
+    const L = R.talents[cls] || [], sub = SUBS(cls), br = Object.entries(TA.branches).find(([k, b]) => b.cls === cls && !b.sub && b.ang === 45);
+    ok(L.length === 10 && new Set(L).size === 10 && L.every(id => TA.noeuds[id]), `référence (5g-1) : ${cls} : dix talents distincts, tous existants`);
+    ok(L.slice(0, 6).join() === ['s1', 's2', 's3', 's4', 's5', 'sk'].map(x => sub + '_' + x).join(), `référence (5g-1) : ${cls} : la sous-classe principale (${sub}) dans l'ordre de l'arbre`);
+    ok(br && L.slice(6).join() === ['n1', 'n2', 'n3', 'n4'].map(x => br[0] + '_' + x).join(), `référence (5g-1) : ${cls} : puis les quatre premiers nœuds de la branche voisine (${br && br[0]}, angle 45)`);
+    const pts = L.reduce((a, id) => a + TA.noeuds[id].max, 0);
+    ok(pts <= R.niveau - 1, `référence (5g-1) : ${cls} : ${pts} rangs pour ${R.niveau - 1} niveaux gagnés (tous au rang max, aucune gravure)`);
+    const E = R.equipement[cls] || R.equipement.tous;
+    ok(E.length === 4 && E.every(id => EQ.objets[id] && EQ.objets[id].r === 'commun' && (!EQ.objets[id].cls || EQ.objets[id].cls === cls)) && new Set(E.map(id => EQ.objets[id].slot)).size === 4,
+      `référence (5g-1) : ${cls} : un objet commun permis par emplacement (${E.join(', ')})`); }
+  // la correction de la Couture (la règle des formes hors des cibles) : nœud 1 %, cousus 10 %
+  ok(D.couture.noeud.pvPart === 0.01 && D.couture.cousus.pvPart === 0.10, 'Couture (5g-1) : nœud 1 % et cousus 10 % des PV de la phase');
+  // branchements : le build de référence et le mannequin ne servent qu'aux essais
+  ok(/function reference\(cls\)\{/.test(html) && (html.match(/reference\(/g) || []).length <= 4 && /if\(o\.ref\)X\.ref=reference\(P\.cls\);/.test(html), 'branchement (5g-1) : le build de référence ne se pose que dans un essai (ref=1)');
+  ok(/if\(X\.mannequin\)\{presence\(e,dt\);return;\}/.test(html) && /if\(o\.mannequin&&X\.e\)\{X\.mannequin=true;/.test(html), 'branchement (5g-1) : le mannequin (essai seulement) ne lance rien');
+  ok(/const TBo=!\(T2&&T2\.o\)&&X\.tab\?/.test(html), 'branchement (5g-1) : le bot vise les ennemis d\'un tableau à toute distance');
+  ok(/if\(!best\)return _c2188\.apply\(this,arguments\);/.test(html), 'branchement (5g-1) : en III, sans nœud, le bot vise un échafaudage resté debout');
+  // le journal de l'arène : le porteur d'un coup et une source morte depuis peu (le journal seulement, sous CAM.on)
+  ok(/const GRACE_S=1\.5;/.test(html) && /if\(RUN\.time-A\.mortT\.get\(e\)<GRACE_S\)ids\.push\(k\);/.test(html) && /for\(const p of eproj\)\{if\(!p\.dead&&Math\.hypot\(p\.x-P\.x,p\.y-P\.y\)-\(p\.r\|\|6\)-P\.r<14\)ch\.push\(id\(p\)\);\}/.test(html), 'branchement (5g-1) : le journal de l\'arène compte le porteur du coup et garde 1,5 s le signe d\'une source morte');
+  // le journal v18.11 : secret
+  ok(VERS.journal.some(y => y.h === 'v18.11') && ['v18.11', 'v18.12'].includes(VERS.actuelle), 'journal (5g-1) : la ligne v18.11 existe');
+  for (const x of VERS.journal.filter(y => y.h === 'v18.11')) ok(!/phase|PV|bot|calibr|mannequin|cous|nœud|noeud|forme|mesur/i.test(x.t), `journal v18.11 : rien sur les PV ni la mesure (secret) : « ${x.t} »`);
 }
 
 function F_mondeFinal() { const S = DA.salles.final; return { w: Math.round(S.w * W), h: Math.round(S.h * H) }; }

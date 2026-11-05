@@ -15,14 +15,15 @@
  // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; 4 la phase II réelle, « L'Ouvrage », action 5c ; 5 la phase III réelle, « La Couture »,
  // action 5d ; 6 la phase IV réelle, « L'Emprunt », action 5e ; la phase V, « L'Effacement » (5f), garde l'état 6 : elle se resserre ensuite en 7 et 8, voir
 // effacement.resserrements) ; libre : part improvisée visée (indicative, Q8) ;
- // pv : PV de la phase (placeholders, à calibrer au bot à l'action 5g : 50 à 70 s par phase, Q11). Pas de PV ni de dégâts en plus par palier (Q12).
+ // pv : PV de la phase, calibrés au bot qui frappe sur le build de référence de l'acte X (v18.11, action 5g-1 : la médiane des quatre formes à 50–70 s par
+ // phase en Normal, la phase V entière à 50–70 s en Extrême ; mesure-brumeux.mjs, memoire.md § 41). Pas de PV ni de dégâts en plus par palier (Q12).
  // exclut : les sortes d'éléments que cette phase ne tire jamais (I : bâtir, c'est la phase II ; V : l'arène se défait, rien n'y est bâti).
  phases:[
-  {id:'rappel',presence:'haut',faible:'mains',arene:3,libre:0.25,pv:2400,exclut:['construction']},
-  {id:'ouvrage',presence:'haut',faible:'mains',arene:4,libre:0.40,pv:2400},
-  {id:'couture',presence:'haut',faible:'croix',arene:5,libre:0.50,pv:2400,exclut:['construction']},
-  {id:'emprunt',presence:'sol',faible:'coeur',arene:6,libre:0.50,pv:2400},
-  {id:'effacement',presence:'sol',faible:'coeur',arene:6,libre:0.60,pv:2400,exclut:['construction']}],
+  {id:'rappel',presence:'haut',faible:'mains',arene:3,libre:0.25,pv:13900,exclut:['construction']},
+  {id:'ouvrage',presence:'haut',faible:'mains',arene:4,libre:0.40,pv:12500},
+  {id:'couture',presence:'haut',faible:'croix',arene:5,libre:0.50,pv:15800,exclut:['construction']},
+  {id:'emprunt',presence:'sol',faible:'coeur',arene:6,libre:0.50,pv:14500},
+  {id:'effacement',presence:'sol',faible:'coeur',arene:6,libre:0.60,pv:15400,exclut:['construction']}],
  // Les dégâts au-delà d'un seuil de phase ne passent pas à la phase suivante (même règle que les gardiens) ; le verrou de phase est celui
  // de data/gardiens.js (verrouPhase : 1,2 s à 15 %). dureeS : la transition entière (verrou, cri, transformation de l'arène, relecture).
  transition:{dureeS:3,cri:true,relecture:true},
@@ -130,7 +131,8 @@
  budget:{base:[4,5,6,6,7],palier:{normal:1,difficile:1.25,extreme:1.5}},
  paliers:{normal:{constructions:5,masques:2,phaseV:'courte'},difficile:{constructions:6,masques:2,phaseV:'courte'},extreme:{constructions:6,masques:3,phaseV:'entiere'}},
  // phase V courte (Normal, Difficile) : réduite à son socle et à cette part de ses PV ; entière (Extrême) : regles.extreme.brumeux.phaseEntiere.
- phaseV:{courte:{pv:0.5}},
+ // v18.11 (5g-1) : 0,6 (0,5 au cadrage) : la phase V entière tient 50–70 s en Extrême et la courte 25–35 s en Normal (le rapport s'ajuste de 0,4 à 0,6).
+ phaseV:{courte:{pv:0.6}},
  // ── La lecture du joueur (Q2) : une à l'entrée, une à chaque changement de phase ; elle devient des POIDS dans les tirages, jamais des chiffres
  // du boss. axe : poids = plancher + pente × (l'axe, ou 1 − l'axe selon le sens) ; axe inconnu : 1. verdict (SAVE.mem.prof.eff, par contre-mesure
  // et son axe) : « a porté » (score ≥ 0) pèse porte × score sur les éléments du même axe et du même sens ; déjouée deux fois (abandonnée) : × abandon.
@@ -257,9 +259,12 @@
   fosse:{enfonceS:0.5},
   libres:{poids:2,menace:3},
   mort:{dureeS:3,rmS:1,brume:0.6}},
- couture:{fils:3,filsMax:3,decalS:0.5,montage:{dureeS:4.4},noeud:{haut:110,r:20,pvPart:0.025},nuS:3,briseS:2,
+ // v18.11 (5g-1, la correction de la règle des formes hors des cibles) : nœud 0,025 → 0,01 et cousus 0,15 → 0,10 des PV de la phase. Le montage dure un
+ // temps fixe (4,4 s) quand le nœud est une part des PV : une forme qui frappe peu ne coupait pas à temps, les cousus s'empilaient (Gouffre et Tisse-Destin
+ // deux à trois fois plus lents que les autres formes en III, à DPS égal) ; la règle vaut pour toutes les formes.
+ couture:{fils:3,filsMax:3,decalS:0.5,montage:{dureeS:4.4},noeud:{haut:110,r:20,pvPart:0.01},nuS:3,briseS:2,
   points:{d:[300,650],ecart:420,bord:80,marge:40,vue:200,minD:230,essais:80},
-  cousus:{pvPart:0.15,plancherS:0.6},recence:[1,3],budget:{moins:2,plancher:2},attente:{acte:3,salle:3},attenteZoneS:1.5},
+  cousus:{pvPart:0.10,plancherS:0.6},recence:[1,3],budget:{moins:2,plancher:2},attente:{acte:3,salle:3},attenteZoneS:1.5},
  // ── Les tableaux de la phase I, « le Rappel » (fiche 5b, § 3 et § 4). Il « accroche » un tableau sur un tiers de l'arène : un fragment de décor
  // d'un acte traversé (peint une fois à l'entrée du combat, à la graine du combat), une vague d'un thème existant (WTHEMES : types et rôles
  // seulement ; les places sont tirées dans le fragment), au plus une règle de salle confinée au fragment (mêmes chiffres et mêmes dessins
@@ -314,7 +319,18 @@
   glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#0a0810" stroke-width="4.4" stroke-linecap="round"/><path d="M3 8.5H21M12 2.6V14.6" fill="none" stroke="#c8c0d8" stroke-width="2.2" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#0a0810" stroke-width="2.6" stroke-linecap="round"/><path d="M4.6 9.4V21.6M19.4 9.4V21.6M12 15.4V21.6" fill="none" stroke="#b9b0c8" stroke-width="1.2" stroke-linecap="round"/><path d="M7 8.5Q12 3.4 17 8.5Q12 13.6 7 8.5Z" fill="#eee8da" stroke="#0a0810" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="8.5" r="1.9" fill="#0a0810"/></svg>'},
  // ── Le bot qui frappe (Q14, bot=2) : il attaque avec le kit de base de sa forme, sort des zones qui chargent (à sa vitesse de marche, par une
  // esquive s'il le faut), vise le Brumeux (ou l'ennemi le plus proche s'il est plus près que proche px). Il sert aussi à mesurer l'action 6.
- bot:{proche:220,portee:520,cycleS:0.5},
+ // reference (v18.11, action 5g-1, fiche 5g § 2.2) : le build de référence de l'acte X, sur lequel les PV des phases sont mesurés (essai ref=1) :
+ // niveau = la médiane du niveau atteint à l'entrée de l'acte X par une descente purgée (banc-descente A, Normal, mesure-brumeux.mjs niveau : 59, 58,
+ // 57, 57) ; talents = dix talents portés au rang max : la sous-classe principale (la première de formes.*.subs) dans l'ordre de l'arbre, puis les quatre
+ // premiers nœuds de la branche principale la plus proche d'elle dans l'arbre (angle 45) ; ni gravure, ni relique, ni pacte ; equipement = un objet
+ // commun (la rareté la plus probable à l'acte X) par emplacement, le premier de chaque emplacement permis à la forme. Jamais lu hors d'un essai.
+ bot:{proche:220,portee:520,cycleS:0.5,
+  reference:{niveau:57,
+   talents:{lum:['sol_s1','sol_s2','sol_s3','sol_s4','sol_s5','sol_sk','fan_n1','fan_n2','fan_n3','fan_n4'],
+    gou:['sai_s1','sai_s2','sai_s3','sai_s4','sai_s5','sai_sk','reg_n1','reg_n2','reg_n3','reg_n4'],
+    her:['dgl_s1','dgl_s2','dgl_s3','dgl_s4','dgl_s5','dgl_sk','req_n1','req_n2','req_n3','req_n4'],
+    tis:['gts_s1','gts_s2','gts_s3','gts_s4','gts_s5','gts_sk','pnt_n1','pnt_n2','pnt_n3','pnt_n4']},
+   equipement:{lum:['lame','lanterne','gilet','amulette'],tous:['lame','piece','gilet','amulette']}}},
  // ── Mode d'essai (Q17) : phase de départ (1 à 5), palier, graine, réserve garnie (ids de talents séparés par des virgules), bot, classe.
  essai:{foule:0,dieu:true}
 };})(window.BRUME_DATA=window.BRUME_DATA||{});

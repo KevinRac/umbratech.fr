@@ -62,6 +62,12 @@ const ok = (c, m) => { checks++; if (!c) { fails++; console.error('ÉCHEC : ' + 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
 const html = readFileSync(join(THEMIST, 'index.html'), 'utf8');
 const DB = (() => { const w = {}; new Function('window', readFileSync(join(THEMIST, 'data', 'brumeux.js'), 'utf8'))(w); return w.BRUME_DATA.brumeux; })();
+// v18.11 (5g-1) : les sections de mécanique (A à M, sauf F) se jouent sur les PV d'ESSAI de 5a à 5f (2 400 par phase, phase V courte à moitié, nœud 2,5 %,
+// cousus 15 %) : leurs chiffres attendus en dépendent, pas la mécanique ; F et N (durées, enchaînement réel) prennent les vraies données (ouvre(…, {vrais}))
+// et le build de référence (ref). DBV : les vraies données, côté Node.
+const DBV = JSON.parse(JSON.stringify(DB));
+const PV_ESSAI = D => { for (const p of D.phases) p.pv = 2400; D.phaseV.courte.pv = 0.5; D.couture.noeud.pvPart = 0.025; D.couture.cousus.pvPart = 0.15; return D; };
+PV_ESSAI(DB);
 const DA = (() => { const w = {}; new Function('window', readFileSync(join(THEMIST, 'data', 'arene.js'), 'utf8'))(w); return w.BRUME_DATA.arene; })();
 // la logique pure, hors navigateur (comme le simulateur)
 const PUR = (() => { const bloc = n => html.match(new RegExp('/\\*' + n + ':pur\\*/([\\s\\S]*?)/\\*/' + n + ':pur\\*/'))[1];
@@ -69,7 +75,7 @@ const PUR = (() => { const bloc = n => html.match(new RegExp('/\\*' + n + ':pur\
   for (const f of ['brumeux', 'arene']) vm.runInContext(readFileSync(join(THEMIST, 'data', f + '.js'), 'utf8'), c);
   vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\nthis.F={desRng,brxLire,brxBoucle,brxBudget,brxPv,brxSeuils,brxTirer,brxTiers,brxTiersLoin,brxDansRect,brxPartition,brxBatir,brxGeo,brxPoser,brxOrdreSortes,brxSortesPoids,brxDans,brxTous,brxEtats,brxGrille,brxConnexe,brxAppel,BRX_SORTES};', c); return c.F; })();
 
-async function ouvre(qs, o = {}) {
+async function ouvre(qs, o = {}) {   // o.vrais : les vraies données (sinon les PV d'essai, voir PV_ESSAI)
   const ctx = await browser.newContext({ viewport: o.vp || { width: 1280, height: 720 }, deviceScaleFactor: o.dpr || 1, reducedMotion: o.rm ? 'reduce' : 'no-preference' });
   await ctx.addInitScript(() => { window.__raf = []; window.requestAnimationFrame = cb => { window.__raf.push(cb); return 1; }; });
   const page = await ctx.newPage(); const errs = [];
@@ -78,11 +84,12 @@ async function ouvre(qs, o = {}) {
   await page.goto(`${BASE}${qs ? '?' + qs : ''}`);
   await page.waitForFunction(() => !!(window.__arene && window.__brume && window.__descente && window.__brumeux), null, { timeout: 30000 });
   await page.evaluate(() => { const q = window.__raf.splice(0); for (const f of q) f(performance.now()); });
+  if (!o.vrais) await page.evaluate(`(${PV_ESSAI.toString()})(window.BRUME_DATA.brumeux)`);
   return { page, errs, ctx };
 }
 // ouvrir le combat d'essai dans la page (muet : aucun son dans le banc)
 const ESSAI = (o) => { if (o.cls) window.__brume.cls(o.cls); const r = window.__brumeux.essai(o.phase || 1, Object.assign({ muet: true }, o)); const B = window.__brume; for (let i = 0; i < 3; i++) B.step(1 / 60, 1); return r; };
-const PAS = (n, f) => { const B = window.__brume; for (let i = 0; i < n; i++) { const o = document.querySelector('#overlay'); if (!o.hidden) { const b = o.querySelector('#bok') || o.querySelector('.card:not([disabled])') || o.querySelector('button.primary:not([disabled])'); if (b) b.click(); } if (f) f(i); B.step(1 / 60, 1); } };
+const PAS = (n, f) => { const B = window.__brume; for (let i = 0; i < n; i++) { const o = document.querySelector('#overlay'); if (!o.hidden) { const b = o.querySelector('#bok') || o.querySelector('.card:not([disabled])') || o.querySelector('button.primary:not([disabled])'); if (b) b.click(); } if (f && f(i) === 'fin') break; B.step(1 / 60, 1); } };   // v18.11 : f rend 'fin' pour s'arrêter
 async function capture(page, nom) { if (!DIR) return; await page.evaluate(() => window.__arene.dbg().frame()); await page.screenshot({ path: join(DIR, nom) }); console.log('   capture ' + join(DIR, nom)); }
 
 // ═══ A. Lecture et tirages = logique pure ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -183,7 +190,9 @@ if (SEC.includes('C')) {
   console.log('\n══ C · aucun coup sans signe : quatre combats conduits ══');
   for (const [k, cls] of ['lum', 'gou', 'her', 'tis'].entries()) {
     const { page, errs, ctx } = await ouvre('');
-    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 31 + k, palier: ['normal', 'difficile', 'extreme', 'normal'][k] });
+    // v18.11 (5g-1) : le build de référence (au niveau 1, le Tisse-Destin, qui vise désormais les ennemis d'un tableau à toute distance, ne sortait plus
+    // de la phase I en 170 s) ; les vingt-quatre combats entiers de N-C éprouvent le combat aux vrais PV
+    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 31 + k, palier: ['normal', 'difficile', 'extreme', 'normal'][k], ref: true });
     const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), D = window.__brumeux.dbg(); let fin = null;
       PAS(60 * 170, i => { const et = window.__brumeux.etat(); if (!et.on || et.scene) { fin = fin == null ? i : fin; } });
       return { j: window.__arene.journal(), st: window.__brumeux.statsRun(), fin, cls: D.P.cls, palier: window.__brumeux.etat().palier }; }, [PAS.toString()]);
@@ -277,18 +286,18 @@ if (SEC.includes('E')) {
 if (SEC.includes('F')) {
   console.log('\n══ F · durée par phase et durée des images, au bot qui frappe ══');
   for (const cls of ['lum', 'gou', 'her', 'tis']) {
-    const { page, errs, ctx } = await ouvre('');
-    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 41 });
+    const { page, errs, ctx } = await ouvre('', { vrais: true });
+    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 41, ref: true });   // v18.11 : les vrais PV, le build de référence de l'acte X
     const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), D = window.__brumeux.dbg(); let fin = null;
       // une image rendue toutes les 3 pas (la durée des images est relevée par render à l'acte X)
-      PAS(60 * 620, i => { if (i % 3 === 0) D.render(); const et = window.__brumeux.etat(); if ((et.scene || !et.on) && fin == null) fin = i; });
+      PAS(60 * 1300, i => { if (i % 3 === 0) D.render(); const et = window.__brumeux.etat(); if ((et.scene || !et.on) && fin == null) fin = i; if (fin != null && i > fin + 60) return 'fin'; });
       return { st: window.__brumeux.statsRun(), im: window.__brumeux.images(), fin, j: window.__arene.journal() }; }, [PAS.toString()]);
     const ph = r.st.phases, tot = Object.values(ph).reduce((a, p) => a + p.t, 0);
     console.log(`   ${cls} : ${r.st.fin} en ${Math.round(tot)} s ; par phase ${Object.entries(ph).map(([k, p]) => k + ' : ' + p.t + ' s, ' + p.coups + ' coups').join(' · ')} ; images ${r.im ? r.im.moyenne + ' ms (pire 5 % ' + r.im.pire5 + ' ms, ' + r.im.n + ' images)' : 'non relevées'}`);
-    // depuis 5c, la phase II (constructions, échafaudages à −40 %) dure plus pour le Tisse-Destin au bot (PV placeholders recalés en 5g) : 480 s et 200 s ;
-    // depuis 5e, la phase IV (environ 60 s au Tisse-Destin) s'ajoute : 600 s pour le combat entier (fenêtre de 620 s)
-    ok(r.st.fin === 'victoire' && tot <= 600, `F : ${cls} : victoire du bot en ${Math.round(tot)} s (≤ 600)`);
-    ok(Object.values(ph).every(p => p.t <= 200), `F : ${cls} : aucune phase au-delà de 200 s`);
+    // v18.11 (5g-1) : les PV calibrés et le build de référence ; le Tisse-Destin, quatre fois moins de DPS que le Lumenarque, reste le plus long
+    // (≈ 14 min, sa phase III ≈ 5 à 6 min : écart du kit, renvoyé à l'action 7, memoire.md § 41) : 1 250 s au plus pour le combat, 450 s par phase
+    ok(r.st.fin === 'victoire' && tot <= 1250, `F : ${cls} : victoire du bot en ${Math.round(tot)} s (≤ 1 250)`);
+    ok(Object.values(ph).every(p => p.t <= 450), `F : ${cls} : aucune phase au-delà de 450 s`);
     ok(r.im && r.im.n > 100 && r.im.moyenne > 0 && r.im.pire5 >= r.im.moyenne, `F : ${cls} : durée des images relevée (moyenne ${r.im && r.im.moyenne} ms, pire 5 % ${r.im && r.im.pire5} ms)`);
     if (r.j.liste.length) console.log('   ' + JSON.stringify(r.j.liste.slice(0, 4)));
     ok(r.j.sansSigne === 0 && !errs.length, `F : ${cls} : aucun coup sans signe, aucune erreur ` + errs.slice(0, 2).join(' | '));
@@ -447,8 +456,9 @@ if (SEC.includes('I')) {
   }
   // ── I-D · la phase I conduite par le bot qui frappe, dans les quatre formes
   for (const [k, cls] of ['lum', 'gou', 'her', 'tis'].entries()) {
-    const { page, errs, ctx } = await ouvre('');
-    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 61 + k, palier: ['normal', 'difficile', 'extreme', 'normal'][k] });
+    // v18.11 (5g-1) : vrais PV et build de référence (au niveau 1, le Tisse-Destin ne finissait plus la phase I en 180 s depuis qu'il vise les tableaux)
+    const { page, errs, ctx } = await ouvre('', { vrais: true });
+    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 61 + k, palier: ['normal', 'difficile', 'extreme', 'normal'][k], ref: true });
     const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); let fin = null;
       PAS(60 * 180, i => { const et = window.__brumeux.etat(); if (fin == null && (et.phase >= 2 || !et.on || et.scene)) fin = i; });
       const et = window.__brumeux.etat(); return { j: window.__arene.journal(), st: window.__brumeux.statsRun(), fin, tabs: et.j.tableaux, sautes: et.j.sautes, lancers: et.j.lancers }; }, [PAS.toString()]);
