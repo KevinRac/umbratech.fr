@@ -432,3 +432,19 @@ describe('fonds et socles peints par code (n°208)', () => {
     for (const id of [anims.backdrops.default, ...Object.values(anims.backdrops.terrains), ...Object.values(anims.backdrops.zones)]) expect(BACKDROP_IDS).toContain(id);
   });
 });
+
+describe('ennemis peints (lot 5, n°228)', () => {
+  it('chaque apparence d’ennemi a sa feuille peinte, avec un coup et un critique (ou une incantation)', async () => {
+    const { existsSync } = await import('node:fs');
+    const sprites = new Set(data.enemies.map((e) => e.sprite.split('#')[0] as string));
+    for (const sprite of sprites) {
+      const def = anims.fighters[sprite];
+      expect(def, sprite).toBeDefined();
+      if (!def) continue;
+      expect(existsSync(`assets/combat/${def.sheet}.png`), sprite).toBe(true);
+      expect(def.anims.attaque?.impact, sprite).toBeDefined();
+      // Un lanceur de sorts tient la pose après son incantation ; les autres ont un critique peint.
+      expect(def.anims.critique ?? def.anims.tenue, sprite).toBeDefined();
+    }
+  });
+});

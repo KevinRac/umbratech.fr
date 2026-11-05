@@ -1080,6 +1080,8 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 
 ## 11. Animations de combat
 
+> **Réalisé au jalon M8 (05/11/2026)** : écran rapproché `scenes/BattleCloseupScene.ts`, chronologie pure `logic/anim/closeup.ts`, données `data/battleAnims.json`, durées `balance.json › closeup`, bruitages `audio/sfx.ts`. Les 12 classes, le héros et les 26 apparences d'ennemis sont peints (Pixellab). Écarts au texte ci-dessous : un temps d'arrêt de 750 ms à l'ouverture, une pose d'armé tenue avant la frappe et un gel plus long (rythme GBA, n°225) portent un coup de mêlée à ≈ 1,5 s ; un échange coup + riposte reste sous 4,3 s (2,2 s en « Rapides »). Détail et décisions n°204 à n°228 : PROGRESS.md, « Livré en M8 ».
+
 ### 11.1 Principes
 
 - Écran de combat **cinématique** dans l'esprit des **critiques de Fire Emblem GBA** : attaquant et défenseur de profil, sur un décor de terrain.
@@ -1099,7 +1101,7 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 | 7. Pose finale | 200 ms | Attaquant tient la pose, barre de PV descend |
 | 8. Retour | 250 ms | Retour à la position, fondu retour carte |
 
-**Total ≈ 1,25 s.**
+**Total ≈ 1,25 s.** (Réalisé : ≈ 1,5 s avec l'armé de 190 ms, l'impact de 130 ms et le gel de 100 ms, n°225 ; une image peinte par étape, aux poses clés `peak`, `impact` et `hold` de chaque feuille.)
 
 ### 11.3 Critique
 
@@ -1143,6 +1145,8 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 | **Sœur Mérrow** | Vague qui engloutit l'écran, voix déformée |
 | **Gardien de Cendre** | Poing qui s'abat, fissures dans le sol |
 | **Orvane** | Phase 1 : trident aqueux ; phase 2 : brume noire envahit l'écran |
+
+Réalisé (n°219) : bandeau en biais du boss à son premier échange du combat (portrait, nom, titre), bandeau « Seconde phase » et aura rouge persistante après son changement de phase ; dernier souffle d'un boss ou d'un nommé (citation de mort dans l'écran, dissolution en cendres, n°220). Les gestes signatures de ce tableau viennent des chorégraphies de critique (`bond` pour Brakk, le Gardien ; sorts `vague` de Mérrow, `lances` d'Orvane).
 
 ### 11.7 Format technique
 
@@ -1668,6 +1672,7 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 33. **Jalon M9 : sauvegarde** (02/11/2026) : décisions n°151 à n°169 validées (format, contrôles, copie de secours, migrations, sauvegardes automatiques et manuelles, écran titre, confirmations, export/import, mode Classique). Compte et sauvegarde en ligne par e-mail réalisés au lot M9b (03/11/2026, n°170 à n°173 validées, base séparée de gw1). Voir §9.13, §14 et PROGRESS.md.
 34. **Lot « dialogues de combat »** (03/11/2026) : décisions n°174 à n°191 validées (contenu pilote, apparence des Échos, plafond et réservation du boss, déclencheurs, Parler et refus, changement de camp, arrivée dans la compagnie, sort des nommés, alliés verts qui parlent, apparition au hasard, affichage, journal, sauvegarde v2, roster de 30 laissé à M7, outils de debug) ; voir §7.9.1 et PROGRESS.md.
 35. **Jalon M7 : contenu du monde** (04/11/2026) : décisions n°192 à n°203 validées le 03/11/2026 (découpage en lots, postes des nommés, Ser Maëlis, Orvane, trois fins, alliés verts nommés, portraits peints, roster de 30, Arène des Cendres, saluts de village, parcours Z1 → Z5, écriture) ; voir §7.9.2 et PROGRESS.md.
+36. **Jalon M8 : animations de combat** (05/11/2026) : décisions n°204 à n°222 validées au début du jalon (écran rapproché, mise en page, fonds peints par code, critère de vitesse, repli sur le sprite de carte, cut-ins, réglages, banc d'essai), n°223 à n°228 au fil des lots (sorts selon l'arme, armes lancées, rythme GBA, impact, bruitages, ennemis peints) ; voir §11 et PROGRESS.md.
 
 ---
 
