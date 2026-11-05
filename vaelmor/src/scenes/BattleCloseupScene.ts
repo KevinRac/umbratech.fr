@@ -505,6 +505,8 @@ export class BattleCloseupScene extends Phaser.Scene {
     const movie = crit && a.spec.critStyle === 'film' && a.spec.kind === 'melee' ? a.painted?.anims.critique : undefined;
     // Animation peinte de plusieurs images : elle suit les étapes au rythme GBA (n°225), gelée si une étape s'attarde.
     const film = multi && !movie ? this.drive(a, anim, steps) : null;
+    // Fin du film (après l'impact) : le retour l'attend, pour que le coup suivant ne la coupe pas.
+    let tail: Promise<void> | null = null;
     // Les coups portés sans frappe au contact (tir, sort, critique chorégraphié) ont leur impact à l'arrivée.
     const contact = steps.some((st) => st.name === 'strike' || st.name === 'cut');
     try {
@@ -608,7 +610,7 @@ export class BattleCloseupScene extends Phaser.Scene {
           }
           case 'impact':
             // La fin du film (pose finale, retour) se joue pendant l'impact, le recul et la pose.
-            if (movie) void this.movie(a, movie, (movie.impact ?? 0) + 1, movie.frames - 1);
+            if (movie) tail = this.movie(a, movie, (movie.impact ?? 0) + 1, movie.frames - 1);
             if (strike.hit && !contact) this.hitFx(a, d, crit, false);
             await this.impact(strike, a, d, step.ms, t);
             break;
@@ -624,6 +626,7 @@ export class BattleCloseupScene extends Phaser.Scene {
             break;
           case 'back':
           case 'settle':
+            if (tail) await tail;
             if (this.dim && this.dim.alpha > 0) void this.tween({ targets: this.dim, alpha: 0, duration: step.ms });
             if (crit) this.zoomTo(1, null, step.ms);
             if (a.spec.thrown && a.sprite.alpha < 1) {
