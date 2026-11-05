@@ -311,7 +311,7 @@ const has = (re, msg) => ok(typeof re === 'string' ? html.includes(re) : re.test
 has('<script src="data/brumeux.js"></script>', 'data/brumeux.js chargé');
 has(/const TH=e\.seuils18\|\|\[0\.66,0\.33\],hp0=e\.hp,guard=hp0>e\.maxHp\*\(e\.seuils18\?TH\[TH\.length-1\]\+0\.01:0\.34\)\?1e7:0;/, 'seuils de phase : ceux du gardien (0,66 / 0,33, garde 0,34) sans e.seuils18, ceux du Brumeux avec');
 has(/for\(const t of TH\)\{const th=e\.maxHp\*t;if\(hp0>th&&e\.hp<th-1\)\{e\.hp=th-1;e\.lockT=RUN\.time\+BAL\.phaseLock;break;\}\}/, 'seuils de phase : les dégâts ne passent pas le seuil, verrou de phase posé');
-has("ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/", 'garde d\'essai de la némésis : brumeux');
+has("ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/", 'garde d\'essai de la némésis : brumeux (v18.12, 5h : demo et descente, comme ESSAI18)');
 has("ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/", 'garde d\'essai de la descente : brumeux');
 has(/updateBoss=function\(e,dt\)\{if\(e&&e\.brx18&&X\.on\)\{try\{if\(X\.mannequin\)\{presence\(e,dt\);return;\}pas\(e,dt\);\}/, 'updateBoss enveloppé : le Brumeux joue sa partition, jamais l\'IA du Glas (le mannequin de mesure de 5g-1 ne joue rien)');
 has(/hitEnemy=function\(e,base,o\)\{if\(!\(e&&e\.brx18&&X\.on\)\)return _he\.apply/, 'hitEnemy enveloppé : changement de phase au seuil');
@@ -336,7 +336,7 @@ has(/const charge=brxPreavis\(DB,X\.sauve,id\);X\.vus\.add\(id\);/, 'première r
 has(/presence:de\.presence!==ph\.presence\};\s*versCons\(n\);/, 'les constructions restent jusqu\'à la phase V, et en V (5f : elles y tombent une à une)');
 has(/const v=brxPoser\(DB,monde\(\),AR,base,X\.cons\.map/, 'une construction passe par brxPoser (connexité, aire, plafond)');
 has(/if\(sur\.length&&c\.attente<AT\)\{c\.attente\+=dt;continue;\}/, 'une construction attend une créature (attenteMax de l\'arène) puis la pousse sans dégât');
-has(/if\(!o\.essai&&N!==S\)\{SAVE\.brumeux=brxEcrireSauve\(N\);/, 'SAVE.brumeux écrite seulement hors essai');
+has(/if\(!o\.essai&&!illisible&&N!==S\)\{SAVE\.brumeux=brxEcrireSauve\(N\);/, 'SAVE.brumeux écrite seulement hors essai, jamais par-dessus une sauvegarde illisible (v18.13)');
 // le Brumeux n'est créé que par l'essai : creer() seulement dans debut(), debut() seulement dans essai()
 ok((html.match(/\bcreer\(/g) || []).length === 2 && /function debut\(phase0\)\{X\.sauve=sauveLire\(\);creer\(phase0\);/.test(html), 'le Brumeux n\'est créé que par debut()');
 ok((html.match(/\bdebut\(phase\)/g) || []).length === 1 && /debut\(phase\);showBanner\(DB\.nom/.test(html), 'debut() n\'est appelé que par l\'essai (rien en jeu avant 5g)');
@@ -1423,7 +1423,7 @@ tic('§ 15');
   // le journal de l'arène : le porteur d'un coup et une source morte depuis peu (le journal seulement, sous CAM.on)
   ok(/const GRACE_S=1\.5;/.test(html) && /if\(RUN\.time-A\.mortT\.get\(e\)<GRACE_S\)ids\.push\(k\);/.test(html) && /for\(const p of eproj\)\{if\(!p\.dead&&Math\.hypot\(p\.x-P\.x,p\.y-P\.y\)-\(p\.r\|\|6\)-P\.r<14\)ch\.push\(id\(p\)\);\}/.test(html), 'branchement (5g-1) : le journal de l\'arène compte le porteur du coup et garde 1,5 s le signe d\'une source morte');
   // le journal v18.11 : secret
-  ok(VERS.journal.some(y => y.h === 'v18.11') && ['v18.11', 'v18.12'].includes(VERS.actuelle), 'journal (5g-1) : la ligne v18.11 existe');
+  ok(VERS.journal.some(y => y.h === 'v18.11') && ['v18.11', 'v18.12', 'v18.13'].includes(VERS.actuelle), 'journal (5g-1) : la ligne v18.11 existe');
   for (const x of VERS.journal.filter(y => y.h === 'v18.11')) ok(!/phase|PV|bot|calibr|mannequin|cous|nœud|noeud|forme|mesur/i.test(x.t), `journal v18.11 : rien sur les PV ni la mesure (secret) : « ${x.t} »`);
 }
 
@@ -1435,8 +1435,10 @@ tic('§ 16');
   const B1812 = (html.match(/═══ v18\.12 · L'allumage[\s\S]*?\/\/ ── v18\.11 \(5g-1\)/) || [''])[0];
   ok(B1812.length > 2000, `branchement (5g-2) : la section « v18.12 · L'allumage » existe (${B1812.length} caractères)`);
   ok(/planRoom=function\(type\)\{\s*if\(RUN&&!RUN\.hub&&RUN\.gardeNow==='final'&&type==='elite'&&room&&room\.arene==='final'\)\{const n=ACTE\(\);RUN\.gardeNow=0;room\.garde=n;room\.gardeK='final';room\.renfort=null;return\[\];\}/.test(B1812), 'branchement (5g-2) : la vraie salle n\'a ni vague ni Masqué (planRoom)');
-  ok(/if\(REEL\(\)&&!X\.on\)debutReel\(\);/.test(B1812) && /debut\(0\);room\.bannerT=DB\.fin\.banniereS;/.test(B1812), 'branchement (5g-2) : le Brumeux naît à l\'entrée de la vraie salle, à la phase I, sa bannière pour premier entracte');
-  ok(/later=function\(t,f\)\{return L0\.call\(this,d,f\);\}/.test(B1812) && /const L0=later,d=\(X\.scene\.dureeS\|\|2\.2\)\+DB\.fin\.apresS;/.test(B1812), 'branchement (5g-2) : la fin de la descente s\'ouvre à la fin de sa scène de mort, plus fin.apresS');
+  ok(/if\(REEL\(\)&&!X\.on\)debutReel\(\);/.test(B1812) && /try\{debut\(0\);\}finally\{window\.__rire=rr;\}X\.regard=0;[\s\S]{0,200}room\.bannerT=DB\.fin\.banniereS;/.test(B1812), 'branchement (5g-2) : le Brumeux naît à l\'entrée de la vraie salle, à la phase I, sa bannière pour premier entracte');
+  ok(/if\(win&&REEL\(\)&&X\.reel&&X\.scene&&!X\.finDiff\)\{X\.finDiff=true;const reste=Math\.max\(0,\(X\.scene\.dureeS\|\|2\.2\)-\(X\.scene\.t\|\|0\)\)\+DB\.fin\.apresS/.test(B1812) && !/const _orcR=onRoomCleared/.test(B1812), 'branchement (5g-2, 5h) : la fin de la descente s\'ouvre à la fin de sa scène de mort, plus fin.apresS (seule l\'ouverture attend)');
+  ok(/const _lhR=loseHp;loseHp=function\(n\)\{if\(vaincu\(\)&&n>0\)return;/.test(B1812) && /if\(!win&&vaincu\(\)\)\{arguments\[0\]=true;/.test(B1812), 'branchement (5h) : vaincu, il ne te tue plus ; une fin ouverte entre-temps reste une victoire');
+  ok(/src\.brx18\|\|src\.brx18p/.test(B1812) && /function tirBrx\(\)/.test(B1812), 'branchement (5h) : une mort par ses emprunts ou ses tirs se note « brumeux »');
   ok(/V7FOE1\.brumeux='le Brumeux';/.test(B1812) && /RUN\.mem\.lastSrc='brumeux'/.test(B1812), 'branchement (5g-2) : une mort par lui se note « brumeux » (la chronique ne dit plus le Glas Originel)');
   ok(/makeRoom=function\(type\)\{const ouv=A\.ouvrir\|\|\(actif\(\)&&RUN&&!RUN\.hub&&!ESSAI_U&&RUN\.gardeNow==='final'&&type==='elite'\?\{cle:'final',o:\{etat:DA\.salles\.final\.reel\|0,reel:true\}\}:null\);/.test(html), 'branchement (5g-2) : seule la salle « final » (pas un miniboss, pas un essai ?arene=) ouvre l\'arène, à l\'état réel');
   ok(/id==='final'&&RUN&&!RUN\.hub&&window\.__glypheFinal18\?window\.__glypheFinal18\(\):null/.test(html) && /window\.__glypheFinal18=\(\)=>XA\.actif&&XA\.actif\(\)\?glyphe\(\):null;/.test(B1812), 'branchement (5g-2) : la porte « final » porte son glyphe quand l\'arène est allumée');
@@ -1446,7 +1448,7 @@ tic('§ 16');
   ok(FD.includes(D.wiki.phrase) && FD.includes(D.nom) && /img\/brumeux\/brumeux-v\d+\.webp/.test(WK), 'wiki (5g-2) : sa carte (portrait, glyphe, la phrase de l\'auteur)');
   ok(!/phase|temps|cinq|5 |bât|constru|style|choisi|cou[sd]|empru|masque|PV|arène|partition|tableau/i.test(FD.replace(D.wiki.phrase, '').replace('Le Fond de la Brume', '').replace('Au fond de la Brume', '')), `wiki (5g-2) : la carte ne dit ni phases, ni ce qu'il fait, ni PV (« ${FD.replace(/\s+/g, ' ').trim().slice(0, 160)} »)`);
   ok(/<!-- gen:signes -->[\s\S]*Les signes au bord de l’écran[\s\S]*<!-- \/gen:signes -->/.test(WK) && !/phase|Brumeux|boss final/i.test((WK.match(/<!-- gen:signes -->([\s\S]*?)<!-- \/gen:signes -->/) || ['', ''])[1].replace(/<[^>]+>/g, ' ')), 'wiki (5g-2) : la légende des signes au bord de l\'écran, sans un mot du combat');
-  for (const x of VERS.journal.filter(y => y.h === 'v18.12')) ok(!/phase|cinq|bât|cou[sd]|empru|masqu|arène|tableau|PV|style/i.test(x.t), `journal v18.12 : ni phase ni mécanique (secret) : « ${x.t} »`);
+  for (const x of VERS.journal.filter(y => y.h === 'v18.12' || y.h === 'v18.13')) ok(!/phase|cinq|bât|cou[sd]|empru|masqu|arène|tableau|PV|style/i.test(x.t), `journal v18.12 : ni phase ni mécanique (secret) : « ${x.t} »`);
 }
 
 function F_mondeFinal() { const S = DA.salles.final; return { w: Math.round(S.w * W), h: Math.round(S.h * H) }; }

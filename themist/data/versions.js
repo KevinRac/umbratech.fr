@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v18.12',
+ actuelle:'v18.13',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-11-05',h:'v18.13',t:'Le fond de la descente, relu : sa fin ne se laisse plus interrompre.'},
  {d:'2026-11-05',h:'v18.12',t:'Au fond de la descente, il ne répète plus : il t’attend.'},
  {d:'2026-11-05',h:'v18.11',t:'Préparation du combat final : le Brumeux rassemble ses forces. Il ne t’attend pas encore au fond : rien ne change en jeu.'},
  {d:'2026-11-05',h:'v18.10',t:'Préparation du combat final : le Brumeux répète en coulisses. Il ne t’attend pas encore au fond : rien ne change en jeu.'},

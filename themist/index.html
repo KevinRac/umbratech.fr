@@ -900,7 +900,7 @@ Object.assign(MERCHANT,{name:SA_D.pnj.colporteur.name,role:SA_D.pnj.colporteur.r
 const MERCHANT_LINES=['Approche, approche. Tout ce que la Brume a perdu, je l’ai retrouvé. Pour un prix.','Les pièces ? Elles ne valent rien là-haut. Ici, elles achètent un lendemain.','Ne me demande pas comment je suis arrivé là. Demande plutôt ce que j’ai en stock.','Ismène te salue ? Non ? Elle ne salue jamais personne, celle-là.','Un client qui revient, c’est un client qui n’est pas mort. J’aime les clients qui reviennent.'];
 const LINES={
  portail:[[S=>true,'Le portail respire. De l’autre côté, la Brume attend ton pas.'],[S=>S.wins>=1,'Le portail bat plus vite depuis ta victoire. La Brume s’épaissit pour toi.']],
- veilleuse:[[S=>true,'Te voilà réveillé. La Brume t’a rendu, comme elle les rend tous, un jour ou l’autre. Quand tu reviendras, et tu reviendras, apporte-moi ce dont tu te souviens.'],[S=>S.runs>=1,'Tu as laissé un peu de toi, là-dessous. Ces éclats de mémoire, je peux les fondre dans ta flamme. Elle brûlera plus longtemps.'],[S=>S.runs>=3,'Chaque descente laisse une trace. Le portail se souvient de toi, maintenant. Moi aussi.'],[S=>S.bossKills>=1,'La Mère-Brume est tombée. Je l’ai sentie se défaire jusqu’ici. Ne crois pas qu’elle soit morte : rien ne meurt vraiment dans la Brume.'],[S=>S.runs>=8,'Autrefois, j’ai porté une lanterne, moi aussi. Elle s’est éteinte dans les Cryptes. Ne me demande pas la suite.'],[S=>S.flags.heraut,'Le Héraut est tombé. Sous les Cryptes, quelque chose bat. Je le sens dans mes os, comme une cloche qui aurait un cœur.'],[S=>S.wins>=1,'Le Glas s’est tu. Je l’entends encore, tu sais : le silence aussi a un écho. Redescends. Il recommencera à battre.']],
+ veilleuse:[[S=>true,'Te voilà réveillé. La Brume t’a rendu, comme elle les rend tous, un jour ou l’autre. Quand tu reviendras, et tu reviendras, apporte-moi ce dont tu te souviens.'],[S=>S.runs>=1,'Tu as laissé un peu de toi, là-dessous. Ces éclats de mémoire, je peux les fondre dans ta flamme. Elle brûlera plus longtemps.'],[S=>S.runs>=3,'Chaque descente laisse une trace. Le portail se souvient de toi, maintenant. Moi aussi.'],[S=>S.bossKills>=1,'La Mère-Brume est tombée. Je l’ai sentie se défaire jusqu’ici. Ne crois pas qu’elle soit morte : rien ne meurt vraiment dans la Brume.'],[S=>S.runs>=8,'Autrefois, j’ai porté une lanterne, moi aussi. Elle s’est éteinte dans les Cryptes. Ne me demande pas la suite.'],[S=>S.flags.heraut,'Le Héraut est tombé. Sous les Cryptes, quelque chose bat. Je le sens dans mes os, comme une cloche qui aurait un cœur.'],[S=>S.wins>=1,'Le fond s’est tu. Je l’entends encore, tu sais : le silence aussi a un écho. Redescends. Il ne restera pas muet longtemps.']],
  fondeur:[[S=>true,'Les reliques ? Des souvenirs que la Brume a oublié de digérer. Ramène-moi des éclats, et je t’en forgerai qu’elle ne pourra plus te reprendre.'],[S=>S.runs>=2,'Le métal de là-dessous chante quand on le frappe. Ça ne me dit rien qui vaille. Mais il coupe bien.'],[S=>S.flags.merchant,'Tobiah, le colporteur ? Il revend mes rebuts au fond de la Brume. Paie-le cher, il le mérite, ce rat.'],[S=>S.wins>=1,'Alors c’est vrai, tu l’as fait. Viens, j’ai gardé une enclume chaude pour ce jour-là.']],
  archiviste:[[S=>true,'Je consigne les descentes. Toutes. Les tiennes commencent aujourd’hui.'],[S=>S.runs>=1,'Une page de plus. Au début, elles se ressemblent toutes. C’est ensuite qu’elles divergent.'],[S=>S.flags.act2,'Les Cryptes Chantantes… Mes registres les plus anciens en parlent à voix basse. Lis les chroniques, tu comprendras pourquoi.'],[S=>S.flags.act3,'Le Cœur… Aucun registre ne le décrit. Tu en écris les premières pages.'],[S=>S.wins>=1,'J’ai dû recoudre la reliure. Ta victoire ne tenait pas dans l’ancien registre.']],
 };
@@ -3397,7 +3397,7 @@ bossDefeated=function(e){const R=RUN.mem,a=RUN.act;
  if(R&&R.perfect.includes(a))later(1.2,()=>toast(`Sans une égratignure. ${ACTS[a].boss} ne t’a pas touché : la Brume s’en souviendra.`,3.5));
  const m=M();if(!m.bossFirst[a]){m.bossFirst[a]=1;persist();giveFrag('first',e.x,e.y,2.4);}else if(Math.random()<fragP('boss',0.4))giveFrag('boss',e.x,e.y,2.4);};
 const _onRoomCleared=onRoomCleared;
-onRoomCleared=function(){const t=room.type;_onRoomCleared();if(!RUN.hub&&t==='elite'&&Math.random()<fragP('elite',0.2))giveFrag('elite',W/2,H/2,0.8);};
+onRoomCleared=function(){const t=room.type,fond=!!(room.arene&&room.gardeK==='final');_onRoomCleared();if(!RUN.hub&&t==='elite'&&!fond&&Math.random()<fragP('elite',0.2))giveFrag('elite',W/2,H/2,0.8);};   // v18.12 (5h) : ni fragment d'élite au fond (le Brumeux)
 // Tombes d'Écho
 const _updateRoom=updateRoom;
 updateRoom=function(dt){_updateRoom(dt);const g=room&&room.grave;if(!g||g.taken)return;g.t+=dt;
@@ -3446,7 +3446,7 @@ function regard(id){const m=M(),s=m.style;
 const RX={
  veilleuse:{
   perfectFled:L=>`${L.boss} sans une égratignure, puis tu as tourné les talons. La Brume ne sait plus si elle doit te craindre ou t’attendre. Moi non plus.`,
-  win:()=>'Le Glas s’est tu. Je l’ai entendu d’ici, ce silence. Il avait la forme de ton nom.',
+  win:()=>'Le fond s’est tu. Je l’ai entendu d’ici, ce silence. Il avait la forme de ton nom.',   // v18.12 (5h) : une victoire est la fin de la descente (le Glas Originel est à l’acte III)
   perfect:L=>`Pas une égratignure sur ton souvenir. ${L.boss} ne t’a même pas effleuré. J’ai senti la Brume reculer d’un pas.`,
   abandon:L=>L.abandons>=3?'Encore une fois, tu as tourné les talons. La Brume commence à t’attendre aux portes, là où tu fuis.':'Tu es remonté avant la fin. Je ne te juge pas. Mais la Brume, elle, a vu ton dos. Elle s’en souviendra.',
   close:()=>'Tu es revenu avec un fil de vie, pas plus. J’ai cru te perdre. Ne me refais pas ça trop souvent.',
@@ -4087,7 +4087,7 @@ enterRoom=function(type){
  if(RUN.g>=8){V.deepN=RUN.g-7;V.fragBonus=has9('D7')?Math.min(0.36,0.06*V.deepN):0;}
  v9SetHp(v9HpTarget());
  if(type==='autel'&&has9('P1'))later(1.0,()=>{if(room&&room.type==='autel'){for(let i=0;i<2;i++){const p=findSpawn(200);createEnemy('rampant',p.x,p.y);}toast('Ta fouille a réveillé deux Rampants.',2.4);}});
- if(type==='elite'&&has9('D6'))enqueue(()=>{
+ if(type==='elite'&&has9('D6')&&!(room&&room.arene&&room.gardeK==='final'))enqueue(()=>{   // v18.12 (5h) : on ne « défie » pas le Brumeux
   openOverlay(`<div class="panel narrow"><p class="eyebrow">Défier l’élite</p><h2>Un champion t’attend</h2><p class="sub">Si tu le défies, il a +20 % de PV et +10 % de dégâts, mais ses éclats sont doublés.</p><div class="row"><button type="button" class="btn primary" id="chy">Le défier</button><button type="button" class="btn" id="chn">Passer</button></div></div>`);
   const go=y=>{if(!armed())return;V.ch=y;closeOverlay();if(y)toast('Défi accepté : éclats doublés si tu triomphes.',2.4);};
   $('#chy').addEventListener('click',()=>go(true));$('#chn').addEventListener('click',()=>go(false));
@@ -4127,7 +4127,7 @@ onRoomCleared=function(){
  if(t==='elite'){
   const extra=6*((V.ch?1:0)+(has9('P5')?1:0));if(extra){RUN.sh.elites+=extra;if(RUN.g>=8)V.deepSh+=extra;}
   V.ch=false;
-  if(has9('P6'))enqueue(()=>{
+  if(has9('P6')&&!(room&&room.arene&&room.gardeK==='final'))enqueue(()=>{   // v18.12 (5h) : pas de pari du glas sur le Brumeux
    openOverlay(`<div class="panel narrow"><p class="eyebrow">Pari du glas</p><h2>Que prends-tu au champion ?</h2><div class="three"><button type="button" class="card" id="pg1"><span class="gl">✦</span><h3>+10 éclats</h3><p>Une somme sûre, tout de suite.</p><span class="k">touche 1</span></button><button type="button" class="card" id="pg2"><span class="gl">✧</span><h3>25 % de fragment</h3><p>Une chance de fragment de la Carte du Glas, sinon rien.</p><span class="k">touche 2</span></button></div></div>`);
    const go=k=>{if(!armed())return;closeOverlay();if(k===1){RUN.sh.elites+=10;toast('+10 éclats pour ce run.',2.4);}else if(Math.random()<0.25){if(!giveFrag('elite',W/2,H/2,0.4))toast('Le pari ne donne rien : le plafond de fragments est atteint.',2.6);}else toast('Le pari ne donne rien.',2.2);};
    $('#pg1').addEventListener('click',()=>go(1));$('#pg2').addEventListener('click',()=>go(2));
@@ -6281,7 +6281,7 @@ onRoomCleared=function(){
  _orc13();
  if(!RUN||RUN.hub)return;
  if(eqIs('amulette'))heal(4,'equip');
- if(t==='elite'&&Math.random()<EQ_D.chanceChampion/100)enqueue(()=>openEquip(rollEquip(),'Le champion portait quelque chose'));
+ if(t==='elite'&&!(room&&room.arene&&room.gardeK==='final')&&Math.random()<EQ_D.chanceChampion/100)enqueue(()=>openEquip(rollEquip(),'Le champion portait quelque chose'));   // v18.12 (5h) : le Brumeux n'est pas un champion (aucun écran pendant sa scène de mort)
  if(t==='boss'&&act===1)enqueue(()=>openEquip('murmure','La Mère-Brume laisse un murmure'));
  if(t==='boss'&&act===2)enqueue(()=>openEquip('larme','Une larme sous la cloche'));};
 const _ue13=updateEnemies;
@@ -10242,7 +10242,7 @@ function demoBoot(cls){
  // (action 3) : tant qu'assemble.nemesis.actif est faux, rien n'est écrit, sauf essai de console (__nemesis.activer(), jamais gardé au rechargement).
  // Jamais en démo, ni dans une descente d'essai (RUN.essai, ou ?masque= ?brume= ?glas= ?dernier= ?nemesis=).
  var NEMSRC=null;   // projectile de la Brume qui touche (navette, perçant) : de qui il vient
- const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/.test(location.search),NDEV={on:null};   // console : activer(true) force, activer(false) éteint, activer(null) rend la main aux données
+ const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/.test(location.search),NDEV={on:null};   // console : activer(true) force, activer(false) éteint, activer(null) rend la main aux données
  const nemActif=()=>!!(NM&&(NDEV.on==null?NM.actif:NDEV.on))&&!DEMO;
  const nemInfo=id=>{const n=NODES[id];return n?{cls:n.cls,genre:/_sk$/.test(id)?'u':(n.kind||'m')}:null;};
  // qui a porté le dernier coup qui t'a blessé (pour les statistiques : la promotion n'en dépend pas, N2). Sans changer les arguments de
@@ -13005,7 +13005,8 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  const vue=()=>arVue(CAM,V);
  const memeAR=()=>AR.x0===AR0.x0&&AR.y0===AR0.y0&&AR.x1===AR0.x1&&AR.y1===AR0.y1;
  // ── tout remettre comme un écran (toute nouvelle salle, Sanctuaire, titre, nouvelle descente)
- function remettre(){Object.assign(AR,AR0);MONDE.w=W;MONDE.h=H;CAM.x=0;CAM.y=0;CAM.on=false;CAM.ff=1;A.on=false;A.trans=null;A.indic=[];A.etat=null;A.essai=null;}
+ function remettre(){Object.assign(AR,AR0);MONDE.w=W;MONDE.h=H;CAM.x=0;CAM.y=0;CAM.on=false;CAM.ff=1;A.on=false;A.trans=null;A.indic=[];A.etat=null;A.essai=null;
+  A.sol={};A.tard={};A.etats=[];A.M=null;A.reel=false;}   // v18.12 (5h) : les tuiles cuites (environ 11 Mo par état) ne survivent pas à l'arène
  // ── le sol : tuiles peintes à l'entrée (un calque par sol d'état), posées seulement là où la vue passe
  const SOLS={pierre:['#15131c','#1d1a27','90,80,120'],cendre:['#17161a','#201e24','140,130,140'],braise:['#1a1214','#251719','170,80,60']};
  // un calque par état : son sol et sa brume de décor, cuits dans les tuiles (le fondu passe d'un calque à l'autre ; rien n'est peint pendant le combat)
@@ -13051,7 +13052,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
    if(b.y0>v.y0)c.fillRect(v.x0,v.y0,W,b.y0-v.y0);if(b.y1<v.y1)c.fillRect(v.x0,b.y1,W,v.y1-b.y1);if(b.x0>v.x0)c.fillRect(v.x0,b.y0,b.x0-v.x0,b.y1-b.y0);if(b.x1<v.x1)c.fillRect(b.x1,b.y0,v.x1-b.x1,b.y1-b.y0);
    c.strokeStyle='rgba(90,80,120,.7)';c.lineWidth=2;c.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);}
   // obstacles et fosses en place
-  for(const p of room.pillars){if(p.kind==='fosse18'){c.fillStyle='#020104';rond(c,p.x,p.y,p.r);c.fill();c.strokeStyle='rgba(150,120,210,.45)';c.lineWidth=2;c.stroke();}
+  for(const p of room.pillars){if(p.kind==='fosse18'){c.fillStyle='#020104';rond(c,p.x,p.y,p.r);c.fill();c.strokeStyle='rgba(132,118,96,.55)';c.lineWidth=2;c.stroke();}   // v18.12 (5h) : l'arête de la pierre (la lavande signale les emprunts en IV et V)
    else{c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(p.x+6,p.y+p.r*0.55,p.r*1.05,p.r*0.45,0,0,TAU);c.fill();c.fillStyle='#2a2533';rond(c,p.x,p.y,p.r);c.fill();c.strokeStyle='#4a4258';c.lineWidth=2;c.stroke();
     c.fillStyle='rgba(255,255,255,.05)';rond(c,p.x-p.r*0.3,p.y-p.r*0.3,p.r*0.45);c.fill();}}
   // annonce : la nouvelle forme, en contour ivoire neutre (jamais orange ni rouge : rien ne frappe)
@@ -13910,8 +13911,10 @@ function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,
  function noter(win){if(X.note||!X.e)return;X.note=true;
   const o={essai:!!(X.essai||RUN.essai||ESSAI_URL18()),phase:X.phase+1,par:win?null:X.tue,tab:!win&&X.tue==='tableau'?X.tueTab:null,bati:!win&&X.tue==='effondrement'?X.tueBati:null,cousu:!win&&X.tue==='couture'?X.tueCousu:null,emp:!win&&X.tue==='emprunt'?X.tueEmp:null,win,vus:[...X.vus]};
   const S=X.sauve||brxNeuf(),N=brxNoter(S,o,DB,window.BRUME_DATA.souvenirsBrume);X.j.note=o;
-  if(!o.essai&&N!==S){SAVE.brumeux=brxEcrireSauve(N);X.sauve=N;try{persist();}catch(err){}}}
- const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/.test(location.search);
+  // v18.12 (5h) : une sauvegarde illisible (d'une version plus récente, ou abîmée) n'est jamais écrasée par une neuve
+  const illisible=!X.sauve&&SAVE.brumeux!=null&&typeof SAVE.brumeux==='object'&&Object.keys(SAVE.brumeux).length>0;
+  if(!o.essai&&!illisible&&N!==S){SAVE.brumeux=brxEcrireSauve(N);X.sauve=N;try{persist();}catch(err){}}}
+ const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/.test(location.search);   // v18.12 (5h) : la liste d'ESSAI18 (une descente relancée depuis un essai n'écrit rien)
  // ── la lecture (Q2) : ce que le jeu sait de toi, vers les poids des tirages ; en image : son regard passe sur ton héros, puis son petit rire
  function lire(){const S={};
   try{S.prof=profile();}catch(err){S.prof={};}
@@ -14173,9 +14176,9 @@ function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,
   for(const o of X.cons){if(o.pose)continue;const k=Math.min(1,o.t/o.annonce);c.save();c.strokeStyle=rgba('craie',RM?0.75:0.5+0.3*k);c.lineWidth=2;c.setLineDash([8,6]);rond(c,o.x,o.y,o.r);c.stroke();c.setLineDash([]);c.strokeStyle=rgba('craie',0.9);rond(c,o.x,o.y,o.r*k);c.stroke();c.restore();}
   if(X.regard>0&&e&&!e.dead&&P){const a=Math.min(1,X.regard/1.2),ph=DB.phases[X.phase],sy=ph.presence==='haut'?AR.y0-90:e.y-e.r*0.55;c.save();c.globalAlpha=0.45*a;c.strokeStyle=rgba('yeux',1);c.lineWidth=1.2;c.setLineDash([3,9]);c.beginPath();c.moveTo(e.x,sy);c.lineTo(P.x,P.y);c.stroke();c.setLineDash([]);c.restore();}
   if(X.scene&&!X.scene.v5){const S=X.scene,k=Math.min(1,S.t/1.6),fd=1-k;c.save();c.globalAlpha=fd;   // v18.10 : sa mort en V a sa propre scène (section v18.10)
-   if(S.haut){const cy=S.y-70+(S.dy||0)+k*160;c.strokeStyle=rgba('croix',0.95);c.lineWidth=5;c.lineCap='round';c.save();c.translate(S.x,cy);c.rotate(RM?0:k*1.2);c.beginPath();c.moveTo(-46,0);c.lineTo(46,0);c.moveTo(0,-22);c.lineTo(0,26);c.stroke();c.restore();
-    c.strokeStyle=rgba('fils',0.7);c.lineWidth=1.2;c.beginPath();for(const fx of [-46,46]){c.moveTo(S.x+fx,cy);c.lineTo(S.x+fx*1.3,cy+40+k*120);}c.stroke();}
-   else{c.fillStyle=rgba('manteau',0.9);c.beginPath();c.ellipse(S.x,S.y+S.r*0.6,S.r*(1+k),S.r*0.4*(1-k*0.6),0,0,TAU);c.fill();}
+   if(S.haut){const cy=S.y-70+(S.dy||0)+(RM?0:k*160);c.strokeStyle=rgba('croix',0.95);c.lineWidth=5;c.lineCap='round';c.save();c.translate(S.x,cy);c.rotate(RM?0:k*1.2);c.beginPath();c.moveTo(-46,0);c.lineTo(46,0);c.moveTo(0,-22);c.lineTo(0,26);c.stroke();c.restore();
+    c.strokeStyle=rgba('fils',0.7);c.lineWidth=1.2;c.beginPath();for(const fx of [-46,46]){c.moveTo(S.x+fx,cy);c.lineTo(S.x+fx*1.3,cy+40+(RM?0:k*120));}c.stroke();}
+   else{c.fillStyle=rgba('manteau',0.9);c.beginPath();c.ellipse(S.x,S.y+S.r*0.6,S.r*(1+(RM?0:k)),S.r*0.4*(1-(RM?0:k*0.6)),0,0,TAU);c.fill();}
    c.restore();}}
  const _dt=drawTelegraphs;drawTelegraphs=function(){_dt.apply(this,arguments);if(X.on&&state==='play')try{dessinZones(ctx);}catch(err){console.error(err);}};
  // sa lumière : celle d'un gardien, dans sa matière (brume18, hors grammaire), sans battement
@@ -15371,19 +15374,28 @@ function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,
   if(RUN&&!RUN.hub&&RUN.gardeNow==='final'&&type==='elite'&&room&&room.arene==='final'){const n=ACTE();RUN.gardeNow=0;room.garde=n;room.gardeK='final';room.renfort=null;return[];}
   return _prR.apply(this,arguments);};
  function debutReel(){X=neuf();X.palier=brxPalier(DB,(RUN&&RUN.palierD)||'normal');X.graine=(Math.random()*4294967296)>>>0;X.rng=desRng(X.graine);X.reel=true;
-  debut(0);room.bannerT=DB.fin.banniereS;showBanner(DB.nom,'Au fond de la Brume',true);X.t=Math.max(X.t,DB.fin.banniereS);}
+  // v18.12 (5h) : son regard et son rire (la première lecture) suivent sa bannière, comme le veut la fiche (§ 1), au lieu de la couvrir
+  const rr=window.__rire;window.__rire=null;try{debut(0);}finally{window.__rire=rr;}X.regard=0;
+  later(DB.fin.banniereS,()=>{if(X.reel&&X.on&&X.e&&!X.e.dead){X.regard=1.2;try{if(window.__rire)window.__rire(0.5);}catch(err){}}});
+  room.bannerT=DB.fin.banniereS;showBanner(DB.nom,'Au fond de la Brume',true);X.t=Math.max(X.t,DB.fin.banniereS);}
  const _erR=enterRoom;enterRoom=function(){const r=_erR.apply(this,arguments);try{if(REEL()&&!X.on)debutReel();}catch(err){console.error(err);}return r;};
- // la fin de la descente : après la scène de sa mort (onRoomCleared l'ouvrait à 2,2 s, en pleine scène)
- const _orcR=onRoomCleared;onRoomCleared=function(){if(!(REEL()&&X.reel&&X.scene))return _orcR.apply(this,arguments);
-  const L0=later,d=(X.scene.dureeS||2.2)+DB.fin.apresS;later=function(t,f){return L0.call(this,d,f);};try{return _orcR.apply(this,arguments);}finally{later=L0;}};
+ // la fin de la descente : après la scène de sa mort (onRoomCleared l'ouvrait à 2,2 s, en pleine scène) ; v18.12 (5h) : seule l'ouverture de la fin
+ // attend (openEnd ci-dessous), le reste de la purge (ses messages, ses effets) garde son heure
  // une mort par lui (ses zones, ses mécanismes, son corps, ses constructions) se note « brumeux » ; foeName le nomme
  V7FOE1.brumeux='le Brumeux';
  const _hpR=hurtPlayer;hurtPlayer=function(dmg,src){const zc=X.zoneCourante,r=_hpR.apply(this,arguments);
-  try{if(X.on&&RUN&&RUN.mem&&(zc||(src&&src.brx18)||RUN.mem.lastSrc==='boss'||RUN.mem.lastSrc==='mannequin'))RUN.mem.lastSrc='brumeux';}catch(err){}return r;};
+  try{if(X.on&&RUN&&RUN.mem&&(zc||(src&&(src.brx18||src.brx18p))||(!src&&tirBrx())||RUN.mem.lastSrc==='boss'||RUN.mem.lastSrc==='mannequin'||RUN.mem.lastSrc==='brx18e'))RUN.mem.lastSrc='brumeux';}catch(err){}return r;};
+ // v18.12 (5h) : un tir du Brumeux (ses tirs, ses aiguilles, les tirs de ses emprunts) arrive sans source : celui qui te touche le nomme
+ function tirBrx(){for(const p of eproj){if(p.brx18&&hyp(p.x-P.x,p.y-P.y)-(p.r||6)-P.r<14)return true;}return false;}
  // la durée du combat (un nombre, l'acte X) dans la tuile « Combats de gardien » de l'écran de fin
  const _bdR=bossDefeated;bossDefeated=function(e){const r=_bdR.apply(this,arguments);try{if(e&&e.brx18&&X.reel&&RUN){(RUN.bossT||(RUN.bossT={}))[ACTE()]=RUN.time-X.j.t0;}}catch(err){}return r;};
  // l'écran de victoire : le texte d'avant v18 parlait du Glas Originel (fin de descente jusqu'à la v17) ; vaincre le Brumeux a le sien (à revoir par l'auteur)
- const _oeR=openEnd;openEnd=function(win){const brx=!!(win&&X.reel&&X.e&&X.e.dead);const r=_oeR.apply(this,arguments);
+ // v18.12 (5h) : vaincu, il n'est plus là pour te tuer : entre sa mort et l'écran de fin (sa scène, puis fin.apresS), tu ne perds plus de PV
+ // (la corruption du Gouffre, le furioso du Héraut) ; et une fin ouverte pendant ce temps (l'abandon depuis la pause) reste une victoire
+ const vaincu=()=>!!(REEL()&&X.reel&&X.e&&X.e.dead);
+ const _lhR=loseHp;loseHp=function(n){if(vaincu()&&n>0)return;return _lhR.apply(this,arguments);};
+ const _oeR=openEnd;openEnd=function(win){if(!win&&vaincu()){arguments[0]=true;if(arguments.length>1)arguments[1]=false;win=true;}
+  if(win&&REEL()&&X.reel&&X.scene&&!X.finDiff){X.finDiff=true;const reste=Math.max(0,(X.scene.dureeS||2.2)-(X.scene.t||0))+DB.fin.apresS,a=[...arguments];later(reste,()=>openEnd.apply(null,a));return;}const brx=!!(win&&X.reel&&X.e&&X.e.dead);const r=_oeR.apply(this,arguments);
   try{if(brx){const ov=document.querySelector('#overlay');if(ov)for(const el of ov.querySelectorAll('h1,h2,h3,p')){const t=el.textContent.trim();
    if(t==='Le dernier glas')el.textContent=DB.fin.titre;else if(/^Le Glas Originel se tait\./.test(t))el.textContent=DB.fin.texte;}}}catch(err){console.error(err);}return r;};
  // la porte « final » : son glyphe, quand l'arène est allumée (crochet lu par sigil)

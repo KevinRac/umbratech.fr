@@ -1773,6 +1773,29 @@ if (SEC.includes('N')) {
     await capture(page, 'allumage-victoire.png');
     ok(r.on && v.s0 <= 1.05 && v.ov != null && v.ov <= 2.3, `N-G : mouvements réduits : la scène de mort est un fondu (${v.s0} s), la fin s'ouvre ${v.ov && v.ov.toFixed(2)} s après`);
     ok(!errs.length, 'N-G : aucune erreur ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // ── N-H · relecture 5h (v18.12) : rien ne s'ouvre pendant sa scène de mort (le butin d'un champion, forcé à 100 %), aucune perte de PV entre
+  // sa mort et l'écran de fin, la fin reste une victoire ; les tuiles de l'arène libérées à la salle suivante ; une sauvegarde d'une version
+  // plus récente n'est pas écrasée
+  { const { page, errs, ctx } = await ouvre('', { vrais: true });
+    const r = await page.evaluate(([PF]) => { window.BRUME_DATA.equipements.chanceChampion = 100; const B = window.__brume, f = eval(PF)('gou'), D = window.__brumeux.dbg();
+      window.__brumeux.vers(5); for (let i = 0; i < 60 * 6; i++) { B.P.iT = 2; B.step(1 / 60, 1); }
+      for (let k = 0; k < 8 && !D.X.e.dead; k++) { B.killAll(); B.step(1 / 60, 1); }
+      const mortB = D.X.e.dead; let ecran = null, t = 0, hpMin = 1e9; B.P.hp = 3;
+      for (let i = 0; i < 60 * 7; i++) { B.P.iT = 0; B.P.dashT = 0; try { B.hurt(50); } catch (e) {} hpMin = Math.min(hpMin, B.P.hp); B.step(1 / 60, 1); t += 1 / 60;
+        const o = document.querySelector('#overlay'); if (!o.hidden) { ecran = { t: +t.toFixed(2), txt: o.innerText.slice(0, 300) }; break; } }
+      const A = window.__arene.dbg().A, avant = Object.keys(A.sol).length; const out = { f, mortB, mort: B.P.dead, hpMin, ecran, avant, desc: B.SAVE.descente };
+      B.start(); for (let i = 0; i < 3; i++) B.step(1 / 60, 1); out.apres = Object.keys(window.__arene.dbg().A.sol).length; out.M = !!window.__arene.dbg().A.M; return out; }, [PURGE_FOND.toString()]);
+    console.log('   ' + JSON.stringify({ mortB: r.mortB, mort: r.mort, hpMin: r.hpMin, ecran: r.ecran && { t: r.ecran.t, txt: r.ecran.txt.slice(0, 60) }, tuiles: [r.avant, r.apres] }));
+    ok(r.f.ok && r.mortB && r.ecran && /Au fond de la Brume/.test(r.ecran.txt) && !/champion/i.test(r.ecran.txt), 'N-H : le premier écran après sa mort est la fin de la descente (aucun butin de champion pendant sa scène)');
+    ok(!r.mort && r.hpMin >= 3 && r.desc && r.desc.ouverts.includes('difficile'), `N-H : entre sa mort et la fin, aucune perte de PV (PV au plus bas ${r.hpMin}), la victoire compte (Difficile s'ouvre)`);
+    ok(r.avant > 0 && r.apres === 0 && !r.M, `N-H : les tuiles de l'arène (${r.avant} états cuits) sont libérées à la salle suivante`);
+    ok(!errs.length, 'N-H : aucune erreur ' + errs.slice(0, 2).join(' | ')); await ctx.close();
+    const { page: p2, errs: e2, ctx: c2 } = await ouvre('', { vrais: true });
+    const m = await p2.evaluate(([PF]) => { const B = window.__brume; B.SAVE.brumeux = { v: 99, futur: 1 }; const f = eval(PF)('lum');
+      for (let i = 0; i < 60 * 240 && !B.P.dead; i++) { B.P.hp = Math.min(B.P.hp, 1); B.step(1 / 60, 1); }
+      for (let i = 0; i < 60 * 4; i++) B.step(1 / 60, 1); return { f, mort: B.P.dead, sb: B.SAVE.brumeux }; }, [PURGE_FOND.toString()]);
+    ok(m.f.ok && m.mort && m.sb && m.sb.v === 99 && m.sb.futur === 1, `N-H : une sauvegarde d'une version plus récente n'est pas écrasée (${JSON.stringify(m.sb)})`);
+    ok(!e2.length, 'N-H : aucune erreur ' + e2.slice(0, 2).join(' | ')); await c2.close(); }
 }
 console.log(`\nbanc-brumeux : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
 await browser.close();

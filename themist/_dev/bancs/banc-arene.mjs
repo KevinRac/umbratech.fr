@@ -145,9 +145,10 @@ if (SEC.includes('C')) {
     const t = []; for (let k = 0; k < 5; k++) D.render(); for (let k = 0; k < n; k++) { const t0 = performance.now(); D.render(); c.getImageData(0, 0, 1, 1); t.push(performance.now() - t0); }
     t.sort((a, b) => a - b); return { med: t[Math.floor(n / 2)], moy: t.reduce((a, b) => a + b, 0) / n }; };
   // même contenu : 20 ennemis ordinaires, 30 lumières ; arène : + boss d'essai et ses zones, 10 signes
+  // v18.12 (5h) : la salle d'élite de référence est la place provisoire de l'acte X, arène éteinte dans sa page (allumée, la salle « final » est l'arène du Brumeux)
   async function salle(arene) {
     const { page, errs, ctx } = await ouvre('');
-    const p = arene ? await page.evaluate(ESSAI, { foule: 0, boss: true, dieu: true }) : await page.evaluate(() => { const B = window.__brume; B.SAVE.descente = { v: 1, ouverts: ['normal'], choisi: 'normal', victoires: {} }; B.cls('lum'); B.start(); window.__descente.essai(10, { fin: true }); for (let i = 0; i < 3; i++) B.step(1 / 60, 1); return null; });
+    const p = arene ? await page.evaluate(ESSAI, { foule: 0, boss: true, dieu: true }) : await page.evaluate(() => { const B = window.__brume; window.__arene.activer(false); B.SAVE.descente = { v: 1, ouverts: ['normal'], choisi: 'normal', victoires: {} }; B.cls('lum'); B.start(); window.__descente.essai(10, { fin: true }); for (let i = 0; i < 3; i++) B.step(1 / 60, 1); return null; });
     // remplir : une vague posée à la main (le jeu crée lui-même les ennemis), étourdis pour rester en place
     const n = await page.evaluate(([arene, PAS_]) => { const PAS = eval(PAS_), X = window.__arene, D = X.dbg(), room = D.room, P = D.P;
       room.waves = []; room.waveI = 0; room.spawning = []; for (const e of D.enemies) e.dead = true;
