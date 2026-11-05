@@ -1080,7 +1080,7 @@ Utilise un **score** simple par action (dégâts × probabilité − risque), pa
 
 ## 11. Animations de combat
 
-> **Réalisé au jalon M8 (05/11/2026)** : écran rapproché `scenes/BattleCloseupScene.ts`, chronologie pure `logic/anim/closeup.ts`, données `data/battleAnims.json`, durées `balance.json › closeup`, bruitages `audio/sfx.ts`. Les 12 classes, le héros et les 26 apparences d'ennemis sont peints (Pixellab). Écarts au texte ci-dessous : un temps d'arrêt de 750 ms à l'ouverture, une pose d'armé tenue avant la frappe et un gel plus long (rythme GBA, n°225) portent un coup de mêlée à ≈ 1,5 s ; un échange coup + riposte reste sous 4,3 s (2,2 s en « Rapides »). Détail et décisions n°204 à n°228 : PROGRESS.md, « Livré en M8 ».
+> **Réalisé au jalon M8 (05/11/2026)** : écran rapproché `scenes/BattleCloseupScene.ts`, chronologie pure `logic/anim/closeup.ts`, données `data/battleAnims.json`, durées `balance.json › closeup`, bruitages `audio/sfx.ts`. Les 12 classes, le héros et les 26 apparences d'ennemis sont peints (Pixellab). Écarts au texte ci-dessous : un temps d'arrêt de 750 ms à l'ouverture, une pose d'armé tenue avant la frappe et un gel plus long (rythme GBA, n°225) portent un coup de mêlée à ≈ 1,5 s ; un échange coup + riposte reste sous 4,3 s (2,2 s en « Rapides »). Détail et décisions n°204 à n°228 : PROGRESS.md, « Livré en M8 ». Le 05/11/2026, toutes les animations sont refaites sur le modèle des classes de *Fire Emblem* GBA (mode vidéo de Pixellab : critiques acrobatiques peintes en entier, style « film », fente peinte) : décisions n°250 à n°256, PROGRESS.md, « Livré : animations façon Fire Emblem GBA ».
 
 ### 11.1 Principes
 
@@ -1673,6 +1673,7 @@ Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le p
 34. **Lot « dialogues de combat »** (03/11/2026) : décisions n°174 à n°191 validées (contenu pilote, apparence des Échos, plafond et réservation du boss, déclencheurs, Parler et refus, changement de camp, arrivée dans la compagnie, sort des nommés, alliés verts qui parlent, apparition au hasard, affichage, journal, sauvegarde v2, roster de 30 laissé à M7, outils de debug) ; voir §7.9.1 et PROGRESS.md.
 35. **Jalon M7 : contenu du monde** (04/11/2026) : décisions n°192 à n°203 validées le 03/11/2026 (découpage en lots, postes des nommés, Ser Maëlis, Orvane, trois fins, alliés verts nommés, portraits peints, roster de 30, Arène des Cendres, saluts de village, parcours Z1 → Z5, écriture) ; voir §7.9.2 et PROGRESS.md.
 36. **Jalon M8 : animations de combat** (05/11/2026) : décisions n°204 à n°222 validées au début du jalon (écran rapproché, mise en page, fonds peints par code, critère de vitesse, repli sur le sprite de carte, cut-ins, réglages, banc d'essai), n°223 à n°228 au fil des lots (sorts selon l'arme, armes lancées, rythme GBA, impact, bruitages, ennemis peints) ; voir §11 et PROGRESS.md.
+37. **Animations façon Fire Emblem GBA** (05/11/2026, demandées par l'auteur) : chaque classe et chaque ennemi copie le geste de son équivalent GBA ; critique « film », fente peinte, effets fondus au bord ; décisions n°250 à n°256 ; voir §11 et PROGRESS.md.
 
 ---
 

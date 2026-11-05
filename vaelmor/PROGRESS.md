@@ -6,7 +6,7 @@
 Nous sommes sur le projet Vaelmor (dossier `vaelmor/` du dépôt umbratech.fr, push direct sur `main`). Lis `docs/GDD_Vaelmor.md`, `docs/STORY_BIBLE.md` et `PROGRESS.md`, puis commence le jalon indiqué. Respecte l'architecture existante. À la fin, mets à jour `PROGRESS.md`.
 
 ## Prochain jalon
-**M10 (finitions) — en cours.** Lots A, B et C livrés le 05/11/2026 (voir « M10 en cours ») ; reprendre au **lot D (bruitages et mixage)**. Bugs, barème et protocole des tests : `docs/TESTS_M10.md`. Décisions n°229 à n°249 validées le 05/11/2026 (liste ci-dessous).
+**M10 (finitions) — en cours.** Lots A, B et C livrés le 05/11/2026 (voir « M10 en cours »), puis, hors lots, les animations façon Fire Emblem GBA (décisions n°250 à n°256, voir « Livré : animations façon Fire Emblem GBA ») ; les décisions de M10 reprennent à **n°257** ; reprendre au **lot D (bruitages et mixage)**. Bugs, barème et protocole des tests : `docs/TESTS_M10.md`. Décisions n°229 à n°249 validées le 05/11/2026 (liste ci-dessous).
 Compte en ligne (M9b) **allumé et essayé en production par l'auteur le 03/11/2026** (schéma importé, secrets créés, connexion et sauvegarde OK).
 
 **Idées gardées pour plus tard (graphismes, 02/11/2026)** : autres personnages générés pour chaque classe (comme le 2e Veilleur, n°122 : environ 37 générations Pixellab par personnage) — **en attente** pour ne pas épuiser le forfait Pixellab de l'auteur ; ennemis, PNJ et bâtiments peints ; animations de combat rapprochées (faites en M8).
@@ -555,6 +555,24 @@ Méthode : un lot à la fois ; captures (et séquence image par image, ou fichie
 - **n°247 — Kit testeur** : F10, journal de session, rien d'envoyé automatiquement.
 - **n°248 — Protocole** : 60 min depuis « Nouvelle partie », sans debug, carnet et questionnaire ; l'auteur recrute les testeurs.
 - **n°249 — Pixellab** : aucune génération prévue (un seul essai chiffré si un manque apparaît) ; version 1.0.0 quand le critère est tenu, diapositive de l'accueil mise à jour.
+
+## Livré : animations façon Fire Emblem GBA (complément de M8, 05/11/2026)
+À la demande de l'auteur (animations « fades », « il manque du mouvement »), toutes les animations de l'écran rapproché sont refaites sur le modèle des classes de *Fire Emblem* GBA, avec le mode vidéo de Pixellab (`pixminimax` : tout le corps bouge, effets peints compris). Fait hors des lots de M10 (n°249 ne prévoyait pas de génération).
+- **Classes et héros** (`assets/combat/<classe>.png`) : héros → Héros (saut en roue, coupe écrasante puis montante) ; Lame → Bretteur (tourbillon aérien, saltos, coupe éclair) ; Gardien → Général (bouclier frappé au sol, charge, double estoc) ; Veilleur → Sniper (genou à terre, visée tenue) ; Danseur → Assassin et danseuse (images rémanentes, pirouettes, salto) ; Chasseur → Guerrier (bond, harpon planté dans une gerbe d'eau) ; Héraut → Ephraim (moulinet de bannière, saut à la perche) ; Ingénieur → baliste (tir surchargé d'éclairs) ; Héritier → Sage / Archisage (cercle et spirale de feu, cône de flammes) ; Porte-Lanterne → Évêque (lévitation, éclair sacré) ; Façonneur → Druide (racines, tempête d'épines) ; Invocateur → Invocateur (pierres runiques en orbite) ; Alchimiste (jonglage de fioles). Le héros garde ses poses peintes de compétence, de coup reçu et de KO.
+- **Ennemis** (26 apparences) : Brakk → Berserker ; Roi-Cerf → Druide paladin ; Sœur Mérrow → Sorcière ; Mère-Harpie → Wyverne ; Gardien de Cendre et Golem → Général ; Orvane → Roi-Démon ; Écumeurs → Combattant, Soldat, Archer, Chaman ; Pillard → Myrmidon ; Revenant → Bretteur ; Garde englouti → Grand Chevalier ; etc.
+- **Moteur** : style de critique `film` (n°251), fente peinte `reach` (n°252), animations jusqu'à 48 images sur plusieurs rangées et feuilles jusqu'à 320 px (n°253), fondu des effets au bord du cadre (n°254), fin du film attendue avant le coup suivant.
+- **Outils** (dossier de travail, hors dépôt) : génération par lots de 8 (limite du forfait), planche de chaque animation vérifiée image par image, assemblage aligné sur la garde (`feet`), annotations `peak` / `impact` / `hold` / `ms` / `loop` à la main.
+- **Coût** : 199 générations (Lame 7 ; classes 60 dont 6 de reprise ; mages sans coupure 10 ; ennemis 116 dont 1 de reprise et 7 boss en tête) ; solde 590 / 2 000.
+- **Tests** : 843 au vert ; le critique « film » de la Lame seul tient sous le budget d'un échange (avec une riposte, environ 1 s de plus, n°255).
+
+### Décisions n°250 à n°256 (animations façon Fire Emblem) — demandées par l'auteur le 05/11/2026
+- **n°250 — Modèle** : chaque classe et chaque ennemi copie le geste de son équivalent GBA (tableau ci-dessus) ; taille des personnages inchangée (l'auteur craignait qu'agrandir soit pire).
+- **n°251 — Critique « film »** au corps à corps : les images peintes portent toute la chorégraphie, déplacement compris, à vitesse constante (`ms`, 45 ms par image) ; pas de course ni de zoom du code ; l'impact tombe à l'image `impact`, la fin se joue pendant le recul et la pose. Tirs et sorts gardent l'armé et l'incantation en boucle (`loop`), critique compris.
+- **n°252 — Fente peinte** (`reach`, en pixels de la feuille) : la course du code s'arrête d'autant plus tôt, pour que la frappe peinte arrive au contact.
+- **n°253 — Feuilles** : une animation continue sur les rangées suivantes (jusqu'à 48 images), cadre jusqu'à 320 × 256 px.
+- **n°254 — Pas de coupure** : un effet de mage qui approche du bord de son cadre se défait en pixels épars (tramage ordonné sur 16 px), le corps jamais touché ; le mage de feu régénéré dans un cadre plus grand.
+- **n°255 — Durée** : un échange avec un critique « film » peut dépasser le budget de 4,3 s d'environ 1 s (critique rare, « Rapides » divise tout par deux).
+- **n°256 — Retouches** : flèches et carreaux peints effacés (le jeu tire les siens) ; fumées grises parasites retirées ; images ratées remplacées par la voisine ; une animation qui tourne vers la caméra est coupée ou régénérée.
 
 ## Livré en M8 (animations de combat, 05/11/2026)
 Écran de combat rapproché façon *Fire Emblem* GBA (GDD §11). Critère du GDD (« toutes les classes avec attaque + critique, vitesse acceptable ») : les 12 classes, le héros et les 26 apparences d'ennemis ont une feuille peinte ; un échange coup + riposte tient sous 4,3 s (2,2 s en « Rapides »), vérifié par `tests/closeup.test.ts`. Modèle conseillé pour M10 : Opus, effort moyen (finitions variées) ; Sonnet suffit pour des retouches.
