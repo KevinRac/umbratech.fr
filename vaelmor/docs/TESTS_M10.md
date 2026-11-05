@@ -40,7 +40,7 @@ M10 est tenu quand **aucun bloquant ni majeur** n'est ouvert après les trois se
 | A-05 | Mineur | HUD d'exploration : ni portrait, ni niveau du héros, ni blessés (GDD §13.1). | B | Corrigé : fiche du héros sous le nom de zone. |
 | A-06 | Mineur | Réglages dispersés : qualité dans la pause du monde ; vitesse, vue, effets réduits et sons dans le menu de carte du combat. | B | Corrigé : tout passe par l'écran Options. |
 | A-07 | Mineur | Le titre et le debug affichent « prototype M9 » (`MILESTONE`). | B | Corrigé. |
-| A-08 | Majeur | Aucun son hors combat : interface, pas, détection « ! », entrée de village, ambiances. | D | Ouvert |
+| A-08 | Majeur | Aucun son hors combat : interface, pas, détection « ! », entrée de village, ambiances. | D | Corrigé : bruitages d'interface et du monde, pas selon le sol, 5 ambiances, sons de combat refaits, mixage ; planche d'écoute validée par l'auteur. |
 | A-09 | Majeur | Accessibilité (GDD §13.8) : seul « Effets réduits » existe, et seulement en combat. | E | Ouvert |
 | A-10 | À mesurer | IA contre IA avec la compagnie d'essai : 100 % de victoires en Z1 et Z2, puis 0 à 50 % dès Z3 et 0 % contre tous les boss après Brakk. La compagnie d'essai (sans soigneur parmi les 5 premiers déployés, sans évolution ni équipement) n'est pas une compagnie réelle : à mesurer avec le simulateur. | F | Ouvert |
 | A-11 | Mineur | « Combat d'essai » est proposé à tous sur le titre. | B | Corrigé : seulement avec `?debug`. |
