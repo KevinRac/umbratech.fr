@@ -17,6 +17,23 @@ Réglages : mode **Instrumental**, prompt collé dans le champ **Style**, 1 min 
 | `mus_boss` | Combat de boss | `instrumental, intense boss battle, pounding timpani, aggressive low strings, choir stabs, dramatic brass, fast tempo 160 bpm, epic tactical RPG, seamless loop` | reçu ✔ |
 | `mus_final_boss` | Orvane (boss final) | `instrumental, final boss theme, tragic fallen king, pipe organ, crashing choir, relentless strings, ocean wave sound design, two-part structure calm then furious, epic dark fantasy, seamless loop` | reçu ✔ |
 | `mus_victory` | Victoire (jingle) | `instrumental, short triumphant victory jingle, brass fanfare, bright strings, 10 seconds, resolves cleanly, retro JRPG, no loop` | reçu ✔ |
+| `mus_prep` | Écran de préparation (jalon M10) | `instrumental, tactical preparation theme before battle, steady snare march, low strings ostinato, hopeful horn melody, calm determination, 100 bpm, Fire Emblem GBA preparation screen inspired, seamless loop` | **à générer** (sans elle, la musique d'exploration continue) |
+| `mus_ending` | Les trois fins (jalon M10) | `instrumental, bittersweet ending theme, solo piano and harp opening, warm strings, distant choir, lantern light over the sea, melancholic hope, resolves gently, medieval fantasy JRPG credits, no loop` | **à générer** (sans elle : `mus_title`) |
+| `mus_recruit` | Scènes « Parler » (facultative) | `instrumental, gentle reunion theme, acoustic guitar, flute, soft strings, tender and hopeful, slow tempo, Fire Emblem GBA recruit theme inspired, seamless loop` | facultative |
+| `mus_arena` | Arène des Cendres (facultative) | `instrumental, arena tournament battle, festive war drums, trumpets, energetic 140 bpm, medieval fantasy gladiator, seamless loop` | facultative (sans elle : `mus_battle`) |
+| `mus_ending_nuit` | Fin « La nuit basse » (facultative) | `instrumental, sorrowful ending, low cello, sparse piano, cold wind, tide receding, slow, dark fantasy, no loop` | facultative (sans elle : `mus_ending`) |
 | `mus_defeat` | Défaite (jingle) | `instrumental, short somber defeat jingle, low strings, solemn horn, fading harp, 10 seconds, resolves quietly, retro JRPG, no loop` | reçu ✔ |
+
+## Préparer les pistes pour le jeu (jalon M10)
+
+Le jeu ne lit pas ces MP3 : il lit `web/<id>.webm` (Opus) ou `web/<id>.m4a` (AAC), produits par
+
+```
+npm run encode-music                       # toutes les pistes (ffmpeg doit être installé)
+npm run encode-music -- mus_prep           # une piste nouvelle ou remplacée
+npm run encode-music -- --preview <dossier>   # + raccords.m4a pour écouter chaque raccord
+```
+
+Le script trouve tout seul les points de boucle (pas besoin de nettoyer la boucle dans Audacity), cuit un raccord en fondu de 50 ms, met toutes les pistes au même volume, encode les deux formats et écrit `data/music.json › tracks`. Une piste nouvelle doit aussi avoir sa place dans `data/music.json › rules` (sinon elle n'est jamais jouée) ; les jingles (sans boucle) sont listés dans `ONE_SHOT` de `tools/encode-music.ts`.
 
 Garder la trace de chaque piste retenue (date de génération, prompt, abonnement Suno utilisé) dans `../CREDITS.md`.

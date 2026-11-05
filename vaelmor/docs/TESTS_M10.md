@@ -34,7 +34,7 @@ M10 est tenu quand **aucun bloquant ni majeur** n'est ouvert après les trois se
 | # | Gravité | Constat | Lot | État |
 |---|---|---|---|---|
 | A-01 | Majeur | **Fuite mémoire** : +0,6 Mo par aller-retour monde ↔ combat (111 → 132 Mo en 30 combats). Cause : Phaser 4.2.1 ne rend pas les textures de données des couches GPU (`TilemapGPULayer.layerDataTexture`), ni celle des tuiles animées ; `destroy()` seul laisse l'enveloppe dans la liste du moteur. | A | **Corrigé** : `releaseGpuTilemapOnShutdown` (`render/tileAnimations.ts`), appelé par le monde et le combat ; tas stable (116 Mo après 15 combats) ; garde-fou dans `tests/architecture.test.ts`. |
-| A-02 | Majeur | **Aucune musique** : les 13 pistes Suno sont dans `music/` (62 Mo de MP3 à 320 kbps), rien ne les charge. | C | Ouvert |
+| A-02 | Majeur | **Aucune musique** : les 13 pistes Suno sont dans `music/` (62 Mo de MP3 à 320 kbps), rien ne les charge. | C | Corrigé : lecteur de musique, boucles trouvées et cuites, Opus/AAC chargés à la demande. |
 | A-03 | Majeur | « Options » du titre affiche « Les options arrivent au jalon M10 ». | B | Corrigé : écran Options (titre, pause, menu, combat). |
 | A-04 | Majeur | **Voyage rapide** (décision n°7) jamais codé ; la touche N (carte de l'île) est liée mais sans effet. | B | Corrigé : carte de l'île (N, onglet Carte) et voyage rapide. |
 | A-05 | Mineur | HUD d'exploration : ni portrait, ni niveau du héros, ni blessés (GDD §13.1). | B | Corrigé : fiche du héros sous le nom de zone. |

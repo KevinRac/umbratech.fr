@@ -13,6 +13,7 @@ import {
   encountersFileSchema,
   endingsFileSchema,
   battleAnimsFileSchema,
+  musicFileSchema,
   itemsFileSchema,
   classesFileSchema,
   elementsFileSchema,
@@ -30,6 +31,7 @@ import {
   type EncountersFile,
   type EndingsFile,
   type BattleAnimsFile,
+  type MusicFile,
   type EnemyDef,
   type ReputationConfig,
   type WeaponDef,
@@ -75,6 +77,7 @@ export const DATA_SCHEMAS = {
   battleQuotes: battleQuotesFileSchema,
   endings: endingsFileSchema,
   battleAnims: battleAnimsFileSchema,
+  music: musicFileSchema,
 } as const;
 
 export type DataKey = keyof typeof DATA_SCHEMAS;
@@ -126,6 +129,8 @@ export interface GameData {
   readonly endings: EndingsFile;
   /** Écran de combat rapproché (`battleAnims.json`, jalon M8). */
   readonly battleAnims: BattleAnimsFile;
+  /** Musiques : pistes encodées et règles (`music.json`, jalon M10). */
+  readonly music: MusicFile;
 }
 
 export type ValidationResult =
@@ -271,6 +276,7 @@ function crossCheck(data: GameData): string[] {
   checkTalk(data, issues);
   checkEndings(data, issues);
   checkBattleAnims(data, issues);
+  checkMusic(data, issues);
 
   const roles = new Set(data.classes.map((c) => c.role));
   for (const role of CLASS_ROLES) {
@@ -458,6 +464,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     battleQuotes: z.infer<typeof battleQuotesFileSchema>;
     endings: z.infer<typeof endingsFileSchema>;
     battleAnims: z.infer<typeof battleAnimsFileSchema>;
+    music: z.infer<typeof musicFileSchema>;
   };
   const data: GameData = {
     elements: files.elements.elements,
@@ -487,6 +494,7 @@ export function validateGameData(raw: RawGameData): ValidationResult {
     scenes: files.battleQuotes.scenes,
     endings: files.endings,
     battleAnims: files.battleAnims,
+    music: files.music,
   };
 
   const crossIssues = crossCheck(data);
@@ -908,5 +916,31 @@ function checkBattleAnims(data: GameData, issues: string[]): void {
     if (!f.anims.attaque) issues.push(`${at}.anims : l'attaque est obligatoire`);
     for (const [name, anim] of Object.entries(f.anims)) if (anim.after && !f.anims[anim.after]) issues.push(`${at}.anims.${name}.after : animation « ${anim.after} » absente`);
     if (f.ranged && !f.anims[f.ranged]) issues.push(`${at}.ranged : animation « ${f.ranged} » absente`);
+  }
+}
+
+/**
+ * Musique (`music.json`, n°236) : chaque piste citée par une règle est encodée,
+ * ou a un remplaçant (`fallback`) qui finit sur une piste encodée ou sur null ;
+ * zones, lieux, rencontres et fins cités existent ; une boucle a ses deux points.
+ */
+function checkMusic(data: GameData, issues: string[]): void {
+  const file = 'music.json';
+  const { rules, tracks, fallback } = data.music;
+  const resolves = (id: string, seen: string[] = []): boolean => {
+    if (tracks[id]) return true;
+    if (!(id in fallback) || seen.includes(id)) return false;
+    const next = fallback[id];
+    return next === null || next === undefined || resolves(next, [...seen, id]);
+  };
+  const cited = [rules.title, rules.village, rules.prep, rules.battle, rules.boss, rules.victory, rules.defeat, rules.ending, ...Object.values(rules.zones), ...Object.values(rules.places), ...Object.values(rules.encounters), ...Object.values(rules.endings)];
+  for (const id of cited) if (!resolves(id)) issues.push(`${file} › rules : piste « ${id} » ni encodée ni remplacée (fallback)`);
+  for (const zone of Object.keys(rules.zones)) if (!data.zones.some((z) => z.id === zone)) issues.push(`${file} › rules.zones : zone inconnue « ${zone} »`);
+  for (const z of data.zones) if (!rules.zones[z.id]) issues.push(`${file} › rules.zones : la zone « ${z.id} » n'a pas de musique`);
+  for (const place of Object.keys(rules.places)) if (!data.locations.some((l) => l.id === place)) issues.push(`${file} › rules.places : lieu inconnu « ${place} »`);
+  for (const enc of Object.keys(rules.encounters)) if (!data.encounters.encounters.some((e) => e.id === enc)) issues.push(`${file} › rules.encounters : rencontre inconnue « ${enc} »`);
+  for (const end of Object.keys(rules.endings)) if (!data.endings.endings.some((e) => e.id === end)) issues.push(`${file} › rules.endings : fin inconnue « ${end} »`);
+  for (const [id, t] of Object.entries(tracks)) {
+    if (t.loop && (t.loopStart === undefined || t.loopEnd === undefined || t.loopEnd <= t.loopStart || t.loopEnd > t.duration)) issues.push(`${file} › tracks.${id} : points de boucle invalides`);
   }
 }

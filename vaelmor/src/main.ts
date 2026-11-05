@@ -3,6 +3,8 @@
  * agrandi par le zoom des caméras) et enregistre les scènes.
  */
 import Phaser from 'phaser';
+import { initAudio } from './audio/engine';
+import * as music from './audio/music';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, GAME_TITLE, GAME_VERSION } from './core/config';
 import { showFatalError } from './core/fatal';
 import { tickPlayClock } from './core/gameSave';
@@ -27,6 +29,8 @@ import { WorldHudScene } from './scenes/WorldHudScene';
 import { WorldScene } from './scenes/WorldScene';
 
 function start(): void {
+  // Son : le contexte audio naît au premier geste du joueur (règle des navigateurs).
+  initAudio();
   const initial = measureDisplay();
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
@@ -54,7 +58,7 @@ function start(): void {
   // Compte en ligne (lot M9b) : les écritures d'emplacements partent aussi sur le serveur quand on est connecté.
   cloud.startCloudSync();
   // Outil de debug : `?debug` expose le jeu à la console (`window.vaelmor`) pour inspecter les scènes.
-  if (new URLSearchParams(window.location.search).has('debug')) Object.assign(window, { vaelmor: game, vaelmorCloud: cloud });
+  if (new URLSearchParams(window.location.search).has('debug')) Object.assign(window, { vaelmor: game, vaelmorCloud: cloud, vaelmorMusic: music });
 }
 
 try {

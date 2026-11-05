@@ -6,9 +6,9 @@
  * oscillateurs carrés et sinus) en attendant les bruitages du jalon M10.
  *
  * Le contexte audio naît au premier son joué (toujours après un geste du
- * joueur) ; « Sons : non » (réglage `sound`) coupe tout.
+ * joueur) ; le volume « Effets sonores » à 0 les coupe (moteur commun : `audio/engine.ts`).
  */
-import { loadSoundOn, saveSoundOn } from '../core/settings';
+import { audioContext, busInput, DEFAULT_VOLUMES, loadVolume, saveVolume } from './engine';
 
 export type SfxId =
   | 'dash'
@@ -31,33 +31,27 @@ export type SfxId =
 /** Couleur d'un sort selon l'élément (`spell`). */
 export type SfxTone = 'cendre' | 'maree' | 'racine' | 'lanterne' | 'pierre' | null;
 
-let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let noise: AudioBuffer | null = null;
-let enabled = loadSoundOn();
 let lastTick = 0;
 
+/** Contexte commun (moteur audio, n°240) ; les bruitages passent par un compresseur puis le bus « effets ». */
 function audio(): AudioContext | null {
-  if (!enabled) return null;
-  if (!ctx) {
-    const Ctor = (globalThis as { AudioContext?: typeof AudioContext }).AudioContext;
-    if (!Ctor) return null;
-    try {
-      ctx = new Ctor();
-    } catch {
-      return null;
-    }
+  if (loadVolume('sfx') <= 0) return null;
+  const ctx = audioContext();
+  const bus = busInput('sfx');
+  if (!ctx || !bus) return null;
+  if (!master) {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14;
     comp.ratio.value = 6;
     master = ctx.createGain();
     master.gain.value = 0.55;
-    master.connect(comp).connect(ctx.destination);
+    master.connect(comp).connect(bus);
     noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const data = noise.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   }
-  if (ctx.state === 'suspended') void ctx.resume();
   return ctx;
 }
 
@@ -191,13 +185,12 @@ export function playSfx(id: SfxId, tone_: SfxTone = null): void {
   }
 }
 
+/** Vrai si les effets sonores ne sont pas coupés (volume > 0). */
 export function soundOn(): boolean {
-  return enabled;
+  return loadVolume('sfx') > 0;
 }
 
-/** Active ou coupe les bruitages (enregistré). */
+/** Coupe les effets sonores ou leur rend leur volume par défaut (enregistré). */
 export function setSoundOn(on: boolean): void {
-  enabled = on;
-  saveSoundOn(on);
-  if (!on && ctx) void ctx.suspend();
+  saveVolume('sfx', on ? DEFAULT_VOLUMES.sfx : 0);
 }

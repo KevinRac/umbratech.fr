@@ -35,6 +35,7 @@ import Phaser from 'phaser';
 import type { BackdropId, CloseupTimings, CritStyle, FighterAnim, FighterDef, ProjectileId, SlashId, SpellId } from '../data/schemas';
 import { castFrameAt, critSlashes, exchangeShapes, rhythmFrameAt, strikeSteps, type AttackKind, type Step } from '../logic/anim/closeup';
 import { playSfx, type SfxTone } from '../audio/sfx';
+import { duckMusic } from '../audio/engine';
 import { ActionInput } from '../core/input';
 import type { Strike, Team } from '../logic/tactics/types';
 import { BATTLE_TEX, ensureMapSprite } from '../render/battleTextures';
@@ -291,7 +292,10 @@ export class BattleCloseupScene extends Phaser.Scene {
       // Temps d'arrêt : les deux combattants face à face, en garde, avant le premier geste ;
       // au premier échange contre un boss, son bandeau occupe ce temps (GDD §11.4 : cut-in 400 ms).
       const intro = spec.cutins?.intro ? this.views.get(spec.cutins.intro) : undefined;
-      if (intro) await this.band(intro, 'intro');
+      if (intro) {
+        duckMusic(-6, 1200);
+        await this.band(intro, 'intro');
+      }
       else await this.wait(spec.timings.opening);
       if (spec.heal) await this.playHeal(spec.heal.amount, spec.heal.hpAfter);
       const kindOf = (id: string): AttackKind => (id === spec.left.id ? spec.left.kind : spec.right.kind);
@@ -305,7 +309,10 @@ export class BattleCloseupScene extends Phaser.Scene {
         if (i < spec.strikes.length - 1) await this.wait(spec.timings.between);
       }
       const phase = spec.cutins?.phase ? this.views.get(spec.cutins.phase) : undefined;
-      if (phase) await this.phaseCutIn(phase);
+      if (phase) {
+        duckMusic(-6, 2000);
+        await this.phaseCutIn(phase);
+      }
       for (const id of spec.falls) {
         const v = this.views.get(id);
         if (v?.spec.important) await this.lastBreath(v, spec.cutins?.quotes.get(id) ?? null);
@@ -504,6 +511,7 @@ export class BattleCloseupScene extends Phaser.Scene {
         switch (step.name) {
           case 'dark':
             playSfx('crit');
+            duckMusic(-6, 1400);
             await this.critIntro(a, step.ms);
             break;
           case 'prep':

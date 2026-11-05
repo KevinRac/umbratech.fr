@@ -95,7 +95,7 @@ export class OptionsPanel {
     if (this.input.justPressed('down')) this.select((this.cursor + 1) % this.rows.length);
     if (this.o.horizontal && this.input.justPressed('left')) this.change(-1);
     if (this.o.horizontal && this.input.justPressed('right')) this.change(1);
-    if (this.input.justPressed('confirm')) this.change(1);
+    if (this.input.justPressed('confirm')) this.change(1, true);
   }
 
   /** Relit toutes les valeurs (un réglage changé ailleurs). */
@@ -118,10 +118,10 @@ export class OptionsPanel {
     setText(this.help, view.row.help);
   }
 
-  private change(step: number): void {
+  private change(step: number, wrap?: boolean): void {
     const view = this.rows[this.cursor];
     if (!view) return;
-    view.row.set(stepValue(view.row, step));
+    view.row.set(stepValue(view.row, step, wrap ?? view.row.wrap !== false));
     this.refresh();
   }
 }
