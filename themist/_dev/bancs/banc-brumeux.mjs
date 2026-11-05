@@ -40,6 +40,12 @@
 //    L-C Dernier Souvenir (brûler le talent emprunté pendant la prise et pendant une étape, sous le plafond de la phase ; un autre talent ; gardien et
 //    Masqué inchangés) ; L-D la phase IV au bot dans les quatre formes, deux graines (0 coup sans signe) ; L-E coût apparié et peinture ; L-F
 //    mouvements réduits et captures.
+// N. L'allumage (5g-2, v18.12 ; vraies données) : N-A l'enchaînement réel depuis l'acte X (deux miniboss provisoires, porte « final » et son glyphe,
+//    arène à l'état 3, rien pendant la bannière, cinq phases sans pause, la fin après la scène) ; N-B vingt-quatre combats entiers au bot sur le build de
+//    référence (quatre formes, trois paliers, deux graines) : durées par phase, médianes ; N-C 0 coup sans signe sur ces combats ; N-D victoire et mort hors
+//    essai, dans une descente purgée jusqu'au fond (SAVE.brumeux, SAVE.descente, tuile X, écran de victoire ; mort : « face au Brumeux », tombe, élément) ;
+//    N-E coût apparié de la phase V en Extrême avec la vraie foule ; N-F la porte « final » : seule la zone de son sceau change, éteinte rien ne change ;
+//    N-G mouvements réduits et captures.
 // M. La phase V, « L'Effacement » (5f) : M-A lecture, candidats, premier et libres en jeu = logique pure (même graine, même X.montre injecté) ; M-B
 //    partitions courte et entière, les quatre gestes (éclair, effondrement → fosse, pan du bord, montage court, emprunt de ce qu'il a emprunté en IV), la
 //    feinte double, deux resserrements (seuils, attente de fin de mesure, poussée sans dégât, constructions filtrées, masque fendu ; jamais au temps), IV → V ;
@@ -54,7 +60,7 @@ import vm from 'node:vm';
 const require = createRequire('/opt/npm-tools/node_modules/');
 const { chromium } = require('playwright');
 const THEMIST = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGHIJKLM').toUpperCase(), DIR = process.argv[4] || null;
+const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGHIJKLMN').toUpperCase(), DIR = process.argv[4] || null;
 const BASE = `http://127.0.0.1:${PORT}/index.html`;
 if (DIR) mkdirSync(DIR, { recursive: true });
 let fails = 0, checks = 0;
@@ -190,9 +196,9 @@ if (SEC.includes('C')) {
   console.log('\n══ C · aucun coup sans signe : quatre combats conduits ══');
   for (const [k, cls] of ['lum', 'gou', 'her', 'tis'].entries()) {
     const { page, errs, ctx } = await ouvre('');
-    // v18.11 (5g-1) : le build de référence (au niveau 1, le Tisse-Destin, qui vise désormais les ennemis d'un tableau à toute distance, ne sortait plus
+    // v18.11 (5g-1) : le build de référence pour le Tisse-Destin seul (les trois autres, au build de référence contre les PV d'essai, finissent sans être touchés ; au niveau 1, le Tisse-Destin, qui vise désormais les ennemis d'un tableau à toute distance, ne sortait plus
     // de la phase I en 170 s) ; les vingt-quatre combats entiers de N-C éprouvent le combat aux vrais PV
-    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 31 + k, palier: ['normal', 'difficile', 'extreme', 'normal'][k], ref: true });
+    await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 31 + k, palier: ['normal', 'difficile', 'extreme', 'normal'][k], ref: cls === 'tis' });
     const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), D = window.__brumeux.dbg(); let fin = null;
       PAS(60 * 170, i => { const et = window.__brumeux.etat(); if (!et.on || et.scene) { fin = fin == null ? i : fin; } });
       return { j: window.__arene.journal(), st: window.__brumeux.statsRun(), fin, cls: D.P.cls, palier: window.__brumeux.etat().palier }; }, [PAS.toString()]);
@@ -312,7 +318,8 @@ if (SEC.includes('G')) {
   const r = spawnSync(process.execPath, [join(THEMIST, '_dev', 'bancs', 'banc-arene.mjs'), String(PORT), 'G'], { env, encoding: 'utf8', maxBuffer: 64 << 20 });
   const out = (r.stdout || '') + (r.stderr || ''); const m = /banc-arene : (\d+) vérifications, (\d+) échec/.exec(out), im = /(\d+) images comparées, (\d+) différentes/.exec(out);
   for (const l of out.split('\n')) if (/images comparées|ÉCHEC/.test(l)) console.log('   ' + l);
-  ok(m && +m[2] === 0 && im && +im[2] === 0 && +im[1] >= 10000, `G : ${im ? im[1] : '?'} images comparées, ${im ? im[2] : '?'} différentes (contre ${env.BANC_AVANT}) : ${m ? m[1] + ' vérifications, ' + m[2] + ' échec(s)' : 'banc-arene G non lu'}`);
+  // v18.12 (5g-2) : l'arène allumée, la salle « final » est le Brumeux : banc-arene G n'admet de différence que dans cette salle (ses 0 échec le disent)
+  ok(m && +m[2] === 0 && im && (+im[2] === 0 || DA.actif) && +im[1] >= 10000, `G : ${im ? im[1] : '?'} images comparées, ${im ? im[2] : '?'} différentes, salle « final » seule quand l'arène est allumée (contre ${env.BANC_AVANT}) : ${m ? m[1] + ' vérifications, ' + m[2] + ' échec(s)' : 'banc-arene G non lu'}`);
 }
 
 // ═══ H. Mouvements réduits et tailles d'écran ═══════════════════════════════════════════════════════════════════════════════════════
@@ -460,15 +467,15 @@ if (SEC.includes('I')) {
     const { page, errs, ctx } = await ouvre('', { vrais: true });
     await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: 61 + k, palier: ['normal', 'difficile', 'extreme', 'normal'][k], ref: true });
     const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_); let fin = null;
-      PAS(60 * 180, i => { const et = window.__brumeux.etat(); if (fin == null && (et.phase >= 2 || !et.on || et.scene)) fin = i; });
+      PAS(60 * 300, i => { const et = window.__brumeux.etat(); if (fin == null && (et.phase >= 2 || !et.on || et.scene)) fin = i; });
       const et = window.__brumeux.etat(); return { j: window.__arene.journal(), st: window.__brumeux.statsRun(), fin, tabs: et.j.tableaux, sautes: et.j.sautes, lancers: et.j.lancers }; }, [PAS.toString()]);
     const p1 = r.st.phases[1] || { t: 0, coups: 0 };
-    console.log(`   ${cls} (${r.st.palier}) : phase I ${r.fin != null ? 'finie en ' + p1.t + ' s' : 'non finie en 180 s'}, ${p1.coups} coups ; ${r.tabs.length} tableaux (${r.tabs.filter(t => t.vide === true).length} vidés, ${r.tabs.filter(t => t.vide === false).length} rentrés) ; ${r.st.dallesSautees} dalles sautées ; ${r.sautes} zones sautées ; journal ${r.j.coups} coups, ${r.j.sansSigne} sans signe`);
+    console.log(`   ${cls} (${r.st.palier}) : phase I ${r.fin != null ? 'finie en ' + p1.t + ' s' : 'non finie en 300 s'}, ${p1.coups} coups ; ${r.tabs.length} tableaux (${r.tabs.filter(t => t.vide === true).length} vidés, ${r.tabs.filter(t => t.vide === false).length} rentrés) ; ${r.st.dallesSautees} dalles sautées ; ${r.sautes} zones sautées ; journal ${r.j.coups} coups, ${r.j.sansSigne} sans signe`);
     console.log('     ' + r.tabs.map(t => `${t.decor}/${t.theme}/${t.regle || '-'}${t.champion ? '+champion' : ''}${t.densite ? '+d' + t.densite : ''} ${t.n} ennemis ${t.duree != null ? t.duree + ' s' : '…'}`).join(' · '));
     if (r.j.liste.length) console.log('   ' + JSON.stringify(r.j.liste.slice(0, 4)));
     ok(r.j.sansSigne === 0 && r.j.coups >= 3, `I-D : ${cls} : aucun coup sans signe (${r.j.coups} coups reçus en phase I, dalles et ennemis des tableaux compris)`);
     ok(r.tabs.length >= 1 && r.tabs.every(t => t.n > 0), `I-D : ${cls} : ${r.tabs.length} tableaux convoqués, chacun avec sa vague`);
-    ok(r.fin != null, `I-D : ${cls} : le bot qui frappe finit la phase I (${p1.t} s ; cible 50 à 70 s, PV placeholders recalés en 5g)`);
+    ok(r.fin != null, `I-D : ${cls} : le bot qui frappe finit la phase I (${p1.t} s, en 300 s au plus : vrais PV, le Tisse-Destin y passe 60 à 150 s, memoire.md § 41)`);
     ok(r.j.assertions === 0 && !errs.length, `I-D : ${cls} : aucune erreur ` + errs.slice(0, 2).join(' | '));
     if (cls === 'tis') await capture(page, 'rappel-combat.png');
     await ctx.close();
@@ -1635,6 +1642,137 @@ if (SEC.includes('M')) {
     ok(!errs.filter(x => !/Failed to load/.test(x)).length, 'M-F (mouvements réduits, suite) : aucune erreur ' + errs.slice(0, 2).join(' | '));
     await ctx.close();
   }
+}
+
+// ═══ N. L'allumage (5g-2, v18.12) : vraies données ═══════════════════════════════════════════════════════════════════════════════
+if (SEC.includes('N')) {
+  console.log('\n══ N · l\'allumage ══');
+  // une descente purgée (tout tué, portes de combat d'abord), comme banc-descente A ; s'arrête à l'entrée de la salle « final »
+  const PURGE_FOND = (cls) => { const B = window.__brume, X = window.__descente; X.effacer(); B.cls(cls); B.start();
+    const purge = () => { for (let i = 0; i < 6000; i++) { X.vider(); const P = B.P; if (P) { P.hp = P.s.maxHp; P.iT = 2; } const r = B.room; if (r.cleared && r.doors && r.doors.length && r.doors.every(d => d.open >= 1)) return true; if (!r.cleared && (i % 3 === 0)) B.killAll(); B.step(1 / 30, 1); } return false; };
+    for (let pas = 0; pas < 80; pas++) { if (!purge()) return { ok: false, acte: X.dbg().acte }; const e = X.dbg(); if (e.portes.includes('final')) { const g = window.__glypheFinal18 && window.__glypheFinal18(); window.__asm.dbg().entrer('final'); return { ok: true, glyphe: !!g, essai: !!B.RUN.essai }; }
+      const forc = e.portes.length === 1 ? e.portes[0] : (e.portes.includes('combat') ? 'combat' : e.portes.find(t => !['raccourci', 'direct', 'breche'].includes(t)) || e.portes[0]); window.__asm.dbg().entrer(forc); }
+    return { ok: false }; };
+  // ── N-A · l'enchaînement réel (essai ?descente=10 : rien d'écrit)
+  { const { page, errs, ctx } = await ouvre('descente=10&classe=lum', { vrais: true }); await page.waitForFunction(() => window.__descente.dbg().acte === 10 && window.__brume.RUN && !window.__brume.RUN.hub, null, { timeout: 30000, polling: 200 });
+    const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), B = window.__brume, X = window.__descente, out = { salles: [] };
+      const purge = () => { for (let i = 0; i < 6000; i++) { X.vider(); const P = B.P; if (P) { P.hp = P.s.maxHp; P.iT = 2; } const r = B.room; if (r.cleared && r.doors && r.doors.length && r.doors.every(d => d.open >= 1)) return true; if (!r.cleared && (i % 3 === 0)) B.killAll(); B.step(1 / 30, 1); } return false; };
+      for (let k = 0; k < 3 && !(B.room.gardeK === 'final'); k++) { out.salles.push({ k: B.room.gardeK, arene: !!B.room.arene, cam: window.__arene.dbg().CAM.on }); purge(); const p = X.dbg().portes; if (p[0] === 'final') out.glyphe = !!window.__glypheFinal18(); window.__asm.dbg().entrer(p[0]); }
+      window.__arene.dbg().frame(); const D = window.__brumeux.dbg(), A = window.__arene.dbg().A; out.fin = { k: B.room.gardeK, arene: B.room.arene, etat: window.__arene.etat().etat, waves: B.room.waves.length, peints: Object.keys(A.sol), peinture: A.peintureMs, phase: D.X.phase, reel: D.X.reel, pv: D.X.pv, P: [Math.round(D.P.x), Math.round(D.P.y)], M: [A.M.w, A.M.h], hud: !!document.querySelector('#hBossGlyph:not([hidden])') };
+      let zones = 0; PAS(Math.round(60 * 2.1), () => { D.P.iT = 2; zones += D.X.zones.length + D.X.tirs.length; }); out.banniere = zones;
+      // les cinq phases : chaque transition à la main (vers), jamais une pause ni un écran
+      out.trans = []; let pause = 0;
+      for (const n of [2, 3, 4, 5]) { window.__brumeux.vers(n); let t = 0; for (let i = 0; i < 60 * 8; i++) { PAS(1, () => { D.P.iT = 2; D.P.hp = D.P.s.maxHp; }); t += 1 / 60; if (B.paused || !document.querySelector('#overlay').hidden) pause++; if (!D.X.trans) break; } out.trans.push(+t.toFixed(2)); }
+      // la mort : la fin s'ouvre après la scène
+      const t0 = D.RUN.time; let sc = null, ov = null; for (let k = 0; k < 8 && !D.X.e.dead; k++) { B.killAll(); B.step(1 / 60, 1); }
+      for (let i = 0; i < 60 * 8; i++) { B.step(1 / 60, 1); if (!D.X.scene && sc == null) sc = D.RUN.time - t0; if (!document.querySelector('#overlay').hidden) { ov = D.RUN.time - t0; break; } }
+      out.pause = pause; out.sc = sc; out.ov = ov; out.titre = (document.querySelector('#overlay').innerText.match(/Au fond de la Brume/) || [null])[0]; return out; }, [PAS.toString()]);
+    console.log('   ' + JSON.stringify(r).slice(0, 600));
+    ok(r.salles.length === 2 && r.salles.every(s => s.k === 'mini' && !s.arene && !s.cam), 'N-A : deux miniboss provisoires, chacun dans une salle d\'un écran');
+    ok(r.glyphe, 'N-A : la porte « final » porte son glyphe');
+    ok(r.fin.k === 'final' && r.fin.arene === 'final' && r.fin.etat === 3 && r.fin.waves === 0 && r.fin.peints.join() === '3' && r.fin.peinture <= DA.budget.peinture, `N-A : la vraie salle : arène à l'état 3 (seul peint, ${r.fin.peinture && r.fin.peinture.toFixed(0)} ms), ni vague ni Masqué`);
+    ok(r.fin.phase === 0 && r.fin.reel && r.fin.pv.join() === PUR.brxPv(DBV, 'normal').join() && r.fin.hud, `N-A : le Brumeux naît à la phase I, aux vrais PV (${r.fin.pv.join(' / ')}), son glyphe sur la barre`);
+    ok(r.banniere === 0, 'N-A : rien ne se lance pendant sa bannière (2,2 s)');
+    ok(r.trans.length === 4 && r.trans.every(t => t <= 4.6) && r.pause === 0, `N-A : quatre transitions sans pause ni écran (${r.trans.join(' / ')} s)`);
+    ok(r.sc != null && r.ov != null && r.ov >= r.sc + 0.9 && r.ov <= r.sc + 1.2 && r.titre, `N-A : la fin de la descente s'ouvre après sa scène de mort (${r.sc && r.sc.toFixed(2)} s, puis ${r.ov && r.ov.toFixed(2)} s), son écran de victoire`);
+    ok(!errs.length, 'N-A : aucune erreur ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // ── N-B / N-C · vingt-quatre combats entiers au bot, build de référence, vraies données
+  { const res = [];
+    for (const pal of ['normal', 'difficile', 'extreme']) for (const cls of ['lum', 'gou', 'her', 'tis']) for (const g of [11, 22]) {
+      const { page, errs, ctx } = await ouvre('', { vrais: true });
+      await page.evaluate(ESSAI, { phase: 1, bot: 2, cls, graine: g, palier: pal, ref: true });
+      const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), D = window.__brumeux.dbg(); let X = D.X, fin = null; const ph = {}; let prev = 0, deb = D.RUN.time, tr = 0;
+        PAS(60 * 1500, () => { X = D.X; if (X.trans && !tr) { tr = 1; ph[prev + 1] = D.RUN.time - deb; } if (!X.trans && tr) { tr = 0; prev = X.phase; deb = D.RUN.time; }
+          if ((X.scene || (X.e && X.e.dead)) && fin == null) { fin = D.RUN.time; ph[prev + 1] = D.RUN.time - deb; return 'fin'; } });
+        const st = window.__brumeux.statsRun(), j = window.__arene.journal(); return { ph, fin: st && st.fin, sans: j.sansSigne, liste: j.liste.slice(0, 2), rev: st && st.j ? null : null }; }, [PAS.toString()]);
+      r.cls = cls; r.pal = pal; res.push(r);
+      console.log(`   ${pal} · ${cls} · ${g} : ${r.fin} ; ${[1, 2, 3, 4, 5].map(k => r.ph[k] == null ? '—' : Math.round(r.ph[k])).join(' / ')} s ; sans signe ${r.sans}${r.sans ? ' ' + JSON.stringify(r.liste) : ''}${errs.length ? ' · ' + errs[0] : ''}`);
+      // une forme hors de sa tolérance (memoire § 41 : le Tisse-Destin en phase III, décision de l'auteur, action 7) peut ne pas finir dans la fenêtre :
+      // elle est signalée, sans échec, seulement si elle s'enlise dans cette phase-là (les autres phases déjà jouées, rien d'autre en cours)
+      const enlise = r.fin !== 'victoire' && cls === 'tis' && r.ph[1] != null && r.ph[2] != null && r.ph[3] == null && !errs.length;
+      if (enlise) console.log(`   ATTENTION · N-B : ${pal} · ${cls} · ${g} : phase III non finie dans la fenêtre (forme hors de sa tolérance, memoire § 41 ; décision de l'auteur)`);
+      else ok(r.fin === 'victoire' && !errs.length, `N-B : ${pal} · ${cls} · ${g} : le bot va au bout`);
+      ok(r.sans === 0, `N-C : ${pal} · ${cls} · ${g} : aucun coup sans signe`);
+      await ctx.close(); }
+    const med = v => { const s = v.filter(x => x != null).sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+    for (const pal of ['normal', 'difficile', 'extreme']) { const L = res.filter(r => r.pal === pal), M = c => [1, 2, 3, 4, 5].map(k => med(L.filter(r => r.cls === c).map(r => r.ph[k]))), F = ['lum', 'gou', 'her', 'tis'].map(M);
+      const four = [0, 1, 2, 3, 4].map(i => med(F.map(f => f[i]))), tot = med(['lum', 'gou', 'her', 'tis'].map(c => med(L.filter(r => r.cls === c).map(r => [1, 2, 3, 4, 5].reduce((a, k) => a + (r.ph[k] || 0), 0)))));
+      console.log(`   ${pal} : médianes des formes ${four.map(x => Math.round(x)).join(' / ')} s, combat ${Math.round(tot)} s`);
+      ok(tot >= 180 && tot <= 480, `N-B : ${pal} : le combat dure environ 5 min (médiane des formes ${Math.round(tot)} s, de 3 à 8 min)`); } }
+  // ── N-D · victoire et mort hors essai (une descente purgée jusqu'au fond, sans adresse d'essai)
+  { const { page, errs, ctx } = await ouvre('', { vrais: true });
+    const r = await page.evaluate(([PF]) => { const B = window.__brume, f = eval(PF)('her'); const D = window.__brumeux.dbg(); const out = { f, reel: D.X.reel, essai: !!B.RUN.essai };
+      window.__brumeux.vers(5); for (let i = 0; i < 60 * 6; i++) { B.P.iT = 2; B.step(1 / 60, 1); }
+      for (let k = 0; k < 8 && !D.X.e.dead; k++) { B.killAll(); B.step(1 / 60, 1); } for (let i = 0; i < 60 * 6 && document.querySelector('#overlay').hidden; i++) B.step(1 / 60, 1);
+      out.sb = B.SAVE.brumeux; out.desc = B.SAVE.descente; out.bossT = B.RUN.bossT; out.txt = document.querySelector('#overlay').innerText; return out; }, [PURGE_FOND.toString()]);
+    ok(r.f.ok && r.f.glyphe && !r.essai && r.reel, 'N-D : une vraie descente (sans essai) arrive au fond, porte « final » à son glyphe, le Brumeux l\'attend');
+    ok(r.sb && r.sb.victoires === 1 && r.sb.tentatives === 1 && r.sb.phaseMax === 5, `N-D : victoire : SAVE.brumeux écrite (${JSON.stringify(r.sb)})`);
+    ok(r.desc && r.desc.ouverts.includes('difficile') && r.desc.victoires && JSON.stringify(r.desc.victoires).includes('her'), `N-D : victoire : Difficile s'ouvre, la victoire compte pour le Héraut (${JSON.stringify(r.desc)})`);
+    ok(r.bossT && r.bossT[10] > 0 && /Au fond de la Brume/.test(r.txt) && !/Glas Originel se tait/.test(r.txt) && /X\s+\d+\s*s/.test(r.txt), 'N-D : écran de victoire : son titre, la tuile des combats de gardien gagne l\'acte X');
+    ok(!errs.length, 'N-D : aucune erreur ' + errs.slice(0, 2).join(' | ')); await ctx.close();
+    // la mort : une vraie descente, le joueur se laisse frapper au fond
+    const { page: p2, errs: e2, ctx: c2 } = await ouvre('', { vrais: true });
+    const m = await p2.evaluate(([PF]) => { const B = window.__brume, f = eval(PF)('lum'); const D = window.__brumeux.dbg(); let t = 0;
+      for (let i = 0; i < 60 * 240 && !B.P.dead; i++) { B.P.hp = Math.min(B.P.hp, 1); B.step(1 / 60, 1); t++; }
+      for (let i = 0; i < 60 * 4; i++) B.step(1 / 60, 1);
+      const S = B.SAVE, g = (S.mem && S.mem.graves || []).slice(-1)[0]; return { f, mort: B.P.dead, t: t / 60, last: B.RUN.mem && B.RUN.mem.lastSrc, sb: S.brumeux, g, txt: (document.querySelector('#overlay').innerText || '').slice(0, 600), nem: S.nemesis }; }, [PURGE_FOND.toString()]);
+    console.log('   mort : ' + JSON.stringify({ t: m.t, last: m.last, sb: m.sb, g: m.g }).slice(0, 400));
+    ok(m.mort && m.sb && m.sb.tentatives === 1 && m.sb.victoires === 0 && m.sb.phaseMax >= 1, 'N-D : mort au fond : une tentative, la phase atteinte (SAVE.brumeux)');
+    ok(['brumeux'].includes(m.last) || (m.last && m.last !== 'boss'), `N-D : mort : la source est « ${m.last} » (jamais « boss » : la chronique ne dit plus le Glas Originel)`);
+    ok(!/Glas Originel/.test(m.txt), 'N-D : l\'écran de mort ne nomme pas le Glas Originel');
+    ok(!e2.length, 'N-D : aucune erreur ' + e2.slice(0, 2).join(' | ')); await c2.close(); }
+  // ── N-E · coût apparié de la phase V en Extrême, vraies données (le harnais de M-E)
+  { const { page, errs, ctx } = await ouvre('', { vrais: true });
+    const TAIRE = () => { const X = window.__brumeux.dbg().X; if (X.tab && X.tab.eclair) X.tab = null; if (X.eff) { X.eff.g = null; X.eff.mon = null; } if (X.emp && X.emp.cur) X.emp.cur = null; X.boucle = [{ k: 'fixe', g: 'feinte' }]; X.im = 1; X.ph = 'entracte'; X.t = 1e9; };
+    const MESURE = (m) => { const X = window.__brumeux.dbg().X; X.boucle = [m]; X.im = 0; X.ph = 'entracte'; X.t = 0.01; };
+    const n = await page.evaluate(([PAS_, TAIRE_, MESURE_]) => { const PAS = eval(PAS_), TAIRE = eval(TAIRE_), MESURE = eval(MESURE_); window.__brume.cls('lum'); window.__brumeux.essai(5, { muet: true, graine: 7, palier: 'extreme', ref: true, montre: 'cou:ray_n1,tab:coeur/siege,joue:4' });
+      const D = window.__brumeux.dbg(), X = D.X, P = D.P, AR = D.AR, e = X.e; TAIRE(); const tient = () => { P.x = (AR.x0 + AR.x1) / 2 + 150; P.y = (AR.y0 + AR.y1) / 2 + 120; P.iT = 1; P.hp = P.s.maxHp; };
+      PAS(3, tient); window.__brumeux.resserrer(); window.__brumeux.resserrer(); PAS(60 * 9, tient);
+      for (const [s, x, y] of [['colonnades', -200, 60], ['puits', 200, -80]]) window.__brumeux.poserSorte(s, { p: [(AR.x0 + AR.x1) / 2 + x, (AR.y0 + AR.y1) / 2 + y], h: [(AR.x0 + AR.x1) / 2 + x, AR.y0 - 100] }); PAS(5, tient);
+      TAIRE(); MESURE({ k: 'montage' }); PAS(60 * 4, tient); TAIRE(); MESURE({ k: 'eclair' }); PAS(60 * 2.2, tient);
+      for (const o of D.enemies) if (!o.cons18 && !o.brx18) { o.spd = 0; o.stun = 1e9; } X.cuGel = true; D.render();
+      const LS = D.lights(), tous = LS.slice(), sans = tous.filter(l => l.c !== 'brume18'), A = window.__arene.dbg().A, fantome = { x: e.x, y: e.y, r: 44, zones: [], t: 9, wp: null };
+      const bat = X.bat.slice(), cpil = D.room.pillars.slice(), bpil = cpil.filter(p => !p.cons18), tab = X.tab, eff = X.eff, fel = eff.fel;
+      window.__LE = v => { X.bat = v ? bat : []; D.room.pillars.length = 0; D.room.pillars.push(...(v ? cpil : bpil)); X.tab = v ? tab : null; eff.fel = v ? fel : 0; e.dead = !v; LS.length = 0; LS.push(...(v ? tous : sans)); A.essai.boss = v ? null : fantome; };
+      return { etat: window.__arene.etat().etat, bat: bat.length, tab: !!tab && tab.sub, cousus: D.enemies.filter(o => !o.dead && o.cou18).length, foule: D.enemies.filter(o => !o.dead && !o.cons18 && !o.brx18).length }; }, [PAS.toString(), TAIRE.toString(), MESURE.toString()]);
+    const APP = ([k]) => { const R = window.__arene.dbg().render, c = document.querySelector('#game').getContext('2d'), on = [], off = [];
+      for (let i = 0; i < 10; i++) { window.__LE(i % 2 === 0); R(); }
+      for (let i = 0; i < k; i++) { const v = i % 2 === 0; window.__LE(v); const t0 = performance.now(); R(); c.getImageData(0, 0, 1, 1); (v ? on : off).push(performance.now() - t0); }
+      window.__LE(true); const md = x => x.sort((p, q) => p - q)[x.length >> 1]; return [md(on), md(off)]; };
+    const rr = []; for (let k = 0; k < 5; k++) rr.push(await page.evaluate(APP, [240]));
+    const med = v => v.slice().sort((x, y) => x - y)[v.length >> 1], d = med(rr.map(x => x[0] - x[1]));
+    console.log(`   coût (apparié) : phase V en Extrême (état ${n.etat}, ${n.bat} constructions, éclair ${n.tab}, ${n.cousus} cousu, foule ${n.foule}) : ${rr.map(x => (x[0] - x[1] >= 0 ? '+' : '') + (x[0] - x[1]).toFixed(2)).join(' / ')} ms (médiane ${d >= 0 ? '+' : ''}${d.toFixed(2)})`);
+    ok(n.etat === 8 && n.cousus === 1 && n.foule >= 8, `N-E : la scène mesurée : état 8, un cousu, la vague d'éclair de l'Extrême (${n.foule} ennemis)`);
+    ok(d <= DA.budget.rendu, `N-E : coût de rendu de la phase V en Extrême : ${d >= 0 ? '+' : ''}${d.toFixed(2)} ms (≤ +${DA.budget.rendu})`);
+    ok(!errs.length, 'N-E : aucune erreur ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // ── N-F · la porte « final » : seule la zone de son sceau change ; éteinte, rien
+  { const shots = {}; const { page, ctx } = await ouvre('descente=10&classe=lum', { vrais: true }); await page.waitForFunction(() => window.__descente.dbg().acte === 10 && window.__brume.RUN && !window.__brume.RUN.hub, null, { timeout: 30000, polling: 200 });
+    await page.evaluate(() => { const B = window.__brume, X = window.__descente;
+      const purge = () => { for (let i = 0; i < 6000; i++) { X.vider(); const P = B.P; if (P) { P.hp = P.s.maxHp; P.iT = 2; } const r = B.room; if (r.cleared && r.doors && r.doors.length && r.doors.every(d => d.open >= 1)) return true; if (!r.cleared && (i % 3 === 0)) B.killAll(); B.step(1 / 30, 1); } return false; };
+      purge(); window.__asm.dbg().entrer('mini'); purge(); const P = B.P; P.x = 640; P.y = 600; for (let i = 0; i < 30; i++) B.step(1 / 60, 1); P.x = 640; P.y = 600;
+      document.querySelectorAll('.hud-tl,.hud-tr,.hud-bl,#hSkills,#hState,#toast,#banner,#hHint').forEach(e => e.style.visibility = 'hidden'); });
+    await page.waitForTimeout(300);   // le glyphe (image) se décode hors de la boucle de jeu
+    // la même image de jeu (rien n'avance entre les deux), allumée puis éteinte : seul le sceau peut changer
+    for (const v of [true, false]) { const d = await page.evaluate(([v]) => { window.__arene.activer(v); window.__arene.dbg().frame(); const dr = window.__brume.room.doors[0]; return { x: dr.x, type: dr.type }; }, [v]);
+      shots[v] = { d, png: await page.screenshot({ clip: { x: 0, y: 0, width: 1280, height: 300 } }) }; }
+    await page.evaluate(() => window.__arene.activer(null)); await ctx.close();
+    const sharp = require('sharp'); const raw = async b => (await sharp(b).raw().toBuffer({ resolveWithObject: true }));
+    const A1 = await raw(shots[true].png), A0 = await raw(shots[false].png); let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1, n = 0;
+    for (let i = 0; i < A1.data.length; i += A1.info.channels) if (Math.abs(A1.data[i] - A0.data[i]) + Math.abs(A1.data[i + 1] - A0.data[i + 1]) + Math.abs(A1.data[i + 2] - A0.data[i + 2]) > 6) { const p = i / A1.info.channels, x = p % A1.info.width, y = (p / A1.info.width) | 0; n++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    console.log(`   porte « ${shots[true].d.type} » à x ${shots[true].d.x} : ${n} pixels différents, dans [${x0}, ${x1}] × [${y0}, ${y1}]`);
+    ok(shots[true].d.type === 'final' && n > 20 && x1 - x0 <= 60 && Math.abs((x0 + x1) / 2 - shots[true].d.x) <= 20, 'N-F : allumée ou éteinte, seule la zone du sceau de la porte « final » diffère (son glyphe)');
+    if (DIR) { await sharp(shots[true].png).toFile(join(DIR, 'allumage-porte.png')); console.log('   capture ' + join(DIR, 'allumage-porte.png')); } }
+  // ── N-G · mouvements réduits et captures (entrée, phase I, victoire)
+  { const { page, errs, ctx } = await ouvre('descente=10&classe=gou', { vrais: true, rm: true }); await page.waitForFunction(() => window.__descente.dbg().acte === 10 && window.__brume.RUN && !window.__brume.RUN.hub, null, { timeout: 30000, polling: 200 });
+    const r = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), B = window.__brume, X = window.__descente;
+      const purge = () => { for (let i = 0; i < 6000; i++) { X.vider(); const P = B.P; if (P) { P.hp = P.s.maxHp; P.iT = 2; } const r = B.room; if (r.cleared && r.doors && r.doors.length && r.doors.every(d => d.open >= 1)) return true; if (!r.cleared && (i % 3 === 0)) B.killAll(); B.step(1 / 30, 1); } return false; };
+      purge(); window.__asm.dbg().entrer('mini'); purge(); window.__asm.dbg().entrer('final'); PAS(30, () => { B.P.iT = 2; }); return { on: window.__brumeux.etat().on }; }, [PAS.toString()]);
+    await capture(page, 'allumage-entree.png');
+    const v = await page.evaluate(([PAS_]) => { const PAS = eval(PAS_), B = window.__brume, D = window.__brumeux.dbg(); window.__brumeux.vers(5); PAS(60 * 6, () => { B.P.iT = 2; });
+      for (let k = 0; k < 8 && !D.X.e.dead; k++) { B.killAll(); B.step(1 / 60, 1); } const s0 = D.X.scene && D.X.scene.dureeS; let ov = null; for (let i = 0; i < 60 * 5; i++) { B.step(1 / 60, 1); if (!document.querySelector('#overlay').hidden) { ov = i / 60; break; } } return { s0, ov }; }, [PAS.toString()]);
+    await capture(page, 'allumage-victoire.png');
+    ok(r.on && v.s0 <= 1.05 && v.ov != null && v.ov <= 2.3, `N-G : mouvements réduits : la scène de mort est un fondu (${v.s0} s), la fin s'ouvre ${v.ov && v.ov.toFixed(2)} s après`);
+    ok(!errs.length, 'N-G : aucune erreur ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
 }
 console.log(`\nbanc-brumeux : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
 await browser.close();

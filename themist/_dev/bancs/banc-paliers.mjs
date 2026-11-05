@@ -51,7 +51,7 @@ const PROVISOIRE = n => { const X = window.__descente, B = window.__brume; X.ess
     const r = B.room; m = r.asm && r.asm.e && !r.asm.e.dead ? r.asm.e : null;
     if (!m && i % 20 === 0) for (const e of B.enemies) if (!e.dead && !e.asm && !e.fixed && e.type !== 'boss') e.hp = 0.01;
     B.step(1 / 30, 1); }
-  if (!m) return { masque: false, gardeK: B.room.gardeK };
+  if (!m) return { masque: false, gardeK: B.room.gardeK, brumeux: B.enemies.some(e => e.brx18 && !e.dead), arene: B.room.arene || null };
   const st = m.asm.st, T0 = st.temps ? Object.assign({}, st.temps) : null, ev = [];
   const avance = (pv, s) => { for (let i = 0; i < s * 30; i++) { const P = B.P; P.hp = P.s.maxHp; P.iT = 2; X.vider(); m.hp = m.maxHp * pv; const c = st.caps.length; B.step(1 / 30, 1); if (st.caps.length !== c) ev.push([st.caps[st.caps.length - 1], pv]); } };
   avance(0.6, 6); const apresEveil = st.caps.slice(); avance(0.3, 6);
@@ -101,7 +101,10 @@ if (SEC.includes('B')) {
   ok(pv.temps && pv.temps.cap === pv.sig && pv.caps.filter(k => k === pv.sig).length === 1 && pv.caps.length === 4, 'B : le temps de plus est la signature redoublée ' + JSON.stringify(pv.caps));
   ok((pv.carte.match(/class="[^"]*nw/g) || []).length >= 1, 'B : la carte du Masqué montre la nouveauté');
   for (const n of [5, 9]) { const q = await page.evaluate(PROVISOIRE, n); ok(q.masque && q.T0 && q.temps && q.temps.on, `B : acte ${n}, temps de plus`); }
-  { const q = await page.evaluate(PROVISOIRE, 10); ok(q.masque && q.gardeK === 'final' && q.T0, 'B : acte X, boss final provisoire : temps de plus ' + JSON.stringify({ k: q.gardeK, t: q.T0 })); }
+  // v18.12 (5g-2) : l'arène allumée, le boss final de l'acte X est le Brumeux (plus de place provisoire, donc pas de temps de plus) ; éteinte, le Masqué revient
+  { const q = await page.evaluate(PROVISOIRE, 10); const allume = await page.evaluate(() => window.__arene.actif());
+    if (allume) ok(!q.masque && q.gardeK === 'final' && q.brumeux && q.arene === 'final', 'B : acte X, la salle « final » est le Brumeux (arène allumée), sans place provisoire ' + JSON.stringify(q));
+    else ok(q.masque && q.gardeK === 'final' && q.T0, 'B : acte X, boss final provisoire : temps de plus ' + JSON.stringify({ k: q.gardeK, t: q.T0 })); }
   ok(!errs.length, 'B : aucune erreur ' + errs.slice(0, 3).join(' | '));
   await ctx.close();
 }

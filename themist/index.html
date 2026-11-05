@@ -7538,7 +7538,7 @@ var PZ_HINT='<span class="caphint pzh"><span><b>Survoler</b> un nœud : lire son
   // halo
   if(k>0){c.save();c.globalCompositeOperation='lighter';glow(c,x,y,r*1.1,col,(0.18+0.08*Math.sin(T*3))*k);c.restore();}
   // icône : ombre gravée, remplissage translucide, trait, reflet. v17.27 (G11) : à la porte du gardien, son glyphe (data/gardiens.js, dessin.glyphes) la remplace
-  const gl=(id==='boss'||id==='direct')&&RUN&&!RUN.hub?g27GlypheImg(RUN.act):null;
+  const gl=(id==='boss'||id==='direct')&&RUN&&!RUN.hub?g27GlypheImg(RUN.act):id==='final'&&RUN&&!RUN.hub&&window.__glypheFinal18?window.__glypheFinal18():null;   // v18.12 : la porte du boss final porte le glyphe du Brumeux quand l'arène est allumée
   if(gl){const gs=r*1.56;c.drawImage(gl,x-gs/2,y-gs/2,gs,gs);}
   else{
   const sz=r*1.22,p=iconPath(id);
@@ -13025,7 +13025,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
     return c;}
  function peindre(M,etats){const t0=performance.now(),T=DA.tuiles,nx=Math.ceil(M.w/T.w),ny=Math.ceil(M.h/T.h),out={};A.tard={};
   const S=DA.salles[A.cle];   // arEtat ne recopie pas « tard » : on le lit dans les données
-  for(const [ie,E] of etats.entries()){if(S&&S.etats[ie]&&S.etats[ie].tard&&ie!==A.ie){A.tard[ie]=[];continue;}const L=[];
+  for(const [ie,E] of etats.entries()){if(((S&&S.etats[ie]&&S.etats[ie].tard)||A.reel)&&ie!==A.ie){A.tard[ie]=[];continue;}const L=[];   // v18.12 : la vraie salle ne peint que son état d'entrée
    for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)L.push(tuile(M,E,i,j));
    out[ie]=L;}
   A.peintureMs=performance.now()-t0;return out;}
@@ -13061,11 +13061,11 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  // ── ouvrir une arène : appelé par makeRoom (avant la salle : layoutFor, makeMists et renderFloor lisent AR)
  function ouvrir(cle,o){const S=DA.salles[cle];o=o||{};
   const M=A.M=arMonde(S,V,DA.mur,o);MONDE.w=M.w;MONDE.h=M.h;
-  A.etats=S.etats.map(E=>arEtat(E,M));A.ie=Math.max(0,Math.min(A.etats.length-1,o.etat|0));A.etat=A.etats[A.ie];A.trans=null;A.cle=cle;
+  A.etats=S.etats.map(E=>arEtat(E,M));A.ie=Math.max(0,Math.min(A.etats.length-1,o.etat|0));A.etat=A.etats[A.ie];A.trans=null;A.cle=cle;A.reel=!!o.reel;
   Object.assign(AR,A.etat.bornes);A.ie0=A.ie;A.sol=peindre(M,A.etats);}
  function piliers(L){return L.map(o=>({x:o.x,y:o.y,r:o.r,kind:o.kind==='fosse'?'fosse18':'pilier18',cle:o.cle}));}
  const _mr184=makeRoom;
- makeRoom=function(type){const ouv=A.ouvrir||(actif()&&RUN&&!RUN.hub&&!ESSAI_U&&RUN.gardeNow==='final'&&type==='elite'?{cle:'final',o:{}}:null);A.ouvrir=null;
+ makeRoom=function(type){const ouv=A.ouvrir||(actif()&&RUN&&!RUN.hub&&!ESSAI_U&&RUN.gardeNow==='final'&&type==='elite'?{cle:'final',o:{etat:DA.salles.final.reel|0,reel:true}}:null);A.ouvrir=null;   // v18.12 : la vraie salle s'ouvre à l'état de la phase I
   remettre();
   if(!ouv)return _mr184.apply(this,arguments);
   ouvrir(ouv.cle,ouv.o);const rm=_mr184.apply(this,arguments);
@@ -13199,9 +13199,8 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
  // ── le joueur frappe ce qu'il voit : aucun coup (hors brûlures et poisons) sur un ennemi au-delà de la vue + horsVue.coup
  const _he184=hitEnemy;hitEnemy=function(e,base,o){if(CAM.on&&e&&!(o&&(o.dot||o.brx))&&arDistRect(vue(),e.x,e.y)>HV.coup+(e.r||0)){A.j.horsVue++;return 0;}return _he184.apply(this,arguments);};   // v18.7 : les coups des mécanismes du Brumeux (o.brx) sur ses ennemis en sont exemptés
  // ── aucun coup sans signe : chaque coup reçu dans l'arène est jugé (sa source signalée depuis au moins 0,6 s, 0,8 s pour le boss)
- const _hp184=hurtPlayer;
- hurtPlayer=function(dmg,src){if(!CAM.on||!P)return _hp184.apply(this,arguments);const h0=P.hp,s0=P.shield||0;const r=_hp184.apply(this,arguments);
-  try{if(P.hp<h0||(P.shield||0)<s0){const ch=[],b=essaiBoss();let boss=false,sorte='?';
+ function chaine184(src){const ch=[],b=essaiBoss();let boss=false,sorte='?';
+
     if(A.zoneCourante){ch.push(id(A.zoneCourante));sorte='zone';boss=!!A.zoneCourante.boss;   // v18.5 : une zone du Brumeux se juge au préavis du boss (0,8 s)
      if(src&&src.cou18&&!src.dead)ch.push(id(src));}   // v18.11 (5g-1) : le coup d'un Masqué cousu prend sa zone en cours (v18.8) même quand il frappe au contact : le cousu, vu, compte aussi (le journal seulement)
     // une explosion (le Bouffi, mort à cet instant) : l'ennemi qui l'a portée
@@ -13220,6 +13219,14 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
        const z18=room.z18&&room.z18.find(z=>z.fini&&Math.hypot(P.x-z.x,P.y-z.y)<z.r+P.r),O18=room.ombre18;   // v18.7 : zone de mutation qui éclate, ombre qui passe
        if(z18){ch.push(id(z18));sorte='mutation:'+z18.k;}else if(O18&&O18.touche&&O18.x!=null&&Math.hypot(P.x-O18.x,P.y-O18.y)<60){ch.push(id(O18));sorte='mutation:ombre';}
        else if(e0&&ed<24){ch.push(id(e0));boss=e0.type==='boss';sorte='contact:'+e0.type;}else if(room.asm&&room.asm.e&&!room.asm.e.dead){ch.push(id(room.asm.e));sorte='masque';}}}}
+    return{ch,boss,sorte};}
+ const _hp184=hurtPlayer;
+ hurtPlayer=function(dmg,src){if(!CAM.on||!P)return _hp184.apply(this,arguments);const h0=P.hp,s0=P.shield||0;
+  // v18.12 (5g-2) : la chaîne des sources se lit AVANT le coup : ce que le coup déclenche (une riposte du kit qui repousse, un tir qui se brise)
+  // ne doit pas effacer ce qui te touchait (le journal seulement ; trois coups « sans source » du Tisse-Destin sur 24 combats, banc N-C)
+  let ch=[],boss=false,sorte='?';try{({ch,boss,sorte}=chaine184(src));}catch(err){console.error(err);}
+  const r=_hp184.apply(this,arguments);
+  try{if(P.hp<h0||(P.shield||0)<s0){
     const J=arJuge(A.sig,RUN.time,ch,boss,DA.preavis);A.j.coups++;
     if(!J.ok){A.j.sansSigne++;A.j.liste.push({t:+RUN.time.toFixed(2),depuis:isFinite(J.depuis)?+J.depuis.toFixed(2):null,boss,src:sorte,p:[P.x|0,P.y|0],cam:[CAM.x|0,CAM.y|0],ex:src&&src.x!=null?{mort:!!src.dead,dans:enemies.includes(src),d:Math.round(Math.hypot(src.x-P.x,src.y-P.y)),deb:A.sig.debut[id(src)]!=null}:null});if(A.j.liste.length>60)A.j.liste.shift();}}}
   catch(err){console.error(err);}return r;};
@@ -13295,7 +13302,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
   indic:()=>A.indic.map(s=>({k:s.k,x:+s.x.toFixed(1),y:+s.y.toFixed(1),sx:+(s.x-CAM.x).toFixed(1),sy:+(s.y-CAM.y).toFixed(1),cote:s.cote,n:s.n,c:s.c,ids:s.ids.length,ks:[...new Set(s.ks)]})),
   journal:()=>JSON.parse(JSON.stringify(A.j)),
   mesure:()=>({peintureMs:A.peintureMs,tuilesPosees:A.tuilesPosees,tuiles:A.M?Math.ceil(A.M.w/DA.tuiles.w)*Math.ceil(A.M.h/DA.tuiles.h):0,calques:Object.keys(A.sol).length}),
-  activer:v=>{A.actif=v;return actif();},
+  activer:v=>{A.actif=v;return actif();},actif:()=>actif(),   // v18.12 : l'arène est-elle allumée (le glyphe de la porte « final » le lit)
   crochets:o=>{Object.assign(A,o);},coup:(z,fn)=>{const k=A.zoneCourante;A.zoneCourante=z;try{return fn();}finally{A.zoneCourante=k;}},   // v18.5 : crochets du Brumeux (sourcesPlus, bossCam, glypheBoss, bossCharge) et zone qui frappe
   dbg:()=>({A,P,RUN,room,enemies,eproj,CAM,AR,AR0,MONDE,mouse,keys,camera,indicateurs,id,pilote:v=>{A.pilote=v;},kill:killEnemy,boss:essaiBoss,frame:()=>{render();updateHud();},render:()=>render(),tlights:()=>tlights,vue})};
 })();
@@ -13404,7 +13411,7 @@ function brxPlaces(f,n,p,rng,o){o=o||{};const out=[],m=o.marge||30,minD=o.minD||
 function brxDalle(R,f,c,rng,jit){const m=R.r;return{forme:'disque',x:Math.max(f.x0+m,Math.min(f.x1-m,c[0]+(rng()*2-1)*jit)),y:Math.max(f.y0+m,Math.min(f.y1-m,c[1]+(rng()*2-1)*jit)),r:R.r};}
 // les décors traversés (un par registre d'acte, jusqu'à l'acte de la descente) ; un tableau est-il encore possible ?
 function brxDecors(D,acte){const out=[];for(const k in D.tableaux.decors)if(D.tableaux.decors[k].actes.some(a=>a<=(acte||1)))out.push(k);return out;}
-function brxTabOk(D,t,dispo){const T=D.tableaux;return!!(t&&typeof t==='object'&&T.decors[t.decor]&&(!dispo||dispo.includes(t.decor))&&T.decors[t.decor].themes.includes(t.theme)&&(t.regle==null||!!T.regles[t.regle]));}
+function brxTabOk(D,t,dispo){const T=D.tableaux;return!!(t&&typeof t==='object'&&T.decors[t.decor]&&(!dispo||dispo.includes(t.decor))&&T.decors[t.decor].themes.includes(t.theme)&&(t.regle==null||(!!T.regles[t.regle]&&!(T.exclues||[]).includes(t.regle))));}   // v18.12 : une règle exclue (le Verre, 5g) n'est jamais rejouée
 // pondération vers ce qui t'a coûté le plus de PV dans la descente (1 + poids × part, plancher) : décor ← parA (par acte), thème ← par (les
 // types que le thème demande, lec.themes[k].need), règle ← parR (part de tous les dégâts reçus) ; « aucune règle » garde un poids fixe
 function brxPoidsTab(D,lec){const T=D.tableaux,L=T.lecture,par=lec.par||{},pa=lec.parA||{},pr=lec.parR||{},TH=lec.themes||{};
@@ -13421,7 +13428,7 @@ function brxTableau(D,lec,palier,rng,o){o=o||{};const T=D.tableaux,C=T.couts,W=b
  let pool=dispo.filter(k=>!(o.exclus||[]).includes(k));if(!pool.length)pool=dispo.slice();
  let decor,theme,regle,rejoue=false,bud=B;
  if(o.premier&&brxTabOk(D,o.premier,dispo)){decor=o.premier.decor;theme=o.premier.theme;regle=o.premier.regle||null;rejoue=true;}
- else{decor=brxPick(W.decor,pool,rng);theme=brxPick(W.theme,T.decors[decor].themes,rng);const r=brxPick(W.regle,['aucune',...Object.keys(T.regles)],rng);regle=r==='aucune'?null:r;}
+ else{decor=brxPick(W.decor,pool,rng);theme=brxPick(W.theme,T.decors[decor].themes,rng);const r=brxPick(W.regle,['aucune',...Object.keys(T.regles).filter(k=>!(T.exclues||[]).includes(k))],rng);regle=r==='aucune'?null:r;}
  bud-=C.vague;if(regle)bud-=C.regle;let densite=0,champion=0;
  for(let k=0;k<8;k++){const op=[];if(densite<T.max.densite&&C.densite<=bud+1e-9)op.push('densite');if(champion<T.max.champion&&C.champion<=bud+1e-9)op.push('champion');if(!op.length)break;
   const ch=op[Math.floor(rng()*op.length)];if(ch==='densite')densite++;else champion++;bud-=C[ch];}
@@ -14772,8 +14779,10 @@ function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,
  const _hp188=hurtPlayer;hurtPlayer=function(dmg,src){if(!(X.on&&X.cou&&P&&X.e&&!X.e.dead))return _hp188.apply(this,arguments);
   let f=src&&src.cou18?src.cou18:null;
   if(!f&&!src)for(const q of eproj){if(q.dead||!q.from||!q.from.cou18)continue;if(hyp(q.x-P.x,q.y-P.y)-(q.r||6)-P.r<14){f=q.from.cou18;break;}}
+  // v18.12 (5g-2) : un disque de cousu éclate par explosion() (sans source) : sa zone (encore posée à cet instant) porte le coup (banc N-C, Extrême)
+  let fz=null;if(!f&&!src)for(const o of enemies){const S=o.asm,z=S&&S.z;if(o.dead||!o.cou18||!z||z.forme!=='disque')continue;if(hyp(z.x-P.x,z.y-P.y)<z.r+P.r+2){f=o.cou18;fz=z;break;}}
   if(!f||!f.e)return _hp188.apply(this,arguments);
-  const e=f.e,S=e.asm,z=src&&S&&S.st&&S.st.ph!=='charge'?(S.z||(S.flash&&S.flash.z)||(S.sb&&S.sb.zc&&S.sb.zc.zs&&S.sb.zc.zs[0])||null):null,h0=P.hp,prev=room.asm,a=arguments;room.asm=Object.assign(f.R,{e});let r;
+  const e=f.e,S=e.asm,z=fz||src&&S&&S.st&&S.st.ph!=='charge'?(S.z||(S.flash&&S.flash.z)||(S.sb&&S.sb.zc&&S.sb.zc.zs&&S.sb.zc.zs[0])||null):null,h0=P.hp,prev=room.asm,a=arguments;room.asm=Object.assign(f.R,{e});let r;
   try{r=z?(X.cou.j.zonesJugees++,XA.coup(z,()=>_hp188.apply(this,a))):_hp188.apply(this,a);}
   finally{const mort=P.dead||P.hp<=0;if(!(mort&&brxPromu({source:'cousu',depuis:0,essai:false})))room.asm=prev;}
   try{if(P.hp<h0){X.tue='couture';X.tueCousu={corps:f.co.corps,cle:f.co.cle,id:f.sv&&f.sv.x?f.sv.x.id:null};}}catch(err){}
@@ -15352,6 +15361,33 @@ function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,
   return{v:enV(),montre:M,parC:Object.assign({},X.parC||{}),cand:E.cand?JSON.parse(JSON.stringify(E.cand,(k,v)=>k==='liste'?v.map(x=>x.id):v)):null,ress:E.ress,rs:E.rs&&{t:+E.rs.t.toFixed(2),n:E.rs.n,et:E.rs.et,ph:E.rs.ph},fel:E.fel,g:E.g&&{k:E.g.k,t:+E.g.t.toFixed(2)},
    mon:E.mon&&E.mon.f?{etat:E.mon.f.etat,cle:E.mon.f.co.cle,pv:Math.round(E.mon.f.el.pv),pvMax:E.mon.f.el.pvMax,hp:E.mon.f.e?[Math.round(E.mon.f.e.hp),Math.round(E.mon.f.e.maxHp)]:null,t:+E.mon.t.toFixed(2),mont:E.mon.f.e&&E.mon.f.e.asm&&E.mon.f.e.asm.mont?+E.mon.f.e.asm.mont.t.toFixed(2):null,p:E.mon.f.p.map(Math.round)}:null,
    dbl:E.dbl&&{n:E.dbl.n},fosses:E.fos.map(g=>({id:g.id,mat:g.mat,n:g.disques.length,t:+g.t.toFixed(2)})),prem:E.prem&&{k:E.prem.k,fait:E.prem.fait},debris:!!E.debris,calE:E.calE?Object.keys(E.calE.sol):[],j:JSON.parse(JSON.stringify(E.j))};}
+ // ═══ v18.12 · L'allumage (action 5g-2, fiche validée le 5 novembre 2026) ═══════════════════════════════════════════════════════════════════
+ // L'arène allumée (arene.js, actif:true), la vraie salle du boss final (porte « final ») : ni vague ni Masqué ; le Brumeux naît à l'entrée, à la phase I,
+ // sa bannière sert de premier entracte ; les cinq phases s'enchaînent (5a à 5f) ; la fin de la descente s'ouvre à la fin de la scène de sa mort, plus
+ // fin.apresS ; une mort par lui se note « brumeux » (chronique, tueurs, tombe) ; la porte « final » porte son glyphe ; la tuile des combats de gardien
+ // gagne l'acte X. Arène éteinte (repli) : rien de cette section ne joue, la place provisoire revient. Les essais ne passent pas par ici.
+ const REEL=()=>!!(room&&room.arene==='final'&&room.gardeK==='final'&&RUN&&!RUN.hub);
+ const _prR=planRoom;planRoom=function(type){
+  if(RUN&&!RUN.hub&&RUN.gardeNow==='final'&&type==='elite'&&room&&room.arene==='final'){const n=ACTE();RUN.gardeNow=0;room.garde=n;room.gardeK='final';room.renfort=null;return[];}
+  return _prR.apply(this,arguments);};
+ function debutReel(){X=neuf();X.palier=brxPalier(DB,(RUN&&RUN.palierD)||'normal');X.graine=(Math.random()*4294967296)>>>0;X.rng=desRng(X.graine);X.reel=true;
+  debut(0);room.bannerT=DB.fin.banniereS;showBanner(DB.nom,'Au fond de la Brume',true);X.t=Math.max(X.t,DB.fin.banniereS);}
+ const _erR=enterRoom;enterRoom=function(){const r=_erR.apply(this,arguments);try{if(REEL()&&!X.on)debutReel();}catch(err){console.error(err);}return r;};
+ // la fin de la descente : après la scène de sa mort (onRoomCleared l'ouvrait à 2,2 s, en pleine scène)
+ const _orcR=onRoomCleared;onRoomCleared=function(){if(!(REEL()&&X.reel&&X.scene))return _orcR.apply(this,arguments);
+  const L0=later,d=(X.scene.dureeS||2.2)+DB.fin.apresS;later=function(t,f){return L0.call(this,d,f);};try{return _orcR.apply(this,arguments);}finally{later=L0;}};
+ // une mort par lui (ses zones, ses mécanismes, son corps, ses constructions) se note « brumeux » ; foeName le nomme
+ V7FOE1.brumeux='le Brumeux';
+ const _hpR=hurtPlayer;hurtPlayer=function(dmg,src){const zc=X.zoneCourante,r=_hpR.apply(this,arguments);
+  try{if(X.on&&RUN&&RUN.mem&&(zc||(src&&src.brx18)||RUN.mem.lastSrc==='boss'||RUN.mem.lastSrc==='mannequin'))RUN.mem.lastSrc='brumeux';}catch(err){}return r;};
+ // la durée du combat (un nombre, l'acte X) dans la tuile « Combats de gardien » de l'écran de fin
+ const _bdR=bossDefeated;bossDefeated=function(e){const r=_bdR.apply(this,arguments);try{if(e&&e.brx18&&X.reel&&RUN){(RUN.bossT||(RUN.bossT={}))[ACTE()]=RUN.time-X.j.t0;}}catch(err){}return r;};
+ // l'écran de victoire : le texte d'avant v18 parlait du Glas Originel (fin de descente jusqu'à la v17) ; vaincre le Brumeux a le sien (à revoir par l'auteur)
+ const _oeR=openEnd;openEnd=function(win){const brx=!!(win&&X.reel&&X.e&&X.e.dead);const r=_oeR.apply(this,arguments);
+  try{if(brx){const ov=document.querySelector('#overlay');if(ov)for(const el of ov.querySelectorAll('h1,h2,h3,p')){const t=el.textContent.trim();
+   if(t==='Le dernier glas')el.textContent=DB.fin.titre;else if(/^Le Glas Originel se tait\./.test(t))el.textContent=DB.fin.texte;}}}catch(err){console.error(err);}return r;};
+ // la porte « final » : son glyphe, quand l'arène est allumée (crochet lu par sigil)
+ window.__glypheFinal18=()=>XA.actif&&XA.actif()?glyphe():null;try{if(XA.actif&&XA.actif())glyphe();}catch(err){}   // le glyphe est chargé dès l'ouverture : la porte le porte dès sa première image
  // ── v18.11 (5g-1) · le build de référence de l'acte X (brumeux.js, bot.reference) : le niveau mesuré, dix talents portés au rang max (la sous-classe principale,
  // puis les quatre premiers nœuds de la branche voisine), un objet commun par emplacement ; ni relique, ni pacte, ni gravure. Essai seulement (ref=1).
  function reference(cls){const R=DB.bot.reference;if(!R||!P||!window.__dernier)return null;const L=R.talents[cls]||[],pris=[];

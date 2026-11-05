@@ -93,7 +93,7 @@ for (const [i, p] of D.phases.entries()) {
   ok(Number.isInteger(p.arene) && p.arene >= 0 && p.arene < ETATS, `données : phase ${i + 1} : état d'arène ${p.arene} existe dans arene.js (${ETATS} états)`);
 }
 ok(D.phases.slice(0, 3).every(p => p.presence === 'haut') && D.phases.slice(3).every(p => p.presence === 'sol'), 'données : au-dessus de l\'arène en I–III, au sol en IV–V (Q1)');
-ok(DA.actif === false, 'données : l\'arène reste ÉTEINTE (arene.js, actif:false) : rien ne change en jeu');
+ok(DA.actif === true, 'données : l\'arène est ALLUMÉE depuis la v18.12 (arene.js, actif:true : le boss final ; faux, la place provisoire revient)');
 ok(D.partition.essai.length >= 4 && D.partition.essai.some(m => m.k === 'libre') && D.partition.essai.every(m => m.k === 'libre' || (m.k === 'fixe' && D.elements[m.g])), 'données : partition d\'essai (mesures fixes sur des éléments connus, mesures libres)');
 ok(D.partition.essai.some(m => m.k === 'fixe' && m.g === 'feinte'), 'données : la feinte est une mesure fixe de la partition (le fil rouge, Q1)');
 ok(D.partition.entracteS > 0 && D.partition.nuS >= 1.5, 'données : entracte et fenêtre à nu');
@@ -340,7 +340,7 @@ has(/if\(!o\.essai&&N!==S\)\{SAVE\.brumeux=brxEcrireSauve\(N\);/, 'SAVE.brumeux 
 // le Brumeux n'est créé que par l'essai : creer() seulement dans debut(), debut() seulement dans essai()
 ok((html.match(/\bcreer\(/g) || []).length === 2 && /function debut\(phase0\)\{X\.sauve=sauveLire\(\);creer\(phase0\);/.test(html), 'le Brumeux n\'est créé que par debut()');
 ok((html.match(/\bdebut\(phase\)/g) || []).length === 1 && /debut\(phase\);showBanner\(DB\.nom/.test(html), 'debut() n\'est appelé que par l\'essai (rien en jeu avant 5g)');
-ok(!/actif:true/.test(readFileSync(join(ROOT, 'data', 'arene.js'), 'utf8')), 'arene.js : actif:false (règle d\'or)');
+ok(/actif:true/.test(readFileSync(join(ROOT, 'data', 'arene.js'), 'utf8')), 'arene.js : actif:true (5g-2 ; la règle d\'or des autres salles est prouvée par banc-arene G)');
 has(/const QB=\/\[\?&\]brumeux=\(\\d\+\)\/\.exec\(location\.search\);/, 'essai par l\'adresse : ?brumeux=<phase>');
 has(/window\.__brumeux=\{DB,essai,reference:c=>reference\(c\|\|P\.cls\),vers/, 'console __brumeux');
 // v18.6 (5b) : la phase I en jeu
@@ -460,9 +460,9 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
         if (c !== t.cout || c > T.budget[pal] || t.densite > T.max.densite || (t.regle && c < Math.min(T.budget[pal], 2 + 1 + 3))) cout++; dens += t.densite; champ += t.champion ? 1 : 0; } }
     ok(det === 0, 'tableaux : 10 000 boucles : déterministes (même graine, mêmes tableaux)');
     ok(bad === 0 && distincts === N, `tableaux : trois tableaux par boucle, trois décors distincts tant qu'il y en a trois (${distincts} / ${N})`);
-    ok(theme === 0 && brume === 0, 'tableaux : thème toujours permis par le décor, jamais la Brume plombée');
+    ok(theme === 0 && brume === 0 && regles.verre === 0, 'tableaux : thème toujours permis par le décor, jamais la Brume plombée, jamais le Verre (5g-2, exclu tant qu\'il n\'a pas de signe)');
     ok(cout === 0, 'tableaux : budget et coûts tenus (vague 2, règle 1, densité ×2 et champion au plus ; tout le budget dépensé quand il y a une règle)');
-    ok(Object.values(regles).every(n => n > 0) && dens > 0 && champ > 0, `tableaux : chaque règle sort (${JSON.stringify(regles)}), densité et champion aussi`);
+    ok(Object.entries(regles).every(([k, n]) => (T.exclues.includes(k) ? n === 0 : n > 0)) && dens > 0 && champ > 0, `tableaux : chaque règle permise sort (${JSON.stringify(regles)}), densité et champion aussi`);
     note(`tableaux : ${N} boucles, règles ${JSON.stringify(regles)}, densité ${dens}, champions ${champ}`);
     // un seul décor traversé (acte I) : trois tableaux des Faubourgs, sans thème interdit
     { const l1 = F.brxLire(D, Object.assign({}, S, { acte: 1 }), 0); let b = 0; for (let i = 0; i < 500; i++) for (const m of F.brxBoucle(D, l1, 0, 'normal', F.desRng(i), {})) if (m.k === 'tableau' && (m.tab.decor !== 'faub' || !T.decors.faub.themes.includes(m.tab.theme))) b++;
@@ -473,8 +473,9 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
     ok(fa1 > fa0 * 1.3, `tableaux : RUN.par18A : les dégâts reçus aux Faubourgs font monter leur décor (${fa0} → ${fa1} / 3 000)`);
     const th0 = freq({}, t => t.theme === 'tir'), th1 = freq({ par: { spectre: 500, brute: 20 } }, t => t.theme === 'tir');
     ok(th1 > th0 * 1.2, `tableaux : RUN.par18 : les dégâts reçus des Spectres font monter Tir croisé (${th0} → ${th1})`);
-    const rg0 = freq({}, t => t.regle === 'verre'), rg1 = freq({ parA: { 3: 1000 }, parR: { verre: 800 } }, t => t.regle === 'verre');
-    ok(rg1 > rg0 * 1.3, `tableaux : RUN.par18R : les dégâts reçus sous le Verre font monter le Verre (${rg0} → ${rg1})`);
+    const rg0 = freq({}, t => t.regle === 'sol'), rg1 = freq({ parA: { 3: 1000 }, parR: { sol: 800 } }, t => t.regle === 'sol');
+    ok(rg1 > rg0 * 1.3, `tableaux : RUN.par18R : les dégâts reçus sous le Sol qui se dérobe font monter le Sol (${rg0} → ${rg1})`);
+    ok(!F.brxTabOk(D, { decor: 'coeur', theme: 'meute', regle: 'verre' }) && F.brxTabOk(D, { decor: 'coeur', theme: 'meute', regle: 'sol' }), 'tableaux (5g-2) : un tableau au Verre (sauvegardé avant) n\'est jamais rejoué');
     const W = F.brxPoidsTab(D, F.brxLire(D, Object.assign({}, S, { par: { spectre: 300, rampant: 100 }, parA: { 2: 300, 3: 100 }, parR: { sol: 100 } }), 0));
     ok(Math.abs(W.decor.crypt - (1 + 0.8 * 0.75)) < 1e-9 && Math.abs(W.theme.tir - (1 + 0.8 * 1)) < 1e-9 && Math.abs(W.theme.meute - (1 + 0.8 * 0.25)) < 1e-9 && Math.abs(W.regle.sol - (1 + 0.8 * 0.25)) < 1e-9 && W.regle.aucune === 1, 'tableaux : poids = 1 + 0,8 × part (décor, thème par ses types, règle) ; « aucune règle » : 1');
     // premier tableau = celui qui t'a tué (s'il est encore possible), seulement au premier tableau de la première boucle
@@ -717,7 +718,7 @@ has(/finally\{X\.feinteCoup=k;if\(X\.on&&room\)room\.blT=1e9;\}/, '(5b) la salle
   ok(!/Math\.random\(\)|setRule\(|murmur\(|toast\(|showBanner\(/.test(B187), 'branchement (5c) : ni Math.random, ni setRule, ni murmur, ni bulle ni bandeau dans la section v18.7');
   { const E4 = DA.salles.final.etats[D.phases[1].arene];
     ok(E4 && E4.id === 'ouvrage' && E4.tard === true, 'branchement (5c) : l\'état « ouvrage » est tard (son calque n\'est pas peint à l\'entrée d\'une arène sans le Brumeux)'); }
-  has(/if\(S&&S\.etats\[ie\]&&S\.etats\[ie\]\.tard&&ie!==A\.ie\)\{A\.tard\[ie\]=\[\];continue;\}/, '(5c) peindre saute les états tard (sauf celui d\'entrée)');
+  has(/if\(\(\(S&&S\.etats\[ie\]&&S\.etats\[ie\]\.tard\)\|\|A\.reel\)&&ie!==A\.ie\)\{A\.tard\[ie\]=\[\];continue;\}/, '(5c) peindre saute les états tard (sauf celui d\'entrée) ; v18.12 : la vraie salle ne peint que son état d\'entrée');
   has(/function vers\(n\)\{if\(!A\.on\|\|!A\.etats\[n\]\|\|A\.trans\)return false;peindreTard\(n,1e9\);/, '(5c) vers() finit d\'un coup un calque tard (jamais de calque à moitié peint)');
   has(/try\{XA\.peindreTard\(DB\.phases\[1\]\.arene,1\);/, '(5c) le Brumeux peint le calque de la phase II une tuile par image');
   has(/const cons=consTous\(\),r=brxBatir\(DB,monde\(\),AR,base,cons,X\.lec,j,h,X\.palier,rng,opt\);/, '(5c) bâtir passe par brxBatir (ordre des sortes, variantes, brxPoser)');
@@ -1105,7 +1106,7 @@ tic('// ── 13. La phase IV');
     { const brut = { v: 1, mort: { 4: 'emprunt' }, emp: { 4: { id: 'ray_n1', fam: 'licorne' } } }; ok(F.brxEmpOk(brut.emp[4], null) && !F.brxLireSauve(brut, D, J).emp[4], 'contre-épreuve : un emp invalide accepté (famille inconnue, sans relire souvenirs-brume) serait attrapé'); }
     ok(F.brxLireSauve({ v: 1, tentatives: 1, mort: { 3: 'couture' }, cousu: { 3: { corps: 'brute', cle: 'brute:a', id: null } } }, D).emp && JSON.stringify(F.brxLireSauve({ v: 1, mort: {} }, D).emp) === '{}', 'sauvegarde : une sauvegarde d\'avant (sans emp) se relit, emp vide'); }
   // ── branchements de la section « v18.9 · Phase IV »
-  const B189 = (html.match(/═══ v18\.9 · Phase IV[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+  const B189 = (html.match(/═══ v18\.9 · Phase IV[\s\S]*?(?:═══ v18\.12 · L'allumage|\/\/ ── essai \(Q17\))/) || [''])[0];
   ok(B189.length > 15000, `branchement (5e) : la section « v18.9 · Phase IV » existe (${B189.length} caractères)`);
   ok(!/Math\.random\(\)|setRule\(|murmur\(|showCard\(|toast\(|showBanner\(/.test(B189), 'branchement (5e) : ni Math.random, ni setRule, ni murmur, ni showCard, ni bulle, ni bandeau dans la section v18.9');
   ok(!/\.asm=/.test(B189.replace(/porteur\.asm|p\.asm/g, '')) && !/X\.e\.asm|e\.asm=/.test(B189), 'branchement (5e) : le Brumeux ne reçoit jamais e.asm (son porteur est un fantôme hors d\'enemies)');
@@ -1375,7 +1376,7 @@ tic('// ── le Dernier Souvenir en V');
     const L5 = F.brxLire(D, { prof: {}, tue: { 5: 'tableau' }, tab: { 5: { decor: 'coeur', theme: 'faux', regle: null } }, bati: { 5: 'puits' }, cousu: { 5: { corps: 'brute', cle: 'brute:x', id: null } } }, 4);
     ok(L5.tab && L5.tab.decor === 'coeur' && L5.premier === null && F.brxLire(D, { prof: {}, tue: { 5: 'disque' } }, 4).premier === 'disque', 'lecture (5f) : le tableau qui t\'a tué en V est relu ; un élément libre qui t\'a tué ouvre la première mesure libre (règle de 5a)'); }
   // ── branchements de la section « v18.10 · Phase V »
-  const B1810 = (html.match(/═══ v18\.10 · Phase V[\s\S]*?\/\/ ── essai \(Q17\)/) || [''])[0];
+  const B1810 = (html.match(/═══ v18\.10 · Phase V[\s\S]*?(?:═══ v18\.12 · L'allumage|\/\/ ── essai \(Q17\))/) || [''])[0];
   ok(B1810.length > 15000, `branchement (5f) : la section « v18.10 · Phase V » existe (${B1810.length} caractères)`);
   ok(!/Math\.random\(|setRule\(|murmur\(|showCard\(|toast\(|showBanner\(/.test(B1810), 'branchement (5f) : ni Math.random, ni setRule, ni murmur, ni showCard, ni bulle, ni bandeau dans la section v18.10');
   for (const f of ['brxCandidatsV', 'brxLibresV', 'brxEclair\\(', 'brxEclairFrag', 'brxEffondreV', 'brxFosse', 'brxResserrement', 'brxResserrePret', 'brxFiltreV', 'brxPremierV', 'brxVariantesV', 'brxPlacerV', 'XA\\.vers\\(', 'brxEmprunts\\(DB,'])
@@ -1424,6 +1425,28 @@ tic('§ 15');
   // le journal v18.11 : secret
   ok(VERS.journal.some(y => y.h === 'v18.11') && ['v18.11', 'v18.12'].includes(VERS.actuelle), 'journal (5g-1) : la ligne v18.11 existe');
   for (const x of VERS.journal.filter(y => y.h === 'v18.11')) ok(!/phase|PV|bot|calibr|mannequin|cous|nœud|noeud|forme|mesur/i.test(x.t), `journal v18.11 : rien sur les PV ni la mesure (secret) : « ${x.t} »`);
+}
+
+// ── 16. L'allumage (action 5g-2, v18.12)
+tic('§ 16');
+{ ok(DA.salles.final.reel === D.phases[0].arene, `allumage : la vraie salle s'ouvre à l'état de la phase I (${DA.salles.final.reel})`);
+  ok(D.fin && D.fin.banniereS === 2.2 && D.fin.apresS === 1.0 && typeof D.fin.titre === 'string' && typeof D.fin.texte === 'string' && !/phase|bât|cou[sd]|emprunt|tableau|masqu/i.test(D.fin.titre + D.fin.texte), 'allumage : bannière 2,2 s, fin de descente 1 s après la scène, écran de victoire sans rien de ses phases');
+  ok(D.tableaux.exclues.includes('verre') && D.tableaux.exclues.includes('brume') && D.tableaux.regles.verre, 'allumage : le Verre sort des fragments (ses réglages restent pour les essais)');
+  const B1812 = (html.match(/═══ v18\.12 · L'allumage[\s\S]*?\/\/ ── v18\.11 \(5g-1\)/) || [''])[0];
+  ok(B1812.length > 2000, `branchement (5g-2) : la section « v18.12 · L'allumage » existe (${B1812.length} caractères)`);
+  ok(/planRoom=function\(type\)\{\s*if\(RUN&&!RUN\.hub&&RUN\.gardeNow==='final'&&type==='elite'&&room&&room\.arene==='final'\)\{const n=ACTE\(\);RUN\.gardeNow=0;room\.garde=n;room\.gardeK='final';room\.renfort=null;return\[\];\}/.test(B1812), 'branchement (5g-2) : la vraie salle n\'a ni vague ni Masqué (planRoom)');
+  ok(/if\(REEL\(\)&&!X\.on\)debutReel\(\);/.test(B1812) && /debut\(0\);room\.bannerT=DB\.fin\.banniereS;/.test(B1812), 'branchement (5g-2) : le Brumeux naît à l\'entrée de la vraie salle, à la phase I, sa bannière pour premier entracte');
+  ok(/later=function\(t,f\)\{return L0\.call\(this,d,f\);\}/.test(B1812) && /const L0=later,d=\(X\.scene\.dureeS\|\|2\.2\)\+DB\.fin\.apresS;/.test(B1812), 'branchement (5g-2) : la fin de la descente s\'ouvre à la fin de sa scène de mort, plus fin.apresS');
+  ok(/V7FOE1\.brumeux='le Brumeux';/.test(B1812) && /RUN\.mem\.lastSrc='brumeux'/.test(B1812), 'branchement (5g-2) : une mort par lui se note « brumeux » (la chronique ne dit plus le Glas Originel)');
+  ok(/makeRoom=function\(type\)\{const ouv=A\.ouvrir\|\|\(actif\(\)&&RUN&&!RUN\.hub&&!ESSAI_U&&RUN\.gardeNow==='final'&&type==='elite'\?\{cle:'final',o:\{etat:DA\.salles\.final\.reel\|0,reel:true\}\}:null\);/.test(html), 'branchement (5g-2) : seule la salle « final » (pas un miniboss, pas un essai ?arene=) ouvre l\'arène, à l\'état réel');
+  ok(/id==='final'&&RUN&&!RUN\.hub&&window\.__glypheFinal18\?window\.__glypheFinal18\(\):null/.test(html) && /window\.__glypheFinal18=\(\)=>XA\.actif&&XA\.actif\(\)\?glyphe\(\):null;/.test(B1812), 'branchement (5g-2) : la porte « final » porte son glyphe quand l\'arène est allumée');
+  ok(!/murmur\(|showCard\(|setRule\(/.test(B1812), 'branchement (5g-2) : ni bulle, ni carte, ni règle de salle dans la section');
+  // le wiki : la carte « Au fond de la Brume » et la légende des signes (le secret est vérifié plus haut sur tout le wiki)
+  const WK = readFileSync(join(ROOT, 'wiki.html'), 'utf8'), FD = (WK.match(/<section class="sec" id="fond"[\s\S]*?<\/section>/) || [''])[0].replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ');
+  ok(FD.includes(D.wiki.phrase) && FD.includes(D.nom) && /img\/brumeux\/brumeux-v\d+\.webp/.test(WK), 'wiki (5g-2) : sa carte (portrait, glyphe, la phrase de l\'auteur)');
+  ok(!/phase|temps|cinq|5 |bât|constru|style|choisi|cou[sd]|empru|masque|PV|arène|partition|tableau/i.test(FD.replace(D.wiki.phrase, '').replace('Le Fond de la Brume', '').replace('Au fond de la Brume', '')), `wiki (5g-2) : la carte ne dit ni phases, ni ce qu'il fait, ni PV (« ${FD.replace(/\s+/g, ' ').trim().slice(0, 160)} »)`);
+  ok(/<!-- gen:signes -->[\s\S]*Les signes au bord de l’écran[\s\S]*<!-- \/gen:signes -->/.test(WK) && !/phase|Brumeux|boss final/i.test((WK.match(/<!-- gen:signes -->([\s\S]*?)<!-- \/gen:signes -->/) || ['', ''])[1].replace(/<[^>]+>/g, ' ')), 'wiki (5g-2) : la légende des signes au bord de l\'écran, sans un mot du combat');
+  for (const x of VERS.journal.filter(y => y.h === 'v18.12')) ok(!/phase|cinq|bât|cou[sd]|empru|masqu|arène|tableau|PV|style/i.test(x.t), `journal v18.12 : ni phase ni mécanique (secret) : « ${x.t} »`);
 }
 
 function F_mondeFinal() { const S = DA.salles.final; return { w: Math.round(S.w * W), h: Math.round(S.h * H) }; }

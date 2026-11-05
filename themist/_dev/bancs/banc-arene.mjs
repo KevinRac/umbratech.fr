@@ -94,7 +94,7 @@ if (SEC.includes('A')) {
   // allumée à la main : l'arène s'ouvre au boss final (porte « final »), pas au miniboss ; éteinte (données), rien
   for (const allume of [false, true]) {
     const { page, errs, ctx } = await ouvre('');
-    const r = await page.evaluate(([v, PAS_]) => { const PAS = eval(PAS_), X = window.__arene; if (v) X.activer(true);
+    const r = await page.evaluate(([v, PAS_]) => { const PAS = eval(PAS_), X = window.__arene; X.activer(!!v);   // v18.12 : allumée par les données ; éteinte à la main (le repli)
       const B = window.__brume; B.SAVE.descente = { v: 1, ouverts: ['normal'], choisi: 'normal', victoires: {} }; B.cls('lum'); B.start(); PAS(5);
       window.__descente.essai(10); PAS(30); const mini = { type: X.dbg().room.type, arene: !!X.dbg().room.arene, cam: X.dbg().CAM.on };
       window.__descente.essai(10, { fin: true }); PAS(30); const fin = { type: X.dbg().room.type, gardeK: X.dbg().room.gardeK, arene: !!X.dbg().room.arene, cam: X.dbg().CAM.on, M: [X.dbg().MONDE.w, X.dbg().MONDE.h] };
@@ -169,14 +169,18 @@ if (SEC.includes('C')) {
   ok(A.n.vivants >= 18 && O.n.vivants >= 18 && A.n.signes >= 8, `C : contenu comparable (20 ennemis, 30 lumières ; arène : ${A.n.signes} signes)`);
   // mesures appariées et alternées (arène, élite, arène, élite…) : la charge de la machine pèse pareil sur les deux ; médiane des écarts.
   // Rejouées (jusqu'à trois séries) si l'écart dépasse le budget : on a vu au § 33 que le coût mesuré varie de ±0,8 ms.
-  let pire = null;
-  for (let serie = 0; serie < 3; serie++) {
-    const ds = [], ra = [], ro = [];
-    for (let k = 0; k < 9; k++) { const a = (await A.page.evaluate(MESURE, [150])).med, o = (await O.page.evaluate(MESURE, [150])).med; ra.push(a); ro.push(o); ds.push(a - o); }
-    const med = v => v.slice().sort((x, y) => x - y)[v.length >> 1], d = med(ds);
-    console.log(`   série ${serie + 1} : arène ${med(ra).toFixed(2)} ms, salle d’élite ${med(ro).toFixed(2)} ms, écart médian ${d >= 0 ? '+' : ''}${d.toFixed(2)} ms (écarts ${ds.map(x => x.toFixed(1)).join(' ')})`);
-    pire = { a: med(ra), o: med(ro), d }; if (d <= DA.budget.rendu) break;
+  // v18.12 (5g-2, point ouvert (8) du § 40) : jusqu'à cinq séries de onze paires ; chaque série a un témoin (l'arène contre elle-même, deux mesures de
+  // suite) qui dit le bruit de la machine ; une série bruitée (témoin au-delà de 0,5 ms) est rejouée au lieu de trancher
+  let pire = null, bruitees = 0;
+  for (let serie = 0; serie < 5; serie++) {
+    const ds = [], ra = [], ro = [], tm = [];
+    for (let k = 0; k < 11; k++) { const a = (await A.page.evaluate(MESURE, [150])).med, o = (await O.page.evaluate(MESURE, [150])).med, a2 = (await A.page.evaluate(MESURE, [150])).med; ra.push(a); ro.push(o); ds.push((a + a2) / 2 - o); tm.push(Math.abs(a2 - a)); }
+    const med = v => v.slice().sort((x, y) => x - y)[v.length >> 1], d = med(ds), bruit = med(tm);
+    console.log(`   série ${serie + 1} : arène ${med(ra).toFixed(2)} ms, salle d’élite ${med(ro).toFixed(2)} ms, écart médian ${d >= 0 ? '+' : ''}${d.toFixed(2)} ms, témoin ${bruit.toFixed(2)} ms (écarts ${ds.map(x => x.toFixed(1)).join(' ')})`);
+    if (bruit > 0.5 && d > DA.budget.rendu) { bruitees++; if (!pire || d < pire.d) pire = { a: med(ra), o: med(ro), d, bruit }; continue; }
+    pire = { a: med(ra), o: med(ro), d, bruit }; if (d <= DA.budget.rendu) break;
   }
+  if (bruitees) console.log(`   ${bruitees} série(s) bruitée(s) rejouée(s)`);
   ok(pire.d <= DA.budget.rendu, `C : une image de l’arène pleine coûte ${pire.d >= 0 ? '+' : ''}${pire.d.toFixed(2)} ms de plus qu’une salle d’élite au même contenu (≤ +${DA.budget.rendu})`);
   const t = await A.page.evaluate(() => window.__arene.mesure());
   const NE = DA.salles.final.etats.filter(E => !E.tard).length;   // v18.7 : un état « tard » (la phase II du Brumeux) n'est pas peint à l'entrée
@@ -318,6 +322,8 @@ if (SEC.includes('G')) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     await ctx.addInitScript({ content: `(${HORLOGE})(${seed});` });
     await ctx.route(u => u.pathname.endsWith('/index.html'), r => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: SRC[ver] }));
+    // v18.12 : BANC_ETEINTE=1 sert arene.js éteint (actif:false) aux deux copies : le repli rend les 19 salles identiques
+    if (process.env.BANC_ETEINTE) await ctx.route(u => u.pathname.endsWith('/data/arene.js'), r => r.fulfill({ status: 200, contentType: 'text/javascript; charset=utf-8', body: readFileSync(join(THEMIST, 'data', 'arene.js'), 'utf8').replace(/\bactif:true\b/, 'actif:false') }));
     const page = await ctx.newPage(); const errs = [];
     page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
     page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
@@ -339,6 +345,8 @@ if (SEC.includes('G')) {
       for (let f = 0; f < Math.max(x.hs.length, y.hs.length); f++) if (x.hs[f] !== y.hs[f]) { n++; if (premier < 0) premier = f; }
       images += x.hs.length; diff += n;
       salles.push(`${x.nom}${x.type !== y.type ? ' (type ≠)' : ''}`);
+      // v18.12 (5g-2) : l'arène allumée, la salle du boss final change (c'est le Brumeux) : elle seule ; aucune autre salle ne change (BANC_ETEINTE=1 : les 19)
+      if (x.gardeK === 'final' && DA.actif && !process.env.BANC_ETEINTE) { ok(x.type === y.type && y.gardeK === 'final', `G : ${palier} (${cls}) · ${x.nom} : la salle du boss final change (le Brumeux, arène allumée : ${n} images sur ${x.hs.length})`); continue; }
       ok(n === 0 && x.type === y.type && x.gardeK === y.gardeK, `G : ${palier} (${cls}) · ${x.nom} [${x.etat === 'title' ? 'écran titre, ' : ''}${x.type}${x.gardeK ? ' ' + x.gardeK : ''}, acte ${x.acte}] : ${x.hs.length} images identiques${n ? ` — ${n} images différentes, la première à l’image ${premier}` : ''}`);
     }
   }

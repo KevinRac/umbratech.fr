@@ -4,8 +4,10 @@
 // Lu par le jeu (index.html, bloc « v18.4 · L'arène » ; logique pure /*arene:pur*/), par outils/sim-arene.mjs et par _dev/bancs/banc-arene.mjs.
 // Le wiki n'en dit rien tant que l'arène est éteinte (une ligne du journal seulement, Q9) ; il ne dira jamais ce que contient chaque phase.
 (function(D){D.arene={
- // Éteinte jusqu'à l'action 5 (Q6) : en jeu, aucune salle ne change. Seul le mode d'essai l'ouvre : index.html?arene=final[&…].
- actif:false,
+ // Allumée depuis la v18.12 (action 5g-2) : la salle du boss final d'une vraie descente (porte « final ») est l'arène, et le Brumeux y combat.
+ // Faux : l'interrupteur de repli (le boss final provisoire, un Masqué renforcé, revient au bit et à l'image près). Les essais (?arene=, ?brumeux=) l'ouvrent
+ // toujours. Aucune autre salle ne change.
+ actif:true,
  // Salles qui reçoivent l'arène (Q1 : le boss final seulement). w × h : taille du monde en écrans (1 280 × 720) ; entree : point d'entrée
  // du joueur, en fractions du monde. etats : états d'arène (Q5) : 0 à 2 d'ESSAI (banc-arene A et C comptent sur eux, à leurs places) ; les états
 // réels des phases du Brumeux s'ajoutent après eux (3 : phase I, action 5b ; 4 : phase II, action 5c ; 5 : phase III, action 5d ; 6 : phase IV, action 5e ;
@@ -13,7 +15,8 @@
  // Un état : bornes jouables (fractions des bornes dures), obstacles (piliers, disques), vides (fosses : on n'y marche pas, rien n'y apparaît),
  // sol (calque peint à l'entrée), brume de décor (ne cache jamais un télégraphe ni un signe de bord). fx, fy : fractions des bornes dures ; r en px.
  salles:{
-  final:{w:2,h:1.5,entree:{fx:0.5,fy:0.88},
+  // reel (v18.12) : l'état où s'ouvre la vraie salle (la phase I du Brumeux, brumeux.js phases[0].arene) ; seul cet état est peint à l'entrée.
+  final:{w:2,h:1.5,entree:{fx:0.5,fy:0.88},reel:3,
    etats:[
     {bornes:{fx0:0,fy0:0,fx1:1,fy1:1},sol:'pierre',
      obstacles:[{fx:0.22,fy:0.3,r:34},{fx:0.78,fy:0.3,r:34},{fx:0.22,fy:0.72,r:34},{fx:0.78,fy:0.72,r:34}],vides:[],

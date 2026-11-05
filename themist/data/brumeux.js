@@ -10,6 +10,9 @@
 // Seul le mode d'essai ouvre le Brumeux : index.html?brumeux=<phase>[&palier=…][&graine=…][&reserve=…][&bot=2][&classe=…].
 (function(D){D.brumeux={
  nom:'Le Brumeux',
+ // v18.12 (action 5g-2, Q16) : ce que le wiki dit de lui, sa carte « Au fond de la Brume » (son portrait, son glyphe, cette phrase, choisie par l'auteur).
+ // Le wiki ne dit jamais combien il a de phases, ce qu'elles contiennent, qu'il bâtit selon ton style, ni comment il choisit, coud ou emprunte.
+ wiki:{phrase:'Ce que tu as traversé, il s’en souvient.'},
  // ── Les cinq phases (Q1). id : nom de travail, jamais affiché ; presence : au-dessus de l'arène (mains, croix, fils ; haut) ou au sol (sol) ;
  // faible : ce que l'anneau ivoire entoure (G27.anneau) ; arene : l'état d'arène (data/arene.js, salles.final.etats : 0 pleine, 1 resserrée,
  // 2 bande à fosses ; 3 la phase I réelle, « le Rappel », action 5b ; 4 la phase II réelle, « L'Ouvrage », action 5c ; 5 la phase III réelle, « La Couture »,
@@ -27,6 +30,10 @@
  // Les dégâts au-delà d'un seuil de phase ne passent pas à la phase suivante (même règle que les gardiens) ; le verrou de phase est celui
  // de data/gardiens.js (verrouPhase : 1,2 s à 15 %). dureeS : la transition entière (verrou, cri, transformation de l'arène, relecture).
  transition:{dureeS:3,cri:true,relecture:true},
+ // v18.12 (action 5g-2) : la vraie salle. banniereS : sa bannière (« Le Brumeux · Au fond de la Brume ») sert de premier entracte (il ne lance rien) ;
+ // apresS : la fin de la descente s'ouvre à la fin de la scène de sa mort, plus ce temps (les contrôles ne sont jamais retirés).
+ // titre, texte : l'écran de victoire quand il est vaincu (le texte d'avant parlait du Glas Originel) ; rien sur ses phases ni sur ce qu'il fait.
+ fin:{banniereS:2.2,apresS:1.0,titre:'Au fond de la Brume',texte:'Le Brumeux s’efface. Pour la première fois, la descente n’a plus personne pour l’écrire. La Brume, elle, se souviendra de toi.'},
  // ── La partition (Q8, option b) : chaque phase est une boucle de mesures, les unes fixes (socle appris), les autres libres (improvisées,
  // retirées à chaque boucle). 5a : une seule partition d'ESSAI, la même pour les cinq phases (chaque fiche 5b à 5f écrit la sienne).
  // Une mesure : {k:'fixe', g:<geste d'essai>} ou {k:'libre'} ; entre deux mesures, l'entracte (s). nu : à nu (anneau ivoire) après la boucle (s).
@@ -283,7 +290,9 @@
   // d'un ennemi voilé (« aucune mort sans signe »).
   regles:{sol:{r:66,annonceS:1.3,ouvertS:2.4,tickS:0.4,degatsJoueur:10,degatsEnnemis:20,max:3,premiereS:1.4,intervalle:[3.2,4.5]},
    braseros:{n:2,rayon:190,lumiere:210,subi:0.4},verre:{recu:1.4}},
-  exclues:['brume'],
+  // v18.12 (5g-2) : le Verre aussi, tant qu'il n'a pas de signe (en descente, il ne se lit qu'à son étiquette, interdite ici) : pas de modificateur caché
+  // (× 1,4) quand le combat s'allume ; son signe vient à l'action 7 (en descente comme dans un fragment). Ses réglages restent (essais, bancs).
+  exclues:['brume','verre'],
   // Budget d'un tableau (menace, Q12 : ×1 / ×1,25 / ×1,5 ; jamais de PV ni de dégâts en plus) ; coûts et plafonds de ce qui s'y achète ;
   // densite : chaque achat ajoute cette part au budget de la vague (budget() du jeu).
   budget:{normal:4,difficile:5,extreme:6},couts:{vague:2,regle:1,densite:1,champion:1},max:{regle:1,densite:2,champion:1},densite:0.25,

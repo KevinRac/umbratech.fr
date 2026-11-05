@@ -33,7 +33,7 @@ const W = 1280, H = 720, V = { w: W, h: H }, AR0 = { x0: 56, y0: 92, x1: W - 56,
 const mk = s => () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 
 // ── 0. Données
-ok(DA.actif === false, 'données : l’arène est éteinte (actif:false) jusqu’à l’action 5');
+ok(DA.actif === true && DA.salles.final.reel === 3, 'données : l’arène est allumée depuis la v18.12 (action 5g-2 : le boss final), la vraie salle s’ouvre à l’état 3');
 ok(JSON.stringify(Object.keys(DA.salles)) === '["final"]', 'données : une seule salle, le boss final (Q1)');
 const S = DA.salles.final;
 ok(S.w === 2 && S.h === 1.5, 'données : 2 × 1,5 écrans');
@@ -344,7 +344,7 @@ has('ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|arene|brumeux)=/', 'garde
 has('ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/', 'garde d’essai de la descente (ESSAI18) : arene (v18.5 : brumeux)');
 const bloc = html.slice(html.indexOf("// v18.4 · L'arène (chantier v18, action 4"), html.indexOf('\nconst DEMO_CLS='));
 ok(bloc.length > 1000, 'bloc « v18.4 · L’arène » en fin de fichier, avant le démarrage');
-ok(/makeRoom=function\(type\)\{const ouv=[\s\S]{0,200}remettre\(\);/.test(bloc), 'bloc : toute nouvelle salle remet AR, MONDE et CAM avant d’être construite');
+ok(/makeRoom=function\(type\)\{const ouv=[\s\S]{0,420}remettre\(\);/.test(bloc), 'bloc : toute nouvelle salle remet AR, MONDE et CAM avant d’être construite');
 ok(/function remettre\(\)\{Object\.assign\(AR,AR0\);MONDE\.w=W;MONDE\.h=H;CAM\.x=0;CAM\.y=0;CAM\.on=false;/.test(bloc), 'bloc : remettre() rend AR0, l’écran et CAM nul');
 ok(/A\.j\.assertions\+\+/.test(bloc), 'bloc : assertion de développement à chaque entrée hors arène');
 ok(/actif\(\)&&RUN&&!RUN\.hub&&!ESSAI_U&&RUN\.gardeNow==='final'/.test(bloc) && /const actif=\(\)=>A\.actif!=null\?A\.actif:!!DA\.actif;/.test(bloc), 'bloc : en jeu, l’arène ne s’ouvre que si actif (boss final) ; le mode d’essai l’ouvre même éteinte');
