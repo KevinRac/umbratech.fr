@@ -7,6 +7,7 @@
  * Échap refuse à toutes les étapes. Les valeurs sont en pixels de la scène
  * (déjà multipliées par l'échelle `S`).
  */
+import { playSfx } from '../audio/sfx';
 import type Phaser from 'phaser';
 import type { ActionInput } from '../core/input';
 import { PALETTE } from '../render/palette';
@@ -67,6 +68,7 @@ export class ConfirmBox {
   update(): void {
     if (!this.menu) return;
     if (this.input.consume('cancel')) {
+      playSfx('cancel');
       this.finish(false);
       return;
     }
@@ -99,12 +101,12 @@ export class ConfirmBox {
     // Dernière étape : « Non » d'abord, pour qu'Entrée par réflexe ne détruise rien.
     const items = last
       ? [
-          { label: step.no, onSelect: () => this.finish(false) },
+          { label: step.no, onSelect: () => this.finish(false), sound: 'cancel' as const },
           { label: step.yes, onSelect: () => this.next() },
         ]
       : [
           { label: step.yes, onSelect: () => this.next() },
-          { label: step.no, onSelect: () => this.finish(false) },
+          { label: step.no, onSelect: () => this.finish(false), sound: 'cancel' as const },
         ];
     this.menu = new VerticalMenu(this.scene, left + pad, top + height - pad - 2 * lh, items, this.input, { width: width - 2 * pad, lineHeight: lh, depth: depth + 2, scale: k, textScale: ts });
     this.input.consume('confirm');

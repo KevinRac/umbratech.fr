@@ -7,6 +7,8 @@
  * Elle se superpose au monde ; `onClose` rend la main au monde (qui retire un
  * PNJ recruté, rafraîchit ses pastilles de quête…).
  */
+import { noticeSound } from '../logic/audio/soundRules';
+import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
 import { getGameCtx } from '../core/townContext';
 import { uiScaleFor } from '../core/viewport';
@@ -212,6 +214,7 @@ export class DialogueScene extends Phaser.Scene {
   private notify(notices: Notice[]): void {
     if (notices.length === 0) return;
     const hud = this.scene.get(SCENES.worldHud) as WorldHudScene | undefined;
+    playSfx(noticeSound(notices));
     hud?.notify?.(formatNotices(this.ctx, notices));
   }
 
@@ -225,6 +228,7 @@ export class DialogueScene extends Phaser.Scene {
       return;
     }
     if (this.mode !== 'waiting') return;
+    playSfx('page');
     if (this.pageIndex < this.pages.length - 1) {
       this.pageIndex++;
       this.showPage(this.pages[this.pageIndex] as string, 0);

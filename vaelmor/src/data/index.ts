@@ -22,12 +22,13 @@ import music from '../../data/music.json';
 import quests from '../../data/quests.json';
 import reputation from '../../data/reputation.json';
 import skills from '../../data/skills.json';
+import sounds from '../../data/sounds.json';
 import terrains from '../../data/terrains.json';
 import worldEnemies from '../../data/worldEnemies.json';
 import zones from '../../data/zones.json';
 import { GameDataError, validateGameData, type GameData, type RawGameData } from './validate';
 
-export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies, skills, allies, company, battleQuotes, endings, battleAnims, music };
+export const EMBEDDED_DATA: RawGameData = { elements, terrains, reputation, balance, classes, zones, items, enemies, encounters, locations, quests, worldEnemies, skills, allies, company, battleQuotes, endings, battleAnims, music, sounds };
 
 let cache: GameData | null = null;
 

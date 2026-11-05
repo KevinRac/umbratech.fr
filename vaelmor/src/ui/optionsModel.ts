@@ -106,7 +106,8 @@ export function optionRows(): OptionRow[] {
       set: (id) => saveAnimSpeed(ANIM_SPEEDS.find((v) => v === id) ?? 'normal'),
     },
     volumeRow('musicVolume', 'music', 'Musique', 'Volume de la musique.'),
-    volumeRow('sfxVolume', 'sfx', 'Effets sonores', 'Volume des bruitages des combats et de l’interface.'),
+    volumeRow('sfxVolume', 'sfx', 'Effets sonores', 'Volume des bruitages : combats, interface, pas du héros.'),
+    volumeRow('ambienceVolume', 'ambience', 'Ambiance', 'Volume des bruits de la nature : vent, oiseaux, ressac, braises.'),
     {
       id: 'reducedFx',
       section: 'accessibilite',

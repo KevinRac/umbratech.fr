@@ -1,0 +1,29 @@
+{
+  "$comment": "Bruitages et ambiances (jalon M10, lot D, décisions n°239 et n°240). Recettes : src/audio/sfxRecipes.ts ; règles : src/logic/audio/soundRules.ts.",
+  "ambience": {
+    "fadeMs": 2500,
+    "zones": { "z1": "plaine", "z2": "foret", "z3": "ressac", "z4": "braises", "z5": "ressac" },
+    "places": { "port_brume": "ressac", "plage_epaves": "ressac", "tour_noye": "marais", "pierre_haute": "braises" },
+    "terrains": { "foret": "foret", "marais": "marais", "plage": "ressac", "eau_profonde": "ressac" },
+    "radius": 5,
+    "terrainShare": 0.35
+  },
+  "steps": {
+    "terrains": {
+      "plaine": "herbe",
+      "route": "terre",
+      "foret": "feuilles",
+      "montagne": "gravier",
+      "gue": "eau",
+      "riviere": "eau",
+      "pont": "bois",
+      "ruines": "pave",
+      "village": "pave",
+      "plage": "sable",
+      "marais": "boue"
+    },
+    "default": "terre",
+    "walkMs": 300,
+    "sprintMs": 215
+  }
+}

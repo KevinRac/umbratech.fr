@@ -10,6 +10,7 @@
  * rencontres (MenuScene). Les scènes, la logique et les données ne savent
  * rien de lui.
  */
+import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
 import type { ActionInput } from '../core/input';
 import type { PortraitMood } from '../data/skins';
@@ -168,7 +169,10 @@ export class TalkBox {
       if (confirm) this.reveal(this.text.length);
       return;
     }
-    if (confirm) this.next();
+    if (confirm) {
+      playSfx('page');
+      this.next();
+    }
   }
 
   /** Ferme la scène (Échap, fin des répliques, ou départ de la scène hôte). */

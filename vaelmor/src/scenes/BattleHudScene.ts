@@ -13,6 +13,7 @@
  * `BattleScene` pilote tout ; les appels reçus avant la création sont mis en attente.
  */
 import { moodForHp, portraitInBox, speak } from '../render/portraits';
+import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
 import { ActionInput } from '../core/input';
 import { uiScaleFor } from '../core/viewport';
@@ -273,10 +274,15 @@ export class BattleHudScene extends Phaser.Scene {
       return;
     }
     if (this.list) {
-      if (this.actions.justPressed('cancel') && this.listCancel) this.listCancel();
-      else this.list?.update();
+      if (this.actions.justPressed('cancel') && this.listCancel) {
+        playSfx('cancel');
+        this.listCancel();
+      } else this.list?.update();
     } else if (this.menu) {
-      if (this.actions.justPressed('cancel') && this.menuCancel) this.menuCancel();
+      if (this.actions.justPressed('cancel') && this.menuCancel) {
+        playSfx('cancel');
+        this.menuCancel();
+      }
       else this.menu?.update();
     } else if (this.prepView) this.updatePrepInput();
     this.resultMenu?.update();
@@ -1391,6 +1397,7 @@ export class BattleHudScene extends Phaser.Scene {
   levelUp(unit: BattleUnit, view: LevelUpView, durationMs: number): Promise<void> {
     return new Promise((resolve) => {
       this.run(() => {
+        playSfx('levelUp');
         if (durationMs <= 0) {
           resolve();
           return;

@@ -1111,3 +1111,38 @@ export const musicFileSchema = z.strictObject({
   tracks: z.record(trackId, musicTrackSchema),
 });
 export type MusicFile = z.infer<typeof musicFileSchema>;
+
+/* ---------- Bruitages et ambiances (jalon M10, lot D, n°239 et n°240) ---------- */
+
+/** Les cinq ambiances en boucle (recettes : `audio/sfxRecipes.ts`). */
+export const AMBIENCE_IDS = ['plaine', 'foret', 'ressac', 'marais', 'braises'] as const;
+export type AmbienceSoundId = (typeof AMBIENCE_IDS)[number];
+/** Matières des pas du héros. */
+export const STEP_MATERIAL_IDS = ['herbe', 'terre', 'pave', 'bois', 'sable', 'boue', 'eau', 'feuilles', 'gravier'] as const;
+export type StepMaterialId = (typeof STEP_MATERIAL_IDS)[number];
+
+export const soundsFileSchema = z.strictObject({
+  $comment: comment,
+  ambience: z.strictObject({
+    /** Fondu entre deux ambiances (ms). */
+    fadeMs: z.number().int().nonnegative(),
+    /** Ambiance de chaque zone. */
+    zones: z.record(z.string(), z.enum(AMBIENCE_IDS)),
+    /** Lieu qui impose son ambiance (port, repaire…). */
+    places: z.record(z.string(), z.enum(AMBIENCE_IDS)),
+    /** Terrain qui impose son ambiance quand il couvre assez les alentours du héros. */
+    terrains: z.record(z.string(), z.enum(AMBIENCE_IDS)),
+    /** Rayon (cases) des alentours comptés, et part qu'un terrain doit y couvrir. */
+    radius: z.number().int().min(1).max(12),
+    terrainShare: z.number().min(0).max(1),
+  }),
+  steps: z.strictObject({
+    /** Matière sous le pied, par terrain ; `default` pour les autres. */
+    terrains: z.record(z.string(), z.enum(STEP_MATERIAL_IDS)),
+    default: z.enum(STEP_MATERIAL_IDS),
+    /** Intervalle entre deux pas (ms), en marchant et en courant. */
+    walkMs: z.number().int().positive(),
+    sprintMs: z.number().int().positive(),
+  }),
+});
+export type SoundsFile = z.infer<typeof soundsFileSchema>;

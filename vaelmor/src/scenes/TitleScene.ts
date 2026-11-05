@@ -6,6 +6,7 @@
  * Options.
  */
 import Phaser from 'phaser';
+import { setAmbience } from '../audio/ambience';
 import { playMusic } from '../audio/music';
 import { GAME_SUBTITLE, GAME_VERSION, MILESTONE, TITLE_HEIGHT as GAME_HEIGHT, TITLE_WIDTH as GAME_WIDTH } from '../core/config';
 import { ActionInput } from '../core/input';
@@ -71,6 +72,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    setAmbience(null, 800);
     playMusic({ kind: 'title' });
     // La scène est réutilisée à chaque retour au titre : on repart d'un état propre.
     this.starting = false;

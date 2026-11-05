@@ -6,6 +6,7 @@
  * Onglet Sauvegarde (jalon M9, n°161) : les emplacements, qui s'ouvrent dans
  * l'écran `SaveScene`.
  */
+import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
 import { getGameCtx } from '../core/townContext';
 import { uiScaleFor } from '../core/viewport';
@@ -120,6 +121,7 @@ export class MenuScene extends Phaser.Scene {
       this.close();
       return;
     }
+    if (this.actions.justPressed('left') || this.actions.justPressed('right')) playSfx('cursor');
     if (this.actions.justPressed('left')) this.setTab(TABS[(this.tabIndex() + TABS.length - 1) % TABS.length]?.id ?? this.tab);
     if (this.actions.justPressed('right')) this.setTab(TABS[(this.tabIndex() + 1) % TABS.length]?.id ?? this.tab);
     this.list?.update();

@@ -8,6 +8,7 @@
  * valeur précédente, ailleurs = valeur suivante. Utilisée par l'écran Options
  * et par l'onglet Options du menu (où Gauche/Droite changent d'onglet).
  */
+import { playSfx } from '../audio/sfx';
 import Phaser from 'phaser';
 import type { ActionInput } from '../core/input';
 import { PALETTE } from '../render/palette';
@@ -91,8 +92,8 @@ export class OptionsPanel {
 
   /** À appeler à chaque image. */
   update(): void {
-    if (this.input.justPressed('up')) this.select((this.cursor + this.rows.length - 1) % this.rows.length);
-    if (this.input.justPressed('down')) this.select((this.cursor + 1) % this.rows.length);
+    if (this.input.justPressed('up')) this.move((this.cursor + this.rows.length - 1) % this.rows.length);
+    if (this.input.justPressed('down')) this.move((this.cursor + 1) % this.rows.length);
     if (this.o.horizontal && this.input.justPressed('left')) this.change(-1);
     if (this.o.horizontal && this.input.justPressed('right')) this.change(1);
     if (this.input.justPressed('confirm')) this.change(1, true);
@@ -109,6 +110,11 @@ export class OptionsPanel {
     this.rows.length = 0;
   }
 
+  private move(index: number): void {
+    if (index !== this.cursor) playSfx('cursor');
+    this.select(index);
+  }
+
   private select(index: number): void {
     const view = this.rows[index];
     if (!view) return;
@@ -121,7 +127,10 @@ export class OptionsPanel {
   private change(step: number, wrap?: boolean): void {
     const view = this.rows[this.cursor];
     if (!view) return;
+    const before = view.row.get();
     view.row.set(stepValue(view.row, step, wrap ?? view.row.wrap !== false));
+    // Le son suit le réglage : un volume d'effets changé s'entend tout de suite à son nouveau niveau.
+    if (view.row.get() !== before) playSfx('cursor');
     this.refresh();
   }
 }

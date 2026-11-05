@@ -4,6 +4,7 @@
  * ligne. Navigation aux actions haut/bas/confirmer et à la souris.
  * Les valeurs sont en pixels d'écran (déjà multipliées par l'échelle de l'interface).
  */
+import { playSfx, type SfxId } from '../audio/sfx';
 import Phaser from 'phaser';
 import type { ActionInput } from '../core/input';
 import { PALETTE } from '../render/palette';
@@ -27,6 +28,8 @@ export interface ScrollListOptions {
   readonly textScale?: number;
   readonly onCursor?: (index: number) => void;
   readonly onActivate?: (index: number) => void;
+  /** Bruitage à la validation (« valider » par défaut ; null : l'action joue le sien). Une ligne grisée joue « refus ». */
+  readonly activateSound?: SfxId | null;
   /** Souris : faux = le survol ne déplace pas le curseur (l'écran qui l'affiche se reconstruirait à chaque survol). */
   readonly hoverSelects?: boolean;
   /** Clic droit sur une ligne. */
@@ -124,7 +127,13 @@ export class ScrollList {
 
   private activate(): void {
     const row = this.rows[this.cursor];
-    if (!row || row.enabled === false || this.locked) return;
+    if (!row || this.locked) return;
+    if (row.enabled === false) {
+      playSfx('refuse');
+      return;
+    }
+    const sound = this.options.activateSound;
+    playSfx(sound === undefined ? 'confirm' : sound);
     this.options.onActivate?.(this.cursor);
   }
 
@@ -133,6 +142,7 @@ export class ScrollList {
     this.cursor = index;
     this.clampWindow();
     this.render();
+    playSfx('cursor');
     this.options.onCursor?.(index);
   }
 

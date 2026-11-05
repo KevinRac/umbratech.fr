@@ -18,7 +18,9 @@
  * Souris : survol = curseur, clic gauche = valider, clic droit = annuler (jamais le menu : Échap ou Tab).
  */
 import Phaser from 'phaser';
+import { setAmbience } from '../audio/ambience';
 import { playMusic } from '../audio/music';
+import { playSfx } from '../audio/sfx';
 import { ANIM_SPEED_FACTOR, loadAnimSpeed, loadBattleView, loadReducedEffects, onSettingsChange, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
@@ -268,6 +270,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(params: BattleSceneData): void {
+    setAmbience(null, 400);
     this.params = params;
     this.alive = true;
     this.hovered = null;
@@ -972,7 +975,9 @@ export class BattleScene extends Phaser.Scene {
   private cursorStep(): Cell | null {
     const dx = (this.actions.justPressed('right') ? 1 : 0) - (this.actions.justPressed('left') ? 1 : 0);
     const dy = (this.actions.justPressed('down') ? 1 : 0) - (this.actions.justPressed('up') ? 1 : 0);
-    return dx !== 0 || dy !== 0 ? { x: dx, y: dy } : null;
+    if (dx === 0 && dy === 0) return null;
+    playSfx('cursor');
+    return { x: dx, y: dy };
   }
 
   /* ---------- Préparation (GDD §9.3, §13.4) ---------- */
@@ -1439,6 +1444,7 @@ export class BattleScene extends Phaser.Scene {
   /* ---------- Phase du joueur ---------- */
 
   private select(unit: BattleUnit): void {
+    playSfx('confirm');
     this.selected = unit;
     this.reach = reachable(this.state, unit);
     this.showMoveRange(unit, this.reach);
@@ -1472,6 +1478,7 @@ export class BattleScene extends Phaser.Scene {
         void this.finishAction(() => waitUnit(this.state, unit.id));
         return;
       }
+      playSfx('cancel');
       this.deselect();
       this.setMode('browse');
       return;
@@ -1809,6 +1816,7 @@ export class BattleScene extends Phaser.Scene {
     const t = this.targeting;
     if (!unit || !t) return;
     if (click?.right || this.actions.justPressed('cancel')) {
+      playSfx('cancel');
       this.leaveTargeting();
       this.setCursor(unit);
       this.openActionMenu();
@@ -1821,8 +1829,14 @@ export class BattleScene extends Phaser.Scene {
         this.focusFree();
       }
     } else {
-      if (this.actions.justPressed('right') || this.actions.justPressed('down')) this.focusTarget(this.targetIndex + 1);
-      if (this.actions.justPressed('left') || this.actions.justPressed('up')) this.focusTarget(this.targetIndex - 1);
+      if (this.actions.justPressed('right') || this.actions.justPressed('down')) {
+        playSfx('cursor');
+        this.focusTarget(this.targetIndex + 1);
+      }
+      if (this.actions.justPressed('left') || this.actions.justPressed('up')) {
+        playSfx('cursor');
+        this.focusTarget(this.targetIndex - 1);
+      }
     }
     let confirm = this.actions.justPressed('confirm');
     if (click) {
@@ -1911,6 +1925,7 @@ export class BattleScene extends Phaser.Scene {
   /* ---------- Menu de carte ---------- */
 
   private openMapMenu(): void {
+    playSfx('menuOpen');
     this.setMode('menu');
     const threatLabel = (): string => `Menaces : ${this.showAllThreat ? 'oui' : 'non'}`;
     const close = (): void => {

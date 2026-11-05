@@ -8,6 +8,9 @@
  * ces fonctions et dessiner le résultat.
  */
 import Phaser from 'phaser';
+import { setAmbience, setAmbienceFade } from '../audio/ambience';
+import { playSfx, playStep } from '../audio/sfx';
+import { ambienceFor, noticeSound, stepInterval, stepMaterial } from '../logic/audio/soundRules';
 import { worldZoomFor } from '../core/viewport';
 import { showFatalError } from '../core/fatal';
 import { ActionInput } from '../core/input';
@@ -259,6 +262,9 @@ export class WorldScene extends Phaser.Scene {
   private foesDebugOff = false;
   /** Heure (horloge de la scène) de la dernière sauvegarde automatique de village. */
   private lastVillageSave = -Infinity;
+  /** Bruitages (lot D) : temps depuis le dernier pas, et depuis le dernier choix d'ambiance. */
+  private stepClock = 0;
+  private ambienceClock = 0;
   /** Quêtes terminées et jour au début de la dernière fenêtre (dialogue, menu) : la fin d'une quête et le repos sauvegardent (n°160). */
   private modalMarks = { questsDone: 0, day: 0 };
 
@@ -282,6 +288,8 @@ export class WorldScene extends Phaser.Scene {
     this.nearWanderer = null;
     this.nearAltar = null;
     this.presenceTimer = 0;
+    this.stepClock = 0;
+    this.ambienceClock = Infinity;
     if (data.newGame) this.registry.set('world.atApplied', false);
     this.view = worldView(this, worldZoomFor(this.scale.height));
     try {
@@ -295,6 +303,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.actions = new ActionInput(this);
+    setAmbienceFade(this.data_.sounds.ambience.fadeMs);
     this.scene.launch(SCENES.worldHud);
     this.hud = this.scene.get(SCENES.worldHud) as WorldHudScene;
     ensureWorldTextures(this);
@@ -532,6 +541,7 @@ export class WorldScene extends Phaser.Scene {
     this.state.progress.clock += delta;
     stepBody(this.body_, input, dt, this.grid, this.data_.balance.exploration);
     if (this.body_.bumpedGate) this.onGateBump(this.body_.bumpedGate, time);
+    this.updateSounds(delta);
 
     this.camera_ = followTarget(this.camera_, { x: this.body_.x, y: this.body_.y - 10 }, Math.min(dt, 0.05), this.cameraConfig);
     this.applyCamera();
@@ -885,6 +895,7 @@ export class WorldScene extends Phaser.Scene {
 
   private startDialogue(actor: NpcActor): void {
     this.enterModal();
+    playSfx('page');
     // Le PNJ se tourne vers le héros, et le héros vers lui.
     actor.talking = true;
     const toward = facingToward(actor.x - this.body_.x, actor.footY - 1 - this.body_.y);
@@ -1037,6 +1048,7 @@ export class WorldScene extends Phaser.Scene {
     const zone = this.tracker.currentZone;
     const place = this.tracker.currentLocation;
     this.enterModal();
+    playSfx('menuOpen');
     this.scene.launch(SCENES.islandMap, {
       map: this.map,
       zones: this.data_.zones,
@@ -1047,7 +1059,10 @@ export class WorldScene extends Phaser.Scene {
       destinations,
       travelNote: note,
       onTravel: (point: TravelPoint) => this.travelTo(point),
-      onClose: () => this.leaveModal(),
+      onClose: () => {
+        playSfx('menuClose');
+        this.leaveModal();
+      },
     });
   }
 
@@ -1057,15 +1072,21 @@ export class WorldScene extends Phaser.Scene {
     this.state.player.x = point.x;
     this.state.player.y = point.y;
     this.state.player.facing = 's';
+    playSfx('travel');
+    setAmbience(null, 500);
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(SCENES.world, { travelled: point.name }));
   }
 
   private openMenu(tab: MenuTab): void {
     this.enterModal();
+    playSfx('menuOpen');
     this.scene.launch(SCENES.menu, {
       tab,
-      onClose: () => this.leaveModal(),
+      onClose: () => {
+        playSfx('menuClose');
+        this.leaveModal();
+      },
       island: { map: this.map, zones: this.data_.zones, discoveredZones: this.state.discoveredZones, markers: this.islandMarkerContext(), hero: { x: this.body_.x, y: this.body_.y } },
       saves: { place: this.placeName(), blocked: this.saveBlocker(), onLoad: (save: SaveEnvelope) => this.loadSavedGame(save) },
     });
@@ -1155,7 +1176,11 @@ export class WorldScene extends Phaser.Scene {
       for (const id of Object.keys(this.gameCtx.progress.quests)) if (questStatus(this.gameCtx, id) === 'ready') this.announced.add(id);
     }
     notices.push(...newlyReady(this.gameCtx, this.announced));
-    if (notices.length > 0) this.time.delayedCall(silentStart ? 1200 : 0, () => this.hud.notify(formatNotices(this.gameCtx, notices)));
+    if (notices.length > 0)
+      this.time.delayedCall(silentStart ? 1200 : 0, () => {
+        playSfx(noticeSound(notices));
+        this.hud.notify(formatNotices(this.gameCtx, notices));
+      });
     this.grid.setOpenFlags(this.state.openFlags);
     this.refreshGates();
     this.refreshMarkers();
@@ -1170,12 +1195,55 @@ export class WorldScene extends Phaser.Scene {
       const id = String(update.location.props['id']);
       const isNew = addUnique(this.state.discoveredLocations, id);
       this.hud.showBanner(update.location.name, isNew ? 'Lieu découvert' : '', 1400);
+      if (update.location.kind === 'village' || update.location.kind === 'ville') playSfx('villageEnter');
       this.onLocationEntered(id);
       if (isNew) this.checkProgress(false);
     } else if (update.locationChanged) {
       this.onLocationLeft();
     }
     if (update.zoneChanged || update.locationChanged) this.syncMusic();
+  }
+
+  /**
+   * Pas du héros selon le sol, et ambiance des alentours (lot D, n°239) : le
+   * terrain dominant autour du héros est recompté deux fois par seconde.
+   */
+  private updateSounds(delta: number): void {
+    const rules = this.data_.sounds;
+    const tile = this.map.tileSize;
+    if (this.body_.moved) {
+      this.stepClock += delta;
+      const every = stepInterval(rules, this.body_.sprinting);
+      if (this.stepClock >= every) {
+        this.stepClock = Math.min(this.stepClock - every, every);
+        playStep(stepMaterial(rules, terrainAtCell(this.map, Math.floor(this.body_.x / tile), Math.floor((this.body_.y - 1) / tile))));
+      }
+    } else {
+      // Le premier pas tombe vite après un arrêt.
+      this.stepClock = stepInterval(rules, false) * 0.6;
+    }
+    this.ambienceClock += delta;
+    if (this.ambienceClock >= 500) {
+      this.ambienceClock = 0;
+      this.syncAmbience();
+    }
+  }
+
+  private syncAmbience(): void {
+    const rules = this.data_.sounds;
+    const tile = this.map.tileSize;
+    const cx = Math.floor(this.body_.x / tile);
+    const cy = Math.floor((this.body_.y - 1) / tile);
+    const radius = rules.ambience.radius;
+    const terrains = new Map<string, number>();
+    for (let y = cy - radius; y <= cy + radius; y++) {
+      for (let x = cx - radius; x <= cx + radius; x++) {
+        const t = terrainAtCell(this.map, x, y);
+        if (t) terrains.set(t, (terrains.get(t) ?? 0) + 1);
+      }
+    }
+    const place = this.tracker.currentLocation;
+    setAmbience(ambienceFor(rules, { zone: this.tracker.currentZone?.id ?? null, place: place ? String(place.props['id']) : null, terrains }));
   }
 
   /** Musique de la zone, ou du lieu habité (n°236). */
@@ -1203,6 +1271,7 @@ export class WorldScene extends Phaser.Scene {
   private onGateBump(flag: string, time: number): void {
     if (time - this.lastGateMessage < GATE_MESSAGE_COOLDOWN_MS) return;
     this.lastGateMessage = time;
+    playSfx('gate');
     const zone = this.data_.zones.find((z) => z.unlockFlag === flag);
     // Le boss est tombé mais l'accès manque encore (Citadelle : confiance de Pierre-Haute, barque de Dorn).
     const accessMissing = this.state.openFlags.includes(flag) && zone?.accessMessage !== undefined;
@@ -1342,6 +1411,8 @@ export class WorldScene extends Phaser.Scene {
     if (this.paused || this.leaving) return;
     this.leaving = true;
     this.hud.setPrompt(null);
+    playSfx('battleStart');
+    setAmbience(null, 400);
     const camera = this.cameras.main;
     camera.flash(150, 255, 255, 255);
     this.tweens.add({ targets: camera, zoom: camera.zoom * 1.5, duration: 400, ease: 'Cubic.easeIn' });
@@ -1452,6 +1523,7 @@ export class WorldScene extends Phaser.Scene {
       switch (event.type) {
         case 'alert':
         case 'flee':
+          if (event.type === 'alert') playSfx('alert');
           actor.showBubble('bang', time);
           break;
         case 'lost':
@@ -1506,6 +1578,7 @@ export class WorldScene extends Phaser.Scene {
       this.tweens.add({ targets: img, scale, duration: 160, ease: 'Back.easeOut' });
       this.tweens.add({ targets: img, y: y - 3, duration: 140, yoyo: true, repeat: 3, delay: 200 });
     };
+    playSfx('alert');
     mark(this.body_.x, this.body_.y - 42, 2);
     mark(sim.x, sim.y - 46, 2);
     this.cameras.main.shake(260, 0.004);
@@ -1562,7 +1635,11 @@ export class WorldScene extends Phaser.Scene {
     } else if (ret.end === 'retreat') {
       this.time.delayedCall(700, () => this.hud.toast('La compagnie a battu en retraite.'));
     }
-    if (lines.length > 0) this.time.delayedCall(ret.end === 'victory' ? 700 : 2200, () => this.hud.notify(lines));
+    if (lines.length > 0)
+      this.time.delayedCall(ret.end === 'victory' ? 700 : 2200, () => {
+        playSfx(noticeSound(ret.notices));
+        this.hud.notify(lines);
+      });
     for (const name of ret.losses ?? []) this.time.delayedCall(1200, () => this.hud.toast(`${name} a quitté la compagnie pour toujours.`));
   }
 
@@ -1574,6 +1651,7 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     this.paused = true;
+    playSfx('menuOpen');
     this.hud.showPause({
       onResume: () => this.closePause(),
       onTitle: () => this.backToTitle(),
@@ -1604,6 +1682,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private closePause(): void {
+    playSfx('menuClose');
     this.paused = false;
     this.hud.hidePause();
     this.tweens.resumeAll();
