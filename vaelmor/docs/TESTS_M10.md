@@ -41,7 +41,7 @@ M10 est tenu quand **aucun bloquant ni majeur** n'est ouvert après les trois se
 | A-06 | Mineur | Réglages dispersés : qualité dans la pause du monde ; vitesse, vue, effets réduits et sons dans le menu de carte du combat. | B | Corrigé : tout passe par l'écran Options. |
 | A-07 | Mineur | Le titre et le debug affichent « prototype M9 » (`MILESTONE`). | B | Corrigé. |
 | A-08 | Majeur | Aucun son hors combat : interface, pas, détection « ! », entrée de village, ambiances. | D | Corrigé : bruitages d'interface et du monde, pas selon le sol, 5 ambiances, sons de combat refaits, mixage ; planche d'écoute validée par l'auteur. |
-| A-09 | Majeur | Accessibilité (GDD §13.8) : seul « Effets réduits » existe, et seulement en combat. | E | Ouvert |
+| A-09 | Majeur | Accessibilité (GDD §13.8) : seul « Effets réduits » existe, et seulement en combat. | E | Corrigé : remappage des touches, texte ×1 / ×1,25, vitesse du texte, mode daltonien (motifs, formes de camp, crans), effets réduits étendus au monde, aux menus et à la carte de combat, `prefers-reduced-motion` ; captures validées par l'auteur. |
 | A-10 | À mesurer | IA contre IA avec la compagnie d'essai : 100 % de victoires en Z1 et Z2, puis 0 à 50 % dès Z3 et 0 % contre tous les boss après Brakk. La compagnie d'essai (sans soigneur parmi les 5 premiers déployés, sans évolution ni équipement) n'est pas une compagnie réelle : à mesurer avec le simulateur. | F | Ouvert |
 | A-11 | Mineur | « Combat d'essai » est proposé à tous sur le titre. | B | Corrigé : seulement avec `?debug`. |
 | A-12 | Mineur | L'aide des touches en bas de l'écran du monde se lit mal sur l'herbe claire. | B | Corrigé : texte plus clair, touches E, Tab et N ajoutées. |
