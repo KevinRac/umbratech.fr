@@ -23,8 +23,12 @@
 //  8. les branchements lus dans index.html (données chargées, interrupteur, aiguillage complet, retouches ACTG, réserve du Glas, gardes d'essai) ;
 //  9. le Guet Sans-Nom (6.1b) : herses (10 000 Fermetures), Couvre-feu (2 000 suites), Contrôle (sortie par le guichet), Rafle, Vouge, Feuillets, parts,
 //     Relève, branchements (tirs qui passent, il traverse ses herses, sol, journal des tirs, codex).
+//  6.1c (relecture, v18.16) : la vraie salle (AR0) ; le rouge des ennemis dans la grammaire ; la herse en cases (un corps dans le guichet qui ne touche
+//     aucun barreau n'est jamais frappé) ; au Couvre-feu, une herse qui tombe ne passe jamais dans le guichet d'une herse debout ; les branchements de
+//     la relecture (C2 à C23, H1 : memoire.md, § 46).
 // Contre-épreuves (une erreur introduite exprès doit être attrapée) : une file qui répète, un préavis à 0,5 s, une zone sans sortie posée, une
-// échelle sans habileté neuve, une part à 0,4, un gardien allumé à l'acte X.
+// échelle sans habileté neuve, une part à 0,4, un gardien allumé à l'acte X ; 6.1c : des couloirs à la place des cases frappent dans le guichet ; la
+// logique pure sans la règle des guichets perpendiculaires (copie modifiée, garSans) entame des guichets.
 //   node themist/outils/sim-gardiens.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -38,12 +42,17 @@ const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infin
 vm.createContext(ctx);
 for (const f of ['gardiens-descente', 'descente', 'brumeux', 'talents', 'souvenirs-brume', 'gardiens', 'versions', 'bestiaire', 'histoire']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
 vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + bloc('gar') + '\nthis.F={desRng,desActes,desPorte,desRegles,desTempsEnPlus,brxDans,brxSortie,brxGrille,brxConnexe,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle,GAR_FORMES,GAR_CRANS,garTroncons,garHerse,garHerseC,garGuichets,garFermeture,garCoupes,garSection,garVoisines,garSortie2,garRafle,garVouge,garFeuillets,garVolPage,garCouvreAvant,garCouvreApres,garConnexe,garParTemps,garFermer};', ctx);
+// 6.1c : une copie de la logique pure avec un morceau retiré (contre-épreuves)
+const garSans = (morceau) => { const g = bloc('gar'); if (!g.includes(morceau)) { console.error('contre-épreuve : morceau introuvable : ' + morceau); process.exit(1); }
+  const c2 = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array }; vm.createContext(c2);
+  vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + g.replace(morceau, '') + '\nthis.F={garFermer,garCouvreAvant,garCouvreApres,garConnexe,garFermeture,garHerse};', c2); return c2.F; };
 const F = ctx.F, BD = ctx.window.BRUME_DATA, GD = BD.gardiensD, C = GD.commun, DS = BD.descente, DBX = BD.brumeux, SJ = BD.souvenirsBrume.justice, GA = BD.gardiens;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
 const clone = o => JSON.parse(JSON.stringify(o));
 const mk = s => () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-const W = 1280, H = 720, AR = { x0: 70, y0: 110, x1: 1210, y1: 660 };
+// 6.1c : la vraie salle (AR0 d'index.html : const AR={x0:56,y0:92,x1:W-56,y1:H-44}), vérifiée au § 8
+const W = 1280, H = 720, AR = { x0: 56, y0: 92, x1: W - 56, y1: H - 44 };
 const GARDES = Object.keys(GD).filter(k => /^\d+$/.test(k)).map(Number);
 
 // ── 0. Données
@@ -59,7 +68,8 @@ for (let a = 4; a <= 9; a++) {
 ok(C.reference.niveaux[9] <= DBX.bot.reference.niveau, 'données : le niveau de l\'acte IX ne dépasse pas celui de l\'acte X (Brumeux)');
 const lab = rgb => { const f = v => { v /= 255; return v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92; }; const [r, g, b] = rgb.map(f); const X = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047, Y = r * 0.2126 + g * 0.7152 + b * 0.0722, Z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883; const h = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; return [116 * h(Y) - 16, 500 * (h(X) - h(Y)), 200 * (h(Y) - h(Z))]; };
 const dE = (a, b) => { const A = lab(a), B = lab(b); return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); };
-const GRAMMAIRE = { orange: [255, 150, 60], violet: [205, 120, 255], cyan: [90, 220, 255], lavande: [201, 180, 255], ivoire: [255, 250, 235] };
+// 6.1c : le rouge des ennemis ordinaires (FOE) entre dans la grammaire
+const GRAMMAIRE = { orange: [255, 150, 60], violet: [205, 120, 255], cyan: [90, 220, 255], lavande: [201, 180, 255], ivoire: [255, 250, 235], rouge: [255, 58, 52] };
 const HAB = C.echelle.habiletes;
 for (const n of GARDES) {
   const g = GD[n], nom = g.nom;
@@ -213,7 +223,7 @@ for (const [motif, msg] of [
   [/drawHeart=function\(c,e\)\{if\(e&&e\.g18\)/, 'drawHeart : son corps'],
   [/drawBossPost=function\(e\)\{if\(e&&e\.g18\)/, 'drawBossPost : l\'anneau ivoire sur son point faible (G27.anneau)'],
   [/eyePts=function\(e\)\{if\(e&&e\.g18\)return\[\];/, 'eyePts : un visage sans traits'],
-  [/computeLights=function\(\)\{_cl\.apply\(this,arguments\);const e=room&&room\.g18&&room\.boss;/, 'computeLights : sa lumière, sans battement'],
+  [/computeLights=function\(\)\{_cl\.apply\(this,arguments\);const g=room&&room\.g18,s=S\(\);if\(!g\|\|!s\)return;/, 'computeLights : sa lumière, sans battement (6.1c : elle suit son entrée et sa mort)'],
   [/g27GlypheImg=function\(n\)\{const g=RUN&&!RUN\.hub&&\+n===RUN\.act&&ici\(\);/, 'g27GlypheImg : son glyphe sur la porte'],
   [/g27GlypheHud=function\(el,n\)\{const b=room&&room\.boss;if\(el&&b&&b\.g18/, 'g27GlypheHud : son glyphe sur la barre'],
   [/SC27\.scene=function\(pass\)\{if\(!\(room&&room\.g18\)\)return _sc\.apply/, 'SC27.scene : son entrée et sa mort (pas celles du Glas)'],
@@ -231,7 +241,39 @@ for (const [motif, msg] of [
 const ESS = "(masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=";
 ok(html.split(ESS).length - 1 === 3, 'gardes d\'essai : ESSAI_URL, ESSAI18 et ESSAI_URL18 connaissent « gardien »');
 has(/const ESSAI=\/\[\?&\]gardien=\[4-9\]\(\?:&\|\$\)\/\.test\(QS\)&&!\/\[\?&\]dernier=\/\.test\(QS\);/, 'essai : ?gardien=<4..9> (jamais confondu avec ?dernier=…&gardien=1)');
-has(/window\.__descente\.essai\(n,\{fin:true,cls:o\.cls\}\);RUN\.essai=1;/, 'essai : une descente d\'essai (rien d\'écrit, rien d\'ouvert)');
+has(/window\.__descente\.essai\(n,\{fin:true,cls:o\.cls\}\);\}finally\{ST\.enCours=false;\}RUN\.essai=1;ST\.run=RUN;/, 'essai : une descente d\'essai (RUN.essai), liée à sa descente (ST.run)');
+// 6.1c : la relecture indépendante (memoire.md, § 46)
+ok(/const AR=\{x0:56,y0:92,x1:W-56,y1:H-44\};/.test(html), 'branchement (6.1c) : le simulateur teste la vraie salle (AR0)');
+for (const [motif, msg] of [
+  [/return g\.actif===true\|\|\(ST\.force===g&&\(ST\.enCours\|\|ST\.run===RUN\)\)\?g:null;/, 'C2 : un essai ne vaut que pour sa descente (ici)'],
+  [/const _sr18=startRun;startRun=function\(\)\{const r=_sr18\.apply\(this,arguments\);if\(!ST\.enCours&&ST\.run&&ST\.run!==RUN\)finEssai\(\);return r;\};/, 'C2 : la descente suivante défait l\'essai (finEssai)'],
+  [/function essaiG18\(\)\{return !!\(RUN&&RUN\.essai&&room&&room\.g18\);\}/, 'C3 : essaiG18 (base)'],
+  [/const m=M\(\);if\(essaiG18\(\)\)\{\}else if\(!m\.bossFirst\[a\]\)/, 'C3 : ni bossFirst ni fragment en essai'],
+  [/ if\(essaiG18\(\)\)return;   \/\/ v18\.16 \(6\.1c\) : un essai d'un gardien de la descente n'ouvre pas le Portail/, 'C3 : ni Portail ni Résonance en essai'],
+  [/const _dep=drawEproj;drawEproj=function\(\)\{if\(!\(room&&room\.g18s&&eproj\.some\(p=>p\.g18f\)\)\)return _dep\.apply/, 'C4 : ses pages dessinées à part (pas comme les tirs du Glas)'],
+  [/L=lgTir\(q,G\.attaques\[q\.id\]\)/, 'C5 : la ligne violette couvre tout le vol (a.len, au mur)'],
+  [/for\(let i=0;i<n;i\+\+\)\{P\.x\+=dx\/d\*k\/n;P\.y\+=dy\/d\*k\/n;collidePlayer\(\);\}/, 'C6 : le recul par pas (jamais à travers une herse)'],
+  [/if\(\(P\.iT\|\|0\)>it0\+1e-6\|\|P\.hp<hp0-1e-6\)\{s\.contactT=/, 'C6 : le recul seulement si le coup a porté'],
+  [/for\(const q of h\.pil\)room\.pillars\.push\(q\);CAM\.ff=1;/, 'C7 : la carte des chemins refaite quand une herse tombe'],
+  [/room\.pillars=room\.pillars\.filter\(p=>p\.herse18!==h\);CAM\.ff=1;\}/, 'C7 : … et quand elle se relève'],
+  [/if\(!RM&&TINT\[KEY\(g\)\]\)tlights\.push\(\{x:e\.x,y:e\.y,r:360,t:0\.5,max:0\.5,c:KEY\(g\)\}\);/, 'C9 : l\'éclat du changement de temps à sa teinte, aucun en mouvements réduits'],
+  [/shadowAt\(c,0,r\*0\.9,r\*0\.6,r\*0\.16,0\.4\);/, 'C10 : l\'ombre resserrée'],
+  [/G27\.poser\(c,imgPage\(g,r\)\)/, 'C10 : la page du Couvre-feu cuite avec sa lueur'],
+  [/function titre\(s,txt,e\)\{s\.titre=/, 'C11 : ses titres fixes (plus addNum)'],
+  [/mortGuet\(ctx,m\.e,u,m\.tp\|\|3,m\.mir\)/, 'C12 : sa mort tournée comme il l\'était'],
+  [/else if\(P\.x<e\.x-20\)e\.mir18=true;else if\(P\.x>e\.x\+20\)e\.mir18=false;/, 'C13 : le miroir avec une marge de ±20 px'],
+  [/function voiles\(s\)\{/, 'C14 : le Voilé ne cligne pas à travers une herse'],
+  [/V7FOE\[KEY\(g\)\]=g\.un\|\|g\.nom;/, 'C15 : son nom dans les répliques (V7FOE)'],
+  [/V7FOE\.brumeux='le Brumeux';/, 'C15 : le nom du Brumeux dans les répliques (V7FOE)'],
+  [/const b=pts\[i%pts\.length\],d=\[0,30,-30\]/, 'C16 : les Sans-Nom décalés le long du guichet'],
+  [/o=optSortie\(charge,e\);F\.ph='suite';/, 'C17 : la sortie du Contrôle et de la Rafle contourne son corps'],
+  [/c\.strokeStyle=INK;c\.lineWidth=6;c\.stroke\(\);c\.strokeStyle=`rgb\(\$\{\(K\.etain/, 'C20 : les montants des guichets en étain cerné d\'encre'],
+  [/if\(o\.palier&&DES_D\.paliers&&DES_D\.paliers\[o\.palier\]\)/, 'C22 : seulement un palier connu'],
+  [/const faceA=n=>/, 'C23 : « face au »'],
+  [/const L=\{n:SAVE\.runs,act:ACTE\(\),/, 'H1 : la chronique dit l\'acte de la descente'],
+]) has(motif, msg);
+for (const blanc of ["'rgba(240,242,246,.6)'", "'rgba(235,238,242,.75)'", "'rgba(245,247,250,.55)'"]) ok(!html.includes(blanc), `C19 : plus de blanc écrit dans son dessin (${blanc} : ΔE < 25 de l'ivoire)`);
+ok(GD[4].couleurs.reflet && GD[4].dessin.version >= 2, 'C19 : la couleur reflet est dans ses données (vérifiée par la grammaire) ; dessin.version 2');
 // le bloc pur n'a pas accès au jeu
 const pur = bloc('gar');
 ok(!/\b(RUN|room|SAVE|enemies|ctx)\b/.test(pur.replace(/\/\/[^\n]*/g, '')) && !/\bP\.[a-z]/.test(pur.replace(/\/\/[^\n]*/g, '')), 'bloc pur : ni P, ni RUN, ni room, ni SAVE, ni enemies');
@@ -245,6 +287,10 @@ for (const n of GARDES) ok(GD[n].actif ? wiki.includes(GD[n].nom) && wiki.includ
   ok(HS.guichet >= 120 && HS.guichet - 2 * pad >= 2 * C.sortie.grille, `herse : guichet de ${HS.guichet} px (≥ 120, au moins deux cases de grille libres)`);
   ok(Object.values(HS.dureeS).every(v => v >= 4) && HS.couvreFeu.garde < HS.couvreFeu.total && HS.connexite >= 0.85, 'herse : durées, Couvre-feu (garde < total), connexité ≥ 85 %');
   // a. une Fermeture : d'un mur à l'autre, un guichet par tronçon, aucun barreau dans un guichet, à bord des murs ; jamais la salle coupée
+  // les points du guichet où ton corps ne touche aucun barreau (sur la ligne et de part et d'autre) : combien seraient frappés par ces zones
+  const guichetFrappe = (h, zones) => { let n = 0; for (const q of h.guichets) for (let t = q - HS.guichet / 2 + pr + 0.5; t <= q + HS.guichet / 2 - pr - 0.5; t += 3) for (const u of [-HS.w / 2, 0, HS.w / 2]) {
+    const x = h.o === 'v' ? h.c + u : t, y = h.o === 'v' ? t : h.c + u; if (h.disques.some(d => Math.hypot(x - d.x, y - d.y) < d.r + pr)) continue; if (zones.some(z => F.brxDans(z, x, y, pr))) n++; } return n; };
+  let gui = 0, gref = 0;
   { let mal = 0, n = 0, coupe = 0; const r = mk(9001);
     for (let i = 0; i < 10000; i++) { const p = [AR.x0 + 30 + r() * (AR.x1 - AR.x0 - 60), AR.y0 + 30 + r() * (AR.y1 - AR.y0 - 60)], kind = i % 2 ? 'croix' : 'herse';
       const L = F.garFermeture(HS, AR, kind, p, [], r); if (!L) continue; n++;
@@ -254,13 +300,36 @@ for (const n of GARDES) ok(GD[n].actif ? wiki.includes(GD[n].nom) && wiki.includ
         for (const q of h.guichets) if (h.disques.some(d => Math.abs(axe(h)(d) - q) < HS.guichet / 2 + d.r - 1e-6)) mal++;
         for (const [a, b] of h.segs) { const q = ts.filter(t => t >= a - 1e-6 && t <= b + 1e-6); for (let k = 1; k < q.length; k++) if (q[k] - q[k - 1] > HS.disque.pas + 1e-6) mal++; }
         if (h.c < (h.o === 'v' ? AR.x0 : AR.y0) + HS.bord[h.o] - 1e-6 || h.c > (h.o === 'v' ? AR.x1 : AR.y1) - HS.bord[h.o] + 1e-6) mal++;
-        if (h.zones.length !== h.segs.length || !h.zones.every(z => z.forme === 'couloir' && z.w === HS.w)) mal++; }
+        if (h.zones.length !== h.segs.length || !h.zones.every((z, k) => { const [a, b] = h.segs[k], w2 = HS.w / 2; return z.forme === 'case' && z.long === h.o && (h.o === 'v' ? z.x0 === h.c - w2 && z.x1 === h.c + w2 && z.y0 === a && z.y1 === b : z.y0 === h.c - w2 && z.y1 === h.c + w2 && z.x0 === a && z.x1 === b); })) mal++;
+        // 6.1c : un corps dans le guichet qui ne touche aucun barreau n'est jamais frappé par la chute (la zone s'arrête net au bord du guichet)
+        gui += guichetFrappe(h, h.zones); gref += guichetFrappe(h, h.segs.map(([a, b]) => { const q0 = h.o === 'v' ? [h.c, a] : [a, h.c], q1 = h.o === 'v' ? [h.c, b] : [b, h.c]; return { forme: 'couloir', x0: q0[0], y0: q0[1], x1: q1[0], y1: q1[1], w: HS.w }; })); }
       if (F.garConnexe(M, AR, L.flatMap(h => h.disques), p, pad) < HS.connexite) coupe++; }
     ok(n > 9900, `herse : 10 000 Fermetures : une place presque toujours (${n})`);
     ok(mal === 0, `herse : d'un mur à l'autre, un guichet clair par tronçon, aucun barreau dans un guichet, barreaux jointifs, à bord des murs (${mal} écarts)`);
-    ok(coupe === 0, `herse : une Fermeture (herse ou Croix) ne coupe jamais la salle (connexité ≥ ${HS.connexite}) (${coupe} coupées)`); }
+    ok(coupe === 0, `herse : une Fermeture (herse ou Croix) ne coupe jamais la salle (connexité ≥ ${HS.connexite}) (${coupe} coupées)`);
+    ok(gui === 0, `herse (6.1c) : un corps dans le guichet qui ne touche aucun barreau n'est jamais frappé par la chute (${gui} points frappés)`);
+    ok(gref > 0, `herse (6.1c, contre-épreuve) : des couloirs à la place des cases frappent dans le guichet (${gref} points)`); }
   // b. le Couvre-feu : 2 000 suites de six Fermetures ; avant : les plus anciennes se relèvent (total) ; après la Relève : il en garde une de la Fermeture,
   // au plus « garde » en tout ; une Fermeture qui couperait la salle est refusée (le jeu en essaie une autre, puis saute) : jamais d'état coupé
+  // 6.1c : chaque herse debout garde ses guichets entiers : aucune herse perpendiculaire ne passe à moins de guichet/2 + rayon d'un barreau de leur centre
+  const entiers = hs => { let n = 0; for (const h of hs) for (const q of h.guichets) for (const k of hs) if (k !== h && k.o !== h.o && Math.abs(k.c - q) < HS.guichet / 2 + HS.disque.r - 1e-6) n++; return n; };
+  const suites = (Fx, seed, N) => { let trop = 0, coupe = 0, refus = 0, poses = 0, casse = 0; const r = mk(seed);
+    for (let i = 0; i < N; i++) { let deb = [], ne = 0;
+      for (let k = 0; k < 6; k++) { const p = [AR.x0 + 40 + r() * (AR.x1 - AR.x0 - 80), AR.y0 + 40 + r() * (AR.y1 - AR.y0 - 80)], kind = r() < 0.5 ? 'croix' : 'herse', nn = kind === 'croix' ? 2 : 1;
+        const A = Fx.garCouvreAvant(HS.couvreFeu, deb, nn); deb = A.garde;
+        const X = Fx.garFermer(HS, AR, kind, p, deb, r, C.sortie.essais + 2, (D, L) => Fx.garConnexe(M, AR, D.concat(L).flatMap(h => h.disques), p, pad) >= HS.connexite);
+        deb = X.garde; const L = X.L; if (!L) { refus++; continue; } poses++; L.forEach(h => h.ne = ++ne);
+        if (deb.length + L.length > HS.couvreFeu.total) trop++;
+        if (Fx.garConnexe(M, AR, deb.concat(L).flatMap(h => h.disques), p, pad) < HS.connexite) coupe++;
+        casse += entiers(deb.concat(L));
+        deb = deb.concat([L[L.length - 1]]); deb = Fx.garCouvreApres(HS.couvreFeu, deb).garde;
+        if (deb.length > HS.couvreFeu.garde) trop++; } }
+    return { trop, coupe, refus, poses, casse }; };
+  { const Q = suites(F, 77, 2000);
+    ok(Q.casse === 0, `Couvre-feu (6.1c) : 12 000 Fermetures : une herse qui tombe ne passe jamais dans le guichet d'une herse debout (${Q.casse} guichets entamés)`);
+    ok(Q.poses > 0.99 * (Q.poses + Q.refus), `Couvre-feu (6.1c) : avec cette règle, la Fermeture se pose encore presque toujours (${Q.poses} posées, ${Q.refus} sautées)`);
+    const F0 = garSans('&&gp.every(q=>Math.abs(q-c)>=mg)'), Q0 = suites(F0, 77, 400);
+    ok(Q0.casse > 0, `Couvre-feu (6.1c, contre-épreuve) : sans la règle des guichets perpendiculaires, des guichets sont entamés (${Q0.casse})`); }
   { let trop = 0, coupe = 0, refus = 0, poses = 0; const r = mk(77);
     for (let i = 0; i < 2000; i++) { let deb = [], ne = 0;
       for (let k = 0; k < 6; k++) { const p = [AR.x0 + 40 + r() * (AR.x1 - AR.x0 - 80), AR.y0 + 40 + r() * (AR.y1 - AR.y0 - 80)], kind = r() < 0.5 ? 'croix' : 'herse', nn = kind === 'croix' ? 2 : 1;

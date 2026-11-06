@@ -63,7 +63,9 @@
   decor:{theme:'basfonds',palette:{h:150,s:8,l:9,acc:'150,170,130',mote:'#c4d2b4',mist:'110,130,115'},flaques:9,grilles:4},
   // couleurs (Q21, mesurées en 6.1b : ΔE ≥ 25 de toute la grammaire, sim-gardiens ; contraste contre son sol, banc F). Le ciré est délavé par l'eau
   // (plus clair que « ciré sombre » du cadrage : sombre, il tombait sous le contraste 4,5 du sol des Bas-Fonds). eau : ce qu'il devient à sa mort.
-  couleurs:{etain:[150,156,166],visage:[172,178,186],cire:[150,162,156],rouille:[132,80,50],parchemin:[170,150,110],eau:[62,84,70],lueur:[160,176,128]},
+  // reflet (6.1c) : les rivets, le fil du fer de la vouge, le reflet du visage (écrits en blanc dans le dessin, ils tombaient à ΔE 15 à 19 de l'ivoire du
+  // point faible)
+  couleurs:{etain:[150,156,166],visage:[172,178,186],cire:[150,162,156],rouille:[132,80,50],parchemin:[170,150,110],eau:[62,84,70],lueur:[160,176,128],reflet:[176,188,204]},
   // glyphe (24 × 24, XML valide et autonome, sans identifiant ni filtre ; lisible à 16 px) : une herse derrière un ovale d'étain sans traits
   glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3.5 3.5H20.5V20.5H3.5Z" fill="#23282b" stroke="#0a0810" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 3.5V22M12 3.5V22M16.5 3.5V22M3.5 9H20.5M3.5 15H20.5" fill="none" stroke="#a0603a" stroke-width="2"/><path d="M12 6.2C9.2 6.2 7.9 8.6 7.9 11.6C7.9 15.1 9.6 17.8 12 17.8C14.4 17.8 16.1 15.1 16.1 11.6C16.1 8.6 14.8 6.2 12 6.2Z" fill="#aab0b8" stroke="#0a0810" stroke-width="1.4"/><path d="M10 9.1Q12 8.3 14 9.1" fill="none" stroke="#eef0f2" stroke-opacity=".7" stroke-width="1" stroke-linecap="round"/></svg>',
   // ── la herse (Q17) : une ligne d'un mur à l'autre, verticale ('v', x fixe) ou horizontale ('h', y fixe), un guichet (passage clair, entre les bords des
@@ -97,7 +99,8 @@
   // Q12, Q23 : ce que le wiki en dit (phrase de la carte, lecture à l'œil, entrée et mort) ; Q13 : son entrée de codex est dans histoire.js (id guet)
   wiki:{done:'Le Guet Sans-Nom relève sa herse pour la dernière fois',journal:'Au fond des Bas-Fonds, quelqu’un garde encore la porte.'},
   // Q7, Q21 : le dessin (version : un changement visible la passe à n + 1 et refait les portraits img/gardiens/gardien-4-t<temps>-v<version>.webp)
-  dessin:{version:1,
+  // version 2 (6.1c) : un seul calque voilé, ombre resserrée, page du Couvre-feu cuite, reflets loin de l'ivoire, montants des guichets en étain
+  dessin:{version:2,
    lecture:'Un guet sans visage, la herse de la Porte Basse sur le dos, un registre enchaîné sur la poitrine. Au deuxième temps, le registre s’ouvre et ses feuillets s’envolent ; au troisième, la herse lui glisse des épaules et reste au sol : le registre est à nu.',
    entree:'une herse remonte du sol, il passe le guichet',mort:'le registre tombe ouvert, il pose le genou, la herse s’abat derrière lui et il se défait en eau trouble',
    quatrieme:'la page de la phrase interrompue se détache du registre et flotte au-dessus de lui'}}

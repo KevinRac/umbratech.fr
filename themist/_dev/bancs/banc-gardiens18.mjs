@@ -1,5 +1,5 @@
 // Banc Chromium : les gardiens de la descente (v18.14, chantier v18, action 6.1a : le socle commun ; v18.15, action 6.1b : le Guet Sans-Nom allumé ;
-// cadrage _dev/cadrages/la-brume-v18-6-gardiens-cadrage.md, Q14). Usage : node banc-gardiens18.mjs <port> [ABCDEFGH] [dossier de captures, hors dépôt]
+// cadrage _dev/cadrages/la-brume-v18-6-gardiens-cadrage.md, Q14). Usage : node banc-gardiens18.mjs <port> [ABCDEFGHI] [dossier de captures, hors dépôt]
 // A · aiguillage : l'essai ?gardien=4 ouvre une vraie salle de gardien à l'acte IV, et rien du Glas Originel n'y paraît (ni sa mémoire, ni son cœur,
 //     ni son glyphe, ni sa lumière qui bat, ni ses vaisseaux, ni la réserve notée à son entrée) ; son nom, ses PV, son rayon ; son sol (Q4) ; son
 //     glyphe sur la porte et la barre ; ses coups (journal, la mort nomme le gardien) ; sa victoire (temps de gardien et Mémoire sous la clé de l'acte,
@@ -20,6 +20,14 @@
 //     BANC_MODES=eteint,allume.
 // H · repli et wiki : éteint, la dernière salle de l'acte IV est la place provisoire (porte « garde », Masqué renforcé) ; allumé, la salle du gardien ;
 //     wiki.mjs --check à jour, le wiki nomme le Guet allumé ; éteint (données servies actif:false), les sections du wiki redeviennent celles de la v18.14.
+// I · relecture (6.1c, v18.16 ; memoire.md § 46), un essai par constat : C1 le guichet n'est pas frappé (contre-épreuve : à 3 px des barreaux, il l'est) ;
+//     C2 « Recommencer » défait l'essai (allumé : la vraie salle au temps 1, sans bot ; éteint : la place provisoire revient) ; C4 les pages en vol ne
+//     sont plus les orbes du Glas (contre-épreuve sans leur marque) ; C5 la ligne couvre tout le vol ; C13 le miroir à ±20 px ; C6 le recul ne traverse
+//     pas une herse (contre-épreuve : 40 px d'un coup la traversent), et aucun recul sans coup porté ; C7 la carte des chemins suit les herses ; C9, C11,
+//     C12, C21 en mouvements réduits et sans (éclat, titres fixes, sa mort tournée comme lui, sa lumière à l'entrée et à sa mort) ; C14 le Voilé ; C16
+//     l'Appel ; C15, C22, C23, H1 une mort au Guet (répliques, journal « face au », acte IV, palier inconnu ignoré). A (6.1c, C3) : en essai, ni bossFirst,
+//     ni Résonance, ni Portail, ni fragment, ni codex ; la vraie victoire (RUN.essai à 0) les écrit. F (6.1c, C10) : le corps plein mesuré aussi sur le
+//     rendu complet (ombre, feuillets, page du Couvre-feu ; miroir ; quatre instants).
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -28,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire('/opt/npm-tools/node_modules/');
 const { chromium } = require('playwright');
 const THEMIST = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGH').toUpperCase(), OUT = process.argv[4] || null;
+const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGHI').toUpperCase(), OUT = process.argv[4] || null;
 if (OUT) mkdirSync(OUT, { recursive: true });
 const BASE = `http://127.0.0.1:${PORT}/index.html`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
@@ -93,15 +101,19 @@ if (SEC.includes('A')) {
   for (const palier of ['normal', 'difficile']) {
     const { page, errs, ctx } = await ouvre('');
     await essai(page, { cls: 'her', dieu: true, palier });
-    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), e = B.room.boss; B.P.hp = B.P.s.maxHp * 0.5; const hp0 = B.P.hp;
+    // 6.1c : en Normal, la descente n'est plus une descente d'essai (RUN.essai à 0, le gardien reste là) : une vraie victoire ; en Difficile, un essai :
+    // ni bossFirst, ni fragment, ni Résonance, ni Portail (C3)
+    const r = await page.evaluate((vraie) => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), e = B.room.boss; B.P.hp = B.P.s.maxHp * 0.5; const hp0 = B.P.hp;
+      if (vraie) B.RUN.essai = 0; const res0 = JSON.stringify(B.SAVE.res || {}), fr0 = (B.SAVE.mem.frags || []).length;
       for (let k = 0; k < 400 && !e.dead; k++) { D.hit(e, 600, { crit: false }); for (let i = 0; i < 6; i++) B.step(1 / 60, 1); }
       const mort = !!(B.room.g18s && B.room.g18s.mort); for (let i = 0; i < 30; i++) B.step(1 / 60, 1); D.pump();
       const ov = document.querySelector('#overlay'), titre = ov && !ov.hidden ? ov.textContent.slice(0, 200) : '';
       return { dead: e.dead, bossT: B.RUN.bossT && B.RUN.bossT[4], bossT3: B.RUN.bossT && B.RUN.bossT[3], first: B.SAVE.mem.bossFirst && B.SAVE.mem.bossFirst[4], perfect: B.RUN.mem.perfect.slice(), hurt: B.RUN.mem.bossHurt,
-        hp0, hp: B.P.hp, max: B.P.s.maxHp, mort, overlay: titre, cleared: B.room.cleared }; });
+        hp0, hp: B.P.hp, max: B.P.s.maxHp, mort, overlay: titre, cleared: B.room.cleared, res: JSON.stringify(B.SAVE.res || {}) === res0, frags: (B.SAVE.mem.frags || []).length === fr0, codex: !!B.SAVE.flags.g18_4 }; }, palier === 'normal');
     ok(r.dead && r.mort, `A (${palier}) : vaincu, sa scène de mort à lui (pas celle du Glas)`);
     ok(r.bossT > 0 && r.bossT3 == null, `A (${palier}) : le temps de gardien sous la clé IV (${r.bossT && r.bossT.toFixed(1)} s), rien sous la clé III`);
-    ok(r.first === 1, `A (${palier}) : premier gardien vaincu sous la clé IV (fragment, Résonance)`);
+    if (palier === 'normal') ok(r.first === 1 && r.codex, `A (${palier}, vraie victoire) : premier gardien vaincu sous la clé IV (fragment, Résonance), son entrée de codex`);
+    else ok(r.first == null && r.res && r.frags && !r.codex, `A (${palier}, essai, C3) : ni bossFirst (${r.first}), ni Résonance ni Portail (res ${r.res ? 'inchangé' : 'changé'}), ni fragment, ni codex`);
     ok(r.perfect.includes(4) && !r.perfect.includes(3), `A (${palier}) : « sans une égratignure » compté pour l'acte IV (${JSON.stringify(r.perfect)})`);
     const attendu = palier === 'normal' ? r.max : Math.min(r.max, r.hp0 + r.max * 0.65);
     ok(Math.abs(r.hp - attendu) < 1.5, `A (${palier}) : le soin après un gardien suit le palier (${r.hp.toFixed(1)} / ${r.max}, attendu ${attendu.toFixed(1)})`);
@@ -272,6 +284,13 @@ if (SEC.includes('F')) {
       out.plein['t' + t] = +(m / r).toFixed(3); out.contraste['t' + t] = +((med(Lc) + 0.05) / (sol + 0.05)).toFixed(2); }
     out.sol = sol; return out; });
   for (const k in r.plein) ok(r.plein[k] <= 1.15, `F : corps plein ${k} : ${r.plein[k]} × r (≤ 1,15)`);
+  // 6.1c (C10) : sur le RENDU COMPLET (ombre, image cuite, feuillets, page du Couvre-feu ; avec et sans miroir, à plusieurs instants), rien au-delà de
+  // 1,15 × r ne dépasse 35 % d'opacité (α ≤ 89) ; l'image cuite seule ne le voyait pas (deux calques voilés posés l'un sur l'autre, l'ombre sous l'eau)
+  const rc = await page.evaluate(() => { const G = window.__gardiens18, r = G.GD[4].rayon, cv = document.createElement('canvas'); cv.width = 400; cv.height = 400; const c = cv.getContext('2d', { willReadFrequently: true }), out = {};
+    for (const t of [1, 2, 3, 4]) { let am = 0; for (const mir of [false, true]) for (const tt of [0, 0.7, 1.3, 2.9]) { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, 400, 400); G.guet.apercu(c, { x: 200, y: 220, temps: t, mir, t: tt, debris: false });
+        const d = c.getImageData(0, 0, 400, 400).data; for (let y = 0; y < 400; y++) for (let x = 0; x < 400; x++) { if (Math.hypot(x + 0.5 - 200, y + 0.5 - 220) / r <= 1.15) continue; am = Math.max(am, d[(y * 400 + x) * 4 + 3]); } }
+      out['t' + t] = +(am / 255).toFixed(3); } return out; });
+  for (const k in rc) ok(rc[k] <= 0.35 + 1e-9, `F (6.1c) : rendu complet ${k} (ombre, feuillets, page ; miroir ; quatre instants) : au-delà de 1,15 × r, ${rc[k]} d'opacité au plus (≤ 0,35)`);
   for (const k in r.contraste) ok(r.contraste[k] >= 4.5, `F : contraste corps / sol ${k} : ${r.contraste[k]} (≥ 4,5)`);
   // coût : le gardien, ses herses debout (une Croix) et ses feuillets, 200 images sur un canevas caché, contre le canevas vide
   const cout = await page.evaluate(() => { const G = window.__gardiens18, B = window.__brume, D = G.dbg(), s = B.room.g18s, e = B.room.boss;
@@ -398,6 +417,143 @@ if (SEC.includes('H')) {
     for (const id of ['descente', 'gardiens']) ok(sec(apres, id) && sec(apres, id) === sec(v1814, id), `H : éteint, la section « ${id} » du wiki est exactement celle de la v18.14`);
     ok(frag(apres, 'codex') != null && frag(apres, 'codex') === frag(v1814, 'codex') && !apres.includes('Le Guet Sans-Nom'), 'H : éteint, le codex est celui de la v18.14 et le Guet n\'est nommé nulle part');
     sh(`rm -rf ${tmp}`); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// I · relecture indépendante (6.1c, v18.16 ; memoire.md § 46) : un essai par constat corrigé, avec sa contre-épreuve quand elle se joue en jeu
+if (SEC.includes('I')) {
+  console.log('\n══ I · relecture (6.1c) ══');
+  // une herse annoncée, puis tombée, dans un essai attaque=herse ; rend la herse
+  const herse = (etat) => `(() => { const B = window.__brume, s = B.room.g18s; let h = null; window.__pas(8, () => { h = s.herses.find(q => q.etat === '${etat}'); return !!h; }); return h; })()`;
+  // C1 : un corps dans le guichet, qui ne touche aucun barreau, n'est pas frappé par la chute ; à 3 px du bord des barreaux, il l'est (contre-épreuve)
+  for (const [ecart, frappe] of [[14, false], [20, false], [3, true]]) {
+    const { page, errs, ctx } = await ouvre('');
+    await essai(page, { cls: 'lum', dieu: true, attaque: 'herse' });
+    const r = await page.evaluate(([ecart, src]) => { const B = window.__brume, G = window.__gardiens18, s = B.room.g18s, HS = B.room.g18.herse; const h = eval(src); if (!h) return null;
+      const q = h.guichets[0], t = q - HS.guichet / 2 + B.P.r + ecart - B.P.r, pose = () => { if (h.o === 'v') { B.P.x = h.c; B.P.y = t; } else { B.P.x = t; B.P.y = h.c; } B.P.iT = 0; B.P.dashT = 0; };
+      const n0 = G.journal().coups.filter(c => c.id === 'herse').length; window.__pas(3, () => { pose(); return h.etat === 'debout'; });
+      return { touche: G.journal().coups.filter(c => c.id === 'herse').length - n0, etat: h.etat }; }, [ecart, herse('annonce')]);
+    ok(r && r.etat === 'debout' && (r.touche > 0) === frappe, `I · C1 : dans le guichet, à ${ecart} px du bord des barreaux : ${frappe ? 'frappé (le corps chevauche les barreaux : contre-épreuve)' : 'pas frappé'} (${r && r.touche} coup)`);
+    ok(!errs.length, 'I · C1 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C2 : l'essai ne vaut que pour sa descente : « Recommencer » défait le temps, le bot, dieu, le mannequin ; allumé, la vraie salle du Guet commence au temps 1 ;
+  // éteint, la place provisoire revient (ACTD[4].boss remis)
+  for (const allume of [true, false]) {
+    const { page, errs, ctx } = await ouvre('', { allume });
+    await essai(page, { cls: 'lum', dieu: true, bot: 2, temps: 3 });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), A0 = { temps: B.room.g18s.temps, bot: D.ST.bot, boss: D.RUN && window.__descente && null };
+      const boss0 = !!B.room.boss && B.room.boss.hp;
+      B.start(); const ST = G.dbg().ST, apres = { force: ST.force, run: ST.run, bot: ST.bot, dieu: ST.dieu, mannequin: ST.mannequin, att: ST.essai_attaque, essai: B.RUN.essai };
+      const descente = window.__descente.dbg ? window.__descente.dbg() : {}; const RUN = B.RUN; RUN.acteD = 4; const ici = !!G.ici();
+      return { A0, apres, ici, actd: window.__gardiens18.dbg().actd4() || null }; });
+    const a = r.apres;
+    ok(r.A0.temps === 3 && r.A0.bot === 2, `I · C2 (${allume ? 'allumé' : 'éteint'}) : l'essai joue au temps 3, bot 2`);
+    ok(a.force == null && a.run == null && a.bot === 0 && a.dieu === false && a.mannequin === false && a.att == null && !a.essai, `I · C2 (${allume ? 'allumé' : 'éteint'}) : la descente suivante défait l'essai (${JSON.stringify(a)})`);
+    ok(allume ? r.ici && r.actd === 'Le Guet Sans-Nom' : !r.ici && r.actd == null, `I · C2 (${allume ? 'allumé' : 'éteint'}) : ${allume ? 'le Guet garde l\'acte IV' : 'la place provisoire revient (ACTD[4].boss vide)'} (ici ${r.ici}, ACTD ${r.actd})`);
+    if (allume) { const v = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18; B.RUN.acteD = 4; window.__asm.dbg().entrer('boss'); window.__pas(5, () => B.room.boss && B.room.started); const e = B.room.boss, s = B.room.g18s;
+        const x0 = B.P.x, y0 = B.P.y; window.__pas(1); return { g18: !!B.room.g18, temps: s && s.temps, plein: e && e.hp === e.maxHp && e.maxHp < 1e8, bouge: Math.hypot(B.P.x - x0, B.P.y - y0) }; });
+      ok(v.g18 && v.temps === 1 && v.plein && v.bouge < 1, `I · C2 : la vraie salle du Guet après l'essai : temps ${v.temps}, PV pleins, aucun bot (déplacement ${v.bouge.toFixed(1)} px)`); }
+    ok(!errs.length, 'I · C2 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C4 : les pages en vol sont des pages (parchemin au liseré violet), pas les orbes du Glas ; contre-épreuve : sans la marque g18f, l'orbe lavande revient
+  { const { page, errs, ctx } = await ouvre('');
+    await essai(page, { cls: 'lum', dieu: true, attaque: 'feuillets', temps: 2 });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(); let p = null; window.__pas(6, () => { p = D.eproj().find(q => q.g18f); return !!p && Math.hypot(p.x - B.room.boss.x, p.y - B.room.boss.y) > 90; }); if (!p) return null;
+      const cv = document.querySelector('canvas'), px = () => { D.render(); const c = cv.getContext('2d'), k = cv.width / 1280, d = c.getImageData(Math.round(p.x * k), Math.round(p.y * k), 1, 1).data; return [d[0], d[1], d[2]]; };
+      const a = px(), f = p.g18f; delete p.g18f; const b = px(); p.g18f = f; return { a, b }; });
+    const lab = rgb => { const f = v => { v /= 255; return v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92; }; const [R, Gg, Bb] = rgb.map(f); const X = (R * 0.4124 + Gg * 0.3576 + Bb * 0.1805) / 0.95047, Y = R * 0.2126 + Gg * 0.7152 + Bb * 0.0722, Z = (R * 0.0193 + Gg * 0.1192 + Bb * 0.9505) / 1.08883; const h = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116; return [116 * h(Y) - 16, 500 * (h(X) - h(Y)), 200 * (h(Y) - h(Z))]; };
+    const dE = (x, y) => { const A = lab(x), B2 = lab(y); return Math.hypot(A[0] - B2[0], A[1] - B2[1], A[2] - B2[2]); };
+    ok(r && dE(r.a, [255, 245, 255]) > 25 && dE(r.a, [255, 250, 235]) > 25, `I · C4 : une page en vol (pixel ${r && r.a}) : loin du cœur blanc des tirs du Glas et de l'ivoire (ΔE ${r && dE(r.a, [255, 245, 255]).toFixed(1)})`);
+    ok(r && dE(r.b, [255, 245, 255]) < dE(r.a, [255, 245, 255]) - 10, `I · C4 (contre-épreuve) : sans sa marque, drawEproj la dessine en orbe du Glas (pixel ${r && r.b})`);
+    ok(!errs.length, 'I · C4 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C5, C13 : la ligne d'une page couvre tout son vol (a.len, arrêtée au mur) ; le miroir a une marge de ±20 px
+  { const { page, errs, ctx } = await ouvre('');
+    await essai(page, { cls: 'lum', dieu: true, mannequin: true });
+    const r = await page.evaluate(() => { const G = window.__gardiens18, D = G.dbg(), a = G.GD[4].attaques.feuillets, e = { x: 600 }, P = D.P, m = [];
+      for (const x of [560, 595, 610, 625, 605, 570]) { P.x = x; m.push(D.miroir(e)); }
+      return { l1: D.lgTir({ x: 160, y: 300, a: 0 }, a), l2: D.lgTir({ x: 600, y: 300, a: 0 }, a), l3: D.lgTir({ x: 600, y: 300, a: Math.PI / 2 }, a), len: a.len, m }; });
+    ok(r.l1 === r.len && r.l1 > 839 && Math.abs(r.l2 - (1224 - 600)) < 1e-6 && Math.abs(r.l3 - (676 - 300)) < 1e-6, `I · C5 : la ligne violette couvre tout le vol (${r.l1} px depuis x 160 ; ${r.l2.toFixed(0)} et ${r.l3.toFixed(0)} px : arrêtée au mur)`);
+    ok(JSON.stringify(r.m) === '[true,true,true,false,false,true]', `I · C13 : le miroir ne bascule qu'au-delà de ±20 px (${JSON.stringify(r.m)})`);
+    ok(!errs.length, 'I · C5 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C6 : collé à une herse, le recul du contact ne la fait pas traverser ; sans coup porté (invulnérable), aucun recul ; contre-épreuve : 40 px d'un coup la traversent
+  { const { page, errs, ctx } = await ouvre('');
+    await essai(page, { cls: 'lum', dieu: true, attaque: 'herse' });
+    const r = await page.evaluate((src) => { const B = window.__brume, s = B.room.g18s, e = B.room.boss, P = B.P; const h = eval(src); if (!h) return null;
+      const u = () => h.o === 'v' ? P.x - h.c : P.y - h.c, place = () => { const t = (h.segs[0][0] + h.segs[0][1]) / 2; if (h.o === 'v') { P.x = h.c + 25; P.y = t; e.x = P.x + e.r + P.r - 4; e.y = t; } else { P.y = h.c + 25; P.x = t; e.y = P.y + e.r + P.r - 4; e.x = t; } };
+      const D = window.__gardiens18.dbg();
+      s.contactT = 0; P.iT = 0; place(); window.__pas(1 / 60); const u1 = u();
+      s.contactT = 0; P.iT = 5; place(); const c0 = s.contactT, x0 = P.x, y0 = P.y; window.__pas(1 / 60); const sans = { d: Math.hypot(P.x - x0, P.y - y0), c: s.contactT === c0 };
+      P.iT = 5; e.x = 1000; e.y = 600; place(); e.x = 1100; e.y = 600; if (h.o === 'v') P.x -= 40; else P.y -= 40; window.__pas(1 / 60); const u3 = u();
+      return { u1, sans, u3 }; }, herse('debout'));
+    ok(r && r.u1 > 0, `I · C6 : collé à la herse, le recul ne la fait pas traverser (côté ${r && r.u1.toFixed(1)} px)`);
+    ok(r && r.sans.d < 1 && r.sans.c, `I · C6 : sans coup porté (invulnérable), ni recul ni délai consommé (${r && r.sans.d.toFixed(1)} px)`);
+    ok(r && r.u3 < 0, `I · C6 (contre-épreuve) : un saut de 40 px d'un coup traverse la herse (côté ${r && r.u3.toFixed(1)} px)`);
+    ok(!errs.length, 'I · C6 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C7 : la carte des chemins (FF) suit les herses à chaque image (au bot, 60 s au temps 2, deux formes)
+  for (const cls of ['lum', 'gou']) {
+    const { page, errs, ctx } = await ouvre('');
+    await essai(page, { cls, dieu: true, bot: 2, temps: 2 });
+    const r = await page.evaluate(() => { const B = window.__brume, FF = window.__v175.FF, a = { x0: 56, y0: 92, x1: 1224, y1: 676 }; let cmp = 0, stale = 0;
+      for (let f = 0; f < 60 * 60; f++) { window.__vide(); B.step(1 / 60, 1); const e = B.room.boss; if (!e || e.dead || B.P.dead) break; if (e.hp < e.maxHp * 0.36) e.hp = e.maxHp * 0.6;
+        // une reconstruction demandée (CAM.ff) se fait au prochain qui lit la carte : seule une carte tenue pour à jour compte
+        const n = B.room.pillars.length; if (!(FF.room === B.room && FF.n === n && n) || window.__gardiens18.dbg().ffAttend()) continue; cmp++; let diff = 0;
+        for (let rr = 0; rr < 36; rr++) for (let c = 0; c < 64; c++) { const x = (c + 0.5) * 20, y = (rr + 0.5) * 20; let b = x < a.x0 + 15 || x > a.x1 - 15 || y < a.y0 + 15 || y > a.y1 - 15;
+          if (!b) for (const p of B.room.pillars) if (Math.hypot(x - p.x, y - p.y) < p.r + 15) { b = true; break; } if ((FF.blk[rr * 64 + c] ? 1 : 0) !== (b ? 1 : 0)) diff++; }
+        if (diff) stale++; }
+      return { cmp, stale }; });
+    ok(r.cmp > 200 && r.stale === 0, `I · C7 (${cls}) : la carte des chemins suit les herses (${r.cmp} images comparées, ${r.stale} périmées)`);
+    ok(!errs.length, 'I · C7 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C9, C11, C12, C21 : en mouvements réduits puis sans : l'éclat du changement de temps (à sa teinte, aucun en mouvements réduits), son titre fixe,
+  // sa lumière qui grandit à l'entrée et décroît à sa mort, sa mort tournée comme il l'était
+  for (const rm of [false, true]) {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: rm ? 'reduce' : 'no-preference' });
+    await ctx.addInitScript(() => { window.__raf = []; window.requestAnimationFrame = cb => { window.__raf.push(cb); return 1; }; });
+    const page = await ctx.newPage(), errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+    await page.goto(BASE); await page.waitForFunction(() => !!(window.__gardiens18 && window.__brume && window.__brume.step && window.__descente), null, { timeout: 30000 });
+    await page.evaluate(() => { const q = window.__raf.splice(0); for (const f of q) f(performance.now()); window.__vide = () => { const o = document.querySelector('#overlay'); if (!o.hidden) { const b = o.querySelector('#bok') || o.querySelector('.card:not([disabled])') || o.querySelector('button.primary:not([disabled])'); if (b) b.click(); } };
+      window.__pas = (s, f) => { const B = window.__brume; for (let i = 0; i < Math.max(1, Math.round(s * 60)); i++) { window.__vide(); B.step(1 / 60, 1); if (f && f()) return true; } return false; };
+      // la vraie boucle (horloge du dessin T, rendu) : des images de 1/60 s
+      window.__t = performance.now(); window.__boucle = (s, f) => { for (let i = 0; i < Math.max(1, Math.round(s * 60)); i++) { window.__vide(); window.__t += 1000 / 60; const q = window.__raf.splice(0); for (const g of q) g(window.__t); if (f && f()) return true; } return false; }; });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(); G.essai(4, { cls: 'lum', dieu: true, mannequin: false, attaque: 'garde' });
+      const lu = []; window.__boucle(5, () => { if (!B.room.started) { const L = D.cl().filter(l => l.c === 'g18_4'); lu.push(L.length ? Math.round(L[0].r) : 0); } return B.room.boss && B.room.started; });
+      const e = B.room.boss, s = B.room.g18s, tit0 = D.titre();
+      D.hit(e, e.hp - e.maxHp * 0.6, { crit: false }); window.__pas(0.1); const tl = D.tlights().map(l => l.c), t1 = D.titre(), y1 = t1 && t1.y; window.__pas(1); const t2 = D.titre();
+      const raw = D.nums().filter(n => n.k === 'raw' && typeof n.v === 'string').map(n => n.v);
+      B.P.x = e.x - 200; window.__boucle(0.2); const mir = e.mir18; for (let k = 0; k < 200 && !e.dead; k++) { D.hit(e, 2000, { crit: false }); window.__pas(0.1); }
+      const m = s.mort, lm = []; for (let i = 0; i < 10; i++) { const L = D.cl().filter(l => l.c === 'g18_4'); lm.push(L.length ? Math.round(L[0].r) : 0); window.__boucle(0.2); }
+      return { lu, tit0: tit0 && tit0.txt, tl, t1: t1 && t1.txt, fixe: !!t2 && t2.y === y1, raw, mir, mmir: m && m.mir, lm, rm: matchMedia('(prefers-reduced-motion: reduce)').matches }; });
+    const L = rm ? 'mouvements réduits' : 'sans réglage';
+    ok(r.rm === rm, `I (${L}) : le réglage est lu`);
+    ok(rm ? !r.tl.includes('g18_4') && !r.tl.includes('rage') : r.tl.includes('g18_4') && !r.tl.includes('rage'), `I · C9 (${L}) : l'éclat du changement de temps ${rm ? 'absent' : 'à sa teinte (g18_4), pas « rage »'} (${JSON.stringify(r.tl)})`);
+    ok(r.tit0 === 'Qui va là ?' && r.t1 === 'Il ne te reconnaît pas' && r.fixe && !r.raw.some(v => /Qui va|reconnaît/.test(v)), `I · C11 (${L}) : sa phrase d'entrée et le titre du temps, fixes (plus de chiffre qui monte) (${r.tit0} / ${r.t1})`);
+    const croit = r.lu.filter(v => v > 0), dec = r.lm;
+    ok(croit.length > 3 && croit[0] < croit[croit.length - 1] && croit[0] < 100, `I · C21 (${L}) : sa lumière grandit pendant l'entrée (${croit.slice(0, 3).join(', ')} … ${croit[croit.length - 1]})`);
+    ok(dec[0] > 0 && dec.every((v, i) => !i || v <= dec[i - 1]) && dec[dec.length - 1] === 0, `I · C21 (${L}) : elle décroît pendant sa mort (${dec.join(', ')})`);
+    ok(r.mir === true && r.mmir === true, `I · C12 (${L}) : sa mort est tournée comme il l'était (miroir ${r.mir} → ${r.mmir})`);
+    ok(!errs.length, `I (${L}) : aucune erreur de script ` + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C14, C16 : un Voilé ne cligne pas à travers une herse ; les Sans-Nom d'un Appel naissent décalés le long du guichet
+  { const { page, errs, ctx } = await ouvre('');
+    await essai(page, { cls: 'lum', dieu: true, attaque: 'herse' });
+    const r = await page.evaluate((src) => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), s = B.room.g18s, P = B.P; const h = eval(src); if (!h) return null;
+      const t = (h.segs[0][0] + h.segs[0][1]) / 2, cote = (x, y) => Math.sign(h.o === 'v' ? x - h.c : y - h.c);
+      if (h.o === 'v') { P.x = h.c - 120; P.y = t; } else { P.y = h.c - 120; P.x = t; }
+      const v = D.creer('voile', h.o === 'v' ? h.c + 80 : t, h.o === 'v' ? t : h.c + 80); v.state = 'blink'; v.t = 0.45; v.bx = h.o === 'v' ? h.c - 60 : t; v.by = h.o === 'v' ? t : h.c - 60;
+      const avant = cote(v.bx, v.by); window.__pas(1 / 60); const apres = cote(v.bx, v.by), reste = v.bx === v.x && v.by === v.y;
+      D.ST.essai_attaque = 'appel'; s.file = []; s.ph = 'entracte'; s.t = 0; const n0 = B.room.spawning.length; window.__pas(0.05);
+      const sp = B.room.spawning.slice(n0).map(q => [Math.round(q.x), Math.round(q.y)]);
+      return { avant, apres, reste, sp, cv: cote(v.x, v.y), voiles: G.journal().voiles || 0 }; }, herse('debout'));
+    ok(r && r.avant === -1 && (r.apres === r.cv || r.reste) && r.voiles >= 1, `I · C14 : le Voilé ne cligne pas à travers la herse (arrivée ${r && r.apres}, son côté ${r && r.cv}${r && r.reste ? ', il reste' : ''})`);
+    ok(r && r.sp.length >= 2 && new Set(r.sp.map(q => q.join())).size === r.sp.length, `I · C16 : les Sans-Nom d'un Appel naissent à des points distincts du guichet (${r && JSON.stringify(r.sp)})`);
+    ok(!errs.length, 'I · C14 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // C15, C22, C23, H1 : une mort au Guet (dieu=0) : les répliques le nomment, le journal dit « face au Guet Sans-Nom » et l'acte IV ; un palier inconnu est ignoré
+  { const { page, errs, ctx } = await ouvre('');
+    await essai(page, { cls: 'lum', dieu: false, palier: 'zzz', attaque: 'garde' });
+    const r = await page.evaluate(() => { const B = window.__brume, palier = B.RUN.palierD; for (let k = 0; k < 2400 && !B.P.dead; k++) { const e = B.room.boss; B.P.x = e.x + 40; B.P.y = e.y + 10; B.P.iT = 0; window.__pas(1 / 60); }
+      window.__pas(4); const j = B.SAVE.mem.journal && B.SAVE.mem.journal[0], ov = document.querySelector('#overlay');
+      const V = window.__gardiens18.dbg().V7FOE(); return { palier, mort: B.P.dead, j: j && j.t, foe: V.g18_4, brx: V.brumeux, ov: ov && !ov.hidden ? ov.textContent : '' }; });
+    ok(r.palier === 'normal', `I · C22 : palier=zzz ignoré (palier ${r.palier})`);
+    ok(r.foe === 'le Guet Sans-Nom' && r.brx === 'le Brumeux', `I · C15 : les répliques le nomment (« ${r.foe} », « ${r.brx} »), plus « la Brume » ni « undefined »`);
+    ok(r.mort && /face au Guet Sans-Nom/.test(r.j || '') && /acte IV/.test(r.j || ''), `I · C23 : le journal (« ${r.j} »)`);
+    ok(!/Acte III, salle/.test(r.ov) && !/undefined/.test(r.ov), `I · H1 : la fin de descente ne dit ni « Acte III » ni « undefined »`);
+    ok(!errs.length, 'I · C23 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
 }
 
 console.log(`\nbanc-gardiens18 : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
