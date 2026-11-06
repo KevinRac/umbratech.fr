@@ -16,13 +16,16 @@ import { defineConfig, type Plugin } from 'vite';
 const OUT_DIR = 'play';
 const ENTRY = 'game.html';
 
-/** Renomme `play/game.html` en `play/index.html` après le build. */
+/** Renomme `play/game.html` en `play/index.html` après le build (dans le dossier de sortie réellement utilisé). */
 function entryAsIndex(): Plugin {
+  let outDir = resolve(import.meta.dirname, OUT_DIR);
   return {
     name: 'vaelmor-entry-as-index',
     apply: 'build',
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
     async closeBundle() {
-      const outDir = resolve(import.meta.dirname, OUT_DIR);
       await rename(resolve(outDir, ENTRY), resolve(outDir, 'index.html'));
     },
   };
@@ -44,6 +47,17 @@ export default defineConfig(({ command }) => ({
     chunkSizeWarningLimit: 2000,
     rolldownOptions: {
       input: resolve(import.meta.dirname, ENTRY),
+      output: {
+        // Lot G (n°246) : Phaser dans son propre fichier. Son contenu ne change qu'avec sa version
+        // (4.2.1) : le navigateur le garde en cache d'une mise à jour du jeu à l'autre, et git ne
+        // le réécrit pas à chaque build de `play/`.
+        codeSplitting: {
+          groups: [
+            { name: 'phaser', test: /node_modules[\\/]phaser[\\/]/ },
+            { name: 'vendor', test: /node_modules[\\/](?!phaser[\\/])/ },
+          ],
+        },
+      },
     },
   },
   server: {

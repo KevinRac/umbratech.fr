@@ -1989,6 +1989,7 @@ export class BattleScene extends Phaser.Scene {
   /** Un réglage changé dans l'écran Options s'applique aussitôt. */
   private onSetting(key: string): void {
     if (key === 'battleAnim') this.speed = loadAnimSpeed();
+    else if (key === 'quality') this.atmosphere?.setQuality(loadQuality(), ['tiltShift']);
     else if (key === 'battleView') this.view = loadBattleView();
     else if (key === 'reducedFx') this.reducedFx = loadReducedEffects();
     else if (key === 'colorBlind') {

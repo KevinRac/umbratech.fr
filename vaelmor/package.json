@@ -16,7 +16,8 @@
     "generate-world": "tsx tools/generate-world.ts",
     "encode-music": "tsx tools/encode-music.ts",
     "sfx-board": "tsx tools/sfx-board.ts",
-    "simulate": "tsx tools/simulate.ts"
+    "simulate": "tsx tools/simulate.ts",
+    "perf": "tsx tools/perf-bench.mjs"
   },
   "dependencies": {
     "phaser": "4.2.1",

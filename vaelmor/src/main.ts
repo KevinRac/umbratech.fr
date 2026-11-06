@@ -10,6 +10,7 @@ import * as music from './audio/music';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, GAME_TITLE, GAME_VERSION } from './core/config';
 import { showFatalError } from './core/fatal';
 import { tickPlayClock } from './core/gameSave';
+import { startPerfWatch } from './core/perf';
 import * as cloud from './core/cloud';
 import { bindDisplaySize, measureDisplay } from './render/displayScaler';
 import { PALETTE, toCss } from './render/palette';
@@ -58,6 +59,8 @@ function start(): void {
   bindDisplaySize(game);
   // Temps de jeu de la partie (n°155) : compté à chaque image, hors titre et hors pause.
   game.events.on(Phaser.Core.Events.STEP, (_time: number, delta: number) => tickPlayClock(delta));
+  // Qualité automatique (lot G, n°246) : mesure la durée des images et baisse les effets si le jeu ralentit.
+  startPerfWatch(game);
   // Compte en ligne (lot M9b) : les écritures d'emplacements partent aussi sur le serveur quand on est connecté.
   cloud.startCloudSync();
   // Outil de debug : `?debug` expose le jeu à la console (`window.vaelmor`) pour inspecter les scènes.

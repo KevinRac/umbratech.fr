@@ -8,6 +8,8 @@
 import Phaser from 'phaser';
 import { GAME_VERSION, MILESTONE } from '../core/config';
 import { ActionInput } from '../core/input';
+import { autoQualityState } from '../core/perf';
+import { loadQuality, loadQualitySetting } from '../core/settings';
 import { getDisplayInfo } from '../render/displayScaler';
 import { PALETTE } from '../render/palette';
 import { addText, setText, type PixelText } from '../ui/text';
@@ -50,6 +52,7 @@ export class DebugScene extends Phaser.Scene {
       this.label,
       [
         `FPS ${Math.round(this.game.loop.actualFps)}`,
+        qualityLine(),
         `ZOOM ÉCRAN ×${size.cssZoom.toFixed(2)} (DPR ${size.dpr})`,
         `SCÈNE ${active || '-'}`,
         `V${GAME_VERSION} ${MILESTONE}`,
@@ -66,4 +69,11 @@ export class DebugScene extends Phaser.Scene {
     this.registry.set('debug.enabled', visible);
     this.elapsed = 1000;
   }
+}
+
+/** Ligne « EFFETS » du debug : réglage du joueur et cran appliqué (en « Automatique », le contrôleur est en répit un moment après chaque baisse). */
+function qualityLine(): string {
+  const setting = loadQualitySetting();
+  const auto = autoQualityState();
+  return setting === 'auto' ? `EFFETS AUTO → ${loadQuality().toUpperCase()}${auto?.inGrace ? ' (répit)' : ''}` : `EFFETS ${setting.toUpperCase()}`;
 }

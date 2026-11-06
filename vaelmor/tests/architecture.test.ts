@@ -63,6 +63,15 @@ describe('ressources du moteur (audit M10)', () => {
     expect(offenders.map((f) => relative(SRC, f))).toEqual([]);
   });
 
+  it('l\u2019écran rapproché arrête ses tweens qui bouclent en démontant la scène (lot G)', () => {
+    // La respiration des combattants, l'aura d'un boss et les lignes de vitesse tournent avec `repeat: -1` :
+    // sans `killTweensOf` au démontage, chaque échange en laissait deux de plus (+26 Ko de tas par échange).
+    const source = readFileSync(join(SRC, 'scenes', 'BattleCloseupScene.ts'), 'utf8');
+    const teardown = /private teardown\(\): void \{[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? '';
+    expect(teardown).toContain('this.tweens.killTweensOf(');
+    expect(teardown).toContain('breath?.remove()');
+  });
+
   it('une texture du moteur se rend par deleteTexture (destroy seul la laisse dans la liste du moteur)', () => {
     const offenders = tsFiles(SRC).filter((file) => /_animationDataTexture\?\.destroy\(|layerDataTexture\?\.destroy\(/.test(readFileSync(file, 'utf8')));
     expect(offenders.map((f) => relative(SRC, f))).toEqual([]);

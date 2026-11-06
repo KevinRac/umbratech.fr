@@ -15,7 +15,7 @@ import {
   BATTLE_VIEWS,
   loadAnimSpeed,
   loadBattleView,
-  loadQuality,
+  loadQualitySetting,
   loadColorBlind,
   loadReducedMotion,
   loadTextSize,
@@ -36,7 +36,7 @@ import {
   TEXT_SPEED_LABEL,
   TEXT_SPEEDS,
 } from '../logic/settings/accessibility';
-import { QUALITIES, QUALITY_LABEL } from '../render/atmosphere';
+import { QUALITY_SETTINGS, QUALITY_SETTING_LABEL } from '../render/atmosphere';
 
 export type OptionSection = 'affichage' | 'combat' | 'son' | 'texte' | 'commandes' | 'accessibilite';
 
@@ -101,10 +101,10 @@ export function optionRows(): OptionRow[] {
       id: 'quality',
       section: 'affichage',
       label: 'Qualité des effets',
-      help: 'Haute : lumière, halos, flou de profondeur. Basse : couleurs et vignettage seulement, pour une machine modeste. Désactivée : aucun filtre.',
-      values: QUALITIES.map((q) => ({ id: q, label: QUALITY_LABEL[q] })),
-      get: () => loadQuality(),
-      set: (id) => saveQuality(QUALITIES.find((q) => q === id) ?? 'high'),
+      help: 'Automatique : le jeu baisse seul les effets si l’image ralentit. Haute : lumière, halos, flou de profondeur. Basse : couleurs et vignettage seulement. Désactivée : aucun filtre.',
+      values: QUALITY_SETTINGS.map((q) => ({ id: q, label: QUALITY_SETTING_LABEL[q] })),
+      get: () => loadQualitySetting(),
+      set: (id) => saveQuality(QUALITY_SETTINGS.find((q) => q === id) ?? 'auto'),
     },
     {
       id: 'battleView',

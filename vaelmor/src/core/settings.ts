@@ -7,7 +7,8 @@
  * `onSettingsChange` pour appliquer un changement aussitôt.
  */
 import { SAVE_KEYS } from '../logic/save/keys';
-import { parseQuality, type Quality } from '../render/atmosphere';
+import { parseQualitySetting, type Quality, type QualitySetting } from '../render/atmosphere';
+import { parsePerfLevel } from '../logic/perf/autoQuality';
 import { resolveBindings, storedBindings, type KeyBindings } from '../logic/input/keymap';
 import {
   parseColorBlind,
@@ -35,10 +36,15 @@ export function onSettingsChange(listener: SettingsListener): () => void {
   return () => listeners.delete(listener);
 }
 
+/** Prévient les scènes ouvertes qu'un réglage a changé, sans rien enregistrer. */
+export function notifySettingsChange(key: string): void {
+  for (const listener of [...listeners]) listener(key);
+}
+
 /** Enregistre un réglage (les autres sont gardés) et prévient les scènes ouvertes. */
 export function writeSetting(key: string, value: unknown): void {
   writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), version: SETTINGS_VERSION, [key]: value }));
-  for (const listener of [...listeners]) listener(key);
+  notifySettingsChange(key);
 }
 
 /** Valeur brute d'un réglage (lecture par les modules qui ont leur propre analyse). */
@@ -57,13 +63,38 @@ function readSettings(): Record<string, unknown> {
   }
 }
 
-/** Qualité enregistrée (« Haute » si rien n'est enregistré ou si la valeur est illisible). */
-export function loadQuality(): Quality {
-  return parseQuality(readSettings()['quality']);
+/** Réglage « Qualité des effets » enregistré (« Automatique » si rien n'est enregistré ou si la valeur est illisible). */
+export function loadQualitySetting(): QualitySetting {
+  return parseQualitySetting(readSettings()['quality']);
 }
 
-/** Enregistre la qualité ; sans stockage disponible, le réglage vaut pour la session seulement. */
-export function saveQuality(quality: Quality): void {
+/** Cran atteint en mode « Automatique » : en mémoire (valable même sans stockage), recopié dans `qualityAuto`. */
+let autoLevel: Quality | null = null;
+
+export function loadAutoLevel(): Quality {
+  autoLevel ??= parsePerfLevel(readSettings()['qualityAuto']);
+  return autoLevel;
+}
+
+/** Le jeu vient de baisser d'un cran (`core/perf.ts`) : on le retient et on prévient les scènes (clé `quality`). */
+export function saveAutoLevel(level: Quality): void {
+  autoLevel = level;
+  writeSetting('qualityAuto', level);
+  notifySettingsChange('quality');
+}
+
+/** Cran à appliquer : le réglage du joueur, ou, en « Automatique », le cran atteint (« Haute » au départ). */
+export function loadQuality(): Quality {
+  const setting = loadQualitySetting();
+  return setting === 'auto' ? loadAutoLevel() : setting;
+}
+
+/** Enregistre le réglage ; choisir « Automatique » repart de « Haute ». Sans stockage, vaut pour la session seulement. */
+export function saveQuality(quality: QualitySetting): void {
+  if (quality === 'auto') {
+    autoLevel = 'high';
+    writeRaw(SAVE_KEYS.settings, JSON.stringify({ ...readSettings(), version: SETTINGS_VERSION, qualityAuto: 'high' }));
+  }
   writeSetting('quality', quality);
 }
 

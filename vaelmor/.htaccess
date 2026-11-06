@@ -1,0 +1,7 @@
+# Vaelmor : le jeu construit (play/js/) porte la version de son contenu dans le nom de ses fichiers
+# (Phaser, zod, jeu) : le navigateur les garde un an. Le HTML de play/ et le reste sont revalidés comme avant.
+<IfModule mod_headers.c>
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.js$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

@@ -222,6 +222,11 @@ function ensureImageTexture(scene: Phaser.Scene, key: string, paint: () => Paint
   scene.textures.addCanvas(key, canvas);
 }
 
+/** Les objets d'une liste et, récursivement, ceux de leurs conteneurs. */
+function descendants(objects: readonly Phaser.GameObjects.GameObject[]): Phaser.GameObjects.GameObject[] {
+  return objects.flatMap((o) => (o instanceof Phaser.GameObjects.Container ? [o, ...descendants(o.list as Phaser.GameObjects.GameObject[])] : [o]));
+}
+
 export class BattleCloseupScene extends Phaser.Scene {
   /** Décor, combattants et effets (caméra principale : zoom et secousse). */
   private stage!: Phaser.GameObjects.Container;
@@ -453,6 +458,13 @@ export class BattleCloseupScene extends Phaser.Scene {
   private teardown(): void {
     this.talkBox?.close();
     this.talkBox = null;
+    // Lot G (n°246) : un tween qui boucle (respiration, aura, lignes de vitesse) ne s'arrête pas quand son objet est
+    // détruit ; chaque échange en laissait deux de plus, qui animaient des objets disparus (+26 Ko de tas par échange).
+    for (const view of this.views.values()) {
+      view.breath?.remove();
+      view.breath = null;
+    }
+    this.tweens.killTweensOf([...descendants(this.stage.list), ...descendants(this.ui.list)]);
     this.stage.removeAll(true).setPosition(0, 0);
     this.ui.removeAll(true);
     this.dim = null;

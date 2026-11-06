@@ -44,6 +44,21 @@ export function parseQuality(raw: unknown): Quality {
   return typeof raw === 'string' && (QUALITIES as readonly string[]).includes(raw) ? (raw as Quality) : 'high';
 }
 
+/**
+ * Réglage du joueur (lot G, n°246) : un cran fixe, ou « Automatique » (le jeu baisse seul
+ * les effets si l'image ralentit, `logic/perf/autoQuality.ts`). `Quality` reste le cran réellement appliqué.
+ */
+export type QualitySetting = Quality | 'auto';
+
+export const QUALITY_SETTINGS: readonly QualitySetting[] = ['auto', 'high', 'low', 'off'];
+
+export const QUALITY_SETTING_LABEL: Readonly<Record<QualitySetting, string>> = { auto: 'Automatique', ...QUALITY_LABEL };
+
+/** Lit le réglage enregistré ; une valeur absente ou inconnue donne « Automatique ». */
+export function parseQualitySetting(raw: unknown): QualitySetting {
+  return typeof raw === 'string' && (QUALITY_SETTINGS as readonly string[]).includes(raw) ? (raw as QualitySetting) : 'auto';
+}
+
 /* ---------- Jour / soir ---------- */
 
 const clamp = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v));
