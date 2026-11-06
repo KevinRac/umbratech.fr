@@ -25,6 +25,7 @@ import { playMusic } from '../audio/music';
 import { playSfx } from '../audio/sfx';
 import { ANIM_SPEED_FACTOR, loadAnimSpeed, loadBattleView, loadColorBlind, loadReducedEffects, loadTyping, onSettingsChange, type AnimSpeed, type BattleView } from '../core/settings';
 import { showFatalError } from '../core/fatal';
+import { logEvent } from '../core/testkit';
 import { ActionInput, keyLabel } from '../core/input';
 import { getLastDeployed, getLoadouts, getSessionState, getWorldState, setLastDeployed } from '../core/session';
 import { getGameCtx } from '../core/townContext';
@@ -2888,6 +2889,7 @@ export class BattleScene extends Phaser.Scene {
     await this.wait(500);
     if (!this.alive) return;
     const summary = summarize(this.state);
+    logEvent('combat', `fin : ${summary.outcome === 'victory' ? 'victoire' : 'défaite'} en ${summary.turns} tours (${this.params.encounterId})`, { ev: 'fin', issue: summary.outcome === 'victory' ? 'victoire' : 'defaite', tours: summary.turns, enc: this.params.encounterId });
     const opensWorld = this.params.returnTo === 'world' && getWorldState() !== null;
     const settlement = this.settle(summary.outcome === 'victory' ? 'victory' : 'defeat');
     playMusic({ kind: summary.outcome === 'victory' ? 'victory' : 'defeat' });

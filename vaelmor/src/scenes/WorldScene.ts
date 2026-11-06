@@ -15,6 +15,7 @@ import { playSfx, playStep } from '../audio/sfx';
 import { ambienceFor, noticeSound, stepInterval, stepMaterial } from '../logic/audio/soundRules';
 import { worldZoomFor } from '../core/viewport';
 import { showFatalError } from '../core/fatal';
+import { logEvent, setPlace } from '../core/testkit';
 import { ActionInput, keyLabel } from '../core/input';
 import { getLastDeployed, getWorldState, setSessionState, setWorldState } from '../core/session';
 import { rollNamedPop } from '../logic/game/namedRules';
@@ -320,6 +321,7 @@ export class WorldScene extends Phaser.Scene {
       progress.company = startingCompany(this.data_, data.heroClass ?? DEFAULT_HERO_CLASS);
       setWorldState(newWorldState(this.map, progress, newGameId()));
       setSessionState(null);
+      logEvent('monde', `nouvelle partie : ${data.heroClass ?? DEFAULT_HERO_CLASS}, mode ${data.mode ?? 'blessure'}`);
     }
     // L'arrivée (chargement, retour de combat) ne compte pas comme une entrée de village : pas de sauvegarde avant 20 s.
     this.lastVillageSave = this.time.now;
@@ -1200,10 +1202,13 @@ export class WorldScene extends Phaser.Scene {
       const id = String(update.location.props['id']);
       const isNew = addUnique(this.state.discoveredLocations, id);
       this.hud.showBanner(update.location.name, isNew ? 'Lieu découvert' : '', 1400);
+      setPlace(update.location.name);
+      logEvent('monde', `lieu : ${update.location.name}${isNew ? ' (découvert)' : ''}`);
       if (update.location.kind === 'village' || update.location.kind === 'ville') playSfx('villageEnter');
       this.onLocationEntered(id);
       if (isNew) this.checkProgress(false);
     } else if (update.locationChanged) {
+      setPlace(this.tracker.currentZone?.name ?? null);
       this.onLocationLeft();
     }
     if (update.zoneChanged || update.locationChanged) this.syncMusic();
@@ -1263,6 +1268,8 @@ export class WorldScene extends Phaser.Scene {
       this.state.progress.zoneVisits += 1;
       this.syncFoePresence();
     }
+    setPlace(zone.name);
+    logEvent('monde', `zone : ${zone.name} (niv. ${zone.levelMin}-${zone.levelMax})`);
     this.hud.setZone(`${zone.name}  Niv. ${zone.levelMin}-${zone.levelMax}`);
     this.hud.setTint(Phaser.Display.Color.HexStringToColor(zone.ambient.color).color, zone.ambient.alpha);
     this.hud.setAmbience(zone.ambience);
@@ -1415,6 +1422,7 @@ export class WorldScene extends Phaser.Scene {
   private startBattle(encounterId: string, site?: { x: number; y: number }, options: EngageOptions = {}): void {
     if (this.paused || this.leaving) return;
     this.leaving = true;
+    logEvent('combat', `début : ${encounterId}${options.ambush ? ' (embuscade)' : options.initiative ? ' (initiative)' : ''}`, { ev: 'debut', enc: encounterId });
     this.hud.setPrompt(null);
     playSfx('battleStart');
     setAmbience(null, 400);

@@ -11,6 +11,7 @@ import { buildEnvelope, decodeSave, encodeEnvelope, MAX_IMPORT_BYTES, type SaveE
 import { restoreGame, snapshotGame, summarize } from '../logic/save/snapshot';
 import { readSlot, SLOT_LABEL, writeSlot, type LoadableSlot, type SlotKey, type WriteResult } from './saves';
 import { getSessionState, getWorldState, setSessionState, setWorldState } from './session';
+import { logEvent } from './testkit';
 
 /* ---------- Identifiant de partie et chronomètre ---------- */
 
@@ -50,7 +51,11 @@ export function currentEnvelope(place: string): SaveEnvelope | null {
 export function saveCurrentGame(key: SlotKey, place: string): WriteResult {
   const envelope = currentEnvelope(place);
   if (!envelope) return { ok: false, message: 'Aucune partie en cours.' };
-  return writeSlot(key, envelope, loadGameData());
+  const result = writeSlot(key, envelope, loadGameData());
+  // Journal de session (n°273) : où et si l'écriture a réussi ; jamais le contenu de la sauvegarde.
+  const slot = key === SAVE_KEYS.auto ? 'auto' : `emplacement ${key.slice(-1)}`;
+  logEvent('save', result.ok ? `sauvegarde ${slot} : écrite (${place})` : `sauvegarde ${slot} : ÉCHEC — ${result.message}`, { ok: result.ok, slot });
+  return result;
 }
 
 /** Sauvegarde automatique (n°160) : même chose, sur la clé `auto`. */
@@ -58,6 +63,7 @@ export const autoSave = (place: string): WriteResult => saveCurrentGame(SAVE_KEY
 
 /** Remplace la partie en mémoire par celle d'une sauvegarde lisible. */
 export function loadIntoSession(save: SaveEnvelope): void {
+  logEvent('charge', `partie chargée : ${save.meta.heroName}, niv. ${save.meta.heroLevel}, ${save.meta.place}`, { niveau: save.meta.heroLevel });
   const { world, session } = restoreGame(save.data);
   setWorldState(world);
   setSessionState(session);

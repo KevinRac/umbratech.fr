@@ -9,6 +9,10 @@ export const SAVE_KEYS = {
   slot3: 'vaelmor:save:slot3',
   auto: 'vaelmor:save:auto',
   settings: 'vaelmor:settings',
+  /** Journal de session du kit de test (lot H de M10, n°273) : jamais envoyé, jamais lu par le jeu. */
+  journal: 'vaelmor:journal',
+  /** Carnet du testeur (lot H de M10, n°274). */
+  notebook: 'vaelmor:notebook',
 } as const;
 
 export const MANUAL_SLOTS = [SAVE_KEYS.slot1, SAVE_KEYS.slot2, SAVE_KEYS.slot3] as const;
