@@ -1,5 +1,6 @@
 /**
- * Ennemis du monde ouvert à l'écran (jalon M3) : le sprite d'unité (silhouette
+ * Ennemis du monde ouvert à l'écran (jalon M3) : le sprite d'unité (feuille de
+ * marche peinte `assets/ennemis/<sprite>.png`, n°281 ; à défaut la silhouette
  * du combat, couleur rouge cendre du camp ennemi), son ombre, l'indicateur de
  * difficulté (GDD §7.5) et les bulles « ! » / « ? ». Aucune règle ici : l'état
  * vient de `FoeSim` (logic/world/foes.ts).
@@ -9,6 +10,8 @@ import { foeFacing, isHidden, type FoeSim } from '../logic/world/foes';
 import { spritePose } from '../logic/world/movement';
 import { BATTLE_TEX, ensureMapSprite } from './battleTextures';
 import { FOE_TEX, ensureFoeTextures } from './foeTextures';
+import { foeSkinKey, foeSkinOf, foeSkinWalkKey } from './skins';
+import { skinFrameIndex } from '../logic/skinFrames';
 
 export interface FoeLook {
   readonly color: number;
@@ -31,6 +34,8 @@ export class FoeActor {
   private bubbleUntil = 0;
   private lastKey = '';
   private readonly phase: number;
+  /** Feuille peinte (n°281) ; null : silhouette générée. */
+  private readonly skin: { id: string; frames: number; cell: number } | null;
 
   constructor(
     scene: Phaser.Scene,
@@ -40,12 +45,16 @@ export class FoeActor {
     private readonly depth: { entities: number; marker: number; shadow: number },
   ) {
     ensureFoeTextures(scene);
-    ensureMapSprite(scene, spriteId, 'enemy');
+    this.skin = foeSkinOf(scene, spriteId);
+    if (!this.skin) ensureMapSprite(scene, spriteId, 'enemy');
     this.phase = (sim.home.x * 7 + sim.home.y * 13) % 900;
     const boss = look.boss;
     this.shadow = scene.add.image(sim.x, sim.y, boss ? FOE_TEX.shadowBig : 'world:shadow').setDepth(depth.shadow);
-    this.sprite = scene.add.sprite(sim.x, sim.y + 2, BATTLE_TEX.ms(spriteId, 'enemy'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1);
-    if (boss) this.sprite.setScale(1.15);
+    this.sprite = this.skin
+      ? scene.add.sprite(sim.x, sim.y + 2, foeSkinKey(this.skin.id), skinFrameIndex('down', 0, this.skin.frames)).setOrigin(0.5, 1)
+      : scene.add.sprite(sim.x, sim.y + 2, BATTLE_TEX.ms(spriteId, 'enemy'), BATTLE_TEX.msFrame('idle', 0)).setOrigin(0.5, 1);
+    // Boss : la silhouette est agrandie ; une feuille peinte de boss a déjà sa propre taille (cellule de 48).
+    if (boss && !this.skin) this.sprite.setScale(1.15);
     this.skull = scene.add.image(sim.x, sim.y - 36, FOE_TEX.skull).setDepth(depth.marker).setTint(look.color).setVisible(false);
     this.pips = scene.add.image(sim.x, sim.y - 28, FOE_TEX.pips(1)).setDepth(depth.marker).setTint(look.color).setVisible(false);
     this.bubble = scene.add.image(sim.x, sim.y - 42, FOE_TEX.bang).setDepth(depth.marker + 0.01).setVisible(false);
@@ -83,7 +92,16 @@ export class FoeActor {
     const { pose, flipX } = spritePose(foeFacing(sim));
     const staticPose = !sim.moving && pose !== 'down';
     const key = sim.moving ? `walk:${pose}` : staticPose ? `static:${pose}` : 'idle';
-    if (key !== this.lastKey) {
+    if (key !== this.lastKey && this.skin) {
+      this.lastKey = key;
+      const skin = this.skin;
+      if (sim.moving) this.sprite.anims.play(foeSkinWalkKey(skin.id, pose), true);
+      else {
+        // À l'arrêt : première image de marche de la direction regardée (face, dos ou profil).
+        this.sprite.anims.stop();
+        this.sprite.setFrame(skinFrameIndex(pose, 0, skin.frames));
+      }
+    } else if (key !== this.lastKey) {
       this.lastKey = key;
       if (sim.moving) this.sprite.anims.play(BATTLE_TEX.msWalk(this.spriteId, 'enemy', pose), true);
       else if (staticPose) {

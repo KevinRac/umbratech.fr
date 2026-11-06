@@ -42,6 +42,22 @@ export const SKIN_ALTS: Readonly<Record<string, readonly string[]>> = {
   veilleur_des_falaises: ['veilleur_des_falaises_v1'],
 };
 
+/**
+ * Ennemis du monde ouvert peints (n°281) : feuilles de marche `assets/ennemis/<sprite>.png`, au même format
+ * que les personnages (3 rangées sud, nord, est × `frames` cellules `SKIN_CELL`, l'ouest est l'est retourné),
+ * générées avec Pixellab à partir du personnage de leur feuille de combat (`assets/combat/<sprite>.png`).
+ * Id = champ `sprite` de `data/worldEnemies.json`. Un ennemi absent de la liste (ou dont la feuille manque)
+ * garde l'ancienne silhouette (`render/unitSprites.ts`). `cell` : cellule plus grande pour les boss (48).
+ */
+export interface FoeSkinDef {
+  readonly id: string;
+  readonly frames: number;
+  readonly cell?: number;
+}
+export const FOE_SKINS: readonly FoeSkinDef[] = [
+  { id: 'ecumeur_sabreur', frames: 8 },
+];
+
 /** Durée d'une image de marche, en ms (réglage du dessin d'origine). */
 export const SKIN_FRAME_MS = 170;
 
@@ -63,7 +79,7 @@ export const SKIN_POSES: Readonly<Record<string, readonly string[]>> = {
  * Elle est ajoutée à l'adresse des fichiers (`?v=`) pour que le navigateur ne garde pas une ancienne
  * feuille avec un nouveau code (cellules décalées, unité invisible).
  */
-export const SKIN_REV = 18;
+export const SKIN_REV = 19;
 
 /**
  * Expressions des portraits (générées avec Pixellab, `vocal-animation`, 3 positions de bouche) :

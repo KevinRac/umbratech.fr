@@ -13,7 +13,7 @@ import { PALETTE } from '../render/palette';
 import { PIXEL_FONTS, buildPixelFont, loadPixelFontFaces, type FontKey } from '../render/pixelFont';
 import { registerFigureSprites } from '../render/npcSprites';
 import { preloadPortraits } from '../render/portraits';
-import { preloadSkins } from '../render/skins';
+import { preloadFoeSkins, preloadSkins } from '../render/skins';
 import { preloadCloseupFighters } from '../render/closeupFighters';
 import { WORLD_MAP_KEY, WORLD_TILESET_KEY } from '../render/worldTextures';
 import { SCENES } from './keys';
@@ -35,7 +35,13 @@ export class BootScene extends Phaser.Scene {
     preloadSkins(this);
     preloadCloseupFighters(this);
     preloadPortraits(this);
+    preloadFoeSkins(this);
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      // Ennemi peint (n°281) : la silhouette d'origine prend le relais, la partie continue.
+      if (file.key.startsWith('foe:skin:')) {
+        console.warn(`Feuille d'ennemi introuvable, silhouette gardée : ${file.url as string}`);
+        return;
+      }
       showFatalError('Un fichier du jeu est introuvable.', [`${file.key} : ${file.url as string}`]);
     });
   }
