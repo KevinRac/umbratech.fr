@@ -35,6 +35,7 @@ Depuis v18 : une **descente de 10 actes** en trois paliers (Normal, Difficile, E
 4. **Régression** : tous les simulateurs, tous les bancs, puis `banc-gardiens-final` **seul** (il mesure des coûts de rendu).
 5. **Commit** avec les trailers habituels (`Co-Authored-By: Claude …` et le lien de session), **push sur `main`**, **sans** les captures que les bancs réécrivent dans `_dev/bancs/` (`git checkout --` sur ces PNG avant de committer).
 6. **Réponse brève** en français : résultat, mesures, points ouverts, modèle et effort pour la suite.
+   Après chaque gardien ou boss livré (ou retouché), la réponse donne aussi **le lien d'essai direct sur le site**, prêt à cliquer, avec ses variantes utiles (forme, temps, palier, mortel). Exemple pour le Guet Sans-Nom : `https://umbratech.fr/themist/index.html?gardien=4` (`&classe=lum|gou|her|tis`, `&temps=2|3`, `&palier=difficile&temps=4` pour le Couvre-feu, `&dieu=0` pour pouvoir mourir : invincible par défaut ; le lien marche une fois le push déployé sur IONOS).
 
 **Règles de conception à respecter** :
 - **Règle d'or** de chaque chantier : ce qui n'est pas visé ne change pas, au bit ou à l'image près (prouvé par le simulateur et par un banc qui compare avant / après, image par image).
