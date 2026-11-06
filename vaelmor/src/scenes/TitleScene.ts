@@ -355,7 +355,7 @@ export class TitleScene extends Phaser.Scene {
     addText(this, 6, GAME_HEIGHT - 11, `v${GAME_VERSION} · prototype ${MILESTONE}`, { font: 'small', color: PALETTE.desactive, shadow: false }).setDepth(DEPTH.ui);
     // Kit de test (lot H, n°273) : F10 est disponible partout.
     // Cliquable aussi : certains navigateurs (Opera GX) gardent la touche F10.
-    const report = addText(this, GAME_WIDTH - 6, GAME_HEIGHT - 11, 'Signaler un problème (F10)', { font: 'small', color: PALETTE.desactive, shadow: false, align: 'right' }).setDepth(DEPTH.ui);
+    const report = addText(this, GAME_WIDTH / 2, GAME_HEIGHT - 11, 'Signaler un problème (F10)', { font: 'small', color: PALETTE.desactive, shadow: false, align: 'center' }).setDepth(DEPTH.ui);
     report.setInteractive({ useHandCursor: true }).on('pointerdown', () => void openReport(this.game));
   }
 

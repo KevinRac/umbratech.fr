@@ -17,7 +17,8 @@
     "encode-music": "tsx tools/encode-music.ts",
     "sfx-board": "tsx tools/sfx-board.ts",
     "simulate": "tsx tools/simulate.ts",
-    "perf": "tsx tools/perf-bench.mjs"
+    "perf": "tsx tools/perf-bench.mjs",
+    "session-bench": "tsx tools/session-bench.mjs"
   },
   "dependencies": {
     "phaser": "4.2.1",
