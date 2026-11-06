@@ -15,7 +15,8 @@
     "validate-data": "tsx tools/validate-data.ts",
     "generate-world": "tsx tools/generate-world.ts",
     "encode-music": "tsx tools/encode-music.ts",
-    "sfx-board": "tsx tools/sfx-board.ts"
+    "sfx-board": "tsx tools/sfx-board.ts",
+    "simulate": "tsx tools/simulate.ts"
   },
   "dependencies": {
     "phaser": "4.2.1",
