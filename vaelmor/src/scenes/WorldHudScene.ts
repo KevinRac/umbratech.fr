@@ -18,6 +18,7 @@ import { PALETTE } from '../render/palette';
 import { drawPanel } from '../ui/panel';
 import { portraitInBox } from '../render/portraits';
 import { Toasts } from '../ui/Toasts';
+import { openReport } from '../ui/reportLauncher';
 import { addText } from '../ui/text';
 import { VerticalMenu } from '../ui/VerticalMenu';
 import { SCENES } from './keys';
@@ -482,19 +483,19 @@ export class WorldHudScene extends Phaser.Scene {
     const items = [
       { label: 'Reprendre', onSelect: handlers.onResume },
       { label: 'Options', onSelect: handlers.onOptions },
+      // Kit de test (lot H, n°273) : même écran que F10, pour les navigateurs qui gardent cette touche.
+      { label: 'Signaler un problème (F10)', onSelect: () => void openReport(this.game) },
       { label: 'Retour au titre', onSelect: handlers.onTitle },
     ];
     const { width: W, height: H } = this.scale;
     const width = 300 * S;
-    const height = items.length * lineHeight + 92 * S;
+    const height = items.length * lineHeight + 76 * S;
     const x = Math.round((W - width) / 2);
     const y = Math.round((H - height) / 2);
     const dim = this.add.rectangle(0, 0, W, H, PALETTE.nuit, 0.55).setOrigin(0, 0).setDepth(DEPTH.pause).setInteractive();
     const panel = drawPanel(this, x, y, width, height, { scale: 2 * S, depth: DEPTH.pause + 1 });
     const title = addText(this, W / 2, y + 14 * S, 'Pause', { scale: 2 * S, color: PALETTE.cyanEclat, align: 'center' }).setDepth(DEPTH.pause + 2);
-    // Kit de test (lot H, n°273) : rappel de F10 sous le menu.
-    const f10 = addText(this, W / 2, y + height - 20 * S, 'F10 : signaler un problème', { font: 'small', scale: 2 * S, color: PALETTE.metalClair, shadow: false, align: 'center' }).setDepth(DEPTH.pause + 2);
-    this.pauseObjects = [dim, panel, title, f10];
+    this.pauseObjects = [dim, panel, title];
     this.pauseMenu = new VerticalMenu(this, x + 12 * S, y + 56 * S, items, this.actions, {
       width: width - 24 * S,
       lineHeight,
