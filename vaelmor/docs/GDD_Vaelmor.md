@@ -1599,7 +1599,7 @@ Un script de validation (`validate-data`) signale toute référence cassée (ex.
 | **M7** (livré le 04/11/2026) | Contenu monde | Île complète | 4 villages + ville, 5 zones, quêtes, recrues, boss de zone | Charge de contenu | Parcours complet de Z1 à Z5 sans bug bloquant | ★★★★ |
 | **M8** | Animations de combat | Spectacle | Écran de combat cinématique, critiques, effets, boss | Pipeline d'art | Toutes classes avec attaque + critique, vitesse acceptable | ★★★★ |
 | **M9** | Sauvegarde | Fiabilité | Auto + manuelle, migrations, export/import, erreurs gérées | Corruption, quota | Test : recharger après chaque type d'événement | ★★★★★ |
-| **M10** | Polish | Finitions | UI, sons, équilibrage, performance, accessibilité | Retouches infinies | Aucun bloquant ni majeur ouvert après la session de 60 min de l'auteur (depuis « Nouvelle partie », sans `?debug`) et le banc automatique (n°279) | ★★★ |
+| **M10** (livré le 06/11/2026, version 1.0.0) | Polish | Finitions | Écran Options, carte de l'île et voyage rapide, musique, bruitages et mixage, accessibilité, équilibrage au simulateur, performance, kit de test (F10) | Retouches infinies | Aucun bloquant ni majeur ouvert après la session de 60 min de l'auteur (depuis « Nouvelle partie », sans `?debug`) et le banc automatique (n°279). **Dérogation (n°280) : la session de l'auteur n'a pas eu lieu ; le jalon est clos sur le seul banc automatique** (60 min, 0 erreur, 0 blocage) | ★★★ |
 
 **Ordre conseillé** : M0 → M1 → M4 → M2 → M3 → M5 → M6 → M9 → M7 → M8 → M10.
 Le combat (M4) est prototypé tôt **avant** le contenu du monde, car c'est le plus grand risque de fun.

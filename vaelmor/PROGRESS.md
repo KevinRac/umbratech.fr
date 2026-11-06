@@ -531,7 +531,34 @@ Méthode : un lot à la fois ; captures (et séquence image par image, ou fichie
 - [x] **Lot F — équilibrage** (n°245, n°263 à n°268 ; validé par l'auteur le 06/11/2026) : simulateur pur `logic/sim/` (`battle.ts` combat complet, `company.ts` compagnies par zone, `stats.ts` agrégation et cibles) et `npm run simulate` (`tools/simulate.ts` : `--n`, `--ai`, `--enc`, `--classes`, `--delta`, `--json`) ; IA « prudente » `logic/ai/prudentAi.ts` (danger par case, héros protégé, soins par objets, avance par le chemin réel, poussée finale au tour 6) ; rapport `docs/EQUILIBRAGE_M10.md` ; retouches dans `data/encounters.json` et `data/enemies.json` seulement ; tests `tests/sim.test.ts`. Mesure (72 combats par rencontre) : ordinaires 82 % en 6,7 tours, boss 50 %, aucune classe de héros sous 66 % (avant : 66 %, 17 %) ; 20 rencontres sur 33 restent hors cible, souvent de peu (rapport §4). A-10 fermé.
 - [x] **Lot G — performance** (n°246, n°269 à n°272 ; validé par l'auteur le 06/11/2026) : Phaser et le reste des dépendances dans des fichiers à nom haché (`vite.config.ts › codeSplitting`, `.htaccess` à cache d'un an) ; qualité des effets « Automatique » par défaut (`logic/perf/autoQuality.ts`, `core/perf.ts`, F3 : `EFFETS AUTO`) ; critère de tas ±10 % (`logic/perf/heap.ts`, banc `npm run perf`, `tools/perf-bench.mjs`) ; fuite corrigée dans l'écran rapproché (2 tweens en boucle par échange, `BattleCloseupScene.teardown`, garde-fou dans `tests/architecture.test.ts`) ; mesures dans `docs/PERF_M10.md`. Retour après mise à jour : 283 Ko de JS à retélécharger au lieu de 664 Ko (−57 %). **À vérifier par l'auteur : les 60 ips (F3) sur le build en ligne, non mesurables ici. n°272 (feuilles de combat à la demande) laissé ouvert.**
 - [x] **Lot H — kit de test** (n°247, n°248, n°273 à n°278 ; validé tel quel par l'auteur, fusionné le 06/11/2026) : F10 « Signaler un problème » (`ui/reportOverlay.ts`, `ui/reportLauncher.ts`), journal de session circulaire (`logic/testkit/journal.ts`, `core/testkit.ts`), carnet du testeur (`logic/testkit/notebook.ts`), rapport et export (`logic/testkit/report.ts`), fluidité (`logic/testkit/perfSampler.ts`) ; protocole, carnet papier, questionnaire et fiches dans `docs/TESTS_M10.md`.
-- [ ] **Banc automatique** (n°279, fait : `npm run session-bench`, résultats dans `docs/TESTS_M10.md`), puis **session de l'auteur** (60 min depuis « Nouvelle partie », sans `?debug`, F10, export, questionnaire court), corrections, puis **lot I — clôture** : « Livré en M10 », GDD §17 et décisions, version 1.0.0 (n°249), diapositive Vaelmor de l'accueil.
+- [x] **Banc automatique** (n°279, `npm run session-bench`, résultats dans `docs/TESTS_M10.md`) : 60 min, 11 victoires sur 11 combats, 0 erreur, 0 blocage, 4 rechargements identiques.
+- [x] **Session de l'auteur** : **non jouée, dérogation au n°279** (n°280) ; aucun bloquant ni majeur connu après le banc.
+- [x] **Lot I — clôture** (06/11/2026) : « Livré en M10 » ci-dessous, GDD §17, version 1.0.0 (n°249), diapositive Vaelmor de l'accueil. Aucune génération Pixellab (n°249).
+
+## Livré en M10 (finitions, version 1.0.0, 06/11/2026)
+Règles et réglages : GDD §17, `docs/TESTS_M10.md`, `docs/EQUILIBRAGE_M10.md`, `docs/PERF_M10.md`. Version du jeu : **1.0.0** (`package.json`, lue par Vite : `__GAME_VERSION__`, affichée sur le titre, dans F3, dans le rapport F10 et dans le journal).
+
+- **Lot A — audit** : 16 constats (A-01 à A-16), tous corrigés ; fuite mémoire des couches GPU de Phaser 4.2.1 (`releaseGpuTilemapOnShutdown`).
+- **Lot B — interface** : écran Options unique (titre, pause, menu, combat), carte de l'île (N) et voyage rapide (n°7), fiche du héros du HUD, Échap qui ne rouvre plus la pause, `MILESTONE` = M10.
+- **Lot C — musique** : lecteur Web Audio, 13 pistes en Opus / AAC à la demande, boucles trouvées par l'outil (`npm run encode-music`).
+- **Lot D — bruitages et mixage** : sons de combat refaits, sons d'interface et du monde, pas selon le sol, 5 ambiances, table de mixage mesurée ; synthèse en Web Audio, aucun fichier tiers.
+- **Lot E — accessibilité** : remappage des touches, texte ×1 / ×1,25, vitesse du texte, mode daltonien, effets réduits étendus au monde et `prefers-reduced-motion`.
+- **Lot F — équilibrage** : simulateur (`npm run simulate`) ; rencontres ordinaires 82 % de victoires en 6,7 tours, boss 50 %, aucune classe de héros sous 66 %.
+- **Lot G — performance** : Phaser à part, qualité automatique, tas stable ±10 % (banc `npm run perf`), fuite de l'écran rapproché corrigée.
+- **Lot H — kit de test** : F10 « Signaler un problème », journal de session, carnet, export.
+- **Banc automatique de session** (n°279) : voir `docs/TESTS_M10.md`.
+- **Lot I — clôture** : version 1.0.0, GDD §17, diapositive de l'accueil, page d'attente `vaelmor/` (badge de version).
+- **Tests** : la suite complète passe au build (`npm run build` lance `validate-data`, `typecheck` et `npm test`).
+
+**Restes connus à la clôture (non bloquants)** :
+- **Session de l'auteur non jouée (n°280)** : ni ressenti, ni lisibilité, ni difficulté, ni questionnaire, ni F10 vécu ; aucun mineur recensé par un humain.
+- **60 ips (F3)** sur une vraie carte graphique : non mesurés (le banc tourne en rendu logiciel, ~23 ips).
+- **Équilibrage** : 20 rencontres sur 33 restent hors cible, souvent de peu (`docs/EQUILIBRAGE_M10.md` §4) ; n°268.
+- **n°272** (feuilles de combat de 6,9 Mo chargées à la demande) laissé ouvert.
+- La longue exécution du banc n'a pas été rejouée après la correction de sa fausse alerte (vérifiée sur une exécution courte).
+
+### Décision n°280 (clôture sans session de test, dérogation au n°279) — 06/11/2026
+- **n°280** : l'auteur décide de clore M10 sans la session de 60 min prévue par le n°279 (« J'ai décidé de clore sans session de test »). Le critère est donc tenu sur le seul banc automatique : aucun bloquant ni majeur ouvert à la connaissance du développement, mais **non éprouvé par un humain**. Les retours de session de `docs/TESTS_M10.md` restent vides. Si un bloquant ou un majeur apparaît à l'usage, il se traite avec le barème n°230 (correctif, nouvelle exécution du banc), dans une 1.0.x. Le kit F10 reste en place pour la suite.
 
 ### Décisions n°229 à n°249 (jalon M10) — validées par l'auteur le 05/11/2026
 - **n°229 — Lots** A à I dans cet ordre, validation sur captures / écoute, push à chaque lot validé.

@@ -1,6 +1,6 @@
 {
   "name": "vaelmor",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Vaelmor : Les Marées de Cendre — RPG tactique en monde ouvert (prototype navigateur)",
   "type": "module",

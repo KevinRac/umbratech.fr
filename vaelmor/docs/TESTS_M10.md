@@ -168,6 +168,8 @@ Questions ouvertes : (1) Qu'est-ce qui t'a le plus plu ? (2) Qu'est-ce qui t'a l
 
 ## Retours de la session de l'auteur
 
+> **Dérogation au n°279 (décision n°280, 06/11/2026) : la session de l'auteur n'a pas eu lieu.** L'auteur a décidé de clore M10 (version 1.0.0) sans session de test ; le critère de sortie repose sur le seul banc automatique. Le protocole ci-dessus reste valable pour une session ultérieure ; sa fiche et son tableau seront alors remplis ci-dessous.
+
 *À remplir après la session : la fiche, puis le tableau des constats.*
 
 ```
