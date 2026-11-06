@@ -447,6 +447,7 @@ kbd{font:700 13.5px var(--f-body);color:var(--flame);border:1px solid var(--line
 <script src="data/descente.js"></script>
 <script src="data/arene.js"></script>
 <script src="data/brumeux.js"></script>
+<script src="data/gardiens-descente.js"></script>
 <script src="data/resonances.js"></script>
 <script src="data/talents.js"></script>
 <script src="data/arbre.js"></script>
@@ -1032,6 +1033,8 @@ const DES_D=window.BRUME_DATA.descente;
 const ACTD=desActes(GA_D,DES_D);                   // ACTD[1..N] : les actes de la descente (ACTS[1..3] : les trois registres)
 const ACTES_N=ACTD.length-1;
 const ACTE=()=>RUN?(RUN.acteD||RUN.act||1):1;     // l'acte de la descente (1 à N) ; RUN.act reste le registre (1 à 3)
+function ACTG(){return room&&room.g18?ACTE():RUN.act;}   // v18.14 · la clé des compteurs d'un gardien : le registre, sauf dans la salle d'un gardien de la descente (room.g18 : l'acte)
+function nomG(a){return a>3?((ACTD[a]&&ACTD[a].boss)||'Le gardien'):ACTS[a].boss;}   // v18.14 · le nom du gardien d'une clé d'acte
 const DOOR={combat:{l:'Combat',c:'214,210,196',g:'C'},elite:{l:'Élite',c:'243,185,77',g:'É'},autel:{l:'Autel',c:'143,178,255',g:'A'},halte:{l:'Halte',c:'255,154,82',g:'H'},boss:{l:'Gardien',c:'255,77,77',g:'G'},act:{l:'Acte II',c:'180,140,255',g:'II'},act3:{l:'Acte III',c:'225,205,255',g:'III'},marchand:{l:'Colporteur',c:'120,220,170',g:'¤'},sanctuaire:{l:'Sanctuaire',c:'0,0,0',g:''},title:{l:'',c:'0,0,0',g:''}};
 
 // ───────────────────────── État
@@ -3387,14 +3390,14 @@ enterRoom=function(type){_enterRoom(type);if(!RUN||RUN.hub)return;if(!RUN.mem)RU
  const g=M().graves.find(g=>g.act===ACTE()&&g.room===RUN.roomIdx);
  if(g&&['combat','elite','boss'].includes(type)){room.grave=Object.assign({},g,{t:0,taken:false});later(1.4,()=>toast(`Un Écho dort ici : ton ${CLS[g.cls].short} est tombé dans cette salle, à ta descente ${g.n}.`,3.5));}};
 const _loseHp=loseHp;
-loseHp=function(n){if(RUN&&RUN.mem&&room&&room.type==='boss'&&!room.bossDead&&n>0)RUN.mem.bossHurt[RUN.act]=(RUN.mem.bossHurt[RUN.act]||0)+n;_loseHp(n);};
+loseHp=function(n){if(RUN&&RUN.mem&&room&&room.type==='boss'&&!room.bossDead&&n>0){const a=ACTG();RUN.mem.bossHurt[a]=(RUN.mem.bossHurt[a]||0)+n;}_loseHp(n);};   // v18.14 : ACTG
 const _hurtPlayer=hurtPlayer;
 hurtPlayer=function(dmg,src){if(RUN&&RUN.mem&&!(P.iT>0||P.dashT>0||P.dead)){let k=src&&src.type;if(!k){if(room&&room.type==='boss')k='boss';else{let best=null,bd=1e9;for(const e of enemies){if(e.dead||e.puppet>0)continue;const sh=['spectre','hurleur','voile','nourrice'].includes(e.type)?0.6:1,d=hyp(e.x-P.x,e.y-P.y)*sh;if(d<bd){bd=d;best=e;}}k=best?best.type:'brume';}}RUN.mem.lastSrc=k;}_hurtPlayer(dmg,src);};
 const _bossDefeated=bossDefeated;
-bossDefeated=function(e){const R=RUN.mem,a=RUN.act;
+bossDefeated=function(e){const R=RUN.mem,a=ACTG();   // v18.14 : ACTG (hors d'un gardien de la descente : RUN.act)
  if(R){if((R.bossHurt[a]||0)<=0.5)R.perfect.push(a);if(P.hp/P.s.maxHp<0.2)R.close.push(a);if(a===3&&ACTE()>=ACTES_N)R.won=true;}
  _bossDefeated(e);
- if(R&&R.perfect.includes(a))later(1.2,()=>toast(`Sans une égratignure. ${ACTS[a].boss} ne t’a pas touché : la Brume s’en souviendra.`,3.5));
+ if(R&&R.perfect.includes(a))later(1.2,()=>toast(`Sans une égratignure. ${nomG(a)} ne t’a pas touché : la Brume s’en souviendra.`,3.5));
  const m=M();if(!m.bossFirst[a]){m.bossFirst[a]=1;persist();giveFrag('first',e.x,e.y,2.4);}else if(Math.random()<fragP('boss',0.4))giveFrag('boss',e.x,e.y,2.4);};
 const _onRoomCleared=onRoomCleared;
 onRoomCleared=function(){const t=room.type,fond=!!(room.arene&&room.gardeK==='final');_onRoomCleared();if(!RUN.hub&&t==='elite'&&!fond&&Math.random()<fragP('elite',0.2))giveFrag('elite',W/2,H/2,0.8);};   // v18.12 (5h) : ni fragment d'élite au fond (le Brumeux)
@@ -3851,7 +3854,7 @@ function rzRender(){
 // ───────────────────────── Gain de Résonances
 const _bossDefeated9=bossDefeated;
 bossDefeated=function(e){
- const a=RUN.act,first=!M().bossFirst[a];
+ const a=ACTG(),first=!M().bossFirst[a];   // v18.14 : ACTG
  _bossDefeated9(e);
  const S=RZS();S.portalAct=Math.max(S.portalAct||1,Math.min(3,a+1));persist();
  if(first)rzGain(1,'premier gardien vaincu');
@@ -10242,7 +10245,7 @@ function demoBoot(cls){
  // (action 3) : tant qu'assemble.nemesis.actif est faux, rien n'est écrit, sauf essai de console (__nemesis.activer(), jamais gardé au rechargement).
  // Jamais en démo, ni dans une descente d'essai (RUN.essai, ou ?masque= ?brume= ?glas= ?dernier= ?nemesis=).
  var NEMSRC=null;   // projectile de la Brume qui touche (navette, perçant) : de qui il vient
- const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/.test(location.search),NDEV={on:null};   // console : activer(true) force, activer(false) éteint, activer(null) rend la main aux données
+ const NM=A.nemesis||null,NSV=window.BRUME_DATA.souvenirs||{},ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=/.test(location.search),NDEV={on:null};   // console : activer(true) force, activer(false) éteint, activer(null) rend la main aux données
  const nemActif=()=>!!(NM&&(NDEV.on==null?NM.actif:NDEV.on))&&!DEMO;
  const nemInfo=id=>{const n=NODES[id];return n?{cls:n.cls,genre:/_sk$/.test(id)?'u':(n.kind||'m')}:null;};
  // qui a porté le dernier coup qui t'a blessé (pour les statistiques : la promotion n'en dépend pas, N2). Sans changer les arguments de
@@ -11029,7 +11032,7 @@ function demoBoot(cls){
  function dsVeille(dt){
   if(DSI.t>0)DSI.t-=dt;
   if(!RUN||RUN.hub)return;
-  if(on()&&room&&room.type==='boss'&&RUN.act===3&&MEM()&&MEM().reserveGlas==null)MEM().reserveGlas=(RUN.reserveBrume||[]).length;   // DS12, DS14 : la réserve à l'entrée du Glas
+  if(on()&&room&&room.type==='boss'&&RUN.act===3&&!room.g18&&MEM()&&MEM().reserveGlas==null)MEM().reserveGlas=(RUN.reserveBrume||[]).length;   // DS12, DS14 : la réserve à l'entrée du Glas
   if(!dsActif())return;
   if(DSH.acte!==RUN.act){const prem=!DSH.acte;DSH.acte=RUN.act;if(!prem||RUN.act>1)setTimeout(()=>dsPalpite($('#hBraise')),900);}   // une braise neuve
   DSH.sabT-=dt;if(DSH.sabT<=0){DSH.sabT=0.2;const a=designe(),t=document.querySelector('#hMem .mt.ds');if(t)t.classList.toggle('attend',!!(a&&dsEnCours(a.id)));}}
@@ -12634,7 +12637,7 @@ function drawScene27(pass){try{SC27.scene(pass);}catch(err){console.error(err);}
 // Essai : index.html?descente=<acte>[&fin=1][&classe=…] ; console : __descente.
 (function(){
  const PA=DES_D.paliers,ORD=DES_D.ordre;
- const ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/.test(location.search);
+ const ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=/.test(location.search);
  // garde : la place d'un gardien qui n'existe pas encore (actes IV à IX) ; mini : un miniboss (acte X) ; final : le boss final (acte X). Tous trois
  // sont, pour l'instant, un Masqué imposé et renforcé (data/descente.js, provisoire). t : la phrase du message de salle purifiée.
  Object.assign(DOOR,{acte:{l:'Acte IV',c:'225,205,255',g:'IV'},garde:{l:'Gardien',c:'255,77,77',g:'G',t:'Le gardien de l’acte t’attend.'},mini:{l:'Miniboss',c:'255,138,92',g:'M',t:'Un miniboss t’attend.'},final:{l:'Boss final',c:'255,60,90',g:'F',t:'Le boss final t’attend.'}});
@@ -13914,7 +13917,7 @@ function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,
   // v18.12 (5h) : une sauvegarde illisible (d'une version plus récente, ou abîmée) n'est jamais écrasée par une neuve
   const illisible=!X.sauve&&SAVE.brumeux!=null&&typeof SAVE.brumeux==='object'&&Object.keys(SAVE.brumeux).length>0;
   if(!o.essai&&!illisible&&N!==S){SAVE.brumeux=brxEcrireSauve(N);X.sauve=N;try{persist();}catch(err){}}}
- const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/.test(location.search);   // v18.12 (5h) : la liste d'ESSAI18 (une descente relancée depuis un essai n'écrit rien)
+ const ESSAI_URL18=()=>/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=/.test(location.search);   // v18.12 (5h) : la liste d'ESSAI18 (une descente relancée depuis un essai n'écrit rien)
  // ── la lecture (Q2) : ce que le jeu sait de toi, vers les poids des tirages ; en image : son regard passe sur ton héros, puis son petit rire
  function lire(){const S={};
   try{S.prof=profile();}catch(err){S.prof={};}
@@ -15442,6 +15445,250 @@ function brxFiltreV(D,M,B,base,cons,j){const m=D.effacement.resserrements.marge,
   sauve:()=>({lu:X.sauve,brut:SAVE.brumeux||null}),noter:(o)=>brxNoter(X.sauve||brxNeuf(),o,DB),
   lancer,batir,poserSorte,resserrer:()=>resserrer(),montrer:o=>montrer(o),mourir:()=>mourir(),emprunter:id=>emprunterId(id),defaire:()=>{const c=X.emp&&X.emp.cur;if(!c||c.defait)return false;defaire(c);return true;},coudre:()=>coudre(),couper:id=>{const f=X.cou&&X.cou.fils.find(y=>y.id===id);if(f&&f.noeud)couper(f);return!!f;},fils:()=>X.cou?X.cou.fils:[],decoudre:()=>decoudre(),poser:(x,y,r,o)=>{if(typeof x==='string')return poserSorte(x,y);o=o||{};const base=room.pillars.filter(p=>!p.brx18),c={x,y,r:r||34};const v=brxPoser(DB,monde(),AR,base,consTous(),c,{x:P.x,y:P.y,r:P.r},X.palier);if(v.ok){X.cons.push(Object.assign(c,{kind:'pilier18',brx18:true,cle:'brx18:'+(++X.ncons),t:o.annonce?0:DB.constructions.annonceS,annonce:DB.constructions.annonceS,pose:false,attente:0,part:v.part,aire:v.aire}));}return v;},   // o.annonce : avec son annonce entière (sinon posée au pas suivant)
   dbg:()=>({get X(){return X;},get pp(){return pproj;},get ep(){return eproj;},P,RUN,room,enemies,eproj,AR,CAM,pure:{brxLire,brxTirer,brxBoucle,brxBudget,brxPv,brxSeuils,brxPhase,brxPreavis,brxSortie,brxPlacer,brxDans,brxGrille,brxConnexe,brxPoser,brxNeuf,brxLireSauve,brxEcrireSauve,brxNoter,brxPire,brxPartition,brxTableau,brxTiers,brxTiersLoin,brxDansRect,brxFils,brxCadre,brxToile,brxSortieToile,brxPoidsTab,brxCoupe,brxRuee,brxEquerre,brxTruelle,brxSortesPoids,brxOrdreSortes,brxGeo,brxBatir,brxPvPart,brxFissure,brxAnnule,brxFiltreBornes,brxChute,brxEffondrement,brxCloche,brxAppel,brxSurjet,brxDe,brxSortieDe,brxAiguilles,brxPointsCouture,brxRelie,brxSouvenirCouture,brxCoudre,brxNemCouture,brxFilsALancer,brxAboutit,brxNuCouture,brxBudgetCouture,brxPvCousu,brxPvNoeud,brxPlancherCharge,brxPromu,brxEmpruntables,brxPoidsEmprunt,brxEmprunts,brxEtapesEmprunt,brxPasse,brxReverence,brxReverenceOk,brxVolte,brxFiltreAire,brxPlafondDs,brxPointChute,brxVariantesIV,brxDefaitable,brxRefusEmprunt,brxMontre,brxCandidatsV,brxPremierV,brxEclairFrag,brxEclair,brxEffondreV,brxFosse,brxVariantesV,brxPlacerV,brxLibresV,brxResserrement,brxResserrePret,brxFiltreV},T9,eff:()=>X.eff,montre:()=>X.montre,parC:()=>X.parC,imgCorps:(cls,et)=>imgCorps(cls||P.cls,et||'n',DB.dessin.r.sol),emp:()=>X.emp,glyphe:GL.url,step:dt=>step(dt),render:()=>render(),press,hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),cuire,fragAlpha,lights:()=>lights,cuireModules,assembler,blesser,retirer,cible2:()=>cible2(),zonesCousus:()=>zonesCousus(),zoneAutre18:e=>zoneAutre18(e),faible:()=>X.e?faible(X.e):null,croix:()=>X.e?croixXY(X.e):null,mod:()=>X.mod,heal:(n,s)=>heal(n,s),updateProjectiles:dt=>updateProjectiles(dt),nearestFoe:(x,y,m,f)=>nearestFoe(x,y,m,f),crashed:e=>crashed(e)})};
+})();
+
+/*gar:pur*/
+// v18.14 · Les gardiens de la descente (action 6.1a) : logique pure, sans P, RUN, room ni SAVE (tout passe en argument). Vérifiée hors navigateur par
+// outils/sim-gardiens.mjs. GD : data/gardiens-descente.js (BRUME_DATA.gardiensD). La géométrie du Brumeux (bloc /*brx:pur*/ : brxDans, brxSortie,
+// brxGrille) est réutilisée telle quelle, sans changement.
+const GAR_FORMES=['disque','anneau','couloir','cone','rayons','croix','losange','case','projectile'],GAR_CRANS=['temps','contraintes','enchainements','preavis','entourage'];
+// l'entrée d'un gardien (acte 4 à 9 ; plus tard mini1, mini2), ou null
+function garEntree(GD,k){const g=GD&&GD[k];return g&&typeof g==='object'&&g.nom&&(g.acte===+k)?g:null;}
+// les gardiens allumés : {acte: nom} (l'interrupteur, Q2 : seul actif === true allume, et seulement aux actes IV à IX)
+function garActifs(GD){const out={};for(const k of Object.keys(GD||{})){const g=garEntree(GD,k);if(g&&g.actif===true&&g.acte>=4&&g.acte<=9)out[g.acte]=g.nom;}return out;}
+// les seuils de ses temps (fractions de PV, décroissants) : ceux du Normal, puis le seuil du temps de plus si le palier l'accorde (tp : desTempsEnPlus)
+function garSeuils(GD,g,tp){const s=((g.temps&&g.temps.seuils)||GD.commun.seuils).slice();if(tp&&g.tempsEnPlus&&g.tempsEnPlus.seuil<s[s.length-1])s.push(g.tempsEnPlus.seuil);return s;}
+// le temps (1 à n) d'un nombre de PV
+function garTemps(hp,maxHp,seuils){let k=1;for(const s of seuils){if(hp>maxHp*s)break;k++;}return Math.min(k,seuils.length+1);}
+// la file d'un temps : ses attaques mélangées (rng : générateur), jamais deux fois la même de suite, la première différente de la dernière jouée
+function garFile(g,temps,rng,dernier){const L=((g.file||{})[temps]||(g.file||{})[3]||[]).slice();if(L.length<2)return L;
+ const bon=a=>a[0]!==dernier&&a.every((k,i)=>!i||k!==a[i-1]);
+ for(let essai=0;essai<24;essai++){const a=L.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}if(bon(a))return a;}
+ // repli glouton : à chaque place, la clé restante la plus nombreuse qui ne répète pas la précédente
+ const reste={};for(const k of L)reste[k]=(reste[k]||0)+1;const out=[];let prec=dernier;
+ for(let i=0;i<L.length;i++){const ks=Object.keys(reste).filter(k=>reste[k]>0&&k!==prec).sort((x,y)=>reste[y]-reste[x]);if(!ks.length)break;out.push(ks[0]);reste[ks[0]]--;prec=ks[0];}
+ return out;}
+// Q9 · PV neutres : le DPS médian des quatre formes contre le mannequin × le temps de frappe, arrondi à 100
+function garPv(dps,frappeS){return Math.max(100,Math.round(dps*frappeS/100)*100);}
+// Q10 · dégâts neutres : une part des PV du build de référence de l'acte, jamais au-delà de partMax
+function garDegats(GD,acte,part){const C=GD.commun,pv=(C.reference.pvRef||{})[acte]||300;return Math.max(1,Math.round(Math.min(C.partMax,Math.max(0,part||0))*pv));}
+// Q9 · le build de référence d'un acte : la liste du Brumeux, dans son ordre, un point par niveau gagné (niveau − 1), chaque talent jusqu'à son rang
+// maximum avant le suivant. max : id → rang maximum. Rend [[id, rang], …] (sans les talents à 0).
+function garReference(liste,niveau,max){let pts=Math.max(0,(niveau|0)-1);const out=[];for(const id of liste||[]){if(pts<=0)break;const m=max[id]||1,r=Math.min(m,pts);out.push([id,r]);pts-=r;}return out;}
+// un geste : ses zones, d'après sa forme. h : le gardien [x, y] ; p : toi [x, y] ; v : variante (0 telle quelle ; ensuite décalée ou tournée,
+// alternativement d'un côté et de l'autre)
+function garGeste(a,h,p,v){v=v|0;const s=v%2?1:-1,n=Math.ceil(v/2);
+ if(a.forme==='disque'){const c=a.cible==='lui'?h:p,ang=Math.atan2(p[1]-h[1],p[0]-h[0])+s*Math.PI/2,d=n*a.r*0.45;return[{forme:'disque',x:c[0]+Math.cos(ang)*d,y:c[1]+Math.sin(ang)*d,r:a.r}];}
+ if(a.forme==='couloir'){const o=a.cible==='toi'?p:h,ang=Math.atan2(p[1]-h[1],p[0]-h[0])+s*n*0.22,L=a.len||900;return[{forme:'couloir',x0:o[0],y0:o[1],x1:o[0]+Math.cos(ang)*L,y1:o[1]+Math.sin(ang)*L,w:a.w}];}
+ if(a.forme==='cone'){const ang=Math.atan2(p[1]-h[1],p[0]-h[0])+s*n*0.2;return[{forme:'cone',x:h[0],y:h[1],a:ang,ouv:(a.ouv||110)*Math.PI/180,r0:a.r0||0,r1:a.r1||160}];}
+ if(a.forme==='anneau'){const c=a.cible==='lui'?h:p;return[{forme:'anneau',x:c[0],y:c[1],r0:a.r0,r1:a.r1,breche:a.breche?{a:Math.atan2(h[1]-c[1],h[0]-c[0])+Math.PI+s*n*0.5,l:a.breche}:null}];}
+ return[];}
+function garVariantes(a,h,p,n){const out=[];for(let v=0;v<n;v++)out.push(garGeste(a,h,p,v));return out;}
+// la sortie au détour (Q5) : la case libre la plus proche (hors des zones, hors des obstacles) atteinte à pied par un chemin sur la grille de FF qui
+// contourne les obstacles, avant le coup (charge − réflexe, à la vitesse v). Sans obstacle, c'est exactement brxSortie (ligne droite).
+// o : {pr, v, charge, reflexe, arene, monde, piliers (obstacles : disques)} ; S : {pas, essais, grille, marge}
+function garSortieGrille(S,zones,p,o){if(!o.piliers||!o.piliers.length)return brxSortie({sortie:S},zones,p,o);
+ const pr=o.pr||0,G=brxGrille(o.monde,o.arene,o.piliers,{cs:S.grille,pad:Math.max(pr,S.marge)}),cs=G.cs,cols=G.cols,rows=G.rows,blk=G.blk;
+ const dansZ=(x,y)=>zones.some(z=>brxDans(z,x,y,pr));
+ if(!dansZ(p[0],p[1]))return{ok:true,d:0,q:[p[0],p[1]]};
+ const Rm=Math.max(0,(o.v||180)*Math.max(0,(o.charge||0)-(o.reflexe||0)));
+ let c0=Math.max(0,Math.min(cols-1,Math.floor(p[0]/cs))),r0=Math.max(0,Math.min(rows-1,Math.floor(p[1]/cs)));
+ const dist=new Float64Array(cols*rows).fill(Infinity),i0=r0*cols+c0;dist[i0]=Math.hypot((c0+0.5)*cs-p[0],(r0+0.5)*cs-p[1]);
+ const NB=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,Math.SQRT2],[1,-1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2]],file=[i0];let best=null;
+ while(file.length){let bi=0;for(let k=1;k<file.length;k++)if(dist[file[k]]<dist[file[bi]])bi=k;const i=file.splice(bi,1)[0],d=dist[i];if(d>Rm)break;
+  const c=i%cols,r=(i/cols)|0,x=(c+0.5)*cs,y=(r+0.5)*cs;
+  if(!blk[i]&&!dansZ(x,y)){best={ok:true,d,q:[x,y]};break;}
+  for(const [dc,dr,w] of NB){const cc=c+dc,rr=r+dr;if(cc<0||rr<0||cc>=cols||rr>=rows)continue;const j=rr*cols+cc;if(blk[j])continue;if(dc&&dr&&(blk[r*cols+cc]||blk[rr*cols+c]))continue;const nd=d+w*cs;if(nd<dist[j]){if(dist[j]===Infinity)file.push(j);dist[j]=nd;}}}
+ return best||{ok:false,d:Infinity,q:null};}
+// placer : l'indice de la première variante qui laisse une sortie (au détour s'il y a des obstacles), sinon −1 (le geste saute)
+function garPlacer(S,variantes,p,o){for(let k=0;k<variantes.length&&k<S.essais;k++)if(garSortieGrille(S,variantes[k],p,o).ok)return k;return -1;}
+// un coup reçu est-il signé ? zone de gardien : son préavis a couru en entier et dure au moins preavisMin ; contact de son corps, tir annoncé, ennemi
+// ordinaire (sa propre grammaire) : oui ; une source inconnue : non
+function garJuge(C,coup){if(!coup)return false;if(coup.k==='zone')return coup.charge>=C.preavisMin-1e-9&&coup.age>=coup.charge-1e-9;return coup.k==='contact'||coup.k==='tir'||coup.k==='ennemi';}
+// Q25 · l'échelle : les repères (gardiens I à III) puis les gardiens 4 à 9 présents dans les données, dans l'ordre des actes. Rend {ok, erreurs[]}.
+function garEchelle(GD){const E=GD.commun.echelle,err=[],suite=[];for(const k of Object.keys(E.reperes).sort((a,b)=>a-b))suite.push(Object.assign({acte:+k},E.reperes[k]));
+ for(let n=4;n<=9;n++){const g=garEntree(GD,n);if(g&&g.echelon)suite.push(Object.assign({acte:n,nom:g.nom,habiletes:g.habiletes||[]},g.echelon));}
+ const vues=new Set();
+ for(let i=0;i<suite.length;i++){const s=suite[i];for(const c of GAR_CRANS)if(typeof s[c]!=='number')err.push(`${s.nom} : cran ${c} manquant`);
+  for(const h of s.habiletes||[])if(!E.habiletes[h])err.push(`${s.nom} : habileté « ${h} » inconnue`);
+  if(s.acte>=4){if(!(s.habiletes||[]).some(h=>!vues.has(h)))err.push(`${s.nom} : aucune habileté neuve`);
+   const q=suite[i-1];let monte=false;
+   for(const c of GAR_CRANS){if(c==='preavis'){if(s[c]>q[c]+1e-9)err.push(`${s.nom} : le préavis remonte (${q[c]} → ${s[c]})`);if(s[c]<q[c]-1e-9)monte=true;}
+    else{if(s[c]<q[c])err.push(`${s.nom} : le cran ${c} baisse (${q[c]} → ${s[c]})`);if(s[c]>q[c])monte=true;}}
+   if(!monte)err.push(`${s.nom} : aucun cran ne monte`);
+   if(s.preavis<GD.commun.preavisMin-1e-9)err.push(`${s.nom} : préavis sous ${GD.commun.preavisMin} s`);}
+  for(const h of s.habiletes||[])vues.add(h);}
+ return{ok:!err.length,erreurs:err,suite};}
+/*/gar:pur*/
+// ═════════════════════════════════════════════════════════════════════════════
+// v18.14 · Les gardiens de la descente (chantier v18, action 6.1a : le socle commun ; cadrage _dev/cadrages/la-brume-v18-6-gardiens-cadrage.md,
+// Q1–Q25, validé le 6 novembre 2026). Données : data/gardiens-descente.js ; logique pure /*gar:pur*/ ci-dessus, vérifiée par outils/sim-gardiens.mjs.
+// Tous les gardiens sont ÉTEINTS (actif:false) : en jeu, rien ne change (les places provisoires restent) ; seul l'essai ouvre un gardien.
+// L'interrupteur (Q2) : actif vrai pose ACTD[n].boss (desPorte donne alors la porte « boss ») ; faux, la place provisoire, au tirage près.
+// L'aiguillage (Q3) : la salle (room.g18) et l'ennemi (e.g18) marqués ; chacun des points d'entrée qui, au registre 3, ferait de lui un second Glas
+// Originel, passe par lui : createBoss (et le Glas qui se souvient), updateBoss (et les temps v13), le dessin (drawHeart, drawBossPost, eyePts), la
+// lumière, la scène d'entrée et de mort (SC27), le glyphe de la porte et de la barre, le sol (themeOf, layoutFor, floorFlags : le décor de son acte,
+// Q4), les vaisseaux du Cœur (le thème n'est plus coeur), la réserve notée à l'entrée du Glas (DS12), les compteurs de la Mémoire et la mort (ACTG,
+// foeName). La musique reste celle du registre. Moteur (Q5) : une file par temps, des gestes aux formes connues, toujours une sortie, sinon il
+// saute ; temps par e.seuils18 (la retouche v18.5 de hitEnemy), temps de plus en Difficile et en Extrême (desTempsEnPlus) ; relâche (sonné) après une
+// file. Journal des coups hors arène (aucun coup sans signe). Essai : index.html?gardien=<4..9>[&temps=n][&attaque=<id>][&palier=…][&ref=1]
+// [&bot=2][&mannequin=1][&dieu=0][&classe=…] ; console : __gardiens18.
+// ═════════════════════════════════════════════════════════════════════════════
+(()=>{
+ const GD=window.BRUME_DATA&&window.BRUME_DATA.gardiensD;if(!GD)return;
+ const C=GD.commun,SJ=(window.BRUME_DATA.souvenirsBrume||{}).justice||{joueur:{rayon:14,vitesse:180},reflexeS:0.05},DBX=window.BRUME_DATA.brumeux;
+ const QS=location.search,qv=k=>(new RegExp('[?&]'+k+'=([^&]*)').exec(QS)||[])[1];
+ const ESSAI=/[?&]gardien=[4-9](?:&|$)/.test(QS)&&!/[?&]dernier=/.test(QS);
+ // ── l'interrupteur (Q2)
+ for(const [n,nom] of Object.entries(garActifs(GD)))if(ACTD[n]&&ACTD[n].fin==='gardien')ACTD[n].boss=nom;
+ // ── l'état
+ const ST={force:null,essai:null,dieu:false,bot:0,mannequin:false,j:{coups:[],sansSigne:0,lances:0,sautes:0,temps:[]}};
+ const ici=()=>{if(!RUN||RUN.hub)return null;const g=garEntree(GD,ACTE());if(!g)return null;return g.actif===true||ST.force===g?g:null;};
+ const tpPalier=()=>desTempsEnPlus(desRegles(DES_D,(RUN&&!RUN.hub&&RUN.palierD)||'normal'),ACTE());
+ const S=()=>room&&room.g18s;
+ const KEY=g=>'g18_'+g.acte;
+ for(let n=4;n<=9;n++){const g=garEntree(GD,n);if(g){V7FOE1[KEY(g)]=g.un||g.nom;if(g.decor&&g.decor.palette&&!THEMES[g.decor.theme])THEMES[g.decor.theme]=g.decor.palette;if(g.couleurs&&g.couleurs.lueur)TINT[KEY(g)]=g.couleurs.lueur.join(',');}}
+ // ── la salle (makeRoom) : marquée avant le sol (son thème, Q4)
+ let prochain=null;
+ const _mr=makeRoom;makeRoom=function(type){prochain=type==='boss'?ici():null;try{const rm=_mr.apply(this,arguments);if(prochain){rm.g18=prochain;rm.g18s={file:[],dernier:null,zones:[],ph:'entracte',t:1,temps:1,frappe:0,nb:0,mort:null,entree:null};}return rm;}finally{prochain=null;}};
+ const _th=themeOf;themeOf=function(type){if(prochain&&type==='boss'&&prochain.decor)return prochain.decor.theme;return _th.apply(this,arguments);};
+ const _lf=layoutFor;layoutFor=function(type){if(prochain&&type==='boss')return[];return _lf.apply(this,arguments);};
+ const _ff=floorFlags;floorFlags=function(g,p){if(prochain&&prochain.decor){floorCobbles(g,p);decorSol(g,prochain.decor);return;}return _ff.apply(this,arguments);};
+ // le sol de sa salle : pavés mouillés, flaques d'eau trouble, grilles d'égout (peints une fois, comme tout sol)
+ function decorSol(g,D){const x0=AR.x0+60,x1=AR.x1-60,y0=AR.y0+60,y1=AR.y1-60;
+  for(let i=0;i<(D.flaques|0);i++){const x=rand(x0,x1),y=rand(y0,y1),rx=rand(28,70),ry=rx*rand(0.35,0.55);g.fillStyle='rgba(20,30,26,.55)';ell(g,x,y,rx,ry);g.fill();g.strokeStyle='rgba(150,175,150,.10)';g.lineWidth=1.5;ell(g,x-rx*0.15,y-ry*0.2,rx*0.6,ry*0.35);g.stroke();}
+  for(let i=0;i<(D.grilles|0);i++){const x=rand(x0,x1),y=rand(y0,y1),w=46,h=30;g.fillStyle='#0d1210';g.fillRect(x-w/2,y-h/2,w,h);g.strokeStyle='rgba(90,70,50,.9)';g.lineWidth=2;g.strokeRect(x-w/2,y-h/2,w,h);g.beginPath();for(let k=1;k<5;k++){g.moveTo(x-w/2+k*w/5,y-h/2);g.lineTo(x-w/2+k*w/5,y+h/2);}g.stroke();}}
+ // ── createBoss : lui, jamais le Glas (ni sa mémoire, ni son cœur)
+ const _cb=createBoss;createBoss=function(){const g=room&&room.g18;if(!g||!RUN||RUN.hub)return _cb.apply(this,arguments);
+  const e=createEnemy('boss',W/2,AR.y0+170),V=RUN.v9;let f=1;if(V){if(has9('M5'))f*=1.08;f*=1+(V.bossHp||0);}
+  e.maxHp=Math.round(g.pv*f);e.hp=e.maxHp;e.dmg=garDegats(GD,g.acte,C.contact);e.spd=g.vitesse;e.xp=g.xp;e.name=g.nom;e.r=g.rayon;
+  e.phase=1;e.queue=[];e.state='idle';e.patT=1.4;e.fade=1;e.g18=g;e.seuils18=garSeuils(GD,g,tpPalier());
+  room.boss=e;RUN.bossStart=RUN.time;const s=S();s.t=1.0;s.temps=1;s.file=[];s.rng=desRng((Math.random()*4294967296)>>>0);
+  if(ST.essai)essaiApres(e);
+  return e;};
+ // ── updateBoss : son moteur
+ const _ub=updateBoss;updateBoss=function(e,dt,slow,dP,touching){if(!e||!e.g18)return _ub.apply(this,arguments);try{pas(e,dt,dP,touching);}catch(err){console.error(err);}};
+ function entracte(s,g){const E=(g.rythme||{}).entracteS||[];return E[Math.min(E.length-1,s.temps)]||0.9;}
+ function pas(e,dt,dP,touching){const s=S(),g=e.g18;if(!s)return;
+  // les temps (les seuils sont tenus par hitEnemy : un coup ne traverse pas deux seuils, verrou de 1,2 s)
+  const tp=garTemps(e.hp,e.maxHp,e.seuils18);
+  if(tp>s.temps&&!ST.mannequin){s.temps=tp;e.phase=tp;s.zones=[];s.file=[];s.ph='entracte';s.t=0.8;ST.j.temps.push({t:+RUN.time.toFixed(2),temps:tp});sfx('phase');shake(10,0.4);
+   const ti=(g.temps&&g.temps.titres||[])[tp-1];if(ti)addNum(e.x,e.y-e.r-34,ti,'raw');tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:'rage'});}
+  // les zones
+  for(const z of s.zones){if(z.fait){z.flash-=dt;continue;}z.t+=dt;if(z.t<z.charge)continue;z.fait=true;z.flash=0.15;
+   if(!P.dead&&P.dashT<=0&&brxDans(z,P.x,P.y,P.r)){s.zoneCourante=z;try{hurtPlayer(z.degats,e);}finally{s.zoneCourante=null;}}}
+  s.zones=s.zones.filter(z=>!z.fait||z.flash>0);
+  if(ST.mannequin)return;
+  if(touching&&e.fade>0.5)contact(e,e.dmg);
+  const vit=e.spd*(s.temps>=3?1.3:1);
+  if(s.ph==='entracte'){if(dP>230)moveTo(e,P.x,P.y,vit,dt);s.t-=dt;if(s.t<=0)lancer(e,s,g);}
+  else if(s.ph==='geste'){if(!s.zones.some(z=>!z.fait)){s.ph='entracte';s.t=entracte(s,g);}}
+  else if(s.ph==='relache'){s.t-=dt;if(s.t<=0){s.ph='entracte';s.t=entracte(s,g)*0.5;}}}
+ function lancer(e,s,g){
+  if(!s.file.length){if(s.nb>0&&!ST.essai_attaque){const nu=(g.rythme||{}).relacheS||0;if(nu>0){e.vuln=Math.max(e.vuln||0,nu);s.ph='relache';s.t=nu;s.nb=0;return;}}
+   s.file=ST.essai_attaque?[ST.essai_attaque]:garFile(g,s.temps,s.rng,s.dernier);}
+  const id=s.file.shift(),a=g.attaques[id];if(!a){s.t=0.5;return;}s.dernier=id;s.nb++;
+  const V=garVariantes(a,[e.x,e.y],[P.x,P.y],C.sortie.essais),o=optSortie(a.preavis);
+  const k=garPlacer(C.sortie,V,[P.x,P.y],o);ST.j.lances++;
+  if(k<0){ST.j.sautes++;s.ph='entracte';s.t=0.4;return;}
+  const dg=garDegats(GD,g.acte,a.part);
+  for(const z of V[k])s.zones.push(Object.assign(z,{t:0,charge:Math.max(C.preavisMin,a.preavis),degats:dg,id,fait:false}));
+  s.ph='geste';}
+ function optSortie(charge){const pr=Math.max(SJ.joueur.rayon,P.r||0),v=Math.min(SJ.joueur.vitesse,pMarche());
+  const pil=room.pillars.filter(p=>p.r>0);return{pr,v,charge,reflexe:SJ.reflexeS,arene:AR,monde:{w:W,h:H},piliers:pil};}
+ // ── les zones (orange, la grammaire des zones de gardien), sous les ennemis
+ function arc(c,x,y,r){c.beginPath();c.arc(x,y,Math.max(0.1,r),0,TAU);}
+ function dessinZones(c){const s=S();if(!s)return;
+  for(const z of s.zones){const k=Math.min(1,z.t/z.charge),al=z.fait?0.5*Math.max(0,z.flash)/0.15:1;c.save();c.globalAlpha=al;c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
+   if(z.forme==='couloir'){const a=Math.atan2(z.y1-z.y0,z.x1-z.x0),l=hyp(z.x1-z.x0,z.y1-z.y0);c.translate(z.x0,z.y0);c.rotate(a);c.fillRect(0,-z.w/2,l,z.w);c.fillStyle=`rgba(${TELE.zone},0.26)`;c.fillRect(0,-z.w/2,l*k,z.w);c.strokeRect(0,-z.w/2,l,z.w);}
+   else if(z.forme==='cone'){c.beginPath();c.arc(z.x,z.y,z.r1,z.a-z.ouv/2,z.a+z.ouv/2);c.arc(z.x,z.y,z.r0,z.a+z.ouv/2,z.a-z.ouv/2,true);c.closePath();c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;c.beginPath();c.arc(z.x,z.y,z.r0+(z.r1-z.r0)*k,z.a-z.ouv/2,z.a+z.ouv/2);c.arc(z.x,z.y,z.r0,z.a+z.ouv/2,z.a-z.ouv/2,true);c.closePath();c.fill();}
+   else if(z.forme==='case'){c.fillRect(z.x0,z.y0,z.x1-z.x0,z.y1-z.y0);c.strokeRect(z.x0+1,z.y0+1,z.x1-z.x0-2,z.y1-z.y0-2);}
+   else if(z.forme==='anneau'){arc(c,z.x,z.y,z.r1);c.stroke();arc(c,z.x,z.y,z.r0);c.stroke();c.beginPath();c.arc(z.x,z.y,z.r1,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();}
+   else{arc(c,z.x,z.y,z.r);c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;arc(c,z.x,z.y,z.r*k);c.fill();}
+   c.restore();}}
+ const _dt=drawTelegraphs;drawTelegraphs=function(){_dt.apply(this,arguments);if(room&&room.g18s&&state==='play')try{dessinZones(ctx);}catch(err){console.error(err);}};
+ // ── le dessin (6.1a : la silhouette d'essai : un corps de ciré, la herse au dos, un visage d'étain sans traits, le registre sur la poitrine)
+ const RGB=a=>a.join(',');
+ function corps(c,e,a){const g=e.g18,K=g.couleurs||{},r=e.r,s=room&&room.g18s,tp=s?s.temps:1;c.save();c.globalAlpha*=(a==null?1:a)*(e.fade==null?1:e.fade);
+  shadowAt(c,0,r*0.7,r*1.1,r*0.4,0.45);
+  if(tp<3){c.strokeStyle=`rgb(${RGB(K.rouille||[120,72,44])})`;c.lineWidth=3;c.beginPath();for(let i=-2;i<=2;i++){c.moveTo(i*r*0.28,-r*1.75);c.lineTo(i*r*0.28,-r*0.35);}for(const y of[-1.55,-1.05,-0.6]){c.moveTo(-r*0.66,y*r);c.lineTo(r*0.66,y*r);}c.stroke();}
+  c.beginPath();c.moveTo(-r*0.55,-r*0.75);c.lineTo(r*0.55,-r*0.75);c.lineTo(r*0.8,r*0.65);c.lineTo(-r*0.8,r*0.65);c.closePath();inkFill(c,`rgb(${RGB(K.cire||[38,46,52])})`,2.4);
+  c.beginPath();c.moveTo(-r*0.62,-r*0.78);c.lineTo(r*0.62,-r*0.78);c.lineTo(r*0.5,-r*0.45);c.lineTo(-r*0.5,-r*0.45);c.closePath();inkFill(c,`rgb(${RGB(K.etain||[128,132,140])})`,2);
+  ell(c,0,-r*1.08,r*0.3,r*0.38);inkFill(c,`rgb(${RGB(K.etain||[128,132,140])})`,2.2);
+  c.fillStyle='rgb(150,130,95)';c.strokeStyle=INK;c.lineWidth=1.6;c.fillRect(-r*0.24,-r*0.3,r*0.48,r*0.36);c.strokeRect(-r*0.24,-r*0.3,r*0.48,r*0.36);
+  c.restore();}
+ const faible=e=>[e.x,e.y-e.r*0.12,e.r];
+ const _dh=drawHeart;drawHeart=function(c,e){if(e&&e.g18){try{corps(c,e);}catch(err){console.error(err);}return;}return _dh.apply(this,arguments);};
+ const _dbp=drawBossPost;drawBossPost=function(e){if(e&&e.g18){try{const c=ctx,fd=e.fade==null?1:e.fade;if(G27.aNu(e,fd)){const [x,y,r]=faible(e);G27.anneau(c,x,y,r);}}catch(err){console.error(err);}return;}return _dbp.apply(this,arguments);};
+ const _ep=eyePts;eyePts=function(e){if(e&&e.g18)return[];return _ep.apply(this,arguments);};   // un visage sans traits
+ // ── sa lumière : la sienne, sans battement
+ const _cl=computeLights;computeLights=function(){_cl.apply(this,arguments);const e=room&&room.g18&&room.boss;if(!e||e.dead||!e.g18)return;const k=KEY(e.g18);if(!TINT[k])return;for(const l of lights)if(l.x===e.x&&l.y===e.y&&l.ex===false){l.c=k;l.r=e.r*2.4;}};
+ // ── le glyphe : la porte de sa salle et la barre de vie (à la place de celui du Glas)
+ const GLY={};function glyphe(g){const k=g.acte;if(!GLY[k]){const im=new Image();im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(g.glyphe);GLY[k]={im,url:im.src};}return GLY[k];}
+ const _gi=g27GlypheImg;g27GlypheImg=function(n){const g=RUN&&!RUN.hub&&+n===RUN.act&&ici();if(g&&g.glyphe){const G=glyphe(g);return G.im.complete&&G.im.naturalWidth>0?G.im:null;}return _gi.apply(this,arguments);};
+ const _gh=g27GlypheHud;g27GlypheHud=function(el,n){const b=room&&room.boss;if(el&&b&&b.g18&&!b.dead&&b.g18.glyphe){const G=glyphe(b.g18);if(el._g!==G.url){el._g=G.url;el.src=G.url;}if(el.hidden)el.hidden=false;return;}return _gh.apply(this,arguments);};
+ for(let n=4;n<=9;n++){const g=garEntree(GD,n);if(g&&g.actif===true&&g.glyphe)glyphe(g);}   // chargé dès l'ouverture : la porte le porte dès sa première image
+ // ── la scène d'entrée et de mort (à la place de celles du Glas) : un fondu pendant la bannière ; la mort, il s'enfonce (1,5 s, rien n'est retardé)
+ const _sc=SC27.scene,_de=SC27.debut,MS=()=>((GA_D.dessin||{}).scene||{}).mortS||1.5;
+ SC27.scene=function(pass){if(!(room&&room.g18))return _sc.apply(this,arguments);if(pass!=='body')return;const s=S(),g=room.g18;
+  if(!room.started&&room.bannerT>0){const k=s.entree||(s.entree={max:room.bannerT});k.max=Math.max(k.max,room.bannerT);const u=clamp(1-room.bannerT/k.max,0,1),f={x:W/2,y:AR.y0+170,r:g.rayon,g18:g,fade:1};ctx.save();ctx.translate(f.x,f.y);try{corps(ctx,f,u);}finally{ctx.restore();}}
+  const m=s.mort;if(m){const u=(T-m.t0)/MS();if(u>=1||u<0){s.mort=null;return;}ctx.save();ctx.translate(m.e.x,m.e.y+(RM?0:u*m.e.r*0.6));try{corps(ctx,m.e,1-u);}finally{ctx.restore();}}};
+ SC27.debut=function(e){if(e&&e.g18&&room&&room.g18s){room.g18s.mort={e,t0:T};return true;}return _de.apply(this,arguments);};
+ // ── la mort : sa clé (foeName nomme le gardien, pas le Glas) ; le journal des coups (aucun coup sans signe, hors arène)
+ const _hp=hurtPlayer;hurtPlayer=function(dmg,src){const s=room&&room.g18s;if(!s||!RUN||RUN.hub)return _hp.apply(this,arguments);
+  const libre=!(P.iT>0||P.dashT>0||P.dead||state!=='play'),zc=s.zoneCourante,b=room.boss,hp0=P.hp;
+  const r=_hp.apply(this,arguments);
+  try{const touche=libre&&dmg>0;if(touche){const coup=zc?{k:'zone',id:zc.id,charge:zc.charge,age:zc.t}:src&&src===b?{k:'contact'}:src&&src.type&&src!==b?{k:'ennemi',type:src.type}:{k:'autre'};
+     coup.t=+RUN.time.toFixed(2);coup.signe=garJuge(C,coup);coup.pv=+(hp0-P.hp).toFixed(1);ST.j.coups.push(coup);if(!coup.signe)ST.j.sansSigne++;}
+   if(RUN.mem&&RUN.mem.lastSrc==='boss'&&b&&b.g18)RUN.mem.lastSrc=KEY(b.g18);}catch(err){console.error(err);}
+  return r;};
+ // ── la mort en essai (dieu : jamais sous 1 PV)
+ const _lh=loseHp;loseHp=function(n){if(ST.dieu&&room&&room.g18&&P&&n>0){P.hp=Math.max(1,P.hp-n);return;}return _lh.apply(this,arguments);};
+ // ── le bot qui frappe (bot=2, Q9) : les règles de celui du Brumeux (sa distance par forme, sa sortie calculée, esquive s'il est pris de court, attaque
+ // de base, R puis A et E dès que prêts, le Héraut au battement, le Tisse-Destin noue ses fils), sur les zones du gardien ; sortie au détour s'il y a
+ // des obstacles. Copié, pas extrait : le pilote du Brumeux ne change pas d'un bit.
+ const DIST={lum:260,gou:80,her:75,tis:240},BOT=DBX&&DBX.bot||{proche:220,portee:520,cycleS:0.5};
+ const press=code=>{dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true}));};
+ function pilote(dt){const e=room.boss;for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);if(!e||e.dead||P.dead||!room.started)return;
+  const s=S(),B=s.bot||(s.bot={t:0,beat:-1,strafe:1,sT:0});B.t+=dt;B.sT-=dt;if(B.sT<=0){B.sT=1.2+Math.random()*1.2;B.strafe=-B.strafe;}
+  let tx,ty;const vives=s.zones.filter(z=>!z.fait),dedans=vives.filter(z=>brxDans(z,P.x,P.y,P.r+24));
+  if(dedans.length){const r0=Math.min(...dedans.map(z=>z.charge-z.t)),zs=vives.filter(z=>z.charge-z.t<=r0+0.5),o=optSortie(9);
+   const q=garSortieGrille(C.sortie,zs,[P.x,P.y],o);if(q.ok&&q.q){tx=q.q[0];ty=q.q[1];}else{const z=dedans[0],c=z.forme==='couloir'?{x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2}:z,dx=P.x-c.x,dy=P.y-c.y,d=hyp(dx,dy)||1;tx=P.x+dx/d*200;ty=P.y+dy/d*200;}
+   if(r0<0.3&&P.dashCh>0&&P.dashT<=0)press('Space');}
+  else{const want=DIST[P.cls]||220,dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy)||1,ux=dx/d,uy=dy/d;
+   if(d>want+40){tx=e.x-ux*want;ty=e.y-uy*want;}else if(d<want-40){tx=P.x-ux*120;ty=P.y-uy*120;}else{tx=P.x-uy*120*B.strafe;ty=P.y+ux*120*B.strafe;}
+   tx=clamp(tx,AR.x0+40,AR.x1-40);ty=clamp(ty,AR.y0+40,AR.y1-40);}
+  if(P.x<tx-12)keys.add('KeyD');else if(P.x>tx+12)keys.add('KeyA');if(P.y<ty-12)keys.add('KeyS');else if(P.y>ty+12)keys.add('KeyW');
+  let cible=e,bd=hyp(e.x-P.x,e.y-P.y);for(const o of enemies){if(o.dead||o===e||o.fixed)continue;const d=hyp(o.x-P.x,o.y-P.y);if(d<BOT.proche&&d<bd){bd=d;cible=o;}}
+  mouse.x=cible.x;mouse.y=cible.y;mouse.sx=mouse.x-CAM.x;mouse.sy=mouse.y-CAM.y;
+  const porte=bd<BOT.portee+cible.r;
+  if(P.cls==='her'){const beat=P.beatPh!=null&&(P.beatPh<0.05||P.beatPh>0.95),bn=P.beatPh<0.5?Math.floor(P.beatN||0):Math.floor(P.beatN||0)+1;if(porte&&beat&&bn!==B.beat){B.beat=bn;mouse.l=true;P.clickQ=1;P.clickT=0.16;setTimeout(()=>{mouse.l=false;},90);}}
+  else mouse.l=porte;
+  if(P.cls==='tis'&&porte&&(P.threads||[]).length<(P.s.filMax||3)&&P.bob>=(P.s.filCost||15)&&B.t>=BOT.cycleS*0.5&&!B.fil){B.fil=true;mouse.r=true;P.rclickQ=1;P.rclickT=0.16;setTimeout(()=>{mouse.r=false;B.fil=false;},90);}
+  if(porte&&B.t>=BOT.cycleS){B.t=0;if(!(P.rCd>0))press('KeyR');else if(!(P.aCd>0))press('KeyQ');else if(!(P.eCd>0))press('KeyE');}}
+ const _st=step;step=function(dt){if(ST.bot===2&&room&&room.g18s&&state==='play'&&!paused&&P)try{pilote(dt);}catch(err){console.error(err);}return _st.apply(this,arguments);};
+ // ── le build de référence de l'acte (Q9 ; essai ref=1)
+ function reference(acte){const R=DBX&&DBX.bot&&DBX.bot.reference;if(!R||!P||!window.__dernier)return null;const niveau=C.reference.niveaux[acte]||R.niveau,max={};
+  const L=R.talents[P.cls]||[];for(const id of L)max[id]=NODES[id]?NODES[id].max:1;
+  P.level=niveau;P.pendingLv=0;P.xp=0;const pris=[];
+  for(const [id,rang] of garReference(L,niveau,max))if(NODES[id]&&window.__dernier.prendre(id,rang,0))pris.push(id+':'+rang);
+  const eq=[];for(const id of (R.equipement[P.cls]||R.equipement.tous||[]))if(EQS[id]){equip(id);eq.push(id);}
+  try{updateHud();}catch(err){}return{niveau:P.level,talents:pris,equipement:eq,pvMax:P.s&&P.s.maxHp};}
+ // ── essai : ?gardien=<4..9>[&temps=n][&attaque=<id>][&palier=…][&ref=1][&bot=2][&mannequin=1][&dieu=0][&classe=…]. Une descente d'essai : rien d'écrit
+ function essai(n,o){o=o||{};n=+n;const g=garEntree(GD,n);if(!g||!window.__descente)return null;
+  ST.force=g;ACTD[n].boss=g.nom;ST.essai=o;ST.dieu=o.dieu!==false;ST.bot=o.bot|0;ST.mannequin=!!o.mannequin;ST.essai_attaque=o.attaque&&g.attaques[o.attaque]?o.attaque:null;ST.j={coups:[],sansSigne:0,lances:0,sautes:0,temps:[]};
+  window.__descente.essai(n,{fin:true,cls:o.cls});RUN.essai=1;
+  if(o.palier)window.__descente.palier(o.palier);
+  if(o.ref)ST.ref=reference(n);
+  return{acte:ACTE(),type:room.type,g18:!!room.g18,ref:ST.ref||null};}
+ function essaiApres(e){const o=ST.essai,s=S();
+  if(ST.mannequin){e.maxHp=1e9;e.hp=1e9;e.seuils18=[];}
+  const t=o.temps|0;if(t>1&&t<=e.seuils18.length+1&&!ST.mannequin){e.hp=Math.floor(e.maxHp*e.seuils18[t-2])-1;s.temps=t;e.phase=t;}}
+ if(ESSAI)addEventListener('load',()=>setTimeout(()=>{try{essai(qv('gardien'),{temps:qv('temps'),attaque:qv('attaque'),palier:qv('palier'),ref:qv('ref')==='1',bot:qv('bot'),mannequin:qv('mannequin')==='1',dieu:qv('dieu')!=='0',cls:qv('classe')});}catch(err){console.error(err);}},400));
+ // ── console
+ window.__gardiens18={GD,essai,reference,ici:()=>ici(),actifs:()=>garActifs(GD),journal:()=>JSON.parse(JSON.stringify(ST.j)),etat:()=>{const s=S(),e=room&&room.boss;return s?{temps:s.temps,ph:s.ph,t:+s.t.toFixed(2),zones:s.zones.map(z=>({forme:z.forme,id:z.id,t:+z.t.toFixed(2),charge:z.charge,fait:z.fait})),file:s.file.slice(),e:e&&{hp:e.hp,maxHp:e.maxHp,seuils:e.seuils18,phase:e.phase,vuln:e.vuln,nom:e.name,r:e.r,g18:!!e.g18,dmg:e.dmg}}:null;},
+  glyphe:n=>{const g=garEntree(GD,n);return g?glyphe(g).url:null;},bot:v=>{ST.bot=v|0;},dieu:v=>{ST.dieu=!!v;},
+  dbg:()=>({ST,P,RUN,room,enemies,step:dt=>step(dt),render:()=>render(),file:()=>queue.length,pump:()=>pumpOverlay(),hud:()=>updateHud(),cl:()=>{computeLights();return lights;},hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),lights:()=>lights,themeOf:t=>themeOf(t),g27GlypheImg:n=>g27GlypheImg(n),corps,pure:{garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle}})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

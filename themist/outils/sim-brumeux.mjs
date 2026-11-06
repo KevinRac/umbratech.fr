@@ -311,8 +311,8 @@ const has = (re, msg) => ok(typeof re === 'string' ? html.includes(re) : re.test
 has('<script src="data/brumeux.js"></script>', 'data/brumeux.js chargé');
 has(/const TH=e\.seuils18\|\|\[0\.66,0\.33\],hp0=e\.hp,guard=hp0>e\.maxHp\*\(e\.seuils18\?TH\[TH\.length-1\]\+0\.01:0\.34\)\?1e7:0;/, 'seuils de phase : ceux du gardien (0,66 / 0,33, garde 0,34) sans e.seuils18, ceux du Brumeux avec');
 has(/for\(const t of TH\)\{const th=e\.maxHp\*t;if\(hp0>th&&e\.hp<th-1\)\{e\.hp=th-1;e\.lockT=RUN\.time\+BAL\.phaseLock;break;\}\}/, 'seuils de phase : les dégâts ne passent pas le seuil, verrou de phase posé');
-has("ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/", 'garde d\'essai de la némésis : brumeux (v18.12, 5h : demo et descente, comme ESSAI18)');
-has("ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/", 'garde d\'essai de la descente : brumeux');
+has("ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=/", 'garde d\'essai de la némésis : brumeux (v18.12, 5h : demo et descente, comme ESSAI18)');
+has("ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=/", 'garde d\'essai de la descente : brumeux');
 has(/updateBoss=function\(e,dt\)\{if\(e&&e\.brx18&&X\.on\)\{try\{if\(X\.mannequin\)\{presence\(e,dt\);return;\}pas\(e,dt\);\}/, 'updateBoss enveloppé : le Brumeux joue sa partition, jamais l\'IA du Glas (le mannequin de mesure de 5g-1 ne joue rien)');
 has(/hitEnemy=function\(e,base,o\)\{if\(!\(e&&e\.brx18&&X\.on\)\)return _he\.apply/, 'hitEnemy enveloppé : changement de phase au seuil');
 has(/bossDefeated=function\(e\)\{if\(e&&e\.brx18\)\{try\{mort\(e\);\}/, 'bossDefeated enveloppé : sa mort, pas celle d\'un gardien');
@@ -1416,14 +1416,15 @@ tic('§ 15');
   // la correction de la Couture (la règle des formes hors des cibles) : nœud 1 %, cousus 10 %
   ok(D.couture.noeud.pvPart === 0.01 && D.couture.cousus.pvPart === 0.10, 'Couture (5g-1) : nœud 1 % et cousus 10 % des PV de la phase');
   // branchements : le build de référence et le mannequin ne servent qu'aux essais
-  ok(/function reference\(cls\)\{/.test(html) && (html.match(/reference\(/g) || []).length <= 4 && /if\(o\.ref\)X\.ref=reference\(P\.cls\);/.test(html), 'branchement (5g-1) : le build de référence ne se pose que dans un essai (ref=1)');
+  ok(/function reference\(cls\)\{/.test(html) && (html.slice(0, html.indexOf('/*gar:pur*/') > 0 ? html.indexOf('/*gar:pur*/') : html.length).match(/reference\(/g) || []).length <= 4 &&   // v18.14 : compté jusqu'au bloc des gardiens de la descente (qui a son propre build de référence)
+     /if\(o\.ref\)X\.ref=reference\(P\.cls\);/.test(html), 'branchement (5g-1) : le build de référence ne se pose que dans un essai (ref=1)');
   ok(/if\(X\.mannequin\)\{presence\(e,dt\);return;\}/.test(html) && /if\(o\.mannequin&&X\.e\)\{X\.mannequin=true;/.test(html), 'branchement (5g-1) : le mannequin (essai seulement) ne lance rien');
   ok(/const TBo=!\(T2&&T2\.o\)&&X\.tab\?/.test(html), 'branchement (5g-1) : le bot vise les ennemis d\'un tableau à toute distance');
   ok(/if\(!best\)return _c2188\.apply\(this,arguments\);/.test(html), 'branchement (5g-1) : en III, sans nœud, le bot vise un échafaudage resté debout');
   // le journal de l'arène : le porteur d'un coup et une source morte depuis peu (le journal seulement, sous CAM.on)
   ok(/const GRACE_S=1\.5;/.test(html) && /if\(RUN\.time-A\.mortT\.get\(e\)<GRACE_S\)ids\.push\(k\);/.test(html) && /for\(const p of eproj\)\{if\(!p\.dead&&Math\.hypot\(p\.x-P\.x,p\.y-P\.y\)-\(p\.r\|\|6\)-P\.r<14\)ch\.push\(id\(p\)\);\}/.test(html), 'branchement (5g-1) : le journal de l\'arène compte le porteur du coup et garde 1,5 s le signe d\'une source morte');
   // le journal v18.11 : secret
-  ok(VERS.journal.some(y => y.h === 'v18.11') && ['v18.11', 'v18.12', 'v18.13'].includes(VERS.actuelle), 'journal (5g-1) : la ligne v18.11 existe');
+  ok(VERS.journal.some(y => y.h === 'v18.11') && /^v18\.(1[1-9]|[2-9]\d)$/.test(VERS.actuelle), 'journal (5g-1) : la ligne v18.11 existe (version actuelle ≥ v18.11)');
   for (const x of VERS.journal.filter(y => y.h === 'v18.11')) ok(!/phase|PV|bot|calibr|mannequin|cous|nœud|noeud|forme|mesur/i.test(x.t), `journal v18.11 : rien sur les PV ni la mesure (secret) : « ${x.t} »`);
 }
 

@@ -189,7 +189,7 @@ ok(!/desGardienX|DES_D\.gardien/.test(html), 'jeu : plus de gardien provisoire r
 has(/else if\(ACTE\(\)<ACTES_N\)\{enqueue\(\(\)=>openRelics\(ACTD\[ACTE\(\)\]\.done/, 'après le Glas Originel, la descente continue');
 has(/if\(a===3&&ACTE\(\)>=ACTES_N\)R\.won=true;/, 'la mort du Glas ne compte plus comme la victoire de la descente');
 has(/win:!!win&&ACTE\(\)>=ACTES_N,essai:!!\(RUN\.essai\|\|ESSAI18\)/, 'déblocage : victoire au dernier acte, hors essai');
-has(/ESSAI18=\/\[\?&\]\(masque\|brume\|glas\|dernier\|nemesis\|demo\|descente\|arene\|brumeux\)=\//, 'déblocage : les paramètres d’essai (et la démo) n’ouvrent rien (v18.4 : arene ; v18.5 : brumeux)');
+has(/ESSAI18=\/\[\?&\]\(masque\|brume\|glas\|dernier\|nemesis\|demo\|descente\|arene\|brumeux\|gardien\)=\//, 'déblocage : les paramètres d’essai (et la démo) n’ouvrent rien (v18.4 : arene ; v18.5 : brumeux)');
 has(/RUN\.final\.palUp=false;/, 'les Paliers de Brume ne se débloquent plus');
 has(/function essai\(n,o\)\{[^]*?RUN\.essai=1;/, 'l’essai de la descente pose RUN.essai');
 has(/ACTD\[ACTE\(\)\]\.rooms-1;/, 'l’antichambre suit l’acte de la descente');

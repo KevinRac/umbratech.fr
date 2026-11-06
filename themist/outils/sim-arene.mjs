@@ -340,8 +340,8 @@ ok(!/\{x:W\/2,y:H\/2,r:(760|700|520|780)/.test(html), 'branchement : plus aucune
 has('arene:CAM.on&&CAM.sbAr?CAM.sbAr():AR,', 'sbOrigine : sorties du Masqué dans la vue sûre (AR hors de l’arène)');
 has('const cw=Math.ceil(MONDE.w/CS),rh=Math.ceil(MONDE.h/CS);if(cw!==COLS||rh!==ROWS)', 'carte de distances dimensionnée par le monde (mêmes tableaux hors de l’arène)');
 has('||CAM.ff){CAM.ff=0;ffBlk();}', 'carte de distances refaite quand les bornes bougent');
-has('ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/', 'garde d’essai de la némésis (ESSAI_URL) : arene (v18.5 : brumeux ; v18.12 : demo, descente)');
-has('ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux)=/', 'garde d’essai de la descente (ESSAI18) : arene (v18.5 : brumeux)');
+has('ESSAI_URL=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=/', 'garde d’essai de la némésis (ESSAI_URL) : arene (v18.5 : brumeux ; v18.12 : demo, descente)');
+has('ESSAI18=/[?&](masque|brume|glas|dernier|nemesis|demo|descente|arene|brumeux|gardien)=/', 'garde d’essai de la descente (ESSAI18) : arene (v18.5 : brumeux)');
 const bloc = html.slice(html.indexOf("// v18.4 · L'arène (chantier v18, action 4"), html.indexOf('\nconst DEMO_CLS='));
 ok(bloc.length > 1000, 'bloc « v18.4 · L’arène » en fin de fichier, avant le démarrage');
 ok(/makeRoom=function\(type\)\{const ouv=[\s\S]{0,420}remettre\(\);/.test(bloc), 'bloc : toute nouvelle salle remet AR, MONDE et CAM avant d’être construite');
