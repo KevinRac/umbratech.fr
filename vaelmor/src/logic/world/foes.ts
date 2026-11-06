@@ -145,7 +145,11 @@ export function createFoe(def: WorldFoeDef, seed: FoeSeed, tile: number): FoeSim
 
 /** Direction de sprite (8 directions) du regard d'un ennemi. */
 export function foeFacing(foe: FoeSim): Facing8 {
-  return facingFromVector(Math.cos(foe.aim), Math.sin(foe.aim)) ?? 's';
+  // Huit secteurs de 45° : sans cette zone morte, cos(π/2) ≈ 6e-17 donnait « se » (profil) à un ennemi qui descend (n°281).
+  const c = Math.cos(foe.aim);
+  const s = Math.sin(foe.aim);
+  const dead = Math.sin(Math.PI / 8);
+  return facingFromVector(Math.abs(c) < dead ? 0 : c, Math.abs(s) < dead ? 0 : s) ?? 's';
 }
 
 /** Caché au joueur : une embuscade qui attend. */
