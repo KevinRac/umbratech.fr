@@ -47,7 +47,8 @@ M10 est tenu quand **aucun bloquant ni majeur** n'est ouvert après les trois se
 | A-12 | Mineur | L'aide des touches en bas de l'écran du monde se lit mal sur l'herbe claire. | B | Corrigé : texte plus clair, touches E, Tab et N ajoutées. |
 | A-14 | Majeur | L'Échap qui ferme le menu (Tab), un dialogue ou la carte ouvre aussitôt la pause ; sur une machine lente, la touche qui ferme une fenêtre peut la rouvrir. | B | Corrigé : le monde attend 250 ms **et** deux images après une fenêtre (`inputReady`). |
 | A-15 | Majeur | Après un chargement depuis la partie (et un voyage), l'or et la fiche du héros disparaissent du HUD jusqu'au prochain menu. | B | Corrigé : le HUD garde ces valeurs quand il redémarre. |
-| A-13 | À mesurer | Le jeu tient en un seul fichier JS de 2,2 Mo ; les musiques pèsent 62 Mo. | C, G | Ouvert |
+| A-13 | À mesurer | Le jeu tient en un seul fichier JS de 2,2 Mo ; les musiques pèsent 62 Mo. | C, G | Corrigé : musiques en webm / m4a à la demande (lot C) ; JS en trois fichiers hachés, Phaser à part, retour après mise à jour −57 % (lot G, `docs/PERF_M10.md`). Reste le poids des feuilles de combat au démarrage (n°272). |
+| A-16 | Majeur | L'écran rapproché du combat fuit deux tweens en boucle par échange (+26 Ko de tas chacun ; +12,6 % sur 100 échanges). | G | Corrigé : tweens retirés à la fermeture ; tas à −0,5 % sur 100 échanges. |
 
 Non reproduits (fausses alertes du banc) : la pause qui ne se ferme pas, le dialogue qui ne se ferme pas à Échap (Échap fait d'abord avancer les répliques, puis ferme le menu de réponses : comportement voulu).
 
