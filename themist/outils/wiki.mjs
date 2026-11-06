@@ -27,6 +27,10 @@ function loadData() {
 }
 
 let ARENE_ACTIF = false;   // v18.12 : l'arène allumée (le boss final n'est plus une place provisoire)
+// v18.15 (6.1b) : les gardiens de la descente allumés (data/gardiens-descente.js, actif === true, actes IV à IX), [{n, g}] dans l'ordre des actes ;
+// un gardien éteint n'est nommé nulle part (sa place reste la place provisoire)
+let GARD_D = [];
+const gardiensAllumes = GDD => Object.keys(GDD || {}).filter(k => /^\d+$/.test(k)).map(Number).filter(n => n >= 4 && n <= 9 && GDD[n] && GDD[n].actif === true).sort((a, b) => a - b).map(n => ({ n, g: GDD[n] }));
 // ── Petits utilitaires
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const ROM = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -241,7 +245,9 @@ function lignesPalier(DS, B, p) {
   if (R.soins && neuf('soins', r => [r.soins.monde, r.soins.gardien])) { const S = R.soins;
     if (S.monde != null) L.push(`Les soins que t’offre la descente (fin de salle, niveau, halte, et ce qui soigne comme une halte) : ${fois(S.monde)}. Ceux de tes talents ne changent pas.`);
     if (S.gardien != null) L.push(S.gardien > 0 ? `Après la victoire sur un gardien des actes I à III, tu récupères ${Math.round(S.gardien * 100)} % de tes PV au lieu de tous.` : 'Après la victoire sur un gardien des actes I à III, la Brume ne te rend rien.'); }
-  if (R.gardien && R.gardien.tempsEnPlus && neuf('gardien', r => r.gardien)) L.push(`Les gardiens des actes ${ROM[Math.max(4, R.gardien.desActe || 4)]} à IX${ARENE_ACTIF ? ' et les miniboss ont' : ', les miniboss et le boss final ont'} <b>un temps de plus</b> : sous ${R.gardien.tempsEnPlus.pv} % de PV, une nouvelle attaque s’éveille. Pour l’instant, leur place est tenue par un Masqué : c’est son sort signature qui revient deux fois par cycle. Les gardiens des actes I à III ne changent pas.`);
+  if (R.gardien && R.gardien.tempsEnPlus && neuf('gardien', r => r.gardien)) L.push(GARD_D.length
+    ? `Les gardiens des actes ${ROM[Math.max(4, R.gardien.desActe || 4)]} à IX${ARENE_ACTIF ? ' et les miniboss ont' : ', les miniboss et le boss final ont'} <b>un temps de plus</b>, une mécanique à eux : ${GARD_D.map(({ n, g }) => `<a href="#gardien-${n}">${esc(g.nom)}</a>, sous ${Math.round(g.tempsEnPlus.seuil * 100)} % de PV, le ${esc(g.tempsEnPlus.n)} (${esc(g.tempsEnPlus.d)})`).join(' ; ')}. Là où un Masqué tient encore la place, c’est son sort signature qui revient deux fois par cycle, sous ${R.gardien.tempsEnPlus.pv} % de PV. Les gardiens des actes I à III ne changent pas.`
+    : `Les gardiens des actes ${ROM[Math.max(4, R.gardien.desActe || 4)]} à IX${ARENE_ACTIF ? ' et les miniboss ont' : ', les miniboss et le boss final ont'} <b>un temps de plus</b> : sous ${R.gardien.tempsEnPlus.pv} % de PV, une nouvelle attaque s’éveille. Pour l’instant, leur place est tenue par un Masqué : c’est son sort signature qui revient deux fois par cycle. Les gardiens des actes I à III ne changent pas.`);
   if (R.repit && R.repit.halteDes) L.push(`Aucun répit : pas de halte au choix avant la ${R.repit.halteDes === 0.5 ? 'moitié' : pct(R.repit.halteDes)} de chaque acte (l’antichambre des actes I à III reste).`);
   if (R.mutations && R.mutations.liste && neuf('mutations', r => r.mutations)) L.push(`<a href="#mutations">Règles mutantes</a> imposées : ${mutPlafond(R.mutations)}, qui changent à chaque acte.`);
   if (!L.length) L.push('Aucune règle en plus.');
@@ -268,12 +274,13 @@ function descente(DS, G, B, I) {
   const finDe = a => a.n <= G.actes.length ? `<a href="#gardiens">${esc(a.boss)}</a>`
     : a.fin === 'final' ? (ARENE_ACTIF ? `${a.miniboss ? `${mot(a.miniboss)} miniboss (à venir ; pour l’instant, des Masqués : PV ${PV.mini.pv.slice(0, a.miniboss).map(x => '×' + num(x)).join(', ')}), puis ` : ''}<a href="#fond">le boss final</a>`
       : `${a.miniboss ? `${mot(a.miniboss)} miniboss, puis ` : ''}le <b>boss final</b> (à venir ; pour l’instant, des Masqués : PV ${[...PV.mini.pv.slice(0, a.miniboss || 0), PV.final.pv].map(x => '×' + num(x)).join(', ')})`)
+    : GARD_D.some(x => x.n === a.n) ? `<a href="#gardien-${a.n}">${esc(GARD_D.find(x => x.n === a.n).g.nom)}</a>`
     : a.boss ? esc(a.boss) : `Gardien à venir (pour l’instant, un Masqué : PV ×${num(PV.fin.pv[a.n])})`;
   const lignes = actes.map(a => `<tr><td>${ROM[a.n]}</td><td><b>${esc(a.name)}</b></td><td>${a.rooms}</td><td>${finDe(a)}</td></tr>`).join('\n');
   const ouvre = p => { const o = DS.paliers[p].ouvrePar; return o ? `Gagne une descente en <b>${esc(DS.paliers[o].n)}</b>.` : 'Ouvert dès le départ.'; };
   const cartes = DS.ordre.map(p => { const X = DS.paliers[p]; return `<article class="ent"><h4>${ico(X.ic)}${esc(X.n)}</h4><p>${esc(X.court)}</p>${lignesPalier(DS, B, p)}<p class="k">${ouvre(p)}</p></article>`; }).join('');
   const reg = actes.find(a => a.n === DS.registre);
-  return `<section class="sec" id="descente" data-sec>${MARK('data/descente.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>La descente</h2><div class="lede"><p>Une descente compte <b>${mot(DS.nombre)} actes</b> (${total} salles, fins d’acte comprises). Chaque acte se termine par un gardien : la Mère-Brume, le Héraut Noyé et le Glas Originel pour les actes I à III, six nouveaux gardiens pour les actes IV à IX. L’acte X enchaîne deux salles de <b>miniboss</b>, puis le <b>boss final</b>. ${ARENE_ACTIF ? 'Les nouveaux gardiens et les miniboss arrivent' : 'Les nouveaux gardiens et le boss final arrivent'} dans les prochaines versions : en attendant, leur place est tenue par un Masqué renforcé, et les actes IV à X reprennent le décor et les ennemis de l’acte ${ROM[DS.registre]} (${esc(reg.name)}).</p><p>Une descente vise environ <b>${DS.dureeCible.normale} minutes</b> en Normal (${DS.dureeCible.rapide} pour un joueur rapide).</p></div></header>
+  return `<section class="sec" id="descente" data-sec>${MARK('data/descente.js')}<header class="sh"><p class="eyebrow">Progression</p><h2>La descente</h2><div class="lede"><p>Une descente compte <b>${mot(DS.nombre)} actes</b> (${total} salles, fins d’acte comprises). Chaque acte se termine par un gardien : la Mère-Brume, le Héraut Noyé et le Glas Originel pour les actes I à III, six nouveaux gardiens pour les actes IV à IX. L’acte X enchaîne deux salles de <b>miniboss</b>, puis le <b>boss final</b>. ${GARD_D.length ? `${GARD_D.map(({ n, g }) => `<a href="#gardien-${n}">${esc(g.nom)}</a> garde l’acte ${ROM[n]}`).join(', ')} ; les autres gardiens${ARENE_ACTIF ? ' et les miniboss arrivent' : ', les miniboss et le boss final arrivent'} dans les prochaines versions : en attendant, leur place est tenue par un Masqué renforcé. Les actes IV à X reprennent le décor et les ennemis de l’acte ${ROM[DS.registre]} (${esc(reg.name)}), sauf la salle d’un nouveau gardien, qui a la sienne.` : `${ARENE_ACTIF ? 'Les nouveaux gardiens et les miniboss arrivent' : 'Les nouveaux gardiens et le boss final arrivent'} dans les prochaines versions : en attendant, leur place est tenue par un Masqué renforcé, et les actes IV à X reprennent le décor et les ennemis de l’acte ${ROM[DS.registre]} (${esc(reg.name)}).`}</p><p>Une descente vise environ <b>${DS.dureeCible.normale} minutes</b> en Normal (${DS.dureeCible.rapide} pour un joueur rapide).</p></div></header>
 <h3 class="sub">Les dix actes</h3>
 <table class="tbl"><thead><tr><th>Acte</th><th>Nom</th><th>Salles</th><th>Fin de l’acte</th></tr></thead><tbody>
 ${lignes}</tbody></table>
@@ -401,8 +408,10 @@ const portraitNom = (G, n, t) => `gardien-${n}-t${t}-v${G.dessin.version}.webp`;
 const dessinActif = (G, n) => { const D = G.dessin; return !!(D && D.actif && (typeof D.actif === 'object' ? D.actif[n] : D.actif)); };
 // v18.12 (5g-2) : le portrait du Brumeux (carte « Au fond de la Brume »), capturé par _dev/bancs/capture-brumeux.mjs, réclamé quand l'arène est allumée
 const PORTRAIT_BRX = (B) => `brumeux-v${B.dessin.version}.webp`;
-export function portraitsManquants(G, B, DA) {
+export function portraitsManquants(G, B, DA, GDD) {
   const m = [];
+  // v18.15 : les gardiens de la descente allumés (gardiens-descente.js, dessin.version)
+  for (const { n, g } of gardiensAllumes(GDD)) for (const t of [1, 2, 3]) if (!existsSync(join(PORTRAITS, portraitNom(g, n, t)))) m.push(`img/gardiens/${portraitNom(g, n, t)}`);
   if (B && DA && DA.actif && !existsSync(join(ROOT, 'img', 'brumeux', PORTRAIT_BRX(B)))) m.push(`img/brumeux/${PORTRAIT_BRX(B)}`);
   if (!G.dessin || G.dessin.version == null) return m;
   for (const n of [1, 2, 3]) if (dessinActif(G, n)) for (const t of [1, 2, 3]) if (!existsSync(join(PORTRAITS, portraitNom(G, n, t)))) m.push(`img/gardiens/${portraitNom(G, n, t)}`);
@@ -440,7 +449,23 @@ function attaquesGardien(G, a) {
 <div class="grid g3">${cartes}</div>${souv}`;
 }
 
-function gardiens(G, F) {
+// v18.15 (6.1b) · un gardien de la descente allumé : sa sous-section (temps, temps de plus, attaques avec la Relève, lecture à l'œil, entrée et mort)
+function gardienD(n, g, DS, G) {
+  const TEMPS = ['', 'premier', 'deuxième', 'troisième'], nt = g.echelon.temps, F = g.fermetures || {};
+  const dans = (t, k) => (g.file[t] || []).some(x => x === k || (F[x] && (F[x].herse === k || F[x].suite === k)));
+  const quand = k => { const t = [1, 2, 3].filter(i => i <= nt && dans(i, k)); if (!t.length) return 'Au quatrième temps';
+    if (t.length === nt) return 'Les trois temps'; const s = t.map(i => TEMPS[i]).join(' et ') + ' temps'; return s[0].toUpperCase() + s.slice(1); };
+  const cartes = Object.entries(g.attaques).map(([k, x]) => `<article class="ent"><h4>${esc(x.n)}</h4><p class="k">${esc(quand(k))}</p><p>${esc(x.d)}</p></article>`)
+    .concat(g.releve ? [`<article class="ent"><h4>${esc(g.releve.n)}</h4><p class="k">Après chaque fermeture</p><p>${esc(g.releve.d)}</p></article>`] : []).join('');
+  const titres = g.temps.titres.slice(0, nt).map(t => `<b>${esc(t)}</b>`).join(', ').replace(/, ([^,]*)$/, ' et $1');
+  const D = g.dessin || {}, mortS = String((G.dessin && G.dessin.scene && G.dessin.scene.mortS) || 1.5).replace('.', ',');
+  return `<h3 class="sub" id="gardien-${n}">${esc(g.nom)} · Acte ${ROM[n]}</h3>
+<p>Il se joue en ${mot(nt)} temps : ${titres}. En Difficile et en Extrême, un quatrième temps, le <b>${esc(g.tempsEnPlus.n)}</b> : ${esc(g.tempsEnPlus.d)}.</p>
+<div class="grid g3">${cartes}</div>
+${D.lecture ? `<p class="k">${esc(D.lecture)}${D.entree ? ` Entrée : ${esc(D.entree)}. Mort : ${esc(D.mort)} (${mortS} s, sans retarder ni la salle ni les récompenses ; mouvements réduits : simple fondu).` : ''}${D.quatrieme ? ` Au quatrième temps, ${esc(D.quatrieme)}.` : ''}</p>` : ''}`;
+}
+
+function gardiens(G, F, DS) {
   const A = G.actes;
   const pv = i => (G.pv && G.pvMul) ? Math.round(G.pv[i + 1] * G.pvMul[i + 1]).toLocaleString('fr-FR') : '';
   // v17.27 (G11) : le glyphe du gardien devant son nom, et ses portraits (premier temps ; le troisième au survol), seulement pour un gardien dont le nouveau dessin est actif
@@ -448,18 +473,21 @@ function gardiens(G, F) {
   const portrait = (n, nom) => { if (!dessinActif(G, n) || G.dessin.version == null) return '';
     const img = (t, cls, alt) => `<img class="${cls}" src="img/gardiens/${portraitNom(G, n, t)}" alt="${esc(alt)}" loading="lazy" decoding="async"${tailleImg(join(PORTRAITS, portraitNom(G, n, t)))}>`;
     return `<figure class="ptr" tabindex="0">${img(1, 'p1', `${nom}, premier temps`)}${img(3, 'p3', `${nom}, troisième temps`)}<figcaption><span class="c1">Premier temps · le troisième au survol</span><span class="c3">Troisième temps</span></figcaption></figure>`; };
-  const cartes = A.map((a, i) => `<article class="ent boss"><span class="num">${ROM[i + 1]}</span>${portrait(i + 1, a.boss)}<h3>${gly(i + 1)}${esc(a.boss)}</h3><p class="k">${esc(a.name)} · ${a.rooms} salles${pv(i) ? ` · ${pv(i)} PV` : ''}</p><p>${esc(a.done)}.</p></article>`).join('');
+  const cartes = A.map((a, i) => `<article class="ent boss"><span class="num">${ROM[i + 1]}</span>${portrait(i + 1, a.boss)}<h3>${gly(i + 1)}${esc(a.boss)}</h3><p class="k">${esc(a.name)} · ${a.rooms} salles${pv(i) ? ` · ${pv(i)} PV` : ''}</p><p>${esc(a.done)}.</p></article>`).join('')
+    // v18.15 : les gardiens de la descente allumés (portraits : le premier temps, le troisième au survol)
+    + GARD_D.map(({ n, g }) => { const X = DS.actes[n - A.length - 1] || {}, im = (t, cls, alt) => `<img class="${cls}" src="img/gardiens/${portraitNom(g, n, t)}" alt="${esc(alt)}" loading="lazy" decoding="async"${tailleImg(join(PORTRAITS, portraitNom(g, n, t)))}>`;
+      return `<article class="ent boss"><span class="num">${ROM[n]}</span><figure class="ptr" tabindex="0">${im(1, 'p1', `${g.nom}, premier temps`)}${im(3, 'p3', `${g.nom}, troisième temps`)}<figcaption><span class="c1">Premier temps · le troisième au survol</span><span class="c3">Troisième temps</span></figcaption></figure><h3><span class="gly" aria-hidden="true">${g.glyphe}</span>${esc(g.nom)}</h3><p class="k">${esc(X.name || '')} · ${X.rooms} salles · ${g.pv.toLocaleString('fr-FR')} PV</p><p>${esc(g.wiki.done)}.</p></article>`; }).join('');
   const copies = Object.values(G.copies).map(c => `<article class="ent"><h4>Si tu abuses de ${esc(c.what)}</h4><p>${esc(c.hint)}</p></article>`).join('');
   // v17.27 · les gardiens redessinés : ce qu'on lit à l'œil (dessin[n].lecture), seulement pour un gardien dont le nouveau dessin est actif
   const actifD = n => { const D = G.dessin; return !!(D && D.actif && (typeof D.actif === 'object' ? D.actif[n] : D.actif)); };
   const lecture = a => actifD(+a) && G.dessin[a] && G.dessin[a].lecture ? `<p class="k">${esc(G.dessin[a].lecture)}${G.dessin[a].entree ? ` Entrée : ${esc(G.dessin[a].entree)}. Mort : ${esc(G.dessin[a].mort)} (${esc(String(G.dessin.scene.mortS).replace('.', ','))} s, sans retarder ni la salle ni les récompenses ; mouvements réduits : simple fondu).` : ''}</p>` : '';
   const failles = Object.entries(G.failles).map(([a, f]) => `<article class="ent"><h4>${esc(A[a - 1].boss)}</h4><p><b>${esc(f.l1)}.</b></p><p><b>${esc(f.l3)}.</b> ${esc(f.t3)}</p>${lecture(a)}</article>`).join('');
   // v17.27 (G5) : le même anneau ivoire entoure le point faible de chaque gardien dont le nouveau dessin est actif, quand il est à nu (fenêtre ou sonné)
-  const faibles = [1, 2, 3].filter(n => actifD(n) && G.dessin[n] && G.dessin[n].faible).map(n => G.dessin[n].faible);
+  const faibles = [1, 2, 3].filter(n => actifD(n) && G.dessin[n] && G.dessin[n].faible).map(n => G.dessin[n].faible).concat(GARD_D.map(({ g }) => g.faible));
   const anneau = faibles.length ? ` Pendant la fenêtre (et quand le gardien est sonné), un <b>anneau ivoire</b> palpite autour de son point faible : ${faibles.map(esc).join(', ')}.` : '';
   const fen = Object.entries(G.fenetres).map(([c, x]) => `<article class="ent" data-cls="${c}"><h4 style="color:${F[c].col}">${esc(F[c].n)}</h4><p><b>Avertissement :</b> ${esc(x.warn)}.</p><p><b>Fenêtre :</b> ${esc(x.label)}.</p></article>`).join('');
   const titre2 = Object.keys(G.failles).map((a, i) => `${esc(i ? lower(A[a - 1].boss) : A[a - 1].boss)} · Acte ${ROM[a]}`).join(' et ');
-  return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Les actes I à III se terminent chacun par un gardien (voir <a href="#descente">La descente</a>). Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux de la descente en Normal.</p>' : ''}${survieGouffre(G)}</div></header>
+  return `<section class="sec" id="gardiens" data-sec>${MARK('data/gardiens.js')}<header class="sh"><p class="eyebrow">Boss</p><h2>Les gardiens</h2><div class="lede"><p>Les actes I à III se terminent chacun par un gardien${GARD_D.length ? `, ${GARD_D.map(({ n }) => `l’acte ${ROM[n]}`).join(', ')} aussi` : ''} (voir <a href="#descente">La descente</a>). Tous se jouent en <b>trois temps</b> (phases) ; ils s’énervent quand leur vie baisse. Le gardien du <b>premier acte</b> observe ta forme et la reflète.</p>${G.pv && G.pvMul ? '<p>Les PV indiqués sont ceux de la descente en Normal.</p>' : ''}${survieGouffre(G)}</div></header>
 <div class="grid g3">${cartes}</div>
 
 <h3 class="sub">${esc(A[0].boss)} · Acte I</h3>
@@ -470,7 +498,7 @@ function gardiens(G, F) {
 <p>Ces deux gardiens passent par trois temps. Lors de la troisième phase, une <b>faille</b> s’ouvre :</p>
 <div class="grid g2">${failles}</div>
 
-${[2, 3].map(a => attaquesGardien(G, a)).join('\n')}
+${[2, 3].map(a => attaquesGardien(G, a)).join('\n')}${GARD_D.map(({ n, g }) => '\n' + gardienD(n, g, DS, G)).join('')}
 
 <h3 class="sub">Fenêtres de vulnérabilité</h3>
 <p>Selon ta forme, le gardien expose périodiquement une faiblesse. Un message te prévient ; tu as <b>${num(G.aNu.dureeS)} secondes</b> pour frapper avec <b>+${Math.round((G.aNu.mult - 1) * 100)} %</b> de dégâts. L’intervalle diminue avec le niveau d’Accoutumance.${anneau}</p>
@@ -593,7 +621,7 @@ ${ME.traits.map(t => `<tr><td><b>${esc(t.name)}</b></td><td>${t.tiers.join(' · 
 <details class="spoil"><summary>Révéler la Vérité : « ${esc(C.truth)} »</summary><p>${esc(C.tx)}</p></details>
 <details class="spoil"><summary>Révéler les fragments</summary>${fr.map(f => `<p><b>${esc(f.name)}</b> — ${esc(f.text)}</p>`).join('')}</details></article>`; }).join('');
   out.codex = `<table class="tbl"><thead><tr><th>Entrée</th><th>Condition</th></tr></thead><tbody>
-${HI.codex.map(l => `<tr><td><b>${esc(l.t)}</b></td><td>${esc(l.h || 'Dès le début.')}</td></tr>`).join('')}</tbody></table>`;
+${HI.codex.filter(l => !l.gardien || GARD_D.some(x => x.n === l.gardien)).map(l => `<tr><td><b>${esc(l.t)}</b></td><td>${esc(l.h || 'Dès le début.')}</td></tr>`).join('')}</tbody></table>`;
   // v18.12 (5g-2, Q16) : la légende des signes au bord de l'écran (data/arene.js : catégories et couleurs de la grammaire) ; de la lisibilité, pas un secret
   const DA = D.arene, CO = DA.indicateurs.couleurs, sv = (b, c) => `<svg class="pic" viewBox="0 0 24 24" aria-hidden="true" style="color:rgb(${CO[c]})">${b}</svg>`;
   const SG = [
@@ -631,14 +659,14 @@ function syncVersion(html, v) {
 }
 
 export function build(html) {
-  const D = loadData(); ARENE_ACTIF = !!(D.arene && D.arene.actif);
+  const D = loadData(); ARENE_ACTIF = !!(D.arene && D.arene.actif); GARD_D = gardiensAllumes(D.gardiensD);
   let out = replaceSection(html, 'equipements', equipements(D.equipements, formes(D), D));
   out = replaceSection(out, 'memoire', memoire(D));
   out = replaceSection(out, 'reliques', reliques(D.reliques, formes(D), D.souvenirs));
   out = replaceSection(out, 'pactes', pactes(D.pactes, D.icones));
   out = replaceSection(out, 'bestiaire', bestiaire(D.bestiaire, D.icones, D.masque, D.gardiens, D.descente));
   out = replaceSection(out, 'descente', descente(D.descente, D.gardiens, D.bestiaire, D.icones));
-  out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D)));
+  out = replaceSection(out, 'gardiens', gardiens(D.gardiens, formes(D), D.descente));
   out = replaceSection(out, 'fond', fond(D.brumeux, D.arene, D.descente));
   out = replaceSection(out, 'resonances', resonances(D.resonances));
   out = replaceSection(out, 'talents', talents(D.talents, D.arbre, D.souvenirs));
@@ -651,10 +679,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const after = build(before);
   if (process.argv.includes('--check')) {
     if (after !== before) { console.error('wiki.html n’est pas à jour : lance « node themist/outils/wiki.mjs ».'); process.exit(1); }
-    const D0 = loadData(), manque = portraitsManquants(D0.gardiens, D0.brumeux, D0.arene);
+    const D0 = loadData(), manque = portraitsManquants(D0.gardiens, D0.brumeux, D0.arene, D0.gardiensD);
     if (manque.length) { console.error(`Portraits des gardiens ou du Brumeux manquants pour la version ${loadData().gardiens.dessin.version} du dessin (lance _dev/bancs/capture-portraits.mjs ou capture-brumeux.mjs) :\n  ${manque.join('\n  ')}`); process.exit(1); }
     console.log('wiki.html est à jour (portraits des gardiens et du Brumeux compris).');
   } else if (after !== before) { writeFileSync(WIKI, after); console.log('wiki.html mis à jour.'); }
   else console.log('wiki.html déjà à jour.');
-  if (!process.argv.includes('--check')) { const D0 = loadData(), manque = portraitsManquants(D0.gardiens, D0.brumeux, D0.arene); if (manque.length) console.warn(`Attention : ${manque.length} portrait(s) des gardiens manquent (capture-portraits.mjs).`); }
+  if (!process.argv.includes('--check')) { const D0 = loadData(), manque = portraitsManquants(D0.gardiens, D0.brumeux, D0.arene, D0.gardiensD); if (manque.length) console.warn(`Attention : ${manque.length} portrait(s) des gardiens manquent (capture-portraits.mjs).`); }
 }

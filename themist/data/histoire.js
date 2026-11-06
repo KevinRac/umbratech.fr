@@ -19,6 +19,8 @@
   {id:'voile',t:'Les Voilés',h:'Croiser un Voilé.',x:'Ils portent des masques de miroir pour ne pas voir ce qu’ils sont devenus. La lumière les force à se regarder, et c’est seulement alors qu’ils saignent.'},
   {id:'coeur',t:'Le Cœur de la Brume',h:'Atteindre le troisième acte.',x:'Sous les Cryptes, la pierre cède à la chair. Les murs ont des yeux, et les veines du sol battent au rythme d’un cœur que personne n’avait jamais vu.'},
   {id:'glas',t:'Le Glas Originel',h:'Faire taire le Glas Originel.',x:'C’était la première cloche, celle qui sonna trop longtemps. Elle n’a jamais cessé : elle a seulement appris à battre comme un cœur. Chaque Éveillé qui tombe est un écho de son glas.'},
+  // v18.15 (6.1b) : les gardiens de la descente (actes IV à IX) ; gardien : l'acte (l'entrée n'est montrée, au jeu comme au wiki, que si ce gardien est allumé)
+  {id:'guet',gardien:4,t:'Le Guet Sans-Nom',h:'Vaincre le gardien des Bas-Fonds.',x:'Le registre de la Porte Basse s’arrêtait au milieu d’une phrase. Celui qui l’écrivait est descendu la finir. Il garde encore la dernière porte, mais il ne sait plus qui il attend.'},
   {id:'pal',t:'La Brume apprend',h:'Faire taire le Glas Originel au palier 1.',x:'Après chaque victoire, la Brume s’épaissit. Elle apprend de ceux qui la traversent, et chaque retour la rend plus dense, plus affamée.'}],
  // Chapitres de la Carte du Glas (I à V) : t titre, hint où chercher, truth la Vérité révélée, tx son texte
  chapitres:[

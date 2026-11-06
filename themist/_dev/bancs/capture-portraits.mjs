@@ -5,6 +5,8 @@
 // Chaque portrait est le gardien tel que le jeu le dessine (fonctions d'aperçu hors salle, __gardiens.<gardien>.apercu : corps puis lueurs), au temps
 // voulu, au repos, sur un fond sombre, dans le même cadre (prolongements compris : cordes du Héraut, artères du Glas). Rien du combat n'est lu ni changé.
 // Vérifie : aucune erreur de script, chaque portrait existe et n'est pas vide, les trois temps d'un gardien se distinguent, rayon de touche inchangé.
+// v18.15 (6.1b) : aussi les gardiens de la descente allumés (data/gardiens-descente.js, dessin.version), par __gardiens18.<id>.apercu (aucune salle ouverte).
+// PORTRAITS=1,2,3,4 (défaut : tous) choisit les gardiens à capturer (une capture refaite sans changement de dessin réécrit des fichiers identiques au pixel).
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -60,7 +62,8 @@ const portrait = (page, cle, LARG, w, cy) => page.evaluate(([cle, LARG, w, cy]) 
 }, [cle, LARG, w, cy]);
 
 const feuille = [];
-for (const act of [1, 2, 3]) {
+const QUI = (process.env.PORTRAITS || '1,2,3,4,5,6,7,8,9').split(',').map(Number);
+for (const act of [1, 2, 3].filter(a => QUI.includes(a))) {
   const { cle, nom, r, w: cw, cy } = ACTES[act];
   const { page, errs, ctx } = await ouvrir(act);
   const version = await page.evaluate(() => window.BRUME_DATA.gardiens.dessin.version);
@@ -85,11 +88,42 @@ for (const act of [1, 2, 3]) {
   feuille.push(portraits.map(p => p.png));
   await ctx.close();
 }
-// planche de contrôle (facultative) : les neuf portraits côte à côte
+// v18.15 · les gardiens de la descente allumés : le cadre (unités du monde, 4:5) ; l'aperçu hors salle (__gardiens18.<cle>.apercu : corps, feuillets et page)
+const DESC = { 4: { cle: 'guet', w: 176, cy: 136 } };
+for (const n of Object.keys(DESC).map(Number).filter(n => QUI.includes(n))) {
+  const { cle, w, cy } = DESC[n];
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, reducedMotion: 'no-preference' });
+  const page = await ctx.newPage(); const errs = [];
+  page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+  await page.goto(BASE); await page.waitForFunction(() => !!window.__gardiens18, null, { timeout: 40000 });
+  const g = await page.evaluate(n => { const g = window.__gardiens18.GD[n]; return { actif: g.actif, version: g.dessin.version, nom: g.nom, r: g.rayon }; }, n);
+  if (!g.actif) { console.log(`${g.nom} : éteint, pas de portrait`); await ctx.close(); continue; }
+  const portraits = [];
+  for (const t of [1, 2, 3]) {
+    const p = await page.evaluate(([cle, LARG, w, cy, t]) => { const zoom = LARG / w, W = w, H = w * 1.25, CX = w / 2;
+      const cv = document.createElement('canvas'); cv.width = W * zoom; cv.height = H * zoom; const o = cv.getContext('2d', { willReadFrequently: true });
+      o.fillStyle = '#17141b'; o.fillRect(0, 0, cv.width, cv.height);
+      const fond = o.createRadialGradient(CX * zoom, (cy - 10) * zoom, 6 * zoom, CX * zoom, (cy - 10) * zoom, W * 0.85 * zoom); fond.addColorStop(0, 'rgba(96,84,112,.42)'); fond.addColorStop(1, 'rgba(23,20,27,0)');
+      o.fillStyle = fond; o.fillRect(0, 0, cv.width, cv.height);
+      o.save(); o.scale(zoom, zoom); o.lineCap = 'round'; o.lineJoin = 'round'; window.__gardiens18[cle].apercu(o, { x: CX, y: cy, temps: t, t: 0.6 }); o.restore();
+      const d = o.getImageData(0, 0, cv.width, cv.height).data; let vif = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - 23) + Math.abs(d[i + 1] - 20) + Math.abs(d[i + 2] - 27) > 60) vif++;
+      return { png: cv.toDataURL('image/webp', 0.9), vif: vif / (d.length / 4), w: cv.width, h: cv.height }; }, [cle, LARG, w, cy, t]);
+    const f = join(OUT, `gardien-${n}-t${t}-v${g.version}.webp`); writeFileSync(f, Buffer.from(p.png.split(',')[1], 'base64')); portraits.push(p);
+    ok(statSync(f).size > 4000 && statSync(f).size < 150000, `${g.nom} : portrait du temps ${t} écrit, ${statSync(f).size} octets (${p.w} × ${p.h})`);
+    ok(p.vif > 0.04 && p.vif < 0.6, `${g.nom} : temps ${t}, le gardien occupe ${(p.vif * 100).toFixed(1)} % du cadre (ni vide ni débordant)`);
+  }
+  const diff = (a, b) => page.evaluate(async ([a, b]) => { const im = async u => { const i = new Image(); i.src = u; await i.decode(); const c = document.createElement('canvas'); c.width = i.width; c.height = i.height; const o = c.getContext('2d'); o.drawImage(i, 0, 0); return o.getImageData(0, 0, c.width, c.height).data; };
+    const A = await im(a), B = await im(b); let k = 0; for (let i = 0; i < A.length; i += 4) if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 60) k++; return k / (A.length / 4); }, [a, b]);
+  const d12 = await diff(portraits[0].png, portraits[1].png), d23 = await diff(portraits[1].png, portraits[2].png);
+  ok(d12 > 0.005 && d23 > 0.005, `${g.nom} : les trois temps se distinguent (${(d12 * 100).toFixed(1)} % · ${(d23 * 100).toFixed(1)} % des pixels)`);
+  ok(errs.length === 0, `${g.nom} : aucune erreur de script${errs.length ? ' : ' + errs.join(' | ') : ''}`);
+  feuille.push(portraits.map(p => p.png)); await ctx.close();
+}
+// planche de contrôle (facultative) : les portraits côte à côte (une ligne par gardien)
 if (PLANCHE) {
   const { page, ctx } = await (async () => { const c = await browser.newContext({ viewport: { width: 800, height: 600 } }); return { page: await c.newPage(), ctx: c }; })();
-  const url = await page.evaluate(async ([feuille, L]) => { const W = L, H = L * 1.25, c = document.createElement('canvas'); c.width = 3 * W; c.height = 3 * H; const o = c.getContext('2d');
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { const im = new Image(); im.src = feuille[i][j]; await im.decode(); o.drawImage(im, j * W, i * H); }
+  const url = await page.evaluate(async ([feuille, L]) => { const W = L, H = L * 1.25, c = document.createElement('canvas'); c.width = 3 * W; c.height = feuille.length * H; const o = c.getContext('2d');
+    for (let i = 0; i < feuille.length; i++) for (let j = 0; j < 3; j++) { const im = new Image(); im.src = feuille[i][j]; await im.decode(); o.drawImage(im, j * W, i * H); }
     return c.toDataURL('image/png'); }, [feuille, LARG]);
   writeFileSync(PLANCHE, Buffer.from(url.split(',')[1], 'base64')); console.log('planche : ' + PLANCHE); await ctx.close();
 }

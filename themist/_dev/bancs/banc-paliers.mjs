@@ -1,7 +1,7 @@
 // Banc Chromium : v18.2, action 3a (règles des paliers Difficile et Extrême, sans les mutations). Usage : node banc-paliers.mjs <port> [sections, ex. ABCDE]
 // A. Normal : rien ne change (Masqué, némésis, soins, soin complet du gardien et son message, haltes, aucun temps de plus).
 // B. Difficile, choisi comme un joueur (sauvegarde ouverte, sélecteur, départ) : Masqué 70 / 75 / 3, soins du monde ×0,65, talents ×1,
-//    gardien de l'acte I : soin ×0,65 et message ; place provisoire de l'acte IV : l'éveil, puis le temps de plus sous 35 % (signature redoublée).
+//    gardien de l'acte I : soin ×0,65 et message ; place provisoire de l'acte V (l'acte IV a son gardien depuis la v18.15) : l'éveil, puis le temps de plus sous 35 % (signature redoublée).
 // C. Extrême : némésis 2 par acte sans répit, soins du monde ×0,5, aucun soin après un gardien et son message, pas de halte au choix avant la moitié de l'acte.
 // D. Règle d'or : les gardiens des actes I à III (PV, dégâts, rayon, vitesse, nom) identiques dans les trois paliers.
 // E. Mesure (indicative) : actes I à V joués debout, le joueur ne bouge pas (PV remis à moitié avant chaque pas) : dégâts subis par minute,
@@ -72,8 +72,8 @@ if (SEC.includes('A')) {
   const g = await page.evaluate(GARDIEN, 1);
   ok(!g.mort && g.boss && g.plein, 'A : gardien de l’acte I, PV entièrement rendus ' + JSON.stringify(g));
   ok(/Tes PV sont restaurés\./.test(g.msg), 'A : message « Tes PV sont restaurés. » ' + g.msg);
-  const pv = await page.evaluate(PROVISOIRE, 4);
-  ok(pv.masque && pv.gardeK === 'garde' && pv.T0 === null && !pv.temps, 'A : place provisoire de l’acte IV sans temps de plus ' + JSON.stringify({ g: pv.gardeK, t: pv.T0 }));
+  const pv = await page.evaluate(PROVISOIRE, 5);
+  ok(pv.masque && pv.gardeK === 'garde' && pv.T0 === null && !pv.temps, 'A : place provisoire de l’acte V sans temps de plus ' + JSON.stringify({ g: pv.gardeK, t: pv.T0 }));
   ok(pv.caps.length === 3, 'A : trois capacités après l’éveil, pas de quatrième');
   ok(!errs.length, 'A : aucune erreur ' + errs.slice(0, 3).join(' | '));
   await ctx.close();
@@ -95,12 +95,12 @@ if (SEC.includes('B')) {
   const g = await page.evaluate(GARDIEN, 1);
   ok(!g.mort && g.boss && near(g.rendu, 0.65, 0.01), 'B : gardien de l’acte I, PV rendus ×0,65 ' + JSON.stringify(g));
   ok(/Tes PV sont en partie restaurés\./.test(g.msg), 'B : message « en partie » ' + g.msg);
-  const pv = await page.evaluate(PROVISOIRE, 4);
-  ok(pv.masque && pv.gardeK === 'garde' && pv.T0 && pv.T0.pv === 35 && pv.T0.on === false, 'B : place provisoire de l’acte IV, temps de plus prévu à 35 % ' + JSON.stringify(pv.T0));
+  const pv = await page.evaluate(PROVISOIRE, 5);
+  ok(pv.masque && pv.gardeK === 'garde' && pv.T0 && pv.T0.pv === 35 && pv.T0.on === false, 'B : place provisoire de l’acte V, temps de plus prévu à 35 % ' + JSON.stringify(pv.T0));
   ok(pv.temps && pv.temps.on && pv.ev.length === 2 && pv.ev[0][1] === 0.6 && pv.ev[1][1] === 0.3, 'B : l’éveil à 60 %, puis le temps de plus à 30 % ' + JSON.stringify(pv.ev));
   ok(pv.temps && pv.temps.cap === pv.sig && pv.caps.filter(k => k === pv.sig).length === 1 && pv.caps.length === 4, 'B : le temps de plus est la signature redoublée ' + JSON.stringify(pv.caps));
   ok((pv.carte.match(/class="[^"]*nw/g) || []).length >= 1, 'B : la carte du Masqué montre la nouveauté');
-  for (const n of [5, 9]) { const q = await page.evaluate(PROVISOIRE, n); ok(q.masque && q.T0 && q.temps && q.temps.on, `B : acte ${n}, temps de plus`); }
+  for (const n of [6, 9]) { const q = await page.evaluate(PROVISOIRE, n); ok(q.masque && q.T0 && q.temps && q.temps.on, `B : acte ${n}, temps de plus`); }
   // v18.12 (5g-2) : l'arène allumée, le boss final de l'acte X est le Brumeux (plus de place provisoire, donc pas de temps de plus) ; éteinte, le Masqué revient
   { const q = await page.evaluate(PROVISOIRE, 10); const allume = await page.evaluate(() => window.__arene.actif());
     if (allume) ok(!q.masque && q.gardeK === 'final' && q.brumeux && q.arene === 'final', 'B : acte X, la salle « final » est le Brumeux (arène allumée), sans place provisoire ' + JSON.stringify(q));

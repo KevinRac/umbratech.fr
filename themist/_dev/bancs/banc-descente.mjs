@@ -67,6 +67,7 @@ if (SEC.includes('A')) {
   const actes = [...new Set(vus.map(v => v.acte))];
   ok(JSON.stringify(actes) === JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), 'A : les 10 actes dans l’ordre ' + JSON.stringify(actes));
   const rooms = { 1: 7, 2: 6, 3: 7, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 3 };
+  const ACT = await page.evaluate(() => window.__gardiens18 ? window.__gardiens18.actifs() : {});   // v18.15 : les gardiens de la descente allumés
   for (let n = 1; n <= 10; n++) {
     const s = vus.filter(v => v.acte === n);
     ok(s.length === rooms[n] && s.every(v => v.rooms === rooms[n]), `A : acte ${n}, ${rooms[n]} salles (${s.length})`);
@@ -74,12 +75,13 @@ if (SEC.includes('A')) {
     ok(s.every(v => new RegExp(`^Acte ${['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n]} · `).test(v.hAct)), `A : acte ${n}, HUD « Acte ${n} » ${s[0] && s[0].hAct}`);
     const der = s[s.length - 1];
     if (n <= 3) { ok(der.type === 'boss' && der.boss, `A : acte ${n}, un gardien en dernière salle`); ok(s[s.length - 2].type === 'halte', `A : acte ${n}, antichambre`); }
+    else if (n < 10 && ACT[n]) { ok(der.type === 'boss' && der.boss && der.boss.name === ACT[n], `A : acte ${n}, son gardien allumé (${der.type}, ${der.boss && der.boss.name})`); ok(/· Gardien/.test(der.hRoom), `A : acte ${n}, HUD « Gardien » (${der.hRoom})`); }
     else if (n < 10) { ok(der.type === 'elite' && der.garde === n && der.k === 'garde', `A : acte ${n}, la place du gardien (${der.type}, ${der.k})`); ok(/· Gardien/.test(der.hRoom), `A : acte ${n}, HUD « Gardien » (${der.hRoom})`); }
     else { ok(JSON.stringify(s.map(v => v.k)) === '["mini","mini","final"]', `A : acte X, deux miniboss puis le boss final ${JSON.stringify(s.map(v => v.k))}`); ok(/· Miniboss/.test(s[0].hRoom) && /· Boss final/.test(der.hRoom), `A : acte X, HUD (${s[0].hRoom} / ${der.hRoom})`); }
-    if (n >= 4) ok(!s.some(v => v.type === 'boss' || (v.boss && /Glas/.test(v.boss.name))), `A : acte ${n}, le Glas Originel n'est pas repris`);
+    if (n >= 4) ok(!s.some(v => (v.type === 'boss' && !ACT[n]) || (v.boss && /Glas/.test(v.boss.name))), `A : acte ${n}, le Glas Originel n'est pas repris`);
     if (n < 10) ok(JSON.stringify(der.portes) === JSON.stringify([n === 1 ? 'act' : n === 2 ? 'act3' : 'acte']), `A : acte ${n}, une seule porte vers l'acte suivant ${JSON.stringify(der.portes)}`);
   }
-  ok(vus.filter(v => v.acte >= 4 && v.asm && v.asm.garde === v.acte && v.asm.k).length >= 7, `A : places provisoires : un Masqué imposé et renforcé (${vus.filter(v => v.asm && v.asm.k).length} / 8)`);
+  { const n = 8 - Object.keys(ACT).length; ok(vus.filter(v => v.acte >= 4 && v.asm && v.asm.garde === v.acte && v.asm.k).length >= n - 1, `A : places provisoires : un Masqué imposé et renforcé (${vus.filter(v => v.asm && v.asm.k).length} / ${n})`); }
   // v18.2 : comparés à corps égal (PV ÷ pv du corps : un Spectre, ×0,85, après une Brute, ×1,1, faisait échouer le banc au hasard)
   const mx = vus.filter(v => v.acte === 10 && v.asm && v.asm.k).map(v => v.asm.parCorps);
   ok(mx.length === 3 ? mx[0] < mx[1] && mx[1] < mx[2] : true, `A : acte X, des Masqués de plus en plus endurants ${JSON.stringify(mx)}`);

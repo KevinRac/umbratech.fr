@@ -6,7 +6,7 @@
 //  0. les données : commun (temps de frappe, part maximale, préavis ≥ 0,8 s, seuils, sortie, build de référence des actes IV à IX), chaque gardien
 //     (acte, nom, attaques aux neuf formes connues, préavis, parts, file par temps sur des attaques connues, titres des temps, temps de plus sous le
 //     dernier seuil, échelon complet, habiletés connues, décor, couleurs à ΔE ≥ 25 de la grammaire, glyphe 24 × 24 XML équilibré sans identifiant ni
-//     filtre) ; 6.1a : tous éteints ;
+//     filtre) ; 6.1b : le Guet allumé (dessin, lecture, codex), les autres éteints ;
 //  1. l'interrupteur (Q2) : garActifs (seul actif === true, seulement aux actes IV à IX) ; desPorte rend « boss » quand l'acte a un gardien, « garde »
 //     sinon (la place provisoire) ;
 //  2. les temps (Q6) : seuils du Normal, temps de plus en Difficile et en Extrême seulement, jamais sous l'acte IV (même avec une règle mal écrite) ;
@@ -20,7 +20,9 @@
 //  6. le juge des coups (aucun coup sans signe) ;
 //  7. l'échelle (Q25) : les données la respectent ; elle attrape une habileté qui n'est pas neuve, un cran qui baisse, un préavis qui remonte ou passe
 //     sous 0,8 s, un gardien sans cran qui monte ;
-//  8. les branchements lus dans index.html (données chargées, interrupteur, aiguillage complet, retouches ACTG, réserve du Glas, gardes d'essai).
+//  8. les branchements lus dans index.html (données chargées, interrupteur, aiguillage complet, retouches ACTG, réserve du Glas, gardes d'essai) ;
+//  9. le Guet Sans-Nom (6.1b) : herses (10 000 Fermetures), Couvre-feu (2 000 suites), Contrôle (sortie par le guichet), Rafle, Vouge, Feuillets, parts,
+//     Relève, branchements (tirs qui passent, il traverse ses herses, sol, journal des tirs, codex).
 // Contre-épreuves (une erreur introduite exprès doit être attrapée) : une file qui répète, un préavis à 0,5 s, une zone sans sortie posée, une
 // échelle sans habileté neuve, une part à 0,4, un gardien allumé à l'acte X.
 //   node themist/outils/sim-gardiens.mjs
@@ -34,8 +36,8 @@ const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 const bloc = (n) => { const m = html.match(new RegExp('/\\*' + n + ':pur\\*/([\\s\\S]*?)/\\*/' + n + ':pur\\*/')); if (!m) { console.error(`Bloc /*${n}:pur*/ introuvable`); process.exit(1); } return m[1]; };
 const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array };
 vm.createContext(ctx);
-for (const f of ['gardiens-descente', 'descente', 'brumeux', 'talents', 'souvenirs-brume', 'gardiens', 'versions']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + bloc('gar') + '\nthis.F={desRng,desActes,desPorte,desRegles,desTempsEnPlus,brxDans,brxSortie,brxGrille,brxConnexe,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle,GAR_FORMES,GAR_CRANS};', ctx);
+for (const f of ['gardiens-descente', 'descente', 'brumeux', 'talents', 'souvenirs-brume', 'gardiens', 'versions', 'bestiaire', 'histoire']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
+vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + bloc('gar') + '\nthis.F={desRng,desActes,desPorte,desRegles,desTempsEnPlus,brxDans,brxSortie,brxGrille,brxConnexe,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle,GAR_FORMES,GAR_CRANS,garTroncons,garHerse,garHerseC,garGuichets,garFermeture,garCoupes,garSection,garVoisines,garSortie2,garRafle,garVouge,garFeuillets,garVolPage,garCouvreAvant,garCouvreApres,garConnexe,garParTemps,garFermer};', ctx);
 const F = ctx.F, BD = ctx.window.BRUME_DATA, GD = BD.gardiensD, C = GD.commun, DS = BD.descente, DBX = BD.brumeux, SJ = BD.souvenirsBrume.justice, GA = BD.gardiens;
 let fails = 0, checks = 0;
 const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
@@ -67,31 +69,38 @@ for (const n of GARDES) {
   const att = Object.entries(g.attaques || {});
   ok(att.length >= 2, `données : ${nom} : au moins deux attaques`);
   for (const [id, a] of att) {
-    ok(F.GAR_FORMES.includes(a.forme), `données : ${nom} · ${id} : forme « ${a.forme} » parmi les neuf connues`);
-    ok(a.preavis >= C.preavisMin, `données : ${nom} · ${id} : préavis ${a.preavis} s ≥ ${C.preavisMin}`);
-    ok(a.part > 0 && a.part <= C.partMax, `données : ${nom} · ${id} : part ${a.part} ≤ ${C.partMax}`);
+    ok(F.GAR_FORMES.includes(a.forme) || a.forme === 'invocation', `données : ${nom} · ${id} : forme « ${a.forme} » parmi les neuf connues (ou une invocation)`);
+    // 6.1b : un tir à trajectoire annoncée a sa ligne violette (preavisTir) ; une zone, son préavis plancher ; une invocation, le signe d'arrivée du jeu
+    const pmin = a.forme === 'projectile' ? C.preavisTir : a.forme === 'invocation' ? 0.8 : C.preavisMin;
+    ok(a.preavis >= pmin && Object.values(a.preavisT || {}).every(v => v >= pmin), `données : ${nom} · ${id} : préavis ${a.preavis} s (par temps : ${JSON.stringify(a.preavisT || {})}) ≥ ${pmin}`);
+    if (a.forme !== 'invocation') ok(a.part > 0 && a.part <= C.partMax && (a.forme !== 'projectile' || a.part <= 0.12), `données : ${nom} · ${id} : part ${a.part} ≤ ${C.partMax} (un tir isolé ≤ 12 %, Q10)`);
+    else ok(a.max >= 1 && a.max <= 7 && a.types.every(t => BD.bestiaire.ennemis[t]), `données : ${nom} · ${id} : invocation de types connus, au plus ${a.max} vivants`);
     ok(typeof a.n === 'string' && typeof a.d === 'string' && a.d.length < 200, `données : ${nom} · ${id} : nom et ligne courte du wiki`);
   }
   const nt = g.echelon.temps + 1;
-  for (let t = 1; t <= nt; t++) { const L = g.file[t]; ok(Array.isArray(L) && L.length >= 2 && L.every(k => g.attaques[k]), `données : ${nom} : file du temps ${t} sur des attaques connues`); }
+  for (let t = 1; t <= nt; t++) { const L = g.file[t]; ok(Array.isArray(L) && L.length >= 2 && L.every(k => g.attaques[k] || (g.fermetures || {})[k]), `données : ${nom} : file du temps ${t} sur des attaques (ou des Fermetures) connues`); }
+  for (const [k, Fm] of Object.entries(g.fermetures || {})) ok(g.attaques[Fm.herse] && ['couloir', 'croix'].includes(g.attaques[Fm.herse].forme) && g.attaques[Fm.suite] && g.attaques[Fm.suite].forme === 'case' && !g.attaques[k], `données : ${nom} · Fermeture ${k} : une herse (ou une Croix) puis une section (case)`);
   ok(g.temps.titres.length === nt, `données : ${nom} : un titre par temps, temps de plus compris (${nt})`);
   ok(g.tempsEnPlus && g.tempsEnPlus.seuil > 0 && g.tempsEnPlus.seuil < C.seuils[C.seuils.length - 1] && g.tempsEnPlus.n === g.temps.titres[nt - 1], `données : ${nom} : temps de plus sous le dernier seuil, nommé comme son titre`);
   ok(F.GAR_CRANS.every(c => typeof g.echelon[c] === 'number') && g.echelon.temps === 3, `données : ${nom} : échelon complet (trois temps aux actes IV à VI)`);
   ok(g.habiletes.length >= 1 && g.habiletes.every(h => HAB[h]), `données : ${nom} : habiletés connues`);
-  if (!g.essai) ok(Math.min(...att.map(([, a]) => a.preavis)) === g.echelon.preavis, `données : ${nom} : le cran « préavis » est son préavis le plus court`);
+  if (!g.essai) { const zs = att.filter(([, a]) => F.GAR_FORMES.includes(a.forme) && a.forme !== 'projectile'), pm = Math.min(...zs.flatMap(([, a]) => [a.preavis, ...Object.values(a.preavisT || {})]));
+    ok(pm === g.echelon.preavis, `données : ${nom} : le cran « préavis » est son préavis de zone le plus court (${pm})`); }
   ok(g.decor && typeof g.decor.theme === 'string' && !['faub', 'crypt', 'hub', 'coeur'].includes(g.decor.theme) && g.decor.palette && g.decor.palette.h >= 0, `données : ${nom} : un décor à lui (thème neuf, palette)`);
   for (const [k, c] of Object.entries(g.couleurs || {})) for (const [gk, gc] of Object.entries(GRAMMAIRE)) ok(dE(c, gc) >= 25, `données : ${nom} : couleur ${k} à ΔE ≥ 25 de ${gk} (${dE(c, gc).toFixed(1)})`);
   const s = g.glyphe || '';
   ok(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 24 24" width="24" height="24">[\s\S]*<\/svg>$/.test(s) && !/\sid=|filter|<script/.test(s), `données : ${nom} : glyphe 24 × 24, sans identifiant, filtre ni script`);
   const ouv = (s.match(/<(?!\/)[a-z]+[^>]*[^/]>/g) || []).length, fer = (s.match(/<\/[a-z]+>/g) || []).length;
   ok(ouv === fer, `données : ${nom} : glyphe XML équilibré (${ouv} ouvertures, ${fer} fermetures)`);
-  ok(g.actif === false, `données (6.1a) : ${nom} est éteint (la descente garde sa place provisoire)`);
+  ok(n === 4 ? g.actif === true && g.essai === false : g.actif === false, `données (6.1b) : ${nom} : ${n === 4 ? 'allumé, plus un gardien d\'essai' : 'éteint'}`);
+  if (g.actif) { ok(g.dessin && g.dessin.version >= 1 && typeof g.dessin.lecture === 'string' && g.wiki && g.wiki.done && g.wiki.journal, `données : ${nom} : allumé, il a son dessin (version ≥ 1), sa lecture et ses lignes de wiki`);
+    ok(BD.histoire.codex.some(c => c.gardien === n), `données : ${nom} : allumé, il a son entrée de codex (Q13)`); }
   ok(typeof g.faible === 'string' && g.faible.length > 0, `données : ${nom} : son point faible nommé (wiki)`);
 }
 ok(GARDES.length >= 1, 'données : au moins le gardien de l\'acte IV');
 
 // ── 1. L'interrupteur (Q2)
-ok(Object.keys(F.garActifs(GD)).length === 0, 'interrupteur : tous éteints → aucun gardien allumé (6.1a)');
+ok(JSON.stringify(F.garActifs(GD)) === JSON.stringify({ 4: GD[4].nom }), 'interrupteur : le Guet allumé à l\'acte IV, les autres éteints (6.1b)');
 { const G2 = clone(GD); G2[4].actif = true; const A = F.garActifs(G2); ok(A[4] === GD[4].nom && Object.keys(A).length === 1, 'interrupteur : actif vrai → le nom à son acte');
   G2[4].actif = 'true'; ok(!F.garActifs(G2)[4], 'interrupteur : seul le booléen vrai allume (« true » en texte n\'allume rien)');
   const G3 = clone(GD); G3[10] = Object.assign(clone(GD[4]), { acte: 10, actif: true }); ok(!F.garActifs(G3)[10], 'interrupteur (contre-épreuve) : un gardien allumé à l\'acte X est refusé');
@@ -139,7 +148,9 @@ ok(F.garDegats(GD, 4, 0.4) === Math.round(C.partMax * C.reference.pvRef[4]), 'd�
 const opt = (charge, piliers) => ({ pr: SJ.joueur.rayon, v: SJ.joueur.vitesse, charge, reflexe: SJ.reflexeS, arene: AR, monde: { w: W, h: H }, piliers: piliers || [] });
 const libre = (q, zones, pil) => q[0] >= AR.x0 + SJ.joueur.rayon - 1e-9 && q[0] <= AR.x1 - SJ.joueur.rayon + 1e-9 && q[1] >= AR.y0 + SJ.joueur.rayon - 1e-9 && q[1] <= AR.y1 - SJ.joueur.rayon + 1e-9 && !zones.some(z => F.brxDans(z, q[0], q[1], SJ.joueur.rayon)) && !(pil || []).some(p => Math.hypot(q[0] - p.x, q[1] - p.y) < p.r + SJ.joueur.rayon - 1);
 for (const n of GARDES) { const g = GD[n];
-  for (const [id, a] of Object.entries(g.attaques)) { let poses = 0, sautes = 0, faux = 0, egal = 0, nonEgal = 0; const r = mk(100 + n);
+  // le moteur générique (garVariantes) : les attaques aux formes simples ; la herse, la section, la Vouge, les Feuillets et l'Appel ont leur section (9)
+  const propre = (id, a) => !['disque', 'couloir', 'cone', 'anneau'].includes(a.forme) || a.atteinte || Object.values(g.fermetures || {}).some(Fm => Fm.herse === id || Fm.suite === id);
+  for (const [id, a] of Object.entries(g.attaques)) { if (propre(id, a)) continue; let poses = 0, sautes = 0, faux = 0, egal = 0, nonEgal = 0; const r = mk(100 + n);
     for (let i = 0; i < 10000; i++) {
       const p = [AR.x0 + 20 + r() * (AR.x1 - AR.x0 - 40), AR.y0 + 20 + r() * (AR.y1 - AR.y0 - 40)], h = [W / 2 + (r() - 0.5) * 600, AR.y0 + 120 + r() * 300];
       const V = F.garVariantes(a, h, p, C.sortie.essais), o = opt(a.preavis), k = F.garPlacer(C.sortie, V, p, o);
@@ -173,6 +184,7 @@ ok(F.garJuge(C, { k: 'zone', charge: 1.0, age: 1.0 }) === true, 'juge : une zone
 ok(F.garJuge(C, { k: 'zone', charge: 0.5, age: 0.5 }) === false, 'juge (contre-épreuve) : une zone au préavis de 0,5 s n\'est pas signée');
 ok(F.garJuge(C, { k: 'zone', charge: 1.0, age: 0.6 }) === false, 'juge : une zone qui frappe avant la fin de son préavis n\'est pas signée');
 ok(F.garJuge(C, { k: 'contact' }) && F.garJuge(C, { k: 'ennemi', type: 'rampant' }) && !F.garJuge(C, { k: 'autre' }), 'juge : contact et ennemis signés, source inconnue non');
+ok(F.garJuge(C, { k: 'tir', charge: 0.6 }) && !F.garJuge(C, { k: 'tir', charge: 0.3 }), 'juge (6.1b) : un tir dont la ligne a duré preavisTir est signé ; une ligne de 0,3 s ne l\'est pas (contre-épreuve)');
 
 // ── 7. L'échelle (Q25)
 { const E = F.garEchelle(GD); ok(E.ok, 'échelle : les données la respectent' + (E.erreurs.length ? ' — ' + E.erreurs.join(' ; ') : ''));
@@ -223,9 +235,89 @@ has(/window\.__descente\.essai\(n,\{fin:true,cls:o\.cls\}\);RUN\.essai=1;/, 'ess
 // le bloc pur n'a pas accès au jeu
 const pur = bloc('gar');
 ok(!/\b(RUN|room|SAVE|enemies|ctx)\b/.test(pur.replace(/\/\/[^\n]*/g, '')) && !/\bP\.[a-z]/.test(pur.replace(/\/\/[^\n]*/g, '')), 'bloc pur : ni P, ni RUN, ni room, ni SAVE, ni enemies');
-// le journal et le wiki ne disent rien tant que tout est éteint (6.1a : une ligne de journal sans mécanique)
+// 6.1b : le wiki nomme le Guet allumé (carte, sous-section, la descente) ; il ne nomme aucun gardien éteint
 const wiki = readFileSync(join(ROOT, 'wiki.html'), 'utf8');
-ok(!wiki.includes(GD[4].nom), 'wiki : le Guet n\'y est pas tant qu\'il est éteint');
+for (const n of GARDES) ok(GD[n].actif ? wiki.includes(GD[n].nom) && wiki.includes(GD[n].tempsEnPlus.n) : !wiki.includes(GD[n].nom), `wiki : ${GD[n].nom} ${GD[n].actif ? 'y est (allumé), son temps de plus compris' : 'n\'y est pas (éteint)'}`);
+// ── 9. Le Guet Sans-Nom (6.1b) : herses, sections, Rafle, Vouge, Feuillets, Couvre-feu, parts
+{ const g = GD[4], HS = g.herse, M = { w: W, h: H }, pr = SJ.joueur.rayon, pad = Math.max(pr, C.sortie.marge), axe = h => d => h.o === 'v' ? d.y : d.x;
+  const lo = h => h.o === 'v' ? AR.y0 : AR.x0, hi = h => h.o === 'v' ? AR.y1 : AR.x1;
+  ok(HS.disque.pas - 2 * HS.disque.r < 2 * pr, `herse : barreaux jointifs (pas ${HS.disque.pas}, rayon ${HS.disque.r}) : on ne passe pas entre deux barreaux`);
+  ok(HS.guichet >= 120 && HS.guichet - 2 * pad >= 2 * C.sortie.grille, `herse : guichet de ${HS.guichet} px (≥ 120, au moins deux cases de grille libres)`);
+  ok(Object.values(HS.dureeS).every(v => v >= 4) && HS.couvreFeu.garde < HS.couvreFeu.total && HS.connexite >= 0.85, 'herse : durées, Couvre-feu (garde < total), connexité ≥ 85 %');
+  // a. une Fermeture : d'un mur à l'autre, un guichet par tronçon, aucun barreau dans un guichet, à bord des murs ; jamais la salle coupée
+  { let mal = 0, n = 0, coupe = 0; const r = mk(9001);
+    for (let i = 0; i < 10000; i++) { const p = [AR.x0 + 30 + r() * (AR.x1 - AR.x0 - 60), AR.y0 + 30 + r() * (AR.y1 - AR.y0 - 60)], kind = i % 2 ? 'croix' : 'herse';
+      const L = F.garFermeture(HS, AR, kind, p, [], r); if (!L) continue; n++;
+      if (L.length !== (kind === 'croix' ? 2 : 1) || (kind === 'croix' && L[0].o === L[1].o)) mal++;
+      for (const h of L) { const T = F.garTroncons(lo(h), hi(h), L.filter(q => q !== h).map(q => q.c)), ts = h.disques.map(axe(h)).sort((a, b) => a - b);
+        if (h.guichets.length !== T.length || !h.guichets.every(q => T.filter(([a, b]) => q > a && q < b).length === 1)) mal++;
+        for (const q of h.guichets) if (h.disques.some(d => Math.abs(axe(h)(d) - q) < HS.guichet / 2 + d.r - 1e-6)) mal++;
+        for (const [a, b] of h.segs) { const q = ts.filter(t => t >= a - 1e-6 && t <= b + 1e-6); for (let k = 1; k < q.length; k++) if (q[k] - q[k - 1] > HS.disque.pas + 1e-6) mal++; }
+        if (h.c < (h.o === 'v' ? AR.x0 : AR.y0) + HS.bord[h.o] - 1e-6 || h.c > (h.o === 'v' ? AR.x1 : AR.y1) - HS.bord[h.o] + 1e-6) mal++;
+        if (h.zones.length !== h.segs.length || !h.zones.every(z => z.forme === 'couloir' && z.w === HS.w)) mal++; }
+      if (F.garConnexe(M, AR, L.flatMap(h => h.disques), p, pad) < HS.connexite) coupe++; }
+    ok(n > 9900, `herse : 10 000 Fermetures : une place presque toujours (${n})`);
+    ok(mal === 0, `herse : d'un mur à l'autre, un guichet clair par tronçon, aucun barreau dans un guichet, barreaux jointifs, à bord des murs (${mal} écarts)`);
+    ok(coupe === 0, `herse : une Fermeture (herse ou Croix) ne coupe jamais la salle (connexité ≥ ${HS.connexite}) (${coupe} coupées)`); }
+  // b. le Couvre-feu : 2 000 suites de six Fermetures ; avant : les plus anciennes se relèvent (total) ; après la Relève : il en garde une de la Fermeture,
+  // au plus « garde » en tout ; une Fermeture qui couperait la salle est refusée (le jeu en essaie une autre, puis saute) : jamais d'état coupé
+  { let trop = 0, coupe = 0, refus = 0, poses = 0; const r = mk(77);
+    for (let i = 0; i < 2000; i++) { let deb = [], ne = 0;
+      for (let k = 0; k < 6; k++) { const p = [AR.x0 + 40 + r() * (AR.x1 - AR.x0 - 80), AR.y0 + 40 + r() * (AR.y1 - AR.y0 - 80)], kind = r() < 0.5 ? 'croix' : 'herse', nn = kind === 'croix' ? 2 : 1;
+        const A = F.garCouvreAvant(HS.couvreFeu, deb, nn); deb = A.garde;
+        const X = F.garFermer(HS, AR, kind, p, deb, r, C.sortie.essais + 2, (D, L) => F.garConnexe(M, AR, D.concat(L).flatMap(h => h.disques), p, pad) >= HS.connexite);
+        deb = X.garde; const L = X.L; if (!L) { refus++; continue; } poses++; L.forEach(h => h.ne = ++ne);
+        if (deb.length + L.length > HS.couvreFeu.total) trop++;
+        if (F.garConnexe(M, AR, deb.concat(L).flatMap(h => h.disques), p, pad) < HS.connexite) coupe++;
+        deb = deb.concat([L[L.length - 1]]); deb = F.garCouvreApres(HS.couvreFeu, deb).garde;
+        if (deb.length > HS.couvreFeu.garde) trop++; } }
+    ok(trop === 0 && coupe === 0, `Couvre-feu : 12 000 Fermetures : jamais plus de ${HS.couvreFeu.total} herses debout (ni plus de ${HS.couvreFeu.garde} après une Relève), jamais la salle coupée (${trop} de trop, ${coupe} coupées)`);
+    ok(poses > 0.99 * (poses + refus), `Couvre-feu : la Fermeture se pose presque toujours (au besoin, la plus ancienne herse se relève d'abord) (${poses} posées, ${refus} sautées)`);
+    { const r2 = mk(5); const D = [F.garFermeture(HS, AR, 'herse', [640, 400], [], r2)[0]]; D[0].ne = 1; const X = F.garFermer(HS, AR, 'herse', [640, 400], D, r2, 3, () => false); ok(X.L === null && X.releve.length === 1 && X.garde.length === 0, 'Couvre-feu : rien ne tient → la plus ancienne se relève, puis la Fermeture saute (contre-épreuve)'); }
+    const D = [{ ne: 1 }, { ne: 2 }]; ok(F.garCouvreAvant(HS.couvreFeu, D, 2).releve.map(h => h.ne).join() === '1' && F.garCouvreApres(HS.couvreFeu, [{ ne: 3 }, { ne: 1 }, { ne: 2 }]).garde.map(h => h.ne).join() === '2,3', 'Couvre-feu : les plus anciennes se relèvent d\'abord'); }
+  // c. le Contrôle : ta section ; sa sortie passe par un guichet (au détour), libre, hors des barreaux, atteinte à temps
+  { let faux = 0, poses = 0, autre = 0, tot = 0; const r = mk(31);
+    for (let i = 0; i < 4000; i++) { const p0 = [AR.x0 + 40 + r() * (AR.x1 - AR.x0 - 80), AR.y0 + 40 + r() * (AR.y1 - AR.y0 - 80)], L = F.garFermeture(HS, AR, 'herse', p0, [], r); if (!L) continue;
+      const h = L[0], q = h.guichets[0], s = r() < 0.5 ? -1 : 1, off = 30 + r() * 120, along = (r() - 0.5) * 220, p = h.o === 'v' ? [h.c + s * off, q + along] : [q + along, h.c + s * off];
+      if (p[0] < AR.x0 + pr || p[0] > AR.x1 - pr || p[1] < AR.y0 + pr || p[1] > AR.y1 - pr) continue; tot++;
+      const z = F.garSection(AR, L, p), charge = F.garParTemps(g.attaques.controle.preavis, g.attaques.controle.preavisT, 1), o = opt(charge, h.disques), x = F.garSortieGrille(C.sortie, [z], p, o);
+      if (!(p[0] >= z.x0 && p[0] <= z.x1 && p[1] >= z.y0 && p[1] <= z.y1)) faux++;
+      if (!x.ok) continue; poses++;
+      if (!libre(x.q, [z], h.disques) || x.d > o.v * (o.charge - o.reflexe) + 1e-6) faux++;
+      if (Math.sign((h.o === 'v' ? x.q[0] : x.q[1]) - h.c) === s) autre++; }
+    ok(faux === 0, `Contrôle : ${tot} positions près d'un guichet : la section contient toujours le joueur ; chaque sortie rendue est libre, hors des barreaux, atteinte à temps (${faux} fausses)`);
+    ok(autre === 0 && poses > 0.5 * tot, `Contrôle : la sortie est toujours de l'autre côté de la herse, par le guichet (${poses} sorties sur ${tot})`); }
+  // d. la Rafle : ta section, puis une voisine ; deux coups qui laissent une sortie (garSortie2)
+  { let faux = 0, poses = 0; const r = mk(55), a = g.attaques.rafle;
+    for (let i = 0; i < 3000; i++) { const p0 = [AR.x0 + 60 + r() * (AR.x1 - AR.x0 - 120), AR.y0 + 60 + r() * (AR.y1 - AR.y0 - 120)], L = F.garFermeture(HS, AR, 'croix', p0, [], r); if (!L) continue;
+      const p = [p0[0] + (r() - 0.5) * 160, p0[1] + (r() - 0.5) * 160]; if (L.some(h => h.disques.some(d => Math.hypot(p[0] - d.x, p[1] - d.y) < d.r + pr)) || p[0] < AR.x0 + pr || p[0] > AR.x1 - pr || p[1] < AR.y0 + pr || p[1] > AR.y1 - pr) continue;
+      const o = opt(a.preavis, L.flatMap(h => h.disques)), R = F.garRafle(C.sortie, AR, L, p, o, a.preavis, a.seconde, r); if (!R) continue; poses++;
+      const adj = Math.abs(R[0].i - R[1].i) + Math.abs(R[0].j - R[1].j) === 1, s2 = F.garSortie2(C.sortie, [R[0]], [R[1]], p, o, a.preavis, a.seconde);
+      if (!adj || !s2.ok || !(p[0] >= R[0].x0 && p[0] <= R[0].x1 && p[1] >= R[0].y0 && p[1] <= R[0].y1)) faux++; }
+    ok(faux === 0 && poses > 1000, `Rafle : ${poses} posées : ta section puis une voisine, et une sortie pour les deux coups (${faux} fausses)`); }
+  // e. la Vouge : un cône vers toi ; au troisième temps, aller et retour (deux cônes à ±decale) ; f. les Feuillets : l'éventail, la ligne avant le vol
+  { const a = g.attaques.vouge, G1 = F.garVouge(a, [600, 300], [700, 300], false, 0), G2 = F.garVouge(a, [600, 300], [700, 300], true, 0);
+    ok(G1.length === 1 && Math.abs(G1[0][0].a) < 1e-9 && Math.abs(G1[0][0].ouv - a.ouv * Math.PI / 180) < 1e-9 && G1[0][0].r1 === a.r1, 'Vouge : un cône de 110° vers toi, 160 px');
+    ok(G2.length === 2 && Math.abs(G2[1][0].a - G2[0][0].a - 2 * a.decale * Math.PI / 180) < 1e-9 && F.garParTemps(0, a.retourT, 3) > 0 && F.garParTemps(0, a.retourT, 1) === 0, 'Vouge : aller et retour au troisième temps seulement (deux cônes à ±35°)');
+    ok(a.atteinte * a.r1 < a.r1 && a.approcheS > 0, 'Vouge : seulement à portée (il s\'approche, puis renonce)');
+    const f = g.attaques.feuillets, Fe = F.garFeuillets(f, 7, [600, 300], [900, 300], 0), da = Fe.tirs.map((t, i) => i ? t.a - Fe.tirs[i - 1].a : 0).slice(1);
+    ok(Fe.tirs.length === 7 && da.every(d => Math.abs(d - f.ecart * Math.PI / 180) < 1e-9) && Math.abs(Fe.tirs[3].a) < 1e-9 && Fe.zones.every(z => z.forme === 'couloir'), 'Feuillets : sept pages en éventail centré sur toi, un couloir par page (pour la sortie)');
+    ok(F.garVolPage(f, [600, 300], [900, 300]) > f.preavis && f.preavis >= C.preavisTir && F.garParTemps(5, f.nT, 2) === 5 && F.garParTemps(5, f.nT, 3) === 7, 'Feuillets : la ligne violette (≥ preavisTir) avant le vol ; cinq pages au deuxième temps, sept au troisième'); }
+  // g. les parts (décision de l'auteur, 6.1b) : zones principales à 25 % au plus, plafond de 30 % jamais dépassé ; contact plus rare, qui repousse
+  ok(Object.values(g.attaques).filter(a => a.part).every(a => a.part <= 0.25) && Math.max(...Object.values(g.attaques).filter(a => a.part).map(a => a.part)) === 0.25, 'parts : zones principales à 25 % au plus (le Contrôle), aucune au-delà');
+  ok(C.contactS >= 1 && C.contactRecul > 0 && C.contact <= 0.1, `contact : une fois par ${C.contactS} s au plus, recul de ${C.contactRecul} px`);
+  ok(g.releve && g.releve.sonneS === 2 && F.garParTemps(g.releve.sonneS, g.releve.sonneT, 4) === 1.5 && g.rythme.relacheS === 0, 'la Relève : sonné 2 s (1,5 s au Couvre-feu) ; pas de relâche en fin de file');
+  // h. branchements du Guet
+  for (const [motif, msg] of [
+    [/hitsWall=function\(x,y,r\)\{if\(!\(room&&room\.g18s&&room\.pillars\.some\(p=>p\.herse18\)\)\)return _hw\.apply/, 'les herses laissent passer les tirs (hitsWall, seulement dans sa salle)'],
+    [/collideEnemy=function\(e\)\{if\(e&&e\.g18\)return sansHerses/, 'il traverse ses herses (collideEnemy)'],
+    [/renderFloor=function\(rm\)\{if\(!rm\|\|!rm\.pillars\|\|!rm\.pillars\.some\(p=>p\.herse18\)\)return _rf\.apply/, 'le sol ne peint jamais ses herses'],
+    [/const tir=!zc&&!src\?eproj\.find\(p=>p\.g18f/, 'le journal reconnaît ses tirs (Feuillets)'],
+    [/SAVE\.flags\[KEY\(e\.g18\)\]=1;persist\(\);/, 'sa victoire (hors essai) débloque son entrée de codex'],
+    [/guet:S=>!!\(S\.flags&&S\.flags\.g18_4\)/, 'codex : la condition du Guet (LORE_C)'],
+    [/HI_D\.codex\.filter\(o=>!o\.gardien\|\|/, 'codex : une entrée de gardien éteint n\'est pas montrée'],
+  ]) has(motif, msg); }
+
 
 console.log(`sim-gardiens : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
 process.exit(fails ? 1 : 0);
