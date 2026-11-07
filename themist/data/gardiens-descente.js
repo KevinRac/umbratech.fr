@@ -113,6 +113,10 @@
  // Action 6.2b-1 (v18.17) : le socle du courant ; elle est ÉTEINTE et encore un gardien d'essai (essai:true) : deux gestes, le Bief (un courant sur une
  // rangée ou une colonne, sans dégâts) et l'Abordage (la case où le courant te mène), une silhouette simple. 6.2b-2 l'allume, avec tout son jeu.
  // Celle qui menait au Marais ceux que plus personne ne reconnaissait ; elle a oublié où était l'autre rive. Habileté neuve (Q27) : le courant.
+ // Révision 1 de la fiche (Q41–Q48, validée le 7 novembre 2026), action 6.2b-1bis (v18.18) : toujours ÉTEINTE et gardien d'essai, mais l'essai a
+ // quatre gestes pour que l'auteur juge de la difficulté : les motifs du courant (presque toujours là), la Lame, le Reflux et la Marée ; le sol
+ // s'arrête à 64 px des murs : au-delà, le vide, qui tue. Le reste de Q44 (Abordage dans la file, Ressac, Remous, Gaffe, Coup de perche, Passagers,
+ // la Dérive), son dessin et ses PV viennent en 6.2b-2.
  5:{actif:false,essai:true,acte:5,nom:'La Passeuse',un:'la Passeuse',
   rayon:48,vitesse:58,xp:100,
   // PV (Q37) : la règle de Q9 sera remesurée avec son vrai corps en 6.2b-2 ; le build de référence est celui de l'acte IV (§ 44) : ceux du Guet d'ici là
@@ -120,8 +124,10 @@
   banniere:'Où dois-je te mener ?',
   temps:{titres:['Où dois-je te mener ?','L’autre rive s’efface','Les eaux mortes coulent','La Dérive']},
   tempsEnPlus:{seuil:0.18,n:'La Dérive',d:'l’eau fait le tour de la salle et ne s’arrête plus'},
-  // échelon (Q28) : l'entourage monte (un terrain qui agit) ; le préavis reste au plancher (la ligne V du tableau de Q25 est caduque)
-  echelon:{temps:3,contraintes:2,enchainements:2,preavis:0.8,entourage:3},
+  // échelon (Q28, revu par Q45) : l'entourage monte (un terrain qui agit) et, avec le vide, les contraintes aussi (le vide, le courant et une zone à la
+  // fois) ; le préavis reste au plancher (la ligne V du tableau de Q25 est caduque). Suite : VI enchaînements 3, VII temps 4, VIII contraintes 4, IX
+  // enchaînements 4.
+  echelon:{temps:3,contraintes:3,enchainements:2,preavis:0.8,entourage:3},
   habiletes:['courant'],
   faible:'le nœud de l’amarre de la Passeuse',
   // Q34 : des dalles noyées sous une eau noire immobile (sol assombri pour le contraste du corps)
@@ -132,16 +138,43 @@
   // ── le courant (Q29) : la salle en grille × grille cases ; un bief = une rangée ou une colonne entière, un sens ; vT : vitesse par temps (px/s, jamais
   // au-delà de commun.courant.vMax × la vitesse de justice) ; annonceS : les flèches s'allument avant que l'eau coule ; dureeT : l'eau coule (s, par
   // temps) ; retombeS : l'eau retombe
-  courant:{grille:[6,4],vT:{1:70,2:80,3:90,4:90},annonceS:1.0,dureeT:{1:5,2:6,3:6,4:6},retombeS:0.3},
+  // Révision 1 (Q41, Q42) : la grille couvre le SOL seulement (la salle moins la lisière de vide : 6 × 4 cases de ≈ 173 × 114 px). Les motifs :
+  // sept dessins sur la grille, une case un sens, aucun croisement, à graine, jamais deux fois le même de suite. voiesT : motifs à la fois, par temps ;
+  // chasseT : à partir de ce temps, le motif suivant chasse le précédent (il s'annonce en pointillé pendant que l'autre coule encore : jamais d'arrêt) ;
+  // avant, le suivant s'annonce quand le premier retombe (calme : annonce − retombée ≤ 1 s) ; fuiteN : au temps 2, un motif sur fuiteN est une Fuite ;
+  // vise : la part des motifs posés sur toi (ta rangée, ta colonne, ton bord) ; decaleS : la seconde voie du temps 2 commence plus tard ;
+  // coude : longueur du L (cases) ; anneau : le Tourbillon (bloc de 4 × 4 autour d'un œil de 2 × 2 ; s'il ne tient plus, 3 × 3 autour d'une case)
+  courant:{grille:[6,4],vT:{1:70,2:80,3:90,4:90},annonceS:1.0,dureeT:{1:5,2:5,3:6,4:6},retombeS:0.3,
+   motifs:['bief','coude','meandre','tourbillon','confluence','fuite','cisaille'],voiesT:{1:1,2:2,3:1,4:1},chasseT:3,fuiteN:3,vise:0.6,decaleS:2.5,coude:[5,7]},
+  // Révision 1 (Q41) : la lisière de vide. marge : sa largeur (px, les quatre côtés) ; une chute = le centre de ton corps au-dessus du vide, hors d'une
+  // esquive ; elle tue par la voie ordinaire (loseHp : ce qui te sauve d'un coup mortel te sauve aussi), sinon tu reprends pied au plus près, intouchable
+  // releveS ; padSortie : une sortie (et la carte des chemins) reste à cette distance du bord ; borne : une poussée ou une traction s'arrête à cette
+  // distance du liseré ; couleurs : l'eau noire et le liseré de pierre pâle (loin de l'ivoire du point faible)
+  vide:{marge:64,releveS:1.0,padSortie:12,borne:2,eau:[6,9,11],lisere:[150,158,150]},
   // ── les attaques (Q30 ; en 6.2b-1, les deux gestes d'essai). bief : un courant (forme « courant » : un terrain, aucun dégât, son annonce vaut préavis) ;
   // abordage : la case où le courant te mènerait si tu ne faisais rien, au moment du coup (cible 'aval') ; apresS : après que l'eau coule
   attaques:{
    bief:{n:'Bief',d:'Des flèches vert d’eau s’allument sur le sol : le courant va t’emporter dans leur sens. Marche contre lui, ou laisse-toi porter.',forme:'courant',preavis:1.0},
-   abordage:{n:'Abordage',d:'La case où le courant t’emmène s’emplit d’orange : n’y arrive pas.',forme:'case',cible:'aval',preavis:1.2,preavisT:{3:1.0,4:1.0},part:0.25,apresS:0.3}},
-  // les Traversées (sa signature, Q30) : un bief, puis l'Abordage ; quand l'eau retombe, l'Échouage (Q32 : sonnée, sa perche prise dans la vase)
+   abordage:{n:'Abordage',d:'La case où le courant t’emmène s’emplit d’orange : n’y arrive pas.',forme:'case',cible:'aval',preavis:1.2,preavisT:{3:1.0,4:1.0},part:0.25,apresS:0.3},
+   // Révision 1 (Q43) : la Lame, une crête qui parcourt un motif dans le sens de son courant, case après case (seq) : toutes les cases de son trajet
+   // cernées dès l'annonce ; la première frappe après preavis, chaque suivante pasS plus tard ; une case touchée : part et une poussée de pousse px dans le
+   // sens du courant (par pas, arrêtée au liseré). trajet : au moins min cases, au plus max. Sa sortie : une séquence (garSortieSeq) ; sans sortie, elle saute.
+   lame:{n:'La Lame',d:'Une crête d’eau suit le courant, case après case : sors de son trajet, remonte-le, ou esquive-la quand elle passe.',forme:'case',seq:true,preavis:1.0,pasS:0.22,part:0.18,pousse:70,min:3,max:8},
+   // Révision 1 (Q44) : le Reflux, une Fuite (un bord du sol coule vers le vide) et un disque de r px au milieu du sol, en même temps : quitter le centre
+   // et tenir sa place près du bord ; la sortie existe toujours entre les deux (calculée), sinon il saute. vise : la part des Reflux sur ton bord.
+   reflux:{n:'Le Reflux',d:'Le centre s’emplit d’orange et un bord du sol coule vers le vide : tiens ta place près du bord.',forme:'disque',r:140,preavis:1.0,part:0.22,fuite:true,vise:0.7},
+   // Révision 1 (Q44) : la Marée, une rangée ou une colonne du bord du sol s'enfonce (se fendille et s'assombrit preavis s, cernée d'orange) puis devient
+   // du vide pour le reste du combat. T : les temps où elle vient (une fois chacun, à l'entrée du temps) ; jamais deux côtés opposés (le sol garde au
+   // moins 3 × 2 cases), jamais sous elle, jamais là où tu te tiens sans une sortie calculée. Un terrain (forme « vide ») : aucune part.
+   maree:{n:'La Marée',d:'Un bord du sol se fendille et s’assombrit : il va s’enfoncer dans le vide, pour de bon.',forme:'vide',preavis:1.5,T:[3,4]}},
+  // les Traversées (sa signature, Q30) : un bief, puis l'Abordage ; quand l'eau retombe, l'Échouage (Q32 : sonnée, sa perche prise dans la vase).
+  // Révision 1 : la Traversée devient « un motif, puis une Lame ou un Abordage » (6.2b-2) ; gardée hors des files de l'essai (attaque=traversee).
   traversees:{traversee:{bief:'bief',suite:'abordage'}},
-  echouage:{n:'L’Échouage',d:'Quand l’eau retombe, sa perche reste prise dans la vase : frappe le nœud de l’amarre.',sonneS:2,sonneT:{4:1.5}},
-  file:{1:['traversee','abordage'],2:['traversee','abordage'],3:['traversee','abordage'],4:['traversee','abordage']},
+  // Révision 1 (Q44) : l'Échouage vient après une Lame qui a parcouru tout son trajet (apres:'lame')
+  echouage:{n:'L’Échouage',d:'Quand sa Lame a fini sa course, sa perche reste prise dans la vase : frappe le nœud de l’amarre.',sonneS:2,sonneT:{4:1.5},apres:'lame'},
+  // files de l'ESSAI de 6.2b-1bis (les quatre gestes : les motifs coulent tout le temps, la Lame, le Reflux, et la Marée à l'entrée des temps 3 et 4) ;
+  // les files de Q44 viennent avec le reste de ses gestes en 6.2b-2
+  file:{1:['lame','reflux','lame'],2:['lame','reflux','lame','reflux'],3:['lame','reflux','lame'],4:['lame','reflux','lame']},
   rythme:{entracteS:[0,0.95,0.75,0.6,0.5],relacheS:0,apresFermeture:0.5},
   wiki:{done:'La Passeuse lâche sa perche',journal:'Plus bas que les Bas-Fonds, les eaux mortes se sont remises à couler.'},
   dessin:{version:0,

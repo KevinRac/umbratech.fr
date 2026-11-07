@@ -11708,8 +11708,9 @@ function demoBoot(cls){
  function ffBlk(){const P_=room.pillars||[];
   const cw=Math.ceil(MONDE.w/CS),rh=Math.ceil(MONDE.h/CS);if(cw!==COLS||rh!==ROWS){COLS=cw;ROWS=rh;FF.blk=new Uint8Array(COLS*ROWS);FF.dist=new Float64Array(COLS*ROWS);}
   FF.blk.fill(0);
+  const V18=window.__ffVide18?window.__ffVide18():null;   // v18.18 (6.2b-1bis) : le vide de la salle de la Passeuse compte comme bloqué ; nul ailleurs
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const x=(c+0.5)*CS,y=(r+0.5)*CS;let b=x<AR.x0+PAD||x>AR.x1-PAD||y<AR.y0+PAD||y>AR.y1-PAD;
-   if(!b)for(const p of P_)if(hyp(x-p.x,y-p.y)<p.r+PAD){b=true;break;}FF.blk[r*COLS+c]=b?1:0;}
+   if(!b)for(const p of P_)if(hyp(x-p.x,y-p.y)<p.r+PAD){b=true;break;}if(!b&&V18)b=V18(x,y);FF.blk[r*COLS+c]=b?1:0;}
   FF.room=room;FF.n=P_.length;}
  const NB=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
  function ffBuild(){
@@ -15511,6 +15512,7 @@ function garPlacer(S,variantes,p,o){for(let k=0;k<variantes.length&&k<S.essais;k
 // ordinaire (sa propre grammaire) : oui ; une source inconnue : non
 function garJuge(C,coup){if(!coup)return false;if(coup.k==='zone')return coup.charge>=C.preavisMin-1e-9&&coup.age>=coup.charge-1e-9;
  if(coup.k==='tir')return coup.charge==null||coup.charge>=(C.preavisTir||0)-1e-9;   // 6.1b : un tir annoncé (sa ligne violette a duré preavisTir au moins)
+ if(coup.k==='vide')return(coup.age==null?Infinity:coup.age)>=C.preavisMin-1e-9;   // 6.2b-1bis : une chute ; le vide où l'on tombe était visible depuis age s (la lisière : toujours)
  return coup.k==='contact'||coup.k==='ennemi';}
 // Q25 · l'échelle : les repères (gardiens I à III) puis les gardiens 4 à 9 présents dans les données, dans l'ordre des actes. Rend {ok, erreurs[]}.
 function garEchelle(GD){const E=GD.commun.echelle,err=[],suite=[];for(const k of Object.keys(E.reperes).sort((a,b)=>a-b))suite.push(Object.assign({acte:+k},E.reperes[k]));
@@ -15612,10 +15614,12 @@ function garTempsPas(champ,x0,y0,x1,y1,v){const dx=x1-x0,dy=y1-y0,L=Math.hypot(d
 // la sortie avec le courant (Q29, Q39) : comme garSortieGrille (la grille de FF, au détour des obstacles), mais chaque pas coûte son temps au sol, le
 // courant compensé ; tenir sa place compte (une case où |courant| < v) ; dans le préavis moins le réflexe. Rend {ok, d (= temps × v : comparable aux
 // autres sorties), t, q, chemin (de toi à la sortie)}. o.champ vide ou absent : exactement garSortieGrille.
-function garSortieCourant(S,zones,p,o){const ch=o.champ;if(!ch||!ch.length)return garSortieGrille(S,zones,p,o);
- const pr=o.pr||0,v=o.v||180,G=brxGrille(o.monde,o.arene,o.piliers||[],{cs:S.grille,pad:Math.max(pr,S.marge)}),cs=G.cs,cols=G.cols,rows=G.rows,blk=G.blk;
+// 6.2b-1bis : o.interdits (le vide : des rectangles) : une case de la grille à o.padVide px du vide est bloquée (jamais une sortie, jamais un passage) ;
+// sans interdits, exactement 6.2b-1 (et sans champ ni interdits, garSortieGrille)
+function garSortieCourant(S,zones,p,o){const it=o.interdits&&o.interdits.length?o.interdits:null,ch=o.champ||[];if(!ch.length&&!it)return garSortieGrille(S,zones,p,o);
+ const pr=o.pr||0,v=o.v||180,G=it?garGrilleSortie(S,o):brxGrille(o.monde,o.arene,o.piliers||[],{cs:S.grille,pad:Math.max(pr,S.marge)}),cs=G.cs,cols=G.cols,rows=G.rows,blk=G.blk;
  const dansZ=(x,y)=>zones.some(z=>brxDans(z,x,y,pr)),tient=(x,y)=>{const c=garVent(ch,x,y);return Math.hypot(c[0],c[1])<v;};
- if(!dansZ(p[0],p[1])&&tient(p[0],p[1]))return{ok:true,d:0,t:0,q:[p[0],p[1]],chemin:[[p[0],p[1]]]};
+ if(!dansZ(p[0],p[1])&&tient(p[0],p[1])&&!(it&&garDansVide(p[0],p[1],it,0)))return{ok:true,d:0,t:0,q:[p[0],p[1]],chemin:[[p[0],p[1]]]};
  const Tm=Math.max(0,(o.charge||0)-(o.reflexe||0));
  const c0=Math.max(0,Math.min(cols-1,Math.floor(p[0]/cs))),r0=Math.max(0,Math.min(rows-1,Math.floor(p[1]/cs))),i0=r0*cols+c0;
  const tm=new Float64Array(cols*rows).fill(Infinity),prv=new Int32Array(cols*rows).fill(-1);tm[i0]=garTempsPas(ch,p[0],p[1],(c0+0.5)*cs,(r0+0.5)*cs,v);
@@ -15631,10 +15635,153 @@ function garSortieCourant(S,zones,p,o){const ch=o.champ;if(!ch||!ch.length)retur
 // placer avec le courant : l'indice de la première variante qui laisse une sortie (garSortieCourant), sinon −1 (le geste saute)
 function garPlacerCourant(S,variantes,p,o){for(let k=0;k<variantes.length&&k<S.essais;k++)if(garSortieCourant(S,variantes[k],p,o).ok)return k;return -1;}
 // là où le courant mène un corps qui ne fait rien pendant t s (bornes de la salle R, rayon pr ; pas dt) : la cible de l'Abordage
-function garPassif(p,champ,t,R,pr,dt){let x=p[0],y=p[1];const n=Math.max(1,Math.ceil(t/(dt||1/60))),h=t/n;
- for(let k=0;k<n;k++){const c=garVent(champ,x,y);x=Math.max(R.x0+pr,Math.min(R.x1-pr,x+c[0]*h));y=Math.max(R.y0+pr,Math.min(R.y1-pr,y+c[1]*h));}return[x,y];}
+// 6.2b-1bis : avec vides (le vide), il rend aussi l'instant où le corps tombe ([x, y, t], t null s'il ne tombe pas) ; sans, exactement 6.2b-1
+function garPassif(p,champ,t,R,pr,dt,vides){let x=p[0],y=p[1];const n=Math.max(1,Math.ceil(t/(dt||1/60))),h=t/n;
+ for(let k=0;k<n;k++){const c=garVent(champ,x,y);x=Math.max(R.x0+pr,Math.min(R.x1-pr,x+c[0]*h));y=Math.max(R.y0+pr,Math.min(R.y1-pr,y+c[1]*h));if(vides&&garDansVide(x,y,vides,0))return[x,y,(k+1)*h];}return vides?[x,y,null]:[x,y];}
 // un mouvement imposé (dx, dy) découpé en pas de pasMax px au plus (exigence de 6.1c : une collision à chaque pas) : {n, sx, sy}
 function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/Math.max(1e-6,pasMax||6)));return{n,sx:dx/n,sy:dy/n};}
+// ── 6.2b-1bis · le vide, les motifs, la sortie en séquence (révision 1 de la fiche 6.2a, Q41 à Q47). Le sol : la salle moins une lisière de marge px ;
+// la Marée ne fait tomber que des rangées ou des colonnes du bord : le sol vivant reste un rectangle, et le vide est la salle moins ce rectangle (quatre
+// bandes). Sans vide (interdits absents ou vides), tout ce qui précède redonne exactement 6.2b-1.
+// le sol : la salle R moins la lisière (marge px des quatre côtés)
+function garSol(R,marge){return{x0:R.x0+marge,y0:R.y0+marge,x1:R.x1-marge,y1:R.y1-marge};}
+// le sol vivant : les cases de la grille G (du sol) encore debout ; tomb : {haut, bas, gauche, droite} (rangées ou colonnes tombées de chaque côté)
+function garVivant(G,tomb){const t=tomb||{},i0=t.gauche|0,i1=G.nx-(t.droite|0),j0=t.haut|0,j1=G.ny-(t.bas|0);
+ return{i0,i1,j0,j1,x0:G.R.x0+i0*G.w,x1:G.R.x0+i1*G.w,y0:G.R.y0+j0*G.h,y1:G.R.y0+j1*G.h};}
+// le vide : la salle R moins le rectangle vivant L, en quatre bandes (rectangles)
+function garVide(R,L){const out=[],add=(x0,y0,x1,y1)=>{if(x1>x0+1e-9&&y1>y0+1e-9)out.push({x0,y0,x1,y1});};
+ add(R.x0,R.y0,R.x1,L.y0);add(R.x0,L.y1,R.x1,R.y1);add(R.x0,L.y0,L.x0,L.y1);add(L.x1,L.y0,R.x1,L.y1);return out;}
+// (x, y) au-dessus du vide (marge > 0 : le vide élargi de marge px, pour une sortie ou une poussée qui doit s'arrêter avant le bord)
+function garDansVide(x,y,vides,marge){const m=marge||0;for(const v of vides||[])if(x>v.x0-m&&x<v.x1+m&&y>v.y0-m&&y<v.y1+m)return true;return false;}
+// la chute (Q41) : le centre du corps au-dessus du vide, hors d'une esquive (une esquive passe au-dessus ; si elle y finit, on tombe)
+function garTombe(p,vides,dash){return !dash&&garDansVide(p[0],p[1],vides,0);}
+// une poussée ou une traction (dx, dy) arrêtée au liseré (Q41 : « l'eau te jette au bord, pas dedans ») : découpée en pas de pas px, elle s'arrête au
+// dernier pas qui laisse le centre à borne px au moins du vide. Rend {x, y, n (pas faits), N (pas prévus), sx, sy, arret}
+function garBorneLisere(p,dx,dy,vides,pas,borne){const D=garPasImpose(dx,dy,pas);let x=p[0],y=p[1],n=0;
+ for(;n<D.n;n++){const nx=x+D.sx,ny=y+D.sy;if(garDansVide(nx,ny,vides,borne||0))break;x=nx;y=ny;}return{x,y,n,N:D.n,sx:D.sx,sy:D.sy,arret:n<D.n};}
+// la grille de la sortie (celle de FF, au détour des obstacles), le vide en plus : une case dont le centre est à padVide px du vide est bloquée
+function garGrilleSortie(S,o){const pr=o.pr||0,G=brxGrille(o.monde,o.arene,o.piliers||[],{cs:S.grille,pad:Math.max(pr,S.marge)}),it=o.interdits||[];
+ if(it.length){const pv=o.padVide!=null?o.padVide:S.grille*0.6;for(let r=0;r<G.rows;r++)for(let c=0;c<G.cols;c++){const i=r*G.cols+c;if(!G.blk[i]&&garDansVide((c+0.5)*G.cs,(r+0.5)*G.cs,it,pv)){G.blk[i]=1;G.libres--;}}}
+ return G;}
+// ── les sept motifs du courant (Q42). G : la grille du sol (garGrilleCases) ; L : le sol vivant (garVivant) ; k : le motif ; o : {v (px/s), exclu (Set
+// des cases j × nx + i déjà prises par un autre courant), p (toi), vise (la part posée sur toi), coude [min, max], cote (Fuite : un côté imposé)}.
+// Rend {k, cases [{forme:'case', x0, y0, x1, y1, i, j, vx, vy}], calmes (cases gardées calmes : l'œil du Tourbillon, le point de la Confluence), cote}
+// ou null s'il ne tient pas. Une case n'a qu'un sens (chaque case une fois), aucune hors du sol vivant ni dans exclu.
+const GAR_MOTIFS=['bief','coude','meandre','tourbillon','confluence','fuite','cisaille'];
+function garMotif(G,L,k,rng,o){o=o||{};const v=o.v||70,ex=o.exclu||new Set(),nx=G.nx,vise=o.vise||0;
+ const vit=(i,j)=>i>=L.i0&&i<L.i1&&j>=L.j0&&j<L.j1&&!ex.has(j*nx+i);
+ const pc=o.p&&o.p[0]>=L.x0&&o.p[0]<L.x1&&o.p[1]>=L.y0&&o.p[1]<L.y1?garCaseGrille(G,o.p[0],o.p[1]):null,vis=()=>!!pc&&rng()<vise;
+ const ri=(a,b)=>b<=a?a:a+Math.floor(rng()*(b-a)),sg=()=>rng()<0.5?1:-1;
+ const C=(i,j,dx,dy)=>{const c=G.cases[j*nx+i];return{forme:'case',x0:c.x0,y0:c.y0,x1:c.x1,y1:c.y1,i,j,vx:dx*v,vy:dy*v};};
+ const fin=(L2,calmes,cote)=>L2&&L2.length?{k,cases:L2,calmes:calmes||[],cote:cote||null}:null;
+ // le plus long morceau contigu d'une ligne de cases [[i, j], …] où ok est vrai
+ const longue=(ln,ok)=>{ok=ok||vit;let best=[],cur=[];for(const q of ln){if(ok(q[0],q[1]))cur.push(q);else{if(cur.length>best.length)best=cur;cur=[];}}return cur.length>best.length?cur:best;};
+ if(k==='bief'){for(let e=0;e<16;e++){const axe=rng()<0.5?'h':'v',idx=vis()?(axe==='h'?pc.j:pc.i):(axe==='h'?ri(L.j0,L.j1):ri(L.i0,L.i1)),ln=[];
+   if(axe==='h')for(let i=L.i0;i<L.i1;i++)ln.push([i,idx]);else for(let j=L.j0;j<L.j1;j++)ln.push([idx,j]);
+   const R=longue(ln);if(R.length<3)continue;const s=sg();return fin(R.map(([i,j])=>C(i,j,axe==='h'?s:0,axe==='v'?s:0)));}return null;}
+ if(k==='cisaille'){for(let e=0;e<16;e++){const j=vis()?pc.j-(rng()<0.5?0:1):ri(L.j0,L.j1-1);if(j<L.j0||j+1>=L.j1)continue;const ln=[];for(let i=L.i0;i<L.i1;i++)ln.push([i,j]);
+   const R=longue(ln,(i,jj)=>vit(i,jj)&&vit(i,jj+1));if(R.length<3)continue;const s=sg();return fin(R.map(([i])=>C(i,j,s,0)).concat(R.map(([i])=>C(i,j+1,-s,0))));}return null;}
+ if(k==='meandre'){for(let e=0;e<16;e++){const j=vis()?pc.j-(rng()<0.5?0:1):ri(L.j0,L.j1-1);if(j<L.j0||j+1>=L.j1)continue;const ln=[];for(let i=L.i0;i<L.i1;i++)ln.push([i,j]);
+   const R=longue(ln,(i,jj)=>vit(i,jj)&&vit(i,jj+1));if(R.length<3)continue;const s=sg(),d=sg(),a=R[0][0],b=R[R.length-1][0],j1=d>0?j:j+1,j2=d>0?j+1:j,bout=s>0?b:a;
+   return fin(R.map(([i])=>i===bout?C(i,j1,0,j2-j1):C(i,j1,s,0)).concat(R.map(([i])=>C(i,j2,-s,0))));}return null;}
+ if(k==='tourbillon'){for(const n of [4,3]){if(L.i1-L.i0<n||L.j1-L.j0<n)continue;
+   for(let e=0;e<16;e++){let i0,j0;if(vis()){i0=ri(Math.max(L.i0,pc.i-n+1),Math.min(L.i1-n,pc.i)+1);j0=ri(Math.max(L.j0,pc.j-n+1),Math.min(L.j1-n,pc.j)+1);}else{i0=ri(L.i0,L.i1-n+1);j0=ri(L.j0,L.j1-n+1);}
+    if(i0<L.i0||j0<L.j0||i0+n>L.i1||j0+n>L.j1)continue;const cw=rng()<0.5,out=[],m=n-1;
+    if(cw){for(let i=i0;i<i0+m;i++)out.push(C(i,j0,1,0));for(let j=j0;j<j0+m;j++)out.push(C(i0+m,j,0,1));for(let i=i0+1;i<=i0+m;i++)out.push(C(i,j0+m,-1,0));for(let j=j0+1;j<=j0+m;j++)out.push(C(i0,j,0,-1));}
+    else{for(let i=i0+1;i<=i0+m;i++)out.push(C(i,j0,-1,0));for(let j=j0;j<j0+m;j++)out.push(C(i0,j,0,1));for(let i=i0;i<i0+m;i++)out.push(C(i,j0+m,1,0));for(let j=j0+1;j<=j0+m;j++)out.push(C(i0+m,j,0,-1));}
+    const calmes=[];for(let j=j0+1;j<j0+m;j++)for(let i=i0+1;i<i0+m;i++)calmes.push(j*nx+i);
+    if(out.every(c=>vit(c.i,c.j))&&calmes.every(q=>vit(q%nx,(q/nx)|0)))return fin(out,calmes);}}return null;}
+ if(k==='confluence'){for(let e=0;e<24;e++){const ic=vis()?pc.i:ri(L.i0,L.i1),jc=vis()?pc.j:ri(L.j0,L.j1),sh=sg(),sv=sg(),a=2+ri(0,2),b=1+ri(0,2),out=[];if(!vit(ic,jc))continue;
+   let okk=true;for(let m=1;m<=a&&okk;m++){const i=ic+sh*m;if(!vit(i,jc)){if(m<=1)okk=false;break;}out.push(C(i,jc,-sh,0));}
+   for(let m=1;m<=b&&okk;m++){const j=jc+sv*m;if(!vit(ic,j)){if(m<=1)okk=false;break;}out.push(C(ic,j,0,-sv));}
+   if(okk&&out.length>=3)return fin(out,[jc*nx+ic]);}return null;}
+ if(k==='coude'){const [n0,n1]=o.coude||[5,7];for(let e=0;e<40;e++){const ic=ri(L.i0,L.i1),jc=ri(L.j0,L.j1),sh=sg(),sv=sg(),n=n0+ri(0,n1-n0+1),b=1+ri(0,Math.min(3,n-2)),a=n-1-b,hv=rng()<0.5,out=[];
+   if(a<1||b<1||!vit(ic,jc))continue;let okk=true;
+   for(let m=1;m<=a&&okk;m++){const i=ic+sh*m;if(!vit(i,jc))okk=false;else out.push(hv?C(i,jc,-sh,0):C(i,jc,sh,0));}
+   for(let m=1;m<=b&&okk;m++){const j=jc+sv*m;if(!vit(ic,j))okk=false;else out.push(hv?C(ic,j,0,sv):C(ic,j,0,-sv));}
+   if(!okk)continue;out.push(hv?C(ic,jc,0,sv):C(ic,jc,sh,0));
+   if(pc&&rng()<vise&&!out.some(c=>c.i===pc.i&&c.j===pc.j)&&e<30)continue;return fin(out);}return null;}
+ if(k==='fuite'){const cotes=['haut','bas','gauche','droite'];let ordre;
+   if(o.cote)ordre=[o.cote];else if(vis()){const d={haut:o.p[1]-L.y0,bas:L.y1-o.p[1],gauche:o.p[0]-L.x0,droite:L.x1-o.p[0]};ordre=cotes.slice().sort((x,y)=>d[x]-d[y]);}
+   else{ordre=cotes.slice();for(let i=ordre.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[ordre[i],ordre[j]]=[ordre[j],ordre[i]];}}
+   for(const c of ordre){const out=[];if(c==='haut'||c==='bas'){const j=c==='haut'?L.j0:L.j1-1;for(let i=L.i0;i<L.i1;i++)if(vit(i,j))out.push(C(i,j,0,c==='haut'?-1:1));}
+    else{const i=c==='gauche'?L.i0:L.i1-1;for(let j=L.j0;j<L.j1;j++)if(vit(i,j))out.push(C(i,j,c==='gauche'?-1:1,0));}
+    if(out.length>=2)return fin(out,[],c);}return null;}
+ return null;}
+// les trajets d'un motif (la Lame, Q43) : les chaînes de cases qui se suivent dans le sens du courant (une case pousse vers sa voisine) ; un anneau
+// (sans tête) donne un trajet qui en fait le tour une fois
+function garTrajets(cases,nx){const at=new Map();for(const c of cases)at.set(c.j*nx+c.i,c);
+ const suiv=c=>{const dx=Math.sign(c.vx),dy=Math.sign(c.vy),i=c.i+dx,j=c.j+dy;return i<0||i>=nx||j<0?null:at.get(j*nx+i)||null;};
+ const pred=new Set();for(const c of cases){const s=suiv(c);if(s)pred.add(s);}
+ const fais=d=>{const ch=[],vu=new Set();let c=d;while(c&&!vu.has(c)){vu.add(c);ch.push(c);c=suiv(c);}return ch;},out=[],pris=new Set();
+ for(const c of cases)if(!pred.has(c)){const ch=fais(c);out.push(ch);for(const q of ch)pris.add(q);}
+ for(const c of cases)if(!pris.has(c)){const ch=fais(c);out.push(ch);for(const q of ch)pris.add(q);}
+ return out;}
+// le trajet d'une Lame : une fenêtre de A.min à A.max cases d'un trajet ; de préférence une qui passe par ta case (p), sinon au hasard ; null sinon
+function garLameTrajet(trajets,G,p,A,rng){const pc=p?garCaseGrille(G,p[0],p[1]):null,cand=[],bons=[];
+ for(const ch of trajets){if(ch.length<A.min)continue;const n=Math.min(A.max,ch.length);for(let a=0;a+n<=ch.length;a++){const w=ch.slice(a,a+n);cand.push(w);if(pc&&w.some(c=>c.i===pc.i&&c.j===pc.j))bons.push(w);}}
+ const L=bons.length?bons:cand;return L.length?L[Math.floor(rng()*L.length)]:null;}
+// ses zones : la case k frappe à at = preavis + k × pasS ; elle pousse dans le sens de son courant
+function garLameZones(w,A){return w.map((c,k)=>({forme:'case',x0:c.x0,y0:c.y0,x1:c.x1,y1:c.y1,i:c.i,j:c.j,at:A.preavis+k*A.pasS,lame:{k,n:w.length,vx:c.vx,vy:c.vy}}));}
+// le Reflux (Q44) : un disque de A.r px sur toi, ramené vers le milieu du sol (loin du bord), et une Fuite sur ton bord (A.vise) ou un autre
+function garReflux(G,L,A,p,rng,o){const r=A.r,cx=(L.x0+L.x1)/2,cy=(L.y0+L.y1)/2,bx=[L.x0+r,L.x1-r],by=[L.y0+r+60,L.y1-r-60];
+ const x=bx[0]<=bx[1]?Math.max(bx[0],Math.min(bx[1],p[0])):cx,y=by[0]<=by[1]?Math.max(by[0],Math.min(by[1],p[1])):cy;
+ const f=garMotif(G,L,'fuite',rng,Object.assign({},o,{p,vise:A.vise||0}));return f?{disque:{forme:'disque',x,y,r},fuite:f}:null;}
+// la Marée (Q44) : les côtés qui peuvent tomber (jamais l'opposé d'un côté tombé, le sol garde au moins 3 × 2 cases, jamais sous son corps) et leur bande
+function garMareeCotes(G,tomb,corps){const t=tomb||{},L=garVivant(G,t),op={haut:'bas',bas:'haut',gauche:'droite',droite:'gauche'},out=[];
+ for(const k of ['haut','bas','gauche','droite']){if(t[op[k]])continue;if((k==='haut'||k==='bas')?L.j1-L.j0-1<2:L.i1-L.i0-1<3)continue;
+  const z=k==='haut'?{x0:L.x0,y0:L.y0,x1:L.x1,y1:L.y0+G.h}:k==='bas'?{x0:L.x0,y0:L.y1-G.h,x1:L.x1,y1:L.y1}:k==='gauche'?{x0:L.x0,y0:L.y0,x1:L.x0+G.w,y1:L.y1}:{x0:L.x1-G.w,y0:L.y0,x1:L.x1,y1:L.y1};
+  if(corps&&corps.x>z.x0-corps.r&&corps.x<z.x1+corps.r&&corps.y>z.y0-corps.r&&corps.y<z.y1+corps.r)continue;out.push({cote:k,zone:Object.assign({forme:'case'},z)});}
+ return out;}
+// ── le champ à venir (la prédiction) : un courant {ph, t, annonce, dur, retombe} a une suite de phases connue dès qu'il est annoncé
+function garPhaseA(b,dt){const D=[['annonce',b.annonce],['coule',b.dur],['retombe',b.retombe]];let k=D.findIndex(d=>d[0]===b.ph);if(k<0)return'fini';let u=b.t+dt;
+ for(;k<3;k++){if(u<D[k][1])return D[k][0];u-=D[k][1];}return'fini';}
+// le champ dans dt s (les courants qui couleront alors) ; les instants (dans ]0, T[) où ce qui coule change
+function garChampA(courants,dt){return garChamp((courants||[]).filter(b=>garPhaseA(b,dt)==='coule').map(b=>b.cases));}
+function garBornesA(courants,T){const out=[];for(const b of courants||[]){const D=[['annonce',b.annonce],['coule',b.dur],['retombe',b.retombe]];let k=D.findIndex(d=>d[0]===b.ph);if(k<0)continue;let u=-b.t;
+  for(;k<2;k++){u+=D[k][1];if(u>1e-9&&u<T-1e-9)out.push(u);}}return out.sort((a,b)=>a-b);}
+// les instants d'une séquence : coups [{t, zones}] et changements du champ, chaque instant avec le champ de l'intervalle qui y mène
+function garEvts(coups,courants){const T=Math.max(0,...coups.map(c=>c.t)),ts=[...coups.map(c=>c.t),...garBornesA(courants,T)].sort((a,b)=>a-b),L=[];
+ for(const t of ts)if(!L.length||t-L[L.length-1]>1e-9)L.push(t);let prev=0;
+ return L.map(t=>{const m=(prev+t)/2;prev=t;return{t,zones:coups.filter(c=>Math.abs(c.t-t)<1e-9).flatMap(c=>c.zones),champ:garChampA(courants,m)};});}
+// un tas binaire (Dijkstra)
+function garTas(){const h=[];return{h,push(i,d){h.push([d,i]);let k=h.length-1;while(k){const q=(k-1)>>1;if(h[q][0]<=h[k][0])break;[h[q],h[k]]=[h[k],h[q]];k=q;}},
+ pop(){const top=h[0],last=h.pop();if(h.length){h[0]=last;let k=0;for(;;){const a=2*k+1,b=a+1;let m=k;if(a<h.length&&h[a][0]<h[m][0])m=a;if(b<h.length&&h[b][0]<h[m][0])m=b;if(m===k)break;[h[m],h[k]]=[h[k],h[m]];k=m;}}return top;}};}
+// la sortie en séquence (Q43, Q47) : evts [{t, zones, champ}] triés (s, depuis maintenant) : à chaque instant t, aucune de ses zones ne doit te
+// contenir ; champ : le courant de l'intervalle qui finit à t (un changement du champ sans coup : zones []). De chaque case où l'on tient à l'instant
+// d'avant (de toi pour le premier, le réflexe retiré), on cherche les cases atteintes avant l'instant suivant (temps au sol avec le courant, au détour
+// des obstacles, jamais par le vide : o.interdits) ; on garde celles qui ne sont dans aucune de ses zones et où l'on tient sa place. Il faut qu'il en
+// reste au dernier instant. Rend {ok, etapes [{t, q, chemin}], q} : à chaque instant, où être (q) et le chemin qui y mène depuis l'étape d'avant.
+function garSortieSeq(S,evts,p,o){const pr=o.pr||0,v=o.v||180,G=garGrilleSortie(S,o),cs=G.cs,cols=G.cols,rows=G.rows,blk=G.blk,N=cols*rows,it=o.interdits||[];
+ const X=i=>(i%cols+0.5)*cs,Y=i=>((i/cols)|0)*cs+cs/2,NB=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+ const sur=(x,y,zs,ch)=>{if(zs.some(z=>brxDans(z,x,y,pr)))return false;const c=garVent(ch,x,y);return Math.hypot(c[0],c[1])<v;};
+ const moi={i:-1,x:p[0],y:p[1]};let src=[moi],t0=0;const E=[],memo=new Map();   // memo : les temps des pas, par champ (souvent le même d'un instant à l'autre)
+ for(let k=0;k<evts.length;k++){const ev=evts[k],ch=ev.champ||[],zs=ev.zones||[],budget=ev.t-t0-(k===0?(o.reflexe||0):0);
+  const tm=new Float64Array(N).fill(Infinity),prv=new Int32Array(N).fill(-9),org=new Int32Array(N).fill(-9),H=garTas(),vus=[];let reste=false;
+  // le temps d'un pas de grille : dans une même case du champ (un rectangle : le segment y reste), ou loin de toute case, le courant est constant (calcul
+  // direct) ; sinon garTempsPas (le segment coupé aux bords des cases). Exactement le même temps, en bien moins de calcul.
+  const sig=ch.map(c=>c.x0+','+c.y0+','+c.x1+','+c.y1+','+c.vx+','+c.vy).join(';');if(!memo.has(sig))memo.set(sig,{ci:new Int32Array(N).fill(-2),pt:new Float64Array(N*8).fill(-1)});const MM=memo.get(sig);
+  const ci=MM.ci,cas=i=>{if(ci[i]>-2)return ci[i];const x=X(i),y=Y(i);let k=-1;for(let q=ch.length-1;q>=0;q--){const c=ch[q];if(x>=c.x0&&x<c.x1&&y>=c.y0&&y<c.y1){k=q;break;}}return ci[i]=k;};
+  const pas=(i,j)=>{const a=cas(i),b=cas(j),x0=X(i),y0=Y(i),x1=X(j),y1=Y(j);let net=a===b;
+   if(net&&a<0){const lx=Math.min(x0,x1),hx=Math.max(x0,x1),ly=Math.min(y0,y1),hy=Math.max(y0,y1);for(const c of ch)if(c.x0<=hx&&c.x1>=lx&&c.y0<=hy&&c.y1>=ly){net=false;break;}}
+   else if(net){for(let q=a+1;q<ch.length;q++){const c=ch[q];if(c.x0<=Math.max(x0,x1)&&c.x1>=Math.min(x0,x1)&&c.y0<=Math.max(y0,y1)&&c.y1>=Math.min(y0,y1)){net=false;break;}}}
+   if(!net)return garTempsPas(ch,x0,y0,x1,y1,v);const L=Math.hypot(x1-x0,y1-y0);if(a<0)return L/v;const c=ch[a],sp=garVitSol([c.vx,c.vy],(x1-x0)/L,(y1-y0)/L,v);return sp>1e-9?L/sp:Infinity;};
+  for(const s of src){if(s.i<0){if(budget>=0&&!garDansVide(s.x,s.y,it,0)&&sur(s.x,s.y,zs,ch))reste=true;
+    const c0=Math.max(0,Math.min(cols-1,Math.floor(s.x/cs))),r0=Math.max(0,Math.min(rows-1,Math.floor(s.y/cs))),i0=r0*cols+c0,t=garTempsPas(ch,s.x,s.y,X(i0),Y(i0),v);if(t<tm[i0]){if(tm[i0]===Infinity)vus.push(i0);tm[i0]=t;prv[i0]=-2;org[i0]=-1;H.push(i0,t);}}
+   else if(0<tm[s.i]){if(tm[s.i]===Infinity)vus.push(s.i);tm[s.i]=0;prv[s.i]=-3;org[s.i]=s.i;H.push(s.i,0);}}
+  while(H.h.length){const [t,i]=H.pop();if(t>tm[i])continue;if(t>budget)break;const c=i%cols,r=(i/cols)|0,x=X(i),y=Y(i);
+   for(let q=0;q<8;q++){const dc=NB[q][0],dr=NB[q][1],cc=c+dc,rr=r+dr;if(cc<0||rr<0||cc>=cols||rr>=rows)continue;const j=rr*cols+cc;if(blk[j])continue;if(dc&&dr&&(blk[r*cols+cc]||blk[rr*cols+c]))continue;
+    const kq=i*8+q;let w=MM.pt[kq];if(w<0)w=MM.pt[kq]=pas(i,j);const nt=t+w;if(nt<tm[j]){if(tm[j]===Infinity)vus.push(j);tm[j]=nt;prv[j]=i;org[j]=org[i];H.push(j,nt);}}}
+  const sures=[];for(const i of vus)if(tm[i]<=budget&&!blk[i]&&sur(X(i),Y(i),zs,ch))sures.push(i);
+  if(!sures.length&&!reste)return{ok:false,etapes:null,q:null};
+  E.push({t:ev.t,tm,prv,org,sures,reste});src=sures.map(i=>({i,x:X(i),y:Y(i)}));if(reste)src.push(moi);t0=ev.t;}
+ if(!E.length)return{ok:true,etapes:[],q:[p[0],p[1]]};
+ // le chemin, à rebours : au dernier instant, rester où l'on est s'il se peut, sinon la case sûre la plus tôt atteinte
+ const etapes=[];let n=E[E.length-1].reste?-1:E[E.length-1].sures.reduce((b,i)=>b<0||E[E.length-1].tm[i]<E[E.length-1].tm[b]?i:b,-1);
+ for(let k=E.length-1;k>=0;k--){const e=E[k];if(n<0){etapes.unshift({t:e.t,q:[p[0],p[1]],chemin:[[p[0],p[1]]]});continue;}
+  const ch=[];let i=n;while(i>=0){ch.unshift([X(i),Y(i)]);const q=e.prv[i];if(q===-2){ch.unshift([p[0],p[1]]);break;}if(q===-3)break;i=q;}
+  etapes.unshift({t:e.t,q:[X(n),Y(n)],chemin:ch});n=e.org[n];}
+ return{ok:true,etapes,q:etapes[etapes.length-1].q};}
 /*/gar:pur*/
 // ═════════════════════════════════════════════════════════════════════════════
 // v18.14 · Les gardiens de la descente (chantier v18, action 6.1a : le socle commun ; cadrage _dev/cadrages/la-brume-v18-6-gardiens-cadrage.md,
@@ -15670,10 +15817,11 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
  // ── 6.2b-1 · le courant (le socle du déplacement subi ; fiche 6.2a, Q29, Q39). s.courants : les biefs de sa salle ({cases, ph 'annonce' | 'coule' |
  // 'retombe', t, annonce, dur, retombe}) ; le champ : les cases des biefs qui coulent. Sans courant (le Guet), rien de ce qui suit ne fait quoi que ce soit.
  const champ=s=>{if(!s||!s.courants||!s.courants.length)return[];return garChamp(s.courants.filter(b=>b.ph==='coule').map(b=>b.cases));};
- const grilleC=g=>garGrilleCases(AR,g.courant.grille[0],g.courant.grille[1]);
+ const grilleC=g=>garGrilleCases(g.vide?garSol(AR,g.vide.marge):AR,g.courant.grille[0],g.courant.grille[1]);   // 6.2b-1bis : la grille couvre le sol (la salle moins la lisière de vide)
  // le champ ne change pas pendant charge s (aucun bief annoncé, aucun qui retombe avant) : la règle de stabilité (Q29)
  function champStable(s,charge){for(const b of s.courants){if(b.ph==='annonce')return false;if(b.ph==='coule'&&b.dur-b.t<charge+0.05)return false;}return true;}
- function courantsVieillir(s,dt){for(const b of s.courants){b.t+=dt;if(b.ph==='annonce'&&b.t>=b.annonce){b.ph='coule';b.t=0;}else if(b.ph==='coule'&&b.t>=b.dur){b.ph='retombe';b.t=0;}else if(b.ph==='retombe'&&b.t>=b.retombe)b.ph='fini';}
+ // 6.2b-1bis : le reste du pas est reporté sur la phase suivante (plusieurs phases dans un même pas s'il le faut) : la prédiction (garPhaseA) suit au pas près
+ function courantsVieillir(s,dt){for(const b of s.courants){b.t+=dt;for(let k=0;k<3;k++){if(b.ph==='annonce'&&b.t>=b.annonce){b.ph='coule';b.t-=b.annonce;}else if(b.ph==='coule'&&b.t>=b.dur){b.ph='retombe';b.t-=b.dur;}else if(b.ph==='retombe'&&b.t>=b.retombe){b.ph='fini';break;}else break;}}
   s.courants=s.courants.filter(b=>b.ph!=='fini');}
  function courantsRetombent(s){for(const b of s.courants)if(b.ph!=='retombe'){b.ph='retombe';b.t=0;}s.trav=null;}
  // la poussée (après le pas du joueur) : toi, puis ses invoqués ; découpée en pas de C.courant.pas px au plus, une collision à chaque pas (exigence C6 de
@@ -15682,11 +15830,113 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
   if(P&&!P.dead){const c=garVent(ch,P.x,P.y);if(c[0]||c[1]){const D=garPasImpose(c[0]*dt,c[1]*dt,C.courant.pas);for(let k=0;k<D.n;k++){P.x+=D.sx;P.y+=D.sy;collidePlayer();}}}
   for(const e of enemies){if(e.dead||e.fixed||e===room.boss||e.g18)continue;const c=garVent(ch,e.x,e.y);if(!c[0]&&!c[1])continue;const D=garPasImpose(c[0]*dt,c[1]*dt,C.courant.pas);
    for(let k=0;k<D.n;k++){const nx=e.x+D.sx,ny=e.y+D.sy;if(hitsWall(nx,ny,e.r))break;e.x=nx;e.y=ny;}}}
+ // ── 6.2b-1bis · le vide, les motifs, la Lame, le Reflux, la Marée (révision 1 de la fiche 6.2a, Q41 à Q48). s.vide (seulement dans une salle dont le
+ // gardien a g.vide : la Passeuse) : {sol, G (la grille du sol), tomb (rangées et colonnes tombées par côté), L (le sol vivant), vides (le vide : quatre
+ // bandes), vus (les bandes tombées et l'instant où elles se sont annoncées : l'âge d'une chute), actif (faux après sa mort : l'eau retombe partout, le
+ // vide s'efface)}. Sans s.vide (le Guet, toute autre salle), rien de ce qui suit ne fait quoi que ce soit.
+ function videInit(s,g){const sol=garSol(AR,g.vide.marge),G=garGrilleCases(sol,g.courant.grille[0],g.courant.grille[1]);s.vide={sol,G,tomb:{},L:null,vides:[],vus:[],actif:true,fin:null,borne:g.vide.borne||2};videMaj(s);}
+ function videMaj(s){const V=s.vide;V.L=garVivant(V.G,V.tomb);V.vides=garVide(AR,V.L);}
+ const videOn=s=>!!(s&&s.vide&&s.vide.actif);
+ // la sortie d'un geste de la Passeuse : le champ, le vide interdit, son corps pour obstacle
+ function optP(s,charge,corps){const o=optSortie(charge,corps);if(videOn(s))Object.assign(o,{interdits:s.vide.vides,padVide:(room.g18.vide||{}).padSortie||12});return o;}
+ // le prochain changement du champ que personne ne connaît encore (un motif prévu mais pas annoncé) : un geste qui frapperait après attend
+ function inconnu(s,g){if(!s.voies.length)return Infinity;let m=Infinity;for(const V of s.voies)m=Math.min(m,V.plan-s.h);return Math.max(0,m)+(g.courant.annonceS||1);}
+ const legacy=()=>['traversee','abordage','bief'].includes(ST.essai_attaque);
+ // les cases déjà prises par un autre courant (annoncé ou qui coule), sauf ceux de la voie vi quand le motif suivant chasse le précédent
+ function prises(s,vi,chasse){const ex=new Set(),nx=s.vide.G.nx;for(const b of s.courants){if(b.ph!=='annonce'&&b.ph!=='coule')continue;if(chasse&&b.voie===vi)continue;for(const c of b.cases)ex.add(c.j*nx+c.i);for(const q of b.calmes||[])ex.add(q);}return ex;}
+ // un motif neuf pour la voie vi (Q42) : à graine, jamais deux fois le même de suite ; au temps 2, un sur fuiteN est une Fuite
+ function nouveauMotif(s,g,vi,chasse){const K=g.courant,V=s.vide,v=garParTemps(70,K.vT,s.temps);let L=K.motifs.filter(k=>k!==s.motifPrec);
+  for(let i=L.length-1;i>0;i--){const j=Math.floor(s.rng()*(i+1));[L[i],L[j]]=[L[j],L[i]];}
+  if(s.temps===2&&K.fuiteN&&((s.nMotifs||0)+1)%K.fuiteN===0&&s.motifPrec!=='fuite')L=['fuite'].concat(L.filter(k=>k!=='fuite'));
+  const ex=prises(s,vi,chasse);
+  for(const k of L){const m=garMotif(V.G,V.L,k,s.rng,{v,exclu:ex,p:[P.x,P.y],vise:K.vise,coude:K.coude});if(m){s.motifPrec=k;s.nMotifs=(s.nMotifs||0)+1;ST.j.motifs=(ST.j.motifs||0)+1;(ST.j.parMotif=ST.j.parMotif||{})[k]=(ST.j.parMotif[k]||0)+1;return m;}}
+  return null;}
+ // les voies : temps 1, un motif à la fois, le suivant s'annonce quand le premier retombe ; temps 2, deux voies décalées ; dès chasseT, le suivant
+ // s'annonce en pointillé pendant que l'autre coule et le chasse (jamais d'arrêt)
+ function motifsPas(e,s,g){const K=g.courant;if(!K||!K.motifs||!videOn(s)||legacy())return;const nv=garParTemps(1,K.voiesT,s.temps),chasse=s.temps>=(K.chasseT||99);
+  while(s.voies.length<nv)s.voies.push({plan:s.h+(s.voies.length?(K.decaleS||2.5):0.3),cur:null});if(s.voies.length>nv)s.voies.length=nv;
+  s.voies.forEach((W,vi)=>{if(s.h<W.plan)return;const cur=W.cur&&s.courants.includes(W.cur)&&W.cur.ph==='coule'?W.cur:null,ch=chasse&&!!cur&&cur.dur-cur.t>=C.preavisMin,m=nouveauMotif(s,g,vi,ch);
+   if(!m){W.plan=s.h+0.5;return;}const dur=garParTemps(5,K.dureeT,s.temps),an=ch?cur.dur-cur.t:K.annonceS;   // en chasse, il coule à l'instant où le précédent finit (sa fin, déjà connue, ne bouge pas)
+   const b={cases:m.cases,calmes:m.calmes,k:m.k,cote:m.cote,ph:'annonce',t:0,annonce:an,dur,retombe:chasse?0:(K.retombeS||0.3),id:'motif',voie:vi,v:garParTemps(70,K.vT,s.temps),chasse:ch};
+   s.courants.push(b);W.cur=b;W.plan=s.h+an+dur-(chasse?K.annonceS:0);});}
+ // ── la Lame (Q43) : une crête suit le courant d'un motif qui coule, case après case ; sortie en séquence (garSortieSeq), sinon elle saute ; l'Échouage
+ // quand elle a parcouru tout son trajet
+ // sa longueur tient dans ce qu'on sait du champ : le motif coule jusqu'à sa dernière case, et aucun changement inconnu ne vient avant (sinon plus courte, au
+ // moins A.min cases ; sinon elle attend)
+ function lame(e,s,g,id){const A=g.attaques[id],V=s.vide,U=inconnu(s,g),nMax=b=>Math.min(A.max,Math.floor((Math.min(b.dur-b.t,U)-0.05-A.preavis)/A.pasS)+1);
+  const M=s.courants.filter(b=>b.id==='motif'&&b.ph==='coule'&&nMax(b)>=A.min);
+  if(!M.length){s.file.unshift(id);s.ph='entracte';s.t=0.25;ST.j.attentes=(ST.j.attentes||0)+1;return;}ST.j.lances++;
+  const p=[P.x,P.y],pc=garCaseGrille(V.G,p[0],p[1]);
+  M.sort((a,b)=>(b.cases.some(c=>c.i===pc.i&&c.j===pc.j)?1:0)-(a.cases.some(c=>c.i===pc.i&&c.j===pc.j)?1:0));
+  for(let k=0;k<C.sortie.essais;k++){const b=M[k%M.length],n=nMax(b),w=garLameTrajet(garTrajets(b.cases,V.G.nx),V.G,p,Object.assign({},A,{max:n}),s.rng);if(!w)continue;const o=optP(s,A.preavis+n*A.pasS+0.5,e);
+   const zs=garLameZones(w,A),ev=garEvts(zs.map(z=>({t:z.at,zones:[z]})),s.courants),q=garSortieSeq(C.sortie,ev,p,o);if(!q.ok)continue;
+   const dg=garDegats(GD,g.acte,A.part);for(const z of zs)s.zones.push(Object.assign(z,{t:0,charge:z.at,degats:dg,id,fait:false,pousse:A.pousse}));
+   s.plan={t0:s.h,etapes:q.etapes};s.lame={n:zs.length};s.ph='geste';ST.j.lames=(ST.j.lames||0)+1;try{sfx('lame');}catch(err){}return;}
+  ST.j.sautes++;s.ph='entracte';s.t=0.4;}
+ // ── le Reflux (Q44) : une Fuite (un bord du sol coule vers le vide) et un disque au milieu du sol, en même temps
+ function reflux(e,s,g,id){const A=g.attaques[id],K=g.courant,V=s.vide;if(!videOn(s)){s.ph='entracte';s.t=0.4;return;}
+  if(inconnu(s,g)<=A.preavis+0.05){s.file.unshift(id);s.ph='entracte';s.t=0.25;ST.j.attentes=(ST.j.attentes||0)+1;return;}ST.j.lances++;
+  const p=[P.x,P.y],o=optP(s,A.preavis+0.5,e),v=garParTemps(70,K.vT,s.temps);
+  for(let k=0;k<C.sortie.essais;k++){const R=garReflux(V.G,V.L,A,p,s.rng,{v,exclu:prises(s,-1,false)});if(!R)break;
+   const b={cases:R.fuite.cases,calmes:[],k:'fuite',cote:R.fuite.cote,ph:'annonce',t:0,annonce:A.preavis,dur:garParTemps(5,K.dureeT,s.temps),retombe:K.retombeS||0.3,id:'reflux',voie:-1,v};
+   const ev=garEvts([{t:A.preavis,zones:[R.disque]}],s.courants.concat([b])),q=garSortieSeq(C.sortie,ev,p,o);if(!q.ok)continue;
+   s.courants.push(b);pousser(s,[R.disque],A,id,Math.max(C.preavisMin,A.preavis),g);s.plan={t0:s.h,etapes:q.etapes};s.ph='geste';ST.j.reflux=(ST.j.reflux||0)+1;try{sfx('lame');}catch(err){}return;}
+  ST.j.sautes++;s.ph='entracte';s.t=0.4;}
+ // ── la Marée (Q44) : un bord du sol se fendille 1,5 s, puis devient du vide pour le reste du combat ; jamais sous elle, jamais à l'opposé d'un côté
+ // tombé, jamais là où tu te tiens sans une sortie (sinon elle attend)
+ function maree(e,s,g,id){const A=g.attaques[id],V=s.vide;if(!videOn(s)){s.mareeDue=false;s.ph='entracte';s.t=0.4;return;}
+  if(inconnu(s,g)<=A.preavis+0.05){if(!s.mareeDue)s.file.unshift(id);s.ph='entracte';s.t=0.25;ST.j.attentes=(ST.j.attentes||0)+1;return;}ST.j.lances++;
+  const L=garMareeCotes(V.G,V.tomb,e);if(!L.length){s.mareeDue=false;ST.j.sautes++;s.ph='entracte';s.t=0.4;return;}
+  for(let i=L.length-1;i>0;i--){const j=Math.floor(s.rng()*(i+1));[L[i],L[j]]=[L[j],L[i]];}
+  const p=[P.x,P.y],o=optP(s,A.preavis+0.5,e);
+  for(const c of L){const z=Object.assign({},c.zone),ev=garEvts([{t:A.preavis,zones:[z]}],s.courants),q=garSortieSeq(C.sortie,ev,p,o);if(!q.ok)continue;
+   s.zones.push(Object.assign(z,{t:0,charge:Math.max(C.preavisMin,A.preavis),degats:0,id,fait:false,maree:{cote:c.cote,t0:s.h}}));s.maree={cote:c.cote,zone:z};s.mareeDue=false;
+   s.plan={t0:s.h,etapes:q.etapes};s.ph='geste';ST.j.marees=(ST.j.marees||0)+1;try{sfx('rupture');}catch(err){}return;}
+  ST.j.sautes++;s.ph='entracte';s.t=0.4;}
+ // le bord tombe : le sol vivant rétrécit, le vide grandit (la carte des chemins se refait : CAM.ff), les courants n'y coulent plus, son corps reste sur le sol
+ function mareeTombe(s,z){const V=s.vide;V.tomb[z.maree.cote]=(V.tomb[z.maree.cote]||0)+1;videMaj(s);V.vus.push({x0:z.x0,y0:z.y0,x1:z.x1,y1:z.y1,t0:z.maree.t0});CAM.ff=1;s.maree=null;
+  for(const b of s.courants)b.cases=b.cases.filter(c=>!garDansVide((c.x0+c.x1)/2,(c.y0+c.y1)/2,V.vides,0));s.courants=s.courants.filter(b=>b.cases.length);
+  if(!RM)shake(6,0.25);}
+ // le sol où son corps peut se tenir (une Marée annoncée compte déjà) : elle ne se tient jamais au-dessus du vide
+ function bornerCorps(e,s){if(!videOn(s))return;const V=s.vide;let L=V.L;if(s.maree){const t2=Object.assign({},V.tomb);t2[s.maree.cote]=(t2[s.maree.cote]||0)+1;L=garVivant(V.G,t2);}
+  const m=e.r*0.6;e.x=clamp(e.x,L.x0+m,L.x1-m);e.y=clamp(e.y,L.y0+m,L.y1-m);}
+ // une poussée ou une traction d'un coup (la Lame, le recul du contact) : par pas, une collision à chaque pas, arrêtée au liseré (Q41) ; sans vide, par pas
+ function pousseBornee(s,dx,dy,pas){const D=garPasImpose(dx,dy,pas||C.courant.pas),V=videOn(s)?s.vide:null;
+  for(let k=0;k<D.n;k++){const nx=P.x+D.sx,ny=P.y+D.sy;if(V&&garDansVide(nx,ny,V.vides,V.borne))break;P.x=nx;P.y=ny;collidePlayer();}}
+ // ── la chute (Q41) : le centre au-dessus du vide, hors d'une esquive : tes PV à zéro par la voie ordinaire (loseHp : ce qui te sauve d'un coup mortel te
+ // sauve aussi) ; sauvé, tu reprends pied au plus près, intouchable un instant. Ses invoqués y tombent aussi (sans butin). Elle, jamais.
+ function chutes(s){if(!videOn(s))return;const V=s.vide,g=room.g18;
+  if(P&&!P.dead&&garTombe([P.x,P.y],V.vides,P.dashT>0)){let age=Infinity;for(const q of V.vus)if(P.x>q.x0&&P.x<q.x1&&P.y>q.y0&&P.y<q.y1){age=s.h-q.t0;break;}
+   const coup={k:'vide',age,t:+RUN.time.toFixed(2),pv:+P.hp.toFixed(1)};coup.signe=garJuge(C,coup);ST.j.coups.push(coup);if(!coup.signe)ST.j.sansSigne++;ST.j.chutes=(ST.j.chutes||0)+1;
+   mist(P.x,P.y,30,'#06090b');try{sfx('hurt');}catch(err){}if(RUN&&RUN.mem)RUN.mem.lastSrc='vide18';loseHp(P.hp);
+   if(!P.dead){const L=V.L,m=40;P.x=clamp(P.x,L.x0+m,L.x1-m);P.y=clamp(P.y,L.y0+m,L.y1-m);P.vx=P.vy=0;P.dashT=0;P.iT=Math.max(P.iT||0,(g.vide&&g.vide.releveS)||1);collidePlayer();}}
+  for(const o of enemies){if(o.dead||o.fixed||o===room.boss||o.g18)continue;if(garTombe([o.x,o.y],V.vides,false)){o.dead=true;mist(o.x,o.y,o.r,'#06090b');ST.j.chutesE=(ST.j.chutesE||0)+1;}}}
+ V7FOE1.vide18='le vide';V7FOE.vide18='les eaux mortes';
+ // la carte des chemins (FF, base) compte le vide comme bloqué (crochet lu par ffBlk ; nul hors de sa salle)
+ window.__ffVide18=()=>{const s=room&&room.g18s;if(!videOn(s))return null;const vd=s.vide.vides;return(x,y)=>garDansVide(x,y,vd,15);};
+ // le joueur entre sur le sol (la porte d'entrée le pose sur la lisière)
+ const _er18=enterRoom;enterRoom=function(){const r=_er18.apply(this,arguments);try{const s=room&&room.g18s;if(videOn(s)&&P){const L=s.vide.L;P.y=Math.min(P.y,L.y1-60);P.x=clamp(P.x,L.x0+40,L.x1-40);}}catch(err){console.error(err);}return r;};
+ // ── le dessin du vide : sous les corps, une eau noire sans fond (rien ne bouge) ; au-dessus du brouillard, le liseré de pierre pâle (toujours visible).
+ // Après sa mort, il s'efface en 1 s (l'eau retombe partout).
+ function videAlpha(s){const V=s.vide;if(!V)return 0;if(V.actif)return 1;return V.fin==null?0:clamp(1-(T-V.fin)/1,0,1);}
+ function dessinVide(c,s){const V=s.vide,al=videAlpha(s);if(al<=0)return;const g=room.g18,eau=(g.vide.eau||[6,9,11]).join(',');c.save();c.globalAlpha*=al;
+  for(const r of V.vides){c.fillStyle=`rgba(${eau},.94)`;c.fillRect(r.x0,r.y0,r.x1-r.x0,r.y1-r.y0);}
+  const L=V.L,gr=(x0,y0,x1,y1,ax,ay,bx,by)=>{const q=c.createLinearGradient(ax,ay,bx,by);q.addColorStop(0,'rgba(0,0,0,.55)');q.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=q;c.fillRect(x0,y0,x1-x0,y1-y0);};
+  gr(L.x0,L.y0-26,L.x1,L.y0,L.x0,L.y0,L.x0,L.y0-26);gr(L.x0,L.y1,L.x1,L.y1+26,L.x0,L.y1,L.x0,L.y1+26);gr(L.x0-26,L.y0,L.x0,L.y1,L.x0,L.y0,L.x0-26,L.y0);gr(L.x1,L.y0,L.x1+26,L.y1,L.x1,L.y0,L.x1+26,L.y0);
+  c.restore();}
+ function dessinLisere(c,s){const V=s.vide,al=videAlpha(s);if(al<=0)return;const L=V.L,li=room.g18.vide.lisere||[150,158,150];c.save();c.globalAlpha*=al;c.lineJoin='round';
+  c.strokeStyle=INK;c.lineWidth=6;c.strokeRect(L.x0,L.y0,L.x1-L.x0,L.y1-L.y0);c.strokeStyle=`rgb(${li.join(',')})`;c.lineWidth=2.5;c.strokeRect(L.x0,L.y0,L.x1-L.x0,L.y1-L.y0);c.restore();}
+ const _dd18=drawDecals;drawDecals=function(){_dd18.apply(this,arguments);const s=room&&room.g18s;if(s&&s.vide&&state==='play')try{dessinVide(ctx,s);}catch(err){console.error(err);}};
+ // la Marée en préavis : la bande se fendille et s'assombrit, cernée d'orange en tirets (la grammaire des zones) ; fissures à graine (rien ne pulse)
+ function dessinMaree(c,z){const k=clamp(z.t/z.charge,0,1),w=z.x1-z.x0,h=z.y1-z.y0;c.save();c.fillStyle=`rgba(6,9,11,${0.18+0.6*k})`;c.fillRect(z.x0,z.y0,w,h);
+  let sd=Math.floor(z.x0*7+z.y0*13)>>>0;const rr=()=>{sd=(sd*1103515245+12345)>>>0;return sd/4294967296;};c.strokeStyle='rgba(10,8,16,.9)';c.lineWidth=2;c.beginPath();
+  const n=Math.floor(4+14*k);for(let i=0;i<n;i++){let x=z.x0+rr()*w,y=z.y0+rr()*h;c.moveTo(x,y);for(let q=0;q<3;q++){x+=(rr()-0.5)*40;y+=(rr()-0.5)*30;c.lineTo(clamp(x,z.x0,z.x1),clamp(y,z.y0,z.y1));}}c.stroke();
+  c.setLineDash([10,8]);c.strokeStyle=`rgba(${TELE.zone},.9)`;c.lineWidth=2.5;c.strokeRect(z.x0+1,z.y0+1,w-2,h-2);c.setLineDash([]);c.restore();}
  const KEY=g=>'g18_'+g.acte;
  for(let n=4;n<=9;n++){const g=garEntree(GD,n);if(g){V7FOE1[KEY(g)]=g.un||g.nom;V7FOE[KEY(g)]=g.un||g.nom;if(g.decor&&g.decor.palette&&!THEMES[g.decor.theme])THEMES[g.decor.theme]=g.decor.palette;if(g.couleurs&&g.couleurs.lueur)TINT[KEY(g)]=g.couleurs.lueur.join(',');}}
  // ── la salle (makeRoom) : marquée avant le sol (son thème, Q4)
  let prochain=null;
- const _mr=makeRoom;makeRoom=function(type){prochain=type==='boss'?ici():null;try{const rm=_mr.apply(this,arguments);if(prochain){rm.g18=prochain;rm.g18s={file:[],dernier:null,zones:[],ph:'entracte',t:1,temps:1,frappe:0,nb:0,mort:null,entree:null,herses:[],tirs:[],fer:null,ne:0,colle:0,contactT:0,ap:null,debris:null,courants:[],trav:null};}return rm;}finally{prochain=null;}};
+ const _mr=makeRoom;makeRoom=function(type){prochain=type==='boss'?ici():null;try{const rm=_mr.apply(this,arguments);if(prochain){rm.g18=prochain;rm.g18s={file:[],dernier:null,zones:[],ph:'entracte',t:1,temps:1,frappe:0,nb:0,mort:null,entree:null,herses:[],tirs:[],fer:null,ne:0,colle:0,contactT:0,ap:null,debris:null,courants:[],trav:null,vide:null,voies:[],h:0,plan:null,lame:null,maree:null,mareeVu:[]};if(prochain.vide)videInit(rm.g18s,prochain);}return rm;}finally{prochain=null;}};
  const _th=themeOf;themeOf=function(type){if(prochain&&type==='boss'&&prochain.decor)return prochain.decor.theme;return _th.apply(this,arguments);};
  const _lf=layoutFor;layoutFor=function(type){if(prochain&&type==='boss')return[];return _lf.apply(this,arguments);};
  const _ff=floorFlags;floorFlags=function(g,p){if(prochain&&prochain.decor){floorCobbles(g,p);decorSol(g,prochain.decor);return;}return _ff.apply(this,arguments);};
@@ -15713,7 +15963,7 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
   // les temps (les seuils sont tenus par hitEnemy : un coup ne traverse pas deux seuils, verrou de 1,2 s)
   const tp=garTemps(e.hp,e.maxHp,e.seuils18);
   if(tp>s.temps&&!ST.mannequin){const t0=s.temps;s.temps=tp;e.phase=tp;s.zones=[];s.tirs=[];s.file=[];s.ph='entracte';s.t=0.8;s.ap=null;ST.j.temps.push({t:+RUN.time.toFixed(2),temps:tp});sfx('phase');if(!RM)shake(10,0.4);
-   leverTout(s,'temps');s.fer=null;courantsRetombent(s);if(t0<3&&tp>=3&&g.herse)s.debris={x:e.x,y:e.y,t:0};   // la herse lui glisse des épaules et reste au sol (dessin seulement)
+   leverTout(s,'temps');s.fer=null;courantsRetombent(s);s.voies=[];s.plan=null;s.lame=null;s.maree=null;if(t0<3&&tp>=3&&g.herse)s.debris={x:e.x,y:e.y,t:0};   // la herse lui glisse des épaules et reste au sol (dessin seulement)
    const ti=(g.temps&&g.temps.titres||[])[tp-1];if(ti)titre(s,ti,e);if(!RM&&TINT[KEY(g)])tlights.push({x:e.x,y:e.y,r:360,t:0.5,max:0.5,c:KEY(g)});}   // 6.1c : l'éclat à sa teinte, aucun en mouvements réduits
   if(s.titre){s.titre.t+=dt;if(s.titre.t>=TITRE_S)s.titre=null;}
   // les herses : l'âge (debout), la levée (dessin)
@@ -15721,7 +15971,9 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
   s.herses=s.herses.filter(h=>h.etat!=='finie');
   // les zones
   for(const z of s.zones){if(z.fait){z.flash-=dt;continue;}z.t+=dt;if(z.t<z.charge)continue;z.fait=true;z.flash=0.15;
-   if(!P.dead&&P.dashT<=0&&brxDans(z,P.x,P.y,P.r)){s.zoneCourante=z;try{hurtPlayer(z.degats,e);}finally{s.zoneCourante=null;}}
+   if(z.maree){mareeTombe(s,z);continue;}   // 6.2b-1bis : la Marée ne frappe pas : le bord devient du vide (la chute fait le reste, dans le pas du jeu)
+   if(!P.dead&&P.dashT<=0&&brxDans(z,P.x,P.y,P.r)){s.zoneCourante=z;const it0=P.iT||0,hp0=P.hp;try{hurtPlayer(z.degats,e);}finally{s.zoneCourante=null;}
+    if(z.pousse&&z.lame&&!P.dead&&((P.iT||0)>it0+1e-6||P.hp<hp0-1e-6)){const n=Math.hypot(z.lame.vx,z.lame.vy)||1;pousseBornee(s,z.lame.vx/n*z.pousse,z.lame.vy/n*z.pousse);ST.j.pousses=(ST.j.pousses||0)+1;}}
    if(z.herse&&z.herse.etat==='annonce')tomber(s,z.herse);}
   s.zones=s.zones.filter(z=>!z.fait||z.flash>0);
   // les Feuillets : leur ligne violette, puis le départ (un tir du gardien, qui passe entre les barreaux)
@@ -15729,12 +15981,13 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
    eproj.push({x:q.x,y:q.y,vx:Math.cos(q.a)*a.v,vy:Math.sin(q.a)*a.v,r:a.r,dmg:q.dmg,life:a.len/a.v,boss:true,g18f:{id:q.id,charge:q.charge},page:q.a});}
   s.tirs=s.tirs.filter(q=>!q.parti);
   if(ST.mannequin)return;
+  if(s.vide){motifsPas(e,s,g);const Am=g.attaques.maree;if(Am&&(Am.T||[]).includes(s.temps)&&!s.mareeVu.includes(s.temps)&&!legacy()){s.mareeVu.push(s.temps);s.mareeDue=true;}}   // 6.2b-1bis
   // le contact : plus rare (une fois par contactS) et il repousse (décision de l'auteur, 6.1b)
   // 6.1c : seulement si le coup a porté (sinon, ni recul ni délai consommé) ; le recul par pas de 10 px, une collision à chaque pas (un saut d'un coup
   // traversait une herse : barreau + corps font plus de 40 px de large, mais pas 10)
   if(touching&&e.fade>0.5&&RUN.time>=(s.contactT||0)){const it0=P.iT||0,hp0=P.hp;contact(e,e.dmg);
    if((P.iT||0)>it0+1e-6||P.hp<hp0-1e-6){s.contactT=RUN.time+(C.contactS||0);const dx=P.x-e.x,dy=P.y-e.y,d=hyp(dx,dy)||1,k=C.contactRecul||0;
-    if(k>0&&!P.dead){const n=Math.max(1,Math.ceil(k/10));for(let i=0;i<n;i++){P.x+=dx/d*k/n;P.y+=dy/d*k/n;collidePlayer();}}}}
+    if(k>0&&!P.dead){if(videOn(s))pousseBornee(s,dx/d*k,dy/d*k,10);else{const n=Math.max(1,Math.ceil(k/10));for(let i=0;i<n;i++){P.x+=dx/d*k/n;P.y+=dy/d*k/n;collidePlayer();}}}}}
   // collé à lui : Garde ! (la réponse au corps à corps)
   const ga=g.attaques.garde;if(ga&&ga.colle){if(dP<ga.colle.d)s.colle=(s.colle||0)+dt;else s.colle=Math.max(0,(s.colle||0)-dt*2);}
   const vit=e.spd*(s.temps>=3?1.3:1);
@@ -15747,15 +16000,18 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
    if(dP<=a.atteinte*a.r1){const id=s.ap.id;s.ap=null;vouge(e,s,g,id);}
    else if(s.ap.t>=(a.approcheS||2)){ST.j.renonces=(ST.j.renonces||0)+1;s.ap=null;s.ph='entracte';s.t=entracte(s,g)*0.5;}
    else sansHerses(()=>moveTo(e,P.x,P.y,vit*1.15,dt));}
-  else if(s.ph==='geste'){if(!s.zones.some(z=>!z.fait)&&!s.tirs.length){
+  else if(s.ph==='geste'){if(!s.zones.some(z=>!z.fait)&&!s.tirs.length){s.plan=null;
+    if(s.lame){s.lame=null;if((g.echouage||{}).apres==='lame'){echouer(e,s,g);return;}}
     if(s.fer&&s.fer.ph==='herse'){s.fer.ph='pause';s.ph='suite';s.t=(g.attaques[s.fer.suite]||{}).apresS||0.3;}
     else{const ap=s.fer&&s.fer.ph==='suite',at=s.trav&&s.trav.ph==='suite';if(ap)s.fer.ph='attend';if(at)s.trav.ph='attend';s.ph='entracte';s.t=entracte(s,g)*(ap||at?((g.rythme||{}).apresFermeture||1):1);}}}
   else if(s.ph==='suite'){s.t-=dt;if(s.t<=0)suite(e,s,g);}
   else if(s.ph==='suiteT'){s.t-=dt;if(s.t<=0)suiteTrav(e,s,g);}
   else if(s.ph==='relache'){s.t-=dt;if(s.t<=0){s.ph='entracte';s.t=entracte(s,g)*0.5;}}}
  // essai attaque=<id> : une attaque, une Fermeture, ou une des deux moitiés d'une Fermeture (la Fermeture entière)
- function cleEssai(g,id){if(!id)return null;if((g.traversees||{})[id])return id;for(const [k,T] of Object.entries(g.traversees||{}))if(T.bief===id)return k;if((g.fermetures||{})[id])return id;for(const [k,F] of Object.entries(g.fermetures||{}))if(F.herse===id||F.suite===id)return k;return g.attaques[id]?id:null;}
+ function cleEssai(g,id){if(!id)return null;if(id==='motifs'&&g.courant&&g.courant.motifs)return'motifs';if((g.traversees||{})[id])return id;for(const [k,T] of Object.entries(g.traversees||{}))if(T.bief===id)return k;if((g.fermetures||{})[id])return id;for(const [k,F] of Object.entries(g.fermetures||{}))if(F.herse===id||F.suite===id)return k;return g.attaques[id]?id:null;}
  function lancer(e,s,g){
+  if(s.mareeDue&&g.attaques.maree){maree(e,s,g,'maree');return;}   // 6.2b-1bis : à l'entrée des temps 3 et 4, la Marée avant tout
+  if(ST.essai_attaque==='motifs'){s.ph='entracte';s.t=1;return;}   // essai attaque=motifs : seulement les motifs du courant
   if(!s.file.length){if(s.nb>0&&!ST.essai_attaque){const nu=(g.rythme||{}).relacheS||0;if(nu>0){e.vuln=Math.max(e.vuln||0,nu);s.ph='relache';s.t=nu;s.nb=0;return;}}
    s.file=ST.essai_attaque?[ST.essai_attaque]:garFile(g,s.temps,s.rng,s.dernier);}
   const id=s.file.shift();
@@ -15764,6 +16020,7 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
   if(g.fermetures&&g.fermetures[id]){if(s.fer&&s.herses.some(h=>h.etat==='debout'&&!h.garde)){s.file.unshift(id);relever(e,s,g);return;}s.dernier=id;s.nb++;fermer(e,s,g,id);return;}
   const a=g.attaques[id];if(!a){s.t=0.5;return;}s.dernier=id;s.nb++;
   if(a.cible==='aval'){abordage(e,s,g,id,null);return;}
+  if(a.seq){lame(e,s,g,id);return;}if(a.fuite){reflux(e,s,g,id);return;}if(a.forme==='vide'){maree(e,s,g,id);return;}   // 6.2b-1bis
   if(a.forme==='projectile'){feuillets(e,s,g,id);return;}
   if(a.forme==='invocation'){appel(e,s,g,id);return;}
   if(a.atteinte){ST.j.lances++;s.ap={id,t:0};s.ph='approche';return;}
@@ -15857,12 +16114,13 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
  // ── les zones (orange, la grammaire des zones de gardien), sous les ennemis
  function arc(c,x,y,r){c.beginPath();c.arc(x,y,Math.max(0.1,r),0,TAU);}
  function dessinZones(c){const s=S();if(!s)return;
-  for(const z of s.zones){const k=Math.min(1,z.t/z.charge),al=z.fait?0.5*Math.max(0,z.flash)/0.15:1;c.save();c.globalAlpha=al;c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
+  for(const z of s.zones){if(z.maree){if(!z.fait)dessinMaree(c,z);continue;}const k=Math.min(1,z.t/z.charge),al=z.fait?0.5*Math.max(0,z.flash)/0.15:1;c.save();c.globalAlpha=al;c.fillStyle=`rgba(${TELE.zone},0.13)`;c.strokeStyle=`rgba(${TELE.zone},0.8)`;c.lineWidth=2;
    if(z.forme==='couloir'){const a=Math.atan2(z.y1-z.y0,z.x1-z.x0),l=hyp(z.x1-z.x0,z.y1-z.y0);c.translate(z.x0,z.y0);c.rotate(a);c.fillRect(0,-z.w/2,l,z.w);c.fillStyle=`rgba(${TELE.zone},0.26)`;c.fillRect(0,-z.w/2,l*k,z.w);c.strokeRect(0,-z.w/2,l,z.w);}
    else if(z.forme==='cone'){if(z.pointille)c.setLineDash([10,8]);c.beginPath();c.arc(z.x,z.y,z.r1,z.a-z.ouv/2,z.a+z.ouv/2);c.arc(z.x,z.y,z.r0,z.a+z.ouv/2,z.a-z.ouv/2,true);c.closePath();c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;c.beginPath();c.arc(z.x,z.y,z.r0+(z.r1-z.r0)*k,z.a-z.ouv/2,z.a+z.ouv/2);c.arc(z.x,z.y,z.r0,z.a+z.ouv/2,z.a-z.ouv/2,true);c.closePath();c.fill();}
    else if(z.forme==='case'&&z.long){const w=z.x1-z.x0,h=z.y1-z.y0;c.fillRect(z.x0,z.y0,w,h);c.fillStyle=`rgba(${TELE.zone},0.26)`;if(z.long==='h')c.fillRect(z.x0,z.y0,w*k,h);else c.fillRect(z.x0,z.y0,w,h*k);c.strokeRect(z.x0,z.y0,w,h);}   // 6.1c : la herse (une case par tronçon)
    else if(z.forme==='case'){if(z.pointille&&!RM){c.setLineDash([10,8]);}else if(z.pointille)c.setLineDash([10,8]);c.fillRect(z.x0,z.y0,z.x1-z.x0,z.y1-z.y0);c.strokeRect(z.x0+1,z.y0+1,z.x1-z.x0-2,z.y1-z.y0-2);c.setLineDash([]);
-    if(!z.fait){c.fillStyle=`rgba(${TELE.zone},${(z.pointille?0.12:0.2)*k})`;c.fillRect(z.x0,z.y0,z.x1-z.x0,z.y1-z.y0);}}
+    if(!z.fait){c.fillStyle=`rgba(${TELE.zone},${(z.pointille?0.12:0.2)*k})`;c.fillRect(z.x0,z.y0,z.x1-z.x0,z.y1-z.y0);}
+    if(z.lame&&!z.fait){const r=z.charge-z.t;if(r<0.33){c.fillStyle=`rgba(${TELE.zone},${0.32*(1-r/0.33)})`;c.fillRect(z.x0,z.y0,z.x1-z.x0,z.y1-z.y0);}}}   // 6.2b-1bis : la crête de la Lame arrive
    else if(z.forme==='anneau'){arc(c,z.x,z.y,z.r1);c.stroke();arc(c,z.x,z.y,z.r0);c.stroke();c.beginPath();c.arc(z.x,z.y,z.r1,0,TAU);c.arc(z.x,z.y,z.r0,0,TAU,true);c.fill();}
    else{arc(c,z.x,z.y,z.r);c.fill();c.stroke();c.fillStyle=`rgba(${TELE.zone},0.26)`;arc(c,z.x,z.y,z.r*k);c.fill();}
    c.restore();}}
@@ -15871,6 +16129,10 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
  // et la flèche est figée ; quand l'eau retombe, il s'efface
  function dessinCourants(c,s){if(!s.courants||!s.courants.length)return;const col=C.courant.couleur.join(',');
   for(const b of s.courants){const al=b.ph==='annonce'?0.35+0.65*clamp(b.t/b.annonce,0,1):b.ph==='retombe'?1-clamp(b.t/b.retombe,0,1):1;if(al<=0)continue;
+   // 6.2b-1bis : le motif qui va chasser celui qui coule (temps 3) s'annonce par des flèches en pointillé, à côté des flèches pleines (la règle du Ressac)
+   if(b.ph==='annonce'&&b.chasse){for(const q of b.cases){const w=q.x1-q.x0,h=q.y1-q.y0,sp=hyp(q.vx,q.vy)||1,ux=q.vx/sp,uy=q.vy/sp,L=Math.min(w,h)*0.26;c.save();c.globalAlpha*=al;
+     c.translate((q.x0+q.x1)/2+uy*h*0.27,(q.y0+q.y1)/2-ux*h*0.27+(ux?0:0));c.rotate(Math.atan2(uy,ux));c.beginPath();c.moveTo(-L,-4);c.lineTo(L*0.3,-4);c.lineTo(L*0.3,-11);c.lineTo(L,0);c.lineTo(L*0.3,11);c.lineTo(L*0.3,4);c.lineTo(-L,4);c.closePath();
+     c.lineJoin='round';c.setLineDash([5,4]);c.strokeStyle=INK;c.lineWidth=4;c.stroke();c.strokeStyle=`rgba(${col},.95)`;c.lineWidth=2;c.stroke();c.setLineDash([]);c.restore();}continue;}
    for(const q of b.cases){const w=q.x1-q.x0,h=q.y1-q.y0,sp=hyp(q.vx,q.vy)||1,ux=q.vx/sp,uy=q.vy/sp;c.save();c.globalAlpha*=al;
     c.fillStyle=`rgba(${col},${b.ph==='coule'?0.1:0.05})`;c.fillRect(q.x0,q.y0,w,h);c.strokeStyle=`rgba(${col},.35)`;c.lineWidth=1.5;c.setLineDash([6,6]);c.strokeRect(q.x0+1,q.y0+1,w-2,h-2);c.setLineDash([]);
     if(b.ph==='coule'){c.save();c.beginPath();c.rect(q.x0,q.y0,w,h);c.clip();const pas=36,off=RM?0:(b.t*sp*0.6)%pas;c.strokeStyle=`rgba(${col},.22)`;c.lineWidth=2;c.beginPath();
@@ -15916,8 +16178,8 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
    c.strokeStyle='rgba(40,30,22,.7)';c.lineWidth=1;c.beginPath();for(const y of [-0.25,0.05,0.35]){c.moveTo(-r*0.6,y*r);c.lineTo(r*0.6,y*r);}c.stroke();c.restore();}}
  const _dep=drawEproj;drawEproj=function(){if(!(room&&room.g18s&&eproj.some(p=>p.g18f)))return _dep.apply(this,arguments);const all=eproj;eproj=all.filter(p=>!p.g18f);
   try{_dep.apply(this,arguments);}finally{eproj=all;}try{dessinPages(ctx);}catch(err){console.error(err);}};
- const _dt=drawTelegraphs;drawTelegraphs=function(){_dt.apply(this,arguments);if(room&&room.g18s&&state==='play')try{const s=S(),HS=room.g18.herse;if(s.debris)dessinDebris(ctx,s.debris,room.g18.rayon);dessinCourants(ctx,s);dessinZones(ctx);if(HS)for(const h of s.herses)dessinHerse(ctx,h,HS);dessinTirs(ctx,s);}catch(err){console.error(err);}};
- const _bdf=bossDefeated;bossDefeated=function(e){if(e&&e.g18&&room&&room.g18s){try{const s=room.g18s;for(const h of s.herses)if(h.etat==='debout')h.chute=true;leverTout(s);courantsRetombent(s);s.zones=[];s.tirs=[];s.fer=null;s.titre=null;
+ const _dt=drawTelegraphs;drawTelegraphs=function(){_dt.apply(this,arguments);if(room&&room.g18s&&state==='play')try{const s=S(),HS=room.g18.herse;if(s.debris)dessinDebris(ctx,s.debris,room.g18.rayon);if(s.vide)dessinLisere(ctx,s);dessinCourants(ctx,s);dessinZones(ctx);if(HS)for(const h of s.herses)dessinHerse(ctx,h,HS);dessinTirs(ctx,s);}catch(err){console.error(err);}};
+ const _bdf=bossDefeated;bossDefeated=function(e){if(e&&e.g18&&room&&room.g18s){try{const s=room.g18s;for(const h of s.herses)if(h.etat==='debout')h.chute=true;leverTout(s);courantsRetombent(s);s.zones=[];s.tirs=[];s.fer=null;s.titre=null;if(s.vide&&s.vide.actif){s.vide.actif=false;s.vide.fin=T;s.voies=[];s.plan=null;}
     if(!RUN.essai&&SAVE&&SAVE.flags){SAVE.flags[KEY(e.g18)]=1;persist();}}catch(err){console.error(err);}}return _bdf.apply(this,arguments);};
  // ── le dessin (6.1a : la silhouette d'essai : un corps de ciré, la herse au dos, un visage d'étain sans traits, le registre sur la poitrine)
  const RGB=a=>a.join(',');
@@ -16069,12 +16331,17 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
  function pilote(dt){const e=room.boss;for(const k of ['KeyW','KeyA','KeyS','KeyD'])keys.delete(k);if(!e||e.dead||P.dead||!room.started)return;
   const s=S(),B=s.bot||(s.bot={t:0,beat:-1,strafe:1,sT:0});B.t+=dt;B.sT-=dt;if(B.sT<=0){B.sT=1.2+Math.random()*1.2;B.strafe=-B.strafe;}
   let tx,ty;const ch=champ(s),vives=s.zones.filter(z=>!z.fait).concat(lignesTirs(s)),dedans=vives.filter(z=>brxDans(z,P.x,P.y,P.r+24));
-  if(dedans.length){const r0=Math.min(...dedans.map(z=>z.charge-z.t)),zs=vives.filter(z=>z.charge-z.t<=r0+0.5),o=optSortie(9);
-   const q=ch.length?garSortieCourant(C.sortie,zs,[P.x,P.y],Object.assign(o,{champ:ch})):garSortieGrille(C.sortie,zs,[P.x,P.y],o);if(q.ok&&q.q){tx=q.q[0];ty=q.q[1];}else{const z=dedans[0],c=z.x0!=null?{x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2}:z,dx=P.x-c.x,dy=P.y-c.y,d=hyp(dx,dy)||1;tx=P.x+dx/d*200;ty=P.y+dy/d*200;}
-   if(r0<0.3&&P.dashCh>0&&P.dashT<=0)press('Space');}
+  // 6.2b-1bis : dans la salle à vide, il suit le plan de la sortie du geste en cours (la séquence : où être à chaque coup ; le sol est un rectangle, la
+  // ligne droite y reste) ; il ne s'approche pas du bord, et il n'esquive pas (une esquive qui finit au-dessus du vide tombe)
+  const Vp=videOn(s)?s.vide:null;
+  if(Vp&&s.plan&&s.plan.etapes.length){const u=s.h-s.plan.t0,et=s.plan.etapes.find(E=>E.t>u-1e-9);if(et){tx=et.q[0];ty=et.q[1];}}
+  if(tx!=null){}
+  else if(dedans.length){const r0=Math.min(...dedans.map(z=>z.charge-z.t)),zs=vives.filter(z=>z.charge-z.t<=r0+0.5),o=Vp?optP(s,9):optSortie(9);
+   const q=ch.length||Vp?garSortieCourant(C.sortie,zs,[P.x,P.y],Object.assign(o,{champ:ch})):garSortieGrille(C.sortie,zs,[P.x,P.y],o);if(q.ok&&q.q){tx=q.q[0];ty=q.q[1];}else{const z=dedans[0],c=z.x0!=null?{x:(z.x0+z.x1)/2,y:(z.y0+z.y1)/2}:z,dx=P.x-c.x,dy=P.y-c.y,d=hyp(dx,dy)||1;tx=P.x+dx/d*200;ty=P.y+dy/d*200;}
+   if(r0<0.3&&P.dashCh>0&&P.dashT<=0&&!Vp)press('Space');}
   else{const want=DIST[P.cls]||220,dx=e.x-P.x,dy=e.y-P.y,d=hyp(dx,dy)||1,ux=dx/d,uy=dy/d;
    if(d>want+40){tx=e.x-ux*want;ty=e.y-uy*want;}else if(d<want-40){tx=P.x-ux*120;ty=P.y-uy*120;}else{tx=P.x-uy*120*B.strafe;ty=P.y+ux*120*B.strafe;}
-   tx=clamp(tx,AR.x0+40,AR.x1-40);ty=clamp(ty,AR.y0+40,AR.y1-40);}
+   tx=clamp(tx,AR.x0+40,AR.x1-40);ty=clamp(ty,AR.y0+40,AR.y1-40);if(Vp){const L=Vp.L,m=46;tx=clamp(tx,L.x0+m,L.x1-m);ty=clamp(ty,L.y0+m,L.y1-m);}}
   [tx,ty]=via(s,tx,ty);
   // 6.2b-1 : dans un courant, il compense (sa vitesse voulue moins le courant) ; sans courant, exactement comme avant
   const cv=ch.length?garVent(ch,P.x,P.y):null;
@@ -16106,10 +16373,13 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
    // les herses vieillissent ici (pas dans son pas : après sa mort, elles finissent de s'affaisser)
    if(!b||b.dead){const HS=room.g18.herse;for(const h of s.herses){h.t+=dt;if(h.etat==='levee'&&h.t>=((HS&&HS.releveS)||0.45))h.etat='finie';}s.herses=s.herses.filter(h=>h.etat!=='finie');}
    if(s.courants.length)courantsVieillir(s,dt);   // 6.2b-1 : les courants vieillissent ici (après sa mort, ils finissent de retomber)
+   s.h=(s.h||0)+dt;   // 6.2b-1bis : l'horloge de sa salle (les voies des motifs)
    if(ST.bot===2&&P)try{pilote(dt);}catch(err){console.error(err);}}
   const r=_st.apply(this,arguments);
   // 6.2b-1 : la poussée du courant, après le pas du joueur (seulement quand un courant coule, dans la salle d'un gardien)
-  if(room&&room.g18s&&state==='play'&&!paused){const s=room.g18s;if(champ(s).length)try{pousseCourant(dt);}catch(err){console.error(err);}}
+  if(room&&room.g18s&&state==='play'&&!paused){const s=room.g18s;if(champ(s).length)try{pousseCourant(dt);}catch(err){console.error(err);}
+   // 6.2b-1bis : après le pas et après la poussée, la chute ; son corps ne quitte jamais le sol
+   if(s.vide)try{const b=room.boss;if(b&&!b.dead&&b.g18)bornerCorps(b,s);chutes(s);}catch(err){console.error(err);}}
   return r;};
  // ── le build de référence de l'acte (Q9 ; essai ref=1)
  function reference(acte){const R=DBX&&DBX.bot&&DBX.bot.reference;if(!R||!P||!window.__dernier)return null;const niveau=C.reference.niveaux[acte]||R.niveau,max={};
@@ -16141,7 +16411,15 @@ function garPasImpose(dx,dy,pasMax){const n=Math.max(1,Math.ceil(Math.hypot(dx,d
   courant:{champ:()=>JSON.parse(JSON.stringify(champ(S()))),biefs:()=>{const s=S();return s?s.courants.map(b=>({ph:b.ph,t:+b.t.toFixed(2),axe:b.axe,sens:b.sens,v:b.v,n:b.cases.length,dur:b.dur})):[];},trav:()=>{const s=S();return s&&s.trav?{id:s.trav.id,ph:s.trav.ph}:null;},
    poser:(axe,i,sens,v,dur)=>{const s=S(),g=room&&room.g18;if(!s||!g||!g.courant)return null;const b={cases:garBief(grilleC(g),axe,i,sens,v||70),axe,sens,v:v||70,ph:'coule',t:0,annonce:0,dur:dur||60,retombe:0.3,id:'essai'};s.courants.push(b);return b.cases.length;},
    vider:()=>{const s=S();if(s)s.courants=[];},pousse:dt=>pousseCourant(dt),dessin:c=>dessinCourants(c,S())},
-  finEssai:()=>finEssai(),dbg:()=>({colP:()=>collidePlayer(),ST,P,RUN,room,enemies,lgTir,miroir,actd4:()=>ACTD[4]&&ACTD[4].boss,ffAttend:()=>!!CAM.ff,tlights:()=>tlights,nums:()=>nums,V7FOE:()=>V7FOE,T:()=>T,titre:()=>{const s=S();return s&&s.titre;},ens:()=>enemies,eproj:()=>eproj,hitsWall:(x,y,r)=>hitsWall(x,y,r),collide:e=>collideEnemy(e),creer:(t,x,y)=>{const o=createEnemy(t,x,y);if(!enemies.includes(o))enemies.push(o);return o;},step:dt=>step(dt),render:()=>render(),file:()=>queue.length,pump:()=>pumpOverlay(),hud:()=>updateHud(),cl:()=>{computeLights();return lights;},hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),lights:()=>lights,themeOf:t=>themeOf(t),g27GlypheImg:n=>g27GlypheImg(n),corps,pure:{garGrilleCases,garCaseGrille,garBief,garChamp,garVent,garVitSol,garSortieCourant,garPassif,garPasImpose,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle}})};
+  // 6.2b-1bis : le vide et les motifs. etat() : le sol vivant, le vide, les côtés tombés, les voies et les motifs ; maree(cote) : fait tomber un bord tout de
+  // suite (sans préavis : essai seulement) ; motif(k, o) : pose un motif qui coule ; plan() : la sortie du geste en cours ; borne(dx, dy) : une poussée bornée
+  vide:{etat:()=>{const s=S();if(!s||!s.vide)return null;const V=s.vide;return{actif:V.actif,L:Object.assign({},V.L),vides:V.vides.map(r=>Object.assign({},r)),tomb:Object.assign({},V.tomb),sol:Object.assign({},V.sol),
+     voies:s.voies.map(W=>({plan:+(W.plan-s.h).toFixed(2),k:W.cur&&W.cur.k,ph:W.cur&&W.cur.ph})),motifs:s.courants.map(b=>({id:b.id,k:b.k,ph:b.ph,t:+b.t.toFixed(2),n:b.cases.length,chasse:!!b.chasse,voie:b.voie})),maree:s.maree&&s.maree.cote,mareeDue:!!s.mareeDue,h:+s.h.toFixed(2)};},
+   maree:cote=>{const s=S();if(!videOn(s))return false;const z=Object.assign({maree:{cote,t0:s.h-10}},garMareeCotes(s.vide.G,s.vide.tomb,null).find(c=>c.cote===cote)?.zone||{});if(z.x0==null)return false;mareeTombe(s,z);return true;},
+   motif:(k,o)=>{const s=S(),g=room&&room.g18;if(!videOn(s))return null;o=o||{};const m=garMotif(s.vide.G,s.vide.L,k,s.rng,Object.assign({v:o.v||90,p:[P.x,P.y],vise:o.vise==null?1:o.vise},o));if(!m)return null;
+    const b={cases:m.cases,calmes:m.calmes,k:m.k,cote:m.cote,ph:'coule',t:0,annonce:0,dur:o.dur||60,retombe:0.3,id:'motif',voie:o.voie==null?9:o.voie,v:o.v||90};s.courants.push(b);return{k:m.k,n:m.cases.length,cote:m.cote};},
+   plan:()=>{const s=S();return s&&s.plan?JSON.parse(JSON.stringify(s.plan)):null;},borne:(dx,dy)=>pousseBornee(S(),dx,dy),chutes:()=>chutes(S()),dessin:c=>{const s=S();if(s&&s.vide){dessinVide(c,s);dessinLisere(c,s);}}},
+  finEssai:()=>finEssai(),dbg:()=>({colP:()=>collidePlayer(),ST,P,RUN,room,enemies,lgTir,miroir,actd4:()=>ACTD[4]&&ACTD[4].boss,ffAttend:()=>!!CAM.ff,tlights:()=>tlights,nums:()=>nums,V7FOE:()=>V7FOE,T:()=>T,titre:()=>{const s=S();return s&&s.titre;},ens:()=>enemies,eproj:()=>eproj,hitsWall:(x,y,r)=>hitsWall(x,y,r),collide:e=>collideEnemy(e),creer:(t,x,y)=>{const o=createEnemy(t,x,y);if(!enemies.includes(o))enemies.push(o);return o;},step:dt=>step(dt),render:()=>render(),file:()=>queue.length,pump:()=>pumpOverlay(),hud:()=>updateHud(),cl:()=>{computeLights();return lights;},hurt:(d,src)=>hurtPlayer(d,src),hit:(e,b,o)=>hitEnemy(e,b,o),lights:()=>lights,themeOf:t=>themeOf(t),g27GlypheImg:n=>g27GlypheImg(n),corps,pure:{garSol,garVivant,garVide,garDansVide,garTombe,garBorneLisere,garMotif,garTrajets,garLameTrajet,garSortieSeq,garEvts,garChampA,garMareeCotes,garGrilleCases,garCaseGrille,garBief,garChamp,garVent,garVitSol,garSortieCourant,garPassif,garPasImpose,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle}})};
 })();
 
 const DEMO_CLS=(/[?&]demo=([a-z]+)/.exec(location.search)||[])[1];

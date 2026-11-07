@@ -28,6 +28,12 @@
 //     l'Appel ; C15, C22, C23, H1 une mort au Guet (répliques, journal « face au », acte IV, palier inconnu ignoré). A (6.1c, C3) : en essai, ni bossFirst,
 //     ni Résonance, ni Portail, ni fragment, ni codex ; la vraie victoire (RUN.essai à 0) les écrit. F (6.1c, C10) : le corps plein mesuré aussi sur le
 //     rendu complet (ombre, feuillets, page du Couvre-feu ; miroir ; quatre instants).
+// K · la Passeuse d'essai, éteinte (6.2b-1, v18.17 ; 6.2b-1bis, v18.18) : K-A sa salle ; K-B la Traversée et l'Échouage (attaque=traversee) ; K-C aucun
+//     coup sans signe au bot (quatre formes × trois paliers ; 6.2b-1bis : motifs, Lames, Reflux, Marées, et le bot ne tombe jamais) ; K-D la poussée
+//     par pas (6.2b-1bis : vers le bord, le courant t'emporte dans le vide) ; K-E les flèches en mouvements réduits ; K-F l'essai défait ; K-H éteinte.
+//     6.2b-1bis : K-V le vide et la chute (esquive, mort par la voie ordinaire, relique, dieu, poussée arrêtée au liseré et sa contre-épreuve, carte des
+//     chemins et Marée) ; K-M les motifs (présence par temps, une case un sens, pointillé) ; K-L la Lame (séquence, poussée, Échouage) et le Reflux ;
+//     K-T la Marée (temps 3, jamais sous elle, le vide qui s'efface à sa mort) ; K-R le vide en mouvements réduits.
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -316,7 +322,7 @@ if (SEC.includes('F')) {
 // ══════════════════════════════════════════════════════════════════════════════
 if (SEC.includes('G')) {
   console.log('\n══ G · règle d’or : chaque image du canevas, avant / après, trois paliers, gardien éteint puis allumé ══');
-  const NF = +(process.env.BANC_IMAGES || 180), AVANT_REV = process.env.BANC_AVANT || 'ec6a62f';   // 6.2b-1 : contre la v18.16 (avant : 3f1dc75, la v18.14)
+  const NF = +(process.env.BANC_IMAGES || 180), AVANT_REV = process.env.BANC_AVANT || 'dcb35a1';   // 6.2b-1bis : contre la v18.17 (6.2b-1 : ec6a62f, la v18.16 ; avant : 3f1dc75, la v18.14)
   // chaque côté a ses propres données des gardiens de la descente (celles de son commit), servies éteintes ou allumées selon le mode
   const GD_AV = process.env.BANC_TEMOIN ? GD_SRC : execSync(`git -C ${JSON.stringify(THEMIST)} show ${AVANT_REV}:themist/data/gardiens-descente.js`, { maxBuffer: 16 << 20 }).toString('utf8');
   // 6.2b-1 : si le Guet existait déjà avant (essai:false), sa salle allumée doit être identique des deux côtés (règle d'or du Guet)
@@ -593,17 +599,18 @@ if (SEC.includes('K')) {
     ok(r.echoue && r.vu.nu > 0 && (r.j.echouages || 0) >= 1, `K-B : ${palier} : l'eau retombée, l'Échouage : sonnée, à nu (${r.j.echouages || 0} fois, anneau ivoire ${r.vu.nu} images)`);
     ok(!errs.length, `K-B : ${palier} : aucune erreur de script ` + errs.slice(0, 2).join(' | ')); await ctx.close(); }
   // K-C : aucun coup sans signe, au bot qui compense (BANC_K_SANS_C=1 pour le sauter)
-  if (!process.env.BANC_K_SANS_C) { let tot = 0, sans = 0, auCourant = 0;
+  if (!process.env.BANC_K_SANS_C) { let tot = 0, sans = 0, auCourant = 0, chutesBot = 0;
     for (const palier of ['normal', 'difficile', 'extreme']) for (const cls of ['lum', 'gou', 'her', 'tis']) {
       const { page, errs, ctx } = await ouvre('');
       await essai5(page, { cls, dieu: true, bot: 2, ref: true, palier });
       const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, e = B.room.boss, t0 = B.RUN.time; window.__pas(70, () => e.dead); const j = G.journal();
-        return { dur: B.RUN.time - t0, mort: e.dead, coups: j.coups.length, sans: j.sansSigne, cour: j.coups.filter(c => c.c > 0).length, lances: j.lances, sautes: j.sautes, biefs: j.biefs || 0, ech: j.echouages || 0, pv: e.hp / e.maxHp, mauvais: j.coups.filter(c => !c.signe).slice(0, 3) }; });
-      tot += r.coups; sans += r.sans; auCourant += r.cour;
-      ok(r.sans === 0 && r.biefs > 0, `K-C : ${palier} · ${cls} : ${r.coups} coups reçus (${r.cour} dans un courant), ${r.sans} sans signe ; ${r.biefs} biefs, ${r.lances} gestes, ${r.sautes} sautés, ${r.ech} échouages ; ${r.mort ? `vaincue en ${r.dur.toFixed(0)} s` : `${Math.round(r.pv * 100)} % de PV à 70 s`}${r.mauvais.length ? ' ' + JSON.stringify(r.mauvais) : ''}`);
+        return { dur: B.RUN.time - t0, mort: e.dead, coups: j.coups.length, sans: j.sansSigne, cour: j.coups.filter(c => c.c > 0).length, lances: j.lances, sautes: j.sautes, motifs: j.motifs || 0, lames: j.lames || 0, reflux: j.reflux || 0, marees: j.marees || 0, chutes: j.chutes || 0, ech: j.echouages || 0, pv: e.hp / e.maxHp, mauvais: j.coups.filter(c => !c.signe).slice(0, 3) }; });
+      tot += r.coups; sans += r.sans; auCourant += r.cour; chutesBot += r.chutes;
+      ok(r.sans === 0 && r.motifs > 0 && r.lames > 0 && r.reflux > 0, `K-C : ${palier} · ${cls} : ${r.coups} coups reçus (${r.cour} dans un courant, ${r.chutes} chutes), ${r.sans} sans signe ; ${r.motifs} motifs, ${r.lames} Lames, ${r.reflux} Reflux, ${r.marees} Marées, ${r.lances} gestes, ${r.sautes} sautés, ${r.ech} échouages ; ${r.mort ? `vaincue en ${r.dur.toFixed(0)} s` : `${Math.round(r.pv * 100)} % de PV à 70 s`}${r.mauvais.length ? ' ' + JSON.stringify(r.mauvais) : ''}`);
       ok(!errs.length, `K-C : ${palier} · ${cls} : aucune erreur de script ` + errs.slice(0, 2).join(' | '));
       await ctx.close(); }
-    console.log(`   ${tot} coups reçus (${auCourant} dans un courant), ${sans} sans signe`); }
+    console.log(`   ${tot} coups reçus (${auCourant} dans un courant), ${sans} sans signe, ${chutesBot} chutes du bot`);
+    ok(chutesBot === 0, `K-C : le bot évite le vide (${chutesBot} chutes en 12 combats)`); }
   // K-D : la poussée
   { const { page, errs, ctx } = await ouvre('');
     await essai5(page, { cls: 'lum', dieu: true, mannequin: true });
@@ -611,8 +618,8 @@ if (SEC.includes('K')) {
       const j1 = (AR.y0 + (AR.y1 - AR.y0) / 4 * 1.5);   // le milieu de la rangée 1
       // a. à 90 px/s pendant 1 s, ton corps avance de 90 px dans le sens du courant (personne ne touche aux touches)
       G.courant.vider(); G.courant.poser('h', 1, 1, 90, 60); P.x = 300; P.y = j1; P.vx = 0; P.vy = 0; const x0 = P.x; window.__pas(1); out.avance = P.x - x0; out.dy = Math.abs(P.y - j1);
-      // b. contre le mur : il s'arrête au mur
-      P.x = 1150; window.__pas(3); out.mur = P.x; out.murMax = AR.x1 - P.r;
+      // b. 6.2b-1bis : vers le bord, le courant t'emporte dans le vide (le centre passe le liseré : tu tombes ; dieu : tu reprends pied sur le sol)
+      const L = G.vide.etat().L, c0 = G.journal().chutes || 0; P.x = 1150; window.__pas(3); out.chute = (G.journal().chutes || 0) - c0; out.mur = P.x; out.murMax = L.x1;
       // c. contre un barreau (r 10) : par pas, il s'arrête devant ; d'un seul saut de 40 px (contre-épreuve), il le traverse
       const bar = { x: 600, y: j1, r: 10 }; room.pillars.push(bar); P.x = 560; P.y = j1; window.__pas(2); out.devant = P.x < bar.x; out.xb = P.x;
       P.x = 585; G.courant.pousse(40 / 90); out.parPas = P.x < bar.x;
@@ -624,7 +631,7 @@ if (SEC.includes('K')) {
       G.courant.vider(); P.x = 300; const x1 = P.x; window.__pas(1); out.sans = Math.abs(P.x - x1);
       return out; });
     ok(Math.abs(r.avance - 90) < 4 && r.dy < 1, `K-D : à 90 px/s pendant 1 s, ton corps avance de ${r.avance.toFixed(1)} px dans son sens (écart ${r.dy.toFixed(1)} px de travers)`);
-    ok(Math.abs(r.mur - r.murMax) < 0.5, `K-D : contre le mur, il s'arrête au mur (${r.mur.toFixed(1)} pour ${r.murMax.toFixed(1)})`);
+    ok(r.chute >= 1 && r.mur < r.murMax, `K-D : vers le bord, le courant t'emporte dans le vide (${r.chute} chute ; dieu : tu reprends pied à ${r.mur.toFixed(1)}, sur le sol)`);
     ok(r.devant && r.parPas, `K-D : par pas de 6 px, une collision à chaque pas : il s'arrête devant le barreau (${r.xb.toFixed(1)} < 600)`);
     ok(r.saut, 'K-D (contre-épreuve) : d\'un seul saut de 40 px, le corps passe de l\'autre côté du barreau');
     ok(r.invoque > 60 && Math.abs(r.elle) < 1e-9, `K-D : ses invoqués sont emportés (${r.invoque.toFixed(1)} px en 1 s), elle non (${r.elle} px)`);
@@ -667,6 +674,116 @@ if (SEC.includes('K')) {
     ok(r.type === 'elite' && r.gardeK === 'garde' && !r.g18, `K-H : éteinte, la dernière salle de l'acte V est la place provisoire (${r.type} ${r.gardeK})`);
     ok(!readFileSync(join(THEMIST, 'wiki.html'), 'utf8').includes('Passeuse'), 'K-H : le wiki ne la nomme nulle part');
     ok(!errs.length, 'K-H : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // ── 6.2b-1bis (révision 1 de la fiche, Q41 à Q48) : le vide, les motifs, la Lame, le Reflux, la Marée
+  // K-V : le vide et la chute : la lisière de 64 px ; on tombe hors du sol, jamais pendant une esquive (si elle finit au-dessus, on tombe) ; la chute tue
+  // par la voie ordinaire (la mort nommée « le vide », un coup signé) ; une relique qui sauve d'un coup mortel sauve aussi ; dieu : on reprend pied
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'lum', dieu: false, mannequin: true });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), P = D.P, V = G.vide.etat(), L = V.L, out = { L, sol: V.sol, vides: V.vides.length };
+      // a. sur le sol, au bord : rien ; une esquive au-dessus du vide : rien tant qu'elle dure ; elle finit au-dessus : la chute
+      P.x = L.x0 + 3; P.y = (L.y0 + L.y1) / 2; window.__pas(0.2); out.bord = !P.dead && (G.journal().chutes || 0) === 0;
+      P.x = L.x0 - 20; P.dashT = 0.3; P.dashVx = 0; P.dashVy = 0; D.step(1 / 60); G.vide.chutes(); out.esquive = !P.dead && (G.journal().chutes || 0) === 0;
+      P.dashT = 0; P.x = L.x0 - 20; G.vide.chutes(); const j = G.journal(), c = j.coups[j.coups.length - 1]; out.mort = P.dead; out.src = B.RUN.mem && B.RUN.mem.lastSrc; out.coup = c; out.foe = D.V7FOE().vide18;
+      return out; });
+    ok(r.sol.x1 - r.sol.x0 === 1040 && r.sol.y1 - r.sol.y0 === 456 && r.vides === 4, `K-V : le sol fait ${r.sol.x1 - r.sol.x0} × ${r.sol.y1 - r.sol.y0} px, la lisière de vide l'entoure (${r.vides} bandes)`);
+    ok(r.bord && r.esquive, 'K-V : au bord du sol, rien ; une esquive passe au-dessus du vide sans tomber');
+    ok(r.mort && r.src === 'vide18' && r.coup && r.coup.k === 'vide' && r.coup.signe, `K-V : l'esquive finie au-dessus du vide, la chute : mort par la voie ordinaire (source ${r.src} : « ${r.foe} »), un coup signé (${JSON.stringify(r.coup)})`);
+    ok(!errs.length, 'K-V : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'gou', dieu: false, mannequin: true });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), P = D.P, L = G.vide.etat().L, out = {};
+      // b. une seconde flamme (relique) te sauve d'une chute comme d'un coup mortel : tu reprends pied sur le sol, intouchable
+      P.extraLife = 1; P.x = (L.x0 + L.x1) / 2; P.y = L.y1 + 20; G.vide.chutes(); out.sauve = !P.dead && P.extraLife === 0 && P.x > L.x0 && P.x < L.x1 && P.y > L.y0 && P.y < L.y1 && P.iT >= 0.9;
+      // c. dieu (l'essai par défaut) : on reprend pied
+      G.dieu(true); P.x = L.x1 + 30; P.y = (L.y0 + L.y1) / 2; G.vide.chutes(); out.dieu = !P.dead && P.hp >= 1 && P.x < L.x1;
+      // d. une poussée d'un coup s'arrête au liseré ; sans borne (contre-épreuve), elle jette dans le vide
+      P.iT = 0; P.x = (L.x0 + L.x1) / 2; P.y = L.y0 + 20; G.vide.borne(0, -110); out.borne = P.y >= L.y0 && P.y < L.y0 + 20 && !P.dead; out.by = P.y - L.y0;
+      P.y = L.y0 + 20; P.y -= 110; D.colP(); const c0 = G.journal().chutes || 0; G.vide.chutes(); out.naif = (G.journal().chutes || 0) > c0;
+      // e. la carte des chemins compte le vide comme bloqué (crochet de ffBlk) ; une Marée la refait (CAM.ff)
+      const f = window.__ffVide18(); out.ff = !!f && f(L.x0 - 30, (L.y0 + L.y1) / 2) && !f((L.x0 + L.x1) / 2, (L.y0 + L.y1) / 2);
+      G.vide.maree('gauche'); out.ffMaree = D.ffAttend(); const L2 = G.vide.etat().L; out.L2 = L2.x0 - L.x0;
+      out.ffApres = window.__ffVide18()(L.x0 + 30, (L.y0 + L.y1) / 2);
+      return out; });
+    ok(r.sauve, 'K-V : une seconde flamme sauve d\'une chute comme d\'un coup mortel : tu reprends pied sur le sol, intouchable 1 s');
+    ok(r.dieu, 'K-V : en essai (dieu), on reprend pied sur le sol');
+    ok(r.borne && r.naif, `K-V : une poussée de 110 px vers le bord s'arrête au liseré (${r.by.toFixed(1)} px du bord) ; d'un coup, sans borne (contre-épreuve), elle jette dans le vide`);
+    ok(r.ff && r.ffMaree && r.L2 > 170 && r.ffApres, `K-V : la carte des chemins compte le vide comme bloqué ; une Marée la fait refaire (CAM.ff) et le bord tombé y est bloqué (sol rétréci de ${r.L2.toFixed(0)} px)`);
+    ok(!errs.length, 'K-V (b à e) : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // K-M : les motifs (essai attaque=motifs) : temps 1 un à la fois, presque toujours là ; temps 2 deux à la fois ; temps 3 jamais d'arrêt, le suivant annoncé
+  // en pointillé ; chaque image, une case n'a qu'un sens ; les sept motifs paraissent
+  { const vus = {}; const res = {};
+    for (const temps of [1, 2, 3]) { const { page, errs, ctx } = await ouvre('');
+      await essai5(page, { cls: 'lum', dieu: true, attaque: 'motifs', temps });
+      const r = await page.evaluate(() => { const G = window.__gardiens18, out = { im: 0, coule: 0, deux: 0, pointille: 0, deuxSens: 0, ks: {} }; let debut = false;
+        window.__pas(60, () => { const V = G.vide.etat(), c = V.motifs.filter(m => m.ph === 'coule'); if (c.length) debut = true; if (!debut) return false; out.im++; if (c.length) out.coule++; if (c.length >= 2) out.deux++;
+          if (V.motifs.some(m => m.chasse && m.ph === 'annonce')) out.pointille++; for (const m of V.motifs) out.ks[m.k] = 1;
+          const ch = G.courant.champ(), vu = new Set(); for (const q of ch) { const k = Math.round(q.x0) + ',' + Math.round(q.y0); if (vu.has(k)) { out.deuxSens++; break; } vu.add(k); } return false; });
+        return out; });
+      res[temps] = r; Object.assign(vus, r.ks);
+      ok(!errs.length, `K-M : temps ${temps} : aucune erreur de script ` + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+    const f = (t, k) => res[t][k] / Math.max(1, res[t].im);
+    ok(f(1, 'coule') >= 0.8 && f(1, 'deux') === 0, `K-M : temps 1 : un motif à la fois, l'eau coule ${(f(1, 'coule') * 100).toFixed(0)} % du temps`);
+    ok(f(2, 'deux') >= 0.4, `K-M : temps 2 : deux motifs à la fois ${(f(2, 'deux') * 100).toFixed(0)} % du temps (l'eau coule ${(f(2, 'coule') * 100).toFixed(0)} %)`);
+    ok(f(3, 'coule') >= 0.99 && res[3].pointille > 0, `K-M : temps 3 : l'eau ne s'arrête plus (${(f(3, 'coule') * 100).toFixed(1)} %), le suivant s'annonce en pointillé (${res[3].pointille} images)`);
+    ok(res[1].deuxSens + res[2].deuxSens + res[3].deuxSens === 0, 'K-M : à chaque image, une case n\'a qu\'un sens');
+    ok(Object.keys(vus).length >= 6, `K-M : les motifs vus en trois minutes : ${Object.keys(vus).sort().join(', ')}`); }
+  // K-L : la Lame (attaque=lame) : ses cases frappent l'une après l'autre (préavis 1,0 s, +0,22 s), toutes cernées dès l'annonce ; touché, poussé de 70 px
+  // dans le sens du courant (arrêté au liseré) ; après sa course, l'Échouage (sonnée, à nu). Le Reflux : un disque et une Fuite qui coule à son coup.
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'gou', dieu: true, attaque: 'lame' });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), P = D.P, e = B.room.boss, out = {};
+      window.__pas(20, () => G.etat().zones.some(z => z.id === 'lame')); const zs = G.etat().zones.filter(z => z.id === 'lame'); out.charges = zs.map(z => +z.charge.toFixed(2));
+      // se tenir dans la première case, immobile (le courant vidé pour mesurer la poussée seule ; la zone garde son sens) : touché, puis poussé
+      G.courant.vider(); const z0 = D.room.g18s.zones.find(z => z.id === 'lame' && z.lame.k === 0); P.x = (z0.x0 + z0.x1) / 2; P.y = (z0.y0 + z0.y1) / 2; P.iT = 0; P.dashT = 0; const x0 = P.x, y0 = P.y, n = Math.hypot(z0.lame.vx, z0.lame.vy);
+      const hp0 = P.hp; let pousse = null, px = P.x, py = P.y; window.__pas(1.2, () => { if (z0.fait && pousse == null) { pousse = [(P.x - px) * z0.lame.vx / n + (P.y - py) * z0.lame.vy / n]; return true; } px = P.x; py = P.y; return false; });
+      out.touche = P.hp < hp0; out.pousse = pousse && pousse[0];
+      let vu = false; window.__pas(6, () => { if (G.etat().ph === 'relache' && e.vuln > 0 && window.__gardiens.G27.aNu(e, 1)) vu = true; return vu; }); out.echoue = vu; out.j = G.journal();
+      return out; });
+    const okSeq = r.charges.length >= 3 && r.charges.every((c, k) => Math.abs(c - (1 + 0.22 * k)) < 1e-6);
+    ok(okSeq, `K-L : la Lame : ${r.charges.length} cases, préavis ${r.charges.join(' / ')} s`);
+    ok(r.touche && r.pousse > 20 && r.pousse <= 72, `K-L : touché par la crête, poussé de ${r.pousse && r.pousse.toFixed(1)} px dans le sens du courant dans l'image du coup (70 et le courant d'une image au plus, moins au liseré)`);
+    ok(r.echoue && (r.j.echouages || 0) >= 1, `K-L : sa course finie, l'Échouage : sonnée, à nu (${r.j.echouages || 0})`);
+    ok(!errs.length, 'K-L : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'lum', dieu: true, attaque: 'reflux' });
+    const r = await page.evaluate(() => { const G = window.__gardiens18, out = {}; window.__pas(20, () => G.etat().zones.some(z => z.id === 'reflux'));
+      const z = G.dbg().room.g18s.zones.find(z => z.id === 'reflux'), V = G.vide.etat(), f = V.motifs.find(m => m.id === 'reflux');
+      out.disque = z && z.forme === 'disque' && z.r === 140 && z.charge >= 1; out.fuite = f && f.k === 'fuite' && f.ph === 'annonce';
+      window.__pas(1.05); out.coule = G.vide.etat().motifs.some(m => m.id === 'reflux' && m.ph === 'coule'); return out; });
+    ok(r.disque && r.fuite && r.coule, 'K-L : le Reflux : un disque de 140 px (préavis 1 s) et une Fuite annoncée en même temps, qui coule à son coup');
+    ok(!errs.length, 'K-L (Reflux) : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // K-T : la Marée : à l'entrée du temps 3 (une fois), un bord se fendille 1,5 s puis tombe ; jamais sous elle ; elle ne quitte jamais le sol ; vaincue,
+  // le vide s'efface (on peut gagner les portes) ; essai puis vraie descente : aucun vide
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'her', dieu: true, temps: 3, bot: 2, ref: true });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), e = B.room.boss, out = { horsSol: 0 }; let vuPre = 0;
+      window.__pas(25, () => { const V = G.vide.etat(); if (V.maree) vuPre++; const L = V.L; if (!e.dead && (e.x < L.x0 || e.x > L.x1 || e.y < L.y0 || e.y > L.y1)) out.horsSol++; return false; });
+      const V = G.vide.etat(); out.tomb = V.tomb; out.marees = G.journal().marees || 0; out.pre = vuPre;
+      for (let k = 0; k < 400 && !e.dead; k++) { D.hit(e, 3000, { crit: false }); for (let i = 0; i < 6; i++) B.step(1 / 60, 1); }
+      window.__pas(1.5); const V2 = G.vide.etat(); out.mort = e.dead; out.actif = V2.actif; const P = D.P; P.x = V2.L.x0 - 25; const c0 = G.journal().chutes || 0; G.vide.chutes(); out.apres = (G.journal().chutes || 0) === c0;
+      B.start(); out.ici = !!G.ici(); return out; });
+    ok(r.marees === 1 && Object.values(r.tomb).reduce((a, b) => a + b, 0) === 1 && r.pre >= 80, `K-T : à l'entrée du temps 3, une Marée (préavis ${r.pre} images, côté ${Object.keys(r.tomb).join(', ')})`);
+    ok(r.horsSol === 0, `K-T : son corps ne quitte jamais le sol (${r.horsSol} images hors du sol)`);
+    ok(r.mort && !r.actif && r.apres, 'K-T : vaincue, le vide s\'efface : on ne tombe plus (les portes se gagnent à pied)');
+    ok(!r.ici, 'K-T : la descente suivante défait l\'essai');
+    ok(!errs.length, 'K-T : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // K-R : mouvements réduits : le vide (eau noire, liseré) dessiné à deux instants est la même image ; le pointillé du motif qui chasse ne bouge pas
+  { const ctxo = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: 'reduce' });
+    await ctxo.addInitScript(() => { window.__raf = []; window.requestAnimationFrame = cb => { window.__raf.push(cb); return 1; }; });
+    const page = await ctxo.newPage(); const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+    await page.goto(BASE); await page.waitForFunction(() => !!(window.__gardiens18 && window.__brume && window.__brume.step && window.__descente), null, { timeout: 30000 });
+    await page.evaluate(() => { const q = window.__raf.splice(0); for (const f of q) f(performance.now());
+      window.__vide = () => { const o = document.querySelector('#overlay'); if (!o.hidden) { const b = o.querySelector('#bok') || o.querySelector('.card:not([disabled])') || o.querySelector('button.primary:not([disabled])'); if (b) b.click(); } };
+      window.__pas = (s, f) => { const B = window.__brume; for (let i = 0; i < Math.round(s * 60); i++) { window.__vide(); B.step(1 / 60, 1); if (f && f()) return true; } return false; }; });
+    await essai5(page, { cls: 'lum', dieu: true, attaque: 'motifs', temps: 3 });
+    const r = await page.evaluate(() => { const G = window.__gardiens18;
+      const img = f => { const c = document.createElement('canvas'); c.width = 1280; c.height = 720; f(c.getContext('2d')); const d = c.getContext('2d').getImageData(0, 0, 1280, 720).data; let h = 2166136261; for (let i = 0; i < d.length; i += 3) h = Math.imul(h ^ d[i], 16777619); return h >>> 0; };
+      window.__pas(30, () => G.vide.etat().motifs.some(m => m.chasse && m.ph === 'annonce' && m.t > 0.1));
+      const a = img(c => G.vide.dessin(c)); window.__pas(0.3); const b = img(c => G.vide.dessin(c));
+      return { vide: a === b, pt: G.vide.etat().motifs.some(m => m.chasse && m.ph === 'annonce') }; });
+    ok(r.vide, 'K-R : mouvements réduits : le vide dessiné à deux instants est la même image (rien ne bouge)');
+    ok(r.pt, 'K-R : le motif suivant s\'annonce en pointillé (ses flèches, comme les pleines, ne glissent pas : K-E)');
+    ok(!errs.length, 'K-R : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctxo.close(); }
 }
 
 console.log(`\nbanc-gardiens18 : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);

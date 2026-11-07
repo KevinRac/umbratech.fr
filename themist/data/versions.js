@@ -2,9 +2,10 @@
 // Source unique : l'écran titre du jeu (index.html) et le wiki (wiki.html, via outils/wiki.mjs) lisent ce fichier.
 // À chaque évolution du jeu : ajouter une ligne EN TÊTE du journal (et changer « actuelle » pour une nouvelle version).
 (function(D){D.versions={
- actuelle:'v18.17',
+ actuelle:'v18.18',
  // Journal, du plus récent au plus ancien. d : date · h : version ou commit · t : ce qui change
  journal:[
+ {d:'2026-11-07',h:'v18.18',t:'Préparation du gardien de l’acte V : plus bas, l’eau dessine des courants qui changent sans cesse, et les bords du sol s’ouvrent sur le vide. Rien ne change en jeu.'},
  {d:'2026-11-07',h:'v18.17',t:'Préparation du gardien de l’acte V : plus bas, l’eau apprend à couler. Rien ne change en jeu.'},
  {d:'2026-11-06',h:'v18.16',t:'Au fond des Bas-Fonds, la porte est mieux gardée : ce qui tombe ne frappe plus dans le passage resté ouvert, et ce qui vole est annoncé jusqu’au bout de sa course.'},
  {d:'2026-11-06',h:'v18.15',t:'Au fond des Bas-Fonds, quelqu’un garde encore la porte.'},

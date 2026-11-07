@@ -26,6 +26,12 @@
 //  6.1c (relecture, v18.16) : la vraie salle (AR0) ; le rouge des ennemis dans la grammaire ; la herse en cases (un corps dans le guichet qui ne touche
 //     aucun barreau n'est jamais frappé) ; au Couvre-feu, une herse qui tombe ne passe jamais dans le guichet d'une herse debout ; les branchements de
 //     la relecture (C2 à C23, H1 : memoire.md, § 46).
+// 10. le courant (6.2b-1, v18.17) ; 11. le vide, les motifs et la sortie en séquence (6.2b-1bis, v18.18 ; révision 1 de la fiche 6.2a, Q41–Q48) : la
+//     lisière, le sol vivant, la chute (jamais pendant une esquive) ; 14 000 motifs (une case un sens, dans le sol vivant, jamais sur une case prise,
+//     la forme de chacun des sept) ; la prédiction du champ ; 4 000 Lames, 3 000 Reflux et 3 000 Marées dont la sortie en séquence est tenue par un
+//     joueur simulé pas à pas qui compense (jamais touché, jamais par le vide, jamais plus vite que sa vitesse) ; pour un seul coup, la séquence répond
+//     comme garSortieCourant ; sans vide, exactement 6.2b-1 ; 10 000 poussées arrêtées au liseré ; le passif qui tombe ; le juge des chutes ; branchements.
+//     Contre-épreuves : deux biefs croisés, la sortie de la première case seule, la sortie sans le vide, la poussée sans borne.
 // Contre-épreuves (une erreur introduite exprès doit être attrapée) : une file qui répète, un préavis à 0,5 s, une zone sans sortie posée, une
 // échelle sans habileté neuve, une part à 0,4, un gardien allumé à l'acte X ; 6.1c : des couloirs à la place des cases frappent dans le guichet ; la
 // logique pure sans la règle des guichets perpendiculaires (copie modifiée, garSans) entame des guichets.
@@ -41,7 +47,7 @@ const bloc = (n) => { const m = html.match(new RegExp('/\\*' + n + ':pur\\*/([\\
 const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array, Int32Array };
 vm.createContext(ctx);
 for (const f of ['gardiens-descente', 'descente', 'brumeux', 'talents', 'souvenirs-brume', 'gardiens', 'versions', 'bestiaire', 'histoire']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + bloc('gar') + '\nthis.F={garGrilleCases,garCaseGrille,garBief,garChamp,garVent,garVitSol,garTempsPas,garSortieCourant,garPlacerCourant,garPassif,garPasImpose,desRng,desActes,desPorte,desRegles,desTempsEnPlus,brxDans,brxSortie,brxGrille,brxConnexe,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle,GAR_FORMES,GAR_CRANS,garTroncons,garHerse,garHerseC,garGuichets,garFermeture,garCoupes,garSection,garVoisines,garSortie2,garRafle,garVouge,garFeuillets,garVolPage,garCouvreAvant,garCouvreApres,garConnexe,garParTemps,garFermer};', ctx);
+vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + bloc('gar') + '\nthis.F={garSol,garVivant,garVide,garDansVide,garTombe,garBorneLisere,garGrilleSortie,garMotif,GAR_MOTIFS,garTrajets,garLameTrajet,garLameZones,garReflux,garMareeCotes,garPhaseA,garChampA,garBornesA,garEvts,garSortieSeq,garGrilleCases,garCaseGrille,garBief,garChamp,garVent,garVitSol,garTempsPas,garSortieCourant,garPlacerCourant,garPassif,garPasImpose,desRng,desActes,desPorte,desRegles,desTempsEnPlus,brxDans,brxSortie,brxGrille,brxConnexe,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle,GAR_FORMES,GAR_CRANS,garTroncons,garHerse,garHerseC,garGuichets,garFermeture,garCoupes,garSection,garVoisines,garSortie2,garRafle,garVouge,garFeuillets,garVolPage,garCouvreAvant,garCouvreApres,garConnexe,garParTemps,garFermer};', ctx);
 // 6.1c : une copie de la logique pure avec un morceau retiré (contre-épreuves)
 const garSans = (morceau) => { const g = bloc('gar'); if (!g.includes(morceau)) { console.error('contre-épreuve : morceau introuvable : ' + morceau); process.exit(1); }
   const c2 = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array, Int32Array }; vm.createContext(c2);
@@ -79,11 +85,12 @@ for (const n of GARDES) {
   const att = Object.entries(g.attaques || {});
   ok(att.length >= 2, `données : ${nom} : au moins deux attaques`);
   for (const [id, a] of att) {
-    ok(F.GAR_FORMES.includes(a.forme) || a.forme === 'invocation' || a.forme === 'courant', `données : ${nom} · ${id} : forme « ${a.forme} » parmi les neuf connues (ou une invocation, ou un courant : 6.2b-1)`);
+    ok(F.GAR_FORMES.includes(a.forme) || a.forme === 'invocation' || a.forme === 'courant' || a.forme === 'vide', `données : ${nom} · ${id} : forme « ${a.forme} » parmi les neuf connues (ou une invocation, un courant : 6.2b-1, ou le vide : 6.2b-1bis)`);
     // 6.1b : un tir à trajectoire annoncée a sa ligne violette (preavisTir) ; une zone, son préavis plancher ; une invocation, le signe d'arrivée du jeu
     const pmin = a.forme === 'projectile' ? C.preavisTir : a.forme === 'invocation' ? 0.8 : C.preavisMin;
     ok(a.preavis >= pmin && Object.values(a.preavisT || {}).every(v => v >= pmin), `données : ${nom} · ${id} : préavis ${a.preavis} s (par temps : ${JSON.stringify(a.preavisT || {})}) ≥ ${pmin}`);
     if (a.forme === 'courant') ok(!a.part && g.courant, `données : ${nom} · ${id} : un courant ne frappe pas (aucune part) et le gardien a ses réglages de courant`);
+    else if (a.forme === 'vide') ok(!a.part && g.vide && g.courant, `données : ${nom} · ${id} : le vide qui avance ne frappe pas (aucune part : la chute tue par la voie ordinaire) et le gardien a sa lisière`);
     else if (a.forme !== 'invocation') ok(a.part > 0 && a.part <= C.partMax && (a.forme !== 'projectile' || a.part <= 0.12), `données : ${nom} · ${id} : part ${a.part} ≤ ${C.partMax} (un tir isolé ≤ 12 %, Q10)`);
     else ok(a.max >= 1 && a.max <= 7 && a.types.every(t => BD.bestiaire.ennemis[t]), `données : ${nom} · ${id} : invocation de types connus, au plus ${a.max} vivants`);
     ok(typeof a.n === 'string' && typeof a.d === 'string' && a.d.length < 200, `données : ${nom} · ${id} : nom et ligne courte du wiki`);
@@ -458,6 +465,146 @@ for (const n of GARDES) ok(GD[n].actif ? wiki.includes(GD[n].nom) && wiki.includ
     [/function dessinCourants\(c,s\)\{/, 'le dessin d\'un champ (flèches, figées en mouvements réduits)'],
     [/courants:\[\],trav:null/, 'l\'état de sa salle porte ses courants (vidés avec la salle)'],
     [/if\(champ\(s\)\.length\)try\{pousseCourant\(dt\)/, 'la poussée seulement quand un courant coule dans une salle de gardien'],
+  ]) has(motif, msg); }
+
+// ── 11. Le vide, les motifs, la sortie en séquence (6.2b-1bis ; révision 1 de la fiche 6.2a, Q41 à Q48)
+{ const g = GD[5], K = g.courant, V = g.vide, A = g.attaques, vJ = SJ.joueur.vitesse, pr = SJ.joueur.rayon, CC = C.courant;
+  // a. données
+  const SOL = F.garSol(AR, V.marge), Gs = F.garGrilleCases(SOL, K.grille[0], K.grille[1]);
+  ok(V.marge === 64 && SOL.x1 - SOL.x0 === 1040 && SOL.y1 - SOL.y0 === 456 && Math.abs(Gs.w - 173.33) < 0.01 && Math.abs(Gs.h - 114) < 1e-9, `vide : lisière de ${V.marge} px : le sol fait ${SOL.x1 - SOL.x0} × ${SOL.y1 - SOL.y0} px, la grille 6 × 4 de ${Gs.w.toFixed(1)} × ${Gs.h} px (Q41)`);
+  for (const [k, c] of [['eau', V.eau], ['liseré', V.lisere]]) for (const [gk, gc] of Object.entries(GRAMMAIRE)) ok(dE(c, gc) >= 25, `vide : ${k} à ΔE ≥ 25 de ${gk} (${dE(c, gc).toFixed(1)})`);
+  ok(dE(V.lisere, CC.couleur) >= 15 && dE(V.lisere, V.eau) >= 40, `vide : le liseré se distingue des flèches (ΔE ${dE(V.lisere, CC.couleur).toFixed(1)}) et de l'eau noire (${dE(V.lisere, V.eau).toFixed(1)})`);
+  ok(JSON.stringify(g.echelon) === JSON.stringify({ temps: 3, contraintes: 3, enchainements: 2, preavis: 0.8, entourage: 3 }), 'vide : échelon {3, 3, 2, 0,8, 3} (Q45 : le vide est une contrainte de plus)');
+  ok(A.lame.seq && A.lame.forme === 'case' && A.lame.preavis >= C.preavisMin && A.lame.pasS > 0 && A.lame.part <= 0.25 && A.lame.pousse === 70 && A.lame.min >= 3 && A.lame.max >= A.lame.min, `vide : la Lame (préavis ${A.lame.preavis} s, +${A.lame.pasS} s par case, ${A.lame.part * 100} %, poussée ${A.lame.pousse} px, ${A.lame.min} à ${A.lame.max} cases)`);
+  ok(A.reflux.forme === 'disque' && A.reflux.fuite && A.reflux.r === 140 && A.reflux.preavis >= C.preavisMin && A.maree.forme === 'vide' && A.maree.preavis >= 1.5 && JSON.stringify(A.maree.T) === '[3,4]', 'vide : le Reflux (disque de 140 px et une Fuite) et la Marée (1,5 s, aux temps 3 et 4)');
+  ok([1, 2, 3, 4].every(t => g.file[t].every(k => ['lame', 'reflux'].includes(k)) && g.file[t].includes('lame') && g.file[t].includes('reflux')), 'vide : les files de l\'essai : la Lame et le Reflux (la Marée vient à l\'entrée des temps 3 et 4, les motifs tout le temps)');
+  ok(JSON.stringify(K.motifs) === JSON.stringify(F.GAR_MOTIFS) && K.voiesT[2] === 2 && K.chasseT === 3 && K.annonceS - K.retombeS <= 1 + 1e-9, `vide : les sept motifs ; deux à la fois au temps 2 ; ils se chassent dès le temps ${K.chasseT} ; au plus ${(K.annonceS - K.retombeS).toFixed(1)} s de calme avant (Q42)`);
+  // b. le sol, le vide, la chute
+  const aireR = (AR.x1 - AR.x0) * (AR.y1 - AR.y0), aire = rs => rs.reduce((a, r) => a + (r.x1 - r.x0) * (r.y1 - r.y0), 0);
+  { let mauvais = 0; const r = mk(4141);
+    for (let n = 0; n < 200; n++) { const tb = { haut: r() < 0.3 ? 1 : 0, gauche: r() < 0.3 ? 1 : 0 }; if (r() < 0.3 && !tb.haut) tb.bas = 1; const L = F.garVivant(Gs, tb), vd = F.garVide(AR, L);
+      if (Math.abs(aire(vd) + (L.x1 - L.x0) * (L.y1 - L.y0) - aireR) > 1e-6) mauvais++;
+      for (let k = 0; k < 50; k++) { const x = AR.x0 + r() * (AR.x1 - AR.x0), y = AR.y0 + r() * (AR.y1 - AR.y0), dedans = x >= L.x0 && x < L.x1 && y >= L.y0 && y < L.y1;
+        if (F.garTombe([x, y], vd, false) === dedans || F.garTombe([x, y], vd, true)) mauvais++; } }
+    ok(mauvais === 0, `vide : le vide est la salle moins le sol vivant (quatre bandes) ; on tombe hors du sol, jamais pendant une esquive (${mauvais} erreurs sur 10 000 points)`); }
+  // c. les motifs : une case un sens, jamais hors du sol vivant ni sur une case prise, la forme de chacun
+  const vit = (L, c) => c.i >= L.i0 && c.i < L.i1 && c.j >= L.j0 && c.j < L.j1;
+  const unSens = cs => { const vu = new Set(); for (const c of cs) { const q = c.j * 6 + c.i; if (vu.has(q)) return false; vu.add(q); } return true; };
+  const forme = (m, L, v) => { const T = F.garTrajets(m.cases, 6), cs = m.cases, tous = cs.every(c => (c.vx === 0) !== (c.vy === 0) && Math.abs(c.vx + c.vy) === v);
+    if (!tous) return 'vecteur'; if (m.calmes.some(q => cs.some(c => c.j * 6 + c.i === q))) return 'calme pris';
+    switch (m.k) {
+      case 'bief': return T.length === 1 && T[0].length === cs.length && cs.length >= 3 ? '' : 'bief';
+      case 'fuite': { const out = cs.every(c => (m.cote === 'haut' && c.j === L.j0 && c.vy < 0) || (m.cote === 'bas' && c.j === L.j1 - 1 && c.vy > 0) || (m.cote === 'gauche' && c.i === L.i0 && c.vx < 0) || (m.cote === 'droite' && c.i === L.i1 - 1 && c.vx > 0)); return out && cs.length >= 2 ? '' : 'fuite'; }
+      case 'tourbillon': return T.length === 1 && T[0].length === cs.length && (cs.length === 12 || cs.length === 8) && m.calmes.length === (cs.length === 12 ? 4 : 1) ? '' : 'tourbillon';
+      case 'meandre': return T.length === 1 && T[0].length === cs.length ? '' : 'meandre';
+      case 'cisaille': return T.length === 2 && T[0].length === cs.length / 2 && T[0][0].vx === -T[1][0].vx ? '' : 'cisaille';
+      case 'coude': return T.length === 1 && T[0].length === cs.length && cs.length >= 5 && cs.length <= 7 && new Set(cs.map(c => c.vx ? 'h' : 'v')).size === 2 ? '' : 'coude';
+      case 'confluence': { const J = m.calmes[0], ji = J % 6, jj = (J / 6) | 0, bouts = T.map(t => t[t.length - 1]); return T.length === 2 && cs.length >= 3 && bouts.every(c => c.i + Math.sign(c.vx) === ji && c.j + Math.sign(c.vy) === jj) ? '' : 'confluence'; } }
+    return 'inconnu'; };
+  { const r = mk(7171), tient = {}, err = {}, ex0 = {}; let poses = 0;
+    for (const k of F.GAR_MOTIFS) { tient[k] = 0; err[k] = []; ex0[k] = 0; }
+    for (let n = 0; n < 14000; n++) { const k = F.GAR_MOTIFS[n % 7], tb = n % 3 ? {} : { [['haut', 'bas', 'gauche', 'droite'][(n / 3 | 0) % 4]]: 1 }, L = F.garVivant(Gs, tb), v = K.vT[1 + (n % 3)];
+      const ex = new Set(); if (n % 2) for (let q = 0; q < 6; q++) ex.add(Math.floor(r() * 24));
+      const p = [L.x0 + r() * (L.x1 - L.x0), L.y0 + r() * (L.y1 - L.y0)], m = F.garMotif(Gs, L, k, r, { v, exclu: ex, p, vise: 0.6, coude: K.coude });
+      if (!m) continue; tient[k]++; if (!(n % 2)) ex0[k]++; poses++;
+      if (!unSens(m.cases)) err[k].push('deux sens'); if (m.cases.some(c => !vit(L, c))) err[k].push('hors du sol'); if (m.cases.some(c => ex.has(c.j * 6 + c.i)) || m.calmes.some(q => ex.has(q))) err[k].push('case prise');
+      const f = forme(m, L, v); if (f) err[k].push(f); }
+    for (const k of F.GAR_MOTIFS) ok(!err[k].length && ex0[k] >= 900, `motifs : ${k} : ${tient[k]} posés sur 2 000 (${ex0[k]} sur 1 000 sans case prise) ; une case un sens, dans le sol vivant, jamais sur une case prise, sa forme${err[k].length ? ' — ' + [...new Set(err[k])].join(', ') : ''}`);
+    // contre-épreuve : deux biefs qui se croisent (une case à deux sens) sont attrapés
+    const L = F.garVivant(Gs, {}), X = F.garBief(Gs, 'h', 1, 1, 70).concat(F.garBief(Gs, 'v', 2, 1, 70)); ok(!unSens(X), 'motifs (contre-épreuve) : deux biefs qui se croisent ont une case à deux sens : la vérification l\'attrape'); }
+  // d. le champ à venir : la prédiction (garPhaseA) suit le vieillissement du jeu (courantsVieillir, recopié)
+  { const vieillir = (bs, dt) => { for (const b of bs) { b.t += dt; if (b.ph === 'annonce' && b.t >= b.annonce) { b.ph = 'coule'; b.t -= b.annonce; } if (b.ph === 'coule' && b.t >= b.dur) { b.ph = 'retombe'; b.t -= b.dur; } if (b.ph === 'retombe' && b.t >= b.retombe) b.ph = 'fini'; } };
+    let mauvais = 0; const r = mk(808);
+    for (let n = 0; n < 500; n++) { const b = { ph: 'annonce', t: r() * 0.5, annonce: 1, dur: 4 + r() * 2, retombe: r() < 0.5 ? 0 : 0.3, cases: [] }, c = clone(b), dts = [];
+      for (let t = 0; t < 8; t += 1 / 64) { const pred = F.garPhaseA(b, t + 1 / 64); vieillir([c], 1 / 64); if (pred !== c.ph) mauvais++; } }
+    ok(mauvais === 0, `prédiction : la phase d'un courant dans dt s est celle qu'il aura (${mauvais} écarts sur 256 000)`); }
+  // e. la sortie en séquence (Q43, Q47) : un joueur simulé pas à pas qui compense, suit les étapes, ne passe jamais par le vide, n'est jamais dans une
+  //    zone à l'instant où elle frappe, sans dépasser sa vitesse
+  const joue = (seq, courants, p, vd, dt) => { let x = p[0], y = p[1], t = 0, trop = false, vide = false, touche = 0, tard = 0;
+    const avance = (tx, ty, jusque, tenir) => { while (t < jusque - 1e-12) { const c = F.garVent(F.garChampA(courants, t), x, y), L = Math.hypot(tx - x, ty - y); let wx = -c[0], wy = -c[1], st = Math.min(dt, jusque - t);
+        let arrive = false;
+        if (L > 1e-6) { const ux = (tx - x) / L, uy = (ty - y) / L, s = F.garVitSol(c, ux, uy, vJ); if (!(s > 0)) { trop = true; return; } if (L / s <= st) { st = L / s; arrive = true; } wx = ux * s - c[0]; wy = uy * s - c[1]; }
+        else if (!tenir) return;
+        if (Math.hypot(wx, wy) > vJ + 1e-6) trop = true; x += (wx + c[0]) * st; y += (wy + c[1]) * st; t += st; if (arrive) { x = tx; y = ty; } if (F.garDansVide(x, y, vd, 0)) vide = true; } };
+    avance(x, y, SJ.reflexeS, true);   // le réflexe : il tient sa place
+    for (const e of seq.etapes) { for (const q of e.chemin.slice(1)) avance(q[0], q[1], e.t, false);
+      if (Math.hypot(e.q[0] - x, e.q[1] - y) > 0.5) tard++; avance(e.q[0], e.q[1], e.t, true);
+      const ev = seq._evts.find(v => Math.abs(v.t - e.t) < 1e-9); if (ev && ev.zones.some(z => F.brxDans(z, x, y, pr))) touche++; }
+    return { trop, vide, touche: touche + tard, x, y }; };
+  const optV = (vd, charge) => Object.assign(opt(charge || 3), { interdits: vd, padVide: V.padSortie });
+  { const r = mk(9393); let poses = 0, sautes = 0, rates = 0, vides = 0, trops = 0, naifs = 0, sansVide = 0, change = 0, longueurs = 0;
+    for (let n = 0; n < 4000; n++) { const tb = n % 2 ? {} : { [['haut', 'bas', 'gauche', 'droite'][(n / 2 | 0) % 4]]: 1 }, L = F.garVivant(Gs, tb), vd = F.garVide(AR, L), v = K.vT[1 + (n % 3)];
+      const p = [L.x0 + 10 + r() * (L.x1 - L.x0 - 20), L.y0 + 10 + r() * (L.y1 - L.y0 - 20)];
+      const m = F.garMotif(Gs, L, F.GAR_MOTIFS.filter(k => k !== 'fuite')[n % 6], r, { v, p, vise: 0.8, coude: K.coude }); if (!m) continue;
+      const courants = [{ ph: 'coule', t: r() * 2, annonce: 1, dur: 3 + r() * 4, retombe: 0.3, cases: m.cases }];
+      // une fois sur trois, le motif suivant est déjà annoncé (en pointillé) : le champ change au milieu de la Lame
+      if (n % 3 === 0) { const m2 = F.garMotif(Gs, L, 'fuite', r, { v, p, vise: 0.5 }); if (m2) { courants.push({ ph: 'annonce', t: r() * 0.8, annonce: 1, dur: 5, retombe: 0, cases: m2.cases }); change++; } }
+      const w = F.garLameTrajet(F.garTrajets(m.cases, 6), Gs, p, A.lame, r); if (!w) continue;
+      const zs = F.garLameZones(w, A.lame), evts = F.garEvts(zs.map(z => ({ t: z.at, zones: [z] })), courants), seq = F.garSortieSeq(C.sortie, evts, p, optV(vd));
+      if (!seq.ok) { sautes++; continue; } poses++; seq._evts = evts; longueurs += w.length;
+      const f = joue(seq, courants, p, vd, 1 / 240); if (f.touche) rates++; if (f.vide) vides++; if (f.trop) trops++;
+      // contre-épreuve 1 : la sortie de la première case seule (garSortieCourant), tenue jusqu'au bout : une case suivante frappe souvent
+      const s1 = F.garSortieCourant(C.sortie, [zs[0]], p, Object.assign(optV(vd, zs[0].at), { champ: F.garChampA(courants, 0) }));
+      if (s1.ok) { const s1q = { etapes: evts.map(e => ({ t: e.t, q: s1.q, chemin: e === evts[0] ? s1.chemin : [s1.q] })), _evts: evts }; if (joue(s1q, courants, p, vd, 1 / 120).touche) naifs++; }
+      // contre-épreuve 2 : la même séquence sans le vide (interdits absents) : sa sortie passe parfois par le vide
+      const s2 = F.garSortieSeq(C.sortie, evts, p, opt(3)); if (s2.ok) { s2._evts = evts; if (joue(s2, courants, p, vd, 1 / 120).vide) sansVide++; } }
+    ok(poses > 3000, `Lame : ${poses} posées, ${sautes} sautées (sans sortie, elle saute), ${(longueurs / Math.max(1, poses)).toFixed(1)} cases en moyenne, ${change} avec un changement du champ en route`);
+    ok(rates === 0 && vides === 0 && trops === 0, `Lame : chaque sortie en séquence est tenue par un joueur simulé pas à pas qui compense (${rates} touché, ${vides} par le vide, ${trops} trop vite)`);
+    ok(naifs > 0, `Lame (contre-épreuve) : la sortie de la première case seule, tenue jusqu'au bout, se fait toucher par une case suivante (${naifs} fois) : la vérification l'attrape`);
+    ok(sansVide > 0, `Lame (contre-épreuve) : la même sortie calculée sans le vide passe par le vide (${sansVide} fois) : la vérification l'attrape`); }
+  // f. une seule zone : la séquence redonne garSortieCourant (même réponse) ; sans vide, interdits vides = 6.2b-1 au bit
+  { const r = mk(3131); let dif = 0, ega = 0, bit = 0;
+    for (let n = 0; n < 1500; n++) { const L = F.garVivant(Gs, {}), p = [L.x0 + r() * (L.x1 - L.x0), L.y0 + r() * (L.y1 - L.y0)], cp = F.garCaseGrille(Gs, p[0], p[1]), axe = r() < 0.5 ? 'h' : 'v';
+      const ch = F.garChamp([F.garBief(Gs, axe, axe === 'h' ? cp.j : cp.i, r() < 0.5 ? 1 : -1, 90)]), z = [{ forme: 'disque', x: p[0] + (r() - 0.5) * 80, y: p[1] + (r() - 0.5) * 80, r: 80 + r() * 90 }], o = Object.assign(opt(1.0), { champ: ch });
+      const a = F.garSortieCourant(C.sortie, z, p, o), b = F.garSortieSeq(C.sortie, [{ t: 1.0, zones: z, champ: ch }], p, o); if (a.ok === b.ok) ega++; else dif++;
+      const c = F.garSortieCourant(C.sortie, z, p, Object.assign({}, o, { interdits: [] })); if (JSON.stringify(c) !== JSON.stringify(a)) bit++; }
+    ok(dif === 0, `sortie : pour un seul coup, la séquence et garSortieCourant répondent pareil (${ega} pareilles, ${dif} différentes)`);
+    ok(bit === 0, `sortie : interdits vides : exactement la sortie de 6.2b-1 (${bit} différentes sur 1 500)`); }
+  // g. le Reflux et la Marée : leur sortie, jamais par le vide ; la Marée ne tombe jamais sous elle ni du côté opposé à un côté tombé
+  { const r = mk(5757); let rp = 0, rs = 0, rmal = 0, mp = 0, ms = 0, mmal = 0, opp = 0, petit = 0, sous = 0;
+    for (let n = 0; n < 3000; n++) { const tb = n % 2 ? {} : { [['haut', 'bas', 'gauche', 'droite'][(n / 2 | 0) % 4]]: 1 }, L = F.garVivant(Gs, tb), vd = F.garVide(AR, L), p = [L.x0 + 10 + r() * (L.x1 - L.x0 - 20), L.y0 + 10 + r() * (L.y1 - L.y0 - 20)];
+      const R = F.garReflux(Gs, L, A.reflux, p, r, { v: 80 }); if (R) { const cour = [{ ph: 'annonce', t: 0, annonce: A.reflux.preavis, dur: 5, retombe: 0.3, cases: R.fuite.cases }], evts = F.garEvts([{ t: A.reflux.preavis, zones: [R.disque] }], cour), s = F.garSortieSeq(C.sortie, evts, p, optV(vd));
+        if (s.ok) { rp++; s._evts = evts; const f = joue(s, cour, p, vd, 1 / 240); if (f.touche || f.vide || f.trop) rmal++; } else rs++; }
+      const corps = { x: L.x0 + r() * (L.x1 - L.x0), y: L.y0 + r() * (L.y1 - L.y0), r: 48 }, M = F.garMareeCotes(Gs, tb, corps);
+      for (const q of M) { if (tb[{ haut: 'bas', bas: 'haut', gauche: 'droite', droite: 'gauche' }[q.cote]]) opp++; const t2 = Object.assign({}, tb); t2[q.cote] = (t2[q.cote] || 0) + 1; const L2 = F.garVivant(Gs, t2); if (L2.i1 - L2.i0 < 3 || L2.j1 - L2.j0 < 2) petit++;
+        if (F.brxDans(q.zone, corps.x, corps.y, 0)) sous++; }
+      if (M.length) { const q = M[Math.floor(r() * M.length)], evts = [{ t: A.maree.preavis, zones: [q.zone], champ: [] }], s = F.garSortieSeq(C.sortie, evts, p, optV(vd));
+        if (s.ok) { mp++; s._evts = evts; const t2 = Object.assign({}, tb); t2[q.cote] = (t2[q.cote] || 0) + 1; const vd2 = F.garVide(AR, F.garVivant(Gs, t2)); const f = joue(s, [], p, vd, 1 / 240); if (f.touche || f.vide || F.garDansVide(f.x, f.y, vd2, 0)) mmal++; } else ms++; } }
+    ok(rp > 2500 && rmal === 0, `Reflux : ${rp} posés, ${rs} sautés ; chaque sortie tenue pas à pas, hors du disque, jamais par le vide (${rmal} manquées)`);
+    ok(mp > 2500 && mmal === 0, `Marée : ${mp} posées, ${ms} sautées ; tenue pas à pas, on finit hors du bord qui tombe et hors du vide (${mmal} manquées)`);
+    ok(opp === 0 && petit === 0 && sous === 0, `Marée : jamais du côté opposé à un côté tombé (${opp}), le sol garde 3 × 2 cases (${petit}), jamais sous elle (${sous})`); }
+  // h. une poussée ou une traction s'arrête au liseré ; sans borne (contre-épreuve), elle jette dans le vide
+  { const r = mk(6262); let dedans = 0, court = 0, naif = 0;
+    for (let n = 0; n < 10000; n++) { const L = F.garVivant(Gs, n % 2 ? {} : { haut: 1 }), vd = F.garVide(AR, L), p = [L.x0 + 4 + r() * (L.x1 - L.x0 - 8), L.y0 + 4 + r() * (L.y1 - L.y0 - 8)], a = r() * Math.PI * 2, d = [70, 110, 40][n % 3];
+      const B = F.garBorneLisere(p, Math.cos(a) * d, Math.sin(a) * d, vd, CC.pas, V.borne); if (F.garDansVide(B.x, B.y, vd, V.borne - 1e-6)) dedans++;
+      if (!B.arret && Math.hypot(B.x - p[0] - Math.cos(a) * d, B.y - p[1] - Math.sin(a) * d) > 1e-6) court++;
+      if (F.garDansVide(p[0] + Math.cos(a) * d, p[1] + Math.sin(a) * d, vd, 0)) naif++; }
+    ok(dedans === 0 && court === 0, `poussée : 10 000 poussées de 40 à 110 px : jamais au-delà du liseré (${dedans}), entières quand rien ne les arrête (${court})`);
+    ok(naif > 0, `poussée (contre-épreuve) : la même poussée d'un coup, sans borne, jette ${naif} fois dans le vide`); }
+  // i. le passif dans une Fuite tombe (garPassif rend l'instant) ; sans vide, garPassif rend exactement [x, y] (6.2b-1)
+  { const L = F.garVivant(Gs, {}), vd = F.garVide(AR, L), f = F.garMotif(Gs, L, 'fuite', mk(1), { v: 90, cote: 'haut' }), ch = F.garChamp([f.cases]), p = [600, L.y0 + 45];
+    const a = F.garPassif(p, ch, 3, AR, pr, 1 / 60, vd), b = F.garPassif(p, ch, 3, AR, pr);
+    ok(a.length === 3 && a[2] > 0.45 && a[2] < 0.55 && F.garDansVide(a[0], a[1], vd, 0) && b.length === 2, `passif : dans une Fuite à 90 px/s, à 45 px du bord, il tombe à ${a[2] && a[2].toFixed(2)} s ; sans vide, garPassif rend [x, y] comme avant`); }
+  // j. le juge : une chute dans un vide visible est signée (la lisière : toujours ; la Marée : après son préavis) ; un vide apparu sans préavis, non
+  ok(F.garJuge(C, { k: 'vide' }) && F.garJuge(C, { k: 'vide', age: 1.5 }) && !F.garJuge(C, { k: 'vide', age: 0.2 }), 'juge : une chute est signée par le vide visible (la lisière, la Marée tombée après 1,5 s) ; un vide sans préavis ne l\'est pas');
+  // k. branchements (jeu, bloc v18.14 et base)
+  for (const [motif, msg] of [
+    [/function chutes\(s\)\{if\(!videOn\(s\)\)return;/, 'la chute (après le pas et la poussée), seulement dans une salle à vide'],
+    [/garTombe\(\[P\.x,P\.y\],V\.vides,P\.dashT>0\)/, 'on ne tombe pas pendant une esquive'],
+    [/RUN\.mem\.lastSrc='vide18';loseHp\(P\.hp\);/, 'la chute tue par la voie ordinaire (loseHp), la mort nommée « le vide »'],
+    [/if\(!P\.dead\)\{const L=V\.L,m=40;P\.x=clamp/, 'sauvé (relique, talent, dieu), on reprend pied sur le sol'],
+    [/const V18=window\.__ffVide18\?window\.__ffVide18\(\):null;/, 'la carte des chemins (base, ffBlk) compte le vide comme bloqué'],
+    [/window\.__ffVide18=\(\)=>\{const s=room&&room\.g18s;if\(!videOn\(s\)\)return null;/, 'le crochet de la carte des chemins est nul hors de sa salle'],
+    [/videMaj\(s\);V\.vus\.push\([^)]*\);CAM\.ff=1;/, 'CAM.ff=1 à chaque Marée'],
+    [/if\(videOn\(s\)\)pousseBornee\(s,dx\/d\*k,dy\/d\*k,10\);else\{/, 'le recul du contact arrêté au liseré (ailleurs, exactement comme avant)'],
+    [/pousseBornee\(s,z\.lame\.vx\/n\*z\.pousse,z\.lame\.vy\/n\*z\.pousse\)/, 'la poussée de la Lame, arrêtée au liseré'],
+    [/q=garSortieSeq\(C\.sortie,ev,p,o\);if\(!q\.ok\)continue;/, 'la Lame, le Reflux et la Marée : sortie en séquence, sinon ils sautent'],
+    [/const Vp=videOn\(s\)\?s\.vide:null;/, 'le bot suit le plan de la sortie et évite le vide'],
+    [/r0<0\.3&&P\.dashCh>0&&P\.dashT<=0&&!Vp\)press\('Space'\)/, 'le bot n\'esquive pas au-dessus du vide'],
+    [/if\(z\.maree\)\{mareeTombe\(s,z\);continue;\}/, 'la Marée ne frappe pas : le bord devient du vide'],
+    [/if\(s\.lame\)\{s\.lame=null;if\(\(g\.echouage\|\|\{\}\)\.apres==='lame'\)\{echouer/, 'l\'Échouage après une Lame entière'],
+    [/b\.ph==='annonce'&&b\.chasse/, 'le motif qui chasse s\'annonce en pointillé'],
+    [/inconnu\(s,g\)/, 'un geste attend qu\'aucun changement inconnu du champ ne tombe pendant son préavis'],
   ]) has(motif, msg); }
 
 console.log(`sim-gardiens : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
