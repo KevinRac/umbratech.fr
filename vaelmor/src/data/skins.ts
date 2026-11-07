@@ -55,7 +55,38 @@ export interface FoeSkinDef {
   readonly cell?: number;
 }
 export const FOE_SKINS: readonly FoeSkinDef[] = [
+  // Z1
   { id: 'ecumeur_sabreur', frames: 8 },
+  { id: 'ecumeur_archer', frames: 8 },
+  { id: 'ecumeur_lancier', frames: 8 },
+  { id: 'ecumeur_incendiaire', frames: 8 },
+  { id: 'rodeur_timide', frames: 8 },
+  { id: 'milicien', frames: 8 },
+  // Z2
+  { id: 'bucheron_corrompu', frames: 8 },
+  { id: 'chasseur_de_ronces', frames: 8 },
+  { id: 'esprit_des_ronces', frames: 8 },
+  // Z3
+  { id: 'harponneur', frames: 8 },
+  { id: 'noye', frames: 8 },
+  { id: 'pillard_des_epaves', frames: 8 },
+  { id: 'voilee_de_brume', frames: 8 },
+  // Z4 (le Golem de cendre, plus grand en combat, l'est aussi sur la carte ; Golem de pierre et Menhir-tour n'apparaissent pas dans le monde)
+  { id: 'arbaletrier_de_cendre', frames: 8 },
+  { id: 'golem_de_cendre', frames: 8, cell: 48 },
+  { id: 'harpie', frames: 8 },
+  { id: 'mercenaire_de_cendre', frames: 8 },
+  // Z5
+  { id: 'abyssal', frames: 8 },
+  { id: 'garde_englouti', frames: 8 },
+  { id: 'revenant', frames: 8 },
+  // Boss (cellule de 48)
+  { id: 'brakk', frames: 8, cell: 48 },
+  { id: 'roi_cerf', frames: 8, cell: 48 },
+  { id: 'soeur_merrow', frames: 8, cell: 48 },
+  { id: 'mere_harpie', frames: 8, cell: 48 },
+  { id: 'gardien_de_cendre', frames: 8, cell: 48 },
+  { id: 'orvane', frames: 8, cell: 48 },
 ];
 
 /** Durée d'une image de marche, en ms (réglage du dessin d'origine). */

@@ -113,7 +113,8 @@ export class FoeActor {
     this.sprite.setFlipX(flipX).setPosition(x, y + 2).setDepth(this.depth.entities + sim.y / 100000);
     this.shadow.setPosition(x, y - 1);
     const bob = this.still ? 0 : Math.round(Math.sin((time + this.phase) / 300) * 1);
-    const top = y - 38 - (this.look.boss ? 5 : 0);
+    // Repères au-dessus de la tête : une feuille peinte donne sa hauteur (cellule 34 → 38 px, comme la silhouette ; 48 → 52 px).
+    const top = this.skin ? y - this.skin.cell - 4 : y - 38 - (this.look.boss ? 5 : 0);
     const skullOn = indicator && sim.mode !== 'flee';
     this.skull.setVisible(skullOn).setPosition(x, top + bob);
     this.pips.setVisible(skullOn && this.pipCount > 0).setPosition(x, top + bob + 8);
