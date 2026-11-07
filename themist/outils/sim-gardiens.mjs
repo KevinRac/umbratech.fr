@@ -38,17 +38,17 @@ import vm from 'node:vm';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 const bloc = (n) => { const m = html.match(new RegExp('/\\*' + n + ':pur\\*/([\\s\\S]*?)/\\*/' + n + ':pur\\*/')); if (!m) { console.error(`Bloc /*${n}:pur*/ introuvable`); process.exit(1); } return m[1]; };
-const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array };
+const ctx = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array, Int32Array };
 vm.createContext(ctx);
 for (const f of ['gardiens-descente', 'descente', 'brumeux', 'talents', 'souvenirs-brume', 'gardiens', 'versions', 'bestiaire', 'histoire']) vm.runInContext(readFileSync(join(ROOT, 'data', f + '.js'), 'utf8'), ctx);
-vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + bloc('gar') + '\nthis.F={desRng,desActes,desPorte,desRegles,desTempsEnPlus,brxDans,brxSortie,brxGrille,brxConnexe,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle,GAR_FORMES,GAR_CRANS,garTroncons,garHerse,garHerseC,garGuichets,garFermeture,garCoupes,garSection,garVoisines,garSortie2,garRafle,garVouge,garFeuillets,garVolPage,garCouvreAvant,garCouvreApres,garConnexe,garParTemps,garFermer};', ctx);
+vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + bloc('gar') + '\nthis.F={garGrilleCases,garCaseGrille,garBief,garChamp,garVent,garVitSol,garTempsPas,garSortieCourant,garPlacerCourant,garPassif,garPasImpose,desRng,desActes,desPorte,desRegles,desTempsEnPlus,brxDans,brxSortie,brxGrille,brxConnexe,garEntree,garActifs,garSeuils,garTemps,garFile,garPv,garDegats,garReference,garGeste,garVariantes,garSortieGrille,garPlacer,garJuge,garEchelle,GAR_FORMES,GAR_CRANS,garTroncons,garHerse,garHerseC,garGuichets,garFermeture,garCoupes,garSection,garVoisines,garSortie2,garRafle,garVouge,garFeuillets,garVolPage,garCouvreAvant,garCouvreApres,garConnexe,garParTemps,garFermer};', ctx);
 // 6.1c : une copie de la logique pure avec un morceau retiré (contre-épreuves)
 const garSans = (morceau) => { const g = bloc('gar'); if (!g.includes(morceau)) { console.error('contre-épreuve : morceau introuvable : ' + morceau); process.exit(1); }
-  const c2 = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array }; vm.createContext(c2);
+  const c2 = { window: {}, Math, console, JSON, Set, Object, Array, Number, Infinity, isFinite, Uint8Array, Float64Array, Int32Array }; vm.createContext(c2);
   vm.runInContext(bloc('des') + '\n' + bloc('brx') + '\n' + g.replace(morceau, '') + '\nthis.F={garFermer,garCouvreAvant,garCouvreApres,garConnexe,garFermeture,garHerse};', c2); return c2.F; };
 const F = ctx.F, BD = ctx.window.BRUME_DATA, GD = BD.gardiensD, C = GD.commun, DS = BD.descente, DBX = BD.brumeux, SJ = BD.souvenirsBrume.justice, GA = BD.gardiens;
 let fails = 0, checks = 0;
-const ok = (c, msg) => { checks++; if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
+const ok = (c, msg) => { checks++; if (process.env.SIM_VERBEUX && msg.includes(process.env.SIM_VERBEUX)) console.log((c ? "ok   " : "ÉCHEC ") + msg); if (!c) { fails++; if (fails <= 60) console.error('ÉCHEC : ' + msg); } };
 const clone = o => JSON.parse(JSON.stringify(o));
 const mk = s => () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 // 6.1c : la vraie salle (AR0 d'index.html : const AR={x0:56,y0:92,x1:W-56,y1:H-44}), vérifiée au § 8
@@ -79,16 +79,17 @@ for (const n of GARDES) {
   const att = Object.entries(g.attaques || {});
   ok(att.length >= 2, `données : ${nom} : au moins deux attaques`);
   for (const [id, a] of att) {
-    ok(F.GAR_FORMES.includes(a.forme) || a.forme === 'invocation', `données : ${nom} · ${id} : forme « ${a.forme} » parmi les neuf connues (ou une invocation)`);
+    ok(F.GAR_FORMES.includes(a.forme) || a.forme === 'invocation' || a.forme === 'courant', `données : ${nom} · ${id} : forme « ${a.forme} » parmi les neuf connues (ou une invocation, ou un courant : 6.2b-1)`);
     // 6.1b : un tir à trajectoire annoncée a sa ligne violette (preavisTir) ; une zone, son préavis plancher ; une invocation, le signe d'arrivée du jeu
     const pmin = a.forme === 'projectile' ? C.preavisTir : a.forme === 'invocation' ? 0.8 : C.preavisMin;
     ok(a.preavis >= pmin && Object.values(a.preavisT || {}).every(v => v >= pmin), `données : ${nom} · ${id} : préavis ${a.preavis} s (par temps : ${JSON.stringify(a.preavisT || {})}) ≥ ${pmin}`);
-    if (a.forme !== 'invocation') ok(a.part > 0 && a.part <= C.partMax && (a.forme !== 'projectile' || a.part <= 0.12), `données : ${nom} · ${id} : part ${a.part} ≤ ${C.partMax} (un tir isolé ≤ 12 %, Q10)`);
+    if (a.forme === 'courant') ok(!a.part && g.courant, `données : ${nom} · ${id} : un courant ne frappe pas (aucune part) et le gardien a ses réglages de courant`);
+    else if (a.forme !== 'invocation') ok(a.part > 0 && a.part <= C.partMax && (a.forme !== 'projectile' || a.part <= 0.12), `données : ${nom} · ${id} : part ${a.part} ≤ ${C.partMax} (un tir isolé ≤ 12 %, Q10)`);
     else ok(a.max >= 1 && a.max <= 7 && a.types.every(t => BD.bestiaire.ennemis[t]), `données : ${nom} · ${id} : invocation de types connus, au plus ${a.max} vivants`);
     ok(typeof a.n === 'string' && typeof a.d === 'string' && a.d.length < 200, `données : ${nom} · ${id} : nom et ligne courte du wiki`);
   }
   const nt = g.echelon.temps + 1;
-  for (let t = 1; t <= nt; t++) { const L = g.file[t]; ok(Array.isArray(L) && L.length >= 2 && L.every(k => g.attaques[k] || (g.fermetures || {})[k]), `données : ${nom} : file du temps ${t} sur des attaques (ou des Fermetures) connues`); }
+  for (let t = 1; t <= nt; t++) { const L = g.file[t]; ok(Array.isArray(L) && L.length >= 2 && L.every(k => g.attaques[k] || (g.fermetures || {})[k] || (g.traversees || {})[k]), `données : ${nom} : file du temps ${t} sur des attaques (ou des Fermetures) connues`); }
   for (const [k, Fm] of Object.entries(g.fermetures || {})) ok(g.attaques[Fm.herse] && ['couloir', 'croix'].includes(g.attaques[Fm.herse].forme) && g.attaques[Fm.suite] && g.attaques[Fm.suite].forme === 'case' && !g.attaques[k], `données : ${nom} · Fermeture ${k} : une herse (ou une Croix) puis une section (case)`);
   ok(g.temps.titres.length === nt, `données : ${nom} : un titre par temps, temps de plus compris (${nt})`);
   ok(g.tempsEnPlus && g.tempsEnPlus.seuil > 0 && g.tempsEnPlus.seuil < C.seuils[C.seuils.length - 1] && g.tempsEnPlus.n === g.temps.titres[nt - 1], `données : ${nom} : temps de plus sous le dernier seuil, nommé comme son titre`);
@@ -387,6 +388,77 @@ for (const n of GARDES) ok(GD[n].actif ? wiki.includes(GD[n].nom) && wiki.includ
     [/HI_D\.codex\.filter\(o=>!o\.gardien\|\|/, 'codex : une entrée de gardien éteint n\'est pas montrée'],
   ]) has(motif, msg); }
 
+// ── 10. Le courant (6.2b-1, fiche 6.2a Q27, Q29, Q38, Q39) : le socle du déplacement subi
+{ const CC = C.courant, vJ = SJ.joueur.vitesse, CRAIE = DBX.couleurs.craie.split(',').map(Number);
+  // a. données : la couleur des flèches (un signal neuf), la vitesse jamais au-delà de vMax × la justice, l'annonce au moins au préavis plancher
+  ok(CC && CC.vMax > 0 && CC.vMax <= 0.5 && CC.pas > 0 && CC.pas <= 6, `courant : vMax ${CC.vMax} ≤ 0,5 ; pas ${CC.pas} px ≤ 6`);
+  for (const [gk, gc] of Object.entries(Object.assign({ craie: CRAIE }, GRAMMAIRE))) ok(dE(CC.couleur, gc) >= 25, `courant : le vert d'eau à ΔE ≥ 25 de ${gk} (${dE(CC.couleur, gc).toFixed(1)})`);
+  for (const n of GARDES) { const g = GD[n]; for (const [k, c] of Object.entries(g.couleurs || {})) ok(dE(c, CC.couleur) >= 15, `courant : ${g.nom} · ${k} se distingue des flèches (ΔE ${dE(c, CC.couleur).toFixed(1)} ≥ 15)`);
+    const K = g.courant; if (!K) continue;
+    ok(Object.values(K.vT).every(v => v > 0 && v <= CC.vMax * vJ + 1e-9) && K.annonceS >= C.preavisMin && K.grille[0] >= 2 && K.grille[1] >= 2, `courant : ${g.nom} : vitesses ${Object.values(K.vT).join(' / ')} ≤ ${CC.vMax * vJ} px/s, annonce ${K.annonceS} s, grille ${K.grille.join(' × ')}`);
+    for (const [k, T] of Object.entries(g.traversees || {})) ok(g.attaques[T.bief] && g.attaques[T.bief].forme === 'courant' && g.attaques[T.suite] && g.attaques[T.suite].forme === 'case' && !g.attaques[k], `courant : ${g.nom} · Traversée ${k} : un bief puis une case`);
+    ok(Object.values(K.dureeT).every(d => d >= K.annonceS) && Object.values(g.attaques).filter(a => a.cible === 'aval').every(a => (a.apresS || 0) + Math.max(a.preavis, ...Object.values(a.preavisT || {})) < Math.min(...Object.values(K.dureeT))), `courant : ${g.nom} : l'Abordage frappe avant que l'eau retombe (le champ ne change pas pendant son préavis)`); }
+  // b. la grille et les biefs : cases alignées sur les axes, qui pavent la salle ; un bief = une rangée ou une colonne entière, un sens
+  const G = F.garGrilleCases(AR, 6, 4), aire = G.cases.reduce((a, c) => a + (c.x1 - c.x0) * (c.y1 - c.y0), 0);
+  ok(G.cases.length === 24 && Math.abs(aire - (AR.x1 - AR.x0) * (AR.y1 - AR.y0)) < 1e-6 && G.cases.every(c => c.x1 > c.x0 && c.y1 > c.y0), 'courant : la grille 6 × 4 pave la salle (cases alignées sur les axes)');
+  const Bh = F.garBief(G, 'h', 2, -1, 80), Bv = F.garBief(G, 'v', 3, 1, 70);
+  ok(Bh.length === 6 && Bh.every(c => c.j === 2 && c.vx === -80 && c.vy === 0 && c.forme === 'case') && Bv.length === 4 && Bv.every(c => c.i === 3 && c.vy === 70 && c.vx === 0), 'courant : un bief en rangée (6 cases) ou en colonne (4 cases), un seul sens');
+  { const ch = F.garChamp([Bh, Bv]), c = G.cases[2 * 6 + 3], v = F.garVent(ch, (c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2);
+    ok(v[0] === 0 && v[1] === 70 && F.garVent(ch, AR.x0 + 1, AR.y0 + 1).join() === '0,0', 'courant : une case n\'a qu\'un sens (le dernier bief par-dessus) ; hors des biefs, rien'); }
+  // c. sans champ, exactement le socle d'avant (garSortieGrille, donc brxSortie sans obstacle) ; 2 000 positions avec et sans obstacles
+  { let ega = 0, dif = 0; const r = mk(5151);
+    for (let i = 0; i < 2000; i++) { const p = [AR.x0 + 30 + r() * (AR.x1 - AR.x0 - 60), AR.y0 + 30 + r() * (AR.y1 - AR.y0 - 60)], z = [{ forme: 'disque', x: p[0] + (r() - 0.5) * 60, y: p[1] + (r() - 0.5) * 60, r: 70 + r() * 80 }];
+      const pil = i % 2 ? [{ x: p[0] + 150, y: p[1], r: 30 }] : [], o = opt(1.0, pil);
+      for (const ch of [undefined, []]) { const a = F.garSortieCourant(C.sortie, z, p, Object.assign({ champ: ch }, o)), b = F.garSortieGrille(C.sortie, z, p, o); if (JSON.stringify(a) === JSON.stringify(b)) ega++; else dif++; } }
+    ok(dif === 0, `courant : sans champ, garSortieCourant rend exactement garSortieGrille (${ega} égales, ${dif} différentes)`); }
+  // d. la sortie avec le courant est ATTEINTE par un joueur simulé pas à pas qui compense (sa vitesse propre ≤ v, le courant lu là où il est), puis qui
+  //    tient sa place jusqu'au coup ; 10 000 Abordages (un bief qui passe par toi, la case où le courant te mènerait)
+  const suivre = (ch, chemin, v, dt) => { let x = chemin[0][0], y = chemin[0][1], t = 0, trop = false;
+    for (let k = 1; k < chemin.length; k++) { const [tx, ty] = chemin[k]; let n = 0;
+      while (Math.hypot(tx - x, ty - y) > 1e-7 && n++ < 1e5) { const L = Math.hypot(tx - x, ty - y), ux = (tx - x) / L, uy = (ty - y) / L, c = F.garVent(ch, x, y), s = F.garVitSol(c, ux, uy, v);
+        if (!(s > 0)) return { t: Infinity }; const wx = ux * s - c[0], wy = uy * s - c[1]; if (Math.hypot(wx, wy) > v + 1e-6) trop = true;
+        const st = Math.min(dt, L / s); x += (wx + c[0]) * st; y += (wy + c[1]) * st; t += st; } }
+    return { t, x, y, trop }; };
+  const naif = (ch, q, p, v, T, dt) => { let x = p[0], y = p[1]; for (let t = 0; t < T; t += dt) { const L = Math.hypot(q[0] - x, q[1] - y), c = F.garVent(ch, x, y), ux = L > 1 ? (q[0] - x) / L : 0, uy = L > 1 ? (q[1] - y) / L : 0;
+      x = Math.max(AR.x0 + 14, Math.min(AR.x1 - 14, x + (ux * v + c[0]) * dt)); y = Math.max(AR.y0 + 14, Math.min(AR.y1 - 14, y + (uy * v + c[1]) * dt)); } return [x, y]; };
+  { const g = GD[5] || { courant: { vT: { 1: 90 }, grille: [6, 4] }, attaques: { abordage: { preavis: 1.0, apresS: 0.3 } } }, K = g.courant, a = g.attaques.abordage;
+    let poses = 0, sautes = 0, tard = 0, dedans = 0, tient = 0, trop = 0, naifRate = 0; const r = mk(2626), Gk = F.garGrilleCases(AR, K.grille[0], K.grille[1]);
+    for (let i = 0; i < 10000; i++) {
+      const p = [AR.x0 + 20 + r() * (AR.x1 - AR.x0 - 40), AR.y0 + 20 + r() * (AR.y1 - AR.y0 - 40)], cp = F.garCaseGrille(Gk, p[0], p[1]), axe = r() < 0.5 ? 'h' : 'v', sens = r() < 0.5 ? 1 : -1, v = K.vT[1 + (i % 3)] || 90;
+      const ch = F.garChamp([F.garBief(Gk, axe, axe === 'h' ? cp.j : cp.i, sens, v)]), charge = [a.preavis, 1.0][i % 2];
+      const pa = F.garPassif(p, ch, charge, AR, SJ.joueur.rayon), c = F.garCaseGrille(Gk, pa[0], pa[1]), z = [{ forme: 'case', x0: c.x0, y0: c.y0, x1: c.x1, y1: c.y1 }];
+      const o = Object.assign(opt(charge), { champ: ch }), s = F.garSortieCourant(C.sortie, z, p, o);
+      if (!s.ok) { sautes++; continue; } poses++;
+      const T = charge - SJ.reflexeS, f = suivre(ch, s.chemin, SJ.joueur.vitesse, 1 / 240);
+      if (f.trop) trop++;
+      if (!(f.t <= T + 1e-3)) tard++;
+      if (z.some(zz => F.brxDans(zz, s.q[0], s.q[1], SJ.joueur.rayon)) || !libre(s.q, z)) dedans++;
+      const cq = F.garVent(ch, s.q[0], s.q[1]); if (!(Math.hypot(cq[0], cq[1]) < SJ.joueur.vitesse)) tient++;
+      // contre-épreuve : la sortie calculée sans le courant, jouée en marchant droit vers elle sans compenser
+      const sg = F.garSortieGrille(C.sortie, z, p, opt(charge)); if (sg.ok && sg.d > 0) { const e = naif(ch, sg.q, p, SJ.joueur.vitesse, charge, 1 / 120); if (F.brxDans(z[0], e[0], e[1], SJ.joueur.rayon)) naifRate++; } }
+    ok(poses > 9500, `courant : 10 000 Abordages : posés presque toujours (${poses} posés, ${sautes} sautés)`);
+    ok(tard === 0 && trop === 0, `courant : chaque sortie est atteinte à temps par un joueur qui compense, sans jamais dépasser sa vitesse (${tard} en retard, ${trop} trop vite)`);
+    ok(dedans === 0 && tient === 0, `courant : chaque sortie est hors de la zone, dans la salle, et l'on peut y tenir sa place (${dedans} dedans, ${tient} intenables)`);
+    ok(naifRate > 0, `courant (contre-épreuve) : une sortie calculée sans le courant, jouée sans compenser, finit dans la zone (${naifRate} fois) : la vérification l'attrape`); }
+  // e. le temps d'un pas : sans courant, longueur ÷ v ; contre le courant, plus lent ; impossible si le courant dépasse ta vitesse
+  { const ch = [{ x0: 0, y0: 0, x1: 2000, y1: 2000, vx: 90, vy: 0 }];
+    ok(Math.abs(F.garTempsPas([], 0, 0, 180, 0, 180) - 1) < 1e-12 && Math.abs(F.garTempsPas(ch, 0, 0, 270, 0, 180) - 1) < 1e-9 && Math.abs(F.garTempsPas(ch, 270, 0, 180, 0, 180) - 1) < 1e-9, 'courant : un pas de 180 px : 1 s à l\'arrêt ; 270 px en 1 s avec le courant ; 90 px en 1 s contre lui');
+    ok(F.garTempsPas([{ x0: 0, y0: 0, x1: 2000, y1: 2000, vx: 200, vy: 0 }], 300, 0, 100, 0, 180) === Infinity, 'courant : un courant plus rapide que toi ne se remonte pas (les données l\'interdisent : vMax)');
+    const p2 = F.garPassif([600, 300], ch, 1, AR, 14); ok(Math.abs(p2[0] - 690) < 1e-6 && p2[1] === 300 && F.garPassif([1200, 300], ch, 5, AR, 14)[0] === AR.x1 - 14 && F.garPassif([600, 300], [], 3, AR, 14).join() === '600,300', 'courant : le passif suit le courant, s\'arrête au mur, ne bouge pas sans courant'); }
+  // f. le mouvement imposé découpé en pas (exigence C6) : contre une rangée de barreaux, un pas unique de 40 px traverse, des pas de 6 px s'arrêtent
+  { const P = F.garPasImpose(40, 0, CC.pas); ok(P.n === 7 && Math.abs(P.sx * P.n - 40) < 1e-9 && Math.abs(P.sx) <= CC.pas, `courant : 40 px en ${P.n} pas de ${P.sx.toFixed(2)} px (≤ ${CC.pas})`);
+    const barre = { x: 120, y: 300, r: 10 }, pousse = (x, y, n, sx) => { for (let k = 0; k < n; k++) { x += sx; const d = Math.hypot(x - barre.x, y - barre.y), m = barre.r + 14; if (d < m) x = barre.x + (x - barre.x) / d * m; } return x; };
+    ok(pousse(95, 300, P.n, P.sx) < barre.x && pousse(95, 300, 1, 40) > barre.x, 'courant : par pas, le corps s\'arrête contre le barreau ; d\'un seul saut, il le traverse (contre-épreuve)'); }
+  // g. branchements (jeu, bloc v18.14)
+  for (const [motif, msg] of [
+    [/function pousseCourant\(dt\)\{/, 'la poussée du courant (toi, puis ses invoqués)'],
+    [/garPasImpose\(c\[0\]\*dt,c\[1\]\*dt,C\.courant\.pas\)/, 'la poussée découpée en pas'],
+    [/collidePlayer\(\);\}\}/, 'une collision à chaque pas (toi)'],
+    [/garSortieCourant\(C\.sortie,/, 'les sorties des gestes de courant passent par garSortieCourant'],
+    [/function dessinCourants\(c,s\)\{/, 'le dessin d\'un champ (flèches, figées en mouvements réduits)'],
+    [/courants:\[\],trav:null/, 'l\'état de sa salle porte ses courants (vidés avec la salle)'],
+    [/if\(champ\(s\)\.length\)try\{pousseCourant\(dt\)/, 'la poussée seulement quand un courant coule dans une salle de gardien'],
+  ]) has(motif, msg); }
 
 console.log(`sim-gardiens : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);
 process.exit(fails ? 1 : 0);

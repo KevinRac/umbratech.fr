@@ -1,6 +1,6 @@
 # La Brume · v18 « La grande descente » · action 6.2a · fiche du gardien de l'acte V, « Les Eaux Mortes » : la Passeuse
 
-Statut : **à valider par l'auteur** (rédigée le 7 novembre 2026, à la v18.16, avec Opus 5.5, effort moyen). Rien du jeu n'a changé pour l'écrire : ni `index.html`, ni `data/`, ni le wiki.
+Statut : **validée par l'auteur le 7 novembre 2026 (« Je valide », toutes les recommandations) ; 6.2b-1 faite le 7 novembre 2026 (v18.17, le socle du courant, Passeuse éteinte ; `memoire.md` § 47, avec ses écarts à la fiche)**. Rédigée le 7 novembre 2026, à la v18.16, avec Opus 5.5, effort moyen. Rien du jeu n'a changé pour l'écrire : ni `index.html`, ni `data/`, ni le wiki.
 
 Lu pour l'écrire : `CLAUDE.md` ; `_dev/REPRISE.md` (§ 3 et § 5) ; le cadrage `la-brume-v18-6-gardiens-cadrage.md` (partie A entière, surtout Q3 à Q14 et Q25 ; partie B comme modèle) ; `memoire.md` § 44 (socle, échelle corrigée du Guet), § 45 (le Guet allumé, écarts, mesures) et § 46 (les 23 constats de la relecture) ; `data/gardiens-descente.js` (commun, échelle, entrée 4) ; `data/descente.js` (acte V : « Les Eaux Mortes », phrase « Les Eaux Mortes se taisent ») ; `data/histoire.js` (fragments, codex, chapitres) ; dans `index.html`, le bloc `/*gar:pur*/` et le bloc « v18.14 · Les gardiens de la descente » (moteur `pas`, `lancer`, `optSortie`, zones, contact, bot), `brxDans`, `brxSortie`, `updatePlayer`, `pMarche`, `collidePlayer`, `hitsWall`, `drawEproj`, `faceA`, et la justice de `data/souvenirs-brume.js` (joueur : rayon 14, vitesse 180 px/s, réflexe 0,05 s).
 

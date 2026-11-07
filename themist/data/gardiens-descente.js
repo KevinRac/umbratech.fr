@@ -40,7 +40,12 @@
     2:{nom:'Le Héraut Noyé',temps:3,contraintes:1,enchainements:1,preavis:0.8,entourage:1,habiletes:['traverser']},
     3:{nom:'Le Glas Originel',temps:3,contraintes:2,enchainements:1,preavis:0.8,entourage:1,habiletes:['traverser','motifs']}},
    // les habiletés connues (une habileté neuve s'ajoute ici avec son gardien)
-   habiletes:{copie:'lire ce qu’il copie de toi',traverser:'traverser au bon moment',motifs:'lire des motifs de tirs',espace:'être au bon endroit : lire et franchir des obstacles'}}},
+   habiletes:{copie:'lire ce qu’il copie de toi',traverser:'traverser au bon moment',motifs:'lire des motifs de tirs',espace:'être au bon endroit : lire et franchir des obstacles',
+    courant:'compenser un déplacement subi : tenir sa place contre le courant, ou se laisser porter'}},
+  // 6.2b-1 · le courant (le déplacement subi, fiche 6.2a, Q29) : la couleur de ses flèches (vert d'eau, un signal neuf : ΔE ≥ 25 de toute la grammaire et
+  // de la craie du Brumeux) ; vMax : jamais plus que cette part de la vitesse de justice (on peut toujours tenir sa place et sortir de côté) ; pas : un
+  // mouvement imposé avance par pas de pas px au plus, une collision à chaque pas (exigence de la relecture 6.1c)
+  courant:{couleur:[100,205,160],vMax:0.5,pas:6}},
  // ── Acte IV, « Les Bas-Fonds » : le Guet Sans-Nom (partie B du cadrage, Q16–Q24 ; action 6.1b, v18.15 : allumé). Le garde de la Porte Basse : sa
  // fille lui a demandé qui il était ; il est descendu garder la dernière porte de la ville. Son idée de jeu : la porte (il ferme, il contrôle, il
  // rouvre). Habileté neuve (Q25) : l'espace, être au bon endroit avant que la porte se ferme.
@@ -103,5 +108,44 @@
   dessin:{version:2,
    lecture:'Un guet sans visage, la herse de la Porte Basse sur le dos, un registre enchaîné sur la poitrine. Au deuxième temps, le registre s’ouvre et ses feuillets s’envolent ; au troisième, la herse lui glisse des épaules et reste au sol : le registre est à nu.',
    entree:'une herse remonte du sol, il passe le guichet',mort:'le registre tombe ouvert, il pose le genou, la herse s’abat derrière lui et il se défait en eau trouble',
-   quatrieme:'la page de la phrase interrompue se détache du registre et flotte au-dessus de lui'}}
+   quatrieme:'la page de la phrase interrompue se détache du registre et flotte au-dessus de lui'}},
+ // ── Acte V, « Les Eaux Mortes » : la Passeuse (fiche _dev/cadrages/la-brume-v18-6-2-passeuse-fiche.md, Q26–Q40, validée le 7 novembre 2026).
+ // Action 6.2b-1 (v18.17) : le socle du courant ; elle est ÉTEINTE et encore un gardien d'essai (essai:true) : deux gestes, le Bief (un courant sur une
+ // rangée ou une colonne, sans dégâts) et l'Abordage (la case où le courant te mène), une silhouette simple. 6.2b-2 l'allume, avec tout son jeu.
+ // Celle qui menait au Marais ceux que plus personne ne reconnaissait ; elle a oublié où était l'autre rive. Habileté neuve (Q27) : le courant.
+ 5:{actif:false,essai:true,acte:5,nom:'La Passeuse',un:'la Passeuse',
+  rayon:48,vitesse:58,xp:100,
+  // PV (Q37) : la règle de Q9 sera remesurée avec son vrai corps en 6.2b-2 ; le build de référence est celui de l'acte IV (§ 44) : ceux du Guet d'ici là
+  pv:19600,
+  banniere:'Où dois-je te mener ?',
+  temps:{titres:['Où dois-je te mener ?','L’autre rive s’efface','Les eaux mortes coulent','La Dérive']},
+  tempsEnPlus:{seuil:0.18,n:'La Dérive',d:'l’eau fait le tour de la salle et ne s’arrête plus'},
+  // échelon (Q28) : l'entourage monte (un terrain qui agit) ; le préavis reste au plancher (la ligne V du tableau de Q25 est caduque)
+  echelon:{temps:3,contraintes:2,enchainements:2,preavis:0.8,entourage:3},
+  habiletes:['courant'],
+  faible:'le nœud de l’amarre de la Passeuse',
+  // Q34 : des dalles noyées sous une eau noire immobile (sol assombri pour le contraste du corps)
+  decor:{theme:'eauxmortes',palette:{h:190,s:20,l:9,acc:'100,205,160',mote:'#b4d2c4',mist:'90,120,115'},flaques:12,grilles:0},
+  // Q34 : mesurées pour la fiche (ΔE ≥ 25 de la grammaire ; contraste du manteau et de la chair ≥ 4,5 sur son sol)
+  couleurs:{manteau:[112,146,70],chair:[176,168,150],bois:[132,104,76],amarre:[150,132,96],vase:[78,70,54],lueur:[196,186,120],reflet:[170,182,196]},
+  glyphe:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M19.2 2.2L13.6 22" fill="none" stroke="#0a0810" stroke-width="3" stroke-linecap="round"/><path d="M19.2 2.2L13.6 22" fill="none" stroke="#84684c" stroke-width="1.4" stroke-linecap="round"/><path d="M12 3.8C9.3 3.8 8.4 6.2 8.4 8.8L7.2 17.6H16.8L15.6 8.8C15.6 6.2 14.7 3.8 12 3.8Z" fill="#70924a" stroke="#0a0810" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 6.2C10.8 6.2 10.3 7.3 10.3 8.5C10.3 9.7 11.1 10.5 12 10.5C12.9 10.5 13.7 9.7 13.7 8.5C13.7 7.3 13.2 6.2 12 6.2Z" fill="#141c1e"/><circle cx="12" cy="13.4" r="1.7" fill="#96845f" stroke="#0a0810" stroke-width="1.1"/><path d="M2.4 17.2Q12 21.6 21.6 17.2L19.6 20.4Q12 23.2 4.4 20.4Z" fill="#84684c" stroke="#0a0810" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  // ── le courant (Q29) : la salle en grille × grille cases ; un bief = une rangée ou une colonne entière, un sens ; vT : vitesse par temps (px/s, jamais
+  // au-delà de commun.courant.vMax × la vitesse de justice) ; annonceS : les flèches s'allument avant que l'eau coule ; dureeT : l'eau coule (s, par
+  // temps) ; retombeS : l'eau retombe
+  courant:{grille:[6,4],vT:{1:70,2:80,3:90,4:90},annonceS:1.0,dureeT:{1:5,2:6,3:6,4:6},retombeS:0.3},
+  // ── les attaques (Q30 ; en 6.2b-1, les deux gestes d'essai). bief : un courant (forme « courant » : un terrain, aucun dégât, son annonce vaut préavis) ;
+  // abordage : la case où le courant te mènerait si tu ne faisais rien, au moment du coup (cible 'aval') ; apresS : après que l'eau coule
+  attaques:{
+   bief:{n:'Bief',d:'Des flèches vert d’eau s’allument sur le sol : le courant va t’emporter dans leur sens. Marche contre lui, ou laisse-toi porter.',forme:'courant',preavis:1.0},
+   abordage:{n:'Abordage',d:'La case où le courant t’emmène s’emplit d’orange : n’y arrive pas.',forme:'case',cible:'aval',preavis:1.2,preavisT:{3:1.0,4:1.0},part:0.25,apresS:0.3}},
+  // les Traversées (sa signature, Q30) : un bief, puis l'Abordage ; quand l'eau retombe, l'Échouage (Q32 : sonnée, sa perche prise dans la vase)
+  traversees:{traversee:{bief:'bief',suite:'abordage'}},
+  echouage:{n:'L’Échouage',d:'Quand l’eau retombe, sa perche reste prise dans la vase : frappe le nœud de l’amarre.',sonneS:2,sonneT:{4:1.5}},
+  file:{1:['traversee','abordage'],2:['traversee','abordage'],3:['traversee','abordage'],4:['traversee','abordage']},
+  rythme:{entracteS:[0,0.95,0.75,0.6,0.5],relacheS:0,apresFermeture:0.5},
+  wiki:{done:'La Passeuse lâche sa perche',journal:'Plus bas que les Bas-Fonds, les eaux mortes se sont remises à couler.'},
+  dessin:{version:0,
+   lecture:'Une passeuse sans visage, debout dans une barque plate, couverte de lentilles d’eau, une longue perche à la main et une amarre nouée à la taille qui ne mène à aucune rive. Au deuxième temps, l’eau monte dans la barque ; au troisième, la barque se fend et reste au sol : elle se tient dans l’eau, l’amarre à nu.',
+   entree:'un courant s’allume, sa barque glisse hors de la brume le long de lui',mort:'sa perche s’enfonce, elle s’assied dans la barque, l’amarre se dénoue et la barque s’en va avec le dernier courant',
+   quatrieme:'l’amarre se rompt et son bout libre flotte derrière elle'}}
 };})(window.BRUME_DATA=window.BRUME_DATA||{});

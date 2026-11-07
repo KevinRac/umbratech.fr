@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire('/opt/npm-tools/node_modules/');
 const { chromium } = require('playwright');
 const THEMIST = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGHI').toUpperCase(), OUT = process.argv[4] || null;
+const PORT = process.argv[2] || 8765, SEC = (process.argv[3] || 'ABCDEFGHIK').toUpperCase(), OUT = process.argv[4] || null;
 if (OUT) mkdirSync(OUT, { recursive: true });
 const BASE = `http://127.0.0.1:${PORT}/index.html`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
@@ -316,9 +316,11 @@ if (SEC.includes('F')) {
 // ══════════════════════════════════════════════════════════════════════════════
 if (SEC.includes('G')) {
   console.log('\n══ G · règle d’or : chaque image du canevas, avant / après, trois paliers, gardien éteint puis allumé ══');
-  const NF = +(process.env.BANC_IMAGES || 180), AVANT_REV = process.env.BANC_AVANT || '3f1dc75';
+  const NF = +(process.env.BANC_IMAGES || 180), AVANT_REV = process.env.BANC_AVANT || 'ec6a62f';   // 6.2b-1 : contre la v18.16 (avant : 3f1dc75, la v18.14)
   // chaque côté a ses propres données des gardiens de la descente (celles de son commit), servies éteintes ou allumées selon le mode
   const GD_AV = process.env.BANC_TEMOIN ? GD_SRC : execSync(`git -C ${JSON.stringify(THEMIST)} show ${AVANT_REV}:themist/data/gardiens-descente.js`, { maxBuffer: 16 << 20 }).toString('utf8');
+  // 6.2b-1 : si le Guet existait déjà avant (essai:false), sa salle allumée doit être identique des deux côtés (règle d'or du Guet)
+  const GUET_AVANT = /\b4:\{actif:(?:true|false),essai:false/.test(GD_AV);
   const APRES = readFileSync(process.env.BANC_APRES || join(THEMIST, 'index.html'), 'utf8');
   const AVANT = process.env.BANC_TEMOIN ? APRES : execSync(`git -C ${JSON.stringify(THEMIST)} show ${AVANT_REV}:themist/index.html`, { maxBuffer: 64 << 20 }).toString('utf8');
   function HORLOGE(seed) {
@@ -351,6 +353,7 @@ if (SEC.includes('G')) {
       salle('combat III', () => ent('act3')); salle('élite III', () => ent('elite')); salle('gardien III', () => ent('boss'));
       salle('combat IV', () => ent('acte')); salle('gardien provisoire IV', () => ent('garde'));
       salle('gardien IV (salle boss)', () => ent('boss'));
+      salle('gardien V (salle boss, éteinte)', () => { RUN.acteD = 5; ent('boss'); });   // 6.2b-1 : la Passeuse éteinte n'y est pas
       salle('miniboss X (1)', () => { RUN.acteD = 9; ent('acte'); }); salle('miniboss X (2)', () => ent('mini')); salle('boss final provisoire', () => ent('final'));
       return out; };
   }
@@ -382,6 +385,7 @@ if (SEC.includes('G')) {
         const x = a.r[i], y = b.r[i]; let premier = -1, n = 0;
         for (let f = 0; f < Math.max(x.hs.length, y.hs.length); f++) if (x.hs[f] !== y.hs[f]) { n++; if (premier < 0) premier = f; }
         images += x.hs.length; diff += n;
+        if (allume && x.nom === 'gardien IV (salle boss)' && GUET_AVANT) { ok(y.g18 && x.g18 && y.type === 'boss' && n === 0, `G (allumé) : ${palier} (${cls}) · ${x.nom} : le Guet, identique à ${AVANT_REV} (${x.hs.length} images${n ? `, ${n} différentes, la première à l'image ${premier}` : ''})`); continue; }
         if (allume && x.nom === 'gardien IV (salle boss)') { ok(y.g18 && x.g18 && y.type === 'boss' && n > 0, `G (allumé) : ${palier} (${cls}) · ${x.nom} : c'est le gardien de l'acte IV, et elle seule change (${n} images sur ${x.hs.length})`); continue; }
         ok(n === 0 && x.type === y.type && x.gardeK === y.gardeK && !y.g18 && !x.g18, `G (${mode}) : ${palier} (${cls}) · ${x.nom} [${x.etat === 'title' ? 'écran titre, ' : ''}${x.type}${x.gardeK ? ' ' + x.gardeK : ''}, acte ${x.acte}] : ${x.hs.length} images identiques${n ? ` — ${n} images différentes, la première à l’image ${premier}` : ''}`);
       }
@@ -554,6 +558,115 @@ if (SEC.includes('I')) {
     ok(r.mort && /face au Guet Sans-Nom/.test(r.j || '') && /acte IV/.test(r.j || ''), `I · C23 : le journal (« ${r.j} »)`);
     ok(!/Acte III, salle/.test(r.ov) && !/undefined/.test(r.ov), `I · H1 : la fin de descente ne dit ni « Acte III » ni « undefined »`);
     ok(!errs.length, 'I · C23 : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// K · le courant (6.2b-1, v18.17 ; fiche _dev/cadrages/la-brume-v18-6-2-passeuse-fiche.md, Q29, Q38, Q39) : la Passeuse éteinte, ouverte par l'essai
+// (?gardien=5) avec ses deux gestes d'essai (le Bief et l'Abordage). K-A aiguillage (sa salle à l'acte V, rien du Glas, aucun obstacle) ; K-B temps et
+// Échouage ; K-C aucun coup sans signe (quatre formes × trois paliers, bot qui compense) ; K-D la poussée (par pas, une collision à chaque pas, le mur,
+// un pilier, la contre-épreuve d'un saut unique ; ses invoqués emportés, elle non) ; K-E mouvements réduits (flèches figées) ; K-F l'essai ne déteint
+// pas (la descente suivante : ni courant, ni poussée ; rien d'écrit en essai) ; K-H éteinte, la place provisoire de l'acte V et le wiki sans son nom.
+if (SEC.includes('K')) {
+  console.log('\n══ K · le courant : la Passeuse d’essai (acte V) ══');
+  const essai5 = (page, o) => page.evaluate(o => { const G = window.__gardiens18, B = window.__brume; const r = G.essai(5, o); window.__pas(5, () => B.room.boss && B.room.started); return { r, boss: !!B.room.boss }; }, o);
+  // K-A
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'lum', dieu: true });
+    await page.waitForFunction(() => !!window.__gardiens18.dbg().g27GlypheImg(3), null, { timeout: 10000 }).catch(() => {});
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), room = B.room, e = room.boss; D.hud(); const hud = document.querySelector('#hBossGlyph');
+      return { actifs: G.actifs(), type: room.type, g18: !!room.g18, theme: room.theme, piliers: room.pillars.length, acte: window.__descente.dbg().acte, registre: B.RUN.act,
+        nom: e.name, pv: e.maxHp, r: e.r, glas: !!room.glas, reserveGlas: B.RUN.memoire && B.RUN.memoire.reserveGlas, porte: !!D.g27GlypheImg(3), hud: hud && !hud.hidden && /svg/.test(hud.src), courants: G.courant.biefs().length }; });
+    ok(JSON.stringify(r.actifs) === '{"4":"Le Guet Sans-Nom"}', 'K-A : la Passeuse est éteinte (seul le Guet est allumé)');
+    ok(r.type === 'boss' && r.g18 && r.acte === 5 && r.registre === 3 && r.nom === 'La Passeuse' && r.pv === 19600 && r.r === 48, `K-A : l'essai ouvre sa salle à l'acte V (${r.type}, ${r.nom}, ${r.pv} PV, r ${r.r}, registre ${r.registre})`);
+    ok(r.theme === 'eauxmortes' && r.piliers === 0, `K-A : son sol (${r.theme}) ; aucun obstacle dans sa salle (${r.piliers} piliers : la carte des chemins n'a rien à suivre)`);
+    ok(!r.glas && !r.reserveGlas && r.porte && r.hud, `K-A : rien du Glas (mémoire ${r.glas}, réserve ${!!r.reserveGlas}) ; son glyphe sur la porte et la barre`);
+    ok(!errs.length, 'K-A : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // K-B : temps (trois en Normal, quatre en Difficile), la Traversée puis l'Échouage (sonnée 2 s, anneau ivoire)
+  for (const palier of ['normal', 'difficile']) { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'gou', dieu: true, palier, attaque: 'traversee' });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, e = B.room.boss, vu = { annonce: 0, coule: 0, zone: 0, vuln: 0, nu: 0 }; let echoue = false;
+      window.__pas(14, () => { const b = G.courant.biefs()[0], s = G.etat(); if (b) vu[b.ph] = (vu[b.ph] || 0) + 1; if (s.zones.some(z => z.id === 'abordage')) vu.zone++;
+        if (s.ph === 'relache' && e.vuln > 0) { vu.vuln++; if (window.__gardiens.G27.aNu(e, 1)) vu.nu++; echoue = true; } return false; });
+      return { seuils: e.seuils18, vu, echoue, j: G.journal() }; });
+    ok(palier === 'normal' ? r.seuils.length === 2 : r.seuils.length === 3 && r.seuils[2] === 0.18, `K-B : ${palier} : ${r.seuils.length + 1} temps (${r.seuils.join(' / ')})`);
+    ok(r.vu.annonce > 0 && r.vu.coule > 0 && r.vu.zone > 0, `K-B : ${palier} : la Traversée : le bief s'annonce (${r.vu.annonce} images), coule (${r.vu.coule}), puis l'Abordage (${r.vu.zone})`);
+    ok(r.echoue && r.vu.nu > 0 && (r.j.echouages || 0) >= 1, `K-B : ${palier} : l'eau retombée, l'Échouage : sonnée, à nu (${r.j.echouages || 0} fois, anneau ivoire ${r.vu.nu} images)`);
+    ok(!errs.length, `K-B : ${palier} : aucune erreur de script ` + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // K-C : aucun coup sans signe, au bot qui compense (BANC_K_SANS_C=1 pour le sauter)
+  if (!process.env.BANC_K_SANS_C) { let tot = 0, sans = 0, auCourant = 0;
+    for (const palier of ['normal', 'difficile', 'extreme']) for (const cls of ['lum', 'gou', 'her', 'tis']) {
+      const { page, errs, ctx } = await ouvre('');
+      await essai5(page, { cls, dieu: true, bot: 2, ref: true, palier });
+      const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, e = B.room.boss, t0 = B.RUN.time; window.__pas(70, () => e.dead); const j = G.journal();
+        return { dur: B.RUN.time - t0, mort: e.dead, coups: j.coups.length, sans: j.sansSigne, cour: j.coups.filter(c => c.c > 0).length, lances: j.lances, sautes: j.sautes, biefs: j.biefs || 0, ech: j.echouages || 0, pv: e.hp / e.maxHp, mauvais: j.coups.filter(c => !c.signe).slice(0, 3) }; });
+      tot += r.coups; sans += r.sans; auCourant += r.cour;
+      ok(r.sans === 0 && r.biefs > 0, `K-C : ${palier} · ${cls} : ${r.coups} coups reçus (${r.cour} dans un courant), ${r.sans} sans signe ; ${r.biefs} biefs, ${r.lances} gestes, ${r.sautes} sautés, ${r.ech} échouages ; ${r.mort ? `vaincue en ${r.dur.toFixed(0)} s` : `${Math.round(r.pv * 100)} % de PV à 70 s`}${r.mauvais.length ? ' ' + JSON.stringify(r.mauvais) : ''}`);
+      ok(!errs.length, `K-C : ${palier} · ${cls} : aucune erreur de script ` + errs.slice(0, 2).join(' | '));
+      await ctx.close(); }
+    console.log(`   ${tot} coups reçus (${auCourant} dans un courant), ${sans} sans signe`); }
+  // K-D : la poussée
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'lum', dieu: true, mannequin: true });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), P = D.P, room = B.room, AR = { x0: 56, y0: 92, x1: 1224, y1: 676 }, out = {};
+      const j1 = (AR.y0 + (AR.y1 - AR.y0) / 4 * 1.5);   // le milieu de la rangée 1
+      // a. à 90 px/s pendant 1 s, ton corps avance de 90 px dans le sens du courant (personne ne touche aux touches)
+      G.courant.vider(); G.courant.poser('h', 1, 1, 90, 60); P.x = 300; P.y = j1; P.vx = 0; P.vy = 0; const x0 = P.x; window.__pas(1); out.avance = P.x - x0; out.dy = Math.abs(P.y - j1);
+      // b. contre le mur : il s'arrête au mur
+      P.x = 1150; window.__pas(3); out.mur = P.x; out.murMax = AR.x1 - P.r;
+      // c. contre un barreau (r 10) : par pas, il s'arrête devant ; d'un seul saut de 40 px (contre-épreuve), il le traverse
+      const bar = { x: 600, y: j1, r: 10 }; room.pillars.push(bar); P.x = 560; P.y = j1; window.__pas(2); out.devant = P.x < bar.x; out.xb = P.x;
+      P.x = 585; G.courant.pousse(40 / 90); out.parPas = P.x < bar.x;
+      P.x = 585; P.x += 40; D.colP(); out.saut = P.x > bar.x;
+      room.pillars.splice(room.pillars.indexOf(bar), 1);
+      // d. ses invoqués sont emportés ; elle, non
+      const o = D.creer('rampant', 300, j1); o.spd = 0; const ox = o.x, e = room.boss, ex = e.x, ey = e.y; e.x = 900; e.y = j1; const ex2 = e.x;
+      G.courant.pousse(1); out.invoque = o.x - ox; out.elle = e.x - ex2; e.x = ex; e.y = ey;
+      G.courant.vider(); P.x = 300; const x1 = P.x; window.__pas(1); out.sans = Math.abs(P.x - x1);
+      return out; });
+    ok(Math.abs(r.avance - 90) < 4 && r.dy < 1, `K-D : à 90 px/s pendant 1 s, ton corps avance de ${r.avance.toFixed(1)} px dans son sens (écart ${r.dy.toFixed(1)} px de travers)`);
+    ok(Math.abs(r.mur - r.murMax) < 0.5, `K-D : contre le mur, il s'arrête au mur (${r.mur.toFixed(1)} pour ${r.murMax.toFixed(1)})`);
+    ok(r.devant && r.parPas, `K-D : par pas de 6 px, une collision à chaque pas : il s'arrête devant le barreau (${r.xb.toFixed(1)} < 600)`);
+    ok(r.saut, 'K-D (contre-épreuve) : d\'un seul saut de 40 px, le corps passe de l\'autre côté du barreau');
+    ok(r.invoque > 60 && Math.abs(r.elle) < 1e-9, `K-D : ses invoqués sont emportés (${r.invoque.toFixed(1)} px en 1 s), elle non (${r.elle} px)`);
+    ok(r.sans < 1, `K-D : sans courant, rien ne pousse (${r.sans.toFixed(2)} px)`);
+    ok(!errs.length, 'K-D : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // K-E : mouvements réduits : les flèches et les stries ne bougent pas (deux instants du même courant, dessinés à part) ; sans, les stries glissent
+  for (const reduit of [true, false]) {
+    const ctxo = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: reduit ? 'reduce' : 'no-preference' });
+    await ctxo.addInitScript(() => { window.__raf = []; window.requestAnimationFrame = cb => { window.__raf.push(cb); return 1; }; });
+    const page = await ctxo.newPage(); const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+    await page.goto(BASE); await page.waitForFunction(() => !!(window.__gardiens18 && window.__brume && window.__brume.step && window.__descente), null, { timeout: 30000 });
+    await page.evaluate(() => { const q = window.__raf.splice(0); for (const f of q) f(performance.now());
+      window.__vide = () => { const o = document.querySelector('#overlay'); if (!o.hidden) { const b = o.querySelector('#bok') || o.querySelector('.card:not([disabled])') || o.querySelector('button.primary:not([disabled])'); if (b) b.click(); } };
+      window.__pas = (s, f) => { const B = window.__brume; for (let i = 0; i < Math.round(s * 60); i++) { window.__vide(); B.step(1 / 60, 1); if (f && f()) return true; } return false; }; });
+    await essai5(page, { cls: 'lum', dieu: true, mannequin: true });
+    const r = await page.evaluate(() => { const G = window.__gardiens18, D = G.dbg(), s = D.room.g18s; G.courant.vider(); G.courant.poser('v', 2, 1, 90, 60);
+      const img = () => { const c = document.createElement('canvas'); c.width = 1280; c.height = 720; G.courant.dessin(c.getContext('2d')); const d = c.getContext('2d').getImageData(0, 0, 1280, 720).data; let h = 2166136261, n = 0; for (let i = 0; i < d.length; i++) { h = Math.imul(h ^ d[i], 16777619); if (d[i + 3 - (i % 4)]) n++; } return [h >>> 0, n]; };
+      const a = img(); for (let k = 0; k < 7; k++) s.courants[0].t += 0.1; const b = img(); return { a, b }; });
+    ok(reduit ? r.a[0] === r.b[0] : r.a[0] !== r.b[0], `K-E : ${reduit ? 'mouvements réduits : le courant dessiné à deux instants est la même image (flèches figées, stries immobiles)' : 'sans mouvements réduits : les stries glissent (deux images différentes)'} (${r.a[1]} px dessinés)`);
+    ok(r.a[1] > 1000, 'K-E : le courant se voit');
+    ok(!errs.length, `K-E (${reduit ? 'réduits' : 'normaux'}) : aucune erreur de script ` + errs.slice(0, 2).join(' | ')); await ctxo.close(); }
+  // K-F : l'essai ne vaut que pour sa descente : vaincue en essai, rien d'écrit ; la descente suivante n'a ni courant ni poussée, et l'acte V garde sa
+  // place provisoire (ACTD[5].boss rendu)
+  { const { page, errs, ctx } = await ouvre('');
+    await essai5(page, { cls: 'lum', dieu: true, attaque: 'traversee' });
+    const r = await page.evaluate(() => { const B = window.__brume, G = window.__gardiens18, D = G.dbg(), e = B.room.boss;
+      window.__pas(1.5); const pendant = G.courant.biefs().length; for (let k = 0; k < 400 && !e.dead; k++) { D.hit(e, 2000, { crit: false }); for (let i = 0; i < 6; i++) B.step(1 / 60, 1); } window.__pas(3);
+      const ecrit = { flag: !!((B.SAVE.flags || {}).g18_5), mort: e.dead };
+      B.start(); const ici = !!G.ici();
+      return { pendant, ecrit, ici, st: { force: G.dbg().ST.force, bot: G.dbg().ST.bot }, biefs: G.courant.biefs().length }; });
+    ok(r.pendant >= 1 && r.ecrit.mort, `K-F : en essai, un courant a coulé (${r.pendant}) et elle est vaincue`);
+    ok(!r.ecrit.flag, 'K-F : vaincue en essai, rien d\'écrit (pas de drapeau g18_5 dans la sauvegarde)');
+    ok(r.st.force == null && r.st.bot === 0 && !r.ici && r.biefs === 0, `K-F : la descente suivante défait l'essai (ni gardien forcé, ni bot ; ${r.biefs} courant)`);
+    ok(!errs.length, 'K-F : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
+  // K-H : éteinte, la dernière salle de l'acte V est la place provisoire (porte « garde ») ; le wiki ne la nomme nulle part
+  { const { page, errs, ctx } = await ouvre('');
+    const r = await page.evaluate(() => { const B = window.__brume, D = window.__descente; B.cls('gou'); D.essai(5, { fin: true, cls: 'gou' });
+      window.__pas(4, () => B.room.boss || (B.room.type === 'elite' && B.room.waves && B.room.waves.length));
+      return { type: B.room.type, gardeK: B.room.gardeK || '', g18: !!B.room.g18 }; });
+    ok(r.type === 'elite' && r.gardeK === 'garde' && !r.g18, `K-H : éteinte, la dernière salle de l'acte V est la place provisoire (${r.type} ${r.gardeK})`);
+    ok(!readFileSync(join(THEMIST, 'wiki.html'), 'utf8').includes('Passeuse'), 'K-H : le wiki ne la nomme nulle part');
+    ok(!errs.length, 'K-H : aucune erreur de script ' + errs.slice(0, 2).join(' | ')); await ctx.close(); }
 }
 
 console.log(`\nbanc-gardiens18 : ${checks} vérifications, ${fails} échec${fails > 1 ? 's' : ''}.`);

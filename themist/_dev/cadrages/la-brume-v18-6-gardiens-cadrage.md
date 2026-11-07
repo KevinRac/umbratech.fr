@@ -223,7 +223,7 @@ Demande de l'auteur : plus on descend, plus les boss doivent être difficiles, *
 |---|---|---|---|---|---|
 | III · Glas (repère) | 3 | 1 à 2 | — | 0,8 à 1,1 s | traverser au bon moment, lire des motifs de tirs |
 | **IV · Bas-Fonds** | 3 | 1 (+ des obstacles brefs) | 2 coups | 1,0 à 1,2 s | **l'espace** : lire et franchir des obstacles, être au bon endroit avant que la porte se ferme (le Guet) |
-| V · Eaux Mortes | 3 | 2 | 2 coups | 0,9 à 1,1 s | **le déplacement subi** : courants et sol qui t'emportent, à compenser pendant l'esquive |
+| V · Eaux Mortes | 3 | 2 | 2 coups | ~~0,9 à 1,1 s~~ **0,8 s** (corrigé par la fiche 6.2a, Q28 : le préavis ne remonte jamais, et le Guet est déjà au plancher ; c'est l'entourage qui monte, 1 → 3, « un terrain qui agit » ; de V à IX, la colonne « préavis » se lit 0,8 s) | **le déplacement subi** : courants et sol qui t'emportent, à compenser pendant l'esquive (confirmé : la Passeuse et le courant) |
 | VI · Nef Muette | 3 | 2 | 3 coups | 0,9 à 1,0 s | **la mémoire d'une séquence** : il montre une suite de gestes en entier, puis la rejoue plus vite (toujours télégraphiée, au préavis plancher) |
 | VII · Racines du Cœur | 4 | 2 | 3 coups | 0,8 à 1,0 s | **la priorité** : des cibles à couper (racines qui le protègent ou le nourrissent) pendant qu'il attaque |
 | VIII · Puits des Échos | 4 | 3 | 3 coups | 0,8 à 1,0 s | **la double lecture** : chaque geste revient en écho, décalé, d'une autre origine |
