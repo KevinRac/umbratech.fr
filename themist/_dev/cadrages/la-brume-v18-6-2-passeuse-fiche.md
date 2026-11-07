@@ -1,6 +1,8 @@
 # La Brume · v18 « La grande descente » · action 6.2a · fiche du gardien de l'acte V, « Les Eaux Mortes » : la Passeuse
 
-Statut : **validée par l'auteur le 7 novembre 2026 (« Je valide », toutes les recommandations) ; 6.2b-1 faite le 7 novembre 2026 (v18.17, le socle du courant, Passeuse éteinte ; `memoire.md` § 47, avec ses écarts à la fiche)**. Rédigée le 7 novembre 2026, à la v18.16, avec Opus 5.5, effort moyen. Rien du jeu n'a changé pour l'écrire : ni `index.html`, ni `data/`, ni le wiki.
+Statut : **validée par l'auteur le 7 novembre 2026 (« Je valide », toutes les recommandations) ; 6.2b-1 faite le 7 novembre 2026 (v18.17, le socle du courant, Passeuse éteinte ; `memoire.md` § 47, avec ses écarts à la fiche)**.
+
+**Révision 1 du 7 novembre 2026 (après l'essai de l'auteur) : à valider.** Elle remplace une partie de Q29 à Q33 et de Q28 ; voir la section « Révision 1 » à la fin de la fiche. Ce qu'elle ne touche pas reste validé. Rédigée le 7 novembre 2026, à la v18.16, avec Opus 5.5, effort moyen. Rien du jeu n'a changé pour l'écrire : ni `index.html`, ni `data/`, ni le wiki.
 
 Lu pour l'écrire : `CLAUDE.md` ; `_dev/REPRISE.md` (§ 3 et § 5) ; le cadrage `la-brume-v18-6-gardiens-cadrage.md` (partie A entière, surtout Q3 à Q14 et Q25 ; partie B comme modèle) ; `memoire.md` § 44 (socle, échelle corrigée du Guet), § 45 (le Guet allumé, écarts, mesures) et § 46 (les 23 constats de la relecture) ; `data/gardiens-descente.js` (commun, échelle, entrée 4) ; `data/descente.js` (acte V : « Les Eaux Mortes », phrase « Les Eaux Mortes se taisent ») ; `data/histoire.js` (fragments, codex, chapitres) ; dans `index.html`, le bloc `/*gar:pur*/` et le bloc « v18.14 · Les gardiens de la descente » (moteur `pas`, `lancer`, `optSortie`, zones, contact, bot), `brxDans`, `brxSortie`, `updatePlayer`, `pMarche`, `collidePlayer`, `hitsWall`, `drawEproj`, `faceA`, et la justice de `data/souvenirs-brume.js` (joueur : rayon 14, vitesse 180 px/s, réflexe 0,05 s).
 
@@ -296,3 +298,139 @@ Après chaque livraison qui l'allume ou la retouche : le lien d'essai direct, `h
 Les PV exacts (mesurés au bot), les textes définitifs (relus par l'auteur), le décor des actes IV à IX hors des salles de gardien, l'équilibrage des formes contre les gardiens (action 7), les gardiens VI à IX et les miniboss.
 
 **Pour valider : « toutes les recommandations », ou question par question (Q26 à Q40). Étape suivante : 6.2b-1, le socle du courant, Opus 5.5, élevé, dans une autre conversation.**
+
+
+---
+
+## Révision 1 · après l'essai de l'auteur (7 novembre 2026) — **à valider**
+
+Rédigée avec Opus 5.5, effort élevé. Rien du jeu n'a changé pour l'écrire.
+
+**Ce que l'auteur a dit, après avoir joué l'essai de 6.2b-1** : le boss est beaucoup trop simple. Les vagues sont une très bonne idée, mais elles ne sont pas assez présentes : une ligne, facile à esquiver, rien de spécial, et elle ne fait pas de dégâts. Il faut que la vague passe par des endroits complètement différents, beaucoup plus de difficulté, des capacités en synergie avec les vagues ; **les bords de la salle sont du vide, et le joueur qui y tombe est mort**.
+
+**Le diagnostic** : l'essai n'avait que deux gestes, mais le défaut est dans la fiche elle-même. Même avec tout son jeu, ses courants restaient des bandes droites d'un mur à l'autre, une à la fois, inoffensives, et rien ne punissait celui qui se laissait porter, sauf une case orange qu'on voit venir. Le courant gênait ; il ne menaçait pas. La révision lui donne trois choses qui lui manquaient : **un endroit où il mène** (le vide), **un dessin qui change** (des motifs, pas une ligne) et **une vague qui frappe** (la Lame). Ses autres gestes sont refaits pour jouer avec eux.
+
+Ce qui reste juste et ne change pas : l'identité (Q26), l'habileté (Q27, le courant), les règles de lecture (le courant ne dépasse jamais la moitié de ta vitesse, il s'annonce ≥ 0,8 s, il ne change pas pendant un préavis sans l'avoir annoncé, il avance par pas avec une collision à chaque pas, toute sortie se calcule avec lui), le socle de 6.2b-1 (qui sert tel quel : un champ est déjà une liste de cases, de n'importe quelle forme).
+
+### Q41 · Le vide sur les bords
+
+- **A. Une lisière de vide tout autour (recommandé).** La salle garde ses murs, mais le sol s'arrête avant eux : une **bande de vide de 64 px** sur les quatre côtés (le sol fait 1 040 × 456 px ; la grille des courants, 6 × 4 cases de ≈ 173 × 114 px, couvre le sol seulement). Le vide est **permanent et toujours visible** : une eau noire sans fond, un liseré de pierre pâle au bord du sol, rien qui bouge en mouvements réduits. Il n'a pas de préavis (il ne change pas), sauf quand il avance (la Marée, Q44).
+- **B. Le vide sur deux côtés seulement** (les petits côtés, à gauche et à droite) : moins dur, mais la moitié des courants ne mèneraient nulle part.
+- **C. Des trous dans la salle plutôt que des bords** : plus lisible au centre, mais c'est la dalle et les douves du Brumeux.
+
+**Ce qui fait tomber** : le **centre de ton corps** passe au-dessus du vide **hors d'une esquive**. Une esquive passe au-dessus du vide (comme au-dessus d'une zone : elle ne frappe pas pendant `P.dashT`) ; si elle **finit** au-dessus du vide, tu tombes. Ce qui peut t'y mener : tes pas, et **le courant** (c'est le cœur du combat : tenir sa place près du bord). Ce qui ne t'y jette jamais : un coup. Le recul du contact, la poussée d'une Lame et la traction de la Gaffe **s'arrêtent au liseré** (« l'eau te jette au bord, pas dedans ») : aucune mort sans signe, et la mort par le vide ne vient que de ce que tu as laissé faire au courant.
+
+**Ce que fait la chute** (décision de l'auteur) :
+- **A. La mort, par la voie ordinaire (recommandé)** : la chute pose tes PV à zéro (`loseHp(P.hp)`), donc une relique ou un talent qui te sauve d'un coup mortel te sauve aussi d'une chute ; tu réapparais alors sur le sol le plus proche, 1 s intouchable. La mort se note « le vide » dans la chronique et la ligne de la mort (« emporté par les eaux mortes »).
+- **B. La mort sèche** : rien ne te sauve, même ce qui sauve d'un coup mortel. Plus dur, mais un talent payé qui ne joue jamais ici serait une surprise sans signe.
+
+Ses invoqués tombent aussi (ils meurent sans butin). Elle, jamais. Le bot évite le vide (sa sortie le compte interdit).
+
+**Recommandation : A et A** (lisière de 64 px tout autour ; la chute tue par la voie ordinaire).
+
+### Q42 · Les motifs du courant : « la vague passe par des endroits complètement différents »
+
+Le courant ne coule plus seulement en bandes : elle choisit un **motif** à chaque fois (à graine, jamais deux fois le même de suite), dessiné sur la grille ; chaque case n'a toujours qu'un sens, d'une flèche.
+
+| Motif | Ce qu'on voit | Ce qu'il fait |
+|---|---|---|
+| **Bief** | une rangée ou une colonne entière | l'ancien courant ; le plus simple |
+| **Coude** | une bande qui tourne à angle droit (un L de 5 à 7 cases) | le passif finit loin de là où on l'attend |
+| **Méandre** | un serpentin sur deux rangées (aller, puis retour) | on ne peut pas « se laisser porter » longtemps sans revenir sous elle |
+| **Tourbillon** | un anneau de 8 cases qui tourne autour d'un carré de 2 × 2 cases calmes (l'œil) | on tourne autour d'elle ou d'une zone ; l'œil est l'abri |
+| **Confluence** | deux bandes qui se rejoignent dans une case | tout ce qui flotte finit au même point : c'est là qu'elle frappe |
+| **Fuite** | un bord entier de cases qui coule **vers le vide** (une rangée du bord, ou une colonne du bord) | tenir sa place ou tomber ; jamais avec une zone qui t'oblige à lâcher prise au même moment (voir la sortie) |
+| **Cisaille** | deux rangées voisines de sens opposés | le contre-courant de la fiche, gardé |
+
+**Présence** (la critique « pas assez présentes ») :
+- **Temps 1** : un motif à la fois, mais **l'eau ne s'arrête presque jamais** : chaque motif coule 5 s, le suivant s'annonce pendant que le premier retombe (au plus 1 s de calme entre deux).
+- **Temps 2** : **deux motifs à la fois**, qui ne se croisent pas (une case n'a qu'un sens) ; un sur trois est une Fuite.
+- **Temps 3** : **le courant ne s'arrête plus** : un motif chasse l'autre ; le changement s'annonce **par les flèches du motif suivant, tracées en pointillé à côté des flèches pleines** 1,0 s avant (la règle du Ressac, généralisée) ; vitesse 90 px/s.
+- **Toujours** : jamais plus de la moitié de ta vitesse ; jamais un changement de motif pendant le préavis d'une zone sans ce pointillé ; toute sortie se calcule sur le champ du moment, le vide compté interdit.
+
+**Recommandation : ces sept motifs et cette présence.**
+
+### Q43 · La vague qui frappe : la Lame
+
+- **A. La Lame (recommandé)** : une crête d'eau parcourt un motif **dans le sens de son courant**, case après case : toutes les cases de son trajet sont cernées dès l'annonce, la première s'emplit d'orange (préavis 1,0 s), puis chaque case frappe à son tour, **0,22 s après la précédente** (une vague qui avance à ≈ 520 px/s le long d'un bief). Une case touchée : **18 %** des PV de référence et une **poussée de 70 px dans le sens du courant** (par pas, arrêtée au liseré). Pour l'éviter : sortir du trajet de côté, ou **remonter le courant** pour sortir par l'arrière avant qu'elle passe, ou **l'esquiver au moment où elle passe** (l'esquive passe à travers, comme toute zone). Le passif est puni deux fois : il est porté **vers** la crête.
+- **B. Le courant lui-même fait des dégâts** (un peu à chaque seconde passée dedans) : simple, mais c'est de la difficulté par les dégâts, sans geste à lire ; écarté par la règle permanente.
+- **C. Des vagues d'un mur à l'autre** (une bande qui balaie la salle entière) : impressionnant, mais un seul bon geste (l'esquive) et rien à lire du courant.
+
+Sortie : une **séquence** de cases à des instants connus, calculée avec le courant (`garSortieSeq`, Q47) : il doit exister un chemin, à ta vitesse au sol, qui n'est dans aucune case **au moment où elle frappe**, sans passer par le vide. Une Lame sans sortie saute.
+
+**Recommandation : A.**
+
+### Q44 · Ses capacités, refaites pour jouer avec l'eau et le vide
+
+Les formes restent les neuf connues ; les parts restent plafonnées à 30 %, les zones principales à 25 % ; aucun PV en plus.
+
+| Geste | Forme | Ce qui se passe | En synergie avec | Préavis | Part | Temps |
+|---|---|---|---|---|---|---|
+| **Courant** (un motif, Q42) | cases de courant | s'annonce, coule, se change | tout | 1,0 s | — | 1 à 4 |
+| **La Lame** (Q43) | cases en séquence | la crête suit le courant | le courant (elle va là où il porte) | 1,0 s, puis + 0,22 s par case | 18 % par case | 1 à 4 |
+| **L'Abordage** | case | la case où le courant te mène, comme dans la fiche | le passif | 1,2 s (1,0 aux temps 3 et 4) | 25 % | 1 à 4 |
+| **Le Ressac** | deux cases et un courant qui s'inverse | comme dans la fiche, flèches du retour en pointillé | le courant | 1,0 s puis + 0,6 s | 22 % par coup | 2 à 4 |
+| **Le Reflux** | une Fuite et un disque | elle pose une Fuite (un bord coule vers le vide) **et** un disque (r 140) au milieu de la salle, loin du bord : il faut quitter le centre **et** tenir sa place près du bord ; la sortie existe toujours entre les deux (calculée) | le vide | 1,0 s | 22 % | 2 à 4 |
+| **Le Remous** | anneau à brèche | ta case tourne (un petit tourbillon) et un anneau se referme ; la brèche est en aval : tiens le centre ou laisse-toi porter par la brèche | le courant | 1,0 s | 22 % | 1 à 4 |
+| **La Gaffe** | cône, puis une traction | 110°, 0 à 170 px ; si elle te touche, son crochet **te tire de 110 px vers elle** (par pas, arrêté au liseré) : tu te retrouves dans son eau ; le bout de la gaffe trace la ligne de la traction pendant le préavis | le courant (elle te ramène dans son tourbillon) | 0,8 s | 16 % | 1 à 4 |
+| **Le Coup de perche** | disque | 130 px autour d'elle si tu restes collé 2,5 s | — | 0,9 s | 18 % | 1 à 4 |
+| **Les Passagers** | invocation | Rampants et Voilés montent de l'eau en amont d'un courant et dérivent avec lui ; **ils tombent dans le vide** (sans butin) : les attirer vers une Fuite est une réponse | le courant et le vide | 0,9 s | — | 2 à 4 |
+| **La Marée** | cases qui deviennent vide | au temps 3 (une fois) et au temps 4 (une fois), **une rangée ou une colonne du bord du sol s'enfonce** : ses cases se fendillent et s'assombrissent 1,5 s (préavis), puis deviennent du vide, pour le reste du combat. Jamais deux côtés opposés (le sol garde au moins 3 × 2 cases) ; jamais là où tu te tiens au moment de l'annonce sans une sortie calculée ; jamais sous elle | le vide | 1,5 s | — | 3, 4 |
+| **L'Échouage** | sa fenêtre | après une Lame qui a parcouru tout son trajet, sa perche reste prise : sonnée 2 s (1,5 au temps 4), anneau ivoire sur le nœud de l'amarre | la Lame | — | — | 1 à 4 |
+
+Le Sillage de la fiche est retiré (une croix sans rapport avec l'eau). La Traversée devient « un motif, puis une Lame ou un Abordage ».
+
+**Files** (mélangées, jamais deux fois la même de suite ; un courant coule presque toujours) :
+- **Temps 1** : lame, abordage, remous, gaffe, lame, perche.
+- **Temps 2** : lame, reflux, ressac, passagers, gaffe, lame, remous.
+- **Temps 3** : marée (une fois, à l'entrée du temps), lame, ressac, reflux, gaffe, passagers, lame.
+- **Temps 4, la Dérive** (Difficile et Extrême, sous 18 %) : marée (une fois), puis la file du temps 3 ; le tour du sol coule en boucle et ne s'arrête plus (la Dérive de la fiche) : avec le vide autour, chaque pas compte.
+
+**Recommandation : ces gestes et ces files.**
+
+### Q45 · L'échelon, avec le vide
+
+Le vide est une contrainte de plus, présente tout le combat, en même temps que le courant et une zone : la fiche disait « contraintes 2 », ce n'est plus vrai.
+
+- **A. {temps 3, contraintes 3, enchaînements 2, préavis 0,8, entourage 3} (recommandé)** : deux crans montent par rapport au Guet (contraintes et entourage). La Lame compte pour un coup (une crête à passer une fois), le Ressac pour deux. **Conséquence pour la suite**, vérifiée : VI enchaînements 3 ; VII temps 4 ; VIII **contraintes 4** (au lieu de 3) ; IX enchaînements 4. Les lignes VI et VII du tableau de Q25 se lisent « contraintes 3 » (aucun cran ne baisse).
+- **B. Garder contraintes 2** en ne posant jamais de zone près du vide : le vide ne compterait que comme décor, et ce n'est pas ce qui a été demandé.
+
+**Recommandation : A.**
+
+### Q46 · Les chiffres
+
+- PV : la règle de Q9, au bot, avec son vrai corps (≈ 19 600 attendus) ; aucune difficulté par les PV.
+- **Friction visée** : nettement au-dessus du Guet (médiane au bot ≥ 1,2 ; durée ≈ 85 s) ; un combat où le bot meurt en Normal sans `dieu` est un signal à rapporter, pas un réglage à cacher.
+- Vitesse du courant : 70 / 80 / 90 / 90 px/s (inchangé : au-delà, on ne peut plus tenir sa place à coup sûr).
+
+### Q47 · Ce que le socle doit gagner (en plus de 6.2b-1)
+
+| Où | Quoi |
+|---|---|
+| `/*gar:pur*/` | `garSol(R, marge)` (le sol et la lisière) ; `garVide(sol, cases tombées)` (les rectangles du vide) ; `garTombe(p, vides, dash)` (le centre au-dessus du vide, hors esquive) ; `garMotif(G, k, rng, o)` (les sept motifs, une case un sens, aucun croisement) ; **`garSortieCourant` gagne `o.interdits`** (le vide : bloqué, jamais une sortie ; sans `interdits`, exactement 6.2b-1) ; **`garSortieSeq(S, seq, p, o)`** (une suite de zones à des instants connus, le champ de chaque instant : la Lame, le Ressac, et `garSortie2` à champ) ; `garPassif` qui rend aussi « tombe à l'instant t » ; `garBorneLiseré(p, dx, dy, sol)` (une poussée ou une traction arrêtée au bord) |
+| jeu, socle | le vide dessiné (eau noire, liseré pâle, rien qui bouge en mouvements réduits) ; la chute (après le pas et après la poussée, hors esquive) par `loseHp`, le relèvement au bord si quelque chose te sauve ; ses invoqués qui tombent ; la carte des chemins (`FF`) qui compte le vide comme bloqué et **`CAM.ff=1` à chaque Marée** ; la poussée d'un coup bornée au liseré ; le bot qui évite le vide ; la chronique (« le vide ») ; le journal (une chute est un coup `vide`, signé par le vide visible) |
+| simulateur | les motifs (une case un sens, couverture, aucun croisement, jamais une Fuite avec une zone sans sortie) ; la sortie séquentielle atteinte par un joueur simulé pas à pas (et sa contre-épreuve) ; le vide jamais une sortie ; une poussée jamais au-delà du liseré |
+
+Propre à elle : les gestes de Q44, la Marée, ses files, son dessin, sa salle à lisière.
+
+### Q48 · Le nouveau découpage
+
+| Étape | Contenu | Modèle, effort |
+|---|---|---|
+| **6.2b-1bis** | le socle du vide et des motifs (Q47), Passeuse **toujours éteinte**, essai à quatre gestes (motifs, Lame, Reflux, Marée) pour juger de la difficulté avant d'habiller ; règle d'or contre la v18.17 | **Opus 5.5, élevé** (des sorties neuves : séquence et vide) |
+| — | **essai de l'auteur** : la difficulté est-elle là ? (un aller-retour court, avant le dessin) | — |
+| **6.2b-2** | la Passeuse allumée (le reste de Q44, dessin, portraits, PV au bot, codex, wiki) | Sonnet 5.5, élevé |
+| **6.2c** | relecture indépendante (aucune mort sans signe, surtout le vide et les poussées) | Opus 5.5, élevé (le vide tue : la même profondeur que 6.1c) |
+
+### Tableau de la révision
+
+| Q | Sujet | Recommandation |
+|---|---|---|
+| Q41 | Le vide | une lisière de 64 px tout autour ; on tombe si le centre passe le bord hors esquive ; un coup ne t'y jette jamais (arrêté au liseré) ; la chute tue par la voie ordinaire |
+| Q42 | Les motifs | sept motifs (bief, coude, méandre, tourbillon, confluence, fuite, cisaille) ; l'eau coule presque tout le temps, deux motifs au temps 2, jamais d'arrêt au temps 3 |
+| Q43 | La vague qui frappe | la Lame : une crête qui suit le courant, case après case, 18 % et une poussée par case |
+| Q44 | Les capacités | Lame, Abordage, Ressac, Reflux, Remous, Gaffe qui tire, Coup de perche, Passagers qui tombent, Marée, Échouage ; Sillage retiré |
+| Q45 | L'échelon | {3, 3, 2, 0,8, 3} ; VIII passe à contraintes 4 |
+| Q46 | Les chiffres | PV par la règle ; friction ≥ 1,2 au bot |
+| Q47 | Le socle | vide, motifs, sortie séquentielle, poussées bornées, `FF` et Marée |
+| Q48 | Découpage | 6.2b-1bis (Opus élevé), essai de l'auteur, 6.2b-2, 6.2c (Opus élevé) |
