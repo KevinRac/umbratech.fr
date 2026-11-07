@@ -4,7 +4,7 @@ Statut : **validée par l'auteur le 7 novembre 2026 (« Je valide », toutes les
 
 **Révision 1 du 7 novembre 2026 (après l'essai de l'auteur) : validée par l'auteur le 7 novembre 2026 (« Je valide » : toutes les recommandations, Q41 à Q48 ; la chute tue par la voie ordinaire, lisière de 64 px sur les quatre côtés, échelon {3, 3, 2, 0,8, 3}).** Elle remplace une partie de Q29 à Q33 et de Q28 ; voir la section « Révision 1 » à la fin de la fiche. Ce qu'elle ne touche pas reste validé. **6.2b-1bis faite le 7 novembre 2026 (v18.18, le socle du vide, des motifs et de la sortie en séquence, Passeuse éteinte, essai à quatre gestes ; `memoire.md` § 48, avec ses écarts à la révision).**
 
-**Révision 2 du 7 novembre 2026 (la Grande Marée : le sol qui rétrécit, minuté, à la dernière phase ; Q49–Q54) : à valider par l'auteur.** Voir la section « Révision 2 » à la fin de la fiche.
+**Révision 2 du 7 novembre 2026 (la Grande Marée : le sol qui rétrécit, minuté, à la dernière phase ; Q49–Q54) : validée par l'auteur le 7 novembre 2026 (« Je valide » : toutes les recommandations).** Voir la section « Révision 2 » à la fin de la fiche.
 
 Lu pour l'écrire : `CLAUDE.md` ; `_dev/REPRISE.md` (§ 3 et § 5) ; le cadrage `la-brume-v18-6-gardiens-cadrage.md` (partie A entière, surtout Q3 à Q14 et Q25 ; partie B comme modèle) ; `memoire.md` § 44 (socle, échelle corrigée du Guet), § 45 (le Guet allumé, écarts, mesures) et § 46 (les 23 constats de la relecture) ; `data/gardiens-descente.js` (commun, échelle, entrée 4) ; `data/descente.js` (acte V : « Les Eaux Mortes », phrase « Les Eaux Mortes se taisent ») ; `data/histoire.js` (fragments, codex, chapitres) ; dans `index.html`, le bloc `/*gar:pur*/` et le bloc « v18.14 · Les gardiens de la descente » (moteur `pas`, `lancer`, `optSortie`, zones, contact, bot), `brxDans`, `brxSortie`, `updatePlayer`, `pMarche`, `collidePlayer`, `hitsWall`, `drawEproj`, `faceA`, et la justice de `data/souvenirs-brume.js` (joueur : rayon 14, vitesse 180 px/s, réflexe 0,05 s).
 
@@ -440,7 +440,7 @@ Propre à elle : les gestes de Q44, la Marée, ses files, son dessin, sa salle �
 
 ---
 
-## Révision 2 · la Grande Marée : le sol qui rétrécit à la dernière phase (7 novembre 2026) — **à valider par l'auteur**
+## Révision 2 · la Grande Marée : le sol qui rétrécit à la dernière phase (7 novembre 2026) — **validée par l'auteur le 7 novembre 2026 (« Je valide » : toutes les recommandations, Q49 à Q54)**
 
 Rédigée avec Opus 5.5, effort moyen, après la v18.18 (6.2b-1bis). Rien du jeu n'a changé pour l'écrire.
 
