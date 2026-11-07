@@ -4,6 +4,8 @@ Statut : **validée par l'auteur le 7 novembre 2026 (« Je valide », toutes les
 
 **Révision 1 du 7 novembre 2026 (après l'essai de l'auteur) : validée par l'auteur le 7 novembre 2026 (« Je valide » : toutes les recommandations, Q41 à Q48 ; la chute tue par la voie ordinaire, lisière de 64 px sur les quatre côtés, échelon {3, 3, 2, 0,8, 3}).** Elle remplace une partie de Q29 à Q33 et de Q28 ; voir la section « Révision 1 » à la fin de la fiche. Ce qu'elle ne touche pas reste validé. **6.2b-1bis faite le 7 novembre 2026 (v18.18, le socle du vide, des motifs et de la sortie en séquence, Passeuse éteinte, essai à quatre gestes ; `memoire.md` § 48, avec ses écarts à la révision).**
 
+**Révision 2 du 7 novembre 2026 (la Grande Marée : le sol qui rétrécit, minuté, à la dernière phase ; Q49–Q54) : à valider par l'auteur.** Voir la section « Révision 2 » à la fin de la fiche.
+
 Lu pour l'écrire : `CLAUDE.md` ; `_dev/REPRISE.md` (§ 3 et § 5) ; le cadrage `la-brume-v18-6-gardiens-cadrage.md` (partie A entière, surtout Q3 à Q14 et Q25 ; partie B comme modèle) ; `memoire.md` § 44 (socle, échelle corrigée du Guet), § 45 (le Guet allumé, écarts, mesures) et § 46 (les 23 constats de la relecture) ; `data/gardiens-descente.js` (commun, échelle, entrée 4) ; `data/descente.js` (acte V : « Les Eaux Mortes », phrase « Les Eaux Mortes se taisent ») ; `data/histoire.js` (fragments, codex, chapitres) ; dans `index.html`, le bloc `/*gar:pur*/` et le bloc « v18.14 · Les gardiens de la descente » (moteur `pas`, `lancer`, `optSortie`, zones, contact, bot), `brxDans`, `brxSortie`, `updatePlayer`, `pMarche`, `collidePlayer`, `hitsWall`, `drawEproj`, `faceA`, et la justice de `data/souvenirs-brume.js` (joueur : rayon 14, vitesse 180 px/s, réflexe 0,05 s).
 
 Numérotation : les questions suivent celles du cadrage (Q1 à Q25) et commencent à **Q26**, pour qu'aucun renvoi ne soit ambigu.
@@ -434,3 +436,84 @@ Propre à elle : les gestes de Q44, la Marée, ses files, son dessin, sa salle �
 | Q46 | Les chiffres | PV par la règle ; friction ≥ 1,2 au bot |
 | Q47 | Le socle | vide, motifs, sortie séquentielle, poussées bornées, `FF` et Marée |
 | Q48 | Découpage | 6.2b-1bis (Opus élevé), essai de l'auteur, 6.2b-2, 6.2c (Opus élevé) |
+
+
+---
+
+## Révision 2 · la Grande Marée : le sol qui rétrécit à la dernière phase (7 novembre 2026) — **à valider par l'auteur**
+
+Rédigée avec Opus 5.5, effort moyen, après la v18.18 (6.2b-1bis). Rien du jeu n'a changé pour l'écrire.
+
+**Ce que l'auteur a demandé** : « rajouter un timer à la dernière phase pour que les bords deviennent de plus en plus petits jusqu'à ce que ce soit vraiment minuscule ».
+
+**Ce qui existe déjà** (v18.18) : le sol vivant est un rectangle de cases (6 × 4, ≈ 173 × 114 px) ; la Marée fait tomber une rangée ou une colonne du bord (préavis 1,5 s, fissures et liseré orange en tirets), une fois à l'entrée des temps 3 et 4 ; jamais deux côtés opposés ; jamais sous elle ; jamais là où tu te tiens sans une sortie calculée ; la chute tue par la voie ordinaire. La révision 2 transforme cette Marée unique en une **série minutée** à la dernière phase.
+
+### Q49 · Quelle phase
+
+- **A. Le dernier temps du palier (recommandé)** : le temps 3 en Normal (sous 33 % de PV), le temps 4 en Difficile et en Extrême (sous 18 %, la Dérive). C'est « la dernière phase » quel que soit le palier. En Difficile et en Extrême, le temps 3 garde sa Marée unique.
+- B. Seulement le temps 4 (Difficile et Extrême) : le Normal ne verrait jamais le sol rétrécir.
+- C. Dès le temps 3 dans tous les paliers : le sol serait minuscule avant même la Dérive.
+
+**Recommandation : A.**
+
+### Q50 · Jusqu'où il rétrécit
+
+Le sol vivant reste un rectangle de cases : toutes les règles de sortie, de chute et de motifs restent vraies, et le vide reste quatre bandes.
+
+| Option | Taille finale | Part du sol de départ | Ce que ça donne |
+|---|---|---|---|
+| A | 2 × 2 cases (≈ 347 × 228 px) | 1/6 | petit, encore jouable : un Tourbillon de 4 cases y tourne, la Lame y passe |
+| **B (recommandé)** | **2 × 1 cases (≈ 347 × 114 px)** | **1/12** | « vraiment minuscule » : une bande où l'on tient à peine contre le courant ; plus de Lame (trop court), presque plus de Reflux (pas de sortie : il saute) |
+| C | 1 × 1 case (≈ 173 × 114 px) | 1/24 | un îlot : une Fuite suffit à faire tomber qui ne compense pas |
+
+**Recommandation : B**, la demande disant « vraiment minuscule ». C reste possible si l'essai montre que B ne l'est pas assez.
+
+### Q51 · Le timer : son rythme
+
+Une chute de bord tous les **N** secondes, depuis l'entrée de la dernière phase. Chaque bande qui va tomber se fendille finement **pendant tout l'intervalle** (c'est le timer lui-même, au sol), puis passe au préavis habituel de la Marée (orange en tirets, 1,5 s), puis tombe. Le sol ne repousse jamais.
+
+- **Recommandation : 6 s en Normal, 4 s en Difficile et en Extrême** (leur dernière phase est plus courte : 18 % des PV au lieu de 33 %). De 6 × 4 jusqu'à 2 × 1, il faut sept chutes (quatre colonnes, trois rangées) : **42 s en Normal, 28 s en Difficile et en Extrême**. À titre de repère, au bot, la dernière phase dure de 15 à 30 s en Normal selon la forme : un joueur rapide ne verra pas le minimum, un joueur lent y finira son combat. C'est le timer qui presse.
+- **Ordre des côtés** : toujours vers le centre du sol, en alternant les deux bouts de la longueur puis de la hauteur (gauche, droite, haut, gauche, droite, bas, …), jamais deux fois le même côté de suite. La règle « jamais deux côtés opposés » de la Marée unique **ne vaut pas** pour la Grande Marée (sinon le sol ne peut pas se resserrer vers le centre).
+- **Les règles qui restent** : jamais là où tu te tiens sans une sortie calculée (sinon c'est un autre côté qui tombe ; si aucun côté n'a de sortie, le timer attend : jamais de mort sans issue) ; une chute de bord ne part jamais pendant le préavis d'une autre zone sans être calculée dans sa sortie (la règle de prédiction de la v18.18).
+- **Au minimum** : le sol reste à 2 × 1 jusqu'à sa mort. Pas de défaite au bout du timer (une mort sans signe n'est jamais une sanction de temps) ; la difficulté vient de l'îlot lui-même.
+
+### Q52 · Comment se lit le timer (image d'abord, aucun texte)
+
+- **A. Au sol seulement** : la bande suivante se fendille de plus en plus pendant l'intervalle, puis le préavis orange.
+- **B. Au sol et dans le HUD (recommandé)** : en plus de A, une petite jauge en goutte d'eau à gauche de la barre de vie du gardien, qui se vide à chaque intervalle et montre combien de chutes restent (un cran par chute, sans chiffre). On voit le temps qui reste sans quitter la barre des yeux.
+- C. Un compte à rebours chiffré : refusé (règle « image d'abord »).
+
+Mouvements réduits : les fissures avancent par paliers (comme le remplissage d'une zone), rien ne pulse ; la jauge se vide sans bouger.
+
+**Recommandation : B.**
+
+### Q53 · Elle, ses gestes et le courant sur un sol qui rétrécit
+
+- **Elle ne tombe jamais** (c'est son eau). **Recommandation** : quand le sol fait moins de 3 × 3 cases, elle **quitte le sol et flotte sur le vide dans sa barque**, à portée du bord (à moins de 60 px du liseré, pour que les formes au corps à corps la touchent encore). Sinon, sur 2 × 1, son corps (96 px de diamètre) remplirait la bande et le contact frapperait sans cesse.
+- **Les motifs** s'adaptent à la taille : un **Tourbillon de 2 × 2** (quatre cases qui tournent, sans œil), un Bief et une Fuite de 2 cases ; un motif qui ne tient pas n'est pas tiré. À 2 × 1, il reste des Biefs et des Fuites : le courant pousse vers le vide, et tenir sa place devient tout le combat.
+- **Les gestes** gardent leurs règles : une Lame demande au moins 3 cases et un Reflux une sortie ; s'ils ne tiennent pas, ils sautent. Les gestes de 6.2b-2 au corps (Gaffe, Coup de perche) prendront le relais sur l'îlot.
+- **La Dérive** (temps 4, 6.2b-2) coule le long du bord du sol tel qu'il est à chaque instant.
+
+**Recommandation : ainsi.**
+
+### Q54 · Le découpage
+
+| Étape | Contenu | Modèle, effort |
+|---|---|---|
+| **6.2b-1ter** | la Grande Marée dans l'essai de la Passeuse (toujours éteinte) : données (`maree.grande` : intervalle par palier, taille minimale, ordre des côtés), logique pure (le côté suivant, les motifs réduits, sa place sur l'eau) et `sim-gardiens`, jeu (timer, fissures, jauge du HUD, elle qui flotte), banc K, journal, `memoire.md`, `CLAUDE.md` | **Opus 5.5, élevé** (le vide qui avance et ses sorties) |
+| — | **essai de l'auteur** (`?gardien=5&temps=3&dieu=0`) | — |
+| 6.2b-2 | la Passeuse allumée (le reste de Q44, dessin, PV au bot, codex, wiki) | Sonnet 5.5, élevé |
+| 6.2c | relecture indépendante | Opus 5.5, élevé |
+
+### Tableau de la révision 2
+
+| Q | Sujet | Recommandation |
+|---|---|---|
+| Q49 | Quelle phase | le dernier temps du palier (temps 3 en Normal, temps 4 en Difficile et en Extrême) |
+| Q50 | Taille finale | 2 × 1 cases (≈ 347 × 114 px, 1/12 du sol) |
+| Q51 | Rythme | une chute de bord toutes les 6 s (Normal) ou 4 s (Difficile, Extrême), préavis 1,5 s, vers le centre ; minimum atteint en 42 s ou 28 s ; puis il reste là, sans défaite au temps |
+| Q52 | Le timer à l'œil | les fissures de la bande suivante pendant l'intervalle, et une jauge en goutte dans le HUD (sans chiffre) |
+| Q53 | Elle et ses gestes | sous 3 × 3, elle flotte dans sa barque près du bord ; motifs réduits (Tourbillon 2 × 2) ; ce qui ne tient pas saute |
+| Q54 | Découpage | 6.2b-1ter (Opus 5.5, élevé), puis essai de l'auteur, puis 6.2b-2 |
+
+**Pour valider : « je valide » (toutes les recommandations), ou question par question (Q49 à Q54).**
